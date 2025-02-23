@@ -34,9 +34,19 @@ CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
     title VARCHAR(100) NOT NULL,
     description TEXT,
-    status VARCHAR(20) NOT NULL DEFAULT 'open',
+    status VARCHAR(20) NOT NULL DEFAULT 'open', -- open, in_progress, improval, quality_control, done
     assigned_to_user INT REFERENCES users(id) ON DELETE SET NULL,
     assigned_to_role INT REFERENCES roles(id) ON DELETE SET NULL,
+    created_by INT REFERENCES users(id) ON DELETE SET NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tabelle: requests
+CREATE TABLE requests (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(100) NOT NULL,
+    description TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'approval', -- approval, approved, to_improve, denied
     created_by INT REFERENCES users(id) ON DELETE SET NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
