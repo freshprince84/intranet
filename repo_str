@@ -1,8 +1,22 @@
 worktracker/
 ├── backend/
-│   ├── .env.example
+│   ├── src/
+│   │   ├── config/
+│   │   ├── controllers/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   └── middleware/
+│   ├── .env
 │   └── package.json
 ├── frontend/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── hooks/
+│   │   ├── services/
+│   │   ├── assets/
+│   │   └── App.js
+│   ├── public/
 │   └── package.json
 ├── database/
 │   ├── schema.sql
