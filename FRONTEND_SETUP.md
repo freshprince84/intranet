@@ -1,8 +1,7 @@
-markdown
 # Frontend-Setup
 
 1. Erstelle `src/components/Sidebar.js`:
-jsx
+
 import React from 'react';
 
 const Sidebar = () => {
@@ -20,8 +19,45 @@ const Sidebar = () => {
 export default Sidebar;
 
 
+2. Erstelle src/pages/Dashboard.js:
+
+import React from 'react';
+
+const Dashboard = () => {
+    const requests = [
+        { id: 1, title: 'Beispiel Request', status: 'approval' },
+        { id: 2, title: 'Testanfrage', status: 'approved' }
+    ];
+
+    return (
+        <div className="p-4">
+            <h1 className="text-2xl mb-4">Dashboard</h1>
+            <table className="w-full border-collapse">
+                <thead>
+                    <tr className="bg-gray-200">
+                        <th className="border p-2">Titel</th>
+                        <th className="border p-2">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {requests.map(request => (
+                        <tr key={request.id}>
+                            <td className="border p-2">{request.title}</td>
+                            <td className="border p-2">{request.status}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+export default Dashboard;
+
+
+
 2. Passe src/App.js an:
-jsx
+
 import Sidebar from './components/Sidebar';
 
 function App() {
