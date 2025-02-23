@@ -23,5 +23,10 @@ Dieses Dokument enthält die Schritt-für-Schritt-Anweisungen zur Erstellung des
 - [ ] Füge Beispieldaten in `database/seed.sql` hinzu.
 - [ ] Protokolliere die Erstellung in einem Kommentar in `database/schema.sql`.
 
+## Schritt 5: Dashboard-Seite mit Requests integrieren
+- [ ] Aktualisiere `FRONTEND_SETUP.md` mit einer `Dashboard.js`-Seite, die eine Tabelle für Requests enthält.
+- [ ] Füge Backend-Routen für Requests hinzu (siehe `BACKEND_SETUP.md`).
+- [ ] Erweitere `database/schema.sql` um eine `requests`-Tabelle mit den Status: `approval`, `approved`, `to_improve`, `denied`.
+
 ## Weitere Schritte
 - Siehe `BACKEND_SETUP.md`, `FRONTEND_SETUP.md` und `DB_SCHEMA.md` für detaillierte Anweisungen.
