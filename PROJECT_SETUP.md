@@ -1,6 +1,6 @@
-# Worktracker Projekt-Setup
+# Intranet Projekt-Setup
 
-Dieses Dokument enthält die Schritt-für-Schritt-Anweisungen zur Erstellung des Worktracker-Projekts. Bitte befolge die Reihenfolge der Schritte genau und markiere abgeschlossene Schritte mit `[x]`. Protokolliere jede Änderung in den entsprechenden Dateien.
+Dieses Dokument enthält die Schritt-für-Schritt-Anweisungen zur Erstellung des Intranet-Projekts. Bitte befolge die Reihenfolge der Schritte genau und markiere abgeschlossene Schritte mit `[x]`. Protokolliere jede Änderung in den entsprechenden Dateien.
 
 ## Schritt 1: Verzeichnisstruktur erstellen
 - [ ] Erstelle die Verzeichnisstruktur gemäß der Projektübersicht (siehe README.md).
