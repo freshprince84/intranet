@@ -1,6 +1,6 @@
 # Datenbank-Schema
 
-Dieses Dokument beschreibt die Struktur der Datenbank für das Worktracker-Projekt. Der ausführbare SQL-Code befindet sich in `database/schema.sql`.
+Dieses Dokument beschreibt die Struktur der Datenbank für das Intranet-Projekt. Der ausführbare SQL-Code befindet sich in `database/schema.sql`.
 
 ## Übersicht der Tabellen
 
