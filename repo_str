@@ -1,0 +1,14 @@
+worktracker/
+├── backend/
+│   ├── .env.example
+│   └── package.json
+├── frontend/
+│   └── package.json
+├── database/
+│   ├── schema.sql
+│   └── seed.sql
+├── PROJECT_SETUP.md
+├── DB_SCHEMA.md
+├── BACKEND_SETUP.md
+├── FRONTEND_SETUP.md
+└── README.md
