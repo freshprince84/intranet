@@ -1,5 +1,7 @@
+# Backend-Setup
+
 1. Erstelle `src/config/db.js` für die Sequelize-Verbindung:
-javascript
+
 const { Sequelize } = require('sequelize');
 require('dotenv').config();
 
@@ -12,7 +14,7 @@ module.exports = sequelize;
 
 
 2. Erstelle erste Route in src/routes/auth.js:
-javascript
+
 const express = require('express');
 const router = express.Router();
 
@@ -23,8 +25,28 @@ router.post('/register', (req, res) => {
 module.exports = router;
 
 
-3. Erstelle src/index.js:
-javascript
+3. Erstelle Route in src/routes/requests.js:
+
+const express = require('express');
+const router = express.Router();
+
+router.post('/requests', (req, res) => {
+    res.send('Request erstellt');
+});
+
+router.get('/requests', (req, res) => {
+    res.send('Liste der Requests');
+});
+
+router.put('/requests/:id', (req, res) => {
+    res.send('Request-Status aktualisiert');
+});
+
+module.exports = router;
+
+
+4. Erstelle src/index.js:
+
 const express = require('express');
 const authRoutes = require('./routes/auth');
 
