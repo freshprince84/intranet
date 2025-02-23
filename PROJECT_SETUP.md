@@ -19,14 +19,14 @@ Dieses Dokument enthält die Schritt-für-Schritt-Anweisungen zur Erstellung des
 - [ ] Protokolliere Änderungen in `frontend/package.json`.
 
 ## Schritt 4: Datenbank einrichten
-- [ ] Erstelle die Tabellen in `database/schema.sql` gemäß `DB_SCHEMA.md`.
+- [ ] Implementiere das Schema in `database/schema.sql` gemäß den Beschreibungen in `DB_SCHEMA.md`.
 - [ ] Füge Beispieldaten in `database/seed.sql` hinzu.
 - [ ] Protokolliere die Erstellung in einem Kommentar in `database/schema.sql`.
 
 ## Schritt 5: Dashboard-Seite mit Requests integrieren
 - [ ] Aktualisiere `FRONTEND_SETUP.md` mit einer `Dashboard.js`-Seite, die eine Tabelle für Requests enthält.
 - [ ] Füge Backend-Routen für Requests hinzu (siehe `BACKEND_SETUP.md`).
-- [ ] Erweitere `database/schema.sql` um eine `requests`-Tabelle mit den Status: `approval`, `approved`, `to_improve`, `denied`.
+- [ ] Aktualisiere `database/schema.sql` mit der `requests`-Tabelle (siehe `DB_SCHEMA.md`).
 
 ## Weitere Schritte
 - Siehe `BACKEND_SETUP.md`, `FRONTEND_SETUP.md` und `DB_SCHEMA.md` für detaillierte Anweisungen.
