@@ -1,34 +1,63 @@
--- Benutzer
-INSERT INTO users (username, first_name, last_name, birthday, id_type, id_number, id_expires, bank, bank_account_number, bank_account_type, contract_type, active_from, active_to, salary) 
-VALUES ('pat', 'Patrick', 'Ammann', '2019-02-02', 'Cedula de extranjeria', '4909137', '2034-02-24', 'BANCO CAJA SOCIAL', '234523452345', 'Ahorros', 'Part Time 21d', '2022-04-28', '2099-04-22', 13000000);
+-- Benutze die Datenbank
+\c intranet;
 
--- Niederlassungen
-INSERT INTO branches (name) VALUES ('Manila'), ('Parque Poblado'), ('Alianza Paisa'), ('Nowhere');
+-- Füge Beispiel-Rollen hinzu
+INSERT INTO roles (name, description) VALUES
+    ('Admin', 'Administrator mit vollen Berechtigungen'),
+    ('Manager', 'Führungskraft mit erweiterten Berechtigungen'),
+    ('Employee', 'Standardbenutzer');
 
--- Rollen
-INSERT INTO roles (name) VALUES ('Admin'), ('Cleaning'), ('Reception'), ('Restaurant'), ('Bar'), ('Promotion'), ('IT'), ('Contabilidad'), ('Derecho'), ('Hamburger');
+-- Füge Beispiel-Niederlassungen hinzu
+INSERT INTO branches (name, address) VALUES
+    ('Parque Poblado', 'Carrera 43A #16A Sur-38, Medellín, Kolumbien'),
+    ('Manila', 'Bonifacio Global City, Taguig, Metro Manila, Philippinen');
 
--- Benutzer-Rollen (Pat hat Cleaning und Admin, Admin als zuletzt verwendet)
-INSERT INTO users_roles (user_id, role_id, last_used) VALUES (1, 2, TRUE), (1, 1, FALSE); -- Pat (ID 1) hat Cleaning (ID 2) und Admin (ID 1)
+-- Füge Beispiel-Benutzer hinzu (Passwort: "test123" - in Produktion sichere Passwörter verwenden!)
+INSERT INTO users (username, email, password_hash, first_name, last_name, birth_date, bank_name, bank_account) VALUES
+    ('pat', 'pat@example.com', '$2b$10$6jM7G6HXcBWqxA3DqcU9reRRmqPxJWJ1lQ9M9C7q.zL9K1qR6Y6Km', 'Pat', 'Admin', '1990-01-01', 'Sparkasse', 'DE123456789'),
+    ('max', 'max@example.com', '$2b$10$6jM7G6HXcBWqxA3DqcU9reRRmqPxJWJ1lQ9M9C7q.zL9K1qR6Y6Km', 'Max', 'Manager', '1992-02-02', 'Deutsche Bank', 'DE987654321');
 
--- Benutzer-Niederlassungen (Pat arbeitet in Manila und Parque Poblado)
-INSERT INTO users_branches (user_id, branch_id) VALUES (1, 1), (1, 2); -- Manila (ID 1), Parque Poblado (ID 2)
+-- Verknüpfe Benutzer mit Rollen
+INSERT INTO users_roles (user_id, role_id, last_used) VALUES
+    (1, 1, true),  -- Pat ist Admin
+    (2, 2, true);  -- Max ist Manager
 
--- Tasks
-INSERT INTO tasks (title, description, status, responsible_user_id, quality_control_user_id, branch_id, due_date, created_by) 
-VALUES ('Beispiel Task', 'Testaufgabe', 'open', 1, 1, 2, '2025-03-02', 1);
+-- Verknüpfe Benutzer mit Niederlassungen
+INSERT INTO users_branches (user_id, branch_id) VALUES
+    (1, 1),  -- Pat arbeitet in Parque Poblado
+    (2, 2);  -- Max arbeitet in Manila
 
--- Requests
-INSERT INTO requests (title, description, status, requested_by, responsible_user_id, branch_id, due_date, create_todo) 
-VALUES ('Beispiel Request', 'Testanfrage', 'approval', 1, 1, 2, '2025-03-02', FALSE);
+-- Füge Beispiel-Berechtigungen hinzu
+INSERT INTO permissions (role_id, page, access_level) VALUES
+    -- Admin Berechtigungen
+    (1, 'dashboard', 'both'),
+    (1, 'worktracker', 'both'),
+    (1, 'reports', 'both'),
+    (1, 'settings', 'both'),
+    -- Manager Berechtigungen
+    (2, 'dashboard', 'both'),
+    (2, 'worktracker', 'both'),
+    (2, 'reports', 'read'),
+    (2, 'settings', 'read'),
+    -- Mitarbeiter Berechtigungen
+    (3, 'dashboard', 'read'),
+    (3, 'worktracker', 'write'),
+    (3, 'reports', 'read'),
+    (3, 'settings', 'none');
 
--- Berechtigungen (Beispiel: Cleaning kann Dashboard lesen, Admin kann alles)
-INSERT INTO permissions (role_id, page, permission) VALUES 
-(2, 'Dashboard', 'read'), -- Cleaning kann Dashboard lesen
-(2, 'Worktracker', 'none'), -- Cleaning sieht Worktracker nicht
-(2, 'Reports', 'none'), -- Cleaning sieht Reports nicht
-(2, 'Settings', 'none'), -- Cleaning sieht Settings nicht
-(1, 'Dashboard', 'both'), -- Admin kann alles
-(1, 'Worktracker', 'both'),
-(1, 'Reports', 'both'),
-(1, 'Settings', 'both');
+-- Füge Beispiel-Tasks hinzu
+INSERT INTO tasks (title, description, status, responsible_id, quality_control_id, branch_id, due_date) VALUES
+    ('Website-Update', 'Aktualisierung der Unternehmenswebsite', 'in_progress', 1, 2, 1, '2025-03-15'),
+    ('Schulung durchführen', 'Neue Mitarbeiter einweisen', 'open', 2, 1, 2, '2025-03-20');
+
+-- Füge Beispiel-Requests hinzu
+INSERT INTO requests (title, description, status, requested_by_id, responsible_id, branch_id, due_date, create_todo) VALUES
+    ('Urlaub beantragen', 'Urlaub vom 01.04.2025 bis 15.04.2025', 'approval', 2, 1, 2, '2025-03-10', false),
+    ('Neuer Laptop', 'Antrag auf neue Hardware', 'approved', 1, 2, 1, '2025-03-05', true);
+
+-- Füge Beispiel-Einstellungen hinzu
+INSERT INTO settings (user_id, setting_key, setting_value) VALUES
+    (1, 'theme', 'dark'),
+    (1, 'language', 'de'),
+    (2, 'theme', 'light'),
+    (2, 'language', 'en');

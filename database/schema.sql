@@ -1,98 +1,134 @@
--- Tabelle: users
+-- Erstelle Datenbank (falls nicht vorhanden)
+CREATE DATABASE IF NOT EXISTS intranet;
+
+-- Benutze die Datenbank
+\c intranet;
+
+-- Erstelle Tabellen
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
-    birthday DATE NOT NULL,
-    id_type VARCHAR(50) NOT NULL,
-    id_number VARCHAR(20) UNIQUE NOT NULL,
-    id_expires DATE NOT NULL,
-    bank VARCHAR(50) NOT NULL,
-    bank_account_number VARCHAR(20) UNIQUE NOT NULL,
-    bank_account_type VARCHAR(20) NOT NULL,
-    contract_type VARCHAR(50) NOT NULL,
-    active_from DATE NOT NULL,
-    active_to DATE NOT NULL,
-    salary DECIMAL(12,2) NOT NULL,
+    birth_date DATE,
+    bank_name VARCHAR(100),
+    bank_account VARCHAR(50),
+    contract_start DATE,
+    contract_end DATE,
+    salary DECIMAL(10,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE roles (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    description TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabelle: roles
-CREATE TABLE roles (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(50) UNIQUE NOT NULL
-);
-
--- Tabelle: users_roles
 CREATE TABLE users_roles (
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
-    role_id INT REFERENCES roles(id) ON DELETE CASCADE,
-    last_used BOOLEAN DEFAULT FALSE, -- Markiert die zuletzt verwendete Rolle
+    user_id INTEGER REFERENCES users(id),
+    role_id INTEGER REFERENCES roles(id),
+    last_used BOOLEAN DEFAULT false,
     PRIMARY KEY (user_id, role_id)
 );
 
--- Tabelle: branches
 CREATE TABLE branches (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(50) UNIQUE NOT NULL
+    name VARCHAR(100) UNIQUE NOT NULL,
+    address TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabelle: users_branches (viele-zu-viele-Beziehung)
 CREATE TABLE users_branches (
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
-    branch_id INT REFERENCES branches(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id),
+    branch_id INTEGER REFERENCES branches(id),
     PRIMARY KEY (user_id, branch_id)
 );
 
--- Tabelle: work_times
 CREATE TABLE work_times (
     id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES users(id),
+    branch_id INTEGER REFERENCES branches(id),
     start_time TIMESTAMP NOT NULL,
     end_time TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabelle: tasks
 CREATE TABLE tasks (
     id SERIAL PRIMARY KEY,
-    title VARCHAR(100) NOT NULL,
+    title VARCHAR(200) NOT NULL,
     description TEXT,
-    status VARCHAR(20) NOT NULL DEFAULT 'open', -- open, in_progress, improval, quality_control, done
-    responsible_user_id INT REFERENCES users(id) ON DELETE SET NULL,
-    quality_control_user_id INT REFERENCES users(id) ON DELETE SET NULL,
-    branch_id INT REFERENCES branches(id) ON DELETE SET NULL,
+    status VARCHAR(20) CHECK (status IN ('open', 'in_progress', 'improval', 'quality_control', 'done')),
+    responsible_id INTEGER REFERENCES users(id),
+    quality_control_id INTEGER REFERENCES users(id),
+    branch_id INTEGER REFERENCES branches(id),
     due_date DATE,
-    created_by INT REFERENCES users(id) ON DELETE SET NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabelle: requests
 CREATE TABLE requests (
     id SERIAL PRIMARY KEY,
-    title VARCHAR(100) NOT NULL,
+    title VARCHAR(200) NOT NULL,
     description TEXT,
-    status VARCHAR(20) NOT NULL DEFAULT 'approval', -- approval, approved, to_improve, denied
-    requested_by INT REFERENCES users(id) ON DELETE SET NULL,
-    responsible_user_id INT REFERENCES users(id) ON DELETE SET NULL,
-    branch_id INT REFERENCES branches(id) ON DELETE SET NULL,
+    status VARCHAR(20) CHECK (status IN ('approval', 'approved', 'to_improve', 'denied')),
+    requested_by_id INTEGER REFERENCES users(id),
+    responsible_id INTEGER REFERENCES users(id),
+    branch_id INTEGER REFERENCES branches(id),
     due_date DATE,
-    create_todo BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    create_todo BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Tabelle: settings
 CREATE TABLE settings (
     id SERIAL PRIMARY KEY,
-    company_logo VARCHAR(255),
-    user_id INT REFERENCES users(id) ON DELETE CASCADE
+    user_id INTEGER REFERENCES users(id),
+    setting_key VARCHAR(50) NOT NULL,
+    setting_value TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, setting_key)
 );
 
--- Tabelle: permissions
 CREATE TABLE permissions (
     id SERIAL PRIMARY KEY,
-    role_id INT REFERENCES roles(id) ON DELETE CASCADE,
-    page VARCHAR(50) NOT NULL, -- z. B. Dashboard, Worktracker, Reports, Settings
-    permission VARCHAR(10) NOT NULL CHECK (permission IN ('read', 'write', 'both', 'none')) -- Berechtigungen
+    role_id INTEGER REFERENCES roles(id),
+    page VARCHAR(50) NOT NULL,
+    access_level VARCHAR(10) CHECK (access_level IN ('read', 'write', 'both', 'none')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (role_id, page)
 );
+
+-- Erstelle Trigger für updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER update_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_tasks_updated_at
+    BEFORE UPDATE ON tasks
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_requests_updated_at
+    BEFORE UPDATE ON requests
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_settings_updated_at
+    BEFORE UPDATE ON settings
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
