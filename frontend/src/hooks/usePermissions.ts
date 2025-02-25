@@ -37,14 +37,21 @@ export const usePermissions = () => {
                 const token = localStorage.getItem('token');
                 if (!token) throw new Error('Nicht authentifiziert');
 
-                const response = await axios.get('http://localhost:5000/api/users/current/role', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
+                // Hole die Rollen direkt vom User-Objekt
+                if (user.roles && user.roles.length > 0) {
+                    const adminRole = user.roles.find(role => role.name === 'admin');
+                    if (adminRole) {
+                        setCurrentRole(adminRole);
+                        // Wenn Admin, gebe volle Berechtigungen
+                        setPermissions([
+                            { id: 1, page: 'dashboard', accessLevel: 'both' },
+                            { id: 2, page: 'settings', accessLevel: 'both' },
+                            { id: 3, page: 'roles', accessLevel: 'both' },
+                            { id: 4, page: 'requests', accessLevel: 'both' },
+                            { id: 5, page: 'tasks', accessLevel: 'both' }
+                        ]);
                     }
-                });
-
-                setCurrentRole(response.data.role);
-                setPermissions(response.data.role.permissions);
+                }
                 setError(null);
             } catch (err) {
                 console.error('Fehler beim Laden der Berechtigungen:', err);
@@ -60,19 +67,30 @@ export const usePermissions = () => {
     }, [user]);
 
     const hasPermission = (page: string, requiredAccess: AccessLevel = 'read'): boolean => {
+        // Wenn keine Berechtigungen vorhanden sind, verweigere Zugriff
         if (!permissions.length) return false;
 
+        // Suche die Berechtigung für die angegebene Seite
         const permission = permissions.find(p => p.page === page);
         if (!permission) return false;
 
-        if (permission.accessLevel === 'none') return false;
-        if (permission.accessLevel === 'both') return true;
-        if (requiredAccess === 'both') return permission.accessLevel === 'both';
-        return permission.accessLevel === requiredAccess || permission.accessLevel === 'both';
+        // Prüfe die Zugriffsebene
+        switch (permission.accessLevel) {
+            case 'none':
+                return false;
+            case 'both':
+                return true;
+            case 'read':
+                return requiredAccess === 'read';
+            case 'write':
+                return requiredAccess === 'write';
+            default:
+                return false;
+        }
     };
 
     const isAdmin = (): boolean => {
-        return currentRole?.name === 'admin';
+        return user?.roles?.some(role => role.name === 'admin') ?? false;
     };
 
     return {

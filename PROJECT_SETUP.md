@@ -1,32 +1,139 @@
-# Intranet Projekt-Setup
+# Projekt-Setup
 
-Dieses Dokument enthält die Schritt-für-Schritt-Anweisungen zur Erstellung des Intranet-Projekts. Bitte befolge die Reihenfolge der Schritte genau und markiere abgeschlossene Schritte mit `[x]`. Protokolliere jede Änderung in den entsprechenden Dateien.
+## Backend
 
-## Schritt 1: Verzeichnisstruktur erstellen
-- [ ] Erstelle die Verzeichnisstruktur gemäß der Projektübersicht (siehe README.md).
-- [ ] Protokolliere die Erstellung mit einem Kommentar in dieser Datei.
+1. Erstelle ein neues Verzeichnis für das Projekt:
+```bash
+mkdir intranet && cd intranet
+mkdir backend frontend
+cd backend
+npm init -y
+```
 
-## Schritt 2: Backend initialisieren
-- [ ] Navigiere in `backend/` und führe `npm init -y` aus.
-- [ ] Installiere Abhängigkeiten: `npm install express sequelize pg pg-hstore jsonwebtoken bcrypt dotenv`.
-- [ ] Kopiere `.env.example` nach `.env` und fülle die Umgebungsvariablen aus.
-- [ ] Protokolliere Änderungen in `backend/package.json`.
+2. Installiere Backend-Abhängigkeiten:
+```bash
+# Hauptabhängigkeiten
+npm install express @prisma/client pg jsonwebtoken bcrypt dotenv cors date-fns exceljs multer
 
-## Schritt 3: Frontend initialisieren
-- [ ] Navigiere in `frontend/` und führe `npx create-react-app .` aus.
-- [ ] Installiere zusätzliche Abhängigkeiten: `npm install react-router-dom axios tailwindcss`.
-- [ ] Initialisiere Tailwind CSS gemäß der offiziellen Dokumentation.
-- [ ] Protokolliere Änderungen in `frontend/package.json`.
+# Entwicklungsabhängigkeiten
+npm install --save-dev prisma typescript ts-node nodemon @types/node @types/express @types/bcrypt @types/cors @types/jsonwebtoken @types/multer
+```
 
-## Schritt 4: Datenbank einrichten
-- [ ] Implementiere das Schema in `database/schema.sql` gemäß den Beschreibungen in `DB_SCHEMA.md`.
-- [ ] Füge Beispieldaten in `database/seed.sql` hinzu.
-- [ ] Protokolliere die Erstellung in einem Kommentar in `database/schema.sql`.
+3. Initialisiere TypeScript:
+```bash
+npx tsc --init
+```
 
-## Schritt 5: Dashboard-Seite mit Requests integrieren
-- [ ] Aktualisiere `FRONTEND_SETUP.md` mit einer `Dashboard.js`-Seite, die eine Tabelle für Requests enthält.
-- [ ] Füge Backend-Routen für Requests hinzu (siehe `BACKEND_SETUP.md`).
-- [ ] Aktualisiere `database/schema.sql` mit der `requests`-Tabelle (siehe `DB_SCHEMA.md`).
+4. Initialisiere Prisma:
+```bash
+npx prisma init
+```
 
-## Weitere Schritte
-- Siehe `BACKEND_SETUP.md`, `FRONTEND_SETUP.md` und `DB_SCHEMA.md` für detaillierte Anweisungen.
+5. Konfiguriere die Datenbankverbindung in `.env`:
+```
+DATABASE_URL="postgresql://user:password@localhost:5432/worktracker"
+JWT_SECRET=dein_jwt_secret
+PORT=5000
+```
+
+6. Erstelle und bearbeite das Prisma-Schema in `prisma/schema.prisma`
+
+7. Generiere die Prisma-Client-Typen:
+```bash
+npx prisma generate
+```
+
+8. Erstelle die Datenbank und führe die Migrationen aus:
+```bash
+npx prisma migrate dev --name init
+```
+
+9. Konfiguriere die TypeScript-Einstellungen in `tsconfig.json`:
+```json
+{
+  "compilerOptions": {
+    "target": "es2016",
+    "module": "commonjs",
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules"]
+}
+```
+
+10. Konfiguriere die Build- und Start-Skripte in `package.json`:
+```json
+"scripts": {
+  "start": "node dist/index.js",
+  "dev": "nodemon dist/index.js",
+  "build": "tsc",
+  "seed": "npx prisma db seed"
+},
+"prisma": {
+  "seed": "ts-node prisma/seed.ts",
+  "schema": "prisma/schema.prisma"
+}
+```
+
+## Frontend
+
+1. Erstelle ein neues React-Projekt mit Vite:
+```bash
+cd ../frontend
+npm create vite@latest . -- --template react-ts
+```
+
+2. Installiere Frontend-Abhängigkeiten:
+```bash
+npm install axios react-router-dom @headlessui/react @heroicons/react
+npm install -D tailwindcss postcss autoprefixer
+```
+
+3. Initialisiere Tailwind:
+```bash
+npx tailwindcss init -p
+```
+
+4. Konfiguriere die Entwicklungsumgebung:
+- Erstelle `.env.development` für Entwicklungseinstellungen
+- Konfiguriere `vite.config.ts` für Proxy-Einstellungen
+
+5. Starte die Entwicklungsserver:
+```bash
+# Terminal 1 (Backend)
+cd backend
+npm run build
+npm run dev
+
+# Terminal 2 (Frontend)
+cd frontend
+npm run dev
+```
+
+## Datenbankstruktur
+
+Das Datenmodell ist vollständig in der `prisma/schema.prisma`-Datei definiert, einschließlich:
+
+- Benutzer (User)
+- Rollen (Role)
+- Berechtigungen (Permission)
+- Niederlassungen (Branch)
+- Arbeitszeiten (WorkTime)
+- Aufgaben (Task)
+- Anfragen (Request)
+- Benutzereinstellungen (Settings)
+
+Beziehungstabellen:
+- UserRole
+- UsersBranches
+
+Das Prisma-Schema enthält alle notwendigen Relationen und Constraints zwischen diesen Entitäten. Bei jeder Schemaänderung muss eine Migration erstellt werden mit:
+
+```bash
+npx prisma migrate dev --name beschreibung_der_aenderung
+```

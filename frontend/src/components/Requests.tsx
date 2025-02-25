@@ -55,27 +55,18 @@ const Requests: React.FC = () => {
 
   const fetchRequests = async () => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Nicht authentifiziert');
-        setLoading(false);
-        return;
-      }
-
-      const response = await axios.get('http://localhost:5000/api/requests', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      console.log('Response:', response.data); // Debug-Log
+      const response = await axios.get('http://localhost:5000/api/requests');
       setRequests(response.data);
+      setError(null);
       setLoading(false);
     } catch (err) {
-      console.error('Request Error:', err); // Debug-Log
+      console.error('Request Error:', err);
       if (axios.isAxiosError(err)) {
-        setError(`Fehler beim Laden der Requests: ${err.response?.data?.message || err.message}`);
+        if (err.code === 'ERR_NETWORK') {
+          setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+        } else {
+          setError(`Fehler beim Laden der Requests: ${err.response?.data?.message || err.message}`);
+        }
       } else {
         setError('Ein unerwarteter Fehler ist aufgetreten');
       }
@@ -111,13 +102,6 @@ const Requests: React.FC = () => {
 
   const handleStatusChange = async (requestId: number, newStatus: Request['status']) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        setError('Nicht authentifiziert');
-        return;
-      }
-
-      // Finde den aktuellen Request
       const currentRequest = requests.find(r => r.id === requestId);
       if (!currentRequest) {
         setError('Request nicht gefunden');
@@ -127,17 +111,10 @@ const Requests: React.FC = () => {
       await axios.put(`http://localhost:5000/api/requests/${requestId}`, 
         { 
           status: newStatus,
-          create_todo: currentRequest.createTodo // Sende den createTodo-Status mit
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
+          create_todo: currentRequest.createTodo
         }
       );
 
-      // Aktualisiere die Requests nach der Statusänderung
       fetchRequests();
     } catch (err) {
       console.error('Status Update Error:', err);
@@ -291,77 +268,110 @@ const Requests: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAndSortedRequests.map(request => (
-                <tr key={request.id}>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{request.title}</div>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)}`}>
-                      {request.status}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {`${request.requestedBy.firstName} ${request.requestedBy.lastName}`}
+              {filteredAndSortedRequests.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-3 py-4 text-center text-gray-500">
+                    <div className="flex flex-col items-center justify-center gap-4">
+                      <p>Keine Requests vorhanden</p>
+                      <button
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                      >
+                        <PlusIcon className="h-5 w-5 mr-2" />
+                        Neuen Request erstellen
+                      </button>
                     </div>
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {`${request.responsible.firstName} ${request.responsible.lastName}`}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{request.branch.name}</div>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {new Date(request.dueDate).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="flex space-x-2">
-                      <div className="group relative">
-                        <button
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-1 bg-gray-600 text-white rounded hover:bg-gray-700"
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                        </button>
-                        <div className="absolute left-0 top-full mt-2 w-max opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800 text-white text-sm rounded-md py-1 px-2 pointer-events-none z-10">
-                          Bearbeiten
-                        </div>
+                </tr>
+              ) : (
+                filteredAndSortedRequests.map(request => (
+                  <tr key={request.id}>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{request.title}</div>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)}`}>
+                        {request.status}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {`${request.requestedBy.firstName} ${request.requestedBy.lastName}`}
                       </div>
-                      {request.status === 'approval' && (
-                        <>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {`${request.responsible.firstName} ${request.responsible.lastName}`}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{request.branch.name}</div>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {new Date(request.dueDate).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <div className="flex space-x-2">
+                        <div className="group relative">
                           <button
-                            onClick={() => handleStatusChange(request.id, 'approved')}
-                            className="p-1 bg-green-600 text-white rounded hover:bg-green-700"
-                            title="Genehmigen"
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-1 bg-gray-600 text-white rounded hover:bg-gray-700"
                           >
-                            <CheckIcon className="h-5 w-5" />
+                            <PencilIcon className="h-5 w-5" />
                           </button>
-                          <button
-                            onClick={() => handleStatusChange(request.id, 'to_improve')}
-                            className="p-1 bg-orange-600 text-white rounded hover:bg-orange-700"
-                            title="Verbessern"
-                          >
-                            <ExclamationTriangleIcon className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => handleStatusChange(request.id, 'denied')}
-                            className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
-                            title="Ablehnen"
-                          >
-                            <XMarkIcon className="h-5 w-5" />
-                          </button>
-                        </>
-                      )}
-                      {request.status === 'to_improve' && (
-                        <>
+                          <div className="absolute left-0 top-full mt-2 w-max opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800 text-white text-sm rounded-md py-1 px-2 pointer-events-none z-10">
+                            Bearbeiten
+                          </div>
+                        </div>
+                        {request.status === 'approval' && (
+                          <>
+                            <button
+                              onClick={() => handleStatusChange(request.id, 'approved')}
+                              className="p-1 bg-green-600 text-white rounded hover:bg-green-700"
+                              title="Genehmigen"
+                            >
+                              <CheckIcon className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(request.id, 'to_improve')}
+                              className="p-1 bg-orange-600 text-white rounded hover:bg-orange-700"
+                              title="Verbessern"
+                            >
+                              <ExclamationTriangleIcon className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(request.id, 'denied')}
+                              className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                              title="Ablehnen"
+                            >
+                              <XMarkIcon className="h-5 w-5" />
+                            </button>
+                          </>
+                        )}
+                        {request.status === 'to_improve' && (
+                          <>
+                            <button
+                              onClick={() => handleStatusChange(request.id, 'approval')}
+                              className="p-1 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                              title="Erneut prüfen"
+                            >
+                              <ArrowPathIcon className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleStatusChange(request.id, 'denied')}
+                              className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                              title="Ablehnen"
+                            >
+                              <XMarkIcon className="h-5 w-5" />
+                            </button>
+                          </>
+                        )}
+                        {(request.status === 'approved' || request.status === 'denied') && (
                           <button
                             onClick={() => handleStatusChange(request.id, 'approval')}
                             className="p-1 bg-yellow-600 text-white rounded hover:bg-yellow-700"
@@ -369,28 +379,12 @@ const Requests: React.FC = () => {
                           >
                             <ArrowPathIcon className="h-5 w-5" />
                           </button>
-                          <button
-                            onClick={() => handleStatusChange(request.id, 'denied')}
-                            className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
-                            title="Ablehnen"
-                          >
-                            <XMarkIcon className="h-5 w-5" />
-                          </button>
-                        </>
-                      )}
-                      {(request.status === 'approved' || request.status === 'denied') && (
-                        <button
-                          onClick={() => handleStatusChange(request.id, 'approval')}
-                          className="p-1 bg-yellow-600 text-white rounded hover:bg-yellow-700"
-                          title="Erneut prüfen"
-                        >
-                          <ArrowPathIcon className="h-5 w-5" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

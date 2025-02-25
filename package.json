@@ -7,7 +7,8 @@
     "backend": "cd backend && npm run dev",
     "frontend": "cd frontend && npm start",
     "install-all": "npm install && cd backend && npm install && cd ../frontend && npm install",
-    "dev": "npm run start"
+    "dev": "npm run start",
+    "prisma:studio": "cd backend && npx prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
@@ -20,5 +21,8 @@
     "postcss": "^8.5.3",
     "prisma": "^6.4.1",
     "tailwindcss": "^4.0.8"
+  },
+  "prisma": {
+    "schema": "backend/prisma/schema.prisma"
   }
 }

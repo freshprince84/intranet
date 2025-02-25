@@ -15,7 +15,7 @@ interface EditRequestModalProps {
     branch: {
       id: number;
     };
-    dueDate: string;
+    dueDate: string | null;
     createTodo: boolean;
   };
 }
@@ -40,7 +40,7 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
   const [title, setTitle] = useState(request.title);
   const [responsibleId, setResponsibleId] = useState(request.responsible.id);
   const [branchId, setBranchId] = useState(request.branch.id);
-  const [dueDate, setDueDate] = useState(request.dueDate.split('T')[0]);
+  const [dueDate, setDueDate] = useState(request.dueDate ? request.dueDate.split('T')[0] : '');
   const [createTodo, setCreateTodo] = useState(request.createTodo);
   const [users, setUsers] = useState<User[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -50,27 +50,64 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
   useEffect(() => {
     const fetchUsers = async () => {
       try {
+        setError(null);
         const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Nicht authentifiziert');
+          return;
+        }
+
+        console.log('Lade Benutzer für EditRequestModal...');
+        
         const response = await axios.get('http://localhost:5000/api/users', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+        
+        console.log('Benutzer geladen:', response.data.length);
         setUsers(response.data);
       } catch (err) {
         console.error('Fehler beim Laden der Benutzer:', err);
-        setError('Fehler beim Laden der Benutzer');
+        
+        if (axios.isAxiosError(err)) {
+          if (err.code === 'ERR_NETWORK') {
+            setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+          } else {
+            setError(`Fehler beim Laden der Benutzer: ${err.response?.data?.message || err.message}`);
+          }
+        } else {
+          setError('Ein unerwarteter Fehler ist aufgetreten');
+        }
       }
     };
 
     const fetchBranches = async () => {
       try {
         const token = localStorage.getItem('token');
+        if (!token) {
+          setError('Nicht authentifiziert');
+          return;
+        }
+
+        console.log('Lade Niederlassungen für EditRequestModal...');
+        
         const response = await axios.get('http://localhost:5000/api/branches', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+        
+        console.log('Niederlassungen geladen:', response.data.length);
         setBranches(response.data);
       } catch (err) {
         console.error('Fehler beim Laden der Niederlassungen:', err);
-        setError('Fehler beim Laden der Niederlassungen');
+        
+        if (axios.isAxiosError(err)) {
+          if (err.code === 'ERR_NETWORK') {
+            setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+          } else {
+            setError(`Fehler beim Laden der Niederlassungen: ${err.response?.data?.message || err.message}`);
+          }
+        } else {
+          setError('Ein unerwarteter Fehler ist aufgetreten');
+        }
       }
     };
 

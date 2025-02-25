@@ -1,168 +1,165 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
   id            Int       @id @default(autoincrement())
   username      String    @unique
   email         String    @unique
-  passwordHash  String    @map("password_hash")
-  firstName     String    @map("first_name")
-  lastName      String    @map("last_name")
-  birthDate     DateTime? @map("birth_date")
-  bankName      String?   @map("bank_name")
-  bankAccount   String?   @map("bank_account")
-  contractStart DateTime? @map("contract_start")
-  contractEnd   DateTime? @map("contract_end")
-  salary        Decimal?
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-
-  roles          UserRole[]
-  branches       UserBranch[]
-  workTimes      WorkTime[]
-  responsibleTasks Task[]    @relation("ResponsibleTasks")
-  qualityControlTasks Task[] @relation("QualityControlTasks")
-  requests       Request[]   @relation("RequestedBy")
-  responsible    Request[]   @relation("ResponsibleFor")
-  settings       Setting[]
-
-  @@map("users")
+  password      String
+  firstName     String
+  lastName      String
+  birthday      DateTime?
+  bankDetails   String?
+  contract      String?
+  salary        Float?
+  roles         UserRole[]
+  branches      UsersBranches[]
+  workTimes     WorkTime[]
+  tasksResponsible Task[] @relation("responsible")
+  tasksQualityControl Task[] @relation("quality_control")
+  requestsRequester Request[] @relation("requester")
+  requestsResponsible Request[] @relation("responsible")
+  settings      Settings?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model Role {
   id          Int       @id @default(autoincrement())
   name        String    @unique
   description String?
-  createdAt   DateTime  @default(now()) @map("created_at")
-  
   users       UserRole[]
   permissions Permission[]
-
-  @@map("roles")
 }
 
 model UserRole {
-  userId    Int     @map("user_id")
-  roleId    Int     @map("role_id")
-  lastUsed  Boolean @default(false) @map("last_used")
-  
-  user      User    @relation(fields: [userId], references: [id])
-  role      Role    @relation(fields: [roleId], references: [id])
-
-  @@id([userId, roleId])
-  @@map("users_roles")
-}
-
-model Branch {
-  id        Int       @id @default(autoincrement())
-  name      String    @unique
-  address   String?
-  createdAt DateTime  @default(now()) @map("created_at")
-  
-  users     UserBranch[]
-  workTimes WorkTime[]
-  tasks     Task[]
-  requests  Request[]
-
-  @@map("branches")
-}
-
-model UserBranch {
-  userId    Int    @map("user_id")
-  branchId  Int    @map("branch_id")
-  
-  user      User   @relation(fields: [userId], references: [id])
-  branch    Branch @relation(fields: [branchId], references: [id])
-
-  @@id([userId, branchId])
-  @@map("users_branches")
-}
-
-model WorkTime {
   id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  branchId  Int      @map("branch_id")
-  startTime DateTime @map("start_time")
-  endTime   DateTime? @map("end_time")
-  createdAt DateTime @default(now()) @map("created_at")
-  
-  user      User    @relation(fields: [userId], references: [id])
-  branch    Branch  @relation(fields: [branchId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  role      Role     @relation(fields: [roleId], references: [id])
+  roleId    Int
+  lastUsed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  @@map("work_times")
-}
-
-model Task {
-  id               Int       @id @default(autoincrement())
-  title            String
-  description      String?
-  status           String
-  responsibleId    Int?      @map("responsible_id")
-  qualityControlId Int?      @map("quality_control_id")
-  branchId         Int?      @map("branch_id")
-  requestId        Int?      @map("request_id")
-  dueDate          DateTime? @map("due_date")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
-  
-  responsible      User?     @relation("ResponsibleTasks", fields: [responsibleId], references: [id])
-  qualityControl   User?     @relation("QualityControlTasks", fields: [qualityControlId], references: [id])
-  branch           Branch?   @relation(fields: [branchId], references: [id])
-  request          Request?  @relation(fields: [requestId], references: [id])
-
-  @@map("tasks")
-}
-
-model Request {
-  id            Int       @id @default(autoincrement())
-  title         String
-  description   String?
-  status        String
-  requestedById Int       @map("requested_by_id")
-  responsibleId Int?      @map("responsible_id")
-  branchId      Int?      @map("branch_id")
-  dueDate       DateTime? @map("due_date")
-  createTodo    Boolean   @default(false) @map("create_todo")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  
-  requestedBy   User      @relation("RequestedBy", fields: [requestedById], references: [id])
-  responsible   User?     @relation("ResponsibleFor", fields: [responsibleId], references: [id])
-  branch        Branch?   @relation(fields: [branchId], references: [id])
-  tasks         Task[]
-
-  @@map("requests")
-}
-
-model Setting {
-  id           Int      @id @default(autoincrement())
-  userId       Int      @map("user_id")
-  settingKey   String   @map("setting_key")
-  settingValue String?  @map("setting_value")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  
-  user         User     @relation(fields: [userId], references: [id])
-
-  @@unique([userId, settingKey])
-  @@map("settings")
+  @@unique([userId, roleId])
 }
 
 model Permission {
   id          Int      @id @default(autoincrement())
-  roleId      Int      @map("role_id")
   page        String
-  accessLevel String   @map("access_level")
-  createdAt   DateTime @default(now()) @map("created_at")
-  
+  accessLevel String
   role        Role     @relation(fields: [roleId], references: [id])
+  roleId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
 
-  @@unique([roleId, page])
-  @@map("permissions")
+model Branch {
+  id        Int             @id @default(autoincrement())
+  name      String         @unique
+  users     UsersBranches[]
+  workTimes WorkTime[]
+  tasks     Task[]
+  requests  Request[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model UsersBranches {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  branchId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, branchId])
+}
+
+model WorkTime {
+  id        Int       @id @default(autoincrement())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    Int
+  branch    Branch    @relation(fields: [branchId], references: [id])
+  branchId  Int
+  startTime DateTime
+  endTime   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Task {
+  id               Int       @id @default(autoincrement())
+  title           String
+  description     String?
+  status          TaskStatus @default(open)
+  responsible     User       @relation("responsible", fields: [responsibleId], references: [id])
+  responsibleId   Int
+  qualityControl  User       @relation("quality_control", fields: [qualityControlId], references: [id])
+  qualityControlId Int
+  branch          Branch     @relation(fields: [branchId], references: [id])
+  branchId        Int
+  dueDate         DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+model Request {
+  id             Int           @id @default(autoincrement())
+  title         String
+  description   String?
+  status        RequestStatus  @default(approval)
+  requester     User          @relation("requester", fields: [requesterId], references: [id])
+  requesterId   Int
+  responsible   User          @relation("responsible", fields: [responsibleId], references: [id])
+  responsibleId Int
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  branchId      Int
+  dueDate       DateTime?
+  createTodo    Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Settings {
+  id         Int      @id @default(autoincrement())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int      @unique
+  companyLogo String?
+  darkMode   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum TaskStatus {
+  open
+  in_progress
+  improval
+  quality_control
+  done
+}
+
+enum RequestStatus {
+  approval
+  approved
+  to_improve
+  denied
+}
+
+enum AccessLevel {
+  read
+  write
+  both
+  none
 } 

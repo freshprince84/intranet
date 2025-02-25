@@ -1,81 +1,82 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import { UserGroupIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, ClipboardDocumentListIcon, HomeIcon, ArrowLeftIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 
 const Sidebar: React.FC = () => {
-    const { user } = useAuth();
     const { isAdmin } = usePermissions();
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [position, setPosition] = useState<'left' | 'right'>('left');
+
+    const togglePosition = () => {
+        setPosition(prev => prev === 'left' ? 'right' : 'left');
+    };
 
     return (
-        <div className="bg-gray-800 text-white w-64 min-h-screen p-4">
-            <div className="mb-8">
-                <h2 className="text-2xl font-bold">Intranet</h2>
-            </div>
-            
-            <nav>
-                <ul className="space-y-2">
-                    <li>
-                        <Link 
-                            to="/dashboard" 
-                            className="block px-4 py-2 rounded hover:bg-gray-700"
+        <aside className={`border-gray-200 ${position === 'left' ? 'border-r' : 'border-l'} relative transition-all duration-300`}>
+            <nav className={`${isCollapsed ? 'w-14' : 'w-56'} transition-all duration-300`}>
+                <div className={`${isCollapsed ? 'px-3' : 'px-4'} py-4`}>
+                    <div className="flex justify-end mb-8">
+                        <button
+                            onClick={() => setIsCollapsed(!isCollapsed)}
+                            className="text-gray-600 hover:text-gray-900"
+                            title={isCollapsed ? "Erweitern" : "Einklappen"}
                         >
-                            Dashboard
-                        </Link>
-                    </li>
-                    {user && (
-                        <>
-                            <li>
-                                <Link 
-                                    to="/worktracker" 
-                                    className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-700"
-                                >
-                                    <ClipboardDocumentListIcon className="h-5 w-5" />
-                                    <span>Worktracker</span>
-                                </Link>
-                            </li>
-                            <li>
-                                <Link 
-                                    to="/profile" 
-                                    className="block px-4 py-2 rounded hover:bg-gray-700"
-                                >
-                                    Profil
-                                </Link>
-                            </li>
-                            <li>
-                                <Link 
-                                    to="/settings" 
-                                    className="block px-4 py-2 rounded hover:bg-gray-700"
-                                >
-                                    Einstellungen
-                                </Link>
-                            </li>
-                        </>
-                    )}
-                    {isAdmin() && (
+                            {isCollapsed ? 
+                                <ArrowRightIcon className="h-6 w-6" /> :
+                                <ArrowLeftIcon className="h-6 w-6" />
+                            }
+                        </button>
+                    </div>
+                    <ul className="space-y-6">
                         <li>
-                            <Link
-                                to="/roles"
-                                className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-700"
+                            <Link 
+                                to="/dashboard" 
+                                className="text-gray-600 hover:text-gray-900 flex items-center gap-3 text-lg group relative"
                             >
-                                <UserGroupIcon className="h-5 w-5" />
-                                <span>Rollenverwaltung</span>
+                                <HomeIcon className="h-6 w-6" />
+                                {!isCollapsed && <span>Dashboard</span>}
+                                {isCollapsed && (
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                                        Dashboard
+                                    </div>
+                                )}
                             </Link>
                         </li>
-                    )}
-                </ul>
-            </nav>
-            
-            {user && (
-                <div className="absolute bottom-0 left-0 w-64 p-4 bg-gray-800">
-                    <div className="text-sm">
-                        <p>Eingeloggt als:</p>
-                        <p className="font-bold">{user.email}</p>
-                    </div>
+                        <li>
+                            <Link 
+                                to="/worktracker"
+                                className="text-gray-600 hover:text-gray-900 flex items-center gap-3 text-lg group relative"
+                            >
+                                <ClipboardDocumentListIcon className="h-6 w-6" />
+                                {!isCollapsed && <span>Worktracker</span>}
+                                {isCollapsed && (
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                                        Worktracker
+                                    </div>
+                                )}
+                            </Link>
+                        </li>
+                        {isAdmin() && (
+                            <li>
+                                <Link 
+                                    to="/roles" 
+                                    className="text-gray-600 hover:text-gray-900 flex items-center gap-3 text-lg group relative"
+                                >
+                                    <UserGroupIcon className="h-6 w-6" />
+                                    {!isCollapsed && <span>Rollenverwaltung</span>}
+                                    {isCollapsed && (
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                                            Rollenverwaltung
+                                        </div>
+                                    )}
+                                </Link>
+                            </li>
+                        )}
+                    </ul>
                 </div>
-            )}
-        </div>
+            </nav>
+        </aside>
     );
 };
 

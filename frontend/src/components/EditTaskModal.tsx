@@ -52,32 +52,48 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
     useEffect(() => {
         const fetchData = async () => {
             try {
+                setError(null);
                 const token = localStorage.getItem('token');
                 if (!token) {
                     setError('Nicht authentifiziert');
                     return;
                 }
 
+                console.log('Lade Daten für EditTaskModal...');
+                
                 const headers = {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 };
 
-                const [usersResponse, branchesResponse] = await Promise.all([
-                    axios.get('http://localhost:5000/api/users', { headers }),
-                    axios.get('http://localhost:5000/api/branches', { headers })
-                ]);
+                try {
+                    const [usersResponse, branchesResponse] = await Promise.all([
+                        axios.get('http://localhost:5000/api/users', { headers }),
+                        axios.get('http://localhost:5000/api/branches', { headers })
+                    ]);
 
-                setUsers(usersResponse.data);
-                setBranches(branchesResponse.data);
-                setError(null);
-            } catch (err) {
-                console.error('Fehler beim Laden der Daten:', err);
-                if (axios.isAxiosError(err)) {
-                    setError(err.response?.data?.message || err.message);
-                } else {
-                    setError('Ein unerwarteter Fehler ist aufgetreten');
+                    console.log('Benutzer geladen:', usersResponse.data.length);
+                    console.log('Niederlassungen geladen:', branchesResponse.data.length);
+                    
+                    setUsers(usersResponse.data);
+                    setBranches(branchesResponse.data);
+                    setError(null);
+                } catch (err) {
+                    console.error('Fehler beim Laden der Daten:', err);
+                    
+                    if (axios.isAxiosError(err)) {
+                        if (err.code === 'ERR_NETWORK') {
+                            setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+                        } else {
+                            setError(`Fehler beim Laden der Daten: ${err.response?.data?.message || err.message}`);
+                        }
+                    } else {
+                        setError('Ein unerwarteter Fehler ist aufgetreten');
+                    }
                 }
+            } catch (err) {
+                console.error('Unerwarteter Fehler:', err);
+                setError('Ein unerwarteter Fehler ist aufgetreten');
             }
         };
 

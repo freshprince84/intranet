@@ -4,6 +4,10 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
+import WorktimeTracker from '../components/WorktimeTracker.tsx';
+import WorktimeList from '../components/WorktimeList.tsx';
+import WorktimeStats from '../components/WorktimeStats.tsx';
+import { API_ENDPOINTS } from '../config/api.ts';
 
 interface Task {
     id: number;
@@ -34,6 +38,7 @@ interface SortConfig {
 }
 
 const Worktracker: React.FC = () => {
+    const { user } = useAuth();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -43,11 +48,6 @@ const Worktracker: React.FC = () => {
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-    const { user } = useAuth();
-
-    useEffect(() => {
-        fetchTasks();
-    }, []);
 
     const fetchTasks = async () => {
         try {
@@ -58,7 +58,7 @@ const Worktracker: React.FC = () => {
                 return;
             }
 
-            const response = await axios.get('http://localhost:5000/api/tasks', {
+            const response = await axios.get(API_ENDPOINTS.TASKS.BASE, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
@@ -79,6 +79,10 @@ const Worktracker: React.FC = () => {
         }
     };
 
+    useEffect(() => {
+        fetchTasks();
+    }, []);
+
     const getStatusColor = (status: Task['status']) => {
         switch (status) {
             case 'open':
@@ -96,13 +100,6 @@ const Worktracker: React.FC = () => {
         }
     };
 
-    const handleSort = (key: SortConfig['key']) => {
-        setSortConfig(current => ({
-            key,
-            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
-        }));
-    };
-
     const handleStatusChange = async (taskId: number, newStatus: Task['status']) => {
         try {
             const token = localStorage.getItem('token');
@@ -111,7 +108,7 @@ const Worktracker: React.FC = () => {
                 return;
             }
 
-            await axios.put(`http://localhost:5000/api/tasks/${taskId}`, 
+            await axios.put(API_ENDPOINTS.TASKS.DETAIL(taskId), 
                 { status: newStatus },
                 {
                     headers: {
@@ -144,40 +141,6 @@ const Worktracker: React.FC = () => {
     const isQualityControlForTask = (task: Task) => {
         return task.qualityControl?.id === user?.id;
     };
-
-    const filteredAndSortedTasks = tasks
-        .filter(task => {
-            const matchesSearch = 
-                task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (task.qualityControl && 
-                    `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                task.branch.name.toLowerCase().includes(searchTerm.toLowerCase());
-            
-            const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
-            
-            return matchesSearch && matchesStatus;
-        })
-        .sort((a, b) => {
-            let aValue: any = a[sortConfig.key as keyof Task];
-            let bValue: any = b[sortConfig.key as keyof Task];
-
-            // Handle nested properties
-            if (sortConfig.key === 'responsible.firstName') {
-                aValue = a.responsible.firstName;
-                bValue = b.responsible.firstName;
-            } else if (sortConfig.key === 'qualityControl.firstName') {
-                aValue = a.qualityControl?.firstName || '';
-                bValue = b.qualityControl?.firstName || '';
-            } else if (sortConfig.key === 'branch.name') {
-                aValue = a.branch.name;
-                bValue = b.branch.name;
-            }
-
-            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-            return 0;
-        });
 
     const renderStatusButtons = (task: Task): JSX.Element[] => {
         const buttons: JSX.Element[] = [];
@@ -257,31 +220,67 @@ const Worktracker: React.FC = () => {
         return buttons;
     };
 
-    if (loading) return <div className="p-4">Lädt...</div>;
-    if (error) return <div className="p-4 text-red-600">{error}</div>;
+    const filteredAndSortedTasks = tasks
+        .filter(task => {
+            const matchesSearch = 
+                task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                (task.qualityControl && 
+                    `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                task.branch.name.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
+            
+            return matchesSearch && matchesStatus;
+        })
+        .sort((a, b) => {
+            let aValue: any = a[sortConfig.key as keyof Task];
+            let bValue: any = b[sortConfig.key as keyof Task];
+
+            if (sortConfig.key === 'responsible.firstName') {
+                aValue = a.responsible.firstName;
+                bValue = b.responsible.firstName;
+            } else if (sortConfig.key === 'qualityControl.firstName') {
+                aValue = a.qualityControl?.firstName || '';
+                bValue = b.qualityControl?.firstName || '';
+            } else if (sortConfig.key === 'branch.name') {
+                aValue = a.branch.name;
+                bValue = b.branch.name;
+            }
+
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            return 0;
+        });
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <CreateTaskModal 
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-                onTaskCreated={fetchTasks}
-            />
-            
-            {selectedTask && (
-                <EditTaskModal
-                    isOpen={isEditModalOpen}
-                    onClose={() => {
-                        setIsEditModalOpen(false);
-                        setSelectedTask(null);
-                    }}
-                    onTaskUpdated={fetchTasks}
-                    task={selectedTask}
-                />
-            )}
-            
             <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+                {/* Zeiterfassung */}
+                <div className="mb-8">
+                    <WorktimeTracker />
+                </div>
+
+                {/* Tasks */}
                 <div className="border rounded-lg bg-white">
+                    <CreateTaskModal 
+                        isOpen={isCreateModalOpen}
+                        onClose={() => setIsCreateModalOpen(false)}
+                        onTaskCreated={fetchTasks}
+                    />
+                    
+                    {selectedTask && (
+                        <EditTaskModal
+                            isOpen={isEditModalOpen}
+                            onClose={() => {
+                                setIsEditModalOpen(false);
+                                setSelectedTask(null);
+                            }}
+                            onTaskUpdated={fetchTasks}
+                            task={selectedTask}
+                        />
+                    )}
+                    
                     <div className="p-4 border-b bg-gray-50">
                         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
                             <div className="flex flex-1 gap-4">
@@ -321,47 +320,30 @@ const Worktracker: React.FC = () => {
                         </div>
                     </div>
 
+                    {/* Task-Tabelle */}
                     <div className="overflow-x-auto">
-                        <table className="w-full table-fixed divide-y divide-gray-200">
+                        <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th 
-                                        className="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                                        onClick={() => handleSort('title')}
-                                    >
-                                        Titel {sortConfig.key === 'title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Titel
                                     </th>
-                                    <th 
-                                        className="w-1/8 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                                        onClick={() => handleSort('status')}
-                                    >
-                                        Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Status
                                     </th>
-                                    <th 
-                                        className="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                                        onClick={() => handleSort('responsible.firstName')}
-                                    >
-                                        Verantwortlich {sortConfig.key === 'responsible.firstName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Verantwortlich
                                     </th>
-                                    <th 
-                                        className="w-1/6 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                                        onClick={() => handleSort('qualityControl.firstName')}
-                                    >
-                                        Qualitätskontrolle {sortConfig.key === 'qualityControl.firstName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Qualitätskontrolle
                                     </th>
-                                    <th 
-                                        className="w-1/8 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                                        onClick={() => handleSort('branch.name')}
-                                    >
-                                        Niederlassung {sortConfig.key === 'branch.name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Niederlassung
                                     </th>
-                                    <th 
-                                        className="w-1/8 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
-                                        onClick={() => handleSort('dueDate')}
-                                    >
-                                        Fälligkeit {sortConfig.key === 'dueDate' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Fälligkeit
                                     </th>
-                                    <th className="w-1/8 px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Aktionen
                                     </th>
                                 </tr>
@@ -414,6 +396,11 @@ const Worktracker: React.FC = () => {
                             </tbody>
                         </table>
                     </div>
+                </div>
+
+                {/* Zeiterfassungs-Statistiken */}
+                <div className="mt-8">
+                    <WorktimeStats />
                 </div>
             </div>
         </div>

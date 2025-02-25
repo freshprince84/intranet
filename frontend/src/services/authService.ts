@@ -3,12 +3,12 @@ import axios from 'axios';
 const API_URL = 'http://localhost:5000/api';
 
 interface LoginData {
-  email: string;
+  username: string;
   password: string;
 }
 
 interface RegisterData extends LoginData {
-  username: string;
+  email: string;
   first_name: string;
   last_name: string;
 }
@@ -19,8 +19,16 @@ interface AuthResponse {
     id: number;
     username: string;
     email: string;
-    first_name: string;
-    last_name: string;
+    firstName: string;
+    lastName: string;
+    roles: Array<{
+      id: number;
+      name: string;
+      permissions: Array<{
+        page: string;
+        accessLevel: string;
+      }>;
+    }>;
   };
   message: string;
 }

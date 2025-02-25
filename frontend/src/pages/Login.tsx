@@ -6,7 +6,7 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login, user } = useAuth();
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   });
   const [error, setError] = useState('');
@@ -32,7 +32,7 @@ const Login: React.FC = () => {
     setError('');
     setLoading(true);
     try {
-      await login(formData.email, formData.password);
+      await login(formData.username, formData.password);
       console.log('Login erfolgreich, leite weiter zum Dashboard');
       navigate('/dashboard');
     } catch (err) {
@@ -50,14 +50,14 @@ const Login: React.FC = () => {
         {error && <p className="text-red-500 text-center">{error}</p>}
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              E-Mail
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+              Benutzername
             </label>
             <input
-              type="email"
-              name="email"
-              id="email"
-              value={formData.email}
+              type="text"
+              name="username"
+              id="username"
+              value={formData.username}
               onChange={handleChange}
               required
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
