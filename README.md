@@ -205,3 +205,69 @@ Bei jeder Neuinitialisierung der Datenbank werden automatisch folgende Einträge
 - **API-Routen**: Korrektur der Routen-Konfiguration für `/api/worktime` zur Vermeidung von 404-Fehlern
 - **Frontend-API-Pfade**: Korrektur der API-Pfade in WorktimeStats.tsx von `/api/worktimes/stats` und `/api/worktimes/export` zu `/api/worktime/stats` und `/api/worktime/export` (Singular statt Plural)
 - **TypeScript-Migration**: Alle Controller, Routen, Middleware und Validierungen wurden von JavaScript zu TypeScript migriert
+- **Zeiterfassung über Mitternacht**: Korrektur der Berechnung von Arbeitszeiten, die über Mitternacht gehen, um negative Zeitwerte zu vermeiden
+- **Arbeitszeitstatistik**: Verbesserung der Berechnung und Anzeige von Arbeitszeiten in der wöchentlichen Statistik
+- **Zeiterfassungs-Modal**: Anzeige der Gesamtarbeitszeit des Tages und Integration der aktiven Zeiterfassung in die Tagesansicht
+
+## Systemanforderungen
+
+### Mindestanforderungen Server
+- **Betriebssystem**: Linux (Ubuntu 20.04 LTS oder höher), Windows Server 2019 oder höher
+- **CPU**: 2 Kerne, 2.0 GHz oder höher
+- **RAM**: 4 GB
+- **Festplatte**: 20 GB SSD
+- **Netzwerk**: 100 Mbit/s
+
+### Empfohlene Konfiguration Server
+- **Betriebssystem**: Linux (Ubuntu 22.04 LTS)
+- **CPU**: 4 Kerne, 2.5 GHz oder höher
+- **RAM**: 8 GB
+- **Festplatte**: 40 GB SSD
+- **Netzwerk**: 1 Gbit/s
+
+### Software-Voraussetzungen
+- **Node.js**: Version 16.x oder höher
+- **PostgreSQL**: Version 13 oder höher
+- **npm**: Version 7 oder höher
+- **Git**: Für Deployment und Updates
+
+### Client-Anforderungen
+- **Browser**: Chrome 90+, Firefox 90+, Edge 90+, Safari 14+
+- **Bildschirmauflösung**: Mindestens 1280x720
+- **Internetverbindung**: Mindestens 10 Mbit/s
+
+### Skalierbarkeit
+Die Anwendung ist für kleine bis mittelgroße Teams (5-50 Benutzer) optimiert. Bei größeren Teams sollten folgende Anpassungen vorgenommen werden:
+- Erhöhung der Serverressourcen (insbesondere RAM)
+- Implementierung von Caching-Mechanismen
+- Optimierung der Datenbankabfragen
+- Eventuell Aufteilung in Microservices bei sehr großen Teams (100+ Benutzer)
+
+## Zeiterfassung - Verbesserungen
+
+### Berechnung von Arbeitszeiten über Mitternacht
+- **Problem**: Die ursprüngliche Implementierung berechnete Arbeitszeiten nur korrekt innerhalb eines Tages
+- **Lösung**: Überarbeitung der Zeitberechnung in `worktimeController.ts`, um Zeitspannen über Mitternacht korrekt zu erfassen
+- **Details**:
+  - Verwendung von Millisekunden-Differenz statt direkter Stundenberechnung
+  - Prüfung auf negative Zeitwerte und entsprechende Fehlerbehandlung
+  - Korrekte Filterung von Zeiteinträgen, die über Mitternacht gehen
+
+### Arbeitszeitstatistik
+- **Verbesserungen**:
+  - Korrekte Berechnung der wöchentlichen Arbeitszeiten auch bei Einträgen über Mitternacht
+  - Anzeige aller Wochentage in der Statistik, auch wenn keine Arbeitszeit erfasst wurde
+  - Formatierung der Stundenwerte auf eine Dezimalstelle für bessere Lesbarkeit
+  - Optimierung des Exportieren-Buttons (nur Icon statt Text)
+
+### Zeiterfassungs-Modal
+- **Neue Funktionen**:
+  - Anzeige der Gesamtarbeitszeit des ausgewählten Tages
+  - Integration der aktiven Zeiterfassung in die Tagesansicht (grün hervorgehoben)
+  - Berechnung der Gesamtzeit inklusive der aktuell laufenden Zeiterfassung
+  - Verbesserte Fehlerbehandlung bei negativen Zeitwerten
+
+### Allgemeine Verbesserungen
+- Konsistente Formatierung von Datum und Uhrzeit in allen Komponenten
+- Verbesserte Filterung von Zeiteinträgen nach Datum im Backend
+- Optimierte Benutzeroberfläche mit klaren visuellen Indikatoren für aktive Zeiterfassungen

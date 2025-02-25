@@ -88,9 +88,12 @@ const WorktimeTracker: React.FC = () => {
                     // Initial berechnete Zeit anzeigen
                     const now = new Date();
                     const diff = now.getTime() - startTimeDate.getTime();
-                    const hours = Math.floor(diff / (1000 * 60 * 60));
-                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                    
+                    // Berechnung mit Millisekunden, um negative Werte zu vermeiden
+                    const totalSeconds = Math.floor(diff / 1000);
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = totalSeconds % 60;
                     
                     setElapsedTime(
                         `${hours.toString().padStart(2, '0')}:${minutes
@@ -134,15 +137,18 @@ const WorktimeTracker: React.FC = () => {
 
     // Timer-Logik
     useEffect(() => {
-        let intervalId: NodeJS.Timeout;
+        let intervalId: number;
 
         if (isTracking && startTime) {
-            intervalId = setInterval(() => {
+            intervalId = window.setInterval(() => {
                 const now = new Date();
                 const diff = now.getTime() - startTime.getTime();
-                const hours = Math.floor(diff / (1000 * 60 * 60));
-                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                // Berechnung mit Millisekunden, um negative Werte zu vermeiden
+                const totalSeconds = Math.floor(diff / 1000);
+                const hours = Math.floor(totalSeconds / 3600);
+                const minutes = Math.floor((totalSeconds % 3600) / 60);
+                const seconds = totalSeconds % 60;
 
                 setElapsedTime(
                     `${hours.toString().padStart(2, '0')}:${minutes
@@ -459,6 +465,20 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
     const [worktimes, setWorktimes] = useState<any[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(true);
+    const [activeWorktime, setActiveWorktime] = useState<any | null>(null);
+    const [totalDuration, setTotalDuration] = useState<string>('0h 0m');
+
+    const formatTime = (dateString: string) => {
+        if (!dateString) return '-';
+        const date = new Date(dateString);
+        return date.toLocaleString('de-DE', { 
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit', 
+            minute: '2-digit' 
+        });
+    };
 
     const fetchWorktimes = useCallback(async () => {
         try {
@@ -471,18 +491,31 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
             }
             
             // Verwende Axios mit explizitem Authorization Header
-            const response = await axios.get(API_ENDPOINTS.WORKTIME.BASE, {
+            const response = await axios.get(`${API_ENDPOINTS.WORKTIME.BASE}?date=${selectedDate}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
             setWorktimes(response.data);
+
+            // Aktive Zeiterfassung abrufen
+            const activeResponse = await axios.get(API_ENDPOINTS.WORKTIME.ACTIVE, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            if (activeResponse.data && activeResponse.data.active === true) {
+                setActiveWorktime(activeResponse.data);
+            } else {
+                setActiveWorktime(null);
+            }
         } catch (error) {
             console.error('Fehler:', error);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [selectedDate]);
 
     useEffect(() => {
         if (isOpen) {
@@ -490,23 +523,93 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
         }
     }, [isOpen, fetchWorktimes]);
 
-    const formatTime = (dateString: string) => {
-        if (!dateString) return '-';
-        const date = new Date(dateString);
-        return date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-    };
+    // Berechne die Gesamtdauer aller Zeiteinträge für den Tag
+    useEffect(() => {
+        let totalMinutes = 0;
+        
+        // Berechne die Dauer der abgeschlossenen Zeiteinträge
+        worktimes.forEach(worktime => {
+            if (worktime.endTime) {
+                const start = new Date(worktime.startTime);
+                const end = new Date(worktime.endTime);
+                const diff = end.getTime() - start.getTime();
+                
+                if (diff > 0) {
+                    totalMinutes += Math.floor(diff / (1000 * 60));
+                }
+            }
+        });
+        
+        // Füge die aktive Zeiterfassung hinzu, wenn sie für den ausgewählten Tag relevant ist
+        if (activeWorktime) {
+            const activeStart = new Date(activeWorktime.startTime);
+            const activeStartDay = activeStart.toISOString().split('T')[0];
+            const selectedDay = selectedDate;
+            
+            // Prüfe, ob die aktive Zeiterfassung am ausgewählten Tag begonnen hat
+            if (activeStartDay === selectedDay) {
+                const now = new Date();
+                const diff = now.getTime() - activeStart.getTime();
+                
+                if (diff > 0) {
+                    totalMinutes += Math.floor(diff / (1000 * 60));
+                }
+            }
+        }
+        
+        // Formatiere die Gesamtdauer
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        setTotalDuration(`${hours}h ${minutes}m`);
+    }, [worktimes, activeWorktime, selectedDate]);
 
     const calculateDuration = (startTime: string, endTime: string | null): string => {
         if (!endTime) return '-';
         
         const start = new Date(startTime);
         const end = new Date(endTime);
+        
+        // Berechnung mit Millisekunden, um negative Werte zu vermeiden
         const diff = end.getTime() - start.getTime();
         
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        if (diff < 0) {
+            console.error('Negative Zeitdifferenz erkannt:', { startTime, endTime, diff });
+            return 'Fehler: Negative Zeit';
+        }
+        
+        // Umrechnung in Stunden und Minuten
+        const totalMinutes = Math.floor(diff / (1000 * 60));
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
         
         return `${hours}h ${minutes}m`;
+    };
+
+    // Berechne die Dauer der aktiven Zeiterfassung
+    const calculateActiveDuration = (): string => {
+        if (!activeWorktime) return '-';
+        
+        const start = new Date(activeWorktime.startTime);
+        const now = new Date();
+        
+        // Berechnung mit Millisekunden
+        const diff = now.getTime() - start.getTime();
+        
+        // Umrechnung in Stunden und Minuten
+        const totalMinutes = Math.floor(diff / (1000 * 60));
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        
+        return `${hours}h ${minutes}m (läuft)`;
+    };
+
+    // Prüfe, ob die aktive Zeiterfassung am ausgewählten Tag begonnen hat
+    const isActiveWorktimeRelevant = (): boolean => {
+        if (!activeWorktime) return false;
+        
+        const activeStart = new Date(activeWorktime.startTime);
+        const activeStartDay = activeStart.toISOString().split('T')[0];
+        return activeStartDay === selectedDate;
     };
 
     if (!isOpen) return null;
@@ -537,7 +640,7 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
                         <div className="flex justify-center items-center h-32">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                         </div>
-                    ) : worktimes.length === 0 ? (
+                    ) : worktimes.length === 0 && !isActiveWorktimeRelevant() ? (
                         <div className="p-4 text-center text-gray-500">
                             Keine Zeiteinträge für diesen Tag gefunden.
                         </div>
@@ -546,10 +649,10 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Start
+                                        Datum & Start
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Ende
+                                        Datum & Ende
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Dauer
@@ -576,7 +679,38 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
                                         </td>
                                     </tr>
                                 ))}
+                                
+                                {/* Aktive Zeiterfassung anzeigen, wenn sie für den ausgewählten Tag relevant ist */}
+                                {isActiveWorktimeRelevant() && (
+                                    <tr className="bg-green-50 hover:bg-green-100">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {formatTime(activeWorktime.startTime)}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            <span className="italic">Aktiv</span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium text-green-600">
+                                            {calculateActiveDuration()}
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {activeWorktime.branch?.name || 'Unbekannt'}
+                                        </td>
+                                    </tr>
+                                )}
                             </tbody>
+                            
+                            {/* Gesamtdauer des Tages */}
+                            <tfoot className="bg-gray-100">
+                                <tr>
+                                    <td colSpan={2} className="px-6 py-3 text-right text-sm font-medium text-gray-700">
+                                        Gesamtdauer des Tages:
+                                    </td>
+                                    <td className="px-6 py-3 text-left text-sm font-bold text-gray-900">
+                                        {totalDuration}
+                                    </td>
+                                    <td></td>
+                                </tr>
+                            </tfoot>
                         </table>
                     )}
                 </div>
