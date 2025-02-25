@@ -28,6 +28,17 @@ sudo systemctl start postgresql
 sudo systemctl enable postgresql
 sudo systemctl status postgresql | grep "active (running)" || { echo -e "${RED}PostgreSQL läuft nicht${NC}"; exit 1; }
 
+# PostgreSQL-Authentifizierung auf md5 setzen
+sudo sed -i 's/local   all             postgres                                peer/local   all             postgres                                md5/' /etc/postgresql/16/main/pg_hba.conf
+sudo systemctl restart postgresql
+
+# Teste die Verbindung
+if ! psql -U postgres -d intranet -h localhost -c "\q" 2>/dev/null; then
+    echo -e "${RED}PostgreSQL-Verbindung fehlgeschlagen. Überprüfe Passwort und Konfiguration.${NC}"
+    exit 1
+fi
+
+
 # 4. PostgreSQL konfigurieren (Benutzer: postgres, Passwort: Postgres123!, DB: intranet)
 echo "Konfiguriere PostgreSQL..."
 sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'Postgres123!';" || { echo -e "${RED}Passwortänderung fehlgeschlagen${NC}"; exit 1; }
