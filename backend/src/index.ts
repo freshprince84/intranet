@@ -1,11 +1,11 @@
 import app from './app';
-import { PrismaClient } from '@prisma/client';
+import dotenv from 'dotenv';
 
-const prisma = new PrismaClient();
+dotenv.config();
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`Server läuft auf Port ${PORT}`);
-    console.log(`API erreichbar unter: http://localhost:${PORT}/api`);
-    console.log('Alle Routen registriert und aktiv.');
+const PORT = Number(process.env.PORT) || 5000;
+const HOST = '0.0.0.0';
+
+app.listen(PORT, HOST, () => {
+  console.log(`API läuft auf http://${HOST}:${PORT}/api`);
 }); 

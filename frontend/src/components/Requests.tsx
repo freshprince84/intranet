@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../hooks/useAuth.tsx';
 import CreateRequestModal from './CreateRequestModal.tsx';
 import EditRequestModal from './EditRequestModal.tsx';
+import { API_URL } from '../config/api.ts';
 import { 
   PlusIcon,
   CheckIcon, 
@@ -55,7 +56,7 @@ const Requests: React.FC = () => {
 
   const fetchRequests = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/requests');
+      const response = await axios.get(`${API_URL}/requests`);
       setRequests(response.data);
       setError(null);
       setLoading(false);
@@ -108,7 +109,7 @@ const Requests: React.FC = () => {
         return;
       }
 
-      await axios.put(`http://localhost:5000/api/requests/${requestId}`, 
+      await axios.put(`${API_URL}/requests/${requestId}`, 
         { 
           status: newStatus,
           create_todo: currentRequest.createTodo

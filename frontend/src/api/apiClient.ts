@@ -1,6 +1,5 @@
 import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
+import { API_URL } from '../config/api.ts';
 
 // Konfiguriere axios für alle Requests
 const apiClient = axios.create({
@@ -14,19 +13,12 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    console.log('Verwende Token für API-Anfrage:', token ? 'Token vorhanden' : 'Kein Token');
-    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      console.warn('Kein Authentifizierungs-Token gefunden');
     }
-    
-    console.log('API-Anfrage wird gesendet an:', config.url, 'mit Methode:', config.method);
     return config;
   },
   (error) => {
-    console.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );
@@ -35,14 +27,6 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Response Error:', error);
-    if (error.response) {
-      console.error('Error Details:', {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        data: error.response.data
-      });
-    }
     return Promise.reject(error);
   }
 );

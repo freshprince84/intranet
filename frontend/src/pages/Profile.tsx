@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { UserCircleIcon } from '@heroicons/react/24/outline';
-
-const API_URL = 'http://localhost:5000/api';
+import { API_URL } from '../config/api.ts';
 
 interface UserProfile {
   id: number;

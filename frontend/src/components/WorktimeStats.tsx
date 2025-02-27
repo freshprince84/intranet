@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, getWeek, getYear } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ChartBarIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import { API_URL } from '../config/api.ts';
 
 interface WorktimeStats {
     totalHours: number;
@@ -33,7 +34,7 @@ const WorktimeStats: React.FC = () => {
     const fetchStats = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/worktime/stats?week=${selectedWeekDate}`, {
+            const response = await fetch(`${API_URL}/worktime/stats?week=${selectedWeekDate}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -57,7 +58,7 @@ const WorktimeStats: React.FC = () => {
     const handleExport = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/worktime/export?week=${selectedWeekDate}`, {
+            const response = await fetch(`${API_URL}/worktime/export?week=${selectedWeekDate}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

@@ -18,7 +18,10 @@ const notifications_1 = __importDefault(require("./routes/notifications"));
 const app = (0, express_1.default)();
 // CORS-Konfiguration
 app.use((0, cors_1.default)({
-    origin: 'http://localhost:3000',
+    origin: [
+        'http://localhost:3000',
+        'http://192.168.1.1:3000' // WLAN IP
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization']
