@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
-import { Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, BellIcon, UserCircleIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
 import NotificationSettingsComponent from '../components/NotificationSettings.tsx';
 
 const Settings: React.FC = () => {
@@ -13,6 +13,8 @@ const Settings: React.FC = () => {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // Tab-Zustand für Navigation zwischen den Einstellungen
+    const [activeTab, setActiveTab] = useState<'personal' | 'notifications' | 'system'>('personal');
 
     // Debug-Ausgaben
     useEffect(() => {
@@ -36,6 +38,12 @@ const Settings: React.FC = () => {
             setPreviewUrl(URL.createObjectURL(file));
             setError(null);
         }
+    };
+
+    // Tab-Wechsel Handler - Fehler beim Wechsel zurücksetzen
+    const handleTabChange = (tab: 'personal' | 'notifications' | 'system') => {
+        setActiveTab(tab);
+        setError(null);
     };
 
     const handleUpload = async () => {
@@ -101,96 +109,136 @@ const Settings: React.FC = () => {
 
     return (
         <div className="p-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-                <div className="flex items-center mb-4">
-                    <Cog6ToothIcon className="h-6 w-6 mr-2 dark:text-white" />
-                    <h1 className="text-2xl font-bold dark:text-white">Einstellungen</h1>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+                {/* Header mit Icon */}
+                <div className="flex items-center mb-6">
+                    <Cog6ToothIcon className="h-6 w-6 mr-2" />
+                    <h2 className="text-xl font-semibold">Einstellungen</h2>
                 </div>
-            </div>
-            
-            {/* Persönliche Einstellungen - für alle Benutzer sichtbar */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-                <h2 className="text-xl font-semibold mb-4 dark:text-white">Persönliche Einstellungen</h2>
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-lg font-medium dark:text-white">Dark Mode</h3>
-                            <p className="text-gray-600 dark:text-gray-400">Dunkles Erscheinungsbild aktivieren</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                className="sr-only peer"
-                                checked={isDarkMode}
-                                onChange={toggleDarkMode}
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-            {/* Benachrichtigungseinstellungen */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
-                <h2 className="text-xl font-semibold p-6 border-b border-gray-200 dark:border-gray-700 dark:text-white">
-                    Benachrichtigungseinstellungen
-                </h2>
-                <div className="p-0">
-                    <NotificationSettingsComponent />
-                </div>
-            </div>
-
-            {/* Allgemeine Einstellungen - temporär für alle sichtbar */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
-                <h2 className="text-xl font-semibold mb-4 dark:text-white">Logo Upload</h2>
-                <div className="space-y-4">
-                    <div className="flex items-center space-x-4">
-                        <input
-                            type="file"
-                            accept="image/png,image/jpeg"
-                            onChange={handleFileSelect}
-                            className="block w-full text-sm text-gray-500 dark:text-gray-400
-                                file:mr-4 file:py-2 file:px-4
-                                file:rounded-full file:border-0
-                                file:text-sm file:font-semibold
-                                file:bg-blue-50 file:text-blue-700
-                                dark:file:bg-blue-900 dark:file:text-blue-300
-                                hover:file:bg-blue-100 dark:hover:file:bg-blue-800"
-                        />
+                
+                {/* Tabs für Navigation */}
+                <div className="border-b border-gray-200 mb-6">
+                    <nav className="-mb-px flex space-x-8">
                         <button
-                            onClick={handleUpload}
-                            disabled={!selectedFile || isUploading}
-                            className={`px-4 py-2 rounded-md text-white font-medium
-                                ${!selectedFile || isUploading
-                                    ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
-                                    : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'}`}
+                            className={`${
+                                activeTab === 'personal'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+                            onClick={() => handleTabChange('personal')}
                         >
-                            {isUploading ? 'Wird hochgeladen...' : 'Hochladen'}
+                            <UserCircleIcon className="h-4 w-4 mr-2" />
+                            Persönlich
                         </button>
-                    </div>
-
-                    {error && (
-                        <div className="text-red-600 dark:text-red-400 text-sm">
-                            {error}
-                        </div>
-                    )}
-
-                    {previewUrl && (
-                        <div className="mt-4">
-                            <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Vorschau:</p>
-                            <img
-                                src={previewUrl}
-                                alt="Logo Vorschau"
-                                className="max-w-xs h-auto rounded-lg shadow-sm"
-                            />
-                        </div>
-                    )}
-
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                        <p>Erlaubte Dateitypen: PNG, JPEG</p>
-                        <p>Maximale Dateigröße: 5MB</p>
-                    </div>
+                        <button
+                            className={`${
+                                activeTab === 'notifications'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+                            onClick={() => handleTabChange('notifications')}
+                        >
+                            <BellIcon className="h-4 w-4 mr-2" />
+                            Benachrichtigungen
+                        </button>
+                        <button
+                            className={`${
+                                activeTab === 'system'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+                            onClick={() => handleTabChange('system')}
+                        >
+                            <ComputerDesktopIcon className="h-4 w-4 mr-2" />
+                            System
+                        </button>
+                    </nav>
                 </div>
+
+                {/* Tab-Inhalte */}
+                {activeTab === 'personal' && (
+                    <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-medium dark:text-white">Dark Mode</h3>
+                                <p className="text-gray-600 dark:text-gray-400">Dunkles Erscheinungsbild aktivieren</p>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={isDarkMode}
+                                    onChange={toggleDarkMode}
+                                />
+                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'notifications' && (
+                    <div className="space-y-4">
+                        <div className="p-0 -mt-4">
+                            <NotificationSettingsComponent />
+                        </div>
+                    </div>
+                )}
+
+                {activeTab === 'system' && (
+                    <div className="space-y-4">
+                        <div>
+                            <h3 className="text-lg font-medium mb-2 dark:text-white">Logo hochladen</h3>
+                            <p className="text-gray-600 dark:text-gray-400 mb-4">Laden Sie ein Logo für Ihr Unternehmen hoch</p>
+                        </div>
+                        
+                        <div className="flex items-center space-x-4">
+                            <input
+                                type="file"
+                                accept="image/png,image/jpeg"
+                                onChange={handleFileSelect}
+                                className="block w-full text-sm text-gray-500 dark:text-gray-400
+                                    file:mr-4 file:py-2 file:px-4
+                                    file:rounded-full file:border-0
+                                    file:text-sm file:font-semibold
+                                    file:bg-blue-50 file:text-blue-700
+                                    dark:file:bg-blue-900 dark:file:text-blue-300
+                                    hover:file:bg-blue-100 dark:hover:file:bg-blue-800"
+                            />
+                            <button
+                                onClick={handleUpload}
+                                disabled={!selectedFile || isUploading}
+                                className={`px-4 py-2 rounded-md text-white font-medium
+                                    ${!selectedFile || isUploading
+                                        ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'}`}
+                            >
+                                {isUploading ? 'Wird hochgeladen...' : 'Hochladen'}
+                            </button>
+                        </div>
+
+                        {error && (
+                            <div className="text-red-600 dark:text-red-400 text-sm mt-2">
+                                {error}
+                            </div>
+                        )}
+
+                        {previewUrl && (
+                            <div className="mt-4">
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Vorschau:</p>
+                                <img
+                                    src={previewUrl}
+                                    alt="Logo Vorschau"
+                                    className="max-w-xs h-auto rounded-lg shadow-sm"
+                                />
+                            </div>
+                        )}
+
+                        <div className="text-sm text-gray-500 dark:text-gray-400 mt-4">
+                            <p>Erlaubte Dateitypen: PNG, JPEG</p>
+                            <p>Maximale Dateigröße: 5MB</p>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -265,6 +265,46 @@ export const notificationApi = {
 
 Die wichtigsten Komponenten für Benachrichtigungen sind:
 
+#### NotificationSettings
+
+Diese Komponente ermöglicht die Verwaltung der Benachrichtigungseinstellungen mit folgenden Funktionen:
+
+- **Globale Steuerung**:
+  - Ein Hauptschalter zum Ein-/Ausschalten aller Benachrichtigungen
+  - Sofortige Speicherung bei Änderungen
+  - Optimistische Updates mit Fehlerbehandlung
+
+- **Kategorien**:
+  - Aufgaben
+  - Anfragen
+  - Benutzerverwaltung
+  - Rollen
+  - Arbeitszeit
+
+- **Pro Kategorie**:
+  - Ein "Alle" Toggle zum Ein-/Ausschalten aller Einstellungen der Kategorie
+  - Einzelne Toggles für spezifische Ereignisse (erstellen, aktualisieren, löschen, etc.)
+  - Automatische Aktualisierung des Kategorie-Toggles basierend auf Untereinstellungen
+
+- **Benutzerfreundlichkeit**:
+  - Direkte Speicherung ohne separaten Speichern-Button
+  - Deaktivierung der Schalter während des Speichervorgangs
+  - Fehlerrückmeldung bei fehlgeschlagenen Aktualisierungen
+  - Automatischer Rollback bei Fehlern
+
+```typescript
+// Beispiel für die Verwendung der NotificationSettings-Komponente
+import NotificationSettings from '@/components/NotificationSettings';
+
+const SettingsPage = () => {
+  return (
+    <div>
+      <NotificationSettings />
+    </div>
+  );
+};
+```
+
 #### NotificationBell
 
 Diese Komponente zeigt einen Glocken-Button in der Navigationsleiste mit der Anzahl ungelesener Benachrichtigungen.

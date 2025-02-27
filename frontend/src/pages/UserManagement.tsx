@@ -41,8 +41,8 @@ const UserManagement: React.FC = () => {
         <div className="bg-white rounded-lg shadow p-6">
           {/* Header mit Icon */}
           <div className="flex items-center mb-6">
-            <UserGroupIcon className="h-6 w-6 text-gray-900 mr-2" />
-            <h1 className="text-2xl font-bold text-gray-900">Benutzerverwaltung</h1>
+            <UserGroupIcon className="h-6 w-6 mr-2" />
+            <h2 className="text-xl font-semibold">Benutzerverwaltung</h2>
           </div>
 
           {/* Tabs für Navigation */}

@@ -248,26 +248,34 @@ Die Anwendung umfasst ein umfassendes Benachrichtigungssystem, das Benutzer übe
 ### UserNotificationSettings-Modell
 - Ermöglicht benutzerspezifische Überschreibungen der systemweiten Einstellungen
 - Jeder Benutzer kann individuell entscheiden, welche Benachrichtigungen er erhalten möchte
-
-### Wichtige Beziehungen zwischen Feldern
-- `Notification.type` entspricht den Werten in der `NotificationType`-Enumeration
-- `Notification.relatedEntityType` beschreibt die Art der Aktion ('create', 'update', 'delete', 'status')
-- Diese Felder korrespondieren direkt mit den Einstellungen in `NotificationSettings` und `UserNotificationSettings`:
-  - Beispiel: Wenn `Notification.type` = 'task' und `relatedEntityType` = 'create' ist, wird die Benachrichtigung nur gesendet, wenn `taskCreate` in den Einstellungen auf `true` gesetzt ist
+- Neue Funktionalitäten in der Benutzeroberfläche:
+  - Globaler "Alle Benachrichtigungen" Toggle zum Ein-/Ausschalten aller Benachrichtigungen
+  - Pro Kategorie (Aufgaben, Anfragen, Benutzer, Rollen, Arbeitszeit) ein "Alle" Toggle
+  - Direkte Speicherung bei jeder Änderung ohne separaten Speichern-Button
+  - Optimistische Updates mit Fehlerbehandlung und Rollback bei Fehlern
 
 ### Best Practices bei der Integration
 
-1. **Feldnamen konsistent verwenden**: 
-   - Die Feldnamen in Frontend-Interfaces müssen exakt mit denen im Prisma-Schema übereinstimmen
-   - Beispiel: Verwenden Sie `taskCreate` (nicht `taskEnabled` oder ähnliches) im Frontend
+1. **Direkte Speicherung**:
+   - Jede Änderung wird sofort an den Server gesendet
+   - Optimistische Updates für bessere Benutzerfreundlichkeit
+   - Rollback bei Fehlern mit entsprechender Benachrichtigung
 
-2. **Typ-Beziehungen respektieren**:
-   - Jeder Wert in `NotificationType` korrespondiert mit einem bestimmten Set von Settings-Feldern
-   - Beispiel: `NotificationType.task` entspricht den Feldern `taskCreate`, `taskUpdate`, `taskDelete`, `taskStatusChange`
+2. **Kategorien-Management**:
+   - Gruppierung von Einstellungen in logische Kategorien
+   - Möglichkeit zum Ein-/Ausschalten aller Einstellungen einer Kategorie
+   - Konsistente Statusanzeige basierend auf Untereinstellungen
 
-3. **Datenmodellierung beim Frontend-Zugriff**:
-   - Bei der Arbeit mit Benachrichtigungen immer Array-Sicherheit implementieren
-   - Verwenden Sie Fallback-Werte für den Fall, dass Benachrichtigungen undefiniert sind
+3. **Fehlerbehandlung**:
+   - Robuste Fehlerbehandlung bei Netzwerkproblemen
+   - Benutzerfreundliche Fehlermeldungen
+   - Automatischer Rollback bei fehlgeschlagenen Aktualisierungen
+
+4. **UI/UX-Richtlinien**:
+   - Klare visuelle Hierarchie mit Hauptschalter und Kategorieschaltern
+   - Konsistente Darstellung von Schaltern und Labels
+   - Sofortiges visuelles Feedback bei Änderungen
+   - Deaktivierung der Schalter während des Speichervorgangs
 
 ## Rolle und Berechtigungen
 - Ein Benutzer erhält bei der Anmeldung die zuletzt verwendete Rolle (Feld `lastUsed` in `UserRole`).

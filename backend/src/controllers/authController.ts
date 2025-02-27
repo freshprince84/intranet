@@ -52,9 +52,9 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
         const { username, email, password, first_name, last_name } = req.body;
         console.log('Register-Versuch für:', { username, email, first_name, last_name });
         
-        // Finde die Hamburger-Rolle
-        const hamburgerRole = await prisma.role.findFirst({
-            where: { name: 'hamburger' }
+        // Finde die Hamburger-Rolle mit ID 999
+        const hamburgerRole = await prisma.role.findUnique({
+            where: { id: 999 }
         });
 
         if (!hamburgerRole) {

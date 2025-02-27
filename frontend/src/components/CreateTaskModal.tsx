@@ -30,6 +30,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
     const [users, setUsers] = useState<User[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -109,22 +110,43 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-
-        if (!title || !responsibleId || !branchId) {
-            setError('Bitte füllen Sie alle erforderlichen Felder aus');
-            return;
-        }
+        setLoading(true);
 
         try {
+            console.log('Task wird erstellt mit Daten:', { title, description, responsibleId, qualityControlId, branchId, dueDate });
+
+            if (!title || !responsibleId || !branchId) {
+                setError('Bitte füllen Sie alle erforderlichen Felder aus');
+                setLoading(false);
+                return;
+            }
+
             const token = localStorage.getItem('token');
-            await axios.post('http://localhost:5000/api/tasks', 
+            if (!token) {
+                setError('Nicht authentifiziert');
+                setLoading(false);
+                return;
+            }
+
+            // Validiere die IDs
+            const responsible = Number(responsibleId);
+            const branch = Number(branchId);
+            const qualityControl = qualityControlId ? Number(qualityControlId) : null;
+
+            if (isNaN(responsible) || isNaN(branch) || (qualityControlId && isNaN(qualityControl!))) {
+                setError('Ungültige ID-Werte für Verantwortlichen, Qualitätskontrolle oder Niederlassung');
+                setLoading(false);
+                return;
+            }
+
+            const response = await axios.post('http://localhost:5000/api/tasks', 
                 {
                     title,
                     description: description || null,
                     status: 'open',
-                    responsibleId: Number(responsibleId),
-                    qualityControlId: qualityControlId ? Number(qualityControlId) : null,
-                    branchId: Number(branchId),
+                    responsibleId: responsible,
+                    qualityControlId: qualityControl,
+                    branchId: branch,
                     dueDate: dueDate || null
                 },
                 {
@@ -135,6 +157,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
                 }
             );
 
+            console.log('Task erfolgreich erstellt:', response.data);
             onTaskCreated();
             handleClose();
         } catch (err) {
@@ -144,6 +167,8 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
             } else {
                 setError('Ein unerwarteter Fehler ist aufgetreten');
             }
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -293,8 +318,9 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
                             <button
                                 type="submit"
                                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                                disabled={loading}
                             >
-                                Erstellen
+                                {loading ? 'Wird erstellt...' : 'Erstellen'}
                             </button>
                         </div>
                     </form>
