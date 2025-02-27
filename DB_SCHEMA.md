@@ -248,16 +248,26 @@ Die Anwendung umfasst ein umfassendes Benachrichtigungssystem, das Benutzer übe
 ### UserNotificationSettings-Modell
 - Ermöglicht benutzerspezifische Überschreibungen der systemweiten Einstellungen
 - Jeder Benutzer kann individuell entscheiden, welche Benachrichtigungen er erhalten möchte
-- Null-Werte bedeuten, dass die systemweite Einstellung verwendet wird
 
-### NotificationType-Enum
-Kategorisiert Benachrichtigungen nach ihrem Ursprung:
-- `task`: Benachrichtigungen im Zusammenhang mit Aufgaben
-- `request`: Benachrichtigungen im Zusammenhang mit Anfragen
-- `user`: Benachrichtigungen im Zusammenhang mit Benutzerverwaltung
-- `role`: Benachrichtigungen im Zusammenhang mit Rollenverwaltung
-- `worktime`: Benachrichtigungen im Zusammenhang mit Zeiterfassung
-- `system`: Systembenachrichtigungen
+### Wichtige Beziehungen zwischen Feldern
+- `Notification.type` entspricht den Werten in der `NotificationType`-Enumeration
+- `Notification.relatedEntityType` beschreibt die Art der Aktion ('create', 'update', 'delete', 'status')
+- Diese Felder korrespondieren direkt mit den Einstellungen in `NotificationSettings` und `UserNotificationSettings`:
+  - Beispiel: Wenn `Notification.type` = 'task' und `relatedEntityType` = 'create' ist, wird die Benachrichtigung nur gesendet, wenn `taskCreate` in den Einstellungen auf `true` gesetzt ist
+
+### Best Practices bei der Integration
+
+1. **Feldnamen konsistent verwenden**: 
+   - Die Feldnamen in Frontend-Interfaces müssen exakt mit denen im Prisma-Schema übereinstimmen
+   - Beispiel: Verwenden Sie `taskCreate` (nicht `taskEnabled` oder ähnliches) im Frontend
+
+2. **Typ-Beziehungen respektieren**:
+   - Jeder Wert in `NotificationType` korrespondiert mit einem bestimmten Set von Settings-Feldern
+   - Beispiel: `NotificationType.task` entspricht den Feldern `taskCreate`, `taskUpdate`, `taskDelete`, `taskStatusChange`
+
+3. **Datenmodellierung beim Frontend-Zugriff**:
+   - Bei der Arbeit mit Benachrichtigungen immer Array-Sicherheit implementieren
+   - Verwenden Sie Fallback-Werte für den Fall, dass Benachrichtigungen undefiniert sind
 
 ## Rolle und Berechtigungen
 - Ein Benutzer erhält bei der Anmeldung die zuletzt verwendete Rolle (Feld `lastUsed` in `UserRole`).

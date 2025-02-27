@@ -451,3 +451,98 @@ Konfiguriere die Build- und Start-Skripte in `package.json`:
 - `GET /api/worktime/stats`: Statistiken abrufen
 - `GET /api/worktime/export`: Exportiert Zeiteinträge als Excel
 - `GET /api/worktime/active`: Prüft, ob aktuell eine Zeiterfassung läuft
+
+### Notifications
+- `GET /api/notifications`: Alle Benachrichtigungen abrufen
+- `GET /api/notifications/unread/count`: Anzahl ungelesener Benachrichtigungen
+- `GET /api/notifications/:id`: Benachrichtigungsdetails abrufen
+- `PATCH /api/notifications/:id/read`: Benachrichtigung als gelesen markieren
+- `PATCH /api/notifications/read-all`: Alle Benachrichtigungen als gelesen markieren
+- `DELETE /api/notifications/:id`: Benachrichtigung löschen
+- `DELETE /api/notifications`: Alle Benachrichtigungen löschen
+
+### Settings
+- `GET /api/settings/notifications`: System-weite Benachrichtigungseinstellungen abrufen
+- `PUT /api/settings/notifications`: System-weite Benachrichtigungseinstellungen aktualisieren
+- `GET /api/settings/notifications/user`: Benutzerspezifische Benachrichtigungseinstellungen abrufen
+- `PUT /api/settings/notifications/user`: Benutzerspezifische Benachrichtigungseinstellungen aktualisieren
+
+## 9. Spezielle Datenmodelle und Integrationen
+
+### Notifications-System
+
+Das Notifications-System verwendet folgende Komponenten:
+
+```typescript
+// Typen für Benachrichtigungen
+export interface NotificationData {
+  userId: number;
+  title: string;
+  message: string;
+  type: NotificationType;
+  relatedEntityId?: number;
+  relatedEntityType?: string;
+}
+
+// Benachrichtigungstypen
+export enum NotificationType {
+  task = 'task',
+  request = 'request',
+  user = 'user',
+  role = 'role',
+  worktime = 'worktime',
+  system = 'system'
+}
+```
+
+Die Benachrichtigungseinstellungen werden in der Settings-Tabelle gespeichert und enthalten folgende Felder:
+
+```typescript
+// Typen für Benachrichtigungseinstellungen
+export interface NotificationSettings {
+  taskCreate: boolean;
+  taskUpdate: boolean;
+  taskDelete: boolean;
+  taskStatusChange: boolean;
+  requestCreate: boolean;
+  requestUpdate: boolean;
+  requestDelete: boolean;
+  requestStatusChange: boolean;
+  userCreate: boolean;
+  userUpdate: boolean;
+  userDelete: boolean;
+  roleCreate: boolean;
+  roleUpdate: boolean;
+  roleDelete: boolean;
+  worktimeStart: boolean;
+  worktimeStop: boolean;
+}
+```
+
+### Wichtige Hinweise zur Integration
+
+1. **Feldbenennungen konsistent halten**: Achten Sie darauf, dass die Feldnamen zwischen Prisma-Schema und Frontend-Interfaces übereinstimmen. Verwenden Sie exakt dieselben Namen wie im Prisma-Schema definiert.
+
+2. **Typsicherheit gewährleisten**: Bei Änderungen am Datenbankschema müssen alle Interfaces im Frontend und Backend synchron aktualisiert werden.
+
+3. **API-Antworten robust verarbeiten**: Frontend-Code sollte defensive Programmierung verwenden:
+   ```typescript
+   // Beispiel für robuste Verarbeitung von API-Antworten
+   const response = await api.getResource();
+   const data = Array.isArray(response.data) ? response.data : 
+               (response.data?.items || []);
+   ```
+
+4. **TypeScript Interface-Kollisionen vermeiden**: Bei globalen Interface-Erweiterungen wie in Express-Namespace können Konflikte entstehen. Stellen Sie sicher, dass nur eine Quelle diese Definitionen erweitert:
+   ```typescript
+   // Richtig: Eine einzige Erweiterung des Request-Interfaces
+   declare global {
+     namespace Express {
+       interface Request {
+         userId?: number;
+         roleId?: number;
+         userPermissions?: any[];
+       }
+     }
+   }
+   ```
