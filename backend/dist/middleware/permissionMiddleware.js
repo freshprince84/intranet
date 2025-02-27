@@ -19,55 +19,58 @@ const prisma = new client_1.PrismaClient();
  */
 const checkPermission = (requiredAccess) => {
     return (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-        var _a;
         try {
-            const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
-            if (!userId) {
+            const userId = parseInt(req.userId, 10);
+            const roleId = parseInt(req.roleId, 10);
+            if (isNaN(userId)) {
                 return res.status(401).json({
                     message: 'Nicht authentifiziert',
                     error: 'NOT_AUTHENTICATED'
                 });
             }
-            // Hole die aktive Rolle des Benutzers
-            const userRole = yield prisma.userRole.findFirst({
-                where: {
-                    userId,
-                    lastUsed: true
-                },
-                include: {
-                    role: {
-                        include: {
-                            permissions: true
-                        }
-                    }
-                }
-            });
-            if (!userRole) {
+            if (isNaN(roleId)) {
                 return res.status(403).json({
-                    message: 'Keine aktive Rolle gefunden',
-                    error: 'NO_ACTIVE_ROLE'
+                    message: 'Keine Rolle im Token',
+                    error: 'NO_ROLE_IN_TOKEN'
+                });
+            }
+            console.log(`[PERMISSION] Prüfe Berechtigung - UserId: ${userId}, RoleId: ${roleId}`);
+            // Hole die Rolle und deren Berechtigungen direkt mit der roleId aus dem Token
+            const role = yield prisma.role.findUnique({
+                where: { id: roleId },
+                include: { permissions: true }
+            });
+            if (!role) {
+                return res.status(403).json({
+                    message: 'Rolle nicht gefunden',
+                    error: 'ROLE_NOT_FOUND'
                 });
             }
             // Bestimme die aktuelle Seite aus der URL
             const currentPage = req.baseUrl.split('/').pop() || 'dashboard';
+            console.log(`[PERMISSION] Aktuelle Seite: ${currentPage}`);
             // Finde die relevante Berechtigung
-            const permission = userRole.role.permissions.find(p => p.page === currentPage);
+            const permission = role.permissions.find(p => p.page === currentPage);
             if (!permission) {
+                console.log(`[PERMISSION] Keine Berechtigung gefunden für Seite: ${currentPage}`);
                 return res.status(403).json({
                     message: 'Keine Berechtigung für diese Seite',
                     error: 'NO_PAGE_PERMISSION'
                 });
             }
+            console.log(`[PERMISSION] Gefundene Berechtigung: ${permission.accessLevel} für Seite ${permission.page}`);
             // Prüfe die Zugriffsebene
             const hasAccess = checkAccessLevel(permission.accessLevel, requiredAccess);
             if (!hasAccess) {
+                console.log(`[PERMISSION] Unzureichende Berechtigungen: Hat ${permission.accessLevel}, benötigt ${requiredAccess}`);
                 return res.status(403).json({
                     message: 'Unzureichende Berechtigungen',
                     error: 'INSUFFICIENT_PERMISSIONS'
                 });
             }
             // Füge die Berechtigungen zum Request hinzu
-            req.userPermissions = userRole.role.permissions;
+            req.userPermissions = role.permissions;
+            console.log(`[PERMISSION] Zugriff gewährt für ${currentPage}`);
             next();
         }
         catch (error) {
@@ -92,32 +95,27 @@ function checkAccessLevel(hasLevel, needsLevel) {
     if (hasLevel === 'both')
         return true;
     if (needsLevel === 'both')
-        return hasLevel === 'both';
-    return hasLevel === needsLevel || hasLevel === 'both';
+        return false; // Nur 'both' kann 'both' erfüllen
+    return hasLevel === needsLevel; // Exakte Übereinstimmung oder 'both' (wegen vorherigem Check)
 }
 /**
  * Middleware zur Überprüfung von Admin-Berechtigungen
  */
 const isAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
     try {
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
-        if (!userId) {
+        const userId = parseInt(req.userId, 10);
+        const roleId = parseInt(req.roleId, 10);
+        if (isNaN(userId)) {
             return res.status(401).json({
                 message: 'Nicht authentifiziert',
                 error: 'NOT_AUTHENTICATED'
             });
         }
-        const userRole = yield prisma.userRole.findFirst({
-            where: {
-                userId,
-                lastUsed: true,
-                role: {
-                    name: 'admin'
-                }
-            }
+        // Überprüfe, ob die Rolle 'admin' ist
+        const role = yield prisma.role.findUnique({
+            where: { id: roleId }
         });
-        if (!userRole) {
+        if (!role || role.name !== 'admin') {
             return res.status(403).json({
                 message: 'Admin-Berechtigung erforderlich',
                 error: 'ADMIN_REQUIRED'

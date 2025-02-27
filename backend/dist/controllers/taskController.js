@@ -103,8 +103,7 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 responsibleId: taskData.responsibleId,
                 qualityControlId: taskData.qualityControlId,
                 branchId: taskData.branchId,
-                dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
-                requestId: taskData.requestId || null
+                dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null
             },
             include: {
                 responsible: {
@@ -167,8 +166,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 responsibleId: updateData.responsibleId,
                 qualityControlId: updateData.qualityControlId,
                 branchId: updateData.branchId,
-                dueDate: updateData.dueDate ? new Date(updateData.dueDate) : undefined,
-                requestId: updateData.requestId
+                dueDate: updateData.dueDate ? new Date(updateData.dueDate) : undefined
             },
             include: {
                 responsible: {

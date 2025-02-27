@@ -137,3 +137,29 @@ Das Prisma-Schema enthält alle notwendigen Relationen und Constraints zwischen 
 ```bash
 npx prisma migrate dev --name beschreibung_der_aenderung
 ```
+
+## UI Design-Vorgaben
+
+Für konsistentes Design aller Seiten sind folgende Vorgaben einzuhalten:
+
+### Layout-Struktur
+- Seitencontainer: `min-h-screen bg-gray-100`
+- Inhaltsbereich: `container mx-auto` oder `max-w-7xl mx-auto`
+- Hauptelemente: `bg-white rounded-lg shadow p-6`
+
+### Header mit Icon
+- Container: `flex items-center mb-6`
+- Icon: `h-6 w-6 text-gray-900 mr-2` (nicht farbig)
+- Titel: `text-2xl font-bold text-gray-900`
+
+### Tab-Navigation
+- Container: `border-b border-gray-200 mb-6`
+- Navigation: `"-mb-px flex space-x-8`
+- Aktiver Tab: `border-blue-500 text-blue-600 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`
+- Inaktiver Tab: `border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`
+
+### Fehler- und Erfolgsmeldungen
+- Fehler: `bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4`
+- Erfolg: `bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4`
+
+Diese Designelemente sollen konsistent auf allen Seiten wie Dashboard, Worktracker und Benutzerverwaltung angewendet werden.

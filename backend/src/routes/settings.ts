@@ -2,8 +2,15 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
-import { authMiddleware } from '../middleware/auth';
-import { adminMiddleware } from '../middleware/admin';
+import express from 'express';
+import { authenticateToken } from '../middleware/auth';
+import { checkRole } from '../middleware/roleCheck';
+import {
+    getNotificationSettings,
+    updateNotificationSettings,
+    getUserNotificationSettings,
+    updateUserNotificationSettings
+} from '../controllers/settingsController';
 
 // Erweitere den Request-Typ
 declare module 'express-serve-static-core' {
@@ -16,14 +23,20 @@ const router = Router();
 
 // Debug-Middleware für alle Settings-Routen
 router.use((req, res, next) => {
-    console.log('Settings Route Handler:', {
+    console.log('Settings Router aufgerufen:', {
         method: req.method,
         path: req.path,
+        originalUrl: req.originalUrl,
+        userId: req.userId || 'nicht verfügbar',
+        user: req.user || 'nicht verfügbar',
         headers: req.headers,
         body: req.body
     });
     next();
 });
+
+// Alle Benutzereinstellungs-Routen benötigen Authentifizierung
+router.use(authenticateToken);
 
 // Test-Route
 router.get('/', (req, res) => {
@@ -47,8 +60,9 @@ const storage = multer.diskStorage({
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const filename = 'logo-' + uniqueSuffix + path.extname(file.originalname);
+        // Verwende einen festen Dateinamen basierend auf der Dateierweiterung
+        const fileExtension = path.extname(file.originalname).toLowerCase();
+        const filename = 'logo' + fileExtension;
         console.log('Generierter Dateiname:', filename);
         cb(null, filename);
     }
@@ -112,17 +126,15 @@ router.get('/logo', (req, res) => {
         const files = fs.readdirSync(uploadDir);
         console.log('Gefundene Dateien:', files);
         
-        const latestLogo = files
-            .filter(file => file.startsWith('logo-'))
-            .sort()
-            .reverse()[0];
+        // Suche nach logo.png oder logo.jpg
+        const logoFile = files.find(file => file === 'logo.png' || file === 'logo.jpg');
 
-        if (!latestLogo) {
+        if (!logoFile) {
             console.log('Kein Logo gefunden');
             return res.status(404).json({ message: 'Kein Logo gefunden' });
         }
 
-        const logoPath = path.join(uploadDir, latestLogo);
+        const logoPath = path.join(uploadDir, logoFile);
         console.log('Sende Logo:', logoPath);
         res.sendFile(logoPath);
     } catch (error) {
@@ -132,5 +144,23 @@ router.get('/logo', (req, res) => {
         });
     }
 });
+
+// Benutzereinstellungen abrufen
+// router.get('/user', getUserSettings);
+
+// Benutzereinstellungen aktualisieren
+// router.put('/user', updateUserSettings);
+
+// System-weite Benachrichtigungseinstellungen abrufen
+router.get('/notifications', getNotificationSettings);
+
+// System-weite Benachrichtigungseinstellungen aktualisieren (nur Admin)
+router.put('/notifications', checkRole(['admin']), updateNotificationSettings);
+
+// Benutzer-spezifische Benachrichtigungseinstellungen abrufen
+router.get('/notifications/user', getUserNotificationSettings);
+
+// Benutzer-spezifische Benachrichtigungseinstellungen aktualisieren
+router.put('/notifications/user', updateUserNotificationSettings);
 
 export default router; 

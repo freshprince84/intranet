@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth.tsx';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import WorktimeTracker from '../components/WorktimeTracker.tsx';
 import WorktimeList from '../components/WorktimeList.tsx';
-import WorktimeStats from '../components/WorktimeStats.tsx';
 import { API_ENDPOINTS } from '../config/api.ts';
 
 interface Task {
@@ -254,7 +253,7 @@ const Worktracker: React.FC = () => {
         });
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-gray-100">
             <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                 {/* Zeiterfassung */}
                 <div className="mb-8">
@@ -262,7 +261,12 @@ const Worktracker: React.FC = () => {
                 </div>
 
                 {/* Tasks */}
-                <div className="border rounded-lg bg-white">
+                <div className="bg-white rounded-lg shadow p-6">
+                    <div className="flex items-center mb-4">
+                        <CheckCircleIcon className="h-6 w-6 mr-2" />
+                        <h2 className="text-xl font-semibold">To Do's</h2>
+                    </div>
+
                     <CreateTaskModal 
                         isOpen={isCreateModalOpen}
                         onClose={() => setIsCreateModalOpen(false)}
@@ -281,20 +285,17 @@ const Worktracker: React.FC = () => {
                         />
                     )}
                     
-                    <div className="p-4 border-b bg-gray-50">
+                    <div className="mb-4">
                         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                            <div className="flex flex-1 gap-4">
-                                <div className="group relative">
-                                    <button
-                                        onClick={() => setIsCreateModalOpen(true)}
-                                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-                                    >
-                                        <PlusIcon className="h-5 w-5" />
-                                    </button>
-                                    <div className="absolute left-0 top-full mt-2 w-max opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800 text-white text-sm rounded-md py-1 px-2 pointer-events-none z-10">
-                                        Neue Aufgabe
-                                    </div>
-                                </div>
+                            <div className="flex flex-1 gap-4 items-center">
+                                <button
+                                    onClick={() => setIsCreateModalOpen(true)}
+                                    className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
+                                    title="Neue Aufgabe erstellen"
+                                    aria-label="Neue Aufgabe erstellen"
+                                >
+                                    <PlusIcon className="h-4 w-4" />
+                                </button>
                                 <input
                                     type="text"
                                     placeholder="Suchen..."
@@ -321,7 +322,7 @@ const Worktracker: React.FC = () => {
                     </div>
 
                     {/* Task-Tabelle */}
-                    <div className="overflow-x-auto">
+                    <div className="overflow-x-auto mt-4">
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
@@ -343,7 +344,7 @@ const Worktracker: React.FC = () => {
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Fälligkeit
                                     </th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Aktionen
                                     </th>
                                 </tr>
@@ -351,10 +352,10 @@ const Worktracker: React.FC = () => {
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {filteredAndSortedTasks.map(task => (
                                     <tr key={task.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
                                             {task.title}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
+                                        <td className="px-6 py-2 whitespace-nowrap">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)}`}>
                                                 {task.status === 'open' && 'Offen'}
                                                 {task.status === 'in_progress' && 'In Bearbeitung'}
@@ -363,31 +364,26 @@ const Worktracker: React.FC = () => {
                                                 {task.status === 'done' && 'Erledigt'}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
                                             {task.responsible.firstName} {task.responsible.lastName}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
                                             {task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-'}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
                                             {task.branch.name}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
                                             {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                        <td className="px-6 py-2 whitespace-nowrap text-right text-sm font-medium">
                                             <div className="flex justify-end space-x-2">
-                                                <div className="group relative">
-                                                    <button
-                                                        onClick={() => handleEditClick(task)}
-                                                        className="p-1 bg-gray-600 text-white rounded hover:bg-gray-700"
-                                                    >
-                                                        <PencilIcon className="h-5 w-5" />
-                                                    </button>
-                                                    <div className="absolute right-0 top-full mt-2 w-max opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800 text-white text-sm rounded-md py-1 px-2 pointer-events-none z-10">
-                                                        Bearbeiten
-                                                    </div>
-                                                </div>
+                                                <button
+                                                    onClick={() => handleEditClick(task)}
+                                                    className="text-blue-600 hover:text-blue-900"
+                                                >
+                                                    <PencilIcon className="h-5 w-5" />
+                                                </button>
                                                 {renderStatusButtons(task)}
                                             </div>
                                         </td>
@@ -396,11 +392,6 @@ const Worktracker: React.FC = () => {
                             </tbody>
                         </table>
                     </div>
-                </div>
-
-                {/* Zeiterfassungs-Statistiken */}
-                <div className="mt-8">
-                    <WorktimeStats />
                 </div>
             </div>
         </div>

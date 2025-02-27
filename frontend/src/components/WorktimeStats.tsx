@@ -144,30 +144,32 @@ const WorktimeStats: React.FC = () => {
                         value={selectedWeekInput}
                         onChange={handleWeekChange}
                         max={currentWeekInput}
-                        className="border rounded-md px-3 py-2"
+                        className="border rounded-md px-3 py-2 h-10"
                     />
                     <button
                         onClick={handleExport}
-                        className="flex items-center justify-center p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center min-w-8 min-h-8 w-8 h-8"
                         title="Exportieren"
+                        aria-label="Arbeitszeiten exportieren"
+                        style={{ marginTop: '1px', marginBottom: '1px' }}
                     >
-                        <DocumentArrowDownIcon className="h-5 w-5" />
+                        <DocumentArrowDownIcon className="h-4 w-4" />
                     </button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <div className="bg-blue-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium text-blue-900 mb-2">Gesamtstunden</h3>
-                    <p className="text-3xl font-bold text-blue-600">{stats.totalHours}h</p>
+            <div className="flex flex-row gap-2 mb-8 overflow-x-auto">
+                <div className="bg-blue-50 p-4 rounded-lg flex-1 min-w-0">
+                    <h3 className="text-lg font-medium text-blue-900 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg">Gesamtstunden</h3>
+                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600 whitespace-nowrap">{stats.totalHours}h</p>
                 </div>
-                <div className="bg-green-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium text-green-900 mb-2">Durchschnitt/Tag</h3>
-                    <p className="text-3xl font-bold text-green-600">{stats.averageHoursPerDay}h</p>
+                <div className="bg-green-50 p-4 rounded-lg flex-1 min-w-0">
+                    <h3 className="text-lg font-medium text-green-900 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg">Durchschnitt/Tag</h3>
+                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600 whitespace-nowrap">{stats.averageHoursPerDay}h</p>
                 </div>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                    <h3 className="text-lg font-medium text-purple-900 mb-2">Arbeitstage</h3>
-                    <p className="text-3xl font-bold text-purple-600">{stats.daysWorked}</p>
+                <div className="bg-purple-50 p-4 rounded-lg flex-1 min-w-0">
+                    <h3 className="text-lg font-medium text-purple-900 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg">Arbeitstage</h3>
+                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-purple-600 whitespace-nowrap">{stats.daysWorked}</p>
                 </div>
             </div>
 

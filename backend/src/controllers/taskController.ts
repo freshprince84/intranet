@@ -104,8 +104,7 @@ export const createTask = async (req: Request<{}, {}, TaskData>, res: Response) 
                 responsibleId: taskData.responsibleId,
                 qualityControlId: taskData.qualityControlId,
                 branchId: taskData.branchId,
-                dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
-                requestId: taskData.requestId || null
+                dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null
             },
             include: {
                 responsible: {
@@ -169,8 +168,7 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
                 responsibleId: updateData.responsibleId,
                 qualityControlId: updateData.qualityControlId,
                 branchId: updateData.branchId,
-                dueDate: updateData.dueDate ? new Date(updateData.dueDate) : undefined,
-                requestId: updateData.requestId
+                dueDate: updateData.dueDate ? new Date(updateData.dueDate) : undefined
             },
             include: {
                 responsible: {

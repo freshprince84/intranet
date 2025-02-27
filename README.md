@@ -60,6 +60,15 @@ Bei jeder Neuinitialisierung der Datenbank werden automatisch folgende Einträge
   - Wöchentliche Statistiken
   - Export-Funktion
   - Bearbeitungsmöglichkeit für Einträge
+  - Chronologische Sortierung nach Startzeit (frühester Eintrag zuoberst)
+- Notification-System
+  - Echtzeit-Benachrichtigungen für wichtige Ereignisse
+  - Verschiedene Benachrichtigungstypen (Aufgaben, Anfragen, Benutzer, Rollen, Arbeitszeit, System)
+  - Anpassbare Benachrichtigungseinstellungen auf System- und Benutzerebene
+  - Globale und persönliche Notification-Einstellungen
+  - Lesebestätigung von Benachrichtigungen
+  - Statusanzeige (gelesen/ungelesen)
+  - Detaillierte Benachrichtigungsinformationen mit Zeitstempel
 - Request-Management System
   - Übersichtliche Tabellendarstellung
   - Status-Tracking (approval → approved/denied, mit to_improve als Zwischenstatus)
@@ -131,6 +140,13 @@ Bei jeder Neuinitialisierung der Datenbank werden automatisch folgende Einträge
   - Query: `week` (Datum innerhalb der gewünschten Woche)
 - `GET /api/worktime/active`: Prüft, ob aktuell eine Zeiterfassung läuft
 
+### Notification-System
+- `GET /api/notifications`: Alle Benachrichtigungen abrufen
+- `GET /api/notifications/:id`: Benachrichtigung-Details abrufen
+- `POST /api/notifications`: Neue Benachrichtigung erstellen
+- `PUT /api/notifications/:id`: Benachrichtigung aktualisieren
+- `DELETE /api/notifications/:id`: Benachrichtigung löschen
+
 ## Status-Workflows
 
 ### Request-Workflow
@@ -160,7 +176,7 @@ Bei jeder Neuinitialisierung der Datenbank werden automatisch folgende Einträge
   - Blau: Start der Bearbeitung
   - Lila: Weiter zur Qualitätskontrolle
   - Grün: Als erledigt markieren
-- Neue Benutzer erhalten automatisch die Rolle "hamburger" (ID: 999)
+- Neue Benutzer erhalten automatisch die Rolle "Hamburger" (ID: 999)
   - Zugriff auf: Dashboard (read) und Worktracker (read)
   - Standardrolle für alle Neuregistrierungen
 
@@ -170,6 +186,26 @@ Bei jeder Neuinitialisierung der Datenbank werden automatisch folgende Einträge
 3. Installiere alle Abhängigkeiten mit `npm run install-all` im Root-Verzeichnis
 4. Starte die Entwicklungsumgebung mit `npm run dev`
 5. Für den Zugriff auf die Datenbank mit Prisma Studio: `npm run prisma:studio`
+
+### Automatische Installation (Linux/Ubuntu)
+Für eine automatische Installation auf einem Linux-Server (Ubuntu) kann das `install.sh`-Skript verwendet werden:
+
+1. Lade das Skript herunter: `wget https://raw.githubusercontent.com/freshprince84/intranet/main/install.sh`
+2. Mache es ausführbar: `chmod +x install.sh`
+3. Führe es aus: `./install.sh`
+
+Das Skript führt folgende Schritte automatisch durch:
+- Aktualisierung des Systems und Installation von Grundpaketen
+- Installation von Node.js v18 und npm
+- Installation und Konfiguration von PostgreSQL
+- Einrichtung des SSH-Zugangs für GitHub (optional)
+- Klonen des Repositories (via SSH oder HTTPS)
+- Installation aller Abhängigkeiten
+- Konfiguration der Umgebungsvariablen
+- Initialisierung der Datenbank mit Prisma
+- Installation von PM2 und Start der Anwendung
+
+**Hinweis:** Das Skript ist für eine frische Ubuntu-Installation konzipiert. Bei bestehenden Systemen können Anpassungen notwendig sein.
 
 ## Struktur
 - `backend/`: Node.js Backend
@@ -208,6 +244,7 @@ Bei jeder Neuinitialisierung der Datenbank werden automatisch folgende Einträge
 - **Zeiterfassung über Mitternacht**: Korrektur der Berechnung von Arbeitszeiten, die über Mitternacht gehen, um negative Zeitwerte zu vermeiden
 - **Arbeitszeitstatistik**: Verbesserung der Berechnung und Anzeige von Arbeitszeiten in der wöchentlichen Statistik
 - **Zeiterfassungs-Modal**: Anzeige der Gesamtarbeitszeit des Tages und Integration der aktiven Zeiterfassung in die Tagesansicht
+- **Sortierung der Zeiteinträge**: Arbeitszeit-Einträge werden chronologisch nach ihrer Startzeit sortiert angezeigt, mit dem frühesten Eintrag des Tages zuoberst und der aktiven Zeiterfassung gesondert in einer grünen Zeile
 
 ## Systemanforderungen
 

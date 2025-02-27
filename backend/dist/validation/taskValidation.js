@@ -24,9 +24,6 @@ const validateTask = (taskData) => {
     if (taskData.dueDate && isNaN(Date.parse(taskData.dueDate))) {
         return 'Ungültiges Fälligkeitsdatum';
     }
-    if (taskData.requestId && typeof taskData.requestId !== 'number') {
-        return 'Ungültige Request-ID';
-    }
     return null;
 };
 exports.validateTask = validateTask;

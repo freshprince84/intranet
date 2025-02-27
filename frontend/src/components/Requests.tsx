@@ -183,32 +183,30 @@ const Requests: React.FC = () => {
         />
       )}
 
-      <div className="border rounded-lg">
-        <div className="p-4 border-b bg-gray-50">
+      <div className="border-0 rounded-lg">
+        <div className="mb-4">
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div className="flex flex-1 gap-4">
-              <div className="group relative">
-                <button
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-                >
-                  <PlusIcon className="h-5 w-5" />
-                </button>
-                <div className="absolute left-0 top-full mt-2 w-max opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800 text-white text-sm rounded-md py-1 px-2 pointer-events-none z-10">
-                  Neuer Request
-                </div>
-              </div>
+            <div className="flex flex-1 gap-4 items-center">
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center min-w-8 min-h-8 w-8 h-8"
+                title="Neuen Request erstellen"
+                aria-label="Neuen Request erstellen"
+                style={{ marginTop: '1px', marginBottom: '1px' }}
+              >
+                <PlusIcon className="h-4 w-4" />
+              </button>
               <input
                 type="text"
                 placeholder="Suchen..."
-                className="w-full px-3 py-2 border rounded-md"
+                className="w-full px-3 py-2 border rounded-md h-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <div className="flex-none">
               <select
-                className="px-3 py-2 border rounded-md bg-white"
+                className="px-3 py-2 border rounded-md bg-white h-10"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as Request['status'] | 'all')}
               >
@@ -222,47 +220,47 @@ const Requests: React.FC = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full table-fixed divide-y divide-gray-200">
+        <div className="overflow-x-auto overflow-y-hidden">
+          <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
                 <th 
-                  className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('title')}
                 >
                   Titel {sortConfig.key === 'title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
                 <th 
-                  className="w-1/12 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('status')}
                 >
                   Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
                 <th 
-                  className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('requestedBy.firstName')}
                 >
                   Angefragt von {sortConfig.key === 'requestedBy.firstName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
                 <th 
-                  className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('responsible.firstName')}
                 >
                   Verantwortlicher {sortConfig.key === 'responsible.firstName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
                 <th 
-                  className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('branch.name')}
                 >
                   Niederlassung {sortConfig.key === 'branch.name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
                 <th 
-                  className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('dueDate')}
                 >
                   Fälligkeit {sortConfig.key === 'dueDate' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                 </th>
-                <th className="w-1/6 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Aktionen
                 </th>
               </tr>
@@ -275,10 +273,12 @@ const Requests: React.FC = () => {
                       <p>Keine Requests vorhanden</p>
                       <button
                         onClick={() => setIsCreateModalOpen(true)}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                        className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center min-w-8 min-h-8 w-8 h-8"
+                        title="Neuen Request erstellen"
+                        aria-label="Neuen Request erstellen"
+                        style={{ marginTop: '1px', marginBottom: '1px' }}
                       >
-                        <PlusIcon className="h-5 w-5 mr-2" />
-                        Neuen Request erstellen
+                        <PlusIcon className="h-4 w-4" />
                       </button>
                     </div>
                   </td>
@@ -286,48 +286,43 @@ const Requests: React.FC = () => {
               ) : (
                 filteredAndSortedRequests.map(request => (
                   <tr key={request.id}>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{request.title}</div>
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)}`}>
                         {request.status}
                       </span>
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
                         {`${request.requestedBy.firstName} ${request.requestedBy.lastName}`}
                       </div>
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
                         {`${request.responsible.firstName} ${request.responsible.lastName}`}
                       </div>
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{request.branch.name}</div>
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">
                         {new Date(request.dueDate).toLocaleDateString()}
                       </div>
                     </td>
-                    <td className="px-3 py-2 whitespace-nowrap">
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex space-x-2">
-                        <div className="group relative">
-                          <button
-                            onClick={() => {
-                              setSelectedRequest(request);
-                              setIsEditModalOpen(true);
-                            }}
-                            className="p-1 bg-gray-600 text-white rounded hover:bg-gray-700"
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
-                          <div className="absolute left-0 top-full mt-2 w-max opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-gray-800 text-white text-sm rounded-md py-1 px-2 pointer-events-none z-10">
-                            Bearbeiten
-                          </div>
-                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedRequest(request);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
                         {request.status === 'approval' && (
                           <>
                             <button

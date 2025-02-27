@@ -7,17 +7,25 @@ const express_1 = require("express");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const auth_1 = require("../middleware/auth");
+const roleCheck_1 = require("../middleware/roleCheck");
+const settingsController_1 = require("../controllers/settingsController");
 const router = (0, express_1.Router)();
 // Debug-Middleware für alle Settings-Routen
 router.use((req, res, next) => {
-    console.log('Settings Route Handler:', {
+    console.log('Settings Router aufgerufen:', {
         method: req.method,
         path: req.path,
+        originalUrl: req.originalUrl,
+        userId: req.userId || 'nicht verfügbar',
+        user: req.user || 'nicht verfügbar',
         headers: req.headers,
         body: req.body
     });
     next();
 });
+// Alle Benutzereinstellungs-Routen benötigen Authentifizierung
+router.use(auth_1.authenticateToken);
 // Test-Route
 router.get('/', (req, res) => {
     res.json({ message: 'Settings Route ist erreichbar' });
@@ -37,8 +45,9 @@ const storage = multer_1.default.diskStorage({
         cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const filename = 'logo-' + uniqueSuffix + path_1.default.extname(file.originalname);
+        // Verwende einen festen Dateinamen basierend auf der Dateierweiterung
+        const fileExtension = path_1.default.extname(file.originalname).toLowerCase();
+        const filename = 'logo' + fileExtension;
         console.log('Generierter Dateiname:', filename);
         cb(null, filename);
     }
@@ -94,15 +103,13 @@ router.get('/logo', (req, res) => {
         }
         const files = fs_1.default.readdirSync(uploadDir);
         console.log('Gefundene Dateien:', files);
-        const latestLogo = files
-            .filter(file => file.startsWith('logo-'))
-            .sort()
-            .reverse()[0];
-        if (!latestLogo) {
+        // Suche nach logo.png oder logo.jpg
+        const logoFile = files.find(file => file === 'logo.png' || file === 'logo.jpg');
+        if (!logoFile) {
             console.log('Kein Logo gefunden');
             return res.status(404).json({ message: 'Kein Logo gefunden' });
         }
-        const logoPath = path_1.default.join(uploadDir, latestLogo);
+        const logoPath = path_1.default.join(uploadDir, logoFile);
         console.log('Sende Logo:', logoPath);
         res.sendFile(logoPath);
     }
@@ -113,5 +120,17 @@ router.get('/logo', (req, res) => {
         });
     }
 });
+// Benutzereinstellungen abrufen
+// router.get('/user', getUserSettings);
+// Benutzereinstellungen aktualisieren
+// router.put('/user', updateUserSettings);
+// System-weite Benachrichtigungseinstellungen abrufen
+router.get('/notifications', settingsController_1.getNotificationSettings);
+// System-weite Benachrichtigungseinstellungen aktualisieren (nur Admin)
+router.put('/notifications', (0, roleCheck_1.checkRole)(['admin']), settingsController_1.updateNotificationSettings);
+// Benutzer-spezifische Benachrichtigungseinstellungen abrufen
+router.get('/notifications/user', settingsController_1.getUserNotificationSettings);
+// Benutzer-spezifische Benachrichtigungseinstellungen aktualisieren
+router.put('/notifications/user', settingsController_1.updateUserNotificationSettings);
 exports.default = router;
 //# sourceMappingURL=settings.js.map

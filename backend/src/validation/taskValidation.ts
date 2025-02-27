@@ -8,7 +8,6 @@ export interface TaskData {
     qualityControlId?: number;
     branchId: number;
     dueDate?: string;
-    requestId?: number;
 }
 
 export const validateTask = (taskData: Partial<TaskData>): string | null => {
@@ -38,10 +37,6 @@ export const validateTask = (taskData: Partial<TaskData>): string | null => {
 
     if (taskData.dueDate && isNaN(Date.parse(taskData.dueDate))) {
         return 'Ungültiges Fälligkeitsdatum';
-    }
-
-    if (taskData.requestId && typeof taskData.requestId !== 'number') {
-        return 'Ungültige Request-ID';
     }
 
     return null;

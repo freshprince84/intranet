@@ -1,5 +1,14 @@
-import { PrismaClient, AccessLevel } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcrypt';
+
+// Definiere AccessLevel als String-Literale entsprechend dem Enum in schema.prisma
+type AccessLevel = 'read' | 'write' | 'both' | 'none';
+const AccessLevel = {
+  read: 'read' as AccessLevel,
+  write: 'write' as AccessLevel,
+  both: 'both' as AccessLevel,
+  none: 'none' as AccessLevel
+};
 
 const prisma = new PrismaClient();
 
@@ -11,7 +20,7 @@ async function main() {
     const adminRole = await prisma.role.create({
       data: {
         id: 1,
-        name: 'admin',
+        name: 'Admin',
         description: 'Administrator mit allen Rechten',
         permissions: {
           create: [
@@ -36,7 +45,7 @@ async function main() {
     const userRole = await prisma.role.create({
       data: {
         id: 2,
-        name: 'user',
+        name: 'User',
         description: 'Standardbenutzer',
         permissions: {
           create: [
@@ -56,7 +65,7 @@ async function main() {
     const hamburgerRole = await prisma.role.create({
       data: {
         id: 999,
-        name: 'hamburger',
+        name: 'Hamburger',
         description: 'Hamburger-Rolle für neue Benutzer',
         permissions: {
           create: [

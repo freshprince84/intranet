@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
+import { Cog6ToothIcon } from '@heroicons/react/24/outline';
+import NotificationSettingsComponent from '../components/NotificationSettings.tsx';
 
 const Settings: React.FC = () => {
     const { user } = useAuth();
@@ -11,7 +13,6 @@ const Settings: React.FC = () => {
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [notifications, setNotifications] = useState(false);
 
     // Debug-Ausgaben
     useEffect(() => {
@@ -93,11 +94,6 @@ const Settings: React.FC = () => {
         }
     };
 
-    const handleNotificationsToggle = () => {
-        setNotifications(!notifications);
-        // TODO: Implementiere Benachrichtigungslogik
-    };
-
     // Wenn kein Benutzer oder Berechtigungen geladen werden
     if (!user) {
         return <div>Laden...</div>;
@@ -105,7 +101,12 @@ const Settings: React.FC = () => {
 
     return (
         <div className="p-6">
-            <h1 className="text-2xl font-bold mb-6 dark:text-white">Einstellungen</h1>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
+                <div className="flex items-center mb-4">
+                    <Cog6ToothIcon className="h-6 w-6 mr-2 dark:text-white" />
+                    <h1 className="text-2xl font-bold dark:text-white">Einstellungen</h1>
+                </div>
+            </div>
             
             {/* Persönliche Einstellungen - für alle Benutzer sichtbar */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-6">
@@ -126,21 +127,16 @@ const Settings: React.FC = () => {
                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                         </label>
                     </div>
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h3 className="text-lg font-medium dark:text-white">Benachrichtigungen</h3>
-                            <p className="text-gray-600 dark:text-gray-400">E-Mail-Benachrichtigungen aktivieren</p>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                className="sr-only peer"
-                                checked={notifications}
-                                onChange={handleNotificationsToggle}
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-                        </label>
-                    </div>
+                </div>
+            </div>
+
+            {/* Benachrichtigungseinstellungen */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+                <h2 className="text-xl font-semibold p-6 border-b border-gray-200 dark:border-gray-700 dark:text-white">
+                    Benachrichtigungseinstellungen
+                </h2>
+                <div className="p-0">
+                    <NotificationSettingsComponent />
                 </div>
             </div>
 

@@ -3,6 +3,7 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { ClockIcon, ListBulletIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api.ts';
+import { useWorktime } from '../contexts/WorktimeContext.tsx';
 
 // Wir entfernen die benutzerdefinierten API-URL-Definitionen und verwenden die direkte URL,
 // um Konflikte mit der globalen Axios-Konfiguration zu vermeiden
@@ -42,6 +43,7 @@ const WorktimeTracker: React.FC = () => {
     const [showWorkTimeModal, setShowWorkTimeModal] = useState(false);
     const [statusError, setStatusError] = useState<string | null>(null);
     const { user } = useAuth();
+    const { updateTrackingStatus } = useWorktime();
 
     // Funktion zum Abrufen des aktiven Worktime-Status
     const checkActiveWorktime = useCallback(async () => {
@@ -81,6 +83,9 @@ const WorktimeTracker: React.FC = () => {
                     setIsTracking(true);
                     setSelectedBranch(data.branchId);
                     
+                    // Aktualisiere den globalen Tracking-Status
+                    updateTrackingStatus(true);
+                    
                     // Startzeit setzen und Timer initialisieren
                     const startTimeDate = new Date(data.startTime);
                     setStartTime(startTimeDate);
@@ -105,6 +110,9 @@ const WorktimeTracker: React.FC = () => {
                     setActiveWorktime(null);
                     setStartTime(null);
                     setElapsedTime('00:00:00');
+                    
+                    // Aktualisiere den globalen Tracking-Status
+                    updateTrackingStatus(false);
                 }
             } catch (error) {
                 console.error('Fehler beim Abrufen der aktiven Zeiterfassung:', error);
@@ -237,6 +245,9 @@ const WorktimeTracker: React.FC = () => {
             setActiveWorktime(data);
             setIsTracking(true);
             setStartTime(new Date(data.startTime));
+            
+            // Aktualisiere den globalen Tracking-Status
+            updateTrackingStatus(true);
         } catch (error) {
             console.error('Fehler:', error);
             
@@ -277,6 +288,9 @@ const WorktimeTracker: React.FC = () => {
             setStartTime(null);
             setElapsedTime('00:00:00');
             setActiveWorktime(null);
+            
+            // Aktualisiere den globalen Tracking-Status
+            updateTrackingStatus(false);
         } catch (error) {
             console.error('Fehler:', error);
             
@@ -338,6 +352,9 @@ const WorktimeTracker: React.FC = () => {
             setActiveWorktime(null);
             setStatusError(null);
             alert('Zeiterfassung wurde erfolgreich gestoppt.');
+            
+            // Aktualisiere den globalen Tracking-Status
+            updateTrackingStatus(false);
         } catch (error) {
             console.error('Fehler:', error);
             setStatusError(`Fehler beim Stoppen: ${error.response?.status || 'Netzwerkfehler'}`);
@@ -462,22 +479,64 @@ const WorktimeTracker: React.FC = () => {
 
 // Neues WorktimeModal
 const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
+    // Initialisiere das selectedDate mit dem heutigen Datum in lokaler Zeit
+    const today = new Date();
+    const initialDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
+    console.log("Initialisiere selectedDate mit:", initialDate);
+    console.log("Heute (lokal):", today.toLocaleString());
+    console.log("Heute (ISO):", today.toISOString());
+    
     const [worktimes, setWorktimes] = useState<any[]>([]);
-    const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
+    const [selectedDate, setSelectedDate] = useState<string>(initialDate);
     const [loading, setLoading] = useState(true);
     const [activeWorktime, setActiveWorktime] = useState<any | null>(null);
     const [totalDuration, setTotalDuration] = useState<string>('0h 0m');
 
-    const formatTime = (dateString: string) => {
+    // Formatiere nur das Datum
+    const formatDate = (dateString: string) => {
         if (!dateString) return '-';
-        const date = new Date(dateString);
-        return date.toLocaleString('de-DE', { 
+        
+        // Wir erstellen ein neues Date-Objekt und setzen die Uhrzeit auf 12:00 Mittag
+        // um Probleme mit Zeitzonen zu vermeiden
+        const dateParts = dateString.split('-');
+        if (dateParts.length !== 3) return '-';
+        
+        const year = parseInt(dateParts[0]);
+        const month = parseInt(dateParts[1]) - 1; // Monate sind 0-basiert in JavaScript
+        const day = parseInt(dateParts[2]);
+        
+        const date = new Date(year, month, day, 12, 0, 0);
+        
+        return date.toLocaleDateString('de-DE', {
             day: '2-digit',
             month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit', 
-            minute: '2-digit' 
+            year: 'numeric'
         });
+    };
+
+    // Formatiere nur die Uhrzeit
+    const formatTime = (dateString: string) => {
+        if (!dateString) return '-';
+        
+        try {
+            // Wir erstellen ein neues Date-Objekt und behalten die originale Zeit bei
+            const date = new Date(dateString);
+            
+            // Debugging
+            console.log(`formatTime für ${dateString}:`);
+            console.log(`  Date-Objekt: ${date}`);
+            console.log(`  Stunden: ${date.getHours()}`);
+            console.log(`  Minuten: ${date.getMinutes()}`);
+            
+            // Formatiere die Zeit manuell, um Zeitzonen-Probleme zu vermeiden
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            
+            return `${hours}:${minutes}`;
+        } catch (error) {
+            console.error(`Fehler beim Formatieren der Zeit für ${dateString}:`, error);
+            return '-';
+        }
     };
 
     const fetchWorktimes = useCallback(async () => {
@@ -490,13 +549,33 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
                 return;
             }
             
-            // Verwende Axios mit explizitem Authorization Header
-            const response = await axios.get(`${API_ENDPOINTS.WORKTIME.BASE}?date=${selectedDate}`, {
+            console.log("Hole Zeiteinträge für Datum:", selectedDate);
+            
+            // WICHTIG: Wir holen ALLE Einträge und filtern selbst im Frontend
+            const response = await axios.get(`${API_ENDPOINTS.WORKTIME.BASE}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
-            setWorktimes(response.data);
+            
+            // Debugging: Zeige das gesendete Datum und die Antwort
+            console.log("An Server gesendetes Datum:", selectedDate);
+            const receivedWorktimes = response.data;
+            console.log("Anzahl erhaltener Einträge vom Server:", receivedWorktimes.length);
+            
+            // AUSFÜHRLICHES DEBUGGING: Zeige jeden erhaltenen Eintrag im Detail
+            receivedWorktimes.forEach((worktime: any, index: number) => {
+                const startDate = new Date(worktime.startTime);
+                console.log(`--- EINTRAG ${index + 1} (ID: ${worktime.id}) ---`);
+                console.log(`Startzeit (ISO): ${startDate.toISOString()}`);
+                console.log(`Startzeit (Lokal): ${startDate.toLocaleString()}`);
+                console.log(`UTC Datum: ${startDate.getUTCFullYear()}-${(startDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${startDate.getUTCDate().toString().padStart(2, '0')}`);
+                console.log(`Lokales Datum: ${startDate.getFullYear()}-${(startDate.getMonth() + 1).toString().padStart(2, '0')}-${startDate.getDate().toString().padStart(2, '0')}`);
+            });
+            
+            // Setze zunächst alle Einträge (wir filtern später im UI)
+            setWorktimes(receivedWorktimes);
+            console.log("Alle Einträge wurden gesetzt, Anzahl:", receivedWorktimes.length);
 
             // Aktive Zeiterfassung abrufen
             const activeResponse = await axios.get(API_ENDPOINTS.WORKTIME.ACTIVE, {
@@ -506,7 +585,14 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
             });
             
             if (activeResponse.data && activeResponse.data.active === true) {
-                setActiveWorktime(activeResponse.data);
+                const activeData = activeResponse.data;
+                setActiveWorktime(activeData);
+                console.log("Aktive Zeiterfassung:", activeData);
+                
+                // Debug für aktive Zeiterfassung
+                const activeStartDate = new Date(activeData.startTime);
+                console.log("Aktive Zeiterfassung Datum (UTC):", 
+                    `${activeStartDate.getUTCFullYear()}-${(activeStartDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${activeStartDate.getUTCDate().toString().padStart(2, '0')}`);
             } else {
                 setActiveWorktime(null);
             }
@@ -516,6 +602,24 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
             setLoading(false);
         }
     }, [selectedDate]);
+
+    // Prüfe, ob ein Worktime-Eintrag für den ausgewählten Tag relevant ist
+    const isWorktimeRelevantForSelectedDate = (worktime: any): boolean => {
+        try {
+            const startDate = new Date(worktime.startTime);
+            const utcDateStr = `${startDate.getUTCFullYear()}-${(startDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${startDate.getUTCDate().toString().padStart(2, '0')}`;
+            
+            console.log(`Prüfe relevanten Eintrag (ID: ${worktime.id}):`);
+            console.log(`  UTC-Datum des Eintrags: ${utcDateStr}`);
+            console.log(`  Ausgewähltes Datum: ${selectedDate}`);
+            console.log(`  Sind gleich? ${utcDateStr === selectedDate}`);
+            
+            return utcDateStr === selectedDate;
+        } catch (error) {
+            console.error("Fehler beim Prüfen der Relevanz eines Worktime-Eintrags:", error);
+            return false;
+        }
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -527,62 +631,111 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
     useEffect(() => {
         let totalMinutes = 0;
         
+        console.log("Berechne Gesamtdauer für Datum:", selectedDate);
+        console.log("Worktimes für Berechnung (Gesamtanzahl):", worktimes.length);
+        
+        // Filtere die relevanten Einträge für das ausgewählte Datum
+        const relevantWorktimes = worktimes.filter(worktime => isWorktimeRelevantForSelectedDate(worktime));
+        console.log("Anzahl relevanter Einträge für das ausgewählte Datum:", relevantWorktimes.length);
+        
         // Berechne die Dauer der abgeschlossenen Zeiteinträge
-        worktimes.forEach(worktime => {
+        relevantWorktimes.forEach((worktime, index) => {
             if (worktime.endTime) {
-                const start = new Date(worktime.startTime);
-                const end = new Date(worktime.endTime);
-                const diff = end.getTime() - start.getTime();
-                
-                if (diff > 0) {
-                    totalMinutes += Math.floor(diff / (1000 * 60));
+                try {
+                    const start = new Date(worktime.startTime);
+                    const end = new Date(worktime.endTime);
+                    const diff = end.getTime() - start.getTime();
+                    
+                    console.log(`Eintrag ${index + 1}:`);
+                    console.log(`  Start: ${start.toLocaleString()}`);
+                    console.log(`  Ende: ${end.toLocaleString()}`);
+                    console.log(`  Differenz: ${diff} ms`);
+                    
+                    if (diff > 0) {
+                        const minutes = Math.floor(diff / (1000 * 60));
+                        totalMinutes += minutes;
+                        console.log(`  Minuten: ${minutes}`);
+                        console.log(`  Zwischensumme: ${totalMinutes} Minuten`);
+                    } else {
+                        console.warn(`  Negative Zeitdifferenz erkannt: ${diff} ms`);
+                    }
+                } catch (error) {
+                    console.error(`Fehler bei der Berechnung für Eintrag ${index + 1}:`, error);
                 }
             }
         });
         
-        // Füge die aktive Zeiterfassung hinzu, wenn sie für den ausgewählten Tag relevant ist
+        // Prüfe, ob die aktive Zeiterfassung für den ausgewählten Tag relevant ist
+        let isActiveRelevant = false;
         if (activeWorktime) {
-            const activeStart = new Date(activeWorktime.startTime);
-            const activeStartDay = activeStart.toISOString().split('T')[0];
-            const selectedDay = selectedDate;
-            
-            // Prüfe, ob die aktive Zeiterfassung am ausgewählten Tag begonnen hat
-            if (activeStartDay === selectedDay) {
+            isActiveRelevant = isActiveWorktimeRelevant();
+        }
+        console.log("Ist aktive Zeiterfassung relevant?", isActiveRelevant);
+        
+        // Füge die aktive Zeiterfassung hinzu, wenn sie für den ausgewählten Tag relevant ist
+        if (activeWorktime && isActiveRelevant) {
+            try {
+                const activeStart = new Date(activeWorktime.startTime);
                 const now = new Date();
                 const diff = now.getTime() - activeStart.getTime();
                 
+                console.log("Aktive Zeiterfassung:");
+                console.log(`  Start: ${activeStart.toLocaleString()}`);
+                console.log(`  Jetzt: ${now.toLocaleString()}`);
+                console.log(`  Differenz: ${diff} ms`);
+                
                 if (diff > 0) {
-                    totalMinutes += Math.floor(diff / (1000 * 60));
+                    const minutes = Math.floor(diff / (1000 * 60));
+                    totalMinutes += minutes;
+                    console.log(`  Minuten: ${minutes}`);
+                    console.log(`  Neue Gesamtsumme: ${totalMinutes} Minuten`);
+                } else {
+                    console.warn(`  Negative Zeitdifferenz erkannt: ${diff} ms`);
                 }
+            } catch (error) {
+                console.error("Fehler bei der Berechnung der aktiven Zeiterfassung:", error);
             }
         }
         
         // Formatiere die Gesamtdauer
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
-        setTotalDuration(`${hours}h ${minutes}m`);
+        const formattedDuration = `${hours}h ${minutes}m`;
+        console.log(`Gesamtdauer: ${formattedDuration}`);
+        setTotalDuration(formattedDuration);
     }, [worktimes, activeWorktime, selectedDate]);
 
     const calculateDuration = (startTime: string, endTime: string | null): string => {
         if (!endTime) return '-';
         
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        
-        // Berechnung mit Millisekunden, um negative Werte zu vermeiden
-        const diff = end.getTime() - start.getTime();
-        
-        if (diff < 0) {
-            console.error('Negative Zeitdifferenz erkannt:', { startTime, endTime, diff });
-            return 'Fehler: Negative Zeit';
+        try {
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            
+            console.log("Berechne Dauer:");
+            console.log(`  Start: ${start.toISOString()} (${start.getHours()}:${start.getMinutes()})`);
+            console.log(`  Ende: ${end.toISOString()} (${end.getHours()}:${end.getMinutes()})`);
+            
+            // Berechnung mit Millisekunden
+            const diff = end.getTime() - start.getTime();
+            console.log(`  Differenz in ms: ${diff}`);
+            
+            if (diff < 0) {
+                console.error('Negative Zeitdifferenz erkannt:', { startTime, endTime, diff });
+                return 'Fehler: Negative Zeit';
+            }
+            
+            // Umrechnung in Stunden und Minuten
+            const totalMinutes = Math.floor(diff / (1000 * 60));
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            
+            console.log(`  Berechnete Dauer: ${hours}h ${minutes}m`);
+            return `${hours}h ${minutes}m`;
+        } catch (error) {
+            console.error("Fehler bei der Dauerberechnung:", error);
+            return 'Fehler';
         }
-        
-        // Umrechnung in Stunden und Minuten
-        const totalMinutes = Math.floor(diff / (1000 * 60));
-        const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-        
-        return `${hours}h ${minutes}m`;
     };
 
     // Berechne die Dauer der aktiven Zeiterfassung
@@ -607,23 +760,78 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
     const isActiveWorktimeRelevant = (): boolean => {
         if (!activeWorktime) return false;
         
-        const activeStart = new Date(activeWorktime.startTime);
-        const activeStartDay = activeStart.toISOString().split('T')[0];
-        return activeStartDay === selectedDate;
+        try {
+            console.log("Prüfe Relevanz der aktiven Zeiterfassung:");
+            console.log(`  Aktive Startzeit: ${activeWorktime.startTime}`);
+            console.log(`  Ausgewähltes Datum: ${selectedDate}`);
+            
+            // Konvertiere die UTC-Zeit aus der Datenbank in lokale Zeit
+            const activeStartDate = new Date(activeWorktime.startTime);
+            const utcYear = activeStartDate.getUTCFullYear();
+            const utcMonth = (activeStartDate.getUTCMonth() + 1).toString().padStart(2, '0');
+            const utcDay = activeStartDate.getUTCDate().toString().padStart(2, '0');
+            
+            // Erstelle den Datumsstring im Format YYYY-MM-DD aus UTC-Komponenten
+            const activeStartDateStr = `${utcYear}-${utcMonth}-${utcDay}`;
+            
+            console.log(`  Aktive Startzeit (UTC): ${activeStartDate.toISOString()}`);
+            console.log(`  Aktive Startzeit als String (UTC): ${activeStartDateStr}`);
+            console.log(`  Selected Date: ${selectedDate}`);
+            
+            // Vergleiche die UTC-Datumsteile
+            const isSameDay = activeStartDateStr === selectedDate;
+            
+            console.log(`  Ist gleicher Tag: ${isSameDay}`);
+            return isSameDay;
+        } catch (error) {
+            console.error("Fehler beim Prüfen der Relevanz der aktiven Zeiterfassung:", error);
+            return false;
+        }
     };
 
     if (!isOpen) return null;
+
+    // Berechne die relevanten Einträge für das ausgewählte Datum
+    const relevantWorktimes = worktimes.filter(worktime => isWorktimeRelevantForSelectedDate(worktime));
+    console.log(`Anzahl relevanter Einträge für ${selectedDate}: ${relevantWorktimes.length}`);
+    relevantWorktimes.forEach((worktime, index) => {
+        console.log(`Relevanter Eintrag ${index + 1} (ID: ${worktime.id}): ${new Date(worktime.startTime).toLocaleString()}`);
+    });
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
                 <div className="p-4 border-b flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">Zeiteinträge</h2>
+                    <h2 className="text-xl font-semibold">
+                        Zeiteinträge für {formatDate(selectedDate)}
+                    </h2>
                     <div className="flex items-center space-x-2">
                         <input
                             type="date"
                             value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
+                            onChange={(e) => {
+                                const newDate = e.target.value;
+                                console.log("Neues Datum ausgewählt:", newDate);
+                                
+                                // Für Debugging: Zeige das neue Datum in verschiedenen Formaten
+                                try {
+                                    const dateParts = newDate.split('-');
+                                    if (dateParts.length === 3) {
+                                        const year = parseInt(dateParts[0]);
+                                        const month = parseInt(dateParts[1]) - 1;
+                                        const day = parseInt(dateParts[2]);
+                                        
+                                        const newDateObj = new Date(year, month, day, 12, 0, 0);
+                                        console.log("Neues Datum als Objekt:", newDateObj);
+                                        console.log("Neues Datum (lokale Zeit):", newDateObj.toLocaleString());
+                                        console.log("Neues Datum (ISO):", newDateObj.toISOString());
+                                    }
+                                } catch (error) {
+                                    console.error("Fehler beim Parsen des neuen Datums:", error);
+                                }
+                                
+                                setSelectedDate(newDate);
+                            }}
                             className="border rounded-md px-3 py-2"
                         />
                         <button 
@@ -640,7 +848,7 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
                         <div className="flex justify-center items-center h-32">
                             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                         </div>
-                    ) : worktimes.length === 0 && !isActiveWorktimeRelevant() ? (
+                    ) : worktimes.filter(worktime => isWorktimeRelevantForSelectedDate(worktime) && (worktime.endTime !== null || isActiveWorktimeRelevant())).length === 0 ? (
                         <div className="p-4 text-center text-gray-500">
                             Keine Zeiteinträge für diesen Tag gefunden.
                         </div>
@@ -649,10 +857,10 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
                             <thead className="bg-gray-50">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Datum & Start
+                                        Start
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Datum & Ende
+                                        Ende
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Dauer
@@ -663,7 +871,12 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {worktimes.map((worktime) => (
+                                {worktimes
+                                  .filter(worktime => isWorktimeRelevantForSelectedDate(worktime))
+                                  .filter(worktime => worktime.endTime !== null)
+                                  // Sortiere nach Startzeit (frühester Eintrag zuerst)
+                                  .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+                                  .map((worktime) => (
                                     <tr key={worktime.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                             {formatTime(worktime.startTime)}

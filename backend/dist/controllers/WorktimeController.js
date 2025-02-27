@@ -42,7 +42,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getActiveWorktime = exports.exportWorktimes = exports.getWorktimeStats = exports.deleteWorktime = exports.updateWorktime = exports.getWorktimes = exports.stopWorktime = exports.startWorktime = void 0;
+exports.getActiveWorktime = exports.exportWorktimes = exports.getWorktimeStats = exports.updateWorktime = exports.deleteWorktime = exports.getWorktimes = exports.stopWorktime = exports.startWorktime = void 0;
 const client_1 = require("@prisma/client");
 const ExcelJS = __importStar(require("exceljs"));
 const date_fns_1 = require("date-fns");
@@ -125,10 +125,28 @@ const getWorktimes = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             userId: Number(userId)
         };
         if (date) {
-            const queryDate = new Date(date);
-            whereClause.startTime = {
-                gte: new Date(queryDate.setHours(0, 0, 0, 0)),
-                lt: new Date(queryDate.setHours(23, 59, 59, 999))
+            const queryDateStr = date;
+            console.log(`Filtere Zeiteinträge für Datum (String): ${queryDateStr}`);
+            // Wir erstellen das Datum manuell, um Zeitzonenprobleme zu vermeiden
+            const dateParts = queryDateStr.split('-');
+            if (dateParts.length !== 3) {
+                return res.status(400).json({ message: 'Ungültiges Datumsformat' });
+            }
+            const year = parseInt(dateParts[0]);
+            const month = parseInt(dateParts[1]) - 1; // Monate sind 0-basiert in JavaScript
+            const day = parseInt(dateParts[2]);
+            // Wir setzen die Uhrzeit auf 00:00:00 und 23:59:59 in der lokalen Zeitzone
+            const startOfDay = new Date(Date.UTC(year, month, day, 0, 0, 0));
+            const endOfDay = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
+            console.log(`Zeitraum (lokal): ${startOfDay.toLocaleString()} bis ${endOfDay.toLocaleString()}`);
+            console.log(`Zeitraum (ISO): ${startOfDay.toISOString()} bis ${endOfDay.toISOString()}`);
+            // Suche nach Einträgen für diesen Tag
+            whereClause = {
+                userId: Number(userId),
+                startTime: {
+                    gte: startOfDay,
+                    lt: endOfDay
+                }
             };
         }
         const worktimes = yield prisma.workTime.findMany({
@@ -137,7 +155,20 @@ const getWorktimes = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 branch: true
             },
             orderBy: {
-                startTime: 'desc'
+                startTime: 'asc'
+            }
+        });
+        console.log(`Gefundene Zeiteinträge: ${worktimes.length}`);
+        // Für Debugging: Zeige die Start- und Endzeiten der gefundenen Einträge
+        worktimes.forEach((worktime, index) => {
+            const startLocal = new Date(worktime.startTime).toLocaleString();
+            const endLocal = worktime.endTime ? new Date(worktime.endTime).toLocaleString() : 'aktiv';
+            console.log(`Eintrag ${index + 1}:`);
+            console.log(`  Start (lokal): ${startLocal}`);
+            console.log(`  Ende (lokal): ${endLocal}`);
+            console.log(`  Start (ISO): ${worktime.startTime.toISOString()}`);
+            if (worktime.endTime) {
+                console.log(`  Ende (ISO): ${worktime.endTime.toISOString()}`);
             }
         });
         res.json(worktimes);
@@ -148,6 +179,33 @@ const getWorktimes = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.getWorktimes = getWorktimes;
+const deleteWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const userId = req.userId;
+        if (!userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        const worktime = yield prisma.workTime.findUnique({
+            where: { id: Number(id) }
+        });
+        if (!worktime) {
+            return res.status(404).json({ message: 'Zeiterfassung nicht gefunden' });
+        }
+        if (worktime.userId !== Number(userId)) {
+            return res.status(403).json({ message: 'Keine Berechtigung' });
+        }
+        yield prisma.workTime.delete({
+            where: { id: Number(id) }
+        });
+        res.json({ message: 'Zeiterfassung erfolgreich gelöscht' });
+    }
+    catch (error) {
+        console.error('Fehler beim Löschen der Zeiterfassung:', error);
+        res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+exports.deleteWorktime = deleteWorktime;
 const updateWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
@@ -184,33 +242,6 @@ const updateWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.updateWorktime = updateWorktime;
-const deleteWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const { id } = req.params;
-        const userId = req.userId;
-        if (!userId) {
-            return res.status(401).json({ message: 'Nicht authentifiziert' });
-        }
-        const worktime = yield prisma.workTime.findUnique({
-            where: { id: Number(id) }
-        });
-        if (!worktime) {
-            return res.status(404).json({ message: 'Zeiterfassung nicht gefunden' });
-        }
-        if (worktime.userId !== Number(userId)) {
-            return res.status(403).json({ message: 'Keine Berechtigung' });
-        }
-        yield prisma.workTime.delete({
-            where: { id: Number(id) }
-        });
-        res.json({ message: 'Zeiterfassung erfolgreich gelöscht' });
-    }
-    catch (error) {
-        console.error('Fehler beim Löschen der Zeiterfassung:', error);
-        res.status(500).json({ message: 'Interner Serverfehler' });
-    }
-});
-exports.deleteWorktime = deleteWorktime;
 const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { week } = req.query;
@@ -221,35 +252,66 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
         const weekDate = week ? new Date(week) : new Date();
         const start = (0, date_fns_1.startOfWeek)(weekDate, { weekStartsOn: 1 });
         const end = (0, date_fns_1.endOfWeek)(weekDate, { weekStartsOn: 1 });
+        // Wir suchen nach Einträgen, die in dieser Woche begonnen oder geendet haben
+        // oder die über diese Woche gehen (Start vor der Woche, Ende nach der Woche)
         const worktimes = yield prisma.workTime.findMany({
             where: {
                 userId: Number(userId),
-                startTime: {
-                    gte: start,
-                    lte: end
-                },
                 endTime: {
                     not: null
+                },
+                OR: [
+                    {
+                        // Einträge, die in dieser Woche begonnen haben
+                        startTime: {
+                            gte: start,
+                            lte: end
+                        }
+                    },
+                    {
+                        // Einträge, die in dieser Woche geendet haben
+                        endTime: {
+                            gte: start,
+                            lte: end
+                        }
+                    },
+                    {
+                        // Einträge, die über diese Woche gehen
+                        startTime: {
+                            lt: start
+                        },
+                        endTime: {
+                            gt: end
+                        }
+                    }
+                ]
+            }
+        });
+        // Wir erstellen ein Map für jeden Tag der Woche
+        const dailyStats = new Map();
+        const weekDays = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+        weekDays.forEach(day => dailyStats.set(day, 0));
+        let totalHours = 0;
+        let daysWorked = 0;
+        // Für jeden Zeiteintrag berechnen wir die Arbeitszeit pro Tag
+        worktimes.forEach(worktime => {
+            if (worktime.endTime) {
+                // Berechnung mit Millisekunden, um negative Werte zu vermeiden
+                const diff = worktime.endTime.getTime() - worktime.startTime.getTime();
+                const hours = diff / (1000 * 60 * 60);
+                if (hours > 0) {
+                    totalHours += hours;
+                    const day = (0, date_fns_1.format)(worktime.startTime, 'EEEE', { locale: locale_1.de });
+                    const currentDayHours = dailyStats.get(day) || 0;
+                    dailyStats.set(day, currentDayHours + hours);
+                    if (currentDayHours === 0)
+                        daysWorked++;
                 }
             }
         });
-        const dailyStats = new Map();
-        let totalHours = 0;
-        let daysWorked = 0;
-        worktimes.forEach(worktime => {
-            if (worktime.endTime) {
-                const hours = (worktime.endTime.getTime() - worktime.startTime.getTime()) / (1000 * 60 * 60);
-                totalHours += hours;
-                const day = (0, date_fns_1.format)(worktime.startTime, 'EEEE', { locale: locale_1.de });
-                const currentDayHours = dailyStats.get(day) || 0;
-                dailyStats.set(day, currentDayHours + hours);
-                if (currentDayHours === 0)
-                    daysWorked++;
-            }
-        });
-        const weeklyData = Array.from(dailyStats).map(([day, hours]) => ({
+        const weeklyData = weekDays.map(day => ({
             day,
-            hours: Math.round(hours * 100) / 100
+            hours: Math.round((dailyStats.get(day) || 0) * 100) / 100
         }));
         res.json({
             totalHours: Math.round(totalHours * 100) / 100,

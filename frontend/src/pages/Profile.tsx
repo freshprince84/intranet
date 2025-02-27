@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth.tsx';
+import { UserCircleIcon } from '@heroicons/react/24/outline';
 
 const API_URL = 'http://localhost:5000/api';
 
@@ -155,7 +156,10 @@ const Profile: React.FC = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Benutzerprofil</h1>
+          <div className="flex items-center">
+            <UserCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Benutzerprofil</h1>
+          </div>
           {!isEditing && (
             <button
               onClick={startEditing}

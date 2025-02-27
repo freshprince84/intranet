@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,135 +8,198 @@ datasource db {
 }
 
 model User {
-  id            Int       @id @default(autoincrement())
-  username      String    @unique
-  email         String    @unique
-  password      String
-  firstName     String
-  lastName      String
-  birthday      DateTime?
-  bankDetails   String?
-  contract      String?
-  salary        Float?
-  roles         UserRole[]
-  branches      UsersBranches[]
-  workTimes     WorkTime[]
-  tasksResponsible Task[] @relation("responsible")
-  tasksQualityControl Task[] @relation("quality_control")
-  requestsRequester Request[] @relation("requester")
-  requestsResponsible Request[] @relation("responsible")
-  settings      Settings?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                       Int                       @id @default(autoincrement())
+  username                 String                    @unique
+  password                 String
+  firstName                String
+  lastName                 String
+  birthday                 DateTime?
+  bankDetails              String?
+  contract                 String?
+  salary                   Float?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  email                    String                    @unique
+  notifications            Notification[]
+  requestsRequester        Request[]                 @relation("requester")
+  requestsResponsible      Request[]                 @relation("responsible")
+  settings                 Settings?
+  tasksQualityControl      Task[]                    @relation("quality_control")
+  tasksResponsible         Task[]                    @relation("responsible")
+  userNotificationSettings UserNotificationSettings?
+  roles                    UserRole[]
+  branches                 UsersBranches[]
+  workTimes                WorkTime[]
 }
 
 model Role {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
   description String?
-  users       UserRole[]
   permissions Permission[]
+  users       UserRole[]
 }
 
 model UserRole {
   id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id])
   userId    Int
-  role      Role     @relation(fields: [roleId], references: [id])
   roleId    Int
   lastUsed  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  role      Role     @relation(fields: [roleId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, roleId])
 }
 
 model Permission {
   id          Int      @id @default(autoincrement())
-  page        String
-  accessLevel String
-  role        Role     @relation(fields: [roleId], references: [id])
   roleId      Int
+  page        String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  accessLevel String
+  role        Role     @relation(fields: [roleId], references: [id])
 }
 
 model Branch {
   id        Int             @id @default(autoincrement())
-  name      String         @unique
+  name      String          @unique
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  requests  Request[]
+  tasks     Task[]
   users     UsersBranches[]
   workTimes WorkTime[]
-  tasks     Task[]
-  requests  Request[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
 }
 
 model UsersBranches {
   id        Int      @id @default(autoincrement())
-  user      User     @relation(fields: [userId], references: [id])
   userId    Int
-  branch    Branch   @relation(fields: [branchId], references: [id])
   branchId  Int
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, branchId])
 }
 
 model WorkTime {
   id        Int       @id @default(autoincrement())
-  user      User      @relation(fields: [userId], references: [id])
   userId    Int
-  branch    Branch    @relation(fields: [branchId], references: [id])
   branchId  Int
   startTime DateTime
   endTime   DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  branch    Branch    @relation(fields: [branchId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
 }
 
 model Task {
-  id               Int       @id @default(autoincrement())
-  title           String
-  description     String?
-  status          TaskStatus @default(open)
-  responsible     User       @relation("responsible", fields: [responsibleId], references: [id])
-  responsibleId   Int
-  qualityControl  User       @relation("quality_control", fields: [qualityControlId], references: [id])
+  id               Int        @id @default(autoincrement())
+  title            String
+  description      String?
+  status           TaskStatus @default(open)
+  responsibleId    Int
   qualityControlId Int
-  branch          Branch     @relation(fields: [branchId], references: [id])
-  branchId        Int
-  dueDate         DateTime?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
+  branchId         Int
+  dueDate          DateTime?
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  branch           Branch     @relation(fields: [branchId], references: [id])
+  qualityControl   User       @relation("quality_control", fields: [qualityControlId], references: [id])
+  responsible      User       @relation("responsible", fields: [responsibleId], references: [id])
 }
 
 model Request {
-  id             Int           @id @default(autoincrement())
+  id            Int           @id @default(autoincrement())
   title         String
   description   String?
-  status        RequestStatus  @default(approval)
-  requester     User          @relation("requester", fields: [requesterId], references: [id])
+  status        RequestStatus @default(approval)
   requesterId   Int
-  responsible   User          @relation("responsible", fields: [responsibleId], references: [id])
   responsibleId Int
-  branch        Branch        @relation(fields: [branchId], references: [id])
   branchId      Int
   dueDate       DateTime?
   createTodo    Boolean       @default(false)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  requester     User          @relation("requester", fields: [requesterId], references: [id])
+  responsible   User          @relation("responsible", fields: [responsibleId], references: [id])
 }
 
 model Settings {
-  id         Int      @id @default(autoincrement())
-  user       User     @relation(fields: [userId], references: [id])
-  userId     Int      @unique
-  companyLogo String?
-  darkMode   Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id               Int      @id @default(autoincrement())
+  userId           Int      @unique
+  companyLogo      String?
+  darkMode         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  sidebarCollapsed Boolean  @default(false)
+  user             User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id                Int              @id @default(autoincrement())
+  userId            Int
+  title             String
+  message           String
+  type              NotificationType
+  read              Boolean          @default(false)
+  relatedEntityId   Int?
+  relatedEntityType String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  user              User             @relation(fields: [userId], references: [id])
+}
+
+model NotificationSettings {
+  id                  Int      @id @default(autoincrement())
+  taskCreate          Boolean  @default(true)
+  taskUpdate          Boolean  @default(true)
+  taskDelete          Boolean  @default(true)
+  taskStatusChange    Boolean  @default(true)
+  requestCreate       Boolean  @default(true)
+  requestUpdate       Boolean  @default(true)
+  requestDelete       Boolean  @default(true)
+  requestStatusChange Boolean  @default(true)
+  userCreate          Boolean  @default(true)
+  userUpdate          Boolean  @default(true)
+  userDelete          Boolean  @default(true)
+  roleCreate          Boolean  @default(true)
+  roleUpdate          Boolean  @default(true)
+  roleDelete          Boolean  @default(true)
+  worktimeStart       Boolean  @default(true)
+  worktimeStop        Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model UserNotificationSettings {
+  id                  Int      @id @default(autoincrement())
+  userId              Int      @unique
+  taskCreate          Boolean?
+  taskUpdate          Boolean?
+  taskDelete          Boolean?
+  taskStatusChange    Boolean?
+  requestCreate       Boolean?
+  requestUpdate       Boolean?
+  requestDelete       Boolean?
+  requestStatusChange Boolean?
+  userCreate          Boolean?
+  userUpdate          Boolean?
+  userDelete          Boolean?
+  roleCreate          Boolean?
+  roleUpdate          Boolean?
+  roleDelete          Boolean?
+  worktimeStart       Boolean?
+  worktimeStop        Boolean?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  user                User     @relation(fields: [userId], references: [id])
 }
 
 enum TaskStatus {
@@ -162,4 +222,13 @@ enum AccessLevel {
   write
   both
   none
-} 
+}
+
+enum NotificationType {
+  task
+  request
+  user
+  role
+  worktime
+  system
+}

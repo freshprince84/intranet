@@ -8,9 +8,6 @@ declare global {
     namespace Express {
         interface Request {
             userPermissions?: any[];
-            user?: {
-                id: number;
-            };
         }
     }
 }
@@ -25,54 +22,60 @@ type AccessLevel = 'none' | 'read' | 'write' | 'both';
 export const checkPermission = (requiredAccess: AccessLevel) => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const userId = req.user?.id;
+            const userId = parseInt(req.userId, 10);
+            const roleId = parseInt(req.roleId, 10);
             
-            if (!userId) {
+            if (isNaN(userId)) {
                 return res.status(401).json({ 
                     message: 'Nicht authentifiziert',
                     error: 'NOT_AUTHENTICATED'
                 });
             }
 
-            // Hole die aktive Rolle des Benutzers
-            const userRole = await prisma.userRole.findFirst({
-                where: { 
-                    userId,
-                    lastUsed: true
-                },
-                include: {
-                    role: {
-                        include: {
-                            permissions: true
-                        }
-                    }
-                }
+            if (isNaN(roleId)) {
+                return res.status(403).json({
+                    message: 'Keine Rolle im Token',
+                    error: 'NO_ROLE_IN_TOKEN'
+                });
+            }
+
+            console.log(`[PERMISSION] Prüfe Berechtigung - UserId: ${userId}, RoleId: ${roleId}`);
+
+            // Hole die Rolle und deren Berechtigungen direkt mit der roleId aus dem Token
+            const role = await prisma.role.findUnique({
+                where: { id: roleId },
+                include: { permissions: true }
             });
 
-            if (!userRole) {
+            if (!role) {
                 return res.status(403).json({ 
-                    message: 'Keine aktive Rolle gefunden',
-                    error: 'NO_ACTIVE_ROLE'
+                    message: 'Rolle nicht gefunden',
+                    error: 'ROLE_NOT_FOUND'
                 });
             }
 
             // Bestimme die aktuelle Seite aus der URL
             const currentPage = req.baseUrl.split('/').pop() || 'dashboard';
+            console.log(`[PERMISSION] Aktuelle Seite: ${currentPage}`);
 
             // Finde die relevante Berechtigung
-            const permission = userRole.role.permissions.find(p => p.page === currentPage);
+            const permission = role.permissions.find(p => p.page === currentPage);
 
             if (!permission) {
+                console.log(`[PERMISSION] Keine Berechtigung gefunden für Seite: ${currentPage}`);
                 return res.status(403).json({ 
                     message: 'Keine Berechtigung für diese Seite',
                     error: 'NO_PAGE_PERMISSION'
                 });
             }
 
+            console.log(`[PERMISSION] Gefundene Berechtigung: ${permission.accessLevel} für Seite ${permission.page}`);
+
             // Prüfe die Zugriffsebene
             const hasAccess = checkAccessLevel(permission.accessLevel as AccessLevel, requiredAccess);
 
             if (!hasAccess) {
+                console.log(`[PERMISSION] Unzureichende Berechtigungen: Hat ${permission.accessLevel}, benötigt ${requiredAccess}`);
                 return res.status(403).json({ 
                     message: 'Unzureichende Berechtigungen',
                     error: 'INSUFFICIENT_PERMISSIONS'
@@ -80,7 +83,8 @@ export const checkPermission = (requiredAccess: AccessLevel) => {
             }
 
             // Füge die Berechtigungen zum Request hinzu
-            req.userPermissions = userRole.role.permissions;
+            req.userPermissions = role.permissions;
+            console.log(`[PERMISSION] Zugriff gewährt für ${currentPage}`);
             next();
         } catch (error) {
             console.error('Error in permission middleware:', error);
@@ -101,8 +105,8 @@ export const checkPermission = (requiredAccess: AccessLevel) => {
 function checkAccessLevel(hasLevel: AccessLevel, needsLevel: AccessLevel): boolean {
     if (hasLevel === 'none') return false;
     if (hasLevel === 'both') return true;
-    if (needsLevel === 'both') return hasLevel === 'both';
-    return hasLevel === needsLevel || hasLevel === 'both';
+    if (needsLevel === 'both') return false; // Nur 'both' kann 'both' erfüllen
+    return hasLevel === needsLevel; // Exakte Übereinstimmung oder 'both' (wegen vorherigem Check)
 }
 
 /**
@@ -110,26 +114,22 @@ function checkAccessLevel(hasLevel: AccessLevel, needsLevel: AccessLevel): boole
  */
 export const isAdmin = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userId = req.user?.id;
+        const userId = parseInt(req.userId, 10);
+        const roleId = parseInt(req.roleId, 10);
 
-        if (!userId) {
+        if (isNaN(userId)) {
             return res.status(401).json({ 
                 message: 'Nicht authentifiziert',
                 error: 'NOT_AUTHENTICATED'
             });
         }
         
-        const userRole = await prisma.userRole.findFirst({
-            where: { 
-                userId,
-                lastUsed: true,
-                role: {
-                    name: 'admin'
-                }
-            }
+        // Überprüfe, ob die Rolle 'admin' ist
+        const role = await prisma.role.findUnique({
+            where: { id: roleId }
         });
 
-        if (!userRole) {
+        if (!role || role.name !== 'admin') {
             return res.status(403).json({ 
                 message: 'Admin-Berechtigung erforderlich',
                 error: 'ADMIN_REQUIRED'
