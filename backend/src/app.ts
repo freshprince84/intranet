@@ -9,6 +9,7 @@ import roleRoutes from './routes/roles';
 import branchRoutes from './routes/branches';
 import worktimeRoutes from './routes/worktime';
 import settingsRoutes from './routes/settings';
+import notificationRoutes from './routes/notifications';
 
 const app = express();
 
@@ -29,6 +30,7 @@ app.use('/api/roles', roleRoutes);
 app.use('/api/branches', branchRoutes);
 app.use('/api/worktime', worktimeRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

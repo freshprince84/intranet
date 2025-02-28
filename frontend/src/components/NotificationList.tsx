@@ -1,38 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Box, 
-  Typography, 
-  List, 
-  ListItem, 
-  ListItemText, 
-  ListItemSecondaryAction, 
-  IconButton, 
-  Divider, 
-  Paper, 
-  Button,
-  Pagination,
-  Chip,
   Tooltip,
   CircularProgress,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
-  DialogTitle
+  DialogTitle,
+  Button
 } from '@mui/material';
-import { 
-  Delete as DeleteIcon,
-  Notifications as NotificationsIcon,
-  Check as CheckIcon,
-  Info as InfoIcon,
-  Warning as WarningIcon,
-  Error as ErrorIcon,
-  Task as TaskIcon,
-  Person as PersonIcon,
-  WorkOutline as WorkOutlineIcon,
-  Assignment as AssignmentIcon,
-  SupervisorAccount as SupervisorAccountIcon
-} from '@mui/icons-material';
+import {
+  BellIcon,
+  CheckIcon,
+  TrashIcon,
+  InformationCircleIcon,
+  ExclamationTriangleIcon,
+  ExclamationCircleIcon,
+  ClipboardDocumentListIcon,
+  UserIcon,
+  ClockIcon,
+  DocumentTextIcon,
+  UserGroupIcon
+} from '@heroicons/react/24/outline';
 import { Notification, notificationApi } from '../api/notificationApi.ts';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -57,8 +46,8 @@ const NotificationList: React.FC = () => {
     try {
       setLoading(true);
       const response = await notificationApi.getNotifications(page, itemsPerPage);
-      setNotifications(response.data.notifications || []);
-      setTotalPages(Math.ceil((response.data.total || 0) / itemsPerPage));
+      setNotifications(response.notifications);
+      setTotalPages(response.pagination.totalPages);
     } catch (error) {
       console.error('Fehler beim Laden der Benachrichtigungen:', error);
     } finally {
@@ -131,23 +120,23 @@ const NotificationList: React.FC = () => {
   const getNotificationIcon = (type: string) => {
     switch (type.toLowerCase()) {
       case 'task':
-        return <TaskIcon color="primary" />;
+        return <ClipboardDocumentListIcon className="h-6 w-6 text-blue-600" />;
       case 'user':
-        return <PersonIcon color="primary" />;
+        return <UserIcon className="h-6 w-6 text-blue-600" />;
       case 'worktime':
-        return <WorkOutlineIcon color="primary" />;
+        return <ClockIcon className="h-6 w-6 text-blue-600" />;
       case 'request':
-        return <AssignmentIcon color="primary" />;
+        return <DocumentTextIcon className="h-6 w-6 text-blue-600" />;
       case 'role':
-        return <SupervisorAccountIcon color="primary" />;
+        return <UserGroupIcon className="h-6 w-6 text-blue-600" />;
       case 'info':
-        return <InfoIcon color="info" />;
+        return <InformationCircleIcon className="h-6 w-6 text-blue-600" />;
       case 'warning':
-        return <WarningIcon color="warning" />;
+        return <ExclamationTriangleIcon className="h-6 w-6 text-yellow-500" />;
       case 'error':
-        return <ErrorIcon color="error" />;
+        return <ExclamationCircleIcon className="h-6 w-6 text-red-600" />;
       default:
-        return <NotificationsIcon color="primary" />;
+        return <BellIcon className="h-6 w-6 text-blue-600" />;
     }
   };
 
@@ -191,200 +180,175 @@ const NotificationList: React.FC = () => {
     }
   };
 
-  if (loading && notifications.length === 0) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   return (
-    <Paper sx={{ p: 2, maxWidth: 800, mx: 'auto', mt: 2 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-        <Typography variant="h5">
-          Benachrichtigungen
-        </Typography>
-        <Box>
-          <Button 
-            variant="outlined" 
-            color="primary" 
-            onClick={handleMarkAllAsRead}
-            startIcon={<CheckIcon />}
-            size="small"
-            sx={{ mr: 1 }}
-            disabled={notifications.every(n => n.read)}
-          >
-            Alle als gelesen markieren
-          </Button>
-          <Button 
-            variant="outlined" 
-            color="error" 
-            onClick={handleDeleteAllClick}
-            startIcon={<DeleteIcon />}
-            size="small"
-            disabled={notifications.length === 0}
-          >
-            Alle löschen
-          </Button>
-        </Box>
-      </Box>
-      
-      {notifications.length === 0 ? (
-        <Box sx={{ display: 'flex', justifyContent: 'center', flexDirection: 'column', alignItems: 'center', py: 4 }}>
-          <NotificationsIcon sx={{ fontSize: 60, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="body1" color="textSecondary">
-            Keine Benachrichtigungen vorhanden
-          </Typography>
-        </Box>
-      ) : (
-        <>
-          <List>
-            {notifications.map((notification, index) => (
-              <React.Fragment key={notification.id}>
-                <ListItem 
-                  alignItems="flex-start" 
+    <div className="min-h-screen bg-gray-100 p-4">
+      <div className="container mx-auto">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <BellIcon className="h-6 w-6 text-gray-600 mr-2" />
+              <h2 className="text-xl font-semibold text-gray-800">Benachrichtigungen</h2>
+            </div>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={handleMarkAllAsRead}
+                disabled={notifications.every(n => n.read)}
+                className={`inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium
+                  ${notifications.every(n => n.read)
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200'}`}
+              >
+                <CheckIcon className="h-4 w-4 mr-2" />
+                Alle gelesen
+              </button>
+              <button
+                onClick={handleDeleteAllClick}
+                disabled={notifications.length === 0}
+                className={`inline-flex items-center px-3 py-2 border rounded-md text-sm font-medium
+                  ${notifications.length === 0
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200'}`}
+              >
+                <TrashIcon className="h-4 w-4 mr-2" />
+                Alle löschen
+              </button>
+            </div>
+          </div>
+
+          {loading && notifications.length === 0 ? (
+            <div className="flex justify-center items-center py-12">
+              <CircularProgress />
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+              <BellIcon className="h-16 w-16 mb-4" />
+              <p className="text-lg">Keine Benachrichtigungen vorhanden</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {notifications.map((notification, index) => (
+                <div
+                  key={notification.id}
                   onClick={() => handleNotificationClick(notification)}
-                  sx={{ 
-                    bgcolor: notification.read ? 'inherit' : 'action.hover',
-                    '&:hover': { bgcolor: 'action.selected' },
-                    cursor: 'pointer'
-                  }}
+                  className={`p-4 rounded-lg transition-colors cursor-pointer
+                    ${notification.read ? 'bg-white hover:bg-gray-50' : 'bg-blue-50 hover:bg-blue-100'}
+                    ${index < notifications.length - 1 ? 'border-b' : ''}`}
                 >
-                  <Box sx={{ mr: 2, display: 'flex', alignItems: 'flex-start', pt: 1 }}>
-                    {getNotificationIcon(notification.type)}
-                  </Box>
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography
-                          variant="subtitle1"
-                          component="span"
-                          sx={{ fontWeight: notification.read ? 'normal' : 'bold' }}
-                        >
+                  <div className="flex items-start">
+                    <div className="flex-shrink-0 mt-1">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="ml-4 flex-grow">
+                      <div className="flex items-center">
+                        <h3 className={`text-base ${notification.read ? 'font-medium' : 'font-semibold'} text-gray-900`}>
                           {notification.title}
-                        </Typography>
-                        
+                        </h3>
                         {!notification.read && (
-                          <Chip 
-                            label="Neu" 
-                            color="primary" 
-                            size="small" 
-                            sx={{ ml: 1, height: 20 }}
-                          />
+                          <span className="ml-2 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                            Neu
+                          </span>
                         )}
-                      </Box>
-                    }
-                    secondary={
-                      <>
-                        <Typography
-                          component="span"
-                          variant="body2"
-                          color="text.primary"
-                        >
-                          {notification.message}
-                        </Typography>
-                        <Typography
-                          component="span"
-                          variant="body2"
-                          color="text.secondary"
-                          display="block"
-                          sx={{ mt: 1 }}
-                        >
-                          {formatDate(notification.createdAt)}
-                        </Typography>
-                      </>
-                    }
-                  />
-                  <ListItemSecondaryAction>
-                    <Box sx={{ display: 'flex' }}>
+                      </div>
+                      <p className="mt-1 text-sm text-gray-600">
+                        {notification.message}
+                      </p>
+                      <p className="mt-2 text-xs text-gray-500">
+                        {formatDate(notification.createdAt)}
+                      </p>
+                    </div>
+                    <div className="ml-4 flex-shrink-0 flex space-x-2">
                       {!notification.read && (
                         <Tooltip title="Als gelesen markieren">
-                          <IconButton
-                            edge="end"
+                          <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleMarkAsRead(notification.id);
                             }}
-                            size="small"
+                            className="text-blue-600 hover:text-blue-900 p-1.5 rounded-full hover:bg-blue-50"
                           >
-                            <CheckIcon fontSize="small" />
-                          </IconButton>
+                            <CheckIcon className="h-5 w-5" />
+                          </button>
                         </Tooltip>
                       )}
                       <Tooltip title="Löschen">
-                        <IconButton
-                          edge="end"
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteClick(notification.id);
                           }}
-                          size="small"
+                          className="text-red-600 hover:text-red-900 p-1.5 rounded-full hover:bg-red-50"
                         >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                          <TrashIcon className="h-5 w-5" />
+                        </button>
                       </Tooltip>
-                    </Box>
-                  </ListItemSecondaryAction>
-                </ListItem>
-                {index < notifications.length - 1 && <Divider variant="inset" component="li" />}
-              </React.Fragment>
-            ))}
-          </List>
-          
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-            <Pagination 
-              count={totalPages} 
-              page={page} 
-              onChange={handlePageChange} 
-              color="primary" 
-            />
-          </Box>
-        </>
-      )}
-      
-      {/* Lösch-Dialog für einzelne Benachrichtigung */}
-      <Dialog
-        open={deleteDialogOpen}
-        onClose={() => setDeleteDialogOpen(false)}
-      >
-        <DialogTitle>Benachrichtigung löschen</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Möchten Sie diese Benachrichtigung wirklich löschen?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)} color="primary">
-            Abbrechen
-          </Button>
-          <Button onClick={handleDeleteConfirm} color="error">
-            Löschen
-          </Button>
-        </DialogActions>
-      </Dialog>
-      
-      {/* Lösch-Dialog für alle Benachrichtigungen */}
-      <Dialog
-        open={deleteAllDialogOpen}
-        onClose={() => setDeleteAllDialogOpen(false)}
-      >
-        <DialogTitle>Alle Benachrichtigungen löschen</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Möchten Sie wirklich alle Benachrichtigungen löschen? Diese Aktion kann nicht rückgängig gemacht werden.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteAllDialogOpen(false)} color="primary">
-            Abbrechen
-          </Button>
-          <Button onClick={handleDeleteAllConfirm} color="error">
-            Alle löschen
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Paper>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className="flex justify-center mt-6">
+              <nav className="flex items-center space-x-2">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => setPage(pageNum)}
+                    className={`px-3 py-1 rounded-md text-sm font-medium
+                      ${page === pageNum
+                        ? 'bg-blue-600 text-white'
+                        : 'text-gray-700 hover:bg-gray-100'}`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          )}
+        </div>
+
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+        >
+          <DialogTitle>Benachrichtigung löschen</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Möchten Sie diese Benachrichtigung wirklich löschen?
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialogOpen(false)} color="primary">
+              Abbrechen
+            </Button>
+            <Button onClick={handleDeleteConfirm} color="error">
+              Löschen
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Dialog
+          open={deleteAllDialogOpen}
+          onClose={() => setDeleteAllDialogOpen(false)}
+        >
+          <DialogTitle>Alle Benachrichtigungen löschen</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Möchten Sie wirklich alle Benachrichtigungen löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteAllDialogOpen(false)} color="primary">
+              Abbrechen
+            </Button>
+            <Button onClick={handleDeleteAllConfirm} color="error">
+              Alle löschen
+            </Button>
+          </DialogActions>
+        </Dialog>
+      </div>
+    </div>
   );
 };
 

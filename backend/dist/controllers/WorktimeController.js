@@ -47,6 +47,7 @@ const client_1 = require("@prisma/client");
 const ExcelJS = __importStar(require("exceljs"));
 const date_fns_1 = require("date-fns");
 const locale_1 = require("date-fns/locale");
+const notificationController_1 = require("./notificationController");
 const prisma = new client_1.PrismaClient();
 const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -74,6 +75,15 @@ const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             include: {
                 branch: true
             }
+        });
+        // Erstelle Notification für Zeiterfassung Start
+        yield (0, notificationController_1.createNotificationIfEnabled)({
+            userId: Number(userId),
+            title: 'Zeiterfassung gestartet',
+            message: `Zeiterfassung wurde um ${(0, date_fns_1.format)(new Date(startTime), 'HH:mm')} gestartet`,
+            type: client_1.NotificationType.worktime,
+            relatedEntityId: worktime.id,
+            relatedEntityType: 'start'
         });
         res.json(worktime);
     }
@@ -105,6 +115,15 @@ const stopWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             include: {
                 branch: true
             }
+        });
+        // Erstelle Notification für Zeiterfassung Stop
+        yield (0, notificationController_1.createNotificationIfEnabled)({
+            userId: Number(userId),
+            title: 'Zeiterfassung beendet',
+            message: `Zeiterfassung wurde um ${(0, date_fns_1.format)(new Date(endTime), 'HH:mm')} beendet`,
+            type: client_1.NotificationType.worktime,
+            relatedEntityId: worktime.id,
+            relatedEntityType: 'stop'
         });
         res.json(worktime);
     }

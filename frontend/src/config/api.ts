@@ -2,10 +2,10 @@
 
 // Zentrale Konfiguration für API-URLs
 export const API_BASE_URL = process.env.NODE_ENV === 'development' 
-  ? window.location.hostname === 'localhost'
-    ? 'http://localhost:5000'  // Lokale Entwicklung auf localhost
-    : `http://${window.location.hostname}:5000`  // Entwicklung über IP
+  ? `http://${window.location.hostname}:5000`  // Entwicklung über IP
   : 'http://localhost:5000';    // Produktionsumgebung
+
+console.log('API_BASE_URL:', API_BASE_URL);
 
 export const API_URL = `${API_BASE_URL}/api`;
 

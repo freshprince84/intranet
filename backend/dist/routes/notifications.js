@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
-const notification_1 = require("../controllers/notification");
+const notificationController_1 = require("../controllers/notificationController");
 const roleCheck_1 = require("../middleware/roleCheck");
 const router = express_1.default.Router();
 // Debug-Middleware
@@ -22,18 +22,18 @@ router.use((req, res, next) => {
 // Alle Routen benötigen Authentifizierung
 router.use(auth_1.authenticateToken);
 // Benachrichtigungen abrufen
-router.get('/', notification_1.getUserNotifications);
+router.get('/', notificationController_1.getUserNotifications);
 // Ungelesene Benachrichtigungen zählen
-router.get('/unread/count', notification_1.countUnreadNotifications);
+router.get('/unread/count', notificationController_1.countUnreadNotifications);
 // Benachrichtigung erstellen (nur für Administratoren)
-router.post('/', (0, roleCheck_1.checkRole)(['admin']), notification_1.createNotification);
+router.post('/', (0, roleCheck_1.checkRole)(['admin']), notificationController_1.createNotification);
 // Benachrichtigung als gelesen markieren
-router.patch('/:id/read', notification_1.markNotificationAsRead);
+router.patch('/:id/read', notificationController_1.markNotificationAsRead);
 // Alle Benachrichtigungen als gelesen markieren
-router.patch('/read-all', notification_1.markAllNotificationsAsRead);
+router.patch('/read-all', notificationController_1.markAllNotificationsAsRead);
 // Benachrichtigung löschen
-router.delete('/:id', notification_1.deleteNotification);
+router.delete('/:id', notificationController_1.deleteNotification);
 // Alle Benachrichtigungen löschen
-router.delete('/', notification_1.deleteAllNotifications);
+router.delete('/', notificationController_1.deleteAllNotifications);
 exports.default = router;
 //# sourceMappingURL=notifications.js.map

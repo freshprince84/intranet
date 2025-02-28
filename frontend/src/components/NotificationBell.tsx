@@ -12,9 +12,7 @@ import {
   Divider, 
   CircularProgress
 } from '@mui/material';
-import { 
-  Notifications as NotificationsIcon
-} from '@mui/icons-material';
+import { BellIcon } from '@heroicons/react/24/outline';
 import { Notification, notificationApi } from '../api/notificationApi.ts';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -36,14 +34,24 @@ const NotificationBell: React.FC = () => {
     try {
       console.log('Versuche, ungelesene Benachrichtigungen zu zählen...');
       const response = await notificationApi.getUnreadCount();
-      console.log('Antwort vom Server:', response);
-      setUnreadCount(response.count);
+      console.log('Antwort vom Server für ungelesene Benachrichtigungen:', response);
+      
+      // Prüfe verschiedene mögliche Antwortformate
+      let count = 0;
+      if (typeof response === 'number') {
+        count = response;
+      } else if (response?.count && typeof response.count === 'number') {
+        count = response.count;
+      } else if (response?.data?.count && typeof response.data.count === 'number') {
+        count = response.data.count;
+      }
+      
+      console.log('Setze ungelesene Benachrichtigungen auf:', count);
+      setUnreadCount(count);
       setError(null);
     } catch (error) {
       console.error('Fehler beim Laden der ungelesenen Nachrichten:', error);
-      // Bei Fehler setzen wir die Anzahl auf 0, zeigen aber keinen sichtbaren Fehler an
       setUnreadCount(0);
-      // Kein setError hier, da wir keinen sichtbaren Fehler anzeigen wollen
     } finally {
       setLoading(false);
     }
@@ -55,9 +63,20 @@ const NotificationBell: React.FC = () => {
     setLoading(true);
     try {
       const response = await notificationApi.getNotifications(1, 5);
-      // Stellen Sie sicher, dass response.data ein Array ist oder verwenden Sie ein leeres Array
-      setNotifications(Array.isArray(response.data) ? response.data : 
-                      (response.data?.notifications || []));
+      console.log('Benachrichtigungen Response:', response);
+      
+      // Prüfe verschiedene mögliche Antwortformate
+      let notifications = [];
+      if (Array.isArray(response)) {
+        notifications = response;
+      } else if (response?.data && Array.isArray(response.data)) {
+        notifications = response.data;
+      } else if (response?.notifications && Array.isArray(response.notifications)) {
+        notifications = response.notifications;
+      }
+      
+      console.log('Verarbeitete Benachrichtigungen:', notifications);
+      setNotifications(notifications);
       setError(null);
     } catch (err) {
       console.error('Fehler beim Laden der Benachrichtigungen:', err);
@@ -165,7 +184,7 @@ const NotificationBell: React.FC = () => {
         sx={{ mr: 1 }}
       >
         <Badge badgeContent={unreadCount} color="error">
-          <NotificationsIcon />
+          <BellIcon className="h-6 w-6" />
         </Badge>
       </IconButton>
       

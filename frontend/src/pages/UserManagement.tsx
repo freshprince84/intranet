@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import { UserGroupIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, UserIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import UserManagementTab from '../components/UserManagementTab.tsx';
 import RoleManagementTab from '../components/RoleManagementTab.tsx';
 
@@ -53,9 +53,10 @@ const UserManagement: React.FC = () => {
                   activeTab === 'users'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
                 onClick={() => handleTabChange('users')}
               >
+                <UserIcon className="h-5 w-5 mr-2" />
                 Benutzer
               </button>
               <button
@@ -63,9 +64,10 @@ const UserManagement: React.FC = () => {
                   activeTab === 'roles'
                     ? 'border-blue-500 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
                 onClick={() => handleTabChange('roles')}
               >
+                <ShieldCheckIcon className="h-5 w-5 mr-2" />
                 Rollen
               </button>
             </nav>

@@ -10,26 +10,39 @@ import {
   Divider
 } from '@mui/material';
 import { NotificationSettings, notificationSettingsApi } from '../api/notificationApi.ts';
+import { API_URL } from '../config/api.ts';
+
+const defaultSettings = {
+  taskCreate: true,
+  taskUpdate: true,
+  taskDelete: true,
+  taskStatusChange: true,
+  requestCreate: true,
+  requestUpdate: true,
+  requestDelete: true,
+  requestStatusChange: true,
+  userCreate: true,
+  userUpdate: true,
+  userDelete: true,
+  roleCreate: true,
+  roleUpdate: true,
+  roleDelete: true,
+  worktimeStart: true,
+  worktimeStop: true
+};
+
+const categorySettings = {
+  task: ['taskCreate', 'taskUpdate', 'taskDelete', 'taskStatusChange'],
+  request: ['requestCreate', 'requestUpdate', 'requestDelete', 'requestStatusChange'],
+  user: ['userCreate', 'userUpdate', 'userDelete'],
+  role: ['roleCreate', 'roleUpdate', 'roleDelete'],
+  worktime: ['worktimeStart', 'worktimeStop'],
+} as const;
+
+type CategoryType = keyof typeof categorySettings;
 
 const NotificationSettingsComponent: React.FC = () => {
-  const [settings, setSettings] = useState<NotificationSettings>({
-    taskCreate: false,
-    taskUpdate: false,
-    taskDelete: false,
-    taskStatusChange: false,
-    requestCreate: false,
-    requestUpdate: false,
-    requestDelete: false,
-    requestStatusChange: false,
-    userCreate: false,
-    userUpdate: false,
-    userDelete: false,
-    roleCreate: false,
-    roleUpdate: false,
-    roleDelete: false,
-    worktimeStart: false,
-    worktimeStop: false,
-  });
+  const [settings, setSettings] = useState<NotificationSettings>(defaultSettings);
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,15 +59,24 @@ const NotificationSettingsComponent: React.FC = () => {
   const fetchSettings = async () => {
     try {
       setLoading(true);
+      console.log('Starte Abruf der Benachrichtigungseinstellungen...');
       const response = await notificationSettingsApi.getUserSettings();
-      if (response.data) {
-        setSettings(response.data);
+      console.log('Erhaltene Einstellungen:', response.data);
+      
+      if (response?.data) {
+        const newSettings: NotificationSettings = {...defaultSettings, ...response.data};
+        setSettings(newSettings);
+        console.log('Einstellungen aktualisiert:', newSettings);
+      } else {
+        console.warn('Keine Daten vom Server erhalten, verwende Standardeinstellungen');
+        setSettings(defaultSettings);
       }
     } catch (error) {
       console.error('Fehler beim Laden der Benachrichtigungseinstellungen:', error);
+      setSettings(defaultSettings);
       setSnackbar({
         open: true,
-        message: 'Einstellungen konnten nicht geladen werden.',
+        message: 'Einstellungen konnten nicht geladen werden. Standardeinstellungen werden verwendet.',
         severity: 'error'
       });
     } finally {
@@ -65,13 +87,11 @@ const NotificationSettingsComponent: React.FC = () => {
   const handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, checked } = event.target;
     
-    // Aktualisierte Einstellungen erstellen
-    const updatedSettings = {
+    const updatedSettings: NotificationSettings = {
       ...settings,
       [name]: checked
     };
     
-    // Optimistisch lokal aktualisieren
     setSettings(updatedSettings);
     
     try {
@@ -85,29 +105,21 @@ const NotificationSettingsComponent: React.FC = () => {
         severity: 'error'
       });
       
-      // Bei Fehler Änderung rückgängig machen
       setSettings(settings);
     } finally {
       setSaving(false);
     }
   };
   
-  const toggleAllInCategory = async (category: 'task' | 'request' | 'user' | 'role' | 'worktime', value: boolean) => {
-    const categorySettings = {
-      task: ['taskCreate', 'taskUpdate', 'taskDelete', 'taskStatusChange'],
-      request: ['requestCreate', 'requestUpdate', 'requestDelete', 'requestStatusChange'],
-      user: ['userCreate', 'userUpdate', 'userDelete'],
-      role: ['roleCreate', 'roleUpdate', 'roleDelete'],
-      worktime: ['worktimeStart', 'worktimeStop'],
-    };
-    
-    // Neuen Settings-Zustand erstellen
+  const toggleAllInCategory = async (category: string, value: boolean) => {
+    const normalizedCategory = category.toLowerCase() as CategoryType;
+    if (!categorySettings[normalizedCategory]) return;
+
     const updatedSettings = { ...settings };
-    categorySettings[category].forEach(setting => {
+    categorySettings[normalizedCategory].forEach(setting => {
       updatedSettings[setting as keyof NotificationSettings] = value;
     });
-    
-    // Optimistisch lokal aktualisieren
+
     setSettings(updatedSettings);
     
     try {
@@ -120,8 +132,6 @@ const NotificationSettingsComponent: React.FC = () => {
         message: 'Einstellungen konnten nicht gespeichert werden',
         severity: 'error'
       });
-      
-      // Bei Fehler Änderung rückgängig machen
       setSettings(settings);
     } finally {
       setSaving(false);
@@ -129,13 +139,11 @@ const NotificationSettingsComponent: React.FC = () => {
   };
   
   const toggleAll = async (value: boolean) => {
-    // Alle Einstellungen auf den selben Wert setzen
-    const updatedSettings = Object.keys(settings).reduce((acc, key) => {
+    const updatedSettings: NotificationSettings = Object.keys(settings).reduce((acc, key) => {
       acc[key as keyof NotificationSettings] = value;
       return acc;
-    }, {} as NotificationSettings);
+    }, { ...defaultSettings });
     
-    // Optimistisch lokal aktualisieren
     setSettings(updatedSettings);
     
     try {
@@ -149,7 +157,6 @@ const NotificationSettingsComponent: React.FC = () => {
         severity: 'error'
       });
       
-      // Bei Fehler Änderung rückgängig machen
       setSettings(settings);
     } finally {
       setSaving(false);
@@ -160,362 +167,152 @@ const NotificationSettingsComponent: React.FC = () => {
     setSnackbar(prev => ({ ...prev, open: false }));
   };
 
-  // Prüfen, ob alle Einstellungen in einer Kategorie aktiviert sind
-  const isAllCheckedInCategory = (category: 'task' | 'request' | 'user' | 'role' | 'worktime'): boolean => {
-    const categorySettings = {
-      task: ['taskCreate', 'taskUpdate', 'taskDelete', 'taskStatusChange'],
-      request: ['requestCreate', 'requestUpdate', 'requestDelete', 'requestStatusChange'],
-      user: ['userCreate', 'userUpdate', 'userDelete'],
-      role: ['roleCreate', 'roleUpdate', 'roleDelete'],
-      worktime: ['worktimeStart', 'worktimeStop'],
-    };
+  const isAllCheckedInCategory = (category: string): boolean => {
+    const normalizedCategory = category.toLowerCase() as CategoryType;
+    if (!categorySettings[normalizedCategory]) return false;
     
-    return categorySettings[category].every(setting => 
-      settings[setting as keyof NotificationSettings]
+    return categorySettings[normalizedCategory].every(setting => 
+      settings[setting as keyof NotificationSettings] === true
     );
   };
   
-  // Prüfen, ob alle Einstellungen aktiviert sind
   const isAllChecked = (): boolean => {
+    if (!settings) return false;
     return Object.values(settings).every(value => value === true);
   };
+
+  const CustomToggle: React.FC<{
+    checked: boolean;
+    onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+    name: string;
+    label: string;
+    description?: string;
+  }> = ({ checked, onChange, name, label, description }) => (
+    <div className="flex items-center justify-between gap-8 group relative">
+      <div className="flex-1">
+        <span className="text-gray-600 dark:text-gray-400">{label}</span>
+      </div>
+      <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          checked={checked}
+          onChange={onChange}
+          name={name}
+        />
+        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+      </label>
+      {description && (
+        <div className="absolute left-0 bottom-[calc(100%+0.5rem)] px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-normal max-w-xs pointer-events-none z-50">
+          {description}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderToggleSection = (title: string, toggles: Array<{ name: keyof NotificationSettings, label: string, description: string }>) => (
+    <div className="mb-6 mt-2">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-medium dark:text-white">{title}</h3>
+        </div>
+        <CustomToggle
+          checked={isAllCheckedInCategory(title)}
+          onChange={(e) => toggleAllInCategory(title, e.target.checked)}
+          name={`${title.toLowerCase()}All`}
+          label="Alle"
+        />
+      </div>
+      <div className="space-y-4">
+        {toggles.map(({ name, label, description }) => (
+          <CustomToggle
+            key={name}
+            checked={settings[name]}
+            onChange={handleChange}
+            name={name}
+            label={label}
+            description={description}
+          />
+        ))}
+      </div>
+    </div>
+  );
 
   if (loading) {
     return <Typography>Lade Einstellungen...</Typography>;
   }
 
   return (
-    <Box sx={{ p: 0, pt: 2 }}>
+    <Box className="p-4">
       <Typography 
         variant="body2" 
-        color="textSecondary" 
-        sx={{ mb: 3, color: "text.secondary" }}
+        className="text-gray-600 dark:text-gray-400 mb-6"
       >
         Wählen Sie aus, für welche Ereignisse Sie Benachrichtigungen erhalten möchten.
       </Typography>
       
-      <Box sx={{ mb: 3 }}>
-        <FormControlLabel
-          control={
-            <Switch 
-              checked={isAllChecked()}
-              onChange={(e) => toggleAll(e.target.checked)}
-              disabled={saving}
-            />
-          }
-          label={<Typography sx={{ fontWeight: 'bold' }}>Alle Benachrichtigungen</Typography>}
-        />
-      </Box>
+      <div className="mb-8 mt-2">
+        <div className="flex items-center justify-between mb-4">
+          <div className="group relative">
+            <h3 className="text-lg font-medium dark:text-white">Alle Benachrichtigungen</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Aktivieren oder deaktivieren Sie alle Benachrichtigungen</p>
+            <div className="absolute left-0 bottom-[calc(100%+0.5rem)] px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-normal max-w-xs pointer-events-none z-50">
+              Aktivieren oder deaktivieren Sie alle Benachrichtigungen
+            </div>
+          </div>
+          <CustomToggle
+            checked={isAllChecked()}
+            onChange={(e) => toggleAll(e.target.checked)}
+            name="allNotifications"
+            label=""
+          />
+        </div>
+      </div>
       
-      <Divider sx={{ mb: 2 }} />
+      <Divider className="my-8" />
       
-      <Grid container spacing={2}>
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Typography 
-              variant="h6" 
-              sx={{ fontSize: "1.125rem", fontWeight: 500, mr: 2 }}
-            >
-              Aufgaben
-            </Typography>
-            <FormControlLabel
-              control={
-                <Switch 
-                  size="small"
-                  checked={isAllCheckedInCategory('task')}
-                  onChange={(e) => toggleAllInCategory('task', e.target.checked)}
-                  disabled={saving}
-                />
-              }
-              label={<Typography variant="body2">Alle</Typography>}
-            />
-          </Box>
-          <Box sx={{ ml: 2, mb: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.taskCreate}
-                  onChange={handleChange}
-                  name="taskCreate"
-                  disabled={saving}
-                />
-              }
-              label="Neue Aufgabe erstellt"
-            />
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.taskUpdate}
-                  onChange={handleChange}
-                  name="taskUpdate"
-                  disabled={saving}
-                />
-              }
-              label="Aufgabe aktualisiert"
-            />
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.taskDelete}
-                  onChange={handleChange}
-                  name="taskDelete"
-                  disabled={saving}
-                />
-              }
-              label="Aufgabe gelöscht"
-            />
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.taskStatusChange}
-                  onChange={handleChange}
-                  name="taskStatusChange"
-                  disabled={saving}
-                />
-              }
-              label="Status einer Aufgabe geändert"
-            />
-          </Box>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Typography 
-              variant="h6" 
-              sx={{ fontSize: "1.125rem", fontWeight: 500, mr: 2 }}
-            >
-              Anfragen
-            </Typography>
-            <FormControlLabel
-              control={
-                <Switch 
-                  size="small"
-                  checked={isAllCheckedInCategory('request')}
-                  onChange={(e) => toggleAllInCategory('request', e.target.checked)}
-                  disabled={saving}
-                />
-              }
-              label={<Typography variant="body2">Alle</Typography>}
-            />
-          </Box>
-          <Box sx={{ ml: 2, mb: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.requestCreate}
-                  onChange={handleChange}
-                  name="requestCreate"
-                  disabled={saving}
-                />
-              }
-              label="Neue Anfrage erstellt"
-            />
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.requestUpdate}
-                  onChange={handleChange}
-                  name="requestUpdate"
-                  disabled={saving}
-                />
-              }
-              label="Anfrage aktualisiert"
-            />
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.requestDelete}
-                  onChange={handleChange}
-                  name="requestDelete"
-                  disabled={saving}
-                />
-              }
-              label="Anfrage gelöscht"
-            />
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.requestStatusChange}
-                  onChange={handleChange}
-                  name="requestStatusChange"
-                  disabled={saving}
-                />
-              }
-              label="Status einer Anfrage geändert"
-            />
-          </Box>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Typography 
-              variant="h6" 
-              sx={{ fontSize: "1.125rem", fontWeight: 500, mr: 2 }}
-            >
-              Benutzerverwaltung
-            </Typography>
-            <FormControlLabel
-              control={
-                <Switch 
-                  size="small"
-                  checked={isAllCheckedInCategory('user')}
-                  onChange={(e) => toggleAllInCategory('user', e.target.checked)}
-                  disabled={saving}
-                />
-              }
-              label={<Typography variant="body2">Alle</Typography>}
-            />
-          </Box>
-          <Box sx={{ ml: 2, mb: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.userCreate}
-                  onChange={handleChange}
-                  name="userCreate"
-                  disabled={saving}
-                />
-              }
-              label="Neuer Benutzer erstellt"
-            />
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.userUpdate}
-                  onChange={handleChange}
-                  name="userUpdate"
-                  disabled={saving}
-                />
-              }
-              label="Benutzer aktualisiert"
-            />
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.userDelete}
-                  onChange={handleChange}
-                  name="userDelete"
-                  disabled={saving}
-                />
-              }
-              label="Benutzer gelöscht"
-            />
-          </Box>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Typography 
-              variant="h6" 
-              sx={{ fontSize: "1.125rem", fontWeight: 500, mr: 2 }}
-            >
-              Rollen
-            </Typography>
-            <FormControlLabel
-              control={
-                <Switch 
-                  size="small"
-                  checked={isAllCheckedInCategory('role')}
-                  onChange={(e) => toggleAllInCategory('role', e.target.checked)}
-                  disabled={saving}
-                />
-              }
-              label={<Typography variant="body2">Alle</Typography>}
-            />
-          </Box>
-          <Box sx={{ ml: 2, mb: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.roleCreate}
-                  onChange={handleChange}
-                  name="roleCreate"
-                  disabled={saving}
-                />
-              }
-              label="Neue Rolle erstellt"
-            />
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.roleUpdate}
-                  onChange={handleChange}
-                  name="roleUpdate"
-                  disabled={saving}
-                />
-              }
-              label="Rolle aktualisiert"
-            />
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.roleDelete}
-                  onChange={handleChange}
-                  name="roleDelete"
-                  disabled={saving}
-                />
-              }
-              label="Rolle gelöscht"
-            />
-          </Box>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-            <Typography 
-              variant="h6" 
-              sx={{ fontSize: "1.125rem", fontWeight: 500, mr: 2 }}
-            >
-              Arbeitszeit
-            </Typography>
-            <FormControlLabel
-              control={
-                <Switch 
-                  size="small"
-                  checked={isAllCheckedInCategory('worktime')}
-                  onChange={(e) => toggleAllInCategory('worktime', e.target.checked)}
-                  disabled={saving}
-                />
-              }
-              label={<Typography variant="body2">Alle</Typography>}
-            />
-          </Box>
-          <Box sx={{ ml: 2, mb: 2 }}>
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.worktimeStart}
-                  onChange={handleChange}
-                  name="worktimeStart"
-                  disabled={saving}
-                />
-              }
-              label="Zeiterfassung gestartet"
-            />
-            <FormControlLabel
-              control={
-                <Switch 
-                  checked={settings.worktimeStop}
-                  onChange={handleChange}
-                  name="worktimeStop"
-                  disabled={saving}
-                />
-              }
-              label="Zeiterfassung gestoppt"
-            />
-          </Box>
-        </Grid>
-      </Grid>
-
+      {renderToggleSection('Aufgaben', [
+        { name: 'taskCreate', label: 'Neue Aufgaben', description: 'Benachrichtigung wenn eine neue Aufgabe erstellt wird' },
+        { name: 'taskUpdate', label: 'Aufgaben-Aktualisierungen', description: 'Benachrichtigung wenn eine Aufgabe aktualisiert wird' },
+        { name: 'taskDelete', label: 'Gelöschte Aufgaben', description: 'Benachrichtigung wenn eine Aufgabe gelöscht wird' },
+        { name: 'taskStatusChange', label: 'Status-Änderungen', description: 'Benachrichtigung wenn sich der Status einer Aufgabe ändert' }
+      ])}
+      
+      <Divider className="my-8" />
+      
+      {renderToggleSection('Anfragen', [
+        { name: 'requestCreate', label: 'Neue Anfragen', description: 'Benachrichtigung wenn eine neue Anfrage erstellt wird' },
+        { name: 'requestUpdate', label: 'Anfragen-Aktualisierungen', description: 'Benachrichtigung wenn eine Anfrage aktualisiert wird' },
+        { name: 'requestDelete', label: 'Gelöschte Anfragen', description: 'Benachrichtigung wenn eine Anfrage gelöscht wird' },
+        { name: 'requestStatusChange', label: 'Status-Änderungen', description: 'Benachrichtigung wenn sich der Status einer Anfrage ändert' }
+      ])}
+      
+      <Divider className="my-8" />
+      
+      {renderToggleSection('Benutzer & Rollen', [
+        { name: 'userCreate', label: 'Neue Benutzer', description: 'Benachrichtigung wenn ein neuer Benutzer erstellt wird' },
+        { name: 'userUpdate', label: 'Benutzer-Aktualisierungen', description: 'Benachrichtigung wenn ein Benutzer aktualisiert wird' },
+        { name: 'userDelete', label: 'Gelöschte Benutzer', description: 'Benachrichtigung wenn ein Benutzer gelöscht wird' },
+        { name: 'roleCreate', label: 'Neue Rollen', description: 'Benachrichtigung wenn eine neue Rolle erstellt wird' },
+        { name: 'roleUpdate', label: 'Rollen-Aktualisierungen', description: 'Benachrichtigung wenn eine Rolle aktualisiert wird' },
+        { name: 'roleDelete', label: 'Gelöschte Rollen', description: 'Benachrichtigung wenn eine Rolle gelöscht wird' }
+      ])}
+      
+      <Divider className="my-8" />
+      
+      {renderToggleSection('Zeiterfassung', [
+        { name: 'worktimeStart', label: 'Zeiterfassung Start', description: 'Benachrichtigung wenn eine Zeiterfassung gestartet wird' },
+        { name: 'worktimeStop', label: 'Zeiterfassung Stop', description: 'Benachrichtigung wenn eine Zeiterfassung gestoppt wird' }
+      ])}
+      
       <Snackbar 
         open={snackbar.open} 
         autoHideDuration={6000} 
-        onClose={handleCloseSnackbar}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
       >
         <Alert 
-          onClose={handleCloseSnackbar} 
           severity={snackbar.severity}
-          sx={{ width: '100%' }}
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
         >
           {snackbar.message}
         </Alert>

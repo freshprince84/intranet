@@ -8,7 +8,7 @@ import {
     markAllNotificationsAsRead,
     deleteNotification,
     deleteAllNotifications
-} from '../controllers/notification';
+} from '../controllers/notificationController';
 import { checkRole } from '../middleware/roleCheck';
 
 const router = express.Router();

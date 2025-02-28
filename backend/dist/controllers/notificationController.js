@@ -15,54 +15,61 @@ const client_1 = require("@prisma/client");
 const notificationValidation_1 = require("../validation/notificationValidation");
 const prisma = new client_1.PrismaClient();
 // Hilfsfunktion zum Prüfen, ob Benachrichtigung für einen Typ aktiviert ist
-function isNotificationEnabled(userId, type) {
+function isNotificationEnabled(userId, type, relatedEntityType) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r;
-        // Systemweite Einstellungen abrufen
-        const systemSettings = yield prisma.notificationSettings.findFirst();
-        if (!systemSettings)
-            return true; // Wenn keine Einstellungen, standardmäßig aktiviert
+        console.log('[Notification] Prüfe Benachrichtigungseinstellungen für:', {
+            userId,
+            type,
+            relatedEntityType
+        });
         // Benutzereinstellungen abrufen
         const userSettings = yield prisma.userNotificationSettings.findFirst({
             where: { userId }
         });
-        // Prüfen, ob für diesen Typ Benachrichtigungen aktiviert sind
+        console.log('[Notification] Gefundene Benutzereinstellungen:', userSettings);
+        // Systemeinstellungen abrufen
+        const systemSettings = yield prisma.notificationSettings.findFirst();
+        console.log('[Notification] Gefundene Systemeinstellungen:', systemSettings);
         let enabled = true;
         switch (type) {
-            case 'task':
-                // Vereinfachte Logik: Wir betrachten alle Task-Benachrichtigungen als aktiviert, 
-                // wenn mindestens eine der Task-Benachrichtigungsarten aktiviert ist
+            case client_1.NotificationType.task:
                 enabled = ((_a = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskCreate) !== null && _a !== void 0 ? _a : systemSettings.taskCreate) ||
                     ((_b = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskUpdate) !== null && _b !== void 0 ? _b : systemSettings.taskUpdate) ||
                     ((_c = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskDelete) !== null && _c !== void 0 ? _c : systemSettings.taskDelete) ||
                     ((_d = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskStatusChange) !== null && _d !== void 0 ? _d : systemSettings.taskStatusChange);
                 break;
-            case 'request':
-                // Vereinfachte Logik für Request-Benachrichtigungen
+            case client_1.NotificationType.request:
                 enabled = ((_e = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestCreate) !== null && _e !== void 0 ? _e : systemSettings.requestCreate) ||
                     ((_f = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestUpdate) !== null && _f !== void 0 ? _f : systemSettings.requestUpdate) ||
                     ((_g = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestDelete) !== null && _g !== void 0 ? _g : systemSettings.requestDelete) ||
                     ((_h = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestStatusChange) !== null && _h !== void 0 ? _h : systemSettings.requestStatusChange);
                 break;
-            case 'user':
+            case client_1.NotificationType.user:
                 enabled = ((_j = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userCreate) !== null && _j !== void 0 ? _j : systemSettings.userCreate) ||
                     ((_k = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userUpdate) !== null && _k !== void 0 ? _k : systemSettings.userUpdate) ||
                     ((_l = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userDelete) !== null && _l !== void 0 ? _l : systemSettings.userDelete);
                 break;
-            case 'role':
+            case client_1.NotificationType.role:
                 enabled = ((_m = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleCreate) !== null && _m !== void 0 ? _m : systemSettings.roleCreate) ||
                     ((_o = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleUpdate) !== null && _o !== void 0 ? _o : systemSettings.roleUpdate) ||
                     ((_p = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleDelete) !== null && _p !== void 0 ? _p : systemSettings.roleDelete);
                 break;
-            case 'worktime':
-                enabled = ((_q = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeStart) !== null && _q !== void 0 ? _q : systemSettings.worktimeStart) ||
-                    ((_r = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeStop) !== null && _r !== void 0 ? _r : systemSettings.worktimeStop);
+            case client_1.NotificationType.worktime:
+                if (relatedEntityType === 'start') {
+                    enabled = (_q = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeStart) !== null && _q !== void 0 ? _q : true;
+                    console.log('[Notification] Worktime Start Einstellung:', enabled);
+                }
+                else if (relatedEntityType === 'stop') {
+                    enabled = (_r = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeStop) !== null && _r !== void 0 ? _r : true;
+                    console.log('[Notification] Worktime Stop Einstellung:', enabled);
+                }
                 break;
-            case 'system':
-                // Für System-Benachrichtigungen immer aktiviert, da es keine spezifische Einstellung gibt
-                enabled = true;
+            case client_1.NotificationType.system:
+                enabled = true; // System-Benachrichtigungen sind immer aktiviert
                 break;
         }
+        console.log('[Notification] Benachrichtigungen sind:', enabled ? 'aktiviert' : 'deaktiviert', 'für Typ:', type, 'und Entity-Typ:', relatedEntityType);
         return enabled;
     });
 }
@@ -70,26 +77,41 @@ function isNotificationEnabled(userId, type) {
 function createNotificationIfEnabled(data) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            // Prüfen, ob Benachrichtigungen für diesen Typ aktiviert sind
-            const enabled = yield isNotificationEnabled(data.userId, data.type);
-            if (!enabled)
-                return null;
-            // Benachrichtigung erstellen
-            return yield prisma.notification.create({
+            console.log('[Notification] Versuche Benachrichtigung zu erstellen:', {
+                userId: data.userId,
+                type: data.type,
+                title: data.title,
+                message: data.message,
+                relatedEntityType: data.relatedEntityType,
+                relatedEntityId: data.relatedEntityId
+            });
+            const enabled = yield isNotificationEnabled(data.userId, data.type, data.relatedEntityType);
+            console.log('[Notification] Benachrichtigungen aktiviert:', enabled);
+            if (!enabled) {
+                console.log('[Notification] Benachrichtigungen sind deaktiviert');
+                return false;
+            }
+            const notification = yield prisma.notification.create({
                 data: {
                     userId: data.userId,
                     title: data.title,
                     message: data.message,
                     type: data.type,
-                    read: false,
                     relatedEntityId: data.relatedEntityId,
                     relatedEntityType: data.relatedEntityType
                 }
             });
+            console.log('[Notification] Benachrichtigung erfolgreich erstellt:', {
+                id: notification.id,
+                userId: notification.userId,
+                type: notification.type,
+                title: notification.title
+            });
+            return true;
         }
         catch (error) {
-            console.error('Fehler beim Erstellen der Benachrichtigung:', error);
-            return null;
+            console.error('[Notification] Fehler beim Erstellen der Benachrichtigung:', error);
+            return false;
         }
     });
 }
@@ -420,29 +442,38 @@ const getUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, fun
     try {
         const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         if (!userId) {
-            return res.status(401).json({ message: 'Nicht authentifiziert' });
+            return res.status(401).json({ message: 'Nicht autorisiert' });
         }
+        // Paginierung
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
-        // Benachrichtigungen mit Pagination abrufen
-        const notifications = yield prisma.notification.findMany({
-            where: { userId },
-            orderBy: { createdAt: 'desc' },
-            skip,
-            take: limit,
-        });
-        // Gesamtanzahl der Benachrichtigungen für Pagination
-        const total = yield prisma.notification.count({
-            where: { userId }
-        });
+        // Filter
+        const where = { userId };
+        if (req.query.read !== undefined) {
+            where.read = req.query.read === 'true';
+        }
+        if (req.query.type) {
+            where.type = req.query.type;
+        }
+        // Abfragen
+        const [notifications, total] = yield Promise.all([
+            prisma.notification.findMany({
+                where,
+                orderBy: { createdAt: 'desc' },
+                skip,
+                take: limit
+            }),
+            prisma.notification.count({ where })
+        ]);
+        // Response-Format
         res.json({
             notifications,
             pagination: {
-                total,
                 page,
                 limit,
-                pages: Math.ceil(total / limit)
+                total,
+                totalPages: Math.ceil(total / limit)
             }
         });
     }
@@ -455,54 +486,22 @@ exports.getUserNotifications = getUserNotifications;
 // Ungelesene Benachrichtigungen zählen
 const countUnreadNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
-    console.log('[Controller] countUnreadNotifications aufgerufen');
     try {
-        // Benutzer-ID extrahieren, mit Fallbacks und Typprüfung
-        let userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
-        if (!userId && req.userId) {
-            userId = req.userId;
-            console.log('[Controller] userId aus req.userId extrahiert:', userId);
-        }
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         if (!userId) {
-            console.log('[Controller] Kein userId gefunden');
-            return res.status(401).json({ message: 'Nicht authentifiziert' });
+            return res.status(401).json({ message: 'Nicht autorisiert' });
         }
-        // userId in number umwandeln, falls es ein String ist
-        let numericUserId;
-        if (typeof userId === 'string') {
-            numericUserId = parseInt(userId, 10);
-            console.log('[Controller] String-userId in Zahl umgewandelt:', numericUserId);
-        }
-        else {
-            numericUserId = userId;
-        }
-        console.log('[Controller] Verwende numericUserId für Datenbankabfrage:', numericUserId);
-        // Überprüfe, ob der Prisma-Client und das Notification-Modell verfügbar sind
-        if (!prisma) {
-            console.error('[Controller] Prisma-Client nicht verfügbar');
-            return res.status(500).json({ message: 'Interner Datenbankfehler' });
-        }
-        if (!prisma.notification) {
-            console.error('[Controller] Notification-Modell nicht verfügbar');
-            return res.status(500).json({ message: 'Interner Datenbankfehler (Modell nicht gefunden)' });
-        }
-        // Anzahl ungelesener Benachrichtigungen abrufen
         const count = yield prisma.notification.count({
             where: {
-                userId: numericUserId,
+                userId,
                 read: false
             }
         });
-        console.log('[Controller] Gefundene ungelesene Benachrichtigungen:', count);
-        // Erfolgreiche Antwort
-        return res.json({ count });
+        res.json({ count });
     }
     catch (error) {
-        console.error('[Controller] Fehler beim Zählen der Benachrichtigungen:', error);
-        return res.status(500).json({
-            message: 'Fehler beim Zählen der Benachrichtigungen',
-            error: error instanceof Error ? error.message : String(error)
-        });
+        console.error('Fehler beim Zählen der ungelesenen Benachrichtigungen:', error);
+        res.status(500).json({ message: 'Interner Server-Fehler' });
     }
 });
 exports.countUnreadNotifications = countUnreadNotifications;
@@ -582,4 +581,4 @@ const deleteAllNotifications = (req, res) => __awaiter(void 0, void 0, void 0, f
     }
 });
 exports.deleteAllNotifications = deleteAllNotifications;
-//# sourceMappingURL=notification.js.map
+//# sourceMappingURL=notificationController.js.map

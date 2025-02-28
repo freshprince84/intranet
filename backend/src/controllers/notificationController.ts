@@ -12,83 +12,113 @@ const prisma = new PrismaClient();
 // Hilfsfunktion zum Prüfen, ob Benachrichtigung für einen Typ aktiviert ist
 async function isNotificationEnabled(
   userId: number,
-  type: NotificationType
+  type: NotificationType,
+  relatedEntityType?: string
 ): Promise<boolean> {
-  // Systemweite Einstellungen abrufen
-  const systemSettings = await prisma.notificationSettings.findFirst();
-  if (!systemSettings) return true; // Wenn keine Einstellungen, standardmäßig aktiviert
+  console.log('[Notification] Prüfe Benachrichtigungseinstellungen für:', {
+    userId,
+    type,
+    relatedEntityType
+  });
 
   // Benutzereinstellungen abrufen
   const userSettings = await prisma.userNotificationSettings.findFirst({
     where: { userId }
   });
+  console.log('[Notification] Gefundene Benutzereinstellungen:', userSettings);
 
-  // Prüfen, ob für diesen Typ Benachrichtigungen aktiviert sind
+  // Systemeinstellungen abrufen
+  const systemSettings = await prisma.notificationSettings.findFirst();
+  console.log('[Notification] Gefundene Systemeinstellungen:', systemSettings);
+
   let enabled = true;
-  
+
   switch (type) {
-    case 'task':
-      // Vereinfachte Logik: Wir betrachten alle Task-Benachrichtigungen als aktiviert, 
-      // wenn mindestens eine der Task-Benachrichtigungsarten aktiviert ist
+    case NotificationType.task:
       enabled = (userSettings?.taskCreate ?? systemSettings.taskCreate) ||
                 (userSettings?.taskUpdate ?? systemSettings.taskUpdate) ||
                 (userSettings?.taskDelete ?? systemSettings.taskDelete) ||
                 (userSettings?.taskStatusChange ?? systemSettings.taskStatusChange);
       break;
-    case 'request':
-      // Vereinfachte Logik für Request-Benachrichtigungen
+    case NotificationType.request:
       enabled = (userSettings?.requestCreate ?? systemSettings.requestCreate) ||
                 (userSettings?.requestUpdate ?? systemSettings.requestUpdate) ||
                 (userSettings?.requestDelete ?? systemSettings.requestDelete) ||
                 (userSettings?.requestStatusChange ?? systemSettings.requestStatusChange);
       break;
-    case 'user':
+    case NotificationType.user:
       enabled = (userSettings?.userCreate ?? systemSettings.userCreate) ||
                 (userSettings?.userUpdate ?? systemSettings.userUpdate) ||
                 (userSettings?.userDelete ?? systemSettings.userDelete);
       break;
-    case 'role':
+    case NotificationType.role:
       enabled = (userSettings?.roleCreate ?? systemSettings.roleCreate) ||
                 (userSettings?.roleUpdate ?? systemSettings.roleUpdate) ||
                 (userSettings?.roleDelete ?? systemSettings.roleDelete);
       break;
-    case 'worktime':
-      enabled = (userSettings?.worktimeStart ?? systemSettings.worktimeStart) ||
-                (userSettings?.worktimeStop ?? systemSettings.worktimeStop);
+    case NotificationType.worktime:
+      if (relatedEntityType === 'start') {
+        enabled = userSettings?.worktimeStart ?? true;
+        console.log('[Notification] Worktime Start Einstellung:', enabled);
+      } else if (relatedEntityType === 'stop') {
+        enabled = userSettings?.worktimeStop ?? true;
+        console.log('[Notification] Worktime Stop Einstellung:', enabled);
+      }
       break;
-    case 'system':
-      // Für System-Benachrichtigungen immer aktiviert, da es keine spezifische Einstellung gibt
-      enabled = true;
+    case NotificationType.system:
+      enabled = true; // System-Benachrichtigungen sind immer aktiviert
       break;
   }
 
+  console.log('[Notification] Benachrichtigungen sind:', enabled ? 'aktiviert' : 'deaktiviert', 
+    'für Typ:', type, 
+    'und Entity-Typ:', relatedEntityType);
   return enabled;
 }
 
 // Hilfsfunktion zum Erstellen einer Benachrichtigung nur wenn sie aktiviert ist
 export async function createNotificationIfEnabled(
   data: NotificationCreateInput
-): Promise<any> {
+): Promise<boolean> {
   try {
-    // Prüfen, ob Benachrichtigungen für diesen Typ aktiviert sind
-    const enabled = await isNotificationEnabled(data.userId, data.type);
-    if (!enabled) return null;
+    console.log('[Notification] Versuche Benachrichtigung zu erstellen:', {
+      userId: data.userId,
+      type: data.type,
+      title: data.title,
+      message: data.message,
+      relatedEntityType: data.relatedEntityType,
+      relatedEntityId: data.relatedEntityId
+    });
 
-    // Benachrichtigung erstellen
-    return await prisma.notification.create({
+    const enabled = await isNotificationEnabled(data.userId, data.type, data.relatedEntityType);
+    console.log('[Notification] Benachrichtigungen aktiviert:', enabled);
+
+    if (!enabled) {
+      console.log('[Notification] Benachrichtigungen sind deaktiviert');
+      return false;
+    }
+
+    const notification = await prisma.notification.create({
       data: {
         userId: data.userId,
         title: data.title,
         message: data.message,
         type: data.type,
-        read: false,
         relatedEntityId: data.relatedEntityId,
         relatedEntityType: data.relatedEntityType
       }
     });
+
+    console.log('[Notification] Benachrichtigung erfolgreich erstellt:', {
+      id: notification.id,
+      userId: notification.userId,
+      type: notification.type,
+      title: notification.title
+    });
+    return true;
   } catch (error) {
-    console.error('Fehler beim Erstellen der Benachrichtigung:', error);
-    return null;
+    console.error('[Notification] Fehler beim Erstellen der Benachrichtigung:', error);
+    return false;
   }
 }
 
@@ -407,33 +437,42 @@ export const getUserNotifications = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
-      return res.status(401).json({ message: 'Nicht authentifiziert' });
+      return res.status(401).json({ message: 'Nicht autorisiert' });
     }
 
+    // Paginierung
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
 
-    // Benachrichtigungen mit Pagination abrufen
-    const notifications = await prisma.notification.findMany({
-      where: { userId },
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit,
-    });
+    // Filter
+    const where: any = { userId };
+    if (req.query.read !== undefined) {
+      where.read = req.query.read === 'true';
+    }
+    if (req.query.type) {
+      where.type = req.query.type;
+    }
 
-    // Gesamtanzahl der Benachrichtigungen für Pagination
-    const total = await prisma.notification.count({
-      where: { userId }
-    });
+    // Abfragen
+    const [notifications, total] = await Promise.all([
+      prisma.notification.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit
+      }),
+      prisma.notification.count({ where })
+    ]);
 
+    // Response-Format
     res.json({
       notifications,
       pagination: {
-        total,
         page,
         limit,
-        pages: Math.ceil(total / limit)
+        total,
+        totalPages: Math.ceil(total / limit)
       }
     });
   } catch (error) {
@@ -444,63 +483,24 @@ export const getUserNotifications = async (req: Request, res: Response) => {
 
 // Ungelesene Benachrichtigungen zählen
 export const countUnreadNotifications = async (req: Request, res: Response) => {
-    console.log('[Controller] countUnreadNotifications aufgerufen');
-    
-    try {
-        // Benutzer-ID extrahieren, mit Fallbacks und Typprüfung
-        let userId: number | string | undefined = req.user?.id;
-        
-        if (!userId && req.userId) {
-            userId = req.userId;
-            console.log('[Controller] userId aus req.userId extrahiert:', userId);
-        }
-        
-        if (!userId) {
-            console.log('[Controller] Kein userId gefunden');
-            return res.status(401).json({ message: 'Nicht authentifiziert' });
-        }
-        
-        // userId in number umwandeln, falls es ein String ist
-        let numericUserId: number;
-        if (typeof userId === 'string') {
-            numericUserId = parseInt(userId, 10);
-            console.log('[Controller] String-userId in Zahl umgewandelt:', numericUserId);
-        } else {
-            numericUserId = userId;
-        }
-        
-        console.log('[Controller] Verwende numericUserId für Datenbankabfrage:', numericUserId);
-        
-        // Überprüfe, ob der Prisma-Client und das Notification-Modell verfügbar sind
-        if (!prisma) {
-            console.error('[Controller] Prisma-Client nicht verfügbar');
-            return res.status(500).json({ message: 'Interner Datenbankfehler' });
-        }
-        
-        if (!prisma.notification) {
-            console.error('[Controller] Notification-Modell nicht verfügbar');
-            return res.status(500).json({ message: 'Interner Datenbankfehler (Modell nicht gefunden)' });
-        }
-        
-        // Anzahl ungelesener Benachrichtigungen abrufen
-        const count = await prisma.notification.count({
-            where: {
-                userId: numericUserId,
-                read: false
-            }
-        });
-        
-        console.log('[Controller] Gefundene ungelesene Benachrichtigungen:', count);
-        
-        // Erfolgreiche Antwort
-        return res.json({ count });
-    } catch (error) {
-        console.error('[Controller] Fehler beim Zählen der Benachrichtigungen:', error);
-        return res.status(500).json({ 
-            message: 'Fehler beim Zählen der Benachrichtigungen', 
-            error: error instanceof Error ? error.message : String(error) 
-        });
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ message: 'Nicht autorisiert' });
     }
+
+    const count = await prisma.notification.count({
+      where: {
+        userId,
+        read: false
+      }
+    });
+
+    res.json({ count });
+  } catch (error) {
+    console.error('Fehler beim Zählen der ungelesenen Benachrichtigungen:', error);
+    res.status(500).json({ message: 'Interner Server-Fehler' });
+  }
 };
 
 // Benachrichtigung als gelesen markieren

@@ -1,8 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { startOfWeek, endOfWeek, format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { createNotificationIfEnabled } from './notificationController';
 
 const prisma = new PrismaClient();
 
@@ -38,6 +39,16 @@ export const startWorktime = async (req: Request, res: Response) => {
       }
     });
 
+    // Erstelle Notification für Zeiterfassung Start
+    await createNotificationIfEnabled({
+      userId: Number(userId),
+      title: 'Zeiterfassung gestartet',
+      message: `Zeiterfassung wurde um ${format(new Date(startTime), 'HH:mm')} gestartet`,
+      type: NotificationType.worktime,
+      relatedEntityId: worktime.id,
+      relatedEntityType: 'start'
+    });
+
     res.json(worktime);
   } catch (error) {
     console.error('Fehler beim Starten der Zeiterfassung:', error);
@@ -71,6 +82,16 @@ export const stopWorktime = async (req: Request, res: Response) => {
       include: {
         branch: true
       }
+    });
+
+    // Erstelle Notification für Zeiterfassung Stop
+    await createNotificationIfEnabled({
+      userId: Number(userId),
+      title: 'Zeiterfassung beendet',
+      message: `Zeiterfassung wurde um ${format(new Date(endTime), 'HH:mm')} beendet`,
+      type: NotificationType.worktime,
+      relatedEntityId: worktime.id,
+      relatedEntityType: 'stop'
     });
 
     res.json(worktime);
