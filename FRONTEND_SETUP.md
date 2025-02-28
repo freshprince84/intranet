@@ -604,3 +604,66 @@ export default NotificationBell;
 4. **Typsicherheit**:
    - TypeScript-Interfaces für alle Backend-Datenstrukturen definieren
    - Union-Types für Enumerationen verwenden, die mit Backend-Enumerationen übereinstimmen
+
+## Box-Standards
+
+### System-Boxen
+Die folgenden Boxen sind offiziell im System definiert:
+
+1. Dashboard/Arbeitszeitstatistik Box
+2. Dashboard/Requests Box
+3. Worktracker/Zeiterfassung Box
+4. Worktracker/To Do's
+5. Settings Box
+6. UserManagement Box
+7. Login Box
+8. Register Box
+9. Profile Box
+10. NotificationList Box
+
+### Box-Header Standard
+Jede Box muss einen standardisierten Header haben:
+```jsx
+<div className="flex items-center mb-6">
+  <Icon className="h-6 w-6 text-gray-900 mr-2" />
+  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Titel der Box</h2>
+</div>
+```
+
+### Box-Breitentypen
+Es gibt drei definierte Breitentypen für Boxen:
+
+1. **Breit (Wide)**
+   - Volle Container-Breite
+   - Verwendet für:
+     - Dashboard/Arbeitszeitstatistik Box
+     - Worktracker/Zeiterfassung Box
+     - UserManagement Box
+
+2. **Normal**
+   - Standard-Breite für die meisten Boxen
+   - Verwendet für:
+     - Dashboard/Requests Box
+     - Settings Box
+     - Login Box
+     - Register Box
+     - Profile Box
+
+3. **Klein (Small)**
+   - Reduzierte Breite für kompakte Darstellung
+   - Verwendet für:
+     - Worktracker/To Do's
+     - NotificationList Box
+
+### Box-Styling
+Alle Boxen folgen diesem Basis-Styling:
+```jsx
+<div className="bg-white rounded-lg shadow p-6 dark:bg-gray-800">
+  {/* Box-Inhalt */}
+</div>
+```
+
+Zusätzliche Klassen je nach Breitentyp:
+- Breit: `w-full`
+- Normal: `max-w-3xl`
+- Klein: `max-w-xl`

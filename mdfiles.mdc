@@ -1,7 +1,7 @@
 ---
 description: 
 globs: 
-alwaysApply: undefined
+alwaysApply: false
 ---
 ## Aktuelle Konfiguration
 
