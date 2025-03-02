@@ -212,16 +212,16 @@ const WorktimeStats: React.FC = () => {
 
             <div className="flex flex-row gap-2 mb-8 overflow-x-auto">
                 <div className="bg-blue-50 p-4 rounded-lg flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-blue-900 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg">Gesamtstunden</h3>
-                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600 whitespace-nowrap">{stats.totalHours}h</p>
+                    <h3 className="text-lg font-medium text-blue-900 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg text-center">Gesamtstunden</h3>
+                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600 whitespace-nowrap text-center">{stats.totalHours}h</p>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-green-900 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg">Durchschnitt/Tag</h3>
-                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600 whitespace-nowrap">{stats.averageHoursPerDay}h</p>
+                    <h3 className="text-lg font-medium text-green-900 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg text-center">Durchschnitt/Tag</h3>
+                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600 whitespace-nowrap text-center">{stats.averageHoursPerDay}h</p>
                 </div>
                 <div className="bg-purple-50 p-4 rounded-lg flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-purple-900 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg">Arbeitstage</h3>
-                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-purple-600 whitespace-nowrap">{stats.daysWorked}</p>
+                    <h3 className="text-lg font-medium text-purple-900 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg text-center">Arbeitstage</h3>
+                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-purple-600 whitespace-nowrap text-center">{stats.daysWorked}</p>
                 </div>
             </div>
 

@@ -13,6 +13,8 @@
   - Beim Login wird die zuletzt genutzte Rolle (`lastUsed=true`) für den Benutzer aktiviert
   - Wenn keine zuletzt genutzte Rolle vorhanden ist, wird die Rolle mit der niedrigsten ID aktiviert
   - Im Rollenauswahlmenü werden die Rollen alphabetisch (A-Z) sortiert angezeigt
+- Standard-Tabelleneinstellungen für den Admin-Benutzer in der Seed-Datei hinzugefügt
+- Dokumentation zu UserTableSettings in DB_SCHEMA.md und FRONTEND_SETUP.md ergänzt
 
 ### Changed
 - Benachrichtigungssystem überarbeitet:
@@ -26,7 +28,15 @@
   - Zentrale Konfiguration in `frontend/src/config/api.ts`
   - Bei Imports muss die vollständige Dateiendung angegeben werden: `import { API_URL } from '../config/api.ts'`
   - API-Endpunkte werden jetzt ohne `/api` Präfix aufgerufen
+- Arbeitszeitstatistik verbessert:
+  - Titel und Werte in den Statistikboxen (Gesamtstunden, Durchschnitt/Tag, Arbeitstage) werden auf allen Bildschirmgrößen zentriert dargestellt
+  - Verbesserte mobile Darstellung der Statistiken
 - Bugfix: `lastUsed`-Eigenschaft wird jetzt korrekt vom Backend zum Frontend übertragen
+- Performance-Optimierung: Unnötige Debug-Logs in folgenden Dateien entfernt:
+  - Bereinigung von console.log-Anweisungen in `backend/src/middleware/permissionMiddleware.ts`
+  - Entfernung von Debug-Ausgaben in `backend/src/controllers/notificationController.ts`
+  - Entfernung von Debug-Logs in `frontend/src/hooks/usePermissions.ts` bei Berechtigungsprüfungen
+- Spaltenbezeichnung von "Zuständigkeit" zu "Verantwortlich / Qualitätskontrolle" geändert
 
 ### Fixed
 - API-Routen in `notificationApi.ts` korrigiert:
@@ -37,6 +47,8 @@
   - Logo wird jetzt korrekt angezeigt
   - Tasks können erstellt werden
   - Requests können erstellt werden
+- Problem mit der Sichtbarkeit der kombinierten Spalte "Verantwortlich / Qualitätskontrolle" im Worktracker behoben
+- Inkonsistenz zwischen Frontend-Spaltendefinitionen und Datenbank-Einträgen korrigiert
 
 ### Technical
 - Migration von Material-UI Komponenten zu Tailwind CSS in `NotificationList.tsx`
@@ -44,4 +56,14 @@
 - Optimierung der TypeScript Interfaces für Benachrichtigungen
 - Verbessertes Error-Handling in der API
 - Fix von TypeScript-Importproblemen in mehreren Dateien
-- Aktualisierung der Dokumentation in verschiedenen MD-Dateien 
+- Aktualisierung der Dokumentation in verschiedenen MD-Dateien
+
+## [1.0.0] - 2023-06-01
+
+### Added
+- Initiale Version des Intranets
+- Dashboard mit Übersicht über Tasks und Requests
+- Worktracker für die Verwaltung von Aufgaben
+- Benutzerverwaltung mit Rollen und Berechtigungen
+- Einstellungen für Benutzer und System
+- Benachrichtigungssystem für wichtige Ereignisse 

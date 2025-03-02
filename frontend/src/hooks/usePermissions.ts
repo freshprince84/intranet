@@ -22,29 +22,21 @@ import { useAuth } from './useAuth.tsx';
 
 // Hilfsfunktion zur Typkonvertierung
 function ensurePermissionFormat(permission: any): Permission {
-    console.log('Konvertiere Permission:', permission);
-    
-    // Debug: Ausgabe aller Eigenschaften von permission
-    console.log('Permission Eigenschaften:', Object.keys(permission));
-    
     // Prüfen, ob es das neue Format mit entity und entityType hat
     if ('entity' in permission && 'entityType' in permission) {
-        console.log('Permission hat bereits entity & entityType:', permission);
         return permission as Permission;
     }
-    
+
     // Prüfen, ob es das alte Format mit page hat
     if ('page' in permission) {
-        console.log('Alt-Format mit page gefunden:', permission);
         return {
             entity: permission.page,
             entityType: 'page',
             accessLevel: permission.accessLevel
         };
     }
-    
+
     // Fallback für unbekanntes Format
-    console.warn('Unbekanntes Permission-Format:', permission);
     return {
         entity: permission.entity || permission.page || '',
         entityType: permission.entityType || 'page',
@@ -77,10 +69,7 @@ export const usePermissions = () => {
 
     const loadPermissions = () => {
         try {
-            console.log('loadPermissions aufgerufen, user:', user);
-            
             if (!user || !user.roles || user.roles.length === 0) {
-                console.log('Keine Benutzerrollen gefunden');
                 setCurrentRole(null);
                 setPermissions([]);
                 setLoading(false);
@@ -90,26 +79,17 @@ export const usePermissions = () => {
             // Finde die aktive Rolle (lastUsed = true)
             const activeRole = user.roles.find(userRole => userRole.lastUsed);
             
-            console.log('Aktive Rolle gefunden:', activeRole);
-            
             if (!activeRole) {
-                console.error('Keine aktive Rolle gefunden');
                 setError('Keine aktive Rolle gefunden');
                 setLoading(false);
                 return;
             }
-
-            console.log('Rolle-Permissions vor Konvertierung:', activeRole.role.permissions);
-
+                
             // Konvertiere Berechtigungen in das neue Format
             const formattedPermissions = activeRole.role.permissions.map(ensurePermissionFormat);
-            
-            console.log('Formatierte Permissions:', formattedPermissions);
-            
+                
             // Konvertiere die Rolle in das richtige Format
             const formattedRole = ensureRoleFormat(activeRole.role);
-            
-            console.log('Formatierte Rolle:', formattedRole);
 
             setCurrentRole(formattedRole);
             setPermissions(formattedPermissions);
@@ -123,23 +103,16 @@ export const usePermissions = () => {
     };
 
     const hasPermission = (entity: string, requiredLevel: AccessLevel = 'read', entityType: string = 'page'): boolean => {
-        console.log(`Prüfe Berechtigung für: entity=${entity}, requiredLevel=${requiredLevel}, entityType=${entityType}`);
-        console.log('Vorhandene Permissions:', permissions);
-        
         if (!permissions || permissions.length === 0) {
-            console.log('Keine Berechtigungen vorhanden');
             return false;
         }
-        
+
         // Suche nach der Berechtigung für die Entität
         const permission = permissions.find(p => 
             p.entity === entity && p.entityType === entityType
         );
-        
-        console.log('Gefundene Berechtigung:', permission);
-        
+
         if (!permission) {
-            console.log(`Keine Berechtigung gefunden für ${entityType} ${entity}`);
             return false;
         }
 
@@ -157,8 +130,7 @@ export const usePermissions = () => {
             default:
                 hasAccess = false;
         }
-        
-        console.log(`Zugriffsberechtigung ${requiredLevel} auf ${entity}: ${hasAccess ? 'JA' : 'NEIN'}`);
+
         return hasAccess;
     };
 

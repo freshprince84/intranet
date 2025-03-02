@@ -19,36 +19,73 @@ async function main() {
   try {
     console.log('Starte Seeding...');
 
-    // Erstelle Admin-Rolle
-    const adminRole = await prisma.role.create({
-      data: {
-        id: 1,
+    // Rollen erstellen
+    const adminRole = await prisma.role.upsert({
+      where: { name: 'Admin' },
+      update: {},
+      create: {
         name: 'Admin',
         description: 'Administrator mit allen Rechten',
-        permissions: {
-          create: [
-            // Immer sichtbare Seiten (für die Vollständigkeit)
-            // @ts-ignore
-            { entity: 'dashboard', entityType: 'page', accessLevel: AccessLevel.both },
-            // @ts-ignore
-            { entity: 'settings', entityType: 'page', accessLevel: AccessLevel.both },
-            
-            // Zusätzliche Seiten mit Berechtigungen
-            // @ts-ignore
-            { entity: 'usermanagement', entityType: 'page', accessLevel: AccessLevel.both },
-            // @ts-ignore
-            { entity: 'worktracker', entityType: 'page', accessLevel: AccessLevel.both },
-            
-            // Tabellen-Berechtigungen
-            // @ts-ignore
-            { entity: 'requests', entityType: 'table', accessLevel: AccessLevel.both },
-            // @ts-ignore
-            { entity: 'tasks', entityType: 'table', accessLevel: AccessLevel.both }
-          ]
-        }
-      }
+      },
     });
-    console.log('Admin-Rolle erstellt');
+
+    const hamburgerRole = await prisma.role.upsert({
+      where: { name: 'Hamburger' },
+      update: {},
+      create: {
+        name: 'Hamburger',
+        description: 'Hamburger-Rolle für neue Benutzer',
+      },
+    });
+
+    // Berechtigungen für Admin-Rolle - ALLE RECHTE
+    // Admin bekommt Berechtigung für alle Seiten und Tabellen mit "both" Zugriff
+    const adminPermissions = [
+      // Seiten-Berechtigungen
+      { entity: 'dashboard', entityType: 'page', accessLevel: 'both' },
+      { entity: 'worktracker', entityType: 'page', accessLevel: 'both' },
+      { entity: 'usermanagement', entityType: 'page', accessLevel: 'both' },
+      { entity: 'settings', entityType: 'page', accessLevel: 'both' },
+      { entity: 'profile', entityType: 'page', accessLevel: 'both' },
+      
+      // Tabellen-Berechtigungen
+      { entity: 'requests', entityType: 'table', accessLevel: 'both' },
+      { entity: 'tasks', entityType: 'table', accessLevel: 'both' },
+      { entity: 'users', entityType: 'table', accessLevel: 'both' },
+      { entity: 'roles', entityType: 'table', accessLevel: 'both' }, // WICHTIG: Berechtigung für Rollen-Verwaltung
+    ];
+
+    // Berechtigungen für Hamburger-Rolle - NUR BASIS-RECHTE
+    const hamburgerPermissions = [
+      // Nur eingeschränkte Berechtigungen
+      { entity: 'dashboard', entityType: 'page', accessLevel: 'both' },
+      { entity: 'settings', entityType: 'page', accessLevel: 'both' },
+      { entity: 'profile', entityType: 'page', accessLevel: 'both' },
+    ];
+
+    // Admin-Berechtigungen erstellen
+    for (const permission of adminPermissions) {
+      await prisma.permission.create({
+        data: {
+          entity: permission.entity,
+          entityType: permission.entityType,
+          accessLevel: permission.accessLevel,
+          roleId: adminRole.id
+        }
+      });
+    }
+
+    // Hamburger-Berechtigungen erstellen
+    for (const permission of hamburgerPermissions) {
+      await prisma.permission.create({
+        data: {
+          entity: permission.entity,
+          entityType: permission.entityType,
+          accessLevel: permission.accessLevel,
+          roleId: hamburgerRole.id
+        }
+      });
+    }
 
     // Erstelle Benutzer-Rolle
     const userRole = await prisma.role.create({
@@ -78,33 +115,6 @@ async function main() {
       }
     });
     console.log('Benutzer-Rolle erstellt');
-
-    // Erstelle Hamburger-Rolle
-    const hamburgerRole = await prisma.role.create({
-      data: {
-        id: 999,
-        name: 'Hamburger',
-        description: 'Hamburger-Rolle für neue Benutzer',
-        permissions: {
-          create: [
-            // Immer sichtbare Seiten (für die Vollständigkeit) 
-            // @ts-ignore
-            { entity: 'dashboard', entityType: 'page', accessLevel: AccessLevel.read },
-            // @ts-ignore
-            { entity: 'settings', entityType: 'page', accessLevel: AccessLevel.read },
-            
-            // Zusätzliche Seiten mit Berechtigungen
-            // @ts-ignore
-            { entity: 'worktracker', entityType: 'page', accessLevel: AccessLevel.read },
-            
-            // Tabellen-Berechtigungen (minimal)
-            // @ts-ignore
-            { entity: 'tasks', entityType: 'table', accessLevel: AccessLevel.read }
-          ]
-        }
-      }
-    });
-    console.log('Hamburger-Rolle erstellt');
 
     // Erstelle Admin-Benutzer
     const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -136,6 +146,17 @@ async function main() {
       }
     });
     console.log('Admin-Benutzer erstellt');
+
+    // Erstelle Standard-Tabelleneinstellungen für den Admin
+    await prisma.userTableSettings.create({
+      data: {
+        userId: adminUser.id,
+        tableId: 'worktracker_tasks',
+        columnOrder: JSON.stringify(['title', 'status', 'responsibleAndQualityControl', 'branch', 'dueDate', 'actions']),
+        hiddenColumns: JSON.stringify([])
+      }
+    });
+    console.log('Standard-Tabelleneinstellungen für Admin erstellt');
 
     // Erstelle Test-Niederlassungen
     const branches = ['Hauptsitz', 'Manila', 'Parque Poblado'];

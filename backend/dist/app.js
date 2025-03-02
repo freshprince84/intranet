@@ -15,6 +15,7 @@ const branches_1 = __importDefault(require("./routes/branches"));
 const worktime_1 = __importDefault(require("./routes/worktime"));
 const settings_1 = __importDefault(require("./routes/settings"));
 const notifications_1 = __importDefault(require("./routes/notifications"));
+const tableSettings_1 = __importDefault(require("./routes/tableSettings"));
 const app = (0, express_1.default)();
 // Middleware
 app.use((0, cors_1.default)());
@@ -32,6 +33,7 @@ app.use('/api/branches', branches_1.default);
 app.use('/api/worktime', worktime_1.default);
 app.use('/api/settings', settings_1.default);
 app.use('/api/notifications', notifications_1.default);
+app.use('/api/table-settings', tableSettings_1.default);
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

@@ -2,6 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Einheitliche Abstände zwischen Topbar und Hauptcontainern */
+.min-h-screen > div.container,
+.min-h-screen > div.max-w-7xl, 
+.min-h-screen > main.max-w-7xl {
+  padding-top: 1.5rem !important; /* py-6 (1.5rem) ist der Referenzwert von Worktracker */
+}
+
+/* Stelle sicher, dass alle obersten Boxen konsistente Abstände haben */
+.min-h-screen .bg-white.rounded-lg.border.border-gray-300:first-of-type,
+.min-h-screen .bg-white.dark\:bg-gray-800.rounded-lg.border:first-of-type,
+.container .bg-white.rounded-lg.border:first-of-type,
+.max-w-7xl .bg-white.rounded-lg.border:first-of-type {
+  margin-top: 0 !important;
+}
+
+/* Konsistente Abstände zwischen Boxen auf derselben Seite */
+.bg-white.rounded-lg.border.border-gray-300 + .bg-white.rounded-lg.border.border-gray-300,
+.bg-white.dark\:bg-gray-800.rounded-lg.border + .bg-white.rounded-lg.border,
+div[class*="bg-white"][class*="rounded-lg"][class*="border"] + div[class*="bg-white"][class*="rounded-lg"][class*="border"] {
+  margin-top: 1.5rem !important; /* Einheitlicher Abstand zwischen Boxen */
+}
+
+/* Entferne zusätzliches Padding bei p-4 Container auf oberster Ebene */
+.min-h-screen > div.p-4 {
+  padding-top: 1rem !important;
+  padding-bottom: 1rem !important;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -14,4 +42,20 @@ body {
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+/* Mobile-Anpassungen für alle Box-Komponenten */
+@media (max-width: 640px) {
+  /* Alle Boxen mit typischen "box"-Klassen werden angepasst */
+  .bg-white.rounded-lg.border.border-gray-300,
+  .bg-white.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  [class*="bg-white"][class*="rounded-lg"][class*="border"][class*="border-gray-300"] {
+    border: none !important;
+    border-radius: 0 !important;
+    width: 100vw !important;
+    margin-left: calc(-50vw + 50%) !important;
+    margin-right: calc(-50vw + 50%) !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
 }

@@ -55,10 +55,6 @@ const Dashboard: React.FC = () => {
 
         <div className="mt-6">
           <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full">
-            <div className="flex items-center mb-4">
-              <DocumentTextIcon className="h-6 w-6 mr-2" />
-              <h2 className="text-xl font-semibold">Requests</h2>
-            </div>
             <div>
               <Requests />
             </div>

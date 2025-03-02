@@ -1,4 +1,9 @@
 ---
+description: 
+globs: 
+alwaysApply: undefined
+---
+---
 description: Hinweisdatei für Dokumentationsregeln
 globs: 
 alwaysApply: false

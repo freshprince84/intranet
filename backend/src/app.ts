@@ -10,6 +10,7 @@ import branchRoutes from './routes/branches';
 import worktimeRoutes from './routes/worktime';
 import settingsRoutes from './routes/settings';
 import notificationRoutes from './routes/notifications';
+import tableSettingsRoutes from './routes/tableSettings';
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/branches', branchRoutes);
 app.use('/api/worktime', worktimeRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/table-settings', tableSettingsRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

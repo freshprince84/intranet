@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { useTableSettings } from '../hooks/useTableSettings.ts';
+import TableColumnConfig from '../components/TableColumnConfig.tsx';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import WorktimeTracker from '../components/WorktimeTracker.tsx';
@@ -37,6 +39,29 @@ interface SortConfig {
     direction: 'asc' | 'desc';
 }
 
+interface FilterState {
+    title: string;
+    status: Task['status'] | 'all';
+    responsible: string;
+    qualityControl: string;
+    branch: string;
+    dueDateFrom: string;
+    dueDateTo: string;
+}
+
+// Definiere die verfügbaren Spalten für die Tabelle
+const availableColumns = [
+    { id: 'title', label: 'Titel' },
+    { id: 'status', label: 'Status' },
+    { id: 'responsibleAndQualityControl', label: 'Verantwortlich / Qualitätskontrolle' },
+    { id: 'branch', label: 'Niederlassung' },
+    { id: 'dueDate', label: 'Fälligkeitsdatum' },
+    { id: 'actions', label: 'Aktionen' },
+];
+
+// Standard-Spaltenreihenfolge
+const defaultColumnOrder = availableColumns.map(column => column.id);
+
 const Worktracker: React.FC = () => {
     const { user } = useAuth();
     const { hasPermission } = usePermissions();
@@ -45,10 +70,45 @@ const Worktracker: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<Task['status'] | 'all'>('all');
+    const [filterState, setFilterState] = useState<FilterState>({
+        title: '',
+        status: 'all',
+        responsible: '',
+        qualityControl: '',
+        branch: '',
+        dueDateFrom: '',
+        dueDateTo: ''
+    });
+    const [activeFilters, setActiveFilters] = useState<FilterState>({
+        title: '',
+        status: 'all',
+        responsible: '',
+        qualityControl: '',
+        branch: '',
+        dueDateFrom: '',
+        dueDateTo: ''
+    });
+    const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+    // Tabellen-Einstellungen laden
+    const {
+        settings,
+        isLoading: isLoadingSettings,
+        updateColumnOrder,
+        updateHiddenColumns,
+        toggleColumnVisibility,
+        isColumnVisible
+    } = useTableSettings('worktracker_tasks', {
+        defaultColumnOrder,
+        defaultHiddenColumns: []
+    });
+
+    const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+    const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
     const fetchTasks = async () => {
         try {
@@ -233,38 +293,169 @@ const Worktracker: React.FC = () => {
         return buttons;
     };
 
-    const filteredAndSortedTasks = tasks
-        .filter(task => {
-            const matchesSearch = 
-                task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (task.qualityControl && 
-                    `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                task.branch.name.toLowerCase().includes(searchTerm.toLowerCase());
-            
-            const matchesStatus = statusFilter === 'all' || task.status === statusFilter;
-            
-            return matchesSearch && matchesStatus;
-        })
-        .sort((a, b) => {
-            let aValue: any = a[sortConfig.key as keyof Task];
-            let bValue: any = b[sortConfig.key as keyof Task];
+    const getActiveFilterCount = () => {
+        let count = 0;
+        if (activeFilters.title) count++;
+        if (activeFilters.status !== 'all') count++;
+        if (activeFilters.responsible) count++;
+        if (activeFilters.qualityControl) count++;
+        if (activeFilters.branch) count++;
+        if (activeFilters.dueDateFrom) count++;
+        if (activeFilters.dueDateTo) count++;
+        return count;
+    };
 
-            if (sortConfig.key === 'responsible.firstName') {
-                aValue = a.responsible.firstName;
-                bValue = b.responsible.firstName;
-            } else if (sortConfig.key === 'qualityControl.firstName') {
-                aValue = a.qualityControl?.firstName || '';
-                bValue = b.qualityControl?.firstName || '';
-            } else if (sortConfig.key === 'branch.name') {
-                aValue = a.branch.name;
-                bValue = b.branch.name;
-            }
-
-            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-            return 0;
+    const resetFilters = () => {
+        setFilterState({
+            title: '',
+            status: 'all',
+            responsible: '',
+            qualityControl: '',
+            branch: '',
+            dueDateFrom: '',
+            dueDateTo: ''
         });
+    };
+
+    const applyFilters = () => {
+        setActiveFilters(filterState);
+        setStatusFilter(filterState.status); // Aktualisiere auch die statusFilter-Variable für die Kompatibilität
+        setIsFilterModalOpen(false);
+    };
+
+    const filteredAndSortedTasks = useMemo(() => {
+        return tasks
+            .filter(task => {
+                // Globale Suchfunktion
+                if (searchTerm) {
+                    const searchLower = searchTerm.toLowerCase();
+                    const matchesSearch = 
+                        task.title.toLowerCase().includes(searchLower) ||
+                        (task.description && task.description.toLowerCase().includes(searchLower)) ||
+                        `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase().includes(searchLower) ||
+                        (task.qualityControl && `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase().includes(searchLower)) ||
+                        task.branch.name.toLowerCase().includes(searchLower);
+                    
+                    if (!matchesSearch) return false;
+                }
+                
+                // Erweiterte Filterkriterien
+                if (activeFilters.title && !task.title.toLowerCase().includes(activeFilters.title.toLowerCase())) {
+                    return false;
+                }
+                
+                if (activeFilters.status !== 'all' && task.status !== activeFilters.status) {
+                    return false;
+                }
+                
+                if (activeFilters.responsible) {
+                    const responsibleName = `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase();
+                    if (!responsibleName.includes(activeFilters.responsible.toLowerCase())) {
+                        return false;
+                    }
+                }
+                
+                if (activeFilters.qualityControl && task.qualityControl) {
+                    const qualityControlName = `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase();
+                    if (!qualityControlName.includes(activeFilters.qualityControl.toLowerCase())) {
+                        return false;
+                    }
+                }
+                
+                if (activeFilters.branch && !task.branch.name.toLowerCase().includes(activeFilters.branch.toLowerCase())) {
+                    return false;
+                }
+                
+                if (activeFilters.dueDateFrom && task.dueDate) {
+                    const dueDateFrom = new Date(activeFilters.dueDateFrom);
+                    const taskDate = new Date(task.dueDate);
+                    if (taskDate < dueDateFrom) {
+                        return false;
+                    }
+                }
+                
+                if (activeFilters.dueDateTo && task.dueDate) {
+                    const dueDateTo = new Date(activeFilters.dueDateTo);
+                    const taskDate = new Date(task.dueDate);
+                    if (taskDate > dueDateTo) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            })
+            .sort((a, b) => {
+                let aValue: any = a[sortConfig.key as keyof Task];
+                let bValue: any = b[sortConfig.key as keyof Task];
+
+                if (sortConfig.key === 'responsible.firstName') {
+                    aValue = a.responsible.firstName;
+                    bValue = b.responsible.firstName;
+                } else if (sortConfig.key === 'qualityControl.firstName') {
+                    aValue = a.qualityControl?.firstName || '';
+                    bValue = b.qualityControl?.firstName || '';
+                } else if (sortConfig.key === 'branch.name') {
+                    aValue = a.branch.name;
+                    bValue = b.branch.name;
+                }
+
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+    }, [tasks, searchTerm, activeFilters, sortConfig]);
+
+    // Handler für das Verschieben von Spalten per Drag & Drop
+    const handleMoveColumn = useCallback((dragIndex: number, hoverIndex: number) => {
+        // Erstelle eine neue Kopie der Spaltenreihenfolge
+        const newColumnOrder = [...settings.columnOrder];
+        
+        // Ermittle die zu verschiebenden Spalten
+        const movingColumn = newColumnOrder[dragIndex];
+        
+        // Entferne die Spalte an der alten Position
+        newColumnOrder.splice(dragIndex, 1);
+        
+        // Füge die Spalte an der neuen Position ein
+        newColumnOrder.splice(hoverIndex, 0, movingColumn);
+        
+        // Aktualisiere die Spaltenreihenfolge
+        updateColumnOrder(newColumnOrder);
+    }, [settings.columnOrder, updateColumnOrder]);
+
+    // Handler für Drag & Drop direkt in der Tabelle
+    const handleDragStart = (columnId: string) => {
+        setDraggedColumn(columnId);
+    };
+
+    const handleDragOver = (e: React.DragEvent, columnId: string) => {
+        e.preventDefault();
+        if (draggedColumn && draggedColumn !== columnId) {
+            setDragOverColumn(columnId);
+        }
+    };
+
+    const handleDrop = (e: React.DragEvent, columnId: string) => {
+        e.preventDefault();
+        if (draggedColumn && draggedColumn !== columnId) {
+            const dragIndex = settings.columnOrder.indexOf(draggedColumn);
+            const hoverIndex = settings.columnOrder.indexOf(columnId);
+            
+            if (dragIndex > -1 && hoverIndex > -1) {
+                handleMoveColumn(dragIndex, hoverIndex);
+            }
+        }
+        setDraggedColumn(null);
+        setDragOverColumn(null);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedColumn(null);
+        setDragOverColumn(null);
+    };
+
+    // Filtern und sortieren der Spalten gemäß den Benutzereinstellungen
+    const visibleColumnIds = settings.columnOrder.filter(id => isColumnVisible(id));
 
     return (
         <div className="min-h-screen">
@@ -276,11 +467,7 @@ const Worktracker: React.FC = () => {
 
                 {/* Tasks */}
                 <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full">
-                    <div className="flex items-center mb-4">
-                        <CheckCircleIcon className="h-6 w-6 mr-2" />
-                        <h2 className="text-xl font-semibold">To Do's</h2>
-                    </div>
-
+                    
                     <CreateTaskModal 
                         isOpen={isCreateModalOpen}
                         onClose={() => setIsCreateModalOpen(false)}
@@ -299,9 +486,135 @@ const Worktracker: React.FC = () => {
                         />
                     )}
                     
+                    {/* Filter Modal */}
+                    {isFilterModalOpen && (
+                        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+                                <div className="px-6 py-4 border-b flex justify-between items-center">
+                                    <h3 className="text-lg font-medium">Erweiterte Filter</h3>
+                                    <button 
+                                        onClick={() => setIsFilterModalOpen(false)}
+                                        className="text-gray-400 hover:text-gray-500"
+                                    >
+                                        <XMarkIcon className="h-5 w-5" />
+                                    </button>
+                                </div>
+                                <div className="p-6 space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-3 py-2 border rounded-md"
+                                            value={filterState.title}
+                                            onChange={(e) => setFilterState({...filterState, title: e.target.value})}
+                                            placeholder="Nach Titel filtern..."
+                                        />
+                                    </div>
+                                
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                        <select
+                                            className="w-full px-3 py-2 border rounded-md bg-white"
+                                            value={filterState.status}
+                                            onChange={(e) => setFilterState({...filterState, status: e.target.value as Task['status'] | 'all'})}
+                                        >
+                                            <option value="all">Alle</option>
+                                            <option value="open">Offen</option>
+                                            <option value="in_progress">In Bearbeitung</option>
+                                            <option value="improval">Zu verbessern</option>
+                                            <option value="quality_control">Qualitätskontrolle</option>
+                                            <option value="done">Erledigt</option>
+                                        </select>
+                                    </div>
+                                
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Verantwortlich / Qualitätskontrolle</label>
+                                        <div className="space-y-2">
+                                            <div>
+                                                <span className="text-xs text-gray-500">Verantwortlich:</span>
+                                                <input
+                                                    type="text"
+                                                    className="w-full px-3 py-2 border rounded-md mt-1"
+                                                    value={filterState.responsible}
+                                                    onChange={(e) => setFilterState({...filterState, responsible: e.target.value})}
+                                                    placeholder="Nach Verantwortlichem filtern..."
+                                                />
+                                            </div>
+                                            <div>
+                                                <span className="text-xs text-gray-500">Qualitätskontrolle:</span>
+                                                <input
+                                                    type="text"
+                                                    className="w-full px-3 py-2 border rounded-md mt-1"
+                                                    value={filterState.qualityControl}
+                                                    onChange={(e) => setFilterState({...filterState, qualityControl: e.target.value})}
+                                                    placeholder="Nach Qualitätskontrolle filtern..."
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Niederlassung</label>
+                                        <input
+                                            type="text"
+                                            className="w-full px-3 py-2 border rounded-md"
+                                            value={filterState.branch}
+                                            onChange={(e) => setFilterState({...filterState, branch: e.target.value})}
+                                            placeholder="Nach Niederlassung filtern..."
+                                        />
+                                    </div>
+                                
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Fälligkeit von</label>
+                                            <input
+                                                type="date"
+                                                className="w-full px-3 py-2 border rounded-md"
+                                                value={filterState.dueDateFrom}
+                                                onChange={(e) => setFilterState({...filterState, dueDateFrom: e.target.value})}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Fälligkeit bis</label>
+                                            <input
+                                                type="date"
+                                                className="w-full px-3 py-2 border rounded-md"
+                                                value={filterState.dueDateTo}
+                                                onChange={(e) => setFilterState({...filterState, dueDateTo: e.target.value})}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="px-6 py-4 bg-gray-50 flex justify-between rounded-b-lg">
+                                    <button
+                                        onClick={resetFilters}
+                                        className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
+                                    >
+                                        Filter zurücksetzen
+                                    </button>
+                                    <div className="space-x-2">
+                                        <button
+                                            onClick={() => setIsFilterModalOpen(false)}
+                                            className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none"
+                                        >
+                                            Abbrechen
+                                        </button>
+                                        <button
+                                            onClick={applyFilters}
+                                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+                                        >
+                                            Filter anwenden
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
                     <div className="mb-4">
-                        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-                            <div className="flex flex-1 gap-4 items-center">
+                        <div className="flex items-center justify-between">
+                            {/* Linke Seite: "Neuer Task"-Button */}
+                            <div className="flex items-center">
                                 {hasPermission('tasks', 'write', 'table') && (
                                     <button
                                         onClick={() => setIsCreateModalOpen(true)}
@@ -313,27 +626,48 @@ const Worktracker: React.FC = () => {
                                         <PlusIcon className="h-4 w-4" />
                                     </button>
                                 )}
+                            </div>
+                            
+                            {/* Mitte: Titel */}
+                            <div className="flex items-center">
+                                <CheckCircleIcon className="h-6 w-6 mr-2" />
+                                <h2 className="text-xl font-semibold">To Do's</h2>
+                            </div>
+                            
+                            {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
+                            <div className="flex space-x-2 items-center">
                                 <input
                                     type="text"
                                     placeholder="Suchen..."
-                                    className="w-full px-3 py-2 border rounded-md"
+                                    className="px-3 py-2 border rounded-md h-10 w-full sm:w-auto"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
-                            </div>
-                            <div className="flex-none">
-                                <select
-                                    className="px-3 py-2 border rounded-md bg-white"
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value as Task['status'] | 'all')}
+                                
+                                {/* Filter-Button */}
+                                <button
+                                    className={`p-2 rounded-md border ${getActiveFilterCount() > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
+                                    onClick={() => setIsFilterModalOpen(true)}
+                                    title="Filter"
                                 >
-                                    <option value="all">Alle Status</option>
-                                    <option value="open">Offen</option>
-                                    <option value="in_progress">In Bearbeitung</option>
-                                    <option value="improval">Zu verbessern</option>
-                                    <option value="quality_control">Qualitätskontrolle</option>
-                                    <option value="done">Erledigt</option>
-                                </select>
+                                    <div className="relative">
+                                        <FunnelIcon className="w-5 h-5" />
+                                        {getActiveFilterCount() > 0 && (
+                                            <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                                                {getActiveFilterCount()}
+                                            </span>
+                                        )}
+                                    </div>
+                                </button>
+                                
+                                {/* Spalten-Konfiguration */}
+                                <TableColumnConfig
+                                    columns={availableColumns}
+                                    visibleColumns={visibleColumnIds}
+                                    columnOrder={settings.columnOrder}
+                                    onToggleColumnVisibility={toggleColumnVisibility}
+                                    onMoveColumn={handleMoveColumn}
+                                />
                             </div>
                         </div>
                     </div>
@@ -343,89 +677,137 @@ const Worktracker: React.FC = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th 
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                        onClick={() => handleSort('title')}
-                                    >
-                                        Titel {sortConfig.key === 'title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                    </th>
-                                    <th 
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                        onClick={() => handleSort('status')}
-                                    >
-                                        Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                    </th>
-                                    <th 
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                        onClick={() => handleSort('responsible.firstName')}
-                                    >
-                                        Verantwortlich {sortConfig.key === 'responsible.firstName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                    </th>
-                                    <th 
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                        onClick={() => handleSort('qualityControl.firstName')}
-                                    >
-                                        Qualitätskontrolle {sortConfig.key === 'qualityControl.firstName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                    </th>
-                                    <th 
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                        onClick={() => handleSort('branch.name')}
-                                    >
-                                        Niederlassung {sortConfig.key === 'branch.name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                    </th>
-                                    <th 
-                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                                        onClick={() => handleSort('dueDate')}
-                                    >
-                                        Fälligkeit {sortConfig.key === 'dueDate' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Aktionen
-                                    </th>
+                                    {visibleColumnIds.map(columnId => {
+                                        const column = availableColumns.find(col => col.id === columnId);
+                                        if (!column) return null;
+                                        
+                                        // Für alle Spalten außer 'actions'
+                                        let sortKey: SortConfig['key'] | undefined;
+                                        if (columnId === 'title') sortKey = 'title';
+                                        if (columnId === 'status') sortKey = 'status';
+                                        if (columnId === 'responsibleAndQualityControl') sortKey = 'responsible.firstName'; // Sortierung für kombinierte Spalte
+                                        if (columnId === 'branch') sortKey = 'branch.name';
+                                        if (columnId === 'dueDate') sortKey = 'dueDate';
+
+                                        return (
+                                            <th 
+                                                key={columnId}
+                                                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative
+                                                    ${sortKey ? 'cursor-pointer hover:bg-gray-100' : ''}
+                                                    ${columnId !== 'actions' ? 'cursor-move' : ''}`}
+                                                onClick={sortKey ? () => handleSort(sortKey) : undefined}
+                                                draggable={columnId !== 'actions'}
+                                                onDragStart={columnId !== 'actions' ? () => handleDragStart(columnId) : undefined}
+                                                onDragOver={columnId !== 'actions' ? (e) => handleDragOver(e, columnId) : undefined}
+                                                onDrop={columnId !== 'actions' ? (e) => handleDrop(e, columnId) : undefined}
+                                                onDragEnd={columnId !== 'actions' ? handleDragEnd : undefined}
+                                            >
+                                                <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
+                                                    {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />}
+                                                    {column.label} {sortKey && sortConfig.key === sortKey && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                </div>
+                                            </th>
+                                        );
+                                    })}
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {filteredAndSortedTasks.map(task => (
-                                    <tr key={task.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                                            {task.title}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap">
-                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)}`}>
-                                                {task.status === 'open' && 'Offen'}
-                                                {task.status === 'in_progress' && 'In Bearbeitung'}
-                                                {task.status === 'improval' && 'Zu verbessern'}
-                                                {task.status === 'quality_control' && 'Qualitätskontrolle'}
-                                                {task.status === 'done' && 'Erledigt'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                                            {task.responsible.firstName} {task.responsible.lastName}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                                            {task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-'}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                                            {task.branch.name}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                                            {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
-                                        </td>
-                                        <td className="px-6 py-2 whitespace-nowrap text-right text-sm font-medium">
-                                            <div className="flex justify-end space-x-2">
+                                {filteredAndSortedTasks.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={visibleColumnIds.length} className="px-3 py-4 text-center text-gray-500">
+                                            <div className="flex flex-col items-center justify-center gap-4">
+                                                <p>Keine Tasks vorhanden</p>
                                                 {hasPermission('tasks', 'write', 'table') && (
                                                     <button
-                                                        onClick={() => handleEditClick(task)}
-                                                        className="text-blue-600 hover:text-blue-900"
+                                                        onClick={() => setIsCreateModalOpen(true)}
+                                                        className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
+                                                        style={{ width: '30.19px', height: '30.19px', marginTop: '1px', marginBottom: '1px' }}
+                                                        title="Neuen Task erstellen"
+                                                        aria-label="Neuen Task erstellen"
                                                     >
-                                                        <PencilIcon className="h-5 w-5" />
+                                                        <PlusIcon className="h-4 w-4" />
                                                     </button>
                                                 )}
-                                                {renderStatusButtons(task)}
                                             </div>
                                         </td>
                                     </tr>
-                                ))}
+                                ) : (
+                                    filteredAndSortedTasks.map(task => (
+                                        <tr key={task.id} className="hover:bg-gray-50">
+                                            {visibleColumnIds.map(columnId => {
+                                                if (columnId === 'title') {
+                                                    return (
+                                                        <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
+                                                            {task.title}
+                                                        </td>
+                                                    );
+                                                }
+                                                if (columnId === 'status') {
+                                                    return (
+                                                        <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap">
+                                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)}`}>
+                                                                {task.status === 'open' && 'Offen'}
+                                                                {task.status === 'in_progress' && 'In Bearbeitung'}
+                                                                {task.status === 'improval' && 'Zu verbessern'}
+                                                                {task.status === 'quality_control' && 'Qualitätskontrolle'}
+                                                                {task.status === 'done' && 'Erledigt'}
+                                                            </span>
+                                                        </td>
+                                                    );
+                                                }
+                                                if (columnId === 'responsibleAndQualityControl') {
+                                                    return (
+                                                        <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap">
+                                                            <div className="flex flex-col">
+                                                                <div className="text-sm text-gray-900">
+                                                                    <span className="text-xs text-gray-500">Verantwortlich:</span><br />
+                                                                    {`${task.responsible.firstName} ${task.responsible.lastName}`}
+                                                                </div>
+                                                                <div className="text-sm text-gray-900 mt-1">
+                                                                    <span className="text-xs text-gray-500">Qualitätskontrolle:</span><br />
+                                                                    {task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-'}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                    );
+                                                }
+                                                if (columnId === 'branch') {
+                                                    return (
+                                                        <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
+                                                            {task.branch.name}
+                                                        </td>
+                                                    );
+                                                }
+                                                if (columnId === 'dueDate') {
+                                                    return (
+                                                        <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
+                                                            {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
+                                                        </td>
+                                                    );
+                                                }
+                                                if (columnId === 'actions') {
+                                                    return (
+                                                        <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                                            <div className="flex space-x-2">
+                                                                {renderStatusButtons(task)}
+                                                                {(hasPermission('tasks', 'write', 'table') || isResponsibleForTask(task)) && (
+                                                                    <button
+                                                                        onClick={() => handleEditClick(task)}
+                                                                        className="text-blue-600 hover:text-blue-900"
+                                                                        title="Task bearbeiten"
+                                                                    >
+                                                                        <PencilIcon className="h-5 w-5" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </td>
+                                                    );
+                                                }
+                                                return null;
+                                            })}
+                                        </tr>
+                                    ))
+                                )}
                             </tbody>
                         </table>
                     </div>

@@ -49,6 +49,19 @@ model UserRole {
   @@unique([userId, roleId])
 }
 
+model UserTableSettings {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  tableId      String   // Identifier für die Tabelle (z.B. "worktracker_tasks", "requests")
+  columnOrder  String   // JSON-String mit der Reihenfolge der Spalten
+  hiddenColumns String   // JSON-String mit versteckten Spalten
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, tableId])
+}
+
 model Permission {
   id          Int      @id @default(autoincrement())
   entity      String   // Früher 'page', jetzt für Seiten und Tabellen
@@ -417,8 +430,11 @@ Der Rollenwechsel erfolgt über den Endpunkt `/api/users/switch-role` und aktual
 
 ### Optimierungen
 
-1. **Performante Berechtigungsprüfung**: Die Berechtigungsprüfung erfolgt effizient über den `authMiddleware`-Mechanismus, der die aktive Rolle und ihre Berechtigungen aus dem JWT-Token ermittelt und in der Request-Objekt speichert.
+1. **Reduzierte Debug-Ausgaben**: Unnötige Debug-Ausgaben wurden entfernt, um die Performance zu verbessern und die Logdateien übersichtlich zu halten. Dies betrifft folgende Komponenten:
+   - `permissionMiddleware.ts`: Reduzierung der Debug-Logs bei Berechtigungsprüfungen
+   - `notificationController.ts`: Entfernung übermäßiger Protokollierung
+   - `usePermissions.ts`: Entfernung von console.log-Ausgaben bei der Berechtigungsprüfung
 
-2. **Reduzierte Debug-Ausgaben**: Unnötige Debug-Ausgaben wurden entfernt, um die Performance zu verbessern und die Logdateien übersichtlich zu halten.
+2. **Effiziente Berechtigungsprüfung**: Die Berechtigungsprüfung erfolgt effizient über den `authMiddleware`-Mechanismus, der die aktive Rolle und ihre Berechtigungen aus dem JWT-Token ermittelt und in der Request-Objekt speichert.
 
 3. **Robuste Fehlerbehandlung**: Die Rollenverwaltung implementiert umfassende Fehlerbehandlung, um fehlende Berechtigungen oder ungültige Rollen zu erkennen und entsprechende Fehlermeldungen zurückzugeben.

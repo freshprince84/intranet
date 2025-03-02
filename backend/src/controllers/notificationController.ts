@@ -15,21 +15,13 @@ async function isNotificationEnabled(
   type: NotificationType,
   relatedEntityType?: string
 ): Promise<boolean> {
-  console.log('[Notification] Prüfe Benachrichtigungseinstellungen für:', {
-    userId,
-    type,
-    relatedEntityType
-  });
-
   // Benutzereinstellungen abrufen
   const userSettings = await prisma.userNotificationSettings.findFirst({
     where: { userId }
   });
-  console.log('[Notification] Gefundene Benutzereinstellungen:', userSettings);
 
   // Systemeinstellungen abrufen
   const systemSettings = await prisma.notificationSettings.findFirst();
-  console.log('[Notification] Gefundene Systemeinstellungen:', systemSettings);
 
   let enabled = true;
 
@@ -59,10 +51,8 @@ async function isNotificationEnabled(
     case NotificationType.worktime:
       if (relatedEntityType === 'start') {
         enabled = userSettings?.worktimeStart ?? true;
-        console.log('[Notification] Worktime Start Einstellung:', enabled);
       } else if (relatedEntityType === 'stop') {
         enabled = userSettings?.worktimeStop ?? true;
-        console.log('[Notification] Worktime Stop Einstellung:', enabled);
       }
       break;
     case NotificationType.system:
@@ -70,9 +60,6 @@ async function isNotificationEnabled(
       break;
   }
 
-  console.log('[Notification] Benachrichtigungen sind:', enabled ? 'aktiviert' : 'deaktiviert', 
-    'für Typ:', type, 
-    'und Entity-Typ:', relatedEntityType);
   return enabled;
 }
 
@@ -81,20 +68,9 @@ export async function createNotificationIfEnabled(
   data: NotificationCreateInput
 ): Promise<boolean> {
   try {
-    console.log('[Notification] Versuche Benachrichtigung zu erstellen:', {
-      userId: data.userId,
-      type: data.type,
-      title: data.title,
-      message: data.message,
-      relatedEntityType: data.relatedEntityType,
-      relatedEntityId: data.relatedEntityId
-    });
-
     const enabled = await isNotificationEnabled(data.userId, data.type, data.relatedEntityType);
-    console.log('[Notification] Benachrichtigungen aktiviert:', enabled);
 
     if (!enabled) {
-      console.log('[Notification] Benachrichtigungen sind deaktiviert');
       return false;
     }
 
@@ -109,15 +85,8 @@ export async function createNotificationIfEnabled(
       }
     });
 
-    console.log('[Notification] Benachrichtigung erfolgreich erstellt:', {
-      id: notification.id,
-      userId: notification.userId,
-      type: notification.type,
-      title: notification.title
-    });
     return true;
   } catch (error) {
-    console.error('[Notification] Fehler beim Erstellen der Benachrichtigung:', error);
     return false;
   }
 }
@@ -152,7 +121,6 @@ export const getNotifications = async (req: Request, res: Response) => {
 
     res.json(notifications);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Benachrichtigungen:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 };
@@ -182,7 +150,6 @@ export const getNotificationById = async (req: Request, res: Response) => {
     
     res.json(notification);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Benachrichtigung:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 };
@@ -296,7 +263,6 @@ export const createNotification = async (req: Request, res: Response) => {
       created: true
     });
   } catch (error) {
-    console.error('Fehler beim Erstellen der Benachrichtigung:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 };
@@ -333,7 +299,6 @@ export const updateNotification = async (req: Request, res: Response) => {
     
     res.json(updatedNotification);
   } catch (error) {
-    console.error('Fehler beim Aktualisieren der Benachrichtigung:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 };
@@ -367,7 +332,6 @@ export const deleteNotification = async (req: Request, res: Response) => {
     
     res.json({ message: 'Benachrichtigung wurde gelöscht' });
   } catch (error) {
-    console.error('Fehler beim Löschen der Benachrichtigung:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 };
@@ -394,7 +358,6 @@ export const markAllAsRead = async (req: Request, res: Response) => {
     
     res.status(200).json({ message: 'Alle Benachrichtigungen als gelesen markiert' });
   } catch (error) {
-    console.error('Fehler beim Markieren aller Benachrichtigungen als gelesen:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 };
@@ -427,7 +390,6 @@ export const getNotificationSettings = async (req: Request, res: Response) => {
       userSettings
     });
   } catch (error) {
-    console.error('Fehler beim Abrufen der Benachrichtigungseinstellungen:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 };
@@ -476,7 +438,6 @@ export const getUserNotifications = async (req: Request, res: Response) => {
       }
     });
   } catch (error) {
-    console.error('Fehler beim Abrufen der Benachrichtigungen:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 };
@@ -498,7 +459,6 @@ export const countUnreadNotifications = async (req: Request, res: Response) => {
 
     res.json({ count });
   } catch (error) {
-    console.error('Fehler beim Zählen der ungelesenen Benachrichtigungen:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 };
@@ -533,7 +493,6 @@ export const markNotificationAsRead = async (req: Request, res: Response) => {
 
     res.json(updatedNotification);
   } catch (error) {
-    console.error('Fehler beim Markieren der Benachrichtigung als gelesen:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 };
@@ -558,7 +517,6 @@ export const markAllNotificationsAsRead = async (req: Request, res: Response) =>
 
     res.json({ message: 'Alle Benachrichtigungen wurden als gelesen markiert' });
   } catch (error) {
-    console.error('Fehler beim Markieren aller Benachrichtigungen als gelesen:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 };
@@ -579,7 +537,6 @@ export const deleteAllNotifications = async (req: Request, res: Response) => {
 
     res.json({ message: 'Alle Benachrichtigungen wurden gelöscht' });
   } catch (error) {
-    console.error('Fehler beim Löschen aller Benachrichtigungen:', error);
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
 }; 

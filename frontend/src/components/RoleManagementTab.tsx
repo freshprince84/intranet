@@ -1,7 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { roleApi } from '../api/apiClient.ts';
 import { Role, AccessLevel } from '../types/interfaces.ts';
-import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { API_URL } from '../config/api.ts';
+import axios from 'axios';
+import { useAuth } from '../hooks/useAuth.tsx';
+import { usePermissions } from '../hooks/usePermissions.ts';
+import { useTableSettings } from '../hooks/useTableSettings.ts';
+import TableColumnConfig from '../components/TableColumnConfig.tsx';
+import { 
+  CheckIcon, 
+} from '@heroicons/react/24/outline';
 
 interface RoleManagementTabProps {
   onRolesChange?: () => void;
@@ -89,6 +98,22 @@ interface RoleFormData {
   }[];
 }
 
+// Definition der verfügbaren Spalten
+const availableColumns = [
+  { id: 'name', label: 'Name' },
+  { id: 'description', label: 'Beschreibung' },
+  { id: 'permissions', label: 'Berechtigungen' },
+  { id: 'actions', label: 'Aktionen' }
+];
+
+// Standardreihenfolge der Spalten
+const defaultColumnOrder = ['name', 'description', 'permissions', 'actions'];
+
+interface FilterState {
+  name: string;
+  description: string;
+}
+
 const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, onError, readOnly = false }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -113,6 +138,23 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     ]
   });
   const [error, setError] = useState<string | null>(null);
+  const { hasPermission } = usePermissions();
+  const { settings, isLoading: isLoadingSettings, updateColumnOrder, updateHiddenColumns, toggleColumnVisibility, isColumnVisible } = useTableSettings('role_management', {
+    defaultColumnOrder,
+    defaultHiddenColumns: []
+  });
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [filterState, setFilterState] = useState<FilterState>({
+    name: '',
+    description: ''
+  });
+  const [activeFilters, setActiveFilters] = useState<FilterState>({
+    name: '',
+    description: ''
+  });
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // Fehlerbehandlung
   const handleError = useCallback((err: any) => {
@@ -462,91 +504,269 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     setFormData({ ...formData, permissions: newPermissions });
   };
 
+  // Handler für das Verschieben von Spalten per Drag & Drop
+  const handleMoveColumn = useCallback((dragIndex: number, hoverIndex: number) => {
+    // Erstelle eine neue Kopie der Spaltenreihenfolge
+    const newColumnOrder = [...settings.columnOrder];
+    
+    // Ermittle die zu verschiebenden Spalten
+    const movingColumn = newColumnOrder[dragIndex];
+    
+    // Entferne die Spalte an der alten Position
+    newColumnOrder.splice(dragIndex, 1);
+    
+    // Füge die Spalte an der neuen Position ein
+    newColumnOrder.splice(hoverIndex, 0, movingColumn);
+    
+    // Aktualisiere die Spaltenreihenfolge
+    updateColumnOrder(newColumnOrder);
+  }, [settings.columnOrder, updateColumnOrder]);
+
+  // Handler für Drag & Drop direkt in der Tabelle
+  const handleDragStart = (e: React.DragEvent, columnId: string) => {
+    setDraggedColumn(columnId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, columnId: string) => {
+    e.preventDefault();
+    if (draggedColumn && draggedColumn !== columnId) {
+      setDragOverColumn(columnId);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, columnId: string) => {
+    e.preventDefault();
+    if (draggedColumn && draggedColumn !== columnId) {
+      const dragIndex = settings.columnOrder.indexOf(draggedColumn);
+      const hoverIndex = settings.columnOrder.indexOf(columnId);
+      
+      if (dragIndex > -1 && hoverIndex > -1) {
+        handleMoveColumn(dragIndex, hoverIndex);
+      }
+    }
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+  };
+
+  // Filtern und sortieren der Spalten gemäß den Benutzereinstellungen
+  const visibleColumnIds = settings.columnOrder.filter(id => isColumnVisible(id));
+
+  // Funktion zum Zählen der aktiven Filter
+  const getActiveFilterCount = () => {
+    let count = 0;
+    if (activeFilters.name) count++;
+    if (activeFilters.description) count++;
+    return count;
+  };
+
+  const resetFilters = () => {
+    setFilterState({
+      name: '',
+      description: ''
+    });
+  };
+
+  const applyFilters = () => {
+    setActiveFilters(filterState);
+    setIsFilterModalOpen(false);
+  };
+
+  // Filtern und sortieren der Rollen
+  const filteredAndSortedRoles = useMemo(() => {
+    return roles
+      .filter(role => {
+        // Globale Suche
+        if (searchTerm) {
+          const searchLower = searchTerm.toLowerCase();
+          const matchesSearch = 
+            role.name.toLowerCase().includes(searchLower) ||
+            (role.description && role.description.toLowerCase().includes(searchLower));
+          
+          if (!matchesSearch) return false;
+        }
+        
+        // Erweiterte Filterkriterien
+        if (activeFilters.name && !role.name.toLowerCase().includes(activeFilters.name.toLowerCase())) {
+          return false;
+        }
+        
+        if (activeFilters.description && role.description && 
+          !role.description.toLowerCase().includes(activeFilters.description.toLowerCase())) {
+          return false;
+        }
+        
+        return true;
+      })
+      .sort((a, b) => {
+        return a.name.localeCompare(b.name);
+      });
+  }, [roles, searchTerm, activeFilters]);
+
   return (
     <div>
-      {loading ? (
-        <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-        </div>
-      ) : (
-        <div>
-          {/* Action-Button nur anzeigen, wenn der Benutzer Schreibrechte hat */}
-          {!readOnly && (
-            <div className="mb-4 flex justify-start">
+      {/* Spaltenanzeige und Suche */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between mb-4">
+          {/* Linke Seite: "Neue Rolle erstellen"-Button */}
+          <div className="flex items-center">
+            {!readOnly && hasPermission('roles', 'write', 'table') && (
               <button
-                onClick={() => { setEditingRole(null); resetForm(); setIsModalOpen(true); }}
+                onClick={() => setIsModalOpen(true)}
                 className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
                 style={{ width: '30.19px', height: '30.19px' }}
                 title="Neue Rolle erstellen"
                 aria-label="Neue Rolle erstellen"
               >
-                <PlusIcon className="h-5 w-5" />
+                <PlusIcon className="h-4 w-4" />
               </button>
-            </div>
-          )}
+            )}
+          </div>
           
-          {roles.length === 0 ? (
-            <div className="p-4 bg-gray-50 rounded text-center">
-              <p>Keine Rollen gefunden. Erstellen Sie eine neue Rolle mit dem Button oben.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Beschreibung</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Berechtigungen</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                  {roles.map(role => (
-                    <tr key={role.id}>
-                      <td className="px-6 py-4 whitespace-nowrap">{role.name}</td>
-                      <td className="px-6 py-4">{role.description}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          {role.permissions.map(permission => (
-                            <span
-                              key={`${permission.entity}-${permission.accessLevel}`}
-                              className="px-2 py-1 text-xs rounded-full bg-gray-100"
-                            >
-                              {permission.entity}: {permission.accessLevel}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        {/* Aktionen nur anzeigen, wenn der Benutzer Schreibrechte hat */}
-                        {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
-                          <>
-                            <button 
-                              onClick={() => prepareRoleForEditing(role)} 
-                              className="text-blue-600 hover:text-blue-900 mr-3"
-                            >
-                              <PencilIcon className="h-5 w-5" />
-                            </button>
-                            <button 
-                              onClick={() => handleDelete(role.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              <TrashIcon className="h-5 w-5" />
-                            </button>
-                          </>
-                        )}
-                        {!readOnly && (role.id === 1 || role.id === 2 || role.id === 999) && (
-                          <span className="text-gray-400 text-xs">Geschützte Systemrolle</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          {/* Mitte: Titel - Kein Titel in der Mitte notwendig bei dieser Komponente, da der Tab-Header bereits den Titel zeigt */}
+          <div></div>
+          
+          {/* Rechte Seite: Suchfeld, Filter-Button, Spalten-Konfiguration */}
+          <div className="flex items-center space-x-2">
+            <input
+              type="text"
+              placeholder="Suchen..."
+              className="px-3 py-2 border rounded-md w-full sm:w-60"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            {/* Filter-Button */}
+            <button
+              className={`p-2 rounded-md border ${getActiveFilterCount() > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
+              onClick={() => setIsFilterModalOpen(true)}
+              title="Filter"
+            >
+              <div className="relative">
+                <FunnelIcon className="w-5 h-5" />
+                {getActiveFilterCount() > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {getActiveFilterCount()}
+                  </span>
+                )}
+              </div>
+            </button>
+            <TableColumnConfig
+              columns={availableColumns}
+              visibleColumns={visibleColumnIds}
+              columnOrder={settings.columnOrder}
+              onToggleColumnVisibility={toggleColumnVisibility}
+              onMoveColumn={handleMoveColumn}
+            />
+          </div>
         </div>
-      )}
+
+        {loading ? (
+          <div className="flex justify-center items-center py-8">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        ) : (
+          <div>
+            {roles.length === 0 ? (
+              <div className="p-4 bg-gray-50 rounded text-center">
+                <p>Keine Rollen gefunden. Erstellen Sie eine neue Rolle mit dem Button oben.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
+                    <tr>
+                      {visibleColumnIds.map(columnId => {
+                        const column = availableColumns.find(col => col.id === columnId);
+                        if (!column) return null;
+                        
+                        return (
+                          <th 
+                            key={columnId}
+                            className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative ${columnId !== 'actions' ? 'cursor-move' : ''}`}
+                            draggable={columnId !== 'actions'}
+                            onDragStart={columnId !== 'actions' ? (e) => handleDragStart(e, columnId) : undefined}
+                            onDragOver={columnId !== 'actions' ? (e) => handleDragOver(e, columnId) : undefined}
+                            onDrop={columnId !== 'actions' ? (e) => handleDrop(e, columnId) : undefined}
+                            onDragEnd={columnId !== 'actions' ? handleDragEnd : undefined}
+                          >
+                            <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
+                              {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />}
+                              {column.label}
+                            </div>
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {filteredAndSortedRoles.map(role => (
+                      <tr key={role.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        {visibleColumnIds.map(columnId => {
+                          if (columnId === 'name') {
+                            return (
+                              <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                {role.name}
+                              </td>
+                            );
+                          }
+                          if (columnId === 'description') {
+                            return (
+                              <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                {role.description || '-'}
+                              </td>
+                            );
+                          }
+                          if (columnId === 'permissions') {
+                            return (
+                              <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                                {role.permissions.filter(p => p.accessLevel !== 'none').length} aktivierte Berechtigungen
+                              </td>
+                            );
+                          }
+                          if (columnId === 'actions') {
+                            return (
+                              <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <div className="flex justify-end space-x-2">
+                                  {/* Bearbeiten-Button wird nur angezeigt, wenn der Benutzer Schreibrechte hat und es sich nicht um eine geschützte Rolle handelt */}
+                                  {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
+                                    <button 
+                                      onClick={(e) => { e.preventDefault(); prepareRoleForEditing(role) }} 
+                                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                      title="Rolle bearbeiten"
+                                    >
+                                      <PencilIcon className="h-5 w-5" />
+                                    </button>
+                                  )}
+                                  
+                                  {/* Löschen-Button wird nur angezeigt, wenn der Benutzer Schreibrechte hat und es sich nicht um eine geschützte Rolle handelt */}
+                                  {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
+                                    <button 
+                                      onClick={(e) => { e.preventDefault(); handleDelete(role.id) }} 
+                                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                      title="Rolle löschen"
+                                    >
+                                      <TrashIcon className="h-5 w-5" />
+                                    </button>
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          }
+                          return null;
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Modal für Rollenerstellung/Bearbeitung */}
       {isModalOpen && (
@@ -686,6 +906,68 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Filter Modal */}
+      {isFilterModalOpen && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+            <div className="px-6 py-4 border-b flex justify-between items-center">
+              <h3 className="text-lg font-medium">Erweiterte Filter</h3>
+              <button 
+                onClick={() => setIsFilterModalOpen(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={filterState.name}
+                  onChange={(e) => setFilterState({...filterState, name: e.target.value})}
+                  placeholder="Nach Name filtern..."
+                />
+              </div>
+            
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+                <input
+                  type="text"
+                  className="w-full px-3 py-2 border rounded-md"
+                  value={filterState.description}
+                  onChange={(e) => setFilterState({...filterState, description: e.target.value})}
+                  placeholder="Nach Beschreibung filtern..."
+                />
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 flex justify-between rounded-b-lg">
+              <button
+                onClick={resetFilters}
+                className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
+              >
+                Filter zurücksetzen
+              </button>
+              <div className="space-x-2">
+                <button
+                  onClick={() => setIsFilterModalOpen(false)}
+                  className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={applyFilters}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+                >
+                  Filter anwenden
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

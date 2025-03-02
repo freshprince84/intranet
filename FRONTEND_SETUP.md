@@ -615,6 +615,7 @@ Die folgenden Boxen sind offiziell im System definiert:
    - Beim Klick auf einen Balken öffnet sich ein Modal mit den detaillierten Zeiteinträgen des Tages
    - Exportfunktion für Arbeitszeitdaten als Excel-Datei
    - Farbliche Unterscheidung zwischen Zeiten unter (blau) und über (rot) der Sollarbeitszeit
+   - Statistikboxen (Gesamtstunden, Durchschnitt/Tag, Arbeitstage) haben zentrierte Titel und Werte
 2. Dashboard/Requests Box
 3. Worktracker/Zeiterfassung Box
 4. Worktracker/To Do's
@@ -854,14 +855,15 @@ Die Anwendung verwendet konsistente Button-Stile für verschiedene Aktionstypen.
   ```
 
 #### Lösch-Buttons
-- **Stil:** Nur Icon ohne Hintergrund
-- **Klassen:** `text-red-600 hover:text-red-900`
+- **Stil:** Runder Button mit rotem Hintergrund und weißem Icon
+- **Klassen:** `p-1 bg-red-600 text-white rounded hover:bg-red-700`
 - **Verwendung:** Buttons zum Löschen von Elementen
 - **Beispiel:**
   ```jsx
   <button 
     onClick={handleDeleteAction}
-    className="text-red-600 hover:text-red-900"
+    className="p-1 bg-red-600 text-white rounded hover:bg-red-700" 
+    title="Löschen"
   >
     <TrashIcon className="h-5 w-5" />
   </button>
@@ -926,11 +928,11 @@ Alle Buttons müssen die folgenden Barrierefreiheits-Attribute haben:
   - Icon-Buttons: `p-1` oder `p-1.5`
   - Text-Buttons: `px-4 py-2` für normale Größe
 
-## 6. Responsive Navigation
+## 7. Responsive Navigation
 
 Die Anwendung verwendet ein responsives Navigationskonzept, das sich an die Bildschirmgröße anpasst:
 
-### 6.1. Desktop-Navigation
+### 7.1. Desktop-Navigation
 
 Auf Desktop-Geräten (Bildschirmbreite >= 768px) wird eine klassische Seitenleiste verwendet:
 
@@ -939,7 +941,7 @@ Auf Desktop-Geräten (Bildschirmbreite >= 768px) wird eine klassische Seitenleis
 - Zeigt alle verfügbaren Menüpunkte je nach Benutzerberechtigungen an
 - Einstellungen-Menüpunkt wird am unteren Rand der Sidebar angezeigt
 
-### 6.2. Mobile-Navigation
+### 7.2. Mobile-Navigation
 
 Auf mobilen Geräten (Bildschirmbreite < 768px) wird die Seitenleiste zu einem Footer-Menü:
 
@@ -948,7 +950,7 @@ Auf mobilen Geräten (Bildschirmbreite < 768px) wird die Seitenleiste zu einem F
 - Menüpunkte werden als Icons mit Text darunter angezeigt
 - Aktive Menüpunkte werden farblich hervorgehoben (blau)
 
-### 6.3. Implementierung
+### 7.3. Implementierung
 
 Die Umschaltung zwischen Desktop- und Mobile-Navigation erfolgt automatisch durch Media Queries und React-State:
 
@@ -978,212 +980,11 @@ Das Layout passt automatisch den Inhaltsbereich an, um Platz für die jeweilige 
 </div>
 ```
 
-## 6. Berechtigungssystem
-
-Das Berechtigungssystem ist eine zentrale Komponente der Anwendung, die den Zugriff auf verschiedene Seiten und Funktionen basierend auf den Benutzerrollen steuert.
-
-### 6.1. Berechtigungsstruktur
-
-Die Berechtigungen werden in zwei Hauptkategorien unterteilt:
-
-1. **Seiten-Berechtigungen**: Steuern den Zugriff auf verschiedene Seiten der Anwendung.
-2. **Tabellen-Berechtigungen**: Steuern den Zugriff auf bestimmte Datentabellen, die bestimmten Seiten zugeordnet sind.
-
-#### Seitenhierarchie
-
-- **Immer sichtbare Seiten**: Diese Seiten sind für alle Benutzer verfügbar, unabhängig von ihren Berechtigungen:
-  - Dashboard
-  - Settings (Einstellungen)
-
-- **Berechtigungspflichtige Seiten**:
-  - Worktracker
-  - Usermanagement (Benutzerverwaltung)
-
-#### Tabellenzuordnung
-
-Tabellen sind ihren übergeordneten Seiten zugeordnet und werden als Unterelemente angezeigt:
-
-- **Dashboard**:
-  - Requests (Anfragen)
-- **Worktracker**:
-  - Tasks (Aufgaben)
-
-### 6.2. Berechtigungstypen
-
-Für jede Seite und Tabelle können folgende Berechtigungen erteilt werden:
-
-- **none**: Kein Zugriff
-- **read**: Nur Lesezugriff
-- **write**: Nur Schreibzugriff 
-- **both**: Vollständiger Zugriff (Lesen und Schreiben)
-
-### 6.3. Implementierung im UI
-
-Die Berechtigungen werden in der Sidebar und auf den jeweiligen Seiten durchgesetzt:
-
-```jsx
-// Beispiel aus der Sidebar-Komponente
-const alwaysVisiblePages = ['dashboard', 'settings'];
-
-const menuItems = [
-  { name: 'Dashboard', path: '/' },
-  { name: 'Worktracker', path: '/worktracker' },
-  { name: 'Usermanagement', path: '/users' }, // Hinweis: Route ist /users, die Berechtigung heißt "usermanagement"
-  { name: 'Settings', path: '/settings' }
-].filter(item => {
-  const pageName = item.name.toLowerCase();
-  return alwaysVisiblePages.includes(pageName) || 
-         hasPermission(pageName, 'read', 'page');
-});
-```
-
-### 6.4. Rollenverwaltung
-
-In der Rollenverwaltung können Administratoren:
-
-1. Neue Rollen erstellen
-2. Bestehende Rollen bearbeiten
-3. Berechtigungen für Seiten und Tabellen zuweisen
-4. Die Option "Alle Seiten" verwenden, um schnell Berechtigungen für mehrere Seiten zu setzen
-
-Die immer sichtbaren Seiten werden nicht in den Berechtigungseinstellungen angezeigt, da sie standardmäßig für alle Benutzer verfügbar sind.
-
-## 7. UI-Komponenten-Richtlinien
-
-### 7.1. Button-Designs
-
-Für eine konsistente Benutzeroberfläche werden folgende Button-Stile verwendet:
-
-#### Neues Item erstellen Button
-
-- **Stil:** Rundes Icon mit weißem Hintergrund und blauem Symbol
-- **Größe:** Immer einheitlich mit 30.19px x 30.19px 
-- **Klassen:** `bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center`
-- **Style:** `style={{ width: '30.19px', height: '30.19px' }}`
-- **Icon-Größe:** `h-5 w-5` für den PlusIcon (bei größeren Listen), `h-4 w-4` für kleinere Listenansichten
-- **Verwendung:** Konsistent in allen Listen- und Übersichtsansichten, wo neue Elemente erstellt werden können
-- **Positionierung:** Immer links oben über der Liste oder im Filterbereich
-- **Beispiel:**
-
-```jsx
-<button
-  onClick={() => setIsCreateModalOpen(true)}
-  className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
-  style={{ width: '30.19px', height: '30.19px' }}
-  title="Neues Element erstellen"
-  aria-label="Neues Element erstellen"
->
-  <PlusIcon className="h-5 w-5" />
-</button>
-```
-
-#### Bearbeitungs-Buttons
-- **Stil:** Nur Icon ohne Hintergrund
-- **Klassen:** `text-blue-600 hover:text-blue-900`
-- **Verwendung:** Buttons zum Bearbeiten von Elementen
-- **Beispiel:**
-  ```jsx
-  <button 
-    onClick={handleEditAction} 
-    className="text-blue-600 hover:text-blue-900"
-  >
-    <PencilIcon className="h-5 w-5" />
-  </button>
-  ```
-
-#### Lösch-Buttons
-- **Stil:** Nur Icon ohne Hintergrund
-- **Klassen:** `text-red-600 hover:text-red-900`
-- **Verwendung:** Buttons zum Löschen von Elementen
-- **Beispiel:**
-  ```jsx
-  <button 
-    onClick={handleDeleteAction}
-    className="text-red-600 hover:text-red-900"
-  >
-    <TrashIcon className="h-5 w-5" />
-  </button>
-  ```
-
-#### Status-Change-Buttons
-- **Stil:** Gefüllt, abgerundet
-- **Klassen:** `p-1 bg-[color]-600 text-white rounded hover:bg-[color]-700`
-- **Verwendung:** Buttons zum Ändern des Status, Farbe basierend auf Aktion (grün=Bestätigen, rot=Abbrechen, etc.)
-- **Beispiel:**
-  ```jsx
-  <button
-    onClick={handleStatusChange}
-    className="p-1 bg-green-600 text-white rounded hover:bg-green-700"
-    title="Status-Beschreibung"
-  >
-    <CheckIcon className="h-5 w-5" />
-  </button>
-  ```
-
-### 2. Text-Buttons
-
-#### Primäre Aktions-Buttons
-- **Stil:** Gefüllt, abgerundet
-- **Klassen:** `px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none`
-- **Verwendung:** Hauptaktionen in Formularen (z.B. Speichern, Erstellen)
-- **Beispiel:**
-  ```jsx
-  <button
-    type="submit"
-    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
-  >
-    Speichern
-  </button>
-  ```
-
-#### Sekundäre Aktions-Buttons
-- **Stil:** Grau, abgerundet
-- **Klassen:** `px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none`
-- **Verwendung:** Sekundäre Aktionen (z.B. Abbrechen)
-- **Beispiel:**
-  ```jsx
-  <button
-    type="button"
-    onClick={handleCancel}
-    className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none"
-  >
-    Abbrechen
-  </button>
-  ```
-
-### Barrierefreiheit
-
-Alle Buttons müssen die folgenden Barrierefreiheits-Attribute haben:
-- `title` für Tooltips
-- `aria-label` für Screenreader, wenn keine Beschriftung vorhanden ist
-- `focus:outline-none focus:ring-2 focus:ring-[color]-500 focus:ring-offset-2` für sichtbaren Fokusindikator
-
-### Größen und Abstände
-- **Icon-Größe:** `h-4 w-4` für kleinere Icons, `h-5 w-5` für Standard-Icons
-- **Padding:**
-  - Icon-Buttons: `p-1` oder `p-1.5`
-  - Text-Buttons: `px-4 py-2` für normale Größe
-
-## 8. Interaktive Frontend-Features
-
-- Die Arbeitszeitstatistik auf dem Dashboard erlaubt das Anklicken der Tagesbalken, um ein Modal mit detaillierten Zeiteinträgen für den jeweiligen Tag zu öffnen
-- Alle Tabellen unterstützen Sortierung durch Klick auf die Spaltenüberschriften
-- Interaktive Filter für Requests und Tasks
-- Die Frontend-Komponenten prüfen jetzt Berechtigungen mit `hasPermission('entity', 'accessLevel', 'entityType')`
-
-### 8.1 Responsive Design
-- Die Seitenleiste wird bei kleinen Bildschirmen (< 768px) automatisch zu einem Footer-Menü
-- Auf Desktop-Geräten wird die klassische Seitenleiste am linken Rand angezeigt
-- Die Umschaltung erfolgt automatisch basierend auf der Bildschirmgröße
-- Der Hauptinhalt wird entsprechend angepasst, um Platz für die Navigation zu schaffen
-- Alle UI-Komponenten sind vollständig responsive gestaltet
-- Das Layout reagiert dynamisch auf Größenänderungen ohne Neuladen der Seite
-
-## 9. Notification-System
+## 8. Notification-System
 
 Das System verwendet die zentrale Funktion `createNotificationIfEnabled` für alle Benachrichtigungen. Diese Funktion berücksichtigt die Benutzer- und Systemeinstellungen und sendet Benachrichtigungen nur, wenn sie aktiviert sind.
 
-### 9.1 Implementierte Notification-Trigger
+### 8.1 Implementierte Notification-Trigger
 
 1. **Task-Trigger**:
    - `taskCreate`: Benachrichtigt den Verantwortlichen und die Qualitätskontrolle, wenn ein neuer Task erstellt wird
@@ -1211,3 +1012,223 @@ Das System verwendet die zentrale Funktion `createNotificationIfEnabled` für al
 5. **Worktime-Trigger**:
    - `worktimeStart`: Benachrichtigt den Benutzer, wenn die Zeiterfassung gestartet wird
    - `worktimeStop`: Benachrichtigt den Benutzer, wenn die Zeiterfassung beendet wird
+
+## 8.2. Tabellenstandards
+
+Alle Tabellen im Frontend müssen den folgenden Standards entsprechen, um eine einheitliche Benutzerfreundlichkeit und Konsistenz in der gesamten Anwendung zu gewährleisten:
+
+### 8.2.1. Drag & Drop für Spaltenreihenfolge
+
+Jede Tabelle muss Drag & Drop für die Neuanordnung von Spalten unterstützen:
+
+- **Implementierung:** Die Spaltenüberschriften müssen das `draggable`-Attribut haben und die entsprechenden Event-Handler.
+- **Speicherung:** Die Spaltenreihenfolge wird pro Benutzer und Tabelle in der Datenbank gespeichert.
+- **Technische Umsetzung:** Verwendung des `useTableSettings`-Hooks, der die Spaltenreihenfolge verwaltet.
+
+```jsx
+// Beispiel für drag & drop in Spaltenüberschriften
+<th 
+  draggable
+  onDragStart={() => handleDragStart(columnId)}
+  onDragOver={(e) => handleDragOver(e, columnId)}
+  onDrop={(e) => handleDrop(e, columnId)}
+  onDragEnd={handleDragEnd}
+  className="cursor-move"
+>
+  <div className="flex items-center">
+    <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />
+    {column.label}
+  </div>
+</th>
+```
+
+### 8.2.2. Sortierbarkeit
+
+Tabellen müssen das Sortieren nach allen relevanten Spalten unterstützen:
+
+- **Implementierung:** Ein Klick auf eine sortierbare Spaltenüberschrift ändert die Sortierreihenfolge.
+- **Visuelle Anzeige:** Pfeile (↑/↓) zeigen die aktuelle Sortierrichtung an.
+- **Status:** Ein SortConfig-State speichert den Schlüssel und die Richtung der Sortierung.
+
+```jsx
+// Beispiel für Sortierlogik
+const handleSort = (key) => {
+  setSortConfig(current => ({
+    key,
+    direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+  }));
+};
+
+// In der Spaltenüberschrift
+<th onClick={() => handleSort('columnKey')}>
+  {column.label} {sortConfig.key === 'columnKey' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+</th>
+```
+
+### 8.2.3. Konfigurierbare Spaltenanzeige
+
+Jede Tabelle muss die Möglichkeit bieten, Spalten ein- und auszublenden:
+
+- **Implementierung:** Ein Konfigurationsbutton öffnet ein Dropdown-Menü zur Spaltenauswahl.
+- **Komponente:** Die `TableColumnConfig`-Komponente sollte verwendet werden.
+- **Speicherung:** Sichtbare/versteckte Spalten werden pro Benutzer in der Datenbank gespeichert.
+
+```jsx
+// Beispiel für Spaltenauswahl
+<TableColumnConfig
+  columns={availableColumns}
+  visibleColumns={visibleColumns}
+  columnOrder={columnOrder}
+  onToggleColumnVisibility={toggleColumnVisibility}
+  onMoveColumn={handleMoveColumn}
+/>
+```
+
+### 8.2.4. Responsive Darstellung
+
+Tabellen müssen auf allen Geräten gut dargestellt werden:
+
+- **Horizontaler Overflow:** `overflow-x-auto` für horizontales Scrollen auf kleineren Bildschirmen.
+- **Vertikaler Overflow:** Bei Bedarf `max-height` und `overflow-y-auto` für vertikales Scrollen.
+- **Mobil-Optimierung:** Wichtige Spalten sollten priorisiert werden.
+
+### 8.2.5. Standardimplementierung
+
+Für die Implementierung dieser Standards sollten folgende Komponenten und Hooks verwendet werden:
+
+- **useTableSettings:** Hook zum Laden und Speichern der Benutzereinstellungen für Tabellen.
+- **TableColumnConfig:** Komponente für die Spaltenauswahl.
+- **HTML5 Drag & Drop API:** Für das Ziehen und Ablegen von Spalten.
+
+Dieser Standard gilt für **alle** Tabellen im Frontend, einschließlich:
+- Requests-Tabelle (Dashboard)
+- Tasks-Tabelle (Worktracker)
+- Roles-Tabelle (Usermanagement > Roles Tab)
+- Alle neu erstellten Tabellen
+
+## 9. Interaktive Frontend-Features
+
+- Die Arbeitszeitstatistik auf dem Dashboard erlaubt das Anklicken der Tagesbalken, um ein Modal mit detaillierten Zeiteinträgen für den jeweiligen Tag zu öffnen
+- Alle Tabellen unterstützen Sortierung durch Klick auf die Spaltenüberschriften
+- Interaktive Filter für Requests und Tasks
+- Die Frontend-Komponenten prüfen jetzt Berechtigungen mit `hasPermission('entity', 'accessLevel', 'entityType')`
+
+### 9.1 Responsive Design
+- Die Seitenleiste wird bei kleinen Bildschirmen (< 768px) automatisch zu einem Footer-Menü
+- Auf Desktop-Geräten wird die klassische Seitenleiste am linken Rand angezeigt
+- Die Umschaltung erfolgt automatisch basierend auf der Bildschirmgröße
+- Der Hauptinhalt wird entsprechend angepasst, um Platz für die Navigation zu schaffen
+- Alle UI-Komponenten sind vollständig responsive gestaltet
+- Das Layout reagiert dynamisch auf Größenänderungen ohne Neuladen der Seite
+
+## 10. Notification-System
+
+Das System verwendet die zentrale Funktion `createNotificationIfEnabled` für alle Benachrichtigungen. Diese Funktion berücksichtigt die Benutzer- und Systemeinstellungen und sendet Benachrichtigungen nur, wenn sie aktiviert sind.
+
+### 10.1 Implementierte Notification-Trigger
+
+1. **Task-Trigger**:
+   - `taskCreate`: Benachrichtigt den Verantwortlichen und die Qualitätskontrolle, wenn ein neuer Task erstellt wird
+   - `taskUpdate`: Benachrichtigt den Verantwortlichen und die Qualitätskontrolle, wenn ein Task aktualisiert wird
+   - `taskDelete`: Benachrichtigt den Verantwortlichen und die Qualitätskontrolle, wenn ein Task gelöscht wird
+   - `taskStatusChange`: Benachrichtigt den Verantwortlichen und die Qualitätskontrolle, wenn sich der Status eines Tasks ändert
+
+2. **Request-Trigger**:
+   - `requestCreate`: Benachrichtigt den Verantwortlichen, wenn ein neuer Request erstellt wird
+   - `requestUpdate`: Benachrichtigt den Verantwortlichen und den Ersteller, wenn ein Request aktualisiert wird
+   - `requestDelete`: Benachrichtigt den Verantwortlichen und den Ersteller, wenn ein Request gelöscht wird
+   - `requestStatusChange`: Benachrichtigt den Ersteller, wenn sich der Status eines Requests ändert, mit spezifischen Nachrichten für verschiedene Status (approved, denied, to_improve)
+
+3. **User-Trigger**:
+   - `userCreate`: Benachrichtigt Administratoren, wenn ein neuer Benutzer erstellt wird
+   - `userUpdate`: Benachrichtigt den aktualisierten Benutzer und Administratoren, wenn ein Benutzer aktualisiert wird
+   - `userDelete`: Benachrichtigt Administratoren, wenn ein Benutzer gelöscht wird
+   - `userRoleUpdate`: Benachrichtigt den betroffenen Benutzer und Administratoren, wenn die Rollen eines Benutzers aktualisiert werden
+
+4. **Role-Trigger**:
+   - `roleCreate`: Benachrichtigt Administratoren, wenn eine neue Rolle erstellt wird
+   - `roleUpdate`: Benachrichtigt Administratoren und Benutzer mit dieser Rolle, wenn eine Rolle aktualisiert wird
+   - `roleDelete`: Benachrichtigt Administratoren und Benutzer mit dieser Rolle, wenn eine Rolle gelöscht wird
+
+5. **Worktime-Trigger**:
+   - `worktimeStart`: Benachrichtigt den Benutzer, wenn die Zeiterfassung gestartet wird
+   - `worktimeStop`: Benachrichtigt den Benutzer, wenn die Zeiterfassung beendet wird
+
+## Table Column Configuration
+
+Das Frontend verwendet ein System für benutzerdefinierte Tabellenkonfigurationen, das es Benutzern ermöglicht, die Anzeige von Tabellen nach ihren Präferenzen anzupassen.
+
+### UserTableSettings
+
+Im Backend werden die Benutzereinstellungen für Tabellen in der `UserTableSettings`-Tabelle gespeichert:
+
+```
+model UserTableSettings {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  tableId      String   // Identifier für die Tabelle (z.B. "worktracker_tasks", "requests")
+  columnOrder  String   // JSON-String mit der Reihenfolge der Spalten
+  hiddenColumns String   // JSON-String mit versteckten Spalten
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, tableId])
+}
+```
+
+Die wichtigsten Felder sind:
+- `tableId`: Ein eindeutiger Bezeichner für die Tabelle (z.B. "worktracker_tasks")
+- `columnOrder`: Ein JSON-String, der die Reihenfolge der Spalten speichert
+- `hiddenColumns`: Ein JSON-String, der die IDs der ausgeblendeten Spalten speichert
+
+### TableColumnConfig Komponente
+
+Die `TableColumnConfig`-Komponente ermöglicht es Benutzern, die Sichtbarkeit und Reihenfolge von Tabellenspalten zu konfigurieren:
+
+```tsx
+<TableColumnConfig
+  columns={availableColumns}
+  visibleColumns={visibleColumnIds}
+  columnOrder={settings.columnOrder}
+  onToggleColumnVisibility={handleToggleColumnVisibility}
+  onMoveColumn={handleMoveColumn}
+/>
+```
+
+### Integration mit useTableSettings Hook
+
+Der `useTableSettings`-Hook verbindet die `TableColumnConfig`-Komponente mit dem Backend:
+
+```tsx
+const { 
+  settings, 
+  visibleColumnIds, 
+  handleToggleColumnVisibility, 
+  handleMoveColumn 
+} = useTableSettings('worktracker_tasks', availableColumns.map(col => col.id));
+```
+
+### Wichtige Hinweise:
+
+1. **tableId Format**: Die `tableId` sollte einen einheitlichen Benennungsstil haben, vorzugsweise `[page]_[entity]`, wie z.B. `worktracker_tasks`.
+
+2. **Standard-Einstellungen**: Für jeden Benutzer werden automatisch Standard-Einstellungen erstellt, wenn keine vorhanden sind. Diese sollten in der Seed-Datei für den Admin-Benutzer definiert werden.
+
+3. **Spaltenbezeichnungen**: Bei der Definition der `availableColumns` muss darauf geachtet werden, dass die Bezeichnungen (`id`) konsistent verwendet werden, da diese als Schlüssel für die Benutzereinstellungen dienen.
+
+4. **Zusammengesetzte Spalten**: Wenn Spalten zusammengefasst werden (z.B. "Verantwortlich / Qualitätskontrolle"), sollte eine neue Spalten-ID erstellt werden (z.B. `responsibleAndQualityControl`) und die alten Spalten entfernt werden.
+
+### Beispiel für Worktracker:
+
+```tsx
+// Definiere die verfügbaren Spalten für die Tabelle
+const availableColumns = [
+    { id: 'title', label: 'Titel' },
+    { id: 'status', label: 'Status' },
+    { id: 'responsibleAndQualityControl', label: 'Verantwortlich / Qualitätskontrolle' },
+    { id: 'branch', label: 'Niederlassung' },
+    { id: 'dueDate', label: 'Fälligkeitsdatum' },
+    { id: 'actions', label: 'Aktionen' },
+];
+```
