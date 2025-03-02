@@ -1,6 +1,22 @@
-# Rollenauswahl-Funktionalität
+# Rollenauswahl und Berechtigungsmanagement
 
-Diese Dokumentation beschreibt die Implementierung der Rollenauswahl-Funktionalität im Intranet.
+## Berechtigungsstruktur
+Die Berechtigungsstruktur wurde aktualisiert, um granularere Kontrolle zu ermöglichen:
+
+- Das Feld `page` wurde zu `entity` umbenannt und kann nun sowohl Seiten als auch Tabellen repräsentieren
+- Das neue Feld `entityType` unterscheidet zwischen 'page' und 'table' Berechtigungen
+- Für Tabellen wie "requests" und "tasks" wurden spezifische Tabellenberechtigungen eingeführt
+- Die Frontend-Komponenten prüfen jetzt Berechtigungen mit `hasPermission('entity', 'accessLevel', 'entityType')`
+
+### Implementierte Berechtigungen für Tabellen
+- **requests**: Kontrolliert Zugriff auf Anfragen-Daten (Erstellen, Bearbeiten, Statusänderungen)
+- **tasks**: Kontrolliert Zugriff auf Aufgaben-Daten (Erstellen, Bearbeiten, Statusänderungen)
+
+## Rollenmanagement & Login
+- Beim Login wird die zuletzt genutzte Rolle (`lastUsed=true`) für den Benutzer aktiviert
+- Wenn keine zuletzt genutzte Rolle vorhanden ist, wird die Rolle mit der niedrigsten ID aktiviert
+- Im Rollenauswahlmenü werden die Rollen alphabetisch (A-Z) sortiert angezeigt
+- Nach einem Rollenwechsel bleibt diese Rolle auch für den nächsten Login aktiv (wird in der Datenbank gespeichert)
 
 ## Überblick
 
@@ -69,14 +85,25 @@ Dieser Endpunkt wechselt die aktive Rolle eines Benutzers.
 
 ### Komponenten
 
-1. **Header.tsx**
-   - Integriert die Rollenauswahl als Untermenü im Profilmenü
-   - Zeigt die aktuelle Rolle des Benutzers im Menüpunkt an
-   - Ermöglicht das Wechseln zwischen verfügbaren Rollen
+Die Funktionalität ist in die folgenden Komponenten integriert:
 
-2. **useAuth.tsx**
+1. `Header.tsx`:
+   - Enthält die Topbar und das Profilmenü
+   - Implementiert die Rollenauswahl als Untermenü
+   - Zeigt die aktive Rolle hervorgehoben an
+   - Sortiert die Rollen alphabetisch (A-Z) für bessere Übersichtlichkeit
+
+2. `authContext.tsx`:
+   - Stellt den `switchRole` Kontext für die Anwendung bereit
+   - Verwaltet den aktuellen Benutzer und seine aktive Rolle
+   - Synchronisiert den Rollenwechsel mit dem Backend
+
+2. `useAuth.tsx`:
    - Erweitert um die `switchRole`-Funktion
    - Aktualisiert den Benutzerkontext nach dem Rollenwechsel
+   - Implementiert `hasPermission(entity, accessLevel, entityType)`-Funktion zur Berechtigungsprüfung
+   - Verwaltet den aktuellen Benutzer und seine aktive Rolle
+   - Sortiert die Rollen alphabetisch im Rollenauswahlmenü
 
 ### Benutzeroberfläche
 
@@ -87,6 +114,53 @@ Die Rollenauswahl ist als Untermenü im Profilmenü implementiert:
 3. Beim Klick auf diese Option öffnet sich ein Untermenü rechts daneben
 4. In diesem Untermenü werden alle verfügbaren Rollen angezeigt
 5. Die aktuelle Rolle ist farblich hervorgehoben
+
+## Erweiterte Berechtigungsstruktur
+
+Die Rollenauswahl wirkt sich auf die verfügbaren Berechtigungen aus. Mit der erweiterten Berechtigungsstruktur ergeben sich folgende Änderungen:
+
+### Permissions-Objekt
+
+Das Permissions-Objekt im Benutzerkontext wurde erweitert, um zwischen Seiten- und Tabellenberechtigungen zu unterscheiden:
+
+```typescript
+interface Permission {
+  entity: string;       // Identifiziert Seite oder Tabelle
+  entityType: string;   // 'page' oder 'table'
+  accessLevel: 'read' | 'write' | 'both' | 'none';
+}
+```
+
+### Berechtigungsprüfung
+
+Die `hasPermission`-Funktion wurde aktualisiert, um die erweiterte Struktur zu unterstützen:
+
+```typescript
+const hasPermission = (
+  entity: string, 
+  accessLevel: 'read' | 'write', 
+  entityType: 'page' | 'table' = 'page'
+): boolean => {
+  const permission = permissions.find(
+    p => p.entity === entity && p.entityType === entityType
+  );
+  
+  if (!permission) return false;
+  
+  if (permission.accessLevel === 'both') return true;
+  return permission.accessLevel === accessLevel;
+};
+```
+
+### Verwendungsbeispiel
+
+```tsx
+// Seitenzugriff prüfen (für Navigation)
+{hasPermission('dashboard', 'read') && <DashboardLink />}
+
+// Tabellenaktion prüfen (für CRUD-Operationen)
+{hasPermission('tasks', 'write', 'table') && <CreateTaskButton />}
+```
 
 ## Beispiel-Nutzung
 

@@ -3,7 +3,8 @@
 // Die aktuellen Linter-Fehler entstehen durch nicht aktualisierte Types
 
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, RequestStatus } from '@prisma/client';
+import { PrismaClient, Prisma, RequestStatus, NotificationType } from '@prisma/client';
+import { createNotificationIfEnabled } from './notificationController';
 
 const prisma = new PrismaClient();
 
@@ -171,6 +172,16 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
             }
         });
 
+        // Benachrichtigung für den Verantwortlichen erstellen
+        await createNotificationIfEnabled({
+            userId: responsibleId,
+            title: 'Neuer Request zur Genehmigung',
+            message: `Ein neuer Request "${req.body.title}" wurde erstellt und wartet auf deine Genehmigung.`,
+            type: NotificationType.request,
+            relatedEntityId: request.id,
+            relatedEntityType: 'create'
+        });
+
         // Formatiere die Antwort für das Frontend
         const formattedRequest = {
             ...request,
@@ -206,7 +217,15 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
 
         // Hole den aktuellen Request, um createTodo-Status zu prüfen
         const currentRequest = await prisma.request.findUnique({
-            where: { id: requestId }
+            where: { id: requestId },
+            include: {
+                requester: {
+                    select: userSelect
+                },
+                responsible: {
+                    select: userSelect
+                }
+            }
         });
 
         if (!currentRequest) {
@@ -239,6 +258,85 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
             }
         });
 
+        // Benachrichtigungen für Statusänderungen
+        if (req.body.status && req.body.status !== currentRequest.status) {
+            // Benachrichtigung für den Ersteller
+            await createNotificationIfEnabled({
+                userId: request.requesterId,
+                title: 'Request-Status geändert',
+                message: `Der Status deines Requests "${request.title}" wurde von "${currentRequest.status}" zu "${req.body.status}" geändert.`,
+                type: NotificationType.request,
+                relatedEntityId: request.id,
+                relatedEntityType: 'status'
+            });
+
+            // Spezifische Benachrichtigungen je nach neuem Status
+            if (req.body.status === 'approved') {
+                await createNotificationIfEnabled({
+                    userId: request.requesterId,
+                    title: 'Request genehmigt',
+                    message: `Dein Request "${request.title}" wurde genehmigt.`,
+                    type: NotificationType.request,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'status'
+                });
+            } else if (req.body.status === 'denied') {
+                await createNotificationIfEnabled({
+                    userId: request.requesterId,
+                    title: 'Request abgelehnt',
+                    message: `Dein Request "${request.title}" wurde abgelehnt.`,
+                    type: NotificationType.request,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'status'
+                });
+            } else if (req.body.status === 'to_improve') {
+                await createNotificationIfEnabled({
+                    userId: request.requesterId,
+                    title: 'Request muss überarbeitet werden',
+                    message: `Dein Request "${request.title}" muss überarbeitet werden.`,
+                    type: NotificationType.request,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'status'
+                });
+            }
+        }
+        // Benachrichtigung bei Änderung des Verantwortlichen
+        else if (req.body.responsible_id && parseInt(req.body.responsible_id, 10) !== currentRequest.responsibleId) {
+            const newResponsibleId = parseInt(req.body.responsible_id, 10);
+            await createNotificationIfEnabled({
+                userId: newResponsibleId,
+                title: 'Request zur Genehmigung zugewiesen',
+                message: `Dir wurde der Request "${request.title}" zur Genehmigung zugewiesen.`,
+                type: NotificationType.request,
+                relatedEntityId: request.id,
+                relatedEntityType: 'update'
+            });
+        }
+        // Allgemeine Aktualisierungsbenachrichtigung
+        else if (Object.keys(req.body).length > 0) {
+            // Benachrichtigung für den Verantwortlichen
+            await createNotificationIfEnabled({
+                userId: request.responsibleId,
+                title: 'Request aktualisiert',
+                message: `Der Request "${request.title}" wurde aktualisiert.`,
+                type: NotificationType.request,
+                relatedEntityId: request.id,
+                relatedEntityType: 'update'
+            });
+            
+            // Benachrichtigung für den Ersteller, falls nicht identisch mit Verantwortlichem
+            if (request.requesterId !== request.responsibleId) {
+                await createNotificationIfEnabled({
+                    userId: request.requesterId,
+                    title: 'Request aktualisiert',
+                    message: `Dein Request "${request.title}" wurde aktualisiert.`,
+                    type: NotificationType.request,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'update'
+                });
+            }
+        }
+
         // Formatiere die Antwort für das Frontend
         const formattedRequest = {
             ...request,
@@ -247,10 +345,7 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
         };
 
         // Wenn der Status auf "approved" geändert wurde und createTodo true ist
-        if (req.body.status === 'approved' && 
-            currentRequest.status !== 'approved' && 
-            formattedRequest.createTodo) {
-            
+        if (req.body.status === 'approved' && request.createTodo) {
             try {
                 // Erstelle einen neuen Task
                 const task = await prisma.task.create({
@@ -273,10 +368,18 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
         res.json(formattedRequest);
     } catch (error) {
         console.error('Error in updateRequest:', error);
-        res.status(400).json({ 
-            message: 'Fehler beim Aktualisieren des Requests', 
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-        });
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            res.status(400).json({ 
+                message: 'Fehler beim Aktualisieren des Requests', 
+                error: error.message,
+                details: error.meta
+            });
+        } else {
+            res.status(400).json({ 
+                message: 'Fehler beim Aktualisieren des Requests', 
+                error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+            });
+        }
     }
 };
 
@@ -288,15 +391,63 @@ export const deleteRequest = async (req: Request<{ id: string }>, res: Response)
             return res.status(400).json({ message: 'Ungültige Request-ID' });
         }
 
+        // Request vor dem Löschen abrufen, um Benachrichtigungen zu senden
+        const request = await prisma.request.findUnique({
+            where: { id: requestId },
+            include: {
+                requester: {
+                    select: userSelect
+                },
+                responsible: {
+                    select: userSelect
+                }
+            }
+        });
+
+        if (!request) {
+            return res.status(404).json({ message: 'Request nicht gefunden' });
+        }
+
         await prisma.request.delete({
             where: { id: requestId }
         });
-        res.json({ message: 'Request erfolgreich gelöscht' });
+
+        // Benachrichtigung für den Ersteller
+        await createNotificationIfEnabled({
+            userId: request.requesterId,
+            title: 'Request gelöscht',
+            message: `Dein Request "${request.title}" wurde gelöscht.`,
+            type: NotificationType.request,
+            relatedEntityId: requestId,
+            relatedEntityType: 'delete'
+        });
+        
+        // Benachrichtigung für den Verantwortlichen, falls nicht identisch mit Ersteller
+        if (request.requesterId !== request.responsibleId) {
+            await createNotificationIfEnabled({
+                userId: request.responsibleId,
+                title: 'Request gelöscht',
+                message: `Der Request "${request.title}" wurde gelöscht.`,
+                type: NotificationType.request,
+                relatedEntityId: requestId,
+                relatedEntityType: 'delete'
+            });
+        }
+
+        res.status(204).send();
     } catch (error) {
         console.error('Error in deleteRequest:', error);
-        res.status(500).json({ 
-            message: 'Fehler beim Löschen des Requests', 
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-        });
+        if (error instanceof Prisma.PrismaClientKnownRequestError) {
+            res.status(400).json({ 
+                message: 'Fehler beim Löschen des Requests', 
+                error: error.message,
+                details: error.meta
+            });
+        } else {
+            res.status(400).json({ 
+                message: 'Fehler beim Löschen des Requests', 
+                error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+            });
+        }
     }
 }; 

@@ -28,10 +28,12 @@ interface UserRoleWithPermissions {
         name: string;
         permissions: Array<{
             id: number;
-            page: string;
+            entity: string;
+            entityType: string;
             accessLevel: string;
         }>;
     };
+    lastUsed?: boolean;
 }
 
 interface UserWithRoles {
@@ -134,7 +136,8 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
                     id: r.role.id,
                     name: r.role.name,
                     permissions: r.role.permissions
-                }
+                },
+                lastUsed: r.lastUsed
             }))
         };
 
@@ -209,10 +212,13 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
             
             // Wenn keine aktive Rolle gefunden wurde, aber der Benutzer hat Rollen
             if (user.roles.length > 0) {
-                console.log('[LOGIN] Benutzer hat Rollen, aber keine ist aktiv. Aktiviere die erste Rolle.');
+                console.log('[LOGIN] Benutzer hat Rollen, aber keine ist aktiv. Wähle Rolle mit niedrigster ID.');
                 
-                const roleToActivate = user.roles[0];
-                console.log(`[LOGIN] Aktiviere Rolle: ID=${roleToActivate.roleId}, Name=${roleToActivate.role.name}`);
+                // Sortiere die Rollen nach ID aufsteigend (niedrigste ID zuerst)
+                const sortedRoles = [...user.roles].sort((a, b) => a.roleId - b.roleId);
+                const roleToActivate = sortedRoles[0];  // Rolle mit der niedrigsten ID
+                
+                console.log(`[LOGIN] Aktiviere Rolle mit niedrigster ID: ID=${roleToActivate.roleId}, Name=${roleToActivate.role.name}`);
                 
                 try {
                     // Aktualisiere den UserRole-Eintrag in der Datenbank
@@ -225,79 +231,6 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
                     activeRole = { ...roleToActivate, lastUsed: true };
                 } catch (error) {
                     console.error('[LOGIN] Fehler beim Aktualisieren des UserRole-Eintrags:', error);
-                    return res.status(500).json({ 
-                        message: 'Fehler bei der Rollenzuweisung',
-                        error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-                    });
-                }
-            } else {
-                // Der Benutzer hat keine Rollen, versuche die Standard-Rolle 999 zuzuweisen
-                console.log('[LOGIN] Benutzer hat keine Rollen. Versuche Standard-Rolle zuzuweisen.');
-                
-                try {
-                    const standardRole = await prisma.role.findUnique({
-                        where: { id: 999 },
-                        include: { permissions: true }
-                    });
-                    
-                    if (standardRole) {
-                        console.log(`[LOGIN] Standard-Rolle gefunden: ID=${standardRole.id}, Name=${standardRole.name}`);
-                        
-                        // Erstelle die Verknüpfung zwischen Benutzer und Rolle
-                        const newUserRole = await prisma.userRole.create({
-                            data: {
-                                userId: user.id,
-                                roleId: standardRole.id,
-                                lastUsed: true
-                            },
-                            include: {
-                                role: {
-                                    include: {
-                                        permissions: true
-                                    }
-                                }
-                            }
-                        });
-                        
-                        console.log(`[LOGIN] Neue UserRole-Verknüpfung erstellt: ID=${newUserRole.id}`);
-                        activeRole = newUserRole;
-                    } else {
-                        console.error('[LOGIN] Standard-Rolle mit ID=999 nicht gefunden');
-                        
-                        // Wenn die Standard-Rolle nicht gefunden wurde, versuche eine beliebige Rolle zu finden
-                        const anyRole = await prisma.role.findFirst({
-                            include: { permissions: true }
-                        });
-                        
-                        if (anyRole) {
-                            console.log(`[LOGIN] Alternative Rolle gefunden: ID=${anyRole.id}, Name=${anyRole.name}`);
-                            
-                            const newUserRole = await prisma.userRole.create({
-                                data: {
-                                    userId: user.id,
-                                    roleId: anyRole.id,
-                                    lastUsed: true
-                                },
-                                include: {
-                                    role: {
-                                        include: {
-                                            permissions: true
-                                        }
-                                    }
-                                }
-                            });
-                            
-                            console.log(`[LOGIN] Neue UserRole-Verknüpfung erstellt: ID=${newUserRole.id}`);
-                            activeRole = newUserRole;
-                        } else {
-                            console.error('[LOGIN] Keine Rollen in der Datenbank gefunden');
-                            return res.status(500).json({ 
-                                message: 'Keine Rollen in der Datenbank verfügbar'
-                            });
-                        }
-                    }
-                } catch (error) {
-                    console.error('[LOGIN] Fehler bei der Rollenzuweisung:', error);
                     return res.status(500).json({ 
                         message: 'Fehler bei der Rollenzuweisung',
                         error: error instanceof Error ? error.message : 'Unbekannter Fehler'
@@ -341,9 +274,18 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
                     id: r.role.id,
                     name: r.role.name,
                     permissions: r.role.permissions
-                }
+                },
+                lastUsed: r.lastUsed
             }))
         };
+        
+        console.log('[LOGIN] Prüfe Berechtigungsformat im userResponse:');
+        userResponse.roles.forEach((roleData, idx) => {
+            console.log(`[LOGIN] Rolle ${idx+1}: ${roleData.role.name}`);
+            roleData.role.permissions.forEach((perm, permIdx) => {
+                console.log(`[LOGIN] Permission ${permIdx+1}:`, JSON.stringify(perm));
+            });
+        });
         
         console.log('[LOGIN] Login erfolgreich');
         
@@ -414,9 +356,18 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                     id: r.role.id,
                     name: r.role.name,
                     permissions: r.role.permissions
-                }
+                },
+                lastUsed: r.lastUsed
             }))
         };
+
+        console.log('[getCurrentUser] Prüfe Berechtigungsformat im userResponse:');
+        userResponse.roles.forEach((roleData, idx) => {
+            console.log(`[getCurrentUser] Rolle ${idx+1}: ${roleData.role.name}`);
+            roleData.role.permissions.forEach((perm, permIdx) => {
+                console.log(`[getCurrentUser] Permission ${permIdx+1}:`, JSON.stringify(perm));
+            });
+        });
 
         res.json({ user: userResponse });
     } catch (error) {

@@ -14,6 +14,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteRequest = exports.updateRequest = exports.createRequest = exports.getRequestById = exports.getAllRequests = void 0;
 const client_1 = require("@prisma/client");
+const notificationController_1 = require("./notificationController");
 const prisma = new client_1.PrismaClient();
 const userSelect = {
     id: true,
@@ -134,6 +135,15 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             }
         });
+        // Benachrichtigung für den Verantwortlichen erstellen
+        yield (0, notificationController_1.createNotificationIfEnabled)({
+            userId: responsibleId,
+            title: 'Neuer Request zur Genehmigung',
+            message: `Ein neuer Request "${req.body.title}" wurde erstellt und wartet auf deine Genehmigung.`,
+            type: client_1.NotificationType.request,
+            relatedEntityId: request.id,
+            relatedEntityType: 'create'
+        });
         // Formatiere die Antwort für das Frontend
         const formattedRequest = Object.assign(Object.assign({}, request), { requestedBy: request.requester, requester: undefined });
         res.status(201).json(formattedRequest);
@@ -165,7 +175,15 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         // Hole den aktuellen Request, um createTodo-Status zu prüfen
         const currentRequest = yield prisma.request.findUnique({
-            where: { id: requestId }
+            where: { id: requestId },
+            include: {
+                requester: {
+                    select: userSelect
+                },
+                responsible: {
+                    select: userSelect
+                }
+            }
         });
         if (!currentRequest) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
@@ -195,12 +213,88 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             }
         });
+        // Benachrichtigungen für Statusänderungen
+        if (req.body.status && req.body.status !== currentRequest.status) {
+            // Benachrichtigung für den Ersteller
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: request.requesterId,
+                title: 'Request-Status geändert',
+                message: `Der Status deines Requests "${request.title}" wurde von "${currentRequest.status}" zu "${req.body.status}" geändert.`,
+                type: client_1.NotificationType.request,
+                relatedEntityId: request.id,
+                relatedEntityType: 'status'
+            });
+            // Spezifische Benachrichtigungen je nach neuem Status
+            if (req.body.status === 'approved') {
+                yield (0, notificationController_1.createNotificationIfEnabled)({
+                    userId: request.requesterId,
+                    title: 'Request genehmigt',
+                    message: `Dein Request "${request.title}" wurde genehmigt.`,
+                    type: client_1.NotificationType.request,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'status'
+                });
+            }
+            else if (req.body.status === 'denied') {
+                yield (0, notificationController_1.createNotificationIfEnabled)({
+                    userId: request.requesterId,
+                    title: 'Request abgelehnt',
+                    message: `Dein Request "${request.title}" wurde abgelehnt.`,
+                    type: client_1.NotificationType.request,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'status'
+                });
+            }
+            else if (req.body.status === 'to_improve') {
+                yield (0, notificationController_1.createNotificationIfEnabled)({
+                    userId: request.requesterId,
+                    title: 'Request muss überarbeitet werden',
+                    message: `Dein Request "${request.title}" muss überarbeitet werden.`,
+                    type: client_1.NotificationType.request,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'status'
+                });
+            }
+        }
+        // Benachrichtigung bei Änderung des Verantwortlichen
+        else if (req.body.responsible_id && parseInt(req.body.responsible_id, 10) !== currentRequest.responsibleId) {
+            const newResponsibleId = parseInt(req.body.responsible_id, 10);
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: newResponsibleId,
+                title: 'Request zur Genehmigung zugewiesen',
+                message: `Dir wurde der Request "${request.title}" zur Genehmigung zugewiesen.`,
+                type: client_1.NotificationType.request,
+                relatedEntityId: request.id,
+                relatedEntityType: 'update'
+            });
+        }
+        // Allgemeine Aktualisierungsbenachrichtigung
+        else if (Object.keys(req.body).length > 0) {
+            // Benachrichtigung für den Verantwortlichen
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: request.responsibleId,
+                title: 'Request aktualisiert',
+                message: `Der Request "${request.title}" wurde aktualisiert.`,
+                type: client_1.NotificationType.request,
+                relatedEntityId: request.id,
+                relatedEntityType: 'update'
+            });
+            // Benachrichtigung für den Ersteller, falls nicht identisch mit Verantwortlichem
+            if (request.requesterId !== request.responsibleId) {
+                yield (0, notificationController_1.createNotificationIfEnabled)({
+                    userId: request.requesterId,
+                    title: 'Request aktualisiert',
+                    message: `Dein Request "${request.title}" wurde aktualisiert.`,
+                    type: client_1.NotificationType.request,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'update'
+                });
+            }
+        }
         // Formatiere die Antwort für das Frontend
         const formattedRequest = Object.assign(Object.assign({}, request), { requestedBy: request.requester, requester: undefined });
         // Wenn der Status auf "approved" geändert wurde und createTodo true ist
-        if (req.body.status === 'approved' &&
-            currentRequest.status !== 'approved' &&
-            formattedRequest.createTodo) {
+        if (req.body.status === 'approved' && request.createTodo) {
             try {
                 // Erstelle einen neuen Task
                 const task = yield prisma.task.create({
@@ -224,10 +318,19 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
     catch (error) {
         console.error('Error in updateRequest:', error);
-        res.status(400).json({
-            message: 'Fehler beim Aktualisieren des Requests',
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-        });
+        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+            res.status(400).json({
+                message: 'Fehler beim Aktualisieren des Requests',
+                error: error.message,
+                details: error.meta
+            });
+        }
+        else {
+            res.status(400).json({
+                message: 'Fehler beim Aktualisieren des Requests',
+                error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+            });
+        }
     }
 });
 exports.updateRequest = updateRequest;
@@ -238,17 +341,61 @@ const deleteRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (isNaN(requestId)) {
             return res.status(400).json({ message: 'Ungültige Request-ID' });
         }
+        // Request vor dem Löschen abrufen, um Benachrichtigungen zu senden
+        const request = yield prisma.request.findUnique({
+            where: { id: requestId },
+            include: {
+                requester: {
+                    select: userSelect
+                },
+                responsible: {
+                    select: userSelect
+                }
+            }
+        });
+        if (!request) {
+            return res.status(404).json({ message: 'Request nicht gefunden' });
+        }
         yield prisma.request.delete({
             where: { id: requestId }
         });
-        res.json({ message: 'Request erfolgreich gelöscht' });
+        // Benachrichtigung für den Ersteller
+        yield (0, notificationController_1.createNotificationIfEnabled)({
+            userId: request.requesterId,
+            title: 'Request gelöscht',
+            message: `Dein Request "${request.title}" wurde gelöscht.`,
+            type: client_1.NotificationType.request,
+            relatedEntityId: requestId,
+            relatedEntityType: 'delete'
+        });
+        // Benachrichtigung für den Verantwortlichen, falls nicht identisch mit Ersteller
+        if (request.requesterId !== request.responsibleId) {
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: request.responsibleId,
+                title: 'Request gelöscht',
+                message: `Der Request "${request.title}" wurde gelöscht.`,
+                type: client_1.NotificationType.request,
+                relatedEntityId: requestId,
+                relatedEntityType: 'delete'
+            });
+        }
+        res.status(204).send();
     }
     catch (error) {
         console.error('Error in deleteRequest:', error);
-        res.status(500).json({
-            message: 'Fehler beim Löschen des Requests',
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-        });
+        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
+            res.status(400).json({
+                message: 'Fehler beim Löschen des Requests',
+                error: error.message,
+                details: error.meta
+            });
+        }
+        else {
+            res.status(400).json({
+                message: 'Fehler beim Löschen des Requests',
+                error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+            });
+        }
     }
 });
 exports.deleteRequest = deleteRequest;

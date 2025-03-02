@@ -10,6 +10,9 @@ const AccessLevel = {
   none: 'none' as AccessLevel
 };
 
+// Seiten, die immer sichtbar sein sollen
+const alwaysVisiblePages = ['dashboard', 'settings'];
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -24,17 +27,23 @@ async function main() {
         description: 'Administrator mit allen Rechten',
         permissions: {
           create: [
-            // Die Typenfehler ignorieren wir für den Seed - die Daten werden korrekt eingetragen
+            // Immer sichtbare Seiten (für die Vollständigkeit)
             // @ts-ignore
-            { page: 'dashboard', accessLevel: AccessLevel.both },
+            { entity: 'dashboard', entityType: 'page', accessLevel: AccessLevel.both },
             // @ts-ignore
-            { page: 'roles', accessLevel: AccessLevel.both },
+            { entity: 'settings', entityType: 'page', accessLevel: AccessLevel.both },
+            
+            // Zusätzliche Seiten mit Berechtigungen
             // @ts-ignore
-            { page: 'users', accessLevel: AccessLevel.both },
+            { entity: 'usermanagement', entityType: 'page', accessLevel: AccessLevel.both },
             // @ts-ignore
-            { page: 'settings', accessLevel: AccessLevel.both },
+            { entity: 'worktracker', entityType: 'page', accessLevel: AccessLevel.both },
+            
+            // Tabellen-Berechtigungen
             // @ts-ignore
-            { page: 'worktracker', accessLevel: AccessLevel.both }
+            { entity: 'requests', entityType: 'table', accessLevel: AccessLevel.both },
+            // @ts-ignore
+            { entity: 'tasks', entityType: 'table', accessLevel: AccessLevel.both }
           ]
         }
       }
@@ -49,12 +58,21 @@ async function main() {
         description: 'Standardbenutzer',
         permissions: {
           create: [
+            // Immer sichtbare Seiten (für die Vollständigkeit)
             // @ts-ignore
-            { page: 'dashboard', accessLevel: AccessLevel.read },
+            { entity: 'dashboard', entityType: 'page', accessLevel: AccessLevel.read },
             // @ts-ignore
-            { page: 'settings', accessLevel: AccessLevel.read },
+            { entity: 'settings', entityType: 'page', accessLevel: AccessLevel.read },
+            
+            // Zusätzliche Seiten mit Berechtigungen
             // @ts-ignore
-            { page: 'worktracker', accessLevel: AccessLevel.both }
+            { entity: 'worktracker', entityType: 'page', accessLevel: AccessLevel.both },
+            
+            // Tabellen-Berechtigungen
+            // @ts-ignore
+            { entity: 'requests', entityType: 'table', accessLevel: AccessLevel.read },
+            // @ts-ignore
+            { entity: 'tasks', entityType: 'table', accessLevel: AccessLevel.both }
           ]
         }
       }
@@ -69,10 +87,19 @@ async function main() {
         description: 'Hamburger-Rolle für neue Benutzer',
         permissions: {
           create: [
+            // Immer sichtbare Seiten (für die Vollständigkeit) 
             // @ts-ignore
-            { page: 'dashboard', accessLevel: AccessLevel.read },
+            { entity: 'dashboard', entityType: 'page', accessLevel: AccessLevel.read },
             // @ts-ignore
-            { page: 'worktracker', accessLevel: AccessLevel.read }
+            { entity: 'settings', entityType: 'page', accessLevel: AccessLevel.read },
+            
+            // Zusätzliche Seiten mit Berechtigungen
+            // @ts-ignore
+            { entity: 'worktracker', entityType: 'page', accessLevel: AccessLevel.read },
+            
+            // Tabellen-Berechtigungen (minimal)
+            // @ts-ignore
+            { entity: 'tasks', entityType: 'table', accessLevel: AccessLevel.read }
           ]
         }
       }

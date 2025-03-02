@@ -181,9 +181,9 @@ const NotificationList: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
+    <div className="min-h-screen p-4">
       <div className="container mx-auto">
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
               <BellIcon className="h-6 w-6 text-gray-600 mr-2" />

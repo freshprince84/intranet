@@ -1,43 +1,26 @@
 ---
-description: 
+description: Hinweisdatei für Dokumentationsregeln
 globs: 
 alwaysApply: false
 ---
-## Aktuelle Konfiguration
+# WICHTIGER HINWEIS
 
-### API Konfiguration
-- Backend läuft auf Port 5000 (http://localhost:5000 oder http://192.168.1.1:5000)
-- Frontend läuft auf Port 3000 (http://localhost:3000 oder http://192.168.1.1:3000)
-- Prisma Studio läuft auf Port 5555 (http://localhost:5555)
+## Diese Datei (mdfiles.mdc) ist nur eine Referenz!
 
-### Wichtige Hinweise
-- Server und Prisma Studio sind bereits gestartet und dürfen NICHT neu gestartet werden
-- Schema.prisma befindet sich in backend/prisma
-- API-Aufrufe erfolgen über die zentrale Konfiguration in api.ts
-- API-Endpunkte werden OHNE /api aufgerufen, z.B.:
-  ```javascript
-  // Korrekt
-  ${API_URL}/worktime/stats
-  ${API_URL}/requests
-  
-  // NICHT mehr verwendet
-  ${API_URL}/api/worktime/stats
-  ${API_URL}/api/requests
-  ```
+**NICHT DIREKT IN DIESE DATEI SCHREIBEN!**
 
-### Dokumentation
-Folgende Dokumentationen müssen beachtet werden:
-- [repo_str](mdc:repo_str)
-- [README.md](mdc:README.md)
-- [PROJECT_SETUP.md](mdc:PROJECT_SETUP.md)
-- [DB_SCHEMA.md](mdc:DB_SCHEMA.md)
-- [BACKEND_SETUP.md](mdc:BACKEND_SETUP.md)
-- [FRONTEND_SETUP.md](mdc:FRONTEND_SETUP.md)
+Diese Datei dient lediglich als Hinweis, welche Dokumentationsdateien zu beachten sind. Alle Inhalte müssen in den entsprechenden Dokumentationsdateien gepflegt werden.
 
-### Frontend Technologien
-- Tailwind CSS für Styling
-- React mit TypeScript
-- Axios für API-Aufrufe
-- React Router für Navigation
-- Headless UI für Komponenten
-- Heroicons für Icons 
+## Zu beachtende Dokumentationen:
+- [repo_str](mdc:repo_str) - Übersicht der Repository-Struktur
+- [README.md](mdc:README.md) - Allgemeine Projektinformationen und Übersicht
+- [PROJECT_SETUP.md](mdc:PROJECT_SETUP.md) - Anweisungen zur Projekt-Einrichtung
+- [DB_SCHEMA.md](mdc:DB_SCHEMA.md) - Datenbankschema und Struktur
+- [BACKEND_SETUP.md](mdc:BACKEND_SETUP.md) - Setup und Konfiguration des Backends
+- [FRONTEND_SETUP.md](mdc:FRONTEND_SETUP.md) - Setup und Konfiguration des Frontends
+- [API_INTEGRATION.md](mdc:API_INTEGRATION.md) - Best Practices für API-Integration
+- [ROLE_SWITCH.md](mdc:ROLE_SWITCH.md) - Funktionalität zum Wechseln der Benutzerrollen
+- [CHANGELOG.md](mdc:CHANGELOG.md) - Änderungshistorie des Projekts
+
+## Wichtig: Änderungen dokumentieren!
+Bei allen Änderungen am Code muss die entsprechende Dokumentation aktualisiert und in die CHANGELOG.md eingetragen werden. 

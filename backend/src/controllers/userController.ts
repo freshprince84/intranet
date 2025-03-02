@@ -3,7 +3,8 @@
 // Die aktuellen Linter-Fehler entstehen durch nicht aktualisierte Types
 
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
+import { createNotificationIfEnabled } from './notificationController';
 
 const prisma = new PrismaClient();
 
@@ -104,8 +105,6 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
         const userId = parseInt(req.userId, 10);
         const roleId = parseInt(req.roleId, 10); // Die roleId aus dem Token lesen
         
-        console.log(`[GET_USER] Abrufen des Benutzers - UserId: ${userId}, RoleId: ${roleId}`);
-        
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
@@ -136,14 +135,11 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
         });
         
         if (!user) {
-            console.log(`[GET_USER] Benutzer mit ID ${userId} nicht gefunden`);
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
         
         // Die Rolle aus dem Token als aktive Rolle markieren
         if (!isNaN(roleId)) {
-            console.log(`[GET_USER] Markiere Rolle mit ID ${roleId} als aktiv`);
-            
             const modifiedUser = {
                 ...user,
                 roles: user.roles.map(roleEntry => ({
@@ -152,16 +148,8 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                 }))
             };
             
-            console.log(`[GET_USER] Benutzer mit aktiver Rolle zurückgeben:`, 
-                        `ID=${modifiedUser.id}, Rollen=${modifiedUser.roles.length}, ` +
-                        `Aktive Rolle=${modifiedUser.roles.find(r => r.lastUsed)?.role.id}`);
-            
             return res.json(modifiedUser);
         }
-        
-        console.log(`[GET_USER] Benutzer ohne Änderungen zurückgeben:`, 
-                    `ID=${user.id}, Rollen=${user.roles.length}, ` +
-                    `Aktive Rolle=${user.roles.find(r => r.lastUsed)?.role.id}`);
         
         res.json(user);
     } catch (error) {
@@ -191,8 +179,6 @@ export const updateUserById = async (req: Request, res: Response) => {
             contract,
             salary
         } = req.body;
-
-        console.log('Updating user with data:', req.body);
 
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
@@ -249,7 +235,6 @@ export const updateUserById = async (req: Request, res: Response) => {
             }
         });
 
-        console.log('User updated successfully:', updatedUser);
         res.json(updatedUser);
     } catch (error) {
         console.error('Error in updateUserById:', error);
@@ -285,8 +270,6 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-
-        console.log('Updating profile with data:', req.body);
 
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
@@ -352,7 +335,6 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             }
         });
 
-        console.log('Profile updated successfully:', updatedUser);
         res.json(updatedUser);
     } catch (error) {
         console.error('Error in updateProfile:', error);
@@ -487,6 +469,43 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
             }
         });
 
+        // Benachrichtigung an den Benutzer senden, dessen Rollen aktualisiert wurden
+        await createNotificationIfEnabled({
+            userId: userId,
+            title: 'Deine Rollen wurden aktualisiert',
+            message: `Deine Benutzerrollen wurden aktualisiert. Melde dich bei Fragen an einen Administrator.`,
+            type: NotificationType.user,
+            relatedEntityId: userId,
+            relatedEntityType: 'update'
+        });
+
+        // Benachrichtigung für Administratoren senden
+        const admins = await prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                },
+                id: {
+                    not: userId // Nicht an den aktualisierten Benutzer senden, falls dieser Admin ist
+                }
+            }
+        });
+
+        for (const admin of admins) {
+            await createNotificationIfEnabled({
+                userId: admin.id,
+                title: 'Benutzerrollen aktualisiert',
+                message: `Die Rollen für "${updatedUser.firstName} ${updatedUser.lastName}" wurden aktualisiert.`,
+                type: NotificationType.user,
+                relatedEntityId: userId,
+                relatedEntityType: 'update'
+            });
+        }
+
         res.json(updatedUser);
     } catch (error) {
         console.error('Error in updateUserRoles:', error);
@@ -543,19 +562,15 @@ export const updateUserSettings = async (req: AuthenticatedRequest & { body: Upd
 // Aktive Rolle eines Benutzers wechseln
 export const switchUserRole = async (req: AuthenticatedRequest, res: Response) => {
     try {
-        const userId = parseInt(req.userId, 10);
+        // Verwende entweder req.user?.id oder req.userId, falls verfügbar
+        const userId = req.user?.id || parseInt(req.userId, 10);
         const { roleId } = req.body as SwitchRoleRequest;
 
-        console.log(`Rollenwechsel angefordert - UserId: ${userId}, RoleId: ${roleId}`);
-        console.log('Typ der req.userId:', typeof req.userId, 'Wert:', req.userId);
-
-        if (isNaN(userId) || userId <= 0) {
-            console.log('Ungültige Benutzer-ID:', req.userId);
+        if (!userId || isNaN(userId) || userId <= 0) {
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
 
         if (isNaN(roleId) || roleId <= 0) {
-            console.log('Ungültige Rollen-ID:', roleId);
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
         }
 
@@ -567,37 +582,26 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
             }
         });
 
-        console.log('Gefundene UserRole:', userRole);
-
         if (!userRole) {
-            console.log(`Rolle ${roleId} ist dem Benutzer ${userId} nicht zugewiesen`);
             return res.status(404).json({
                 message: 'Diese Rolle ist dem Benutzer nicht zugewiesen'
             });
         }
-
-        console.log('Starte Transaktion für Rollenwechsel...');
         
         // Transaktion starten
         await prisma.$transaction(async (tx) => {
             // Alle Rollen des Benutzers auf lastUsed=false setzen
-            const resetResult = await tx.userRole.updateMany({
+            await tx.userRole.updateMany({
                 where: { userId },
                 data: { lastUsed: false }
             });
-            
-            console.log('Alle Rollen zurückgesetzt:', resetResult);
 
             // Die ausgewählte Rolle auf lastUsed=true setzen
-            const updateResult = await tx.userRole.update({
+            await tx.userRole.update({
                 where: { id: userRole.id },
                 data: { lastUsed: true }
             });
-            
-            console.log('Rolle aktiviert:', updateResult);
         });
-
-        console.log('Transaktion erfolgreich abgeschlossen');
 
         // Benutzer mit aktualisierten Rollen zurückgeben
         const updatedUser = await prisma.user.findUnique({
@@ -616,12 +620,302 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
             }
         });
 
-        console.log('Aktualisierter Benutzer:', JSON.stringify(updatedUser, null, 2));
         return res.json(updatedUser);
     } catch (error) {
         console.error('Error in switchUserRole:', error);
         res.status(500).json({ 
             message: 'Fehler beim Wechseln der Benutzerrolle', 
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+};
+
+// Neuen Benutzer erstellen (für Admin-Bereich)
+export const createUser = async (req: Request, res: Response) => {
+    try {
+        const { username, email, password, firstName, lastName, roleIds, branchIds } = req.body;
+
+        // Validiere erforderliche Felder
+        if (!username || !email || !password || !firstName || !lastName) {
+            return res.status(400).json({
+                message: 'Alle Pflichtfelder müssen ausgefüllt sein'
+            });
+        }
+
+        // Überprüfe, ob Benutzername oder E-Mail bereits existieren
+        const existingUser = await prisma.user.findFirst({
+            where: {
+                OR: [
+                    { username },
+                    { email }
+                ]
+            }
+        });
+
+        if (existingUser) {
+            return res.status(400).json({
+                message: 'Benutzername oder E-Mail wird bereits verwendet'
+            });
+        }
+
+        // Erstelle den Benutzer
+        const user = await prisma.user.create({
+            data: {
+                username,
+                email,
+                password, // In der Praxis sollte das Passwort gehasht werden
+                firstName,
+                lastName,
+                roles: {
+                    create: (roleIds || [999]).map(roleId => ({
+                        role: {
+                            connect: { id: Number(roleId) }
+                        }
+                    }))
+                },
+                branches: {
+                    create: (branchIds || []).map(branchId => ({
+                        branch: {
+                            connect: { id: Number(branchId) }
+                        }
+                    }))
+                },
+                settings: {
+                    create: {
+                        darkMode: false
+                    }
+                }
+            },
+            include: {
+                roles: {
+                    include: {
+                        role: true
+                    }
+                },
+                branches: {
+                    include: {
+                        branch: true
+                    }
+                }
+            }
+        });
+
+        // Benachrichtigung für Administratoren senden
+        const admins = await prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                }
+            }
+        });
+
+        for (const admin of admins) {
+            await createNotificationIfEnabled({
+                userId: admin.id,
+                title: 'Neuer Benutzer erstellt',
+                message: `Ein neuer Benutzer "${firstName} ${lastName}" (${username}) wurde erstellt.`,
+                type: NotificationType.user,
+                relatedEntityId: user.id,
+                relatedEntityType: 'create'
+            });
+        }
+
+        res.status(201).json(user);
+    } catch (error) {
+        console.error('Error in createUser:', error);
+        res.status(500).json({
+            message: 'Fehler beim Erstellen des Benutzers',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+};
+
+// Benutzer aktualisieren (für Admin-Bereich)
+export const updateUser = async (req: Request, res: Response) => {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        if (isNaN(userId)) {
+            return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
+        }
+
+        // Aktuellen Benutzer abrufen
+        const currentUser = await prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+                roles: true
+            }
+        });
+
+        if (!currentUser) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+
+        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary } = req.body;
+
+        // Überprüfe, ob Username oder Email bereits existieren
+        if (username || email) {
+            const existingUser = await prisma.user.findFirst({
+                where: {
+                    OR: [
+                        username ? { username } : {},
+                        email ? { email } : {}
+                    ].filter(condition => Object.keys(condition).length > 0),
+                    NOT: {
+                        id: userId
+                    }
+                }
+            });
+
+            if (existingUser) {
+                return res.status(400).json({
+                    message: 'Benutzername oder E-Mail wird bereits verwendet'
+                });
+            }
+        }
+
+        // Aktualisiere den Benutzer
+        const updateData: Prisma.UserUpdateInput = {
+            ...(username && { username }),
+            ...(email && { email }),
+            ...(firstName && { firstName }),
+            ...(lastName && { lastName }),
+            ...(birthday && { birthday: new Date(birthday) }),
+            ...(bankDetails && { bankDetails }),
+            ...(contract && { contract }),
+            ...(salary && { salary: parseFloat(salary.toString()) })
+        };
+
+        const updatedUser = await prisma.user.update({
+            where: { id: userId },
+            data: updateData,
+            include: {
+                roles: {
+                    include: {
+                        role: true
+                    }
+                }
+            }
+        });
+
+        // Benachrichtigung für den aktualisierten Benutzer senden
+        await createNotificationIfEnabled({
+            userId: updatedUser.id,
+            title: 'Dein Profil wurde aktualisiert',
+            message: 'Dein Benutzerprofil wurde aktualisiert.',
+            type: NotificationType.user,
+            relatedEntityId: updatedUser.id,
+            relatedEntityType: 'update'
+        });
+
+        // Benachrichtigung für Administratoren senden
+        const admins = await prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                },
+                id: {
+                    not: userId // Nicht an den aktualisierten Benutzer senden, falls dieser Admin ist
+                }
+            }
+        });
+
+        for (const admin of admins) {
+            await createNotificationIfEnabled({
+                userId: admin.id,
+                title: 'Benutzerprofil aktualisiert',
+                message: `Das Profil von "${updatedUser.firstName} ${updatedUser.lastName}" wurde aktualisiert.`,
+                type: NotificationType.user,
+                relatedEntityId: updatedUser.id,
+                relatedEntityType: 'update'
+            });
+        }
+
+        res.json(updatedUser);
+    } catch (error) {
+        console.error('Error in updateUser:', error);
+        res.status(500).json({
+            message: 'Fehler beim Aktualisieren des Benutzers',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+};
+
+// Benutzer löschen
+export const deleteUser = async (req: Request, res: Response) => {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        if (isNaN(userId)) {
+            return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
+        }
+
+        // Benutzer vor dem Löschen abrufen
+        const user = await prisma.user.findUnique({
+            where: { id: userId }
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+
+        // Lösche alle verknüpften Daten
+        await prisma.$transaction([
+            prisma.userRole.deleteMany({
+                where: { userId }
+            }),
+            prisma.usersBranches.deleteMany({
+                where: { userId }
+            }),
+            prisma.settings.deleteMany({
+                where: { userId }
+            }),
+            prisma.notification.deleteMany({
+                where: { userId }
+            }),
+            prisma.userNotificationSettings.deleteMany({
+                where: { userId }
+            }),
+            prisma.user.delete({
+                where: { id: userId }
+            })
+        ]);
+
+        // Benachrichtigung für Administratoren senden
+        const admins = await prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                }
+            }
+        });
+
+        for (const admin of admins) {
+            await createNotificationIfEnabled({
+                userId: admin.id,
+                title: 'Benutzer gelöscht',
+                message: `Der Benutzer "${user.firstName} ${user.lastName}" (${user.username}) wurde gelöscht.`,
+                type: NotificationType.user,
+                relatedEntityId: userId,
+                relatedEntityType: 'delete'
+            });
+        }
+
+        res.status(204).send();
+    } catch (error) {
+        console.error('Error in deleteUser:', error);
+        res.status(500).json({
+            message: 'Fehler beim Löschen des Benutzers',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
         });
     }

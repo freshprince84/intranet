@@ -12,70 +12,71 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.authMiddleware = exports.authenticateToken = void 0;
+exports.authenticateToken = exports.authMiddleware = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
-// Middleware zur Überprüfung des JWT-Tokens
-const authenticateToken = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
+/**
+ * Authentication middleware to verify the JWT token
+ * and attach the user to the request object.
+ */
+const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log('Auth Headers:', req.headers);
-        const authHeader = req.headers['authorization'];
-        const token = authHeader && authHeader.split(' ')[1];
+        // Extract the token from the Authorization header
+        const authHeader = req.headers.authorization;
+        if (!authHeader) {
+            return res.status(401).json({ message: 'Authentifizierung erforderlich' });
+        }
+        const token = authHeader.split(' ')[1];
         if (!token) {
-            return res.status(401).json({ message: 'Kein Token bereitgestellt' });
+            return res.status(401).json({ message: 'Token erforderlich' });
         }
-        console.log('Token gefunden:', token.substring(0, 20) + '...');
-        // JWT-Secret aus der Umgebungsvariable
-        const secret = process.env.JWT_SECRET;
-        if (!secret) {
-            console.error('JWT_SECRET ist nicht definiert');
-            return res.status(500).json({ message: 'Interner Server-Fehler' });
-        }
-        // Token verifizieren
-        jsonwebtoken_1.default.verify(token, secret, (err, decoded) => __awaiter(void 0, void 0, void 0, function* () {
-            if (err) {
-                console.error('Token-Verifizierung fehlgeschlagen:', err);
-                return res.status(403).json({ message: 'Ungültiges oder abgelaufenes Token' });
-            }
-            console.log('Token decoded:', decoded);
-            // Für Abwärtskompatibilität
-            if (decoded.userId) {
-                req.userId = decoded.userId.toString(); // Als String speichern
-                req.roleId = decoded.roleId.toString(); // Als String speichern
-                console.log('Typ von req.userId:', typeof req.userId, 'Wert:', req.userId);
-                console.log('Typ von req.roleId:', typeof req.roleId, 'Wert:', req.roleId);
-            }
-            // Benutzer aus der Datenbank abrufen
-            const user = yield prisma.user.findUnique({
-                where: { id: Number(decoded.userId) },
-                include: {
-                    roles: {
-                        include: {
-                            role: true
+        // Verify the token
+        const decoded = jsonwebtoken_1.default.verify(token, SECRET_KEY);
+        // Get the user with roles, including the active role
+        const user = yield prisma.user.findUnique({
+            where: { id: decoded.userId },
+            include: {
+                roles: {
+                    include: {
+                        role: {
+                            include: {
+                                permissions: true
+                            }
                         }
                     }
-                }
-            });
-            if (!user) {
-                return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+                },
+                settings: true
             }
-            // Benutzerinformationen zum Request hinzufügen
-            req.user = {
-                id: user.id,
-                username: user.username,
-                email: user.email,
-                roles: user.roles.map(ur => ur.role.name)
-            };
-            next();
-        }));
+        });
+        if (!user) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+        // Attach the user to the request object
+        req.user = user;
+        // Set compatibility fields for legacy code
+        req.userId = String(user.id);
+        // Find and set active role
+        const activeRole = user.roles.find(r => r.lastUsed);
+        if (activeRole) {
+            req.roleId = String(activeRole.role.id);
+        }
+        next();
     }
     catch (error) {
-        console.error('Fehler bei der Authentifizierung:', error);
-        res.status(500).json({ message: 'Interner Server-Fehler' });
+        console.error('Fehler in der Auth-Middleware:', error);
+        if (error.name === 'JsonWebTokenError') {
+            return res.status(401).json({ message: 'Ungültiger Token' });
+        }
+        else if (error.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Token abgelaufen' });
+        }
+        res.status(500).json({ message: 'Server-Fehler bei der Authentifizierung' });
     }
 });
-exports.authenticateToken = authenticateToken;
-// Export der Middleware unter beiden Namen für Kompatibilität
-exports.authMiddleware = exports.authenticateToken;
+exports.authMiddleware = authMiddleware;
+// Exportiere auch unter dem alten Namen für Abwärtskompatibilität
+exports.authenticateToken = exports.authMiddleware;
+exports.default = exports.authMiddleware;
 //# sourceMappingURL=auth.js.map

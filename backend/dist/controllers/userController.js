@@ -12,8 +12,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.switchUserRole = exports.updateUserSettings = exports.updateUserRoles = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsers = void 0;
+exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateUserSettings = exports.updateUserRoles = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsers = void 0;
 const client_1 = require("@prisma/client");
+const notificationController_1 = require("./notificationController");
 const prisma = new client_1.PrismaClient();
 // Alle Benutzer abrufen
 const getAllUsers = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -75,11 +76,9 @@ const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.getUserById = getUserById;
 // Aktuellen Benutzer abrufen
 const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
     try {
         const userId = parseInt(req.userId, 10);
         const roleId = parseInt(req.roleId, 10); // Die roleId aus dem Token lesen
-        console.log(`[GET_USER] Abrufen des Benutzers - UserId: ${userId}, RoleId: ${roleId}`);
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
@@ -108,19 +107,13 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
             }
         });
         if (!user) {
-            console.log(`[GET_USER] Benutzer mit ID ${userId} nicht gefunden`);
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
         // Die Rolle aus dem Token als aktive Rolle markieren
         if (!isNaN(roleId)) {
-            console.log(`[GET_USER] Markiere Rolle mit ID ${roleId} als aktiv`);
             const modifiedUser = Object.assign(Object.assign({}, user), { roles: user.roles.map(roleEntry => (Object.assign(Object.assign({}, roleEntry), { lastUsed: roleEntry.role.id === roleId }))) });
-            console.log(`[GET_USER] Benutzer mit aktiver Rolle zurückgeben:`, `ID=${modifiedUser.id}, Rollen=${modifiedUser.roles.length}, ` +
-                `Aktive Rolle=${(_a = modifiedUser.roles.find(r => r.lastUsed)) === null || _a === void 0 ? void 0 : _a.role.id}`);
             return res.json(modifiedUser);
         }
-        console.log(`[GET_USER] Benutzer ohne Änderungen zurückgeben:`, `ID=${user.id}, Rollen=${user.roles.length}, ` +
-            `Aktive Rolle=${(_b = user.roles.find(r => r.lastUsed)) === null || _b === void 0 ? void 0 : _b.role.id}`);
         res.json(user);
     }
     catch (error) {
@@ -140,7 +133,6 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
         const { username, email, firstName, lastName, birthday, bankDetails, contract, salary } = req.body;
-        console.log('Updating user with data:', req.body);
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
             const existingUser = yield prisma.user.findFirst({
@@ -182,7 +174,6 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 }
             }
         });
-        console.log('User updated successfully:', updatedUser);
         res.json(updatedUser);
     }
     catch (error) {
@@ -210,7 +201,6 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        console.log('Updating profile with data:', req.body);
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
             const existingUser = yield prisma.user.findFirst({
@@ -261,7 +251,6 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             }
         });
-        console.log('Profile updated successfully:', updatedUser);
         res.json(updatedUser);
     }
     catch (error) {
@@ -379,6 +368,40 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
                 }
             }
         });
+        // Benachrichtigung an den Benutzer senden, dessen Rollen aktualisiert wurden
+        yield (0, notificationController_1.createNotificationIfEnabled)({
+            userId: userId,
+            title: 'Deine Rollen wurden aktualisiert',
+            message: `Deine Benutzerrollen wurden aktualisiert. Melde dich bei Fragen an einen Administrator.`,
+            type: client_1.NotificationType.user,
+            relatedEntityId: userId,
+            relatedEntityType: 'update'
+        });
+        // Benachrichtigung für Administratoren senden
+        const admins = yield prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                },
+                id: {
+                    not: userId // Nicht an den aktualisierten Benutzer senden, falls dieser Admin ist
+                }
+            }
+        });
+        for (const admin of admins) {
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: admin.id,
+                title: 'Benutzerrollen aktualisiert',
+                message: `Die Rollen für "${updatedUser.firstName} ${updatedUser.lastName}" wurden aktualisiert.`,
+                type: client_1.NotificationType.user,
+                relatedEntityId: userId,
+                relatedEntityType: 'update'
+            });
+        }
         res.json(updatedUser);
     }
     catch (error) {
@@ -427,17 +450,15 @@ const updateUserSettings = (req, res) => __awaiter(void 0, void 0, void 0, funct
 exports.updateUserSettings = updateUserSettings;
 // Aktive Rolle eines Benutzers wechseln
 const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
-        const userId = parseInt(req.userId, 10);
+        // Verwende entweder req.user?.id oder req.userId, falls verfügbar
+        const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || parseInt(req.userId, 10);
         const { roleId } = req.body;
-        console.log(`Rollenwechsel angefordert - UserId: ${userId}, RoleId: ${roleId}`);
-        console.log('Typ der req.userId:', typeof req.userId, 'Wert:', req.userId);
-        if (isNaN(userId) || userId <= 0) {
-            console.log('Ungültige Benutzer-ID:', req.userId);
+        if (!userId || isNaN(userId) || userId <= 0) {
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
         if (isNaN(roleId) || roleId <= 0) {
-            console.log('Ungültige Rollen-ID:', roleId);
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
         }
         // Prüfen, ob die Rolle dem Benutzer zugewiesen ist
@@ -447,30 +468,24 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 roleId
             }
         });
-        console.log('Gefundene UserRole:', userRole);
         if (!userRole) {
-            console.log(`Rolle ${roleId} ist dem Benutzer ${userId} nicht zugewiesen`);
             return res.status(404).json({
                 message: 'Diese Rolle ist dem Benutzer nicht zugewiesen'
             });
         }
-        console.log('Starte Transaktion für Rollenwechsel...');
         // Transaktion starten
         yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // Alle Rollen des Benutzers auf lastUsed=false setzen
-            const resetResult = yield tx.userRole.updateMany({
+            yield tx.userRole.updateMany({
                 where: { userId },
                 data: { lastUsed: false }
             });
-            console.log('Alle Rollen zurückgesetzt:', resetResult);
             // Die ausgewählte Rolle auf lastUsed=true setzen
-            const updateResult = yield tx.userRole.update({
+            yield tx.userRole.update({
                 where: { id: userRole.id },
                 data: { lastUsed: true }
             });
-            console.log('Rolle aktiviert:', updateResult);
         }));
-        console.log('Transaktion erfolgreich abgeschlossen');
         // Benutzer mit aktualisierten Rollen zurückgeben
         const updatedUser = yield prisma.user.findUnique({
             where: { id: userId },
@@ -487,7 +502,6 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 settings: true
             }
         });
-        console.log('Aktualisierter Benutzer:', JSON.stringify(updatedUser, null, 2));
         return res.json(updatedUser);
     }
     catch (error) {
@@ -499,4 +513,265 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.switchUserRole = switchUserRole;
+// Neuen Benutzer erstellen (für Admin-Bereich)
+const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { username, email, password, firstName, lastName, roleIds, branchIds } = req.body;
+        // Validiere erforderliche Felder
+        if (!username || !email || !password || !firstName || !lastName) {
+            return res.status(400).json({
+                message: 'Alle Pflichtfelder müssen ausgefüllt sein'
+            });
+        }
+        // Überprüfe, ob Benutzername oder E-Mail bereits existieren
+        const existingUser = yield prisma.user.findFirst({
+            where: {
+                OR: [
+                    { username },
+                    { email }
+                ]
+            }
+        });
+        if (existingUser) {
+            return res.status(400).json({
+                message: 'Benutzername oder E-Mail wird bereits verwendet'
+            });
+        }
+        // Erstelle den Benutzer
+        const user = yield prisma.user.create({
+            data: {
+                username,
+                email,
+                password, // In der Praxis sollte das Passwort gehasht werden
+                firstName,
+                lastName,
+                roles: {
+                    create: (roleIds || [999]).map(roleId => ({
+                        role: {
+                            connect: { id: Number(roleId) }
+                        }
+                    }))
+                },
+                branches: {
+                    create: (branchIds || []).map(branchId => ({
+                        branch: {
+                            connect: { id: Number(branchId) }
+                        }
+                    }))
+                },
+                settings: {
+                    create: {
+                        darkMode: false
+                    }
+                }
+            },
+            include: {
+                roles: {
+                    include: {
+                        role: true
+                    }
+                },
+                branches: {
+                    include: {
+                        branch: true
+                    }
+                }
+            }
+        });
+        // Benachrichtigung für Administratoren senden
+        const admins = yield prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                }
+            }
+        });
+        for (const admin of admins) {
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: admin.id,
+                title: 'Neuer Benutzer erstellt',
+                message: `Ein neuer Benutzer "${firstName} ${lastName}" (${username}) wurde erstellt.`,
+                type: client_1.NotificationType.user,
+                relatedEntityId: user.id,
+                relatedEntityType: 'create'
+            });
+        }
+        res.status(201).json(user);
+    }
+    catch (error) {
+        console.error('Error in createUser:', error);
+        res.status(500).json({
+            message: 'Fehler beim Erstellen des Benutzers',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.createUser = createUser;
+// Benutzer aktualisieren (für Admin-Bereich)
+const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        if (isNaN(userId)) {
+            return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
+        }
+        // Aktuellen Benutzer abrufen
+        const currentUser = yield prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+                roles: true
+            }
+        });
+        if (!currentUser) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary } = req.body;
+        // Überprüfe, ob Username oder Email bereits existieren
+        if (username || email) {
+            const existingUser = yield prisma.user.findFirst({
+                where: {
+                    OR: [
+                        username ? { username } : {},
+                        email ? { email } : {}
+                    ].filter(condition => Object.keys(condition).length > 0),
+                    NOT: {
+                        id: userId
+                    }
+                }
+            });
+            if (existingUser) {
+                return res.status(400).json({
+                    message: 'Benutzername oder E-Mail wird bereits verwendet'
+                });
+            }
+        }
+        // Aktualisiere den Benutzer
+        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary && { salary: parseFloat(salary.toString()) }));
+        const updatedUser = yield prisma.user.update({
+            where: { id: userId },
+            data: updateData,
+            include: {
+                roles: {
+                    include: {
+                        role: true
+                    }
+                }
+            }
+        });
+        // Benachrichtigung für den aktualisierten Benutzer senden
+        yield (0, notificationController_1.createNotificationIfEnabled)({
+            userId: updatedUser.id,
+            title: 'Dein Profil wurde aktualisiert',
+            message: 'Dein Benutzerprofil wurde aktualisiert.',
+            type: client_1.NotificationType.user,
+            relatedEntityId: updatedUser.id,
+            relatedEntityType: 'update'
+        });
+        // Benachrichtigung für Administratoren senden
+        const admins = yield prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                },
+                id: {
+                    not: userId // Nicht an den aktualisierten Benutzer senden, falls dieser Admin ist
+                }
+            }
+        });
+        for (const admin of admins) {
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: admin.id,
+                title: 'Benutzerprofil aktualisiert',
+                message: `Das Profil von "${updatedUser.firstName} ${updatedUser.lastName}" wurde aktualisiert.`,
+                type: client_1.NotificationType.user,
+                relatedEntityId: updatedUser.id,
+                relatedEntityType: 'update'
+            });
+        }
+        res.json(updatedUser);
+    }
+    catch (error) {
+        console.error('Error in updateUser:', error);
+        res.status(500).json({
+            message: 'Fehler beim Aktualisieren des Benutzers',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.updateUser = updateUser;
+// Benutzer löschen
+const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        if (isNaN(userId)) {
+            return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
+        }
+        // Benutzer vor dem Löschen abrufen
+        const user = yield prisma.user.findUnique({
+            where: { id: userId }
+        });
+        if (!user) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+        // Lösche alle verknüpften Daten
+        yield prisma.$transaction([
+            prisma.userRole.deleteMany({
+                where: { userId }
+            }),
+            prisma.usersBranches.deleteMany({
+                where: { userId }
+            }),
+            prisma.settings.deleteMany({
+                where: { userId }
+            }),
+            prisma.notification.deleteMany({
+                where: { userId }
+            }),
+            prisma.userNotificationSettings.deleteMany({
+                where: { userId }
+            }),
+            prisma.user.delete({
+                where: { id: userId }
+            })
+        ]);
+        // Benachrichtigung für Administratoren senden
+        const admins = yield prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                }
+            }
+        });
+        for (const admin of admins) {
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: admin.id,
+                title: 'Benutzer gelöscht',
+                message: `Der Benutzer "${user.firstName} ${user.lastName}" (${user.username}) wurde gelöscht.`,
+                type: client_1.NotificationType.user,
+                relatedEntityId: userId,
+                relatedEntityType: 'delete'
+            });
+        }
+        res.status(204).send();
+    }
+    catch (error) {
+        console.error('Error in deleteUser:', error);
+        res.status(500).json({
+            message: 'Fehler beim Löschen des Benutzers',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.deleteUser = deleteUser;
 //# sourceMappingURL=userController.js.map

@@ -36,9 +36,9 @@ const UserManagement: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4">
+    <div className="min-h-screen p-4">
       <div className="container mx-auto">
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           {/* Header mit Icon */}
           <div className="flex items-center mb-6">
             <UserGroupIcon className="h-6 w-6 mr-2" />

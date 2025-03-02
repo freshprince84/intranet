@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteTask = exports.updateTask = exports.createTask = exports.getTaskById = exports.getAllTasks = void 0;
 const client_1 = require("@prisma/client");
 const taskValidation_1 = require("../validation/taskValidation");
+const notificationController_1 = require("./notificationController");
 const prisma = new client_1.PrismaClient();
 const userSelect = {
     id: true,
@@ -117,6 +118,24 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 }
             }
         });
+        // Benachrichtigung für den Verantwortlichen erstellen
+        yield (0, notificationController_1.createNotificationIfEnabled)({
+            userId: taskData.responsibleId,
+            title: 'Neuer Task zugewiesen',
+            message: `Dir wurde ein neuer Task zugewiesen: ${taskData.title}`,
+            type: client_1.NotificationType.task,
+            relatedEntityId: task.id,
+            relatedEntityType: 'create'
+        });
+        // Benachrichtigung für die Qualitätskontrolle erstellen
+        yield (0, notificationController_1.createNotificationIfEnabled)({
+            userId: taskData.qualityControlId,
+            title: 'Neue Qualitätskontrolle zugewiesen',
+            message: `Du wurdest als Qualitätskontrolle für einen neuen Task zugewiesen: ${taskData.title}`,
+            type: client_1.NotificationType.task,
+            relatedEntityId: task.id,
+            relatedEntityType: 'create'
+        });
         res.status(201).json(task);
     }
     catch (error) {
@@ -145,6 +164,21 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return res.status(400).json({ error: 'Ungültige Task-ID' });
         }
         const updateData = req.body;
+        // Aktuellen Task abrufen, um Änderungen zu erkennen
+        const currentTask = yield prisma.task.findUnique({
+            where: { id: taskId },
+            include: {
+                responsible: {
+                    select: userSelect
+                },
+                qualityControl: {
+                    select: userSelect
+                }
+            }
+        });
+        if (!currentTask) {
+            return res.status(404).json({ error: 'Task nicht gefunden' });
+        }
         // Wenn nur der Status aktualisiert wird, keine vollständige Validierung
         if (Object.keys(updateData).length === 1 && updateData.status) {
             if (!Object.values(client_1.TaskStatus).includes(updateData.status)) {
@@ -180,6 +214,72 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 }
             }
         });
+        // Benachrichtigung bei Statusänderung
+        if (updateData.status && updateData.status !== currentTask.status) {
+            // Benachrichtigung für den Verantwortlichen
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: task.responsibleId,
+                title: 'Task-Status geändert',
+                message: `Der Status des Tasks "${task.title}" wurde von "${currentTask.status}" zu "${updateData.status}" geändert.`,
+                type: client_1.NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'status'
+            });
+            // Benachrichtigung für die Qualitätskontrolle
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: task.qualityControlId,
+                title: 'Task-Status geändert',
+                message: `Der Status des Tasks "${task.title}" wurde von "${currentTask.status}" zu "${updateData.status}" geändert.`,
+                type: client_1.NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'status'
+            });
+        }
+        // Benachrichtigung bei Änderung des Verantwortlichen
+        else if (updateData.responsibleId && updateData.responsibleId !== currentTask.responsibleId) {
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: updateData.responsibleId,
+                title: 'Task zugewiesen',
+                message: `Dir wurde der Task "${task.title}" zugewiesen.`,
+                type: client_1.NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'update'
+            });
+        }
+        // Benachrichtigung bei Änderung der Qualitätskontrolle
+        else if (updateData.qualityControlId && updateData.qualityControlId !== currentTask.qualityControlId) {
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: updateData.qualityControlId,
+                title: 'Qualitätskontrolle zugewiesen',
+                message: `Du wurdest als Qualitätskontrolle für den Task "${task.title}" zugewiesen.`,
+                type: client_1.NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'update'
+            });
+        }
+        // Allgemeine Aktualisierungsbenachrichtigung
+        else if (Object.keys(updateData).length > 0) {
+            // Benachrichtigung für den Verantwortlichen
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: task.responsibleId,
+                title: 'Task aktualisiert',
+                message: `Der Task "${task.title}" wurde aktualisiert.`,
+                type: client_1.NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'update'
+            });
+            // Benachrichtigung für die Qualitätskontrolle
+            if (task.responsibleId !== task.qualityControlId) {
+                yield (0, notificationController_1.createNotificationIfEnabled)({
+                    userId: task.qualityControlId,
+                    title: 'Task aktualisiert',
+                    message: `Der Task "${task.title}" wurde aktualisiert.`,
+                    type: client_1.NotificationType.task,
+                    relatedEntityId: task.id,
+                    relatedEntityType: 'update'
+                });
+            }
+        }
         res.json(task);
     }
     catch (error) {
@@ -207,9 +307,44 @@ const deleteTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (isNaN(taskId)) {
             return res.status(400).json({ error: 'Ungültige Task-ID' });
         }
+        // Task vor dem Löschen abrufen, um Benachrichtigungen zu senden
+        const task = yield prisma.task.findUnique({
+            where: { id: taskId },
+            include: {
+                responsible: {
+                    select: userSelect
+                },
+                qualityControl: {
+                    select: userSelect
+                }
+            }
+        });
+        if (!task) {
+            return res.status(404).json({ error: 'Task nicht gefunden' });
+        }
         yield prisma.task.delete({
             where: { id: taskId }
         });
+        // Benachrichtigung für den Verantwortlichen
+        yield (0, notificationController_1.createNotificationIfEnabled)({
+            userId: task.responsibleId,
+            title: 'Task gelöscht',
+            message: `Der Task "${task.title}" wurde gelöscht.`,
+            type: client_1.NotificationType.task,
+            relatedEntityId: taskId,
+            relatedEntityType: 'delete'
+        });
+        // Benachrichtigung für die Qualitätskontrolle
+        if (task.responsibleId !== task.qualityControlId) {
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: task.qualityControlId,
+                title: 'Task gelöscht',
+                message: `Der Task "${task.title}" wurde gelöscht.`,
+                type: client_1.NotificationType.task,
+                relatedEntityId: taskId,
+                relatedEntityType: 'delete'
+            });
+        }
         res.status(204).send();
     }
     catch (error) {

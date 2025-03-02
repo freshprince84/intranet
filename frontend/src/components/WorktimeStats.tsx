@@ -448,7 +448,7 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, selected
                 return;
             }
             
-            const response = await axios.get(`/api/worktime`, {
+            const response = await axios.get(`${API_URL}/worktime`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }

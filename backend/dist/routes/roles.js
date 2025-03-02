@@ -4,36 +4,46 @@ const express_1 = require("express");
 const roleController_1 = require("../controllers/roleController");
 const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
-// Detaillierte Debug-Middleware für alle Roles-Routen
-router.use((req, res, next) => {
-    console.log('Roles-Route aufgerufen:', {
-        method: req.method,
-        url: req.url,
-        path: req.path,
-        params: req.params,
-        query: req.query,
-        body: req.method === 'POST' || req.method === 'PUT' ? req.body : undefined,
-        headers: {
-            authorization: req.headers.authorization ? 'Vorhanden' : 'Nicht vorhanden',
-            'content-type': req.headers['content-type']
-        }
-    });
-    next();
-});
-// Erweiterte Authentifizierungs-Middleware für Rollen-Routen
+// Erweiterte Authentifizierungs-Middleware für Rollen-Routen mit korrekter Berechtigungsprüfung
 const roleAuthMiddleware = (req, res, next) => {
-    console.log('Authentifizierungs-Middleware für Rollen-Route wird ausgeführt');
-    // Authorization-Header checken
-    if (!req.headers.authorization) {
-        console.warn('Authorization-Header fehlt in der Anfrage');
-    }
     // Standard-Authentifizierung durchführen
     (0, auth_1.authMiddleware)(req, res, (err) => {
         if (err) {
             console.error('Authentifizierungsfehler:', err);
             return res.status(401).json({ message: 'Authentifizierungsfehler', error: err.message });
         }
-        console.log('Benutzer erfolgreich authentifiziert');
+        // Für GET-Anfragen erlauben wir den Zugriff, wenn der Benutzer eine Read-Berechtigung hat
+        if (req.method === 'GET') {
+            const hasRoleReadPermission = req.user && req.user.roles && req.user.roles.some(userRole => {
+                if (userRole.lastUsed) {
+                    return userRole.role.permissions.some(permission => permission.entity === 'usermanagement' &&
+                        ['read', 'both'].includes(permission.accessLevel));
+                }
+                return false;
+            });
+            if (hasRoleReadPermission) {
+                console.log('Benutzer hat Leseberechtigung für Usermanagement');
+                return next();
+            }
+            else {
+                console.log('Benutzer hat KEINE Leseberechtigung für Usermanagement');
+                return res.status(403).json({ message: 'Leseberechtigung für Rollen erforderlich' });
+            }
+        }
+        // Bei anderen Methoden (POST, PUT, DELETE) muss der Benutzer Schreibberechtigung haben
+        const hasRoleWritePermission = req.user && req.user.roles && req.user.roles.some(userRole => {
+            if (userRole.lastUsed) {
+                return userRole.role.permissions.some(permission => permission.entity === 'usermanagement' &&
+                    (permission.entityType === 'table' || permission.entityType === 'page') &&
+                    ['write', 'both'].includes(permission.accessLevel));
+            }
+            return false;
+        });
+        if (!hasRoleWritePermission) {
+            console.log('Benutzer hat KEINE Schreibberechtigung für Rollen/Usermanagement');
+            return res.status(403).json({ message: 'Schreibberechtigung für Rollen erforderlich für diese Operation' });
+        }
+        console.log('Benutzer hat Schreibberechtigung für Rollen/Usermanagement');
         next();
     });
 };

@@ -30,6 +30,9 @@ model User {
   roles                    UserRole[]
   branches                 UsersBranches[]
   workTimes                WorkTime[]
+  payrollCountry           String                    @default("CH")
+  hourlyRate               Decimal?
+  payrolls                 EmployeePayroll[]
 }
 
 model Role {
@@ -56,7 +59,8 @@ model UserRole {
 model Permission {
   id          Int      @id @default(autoincrement())
   roleId      Int
-  page        String
+  entity      String   // Früher 'page', jetzt für Seiten und Tabellen
+  entityType  String   @default("page") // "page" oder "table"
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   accessLevel String
@@ -200,6 +204,25 @@ model UserNotificationSettings {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   user                User     @relation(fields: [userId], references: [id])
+}
+
+model EmployeePayroll {
+  id              Int      @id @default(autoincrement())
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id])
+  periodStart     DateTime
+  periodEnd       DateTime
+  regularHours    Float
+  overtimeHours   Float
+  nightHours      Float
+  holidayHours    Float
+  hourlyRate      Decimal
+  grossPay        Decimal
+  socialSecurity  Decimal
+  taxes           Decimal
+  netPay          Decimal
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 enum TaskStatus {

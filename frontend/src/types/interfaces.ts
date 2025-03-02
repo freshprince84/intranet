@@ -27,7 +27,8 @@ export interface Role {
 }
 
 export interface Permission {
-  page: string;
+  entity: string;
+  entityType: string;
   accessLevel: AccessLevel;
 }
 

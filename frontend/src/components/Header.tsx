@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import NotificationBell from './NotificationBell.tsx';
+import { API_URL } from '../config/api.ts';
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
@@ -9,9 +10,32 @@ const Header: React.FC = () => {
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isRoleSubMenuOpen, setIsRoleSubMenuOpen] = useState(false);
+    const [logoSrc, setLogoSrc] = useState<string>(`${API_URL}/settings/logo`);
+    const [logoLoadFailed, setLogoLoadFailed] = useState<boolean>(false);
     const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
     const roleMenuButtonRef = useRef<HTMLButtonElement>(null);
     const roleSubMenuRef = useRef<HTMLDivElement>(null);
+
+    // Versuche das Logo zu laden - erst direkt, dann über Base64 wenn nötig
+    useEffect(() => {
+        if (logoLoadFailed) {
+            console.log("Versuche Logo über Base64-API zu laden...");
+            fetch(`${API_URL}/settings/logo/base64`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Base64-Logo geladen, Größe:", data.size, "Bytes");
+                    setLogoSrc(data.logo);
+                })
+                .catch(error => {
+                    console.error("Fehler beim Laden des Base64-Logos:", error);
+                });
+        }
+    }, [logoLoadFailed]);
 
     const handleLogout = async () => {
         await logout();
@@ -84,26 +108,43 @@ const Header: React.FC = () => {
     const roleName = currentRole?.role.name || 'Keine Rolle';
 
     return (
-        <header className="bg-white dark:bg-gray-800 shadow-md">
+        <header className="bg-white dark:bg-gray-800">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center py-3">
+                <div className="flex justify-between items-center">
                     {/* Logo */}
                     <div className="flex items-center">
                         <img 
-                            src="http://localhost:5000/api/settings/logo" 
+                            src={logoSrc}
                             alt="Intranet Logo" 
-                            className="h-12 w-auto"
+                            className="h-10 w-auto"
+                            onLoad={(e) => {
+                                console.log("Logo wurde erfolgreich geladen:", e.currentTarget.src);
+                                setLogoLoadFailed(false);
+                            }}
                             onError={(e) => {
-                                // Verstecke das Bild und zeige stattdessen den Fallback-Text
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                                // Zeige den Fallback-Text an
-                                const parent = target.parentElement;
-                                if (parent) {
-                                    const fallbackText = document.createElement('span');
-                                    fallbackText.className = 'text-xl font-bold text-gray-800 dark:text-white';
-                                    fallbackText.textContent = 'Intranet';
-                                    parent.appendChild(fallbackText);
+                                // Debug-Ausgabe
+                                console.error("Fehler beim Laden des Logos:", e);
+                                
+                                // Wenn es das direkte Logo ist, versuche es über Base64
+                                if (!logoLoadFailed) {
+                                    console.log("Setze logoLoadFailed auf true, um Base64-Version zu verwenden");
+                                    setLogoLoadFailed(true);
+                                } else {
+                                    // Bei beiden Methoden fehlgeschlagen, zeige Fallback-Text
+                                    console.log("Auch Base64-Version fehlgeschlagen, verwende Fallback-Text");
+                                    
+                                    // Verstecke das Bild und zeige stattdessen den Fallback-Text
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    
+                                    // Zeige den Fallback-Text an
+                                    const parent = target.parentElement;
+                                    if (parent) {
+                                        const fallbackText = document.createElement('span');
+                                        fallbackText.className = 'text-xl font-bold text-gray-800 dark:text-white';
+                                        fallbackText.textContent = 'Intranet';
+                                        parent.appendChild(fallbackText);
+                                    }
                                 }
                             }}
                         />
@@ -202,19 +243,21 @@ const Header: React.FC = () => {
                                                         onMouseEnter={handleMouseEnter}
                                                         onMouseLeave={handleMouseLeave}
                                                     >
-                                                        {user.roles.map((userRole) => (
-                                                            <button
-                                                                key={userRole.role.id}
-                                                                onClick={() => handleRoleSwitch(userRole.role.id)}
-                                                                className={`w-full text-left block px-4 py-2 text-sm ${
-                                                                    userRole.lastUsed
-                                                                        ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium'
-                                                                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                                                                }`}
-                                                            >
-                                                                {userRole.role.name}
-                                                            </button>
-                                                        ))}
+                                                        {[...user.roles]
+                                                            .sort((a, b) => a.role.name.localeCompare(b.role.name))
+                                                            .map((userRole) => (
+                                                                <button
+                                                                    key={userRole.role.id}
+                                                                    onClick={() => handleRoleSwitch(userRole.role.id)}
+                                                                    className={`w-full text-left block px-4 py-2 text-sm ${
+                                                                        userRole.lastUsed
+                                                                            ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium'
+                                                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                                    }`}
+                                                                >
+                                                                    {userRole.role.name}
+                                                                </button>
+                                                            ))}
                                                     </div>
                                                 </>
                                             )}

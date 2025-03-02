@@ -3,8 +3,9 @@
 // Die aktuellen Linter-Fehler entstehen durch nicht aktualisierte Types
 
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, TaskStatus } from '@prisma/client';
+import { PrismaClient, Prisma, TaskStatus, NotificationType } from '@prisma/client';
 import { validateTask, TaskData } from '../validation/taskValidation';
+import { createNotificationIfEnabled } from './notificationController';
 
 const prisma = new PrismaClient();
 
@@ -119,6 +120,26 @@ export const createTask = async (req: Request<{}, {}, TaskData>, res: Response) 
             }
         });
         
+        // Benachrichtigung für den Verantwortlichen erstellen
+        await createNotificationIfEnabled({
+            userId: taskData.responsibleId,
+            title: 'Neuer Task zugewiesen',
+            message: `Dir wurde ein neuer Task zugewiesen: ${taskData.title}`,
+            type: NotificationType.task,
+            relatedEntityId: task.id,
+            relatedEntityType: 'create'
+        });
+
+        // Benachrichtigung für die Qualitätskontrolle erstellen
+        await createNotificationIfEnabled({
+            userId: taskData.qualityControlId,
+            title: 'Neue Qualitätskontrolle zugewiesen',
+            message: `Du wurdest als Qualitätskontrolle für einen neuen Task zugewiesen: ${taskData.title}`,
+            type: NotificationType.task,
+            relatedEntityId: task.id,
+            relatedEntityType: 'create'
+        });
+        
         res.status(201).json(task);
     } catch (error) {
         console.error('Fehler beim Erstellen des Tasks:', error);
@@ -146,6 +167,23 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
         }
 
         const updateData = req.body;
+        
+        // Aktuellen Task abrufen, um Änderungen zu erkennen
+        const currentTask = await prisma.task.findUnique({
+            where: { id: taskId },
+            include: {
+                responsible: {
+                    select: userSelect
+                },
+                qualityControl: {
+                    select: userSelect
+                }
+            }
+        });
+
+        if (!currentTask) {
+            return res.status(404).json({ error: 'Task nicht gefunden' });
+        }
         
         // Wenn nur der Status aktualisiert wird, keine vollständige Validierung
         if (Object.keys(updateData).length === 1 && updateData.status) {
@@ -183,6 +221,75 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
             }
         });
         
+        // Benachrichtigung bei Statusänderung
+        if (updateData.status && updateData.status !== currentTask.status) {
+            // Benachrichtigung für den Verantwortlichen
+            await createNotificationIfEnabled({
+                userId: task.responsibleId,
+                title: 'Task-Status geändert',
+                message: `Der Status des Tasks "${task.title}" wurde von "${currentTask.status}" zu "${updateData.status}" geändert.`,
+                type: NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'status'
+            });
+            
+            // Benachrichtigung für die Qualitätskontrolle
+            await createNotificationIfEnabled({
+                userId: task.qualityControlId,
+                title: 'Task-Status geändert',
+                message: `Der Status des Tasks "${task.title}" wurde von "${currentTask.status}" zu "${updateData.status}" geändert.`,
+                type: NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'status'
+            });
+        } 
+        // Benachrichtigung bei Änderung des Verantwortlichen
+        else if (updateData.responsibleId && updateData.responsibleId !== currentTask.responsibleId) {
+            await createNotificationIfEnabled({
+                userId: updateData.responsibleId,
+                title: 'Task zugewiesen',
+                message: `Dir wurde der Task "${task.title}" zugewiesen.`,
+                type: NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'update'
+            });
+        }
+        // Benachrichtigung bei Änderung der Qualitätskontrolle
+        else if (updateData.qualityControlId && updateData.qualityControlId !== currentTask.qualityControlId) {
+            await createNotificationIfEnabled({
+                userId: updateData.qualityControlId,
+                title: 'Qualitätskontrolle zugewiesen',
+                message: `Du wurdest als Qualitätskontrolle für den Task "${task.title}" zugewiesen.`,
+                type: NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'update'
+            });
+        }
+        // Allgemeine Aktualisierungsbenachrichtigung
+        else if (Object.keys(updateData).length > 0) {
+            // Benachrichtigung für den Verantwortlichen
+            await createNotificationIfEnabled({
+                userId: task.responsibleId,
+                title: 'Task aktualisiert',
+                message: `Der Task "${task.title}" wurde aktualisiert.`,
+                type: NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'update'
+            });
+            
+            // Benachrichtigung für die Qualitätskontrolle
+            if (task.responsibleId !== task.qualityControlId) {
+                await createNotificationIfEnabled({
+                    userId: task.qualityControlId,
+                    title: 'Task aktualisiert',
+                    message: `Der Task "${task.title}" wurde aktualisiert.`,
+                    type: NotificationType.task,
+                    relatedEntityId: task.id,
+                    relatedEntityType: 'update'
+                });
+            }
+        }
+        
         res.json(task);
     } catch (error) {
         console.error('Fehler beim Aktualisieren des Tasks:', error);
@@ -209,9 +316,49 @@ export const deleteTask = async (req: Request<TaskParams>, res: Response) => {
             return res.status(400).json({ error: 'Ungültige Task-ID' });
         }
 
+        // Task vor dem Löschen abrufen, um Benachrichtigungen zu senden
+        const task = await prisma.task.findUnique({
+            where: { id: taskId },
+            include: {
+                responsible: {
+                    select: userSelect
+                },
+                qualityControl: {
+                    select: userSelect
+                }
+            }
+        });
+
+        if (!task) {
+            return res.status(404).json({ error: 'Task nicht gefunden' });
+        }
+
         await prisma.task.delete({
             where: { id: taskId }
         });
+
+        // Benachrichtigung für den Verantwortlichen
+        await createNotificationIfEnabled({
+            userId: task.responsibleId,
+            title: 'Task gelöscht',
+            message: `Der Task "${task.title}" wurde gelöscht.`,
+            type: NotificationType.task,
+            relatedEntityId: taskId,
+            relatedEntityType: 'delete'
+        });
+        
+        // Benachrichtigung für die Qualitätskontrolle
+        if (task.responsibleId !== task.qualityControlId) {
+            await createNotificationIfEnabled({
+                userId: task.qualityControlId,
+                title: 'Task gelöscht',
+                message: `Der Task "${task.title}" wurde gelöscht.`,
+                type: NotificationType.task,
+                relatedEntityId: taskId,
+                relatedEntityType: 'delete'
+            });
+        }
+
         res.status(204).send();
     } catch (error) {
         console.error('Fehler beim Löschen des Tasks:', error);

@@ -51,7 +51,8 @@ model UserRole {
 
 model Permission {
   id          Int      @id @default(autoincrement())
-  page        String
+  entity      String   // Früher 'page', jetzt für Seiten und Tabellen
+  entityType  String   @default("page") // "page" oder "table"
   accessLevel String
   role        Role     @relation(fields: [roleId], references: [id])
   roleId      Int
@@ -222,11 +223,61 @@ enum NotificationType {
 }
 ```
 
+## Wichtige Hinweise bei Schemaänderungen
+
+Bei Änderungen am Datenbankschema:
+
+- **Vor** Änderungen am Schema immer ein Backup der Daten erstellen
+- Bei Umbenennungen von Spalten gehen Daten standardmäßig verloren, wenn nicht manuell migriert wird
+- Nach Änderungen am Prisma Schema:
+  1. Die Datenbank aktualisieren: `npx prisma db push` oder `npx prisma migrate dev`
+  2. Die Seed-Dateien entsprechend anpassen
+  3. Bei Bedarf Daten neu einspielen: `npx ts-node prisma/seed.ts`
+  4. **Server und Prisma Studio neustarten**
+- Bei Produktivumgebungen statt `--accept-data-loss` besser manuelle SQL-Migrationen verwenden:
+  ```sql
+  ALTER TABLE "Permission" RENAME COLUMN "page" TO "entity";
+  ALTER TABLE "Permission" ADD COLUMN "entityType" TEXT NOT NULL DEFAULT 'page';
+  ```
+
+### Aktuelle Konfiguration
+- Schema.prisma befindet sich in backend/prisma
+- Prisma Studio läuft auf Port 5555 (http://localhost:5555)
+
 ## Status-Logik
 - **Tasks**: 
   - `improval` wird gesetzt, wenn eine Aufgabe von `quality_control` zurückgewiesen wird.
 - **Requests**: 
   - `to_improve` wird gesetzt, wenn eine Anfrage von `approval` zurückgewiesen wird.
+
+## Berechtigungsstruktur
+Das System verwendet eine erweiterte Berechtigungsstruktur, die sowohl Seiten- als auch Tabellenzugriffe steuert:
+
+### Permission-Modell
+- `entity`: Identifiziert die Entität (Seite oder Tabelle), für die die Berechtigung gilt
+- `entityType`: Unterscheidet zwischen 'page' und 'table' Berechtigungen
+- `accessLevel`: Definiert die Zugriffsebene ('read', 'write', 'both', 'none')
+
+### Implementierte Berechtigungen
+- **Seitenberechtigungen** (`entityType: 'page'`):
+  - Steuern den Zugriff auf UI-Komponenten und Seiten
+  - Beispiele: 'dashboard', 'settings', 'worktracker', 'roles', 'users'
+
+- **Tabellenberechtigungen** (`entityType: 'table'`):
+  - Steuern den Zugriff auf Datenbankoperationen für bestimmte Tabellen
+  - Implementiert für 'requests' und 'tasks'
+  - Ermöglichen granulare Kontrolle über Aktionen wie Erstellen, Bearbeiten und Statusänderungen
+
+### Wichtige Hinweise bei Schemaänderungen
+Bei Änderungen am Datenbankschema, insbesondere bei Umbenennungen von Spalten:
+- Immer ein Backup der Daten erstellen
+- Bei Produktivumgebungen manuelle SQL-Migrationen verwenden:
+  ```sql
+  ALTER TABLE "Permission" RENAME COLUMN "page" TO "entity";
+  ALTER TABLE "Permission" ADD COLUMN "entityType" TEXT NOT NULL DEFAULT 'page';
+  ```
+- Seed-Dateien entsprechend anpassen
+- Nach Schemaänderungen Server und Prisma Studio neustarten
 
 ## Benachrichtigungen
 Die Anwendung umfasst ein umfassendes Benachrichtigungssystem, das Benutzer über wichtige Ereignisse informiert.
@@ -281,7 +332,9 @@ Die Anwendung umfasst ein umfassendes Benachrichtigungssystem, das Benutzer übe
 - Ein Benutzer erhält bei der Anmeldung die zuletzt verwendete Rolle (Feld `lastUsed` in `UserRole`).
 - Wenn für einen Benutzer kein Eintrag mit `lastUsed=true` in der Tabelle `userrole` gefunden wird, wird die Standard-Rolle mit der ID 999 zugewiesen.
 - Die Rolle mit ID 999 ist eine Standard-Fallback-Rolle und darf nicht gelöscht werden.
+- Die Admin-Rolle hat immer die ID 1 und verfügt über volle Berechtigungen auf alle Funktionalitäten. Diese Rolle sollte nicht gelöscht oder ihre Grundberechtigungen eingeschränkt werden.
 - `Permission` steuert Berechtigungen pro Rolle und Seite mit den Werten: `read`, `write`, `both`, `none`.
+- Benutzer können zwischen ihren zugewiesenen Rollen wechseln (über das Topmenü), wodurch die aktuellen Berechtigungen und angezeigten Menüelemente entsprechend angepasst werden.
 
 ### Erweiterte Funktionalität
 
@@ -343,3 +396,29 @@ npx prisma migrate reset
 ```bash
 npx prisma db seed
 ```
+
+## Rollenverwaltung und Berechtigungen
+
+Die Rollenverwaltung ist ein zentraler Bestandteil des Systems und steuert den Zugriff auf die verschiedenen Funktionen der Anwendung. Das System unterstützt mehrere Rollen pro Benutzer, wobei immer nur eine Rolle aktiv sein kann.
+
+### Modelle
+
+- **Role**: Definiert eine Rolle im System (z.B. Admin, User, HR, etc.)
+- **Permission**: Definiert Zugriffsrechte für bestimmte Entitäten und Aktionen
+- **UserRole**: Verknüpft Benutzer mit Rollen und speichert den aktiven Status (lastUsed)
+
+### Spezialfälle
+
+Die Admin-Rolle (ID: 1) hat standardmäßig vollen Zugriff auf alle Funktionen des Systems. Diese Rolle sollte nicht gelöscht werden.
+
+### Rollenwechsel
+
+Der Rollenwechsel erfolgt über den Endpunkt `/api/users/switch-role` und aktualisiert das Feld `lastUsed` in der `UserRole`-Tabelle. Nach einem Rollenwechsel wird das Backend automatisch die Berechtigungen des Benutzers entsprechend der neuen Rolle anpassen.
+
+### Optimierungen
+
+1. **Performante Berechtigungsprüfung**: Die Berechtigungsprüfung erfolgt effizient über den `authMiddleware`-Mechanismus, der die aktive Rolle und ihre Berechtigungen aus dem JWT-Token ermittelt und in der Request-Objekt speichert.
+
+2. **Reduzierte Debug-Ausgaben**: Unnötige Debug-Ausgaben wurden entfernt, um die Performance zu verbessern und die Logdateien übersichtlich zu halten.
+
+3. **Robuste Fehlerbehandlung**: Die Rollenverwaltung implementiert umfassende Fehlerbehandlung, um fehlende Berechtigungen oder ungültige Rollen zu erkennen und entsprechende Fehlermeldungen zurückzugeben.

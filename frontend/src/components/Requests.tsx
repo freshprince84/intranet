@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth.tsx';
+import { usePermissions } from '../hooks/usePermissions.ts';
 import CreateRequestModal from './CreateRequestModal.tsx';
 import EditRequestModal from './EditRequestModal.tsx';
 import { API_URL } from '../config/api.ts';
@@ -53,6 +54,7 @@ const Requests: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
 
   const fetchRequests = async () => {
     try {
@@ -188,15 +190,17 @@ const Requests: React.FC = () => {
         <div className="mb-4">
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
             <div className="flex flex-1 gap-4 items-center">
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center min-w-8 min-h-8 w-8 h-8"
-                title="Neuen Request erstellen"
-                aria-label="Neuen Request erstellen"
-                style={{ marginTop: '1px', marginBottom: '1px' }}
-              >
-                <PlusIcon className="h-4 w-4" />
-              </button>
+              {hasPermission('requests', 'write', 'table') && (
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
+                  style={{ width: '30.19px', height: '30.19px', marginTop: '1px', marginBottom: '1px' }}
+                  title="Neuen Request erstellen"
+                  aria-label="Neuen Request erstellen"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                </button>
+              )}
               <input
                 type="text"
                 placeholder="Suchen..."
@@ -272,15 +276,17 @@ const Requests: React.FC = () => {
                   <td colSpan={7} className="px-3 py-4 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <p>Keine Requests vorhanden</p>
-                      <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center min-w-8 min-h-8 w-8 h-8"
-                        title="Neuen Request erstellen"
-                        aria-label="Neuen Request erstellen"
-                        style={{ marginTop: '1px', marginBottom: '1px' }}
-                      >
-                        <PlusIcon className="h-4 w-4" />
-                      </button>
+                      {hasPermission('requests', 'write', 'table') && (
+                        <button
+                          onClick={() => setIsCreateModalOpen(true)}
+                          className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
+                          style={{ width: '30.19px', height: '30.19px', marginTop: '1px', marginBottom: '1px' }}
+                          title="Neuen Request erstellen"
+                          aria-label="Neuen Request erstellen"
+                        >
+                          <PlusIcon className="h-4 w-4" />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -315,16 +321,18 @@ const Requests: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex space-x-2">
-                        <button
-                          onClick={() => {
-                            setSelectedRequest(request);
-                            setIsEditModalOpen(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                        </button>
-                        {request.status === 'approval' && (
+                        {hasPermission('requests', 'write', 'table') && (
+                          <button
+                            onClick={() => {
+                              setSelectedRequest(request);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                          </button>
+                        )}
+                        {request.status === 'approval' && hasPermission('requests', 'write', 'table') && (
                           <>
                             <button
                               onClick={() => handleStatusChange(request.id, 'approved')}
@@ -349,7 +357,7 @@ const Requests: React.FC = () => {
                             </button>
                           </>
                         )}
-                        {request.status === 'to_improve' && (
+                        {request.status === 'to_improve' && hasPermission('requests', 'write', 'table') && (
                           <>
                             <button
                               onClick={() => handleStatusChange(request.id, 'approval')}
@@ -367,7 +375,7 @@ const Requests: React.FC = () => {
                             </button>
                           </>
                         )}
-                        {(request.status === 'approved' || request.status === 'denied') && (
+                        {(request.status === 'approved' || request.status === 'denied') && hasPermission('requests', 'write', 'table') && (
                           <button
                             onClick={() => handleStatusChange(request.id, 'approval')}
                             className="p-1 bg-yellow-600 text-white rounded hover:bg-yellow-700"

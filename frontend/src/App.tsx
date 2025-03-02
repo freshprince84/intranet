@@ -8,7 +8,6 @@ import Settings from './pages/Settings.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import PublicRoute from './components/PublicRoute.tsx';
 import UserManagement from './pages/UserManagement.tsx';
-import RoleManagement from './pages/RoleManagement.tsx';
 import Worktracker from './pages/Worktracker.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
 import { SidebarProvider } from './contexts/SidebarContext.tsx';
@@ -16,6 +15,7 @@ import Layout from './components/Layout.tsx';
 import Profile from './pages/Profile.tsx';
 import { WorktimeProvider } from './contexts/WorktimeContext.tsx';
 import NotificationList from './components/NotificationList.tsx';
+import FaviconLoader from './components/FaviconLoader.tsx';
 
 const App: React.FC = () => {
     return (
@@ -23,6 +23,7 @@ const App: React.FC = () => {
             <ThemeProvider>
                 <SidebarProvider>
                     <WorktimeProvider>
+                        <FaviconLoader />
                         <Router>
                             <Routes>
                                 {/* Öffentliche Routen */}
@@ -47,7 +48,6 @@ const App: React.FC = () => {
                                     <Route path="/dashboard" element={<Dashboard />} />
                                     <Route path="/worktracker" element={<Worktracker />} />
                                     <Route path="/users" element={<UserManagement />} />
-                                    <Route path="/roles" element={<RoleManagement />} />
                                     <Route path="/settings" element={<Settings />} />
                                     <Route path="/profile" element={<Profile />} />
                                     <Route path="/notifications" element={<NotificationList />} />

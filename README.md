@@ -50,9 +50,15 @@ Bei jeder Neuinitialisierung der Datenbank werden automatisch folgende Einträge
   - Manueller Toggle in den Einstellungen
   - Konsistentes Design für alle Komponenten
 - API-Konfiguration
-  - Zentrale Konfiguration von Backend-URLs in den Hook-Dateien
+  - Zentrale Konfiguration von Backend-URLs in der Datei `src/config/api.ts`
   - Axios-Instanz mit automatischer Token-Verwaltung
   - Konsistente Fehlerbehandlung
+  - Zugriff über IP-Adresse (192.168.1.1) oder localhost
+- Rollenbasiertes Berechtigungssystem
+  - Granulare Berechtigungskontrolle über Entitäten (Seiten, Tabellen)
+  - Rollenauswahl mit automatischer Aktivierung der zuletzt verwendeten Rolle
+  - Alphabetisch sortierte Rollenansicht im Benutzermenü
+  - Persistentes Speichern der aktiven Rolle in der Datenbank
 - Arbeitszeiterfassung
   - Start/Stop-Funktionalität
   - Niederlassungsauswahl
@@ -120,6 +126,13 @@ Bei jeder Neuinitialisierung der Datenbank werden automatisch folgende Einträge
 - `PUT /api/roles/:id`: Rolle aktualisieren
 - `DELETE /api/roles/:id`: Rolle löschen
 - `GET /api/roles/:id/permissions`: Berechtigungen einer Rolle abrufen
+
+### Berechtigungen
+- `GET /api/permissions`: Alle Berechtigungen abrufen
+- `GET /api/permissions/:entity/:entityType`: Berechtigungen für eine bestimmte Entität abrufen
+- `POST /api/permissions`: Neue Berechtigung erstellen
+- `PUT /api/permissions/:id`: Berechtigung aktualisieren
+- `DELETE /api/permissions/:id`: Berechtigung löschen
 
 ### Niederlassungen
 - `GET /api/branches`: Alle Niederlassungen abrufen
@@ -308,3 +321,28 @@ Die Anwendung ist für kleine bis mittelgroße Teams (5-50 Benutzer) optimiert. 
 - Konsistente Formatierung von Datum und Uhrzeit in allen Komponenten
 - Verbesserte Filterung von Zeiteinträgen nach Datum im Backend
 - Optimierte Benutzeroberfläche mit klaren visuellen Indikatoren für aktive Zeiterfassungen
+
+## Performance-Optimierung
+
+### Debug-Ausgaben
+
+In Produktionsumgebungen sollten Debug-Ausgaben auf ein Minimum reduziert werden, um die Leistung zu verbessern und die Logdateien übersichtlich zu halten. Wir haben folgende Optimierungen vorgenommen:
+
+1. **Entfernen von Debug-Logs**: Unnötige `console.log`-Aufrufe wurden aus Middleware-Funktionen und Controllern entfernt.
+2. **Beibehaltung wichtiger Fehlerprotokolle**: Fehler und Ausnahmen werden weiterhin protokolliert, um Fehlerbehebung zu ermöglichen.
+
+### TypeScript-Import-Optimierungen
+
+Beim Arbeiten mit TypeScript sollten Sie folgende Best Practices beachten:
+
+1. **Keine `.ts`-Suffixe in Imports**: Verwenden Sie `import { module } from './path'` statt `import { module } from './path.ts'`
+2. **Korrekte Exporte**: Stellen Sie sicher, dass Module sowohl mit den neuen als auch mit den alten Namen exportiert werden, wenn Abwärtskompatibilität erforderlich ist
+3. **TypeScript-Kompilierung**: Stellen Sie sicher, dass die TypeScript-Konfiguration korrekt ist und keine Legacy-Optionen die Kompilierung beeinträchtigen
+
+### Rollenwechsel-Optimierung
+
+Die Funktion zum Wechseln der Benutzerrolle wurde optimiert:
+
+1. **Effiziente ID-Extraktion**: Verbesserte Extraktion von Benutzer-IDs aus Auth-Tokens
+2. **Transaktionale Aktualisierungen**: Die Verwendung von Prisma-Transaktionen stellt sicher, dass Rollenwechsel atomar sind
+3. **Minimale Datenbankabfragen**: Die Anzahl der Datenbankabfragen wurde reduziert, um die Leistung zu verbessern

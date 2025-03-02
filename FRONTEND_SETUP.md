@@ -611,6 +611,10 @@ export default NotificationBell;
 Die folgenden Boxen sind offiziell im System definiert:
 
 1. Dashboard/Arbeitszeitstatistik Box
+   - Zeigt Wochenstatistiken der Arbeitszeit als interaktives Diagramm
+   - Beim Klick auf einen Balken öffnet sich ein Modal mit den detaillierten Zeiteinträgen des Tages
+   - Exportfunktion für Arbeitszeitdaten als Excel-Datei
+   - Farbliche Unterscheidung zwischen Zeiten unter (blau) und über (rot) der Sollarbeitszeit
 2. Dashboard/Requests Box
 3. Worktracker/Zeiterfassung Box
 4. Worktracker/To Do's
@@ -637,13 +641,14 @@ Es gibt drei definierte Breitentypen für Boxen:
    - Volle Container-Breite
    - Verwendet für:
      - Dashboard/Arbeitszeitstatistik Box
+     - Dashboard/Requests Box
      - Worktracker/Zeiterfassung Box
+     - Worktracker/To Do's Box
      - UserManagement Box
 
 2. **Normal**
    - Standard-Breite für die meisten Boxen
    - Verwendet für:
-     - Dashboard/Requests Box
      - Settings Box
      - Login Box
      - Register Box
@@ -652,7 +657,6 @@ Es gibt drei definierte Breitentypen für Boxen:
 3. **Klein (Small)**
    - Reduzierte Breite für kompakte Darstellung
    - Verwendet für:
-     - Worktracker/To Do's
      - NotificationList Box
 
 ### Box-Styling
@@ -667,3 +671,543 @@ Zusätzliche Klassen je nach Breitentyp:
 - Breit: `w-full`
 - Normal: `max-w-3xl`
 - Klein: `max-w-xl`
+
+### Tabellen in Boxen
+Alle Tabellen in Boxen müssen folgende Funktionalitäten bieten:
+
+1. **Sortierung**
+   - Jede Tabellenspalte muss sortierbar sein (aufsteigend und absteigend)
+   - Sortierungspfeile (↑/↓) zeigen die aktuelle Sortierrichtung an
+   - Implementierung durch `handleSort`-Funktion und SortConfig-State
+   - Beispiel für sortierbare Tabellenspalte:
+   ```jsx
+   <th 
+     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+     onClick={() => handleSort('title')}
+   >
+     Titel {sortConfig.key === 'title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+   </th>
+   ```
+
+2. **Filterung**
+   - Alle Tabellen müssen Suchfunktion und Status-Filter bieten
+   - Implementierung durch `searchTerm`- und `statusFilter`-States
+   - Filter müssen sowohl als Einzelfilter als auch kombiniert funktionieren
+
+3. **Responsive Design**
+   - Tabellen müssen horizontales Scrollen auf kleinen Bildschirmen ermöglichen
+   - Container mit `overflow-x-auto` und `overflow-y-hidden` umgeben
+   - Minimalbreite mit `min-w-full` sicherstellen
+
+## useAuth-Hook
+
+Der `useAuth`-Hook stellt die Authentifizierungs- und Autorisierungsfunktionen bereit:
+
+```javascript
+import { createContext, useContext, useState } from 'react';
+import api from '../api';
+
+const AuthContext = createContext();
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [permissions, setPermissions] = useState({});
+
+  const login = async (username, password) => {
+    try {
+      const response = await api.post('/auth/login', { username, password });
+      localStorage.setItem('token', response.data.token);
+      setUser(response.data.user);
+      setPermissions(response.data.permissions);
+      return true;
+    } catch (error) {
+      console.error('Login failed:', error);
+      return false;
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    setPermissions({});
+  };
+
+  // Erweiterte Berechtigungsprüfung für Seiten und Tabellen
+  const hasPermission = (entity, accessLevel, entityType = 'page') => {
+    const permission = permissions.find(
+      p => p.entity === entity && p.entityType === entityType
+    );
+    
+    if (!permission) return false;
+    
+    if (permission.accessLevel === 'both') return true;
+    return permission.accessLevel === accessLevel;
+  };
+
+  return { user, permissions, login, logout, hasPermission };
+};
+
+export const useAuth = () => useContext(AuthContext);
+```
+
+## Verwendung von Berechtigungen
+
+### In UI-Komponenten
+
+```jsx
+import { useAuth } from '../hooks/useAuth';
+
+const DashboardPage = () => {
+  const { hasPermission } = useAuth();
+
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      
+      {/* Seitenberechtigungen prüfen */}
+      {hasPermission('tasks', 'read') && (
+        <TaskList />
+      )}
+      
+      {/* Tabellenberechtigungen prüfen */}
+      {hasPermission('tasks', 'write', 'table') && (
+        <button>Neue Aufgabe erstellen</button>
+      )}
+    </div>
+  );
+};
+```
+
+### In Routing-Guards
+
+```jsx
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+
+const ProtectedRoute = ({ element, entity, requiredAccess = 'read', entityType = 'page' }) => {
+  const { user, hasPermission } = useAuth();
+  
+  if (!user) {
+    return <Navigate to="/login" />;
+  }
+  
+  if (!hasPermission(entity, requiredAccess, entityType)) {
+    return <Navigate to="/unauthorized" />;
+  }
+  
+  return element;
+};
+
+// Verwendung im Router
+<Route 
+  path="/tasks" 
+  element={
+    <ProtectedRoute 
+      element={<TasksPage />} 
+      entity="tasks" 
+      requiredAccess="read" 
+    />
+  } 
+/>
+```
+
+## Button-Standards
+
+Die Anwendung verwendet konsistente Button-Stile für verschiedene Aktionstypen. Hier sind die standardisierten Button-Typen und ihre Verwendung:
+
+### 1. Icon-Buttons
+
+#### Primäre Aktion-Buttons (Neu erstellen)
+- **Stil:** Rundes Icon mit weißem Hintergrund und blauem Symbol
+- **Größe:** Immer einheitlich mit 30.19px x 30.19px 
+- **Klassen:** `bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center`
+- **Style:** `style={{ width: '30.19px', height: '30.19px' }}`
+- **Icon-Größe:** `h-5 w-5` für den PlusIcon (bei größeren Listen), `h-4 w-4` für kleinere Listenansichten
+- **Verwendung:** Konsistent in allen Listen- und Übersichtsansichten, wo neue Elemente erstellt werden können
+- **Positionierung:** Immer links oben über der Liste oder im Filterbereich
+- **Beispiel:**
+
+```jsx
+<button
+  onClick={() => setIsCreateModalOpen(true)}
+  className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
+  style={{ width: '30.19px', height: '30.19px' }}
+  title="Neues Element erstellen"
+  aria-label="Neues Element erstellen"
+>
+  <PlusIcon className="h-5 w-5" />
+</button>
+```
+
+#### Bearbeitungs-Buttons
+- **Stil:** Nur Icon ohne Hintergrund
+- **Klassen:** `text-blue-600 hover:text-blue-900`
+- **Verwendung:** Buttons zum Bearbeiten von Elementen
+- **Beispiel:**
+  ```jsx
+  <button 
+    onClick={handleEditAction} 
+    className="text-blue-600 hover:text-blue-900"
+  >
+    <PencilIcon className="h-5 w-5" />
+  </button>
+  ```
+
+#### Lösch-Buttons
+- **Stil:** Nur Icon ohne Hintergrund
+- **Klassen:** `text-red-600 hover:text-red-900`
+- **Verwendung:** Buttons zum Löschen von Elementen
+- **Beispiel:**
+  ```jsx
+  <button 
+    onClick={handleDeleteAction}
+    className="text-red-600 hover:text-red-900"
+  >
+    <TrashIcon className="h-5 w-5" />
+  </button>
+  ```
+
+#### Status-Change-Buttons
+- **Stil:** Gefüllt, abgerundet
+- **Klassen:** `p-1 bg-[color]-600 text-white rounded hover:bg-[color]-700`
+- **Verwendung:** Buttons zum Ändern des Status, Farbe basierend auf Aktion (grün=Bestätigen, rot=Abbrechen, etc.)
+- **Beispiel:**
+  ```jsx
+  <button
+    onClick={handleStatusChange}
+    className="p-1 bg-green-600 text-white rounded hover:bg-green-700"
+    title="Status-Beschreibung"
+  >
+    <CheckIcon className="h-5 w-5" />
+  </button>
+  ```
+
+### 2. Text-Buttons
+
+#### Primäre Aktions-Buttons
+- **Stil:** Gefüllt, abgerundet
+- **Klassen:** `px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none`
+- **Verwendung:** Hauptaktionen in Formularen (z.B. Speichern, Erstellen)
+- **Beispiel:**
+  ```jsx
+  <button
+    type="submit"
+    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+  >
+    Speichern
+  </button>
+  ```
+
+#### Sekundäre Aktions-Buttons
+- **Stil:** Grau, abgerundet
+- **Klassen:** `px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none`
+- **Verwendung:** Sekundäre Aktionen (z.B. Abbrechen)
+- **Beispiel:**
+  ```jsx
+  <button
+    type="button"
+    onClick={handleCancel}
+    className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none"
+  >
+    Abbrechen
+  </button>
+  ```
+
+### Barrierefreiheit
+
+Alle Buttons müssen die folgenden Barrierefreiheits-Attribute haben:
+- `title` für Tooltips
+- `aria-label` für Screenreader, wenn keine Beschriftung vorhanden ist
+- `focus:outline-none focus:ring-2 focus:ring-[color]-500 focus:ring-offset-2` für sichtbaren Fokusindikator
+
+### Größen und Abstände
+- **Icon-Größe:** `h-4 w-4` für kleinere Icons, `h-5 w-5` für Standard-Icons
+- **Padding:**
+  - Icon-Buttons: `p-1` oder `p-1.5`
+  - Text-Buttons: `px-4 py-2` für normale Größe
+
+## 6. Responsive Navigation
+
+Die Anwendung verwendet ein responsives Navigationskonzept, das sich an die Bildschirmgröße anpasst:
+
+### 6.1. Desktop-Navigation
+
+Auf Desktop-Geräten (Bildschirmbreite >= 768px) wird eine klassische Seitenleiste verwendet:
+
+- Positioniert am linken Rand der Anwendung
+- Kann ein- und ausgeklappt werden (über Button oder Benutzereinstellungen)
+- Zeigt alle verfügbaren Menüpunkte je nach Benutzerberechtigungen an
+- Einstellungen-Menüpunkt wird am unteren Rand der Sidebar angezeigt
+
+### 6.2. Mobile-Navigation
+
+Auf mobilen Geräten (Bildschirmbreite < 768px) wird die Seitenleiste zu einem Footer-Menü:
+
+- Fixiert am unteren Bildschirmrand
+- Zeigt Icon und Text für jeden Menüpunkt in einer horizontalen Anordnung
+- Menüpunkte werden als Icons mit Text darunter angezeigt
+- Aktive Menüpunkte werden farblich hervorgehoben (blau)
+
+### 6.3. Implementierung
+
+Die Umschaltung zwischen Desktop- und Mobile-Navigation erfolgt automatisch durch Media Queries und React-State:
+
+```tsx
+// Erkennung der Bildschirmgröße in der Sidebar-Komponente
+const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+useEffect(() => {
+    const handleResize = () => {
+        setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+}, []);
+```
+
+Das Layout passt automatisch den Inhaltsbereich an, um Platz für die jeweilige Navigationsart zu schaffen:
+
+```tsx
+// Anpassung des Layouts für Mobile-Navigation
+<div className={`flex h-[calc(100vh-4rem)] ${isMobile ? 'pb-16' : ''}`}>
+    <Sidebar />
+    <main className="flex-1 overflow-auto p-6">
+        <Outlet />
+    </main>
+</div>
+```
+
+## 6. Berechtigungssystem
+
+Das Berechtigungssystem ist eine zentrale Komponente der Anwendung, die den Zugriff auf verschiedene Seiten und Funktionen basierend auf den Benutzerrollen steuert.
+
+### 6.1. Berechtigungsstruktur
+
+Die Berechtigungen werden in zwei Hauptkategorien unterteilt:
+
+1. **Seiten-Berechtigungen**: Steuern den Zugriff auf verschiedene Seiten der Anwendung.
+2. **Tabellen-Berechtigungen**: Steuern den Zugriff auf bestimmte Datentabellen, die bestimmten Seiten zugeordnet sind.
+
+#### Seitenhierarchie
+
+- **Immer sichtbare Seiten**: Diese Seiten sind für alle Benutzer verfügbar, unabhängig von ihren Berechtigungen:
+  - Dashboard
+  - Settings (Einstellungen)
+
+- **Berechtigungspflichtige Seiten**:
+  - Worktracker
+  - Usermanagement (Benutzerverwaltung)
+
+#### Tabellenzuordnung
+
+Tabellen sind ihren übergeordneten Seiten zugeordnet und werden als Unterelemente angezeigt:
+
+- **Dashboard**:
+  - Requests (Anfragen)
+- **Worktracker**:
+  - Tasks (Aufgaben)
+
+### 6.2. Berechtigungstypen
+
+Für jede Seite und Tabelle können folgende Berechtigungen erteilt werden:
+
+- **none**: Kein Zugriff
+- **read**: Nur Lesezugriff
+- **write**: Nur Schreibzugriff 
+- **both**: Vollständiger Zugriff (Lesen und Schreiben)
+
+### 6.3. Implementierung im UI
+
+Die Berechtigungen werden in der Sidebar und auf den jeweiligen Seiten durchgesetzt:
+
+```jsx
+// Beispiel aus der Sidebar-Komponente
+const alwaysVisiblePages = ['dashboard', 'settings'];
+
+const menuItems = [
+  { name: 'Dashboard', path: '/' },
+  { name: 'Worktracker', path: '/worktracker' },
+  { name: 'Usermanagement', path: '/users' }, // Hinweis: Route ist /users, die Berechtigung heißt "usermanagement"
+  { name: 'Settings', path: '/settings' }
+].filter(item => {
+  const pageName = item.name.toLowerCase();
+  return alwaysVisiblePages.includes(pageName) || 
+         hasPermission(pageName, 'read', 'page');
+});
+```
+
+### 6.4. Rollenverwaltung
+
+In der Rollenverwaltung können Administratoren:
+
+1. Neue Rollen erstellen
+2. Bestehende Rollen bearbeiten
+3. Berechtigungen für Seiten und Tabellen zuweisen
+4. Die Option "Alle Seiten" verwenden, um schnell Berechtigungen für mehrere Seiten zu setzen
+
+Die immer sichtbaren Seiten werden nicht in den Berechtigungseinstellungen angezeigt, da sie standardmäßig für alle Benutzer verfügbar sind.
+
+## 7. UI-Komponenten-Richtlinien
+
+### 7.1. Button-Designs
+
+Für eine konsistente Benutzeroberfläche werden folgende Button-Stile verwendet:
+
+#### Neues Item erstellen Button
+
+- **Stil:** Rundes Icon mit weißem Hintergrund und blauem Symbol
+- **Größe:** Immer einheitlich mit 30.19px x 30.19px 
+- **Klassen:** `bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center`
+- **Style:** `style={{ width: '30.19px', height: '30.19px' }}`
+- **Icon-Größe:** `h-5 w-5` für den PlusIcon (bei größeren Listen), `h-4 w-4` für kleinere Listenansichten
+- **Verwendung:** Konsistent in allen Listen- und Übersichtsansichten, wo neue Elemente erstellt werden können
+- **Positionierung:** Immer links oben über der Liste oder im Filterbereich
+- **Beispiel:**
+
+```jsx
+<button
+  onClick={() => setIsCreateModalOpen(true)}
+  className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
+  style={{ width: '30.19px', height: '30.19px' }}
+  title="Neues Element erstellen"
+  aria-label="Neues Element erstellen"
+>
+  <PlusIcon className="h-5 w-5" />
+</button>
+```
+
+#### Bearbeitungs-Buttons
+- **Stil:** Nur Icon ohne Hintergrund
+- **Klassen:** `text-blue-600 hover:text-blue-900`
+- **Verwendung:** Buttons zum Bearbeiten von Elementen
+- **Beispiel:**
+  ```jsx
+  <button 
+    onClick={handleEditAction} 
+    className="text-blue-600 hover:text-blue-900"
+  >
+    <PencilIcon className="h-5 w-5" />
+  </button>
+  ```
+
+#### Lösch-Buttons
+- **Stil:** Nur Icon ohne Hintergrund
+- **Klassen:** `text-red-600 hover:text-red-900`
+- **Verwendung:** Buttons zum Löschen von Elementen
+- **Beispiel:**
+  ```jsx
+  <button 
+    onClick={handleDeleteAction}
+    className="text-red-600 hover:text-red-900"
+  >
+    <TrashIcon className="h-5 w-5" />
+  </button>
+  ```
+
+#### Status-Change-Buttons
+- **Stil:** Gefüllt, abgerundet
+- **Klassen:** `p-1 bg-[color]-600 text-white rounded hover:bg-[color]-700`
+- **Verwendung:** Buttons zum Ändern des Status, Farbe basierend auf Aktion (grün=Bestätigen, rot=Abbrechen, etc.)
+- **Beispiel:**
+  ```jsx
+  <button
+    onClick={handleStatusChange}
+    className="p-1 bg-green-600 text-white rounded hover:bg-green-700"
+    title="Status-Beschreibung"
+  >
+    <CheckIcon className="h-5 w-5" />
+  </button>
+  ```
+
+### 2. Text-Buttons
+
+#### Primäre Aktions-Buttons
+- **Stil:** Gefüllt, abgerundet
+- **Klassen:** `px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none`
+- **Verwendung:** Hauptaktionen in Formularen (z.B. Speichern, Erstellen)
+- **Beispiel:**
+  ```jsx
+  <button
+    type="submit"
+    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+  >
+    Speichern
+  </button>
+  ```
+
+#### Sekundäre Aktions-Buttons
+- **Stil:** Grau, abgerundet
+- **Klassen:** `px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none`
+- **Verwendung:** Sekundäre Aktionen (z.B. Abbrechen)
+- **Beispiel:**
+  ```jsx
+  <button
+    type="button"
+    onClick={handleCancel}
+    className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none"
+  >
+    Abbrechen
+  </button>
+  ```
+
+### Barrierefreiheit
+
+Alle Buttons müssen die folgenden Barrierefreiheits-Attribute haben:
+- `title` für Tooltips
+- `aria-label` für Screenreader, wenn keine Beschriftung vorhanden ist
+- `focus:outline-none focus:ring-2 focus:ring-[color]-500 focus:ring-offset-2` für sichtbaren Fokusindikator
+
+### Größen und Abstände
+- **Icon-Größe:** `h-4 w-4` für kleinere Icons, `h-5 w-5` für Standard-Icons
+- **Padding:**
+  - Icon-Buttons: `p-1` oder `p-1.5`
+  - Text-Buttons: `px-4 py-2` für normale Größe
+
+## 8. Interaktive Frontend-Features
+
+- Die Arbeitszeitstatistik auf dem Dashboard erlaubt das Anklicken der Tagesbalken, um ein Modal mit detaillierten Zeiteinträgen für den jeweiligen Tag zu öffnen
+- Alle Tabellen unterstützen Sortierung durch Klick auf die Spaltenüberschriften
+- Interaktive Filter für Requests und Tasks
+- Die Frontend-Komponenten prüfen jetzt Berechtigungen mit `hasPermission('entity', 'accessLevel', 'entityType')`
+
+### 8.1 Responsive Design
+- Die Seitenleiste wird bei kleinen Bildschirmen (< 768px) automatisch zu einem Footer-Menü
+- Auf Desktop-Geräten wird die klassische Seitenleiste am linken Rand angezeigt
+- Die Umschaltung erfolgt automatisch basierend auf der Bildschirmgröße
+- Der Hauptinhalt wird entsprechend angepasst, um Platz für die Navigation zu schaffen
+- Alle UI-Komponenten sind vollständig responsive gestaltet
+- Das Layout reagiert dynamisch auf Größenänderungen ohne Neuladen der Seite
+
+## 9. Notification-System
+
+Das System verwendet die zentrale Funktion `createNotificationIfEnabled` für alle Benachrichtigungen. Diese Funktion berücksichtigt die Benutzer- und Systemeinstellungen und sendet Benachrichtigungen nur, wenn sie aktiviert sind.
+
+### 9.1 Implementierte Notification-Trigger
+
+1. **Task-Trigger**:
+   - `taskCreate`: Benachrichtigt den Verantwortlichen und die Qualitätskontrolle, wenn ein neuer Task erstellt wird
+   - `taskUpdate`: Benachrichtigt den Verantwortlichen und die Qualitätskontrolle, wenn ein Task aktualisiert wird
+   - `taskDelete`: Benachrichtigt den Verantwortlichen und die Qualitätskontrolle, wenn ein Task gelöscht wird
+   - `taskStatusChange`: Benachrichtigt den Verantwortlichen und die Qualitätskontrolle, wenn sich der Status eines Tasks ändert
+
+2. **Request-Trigger**:
+   - `requestCreate`: Benachrichtigt den Verantwortlichen, wenn ein neuer Request erstellt wird
+   - `requestUpdate`: Benachrichtigt den Verantwortlichen und den Ersteller, wenn ein Request aktualisiert wird
+   - `requestDelete`: Benachrichtigt den Verantwortlichen und den Ersteller, wenn ein Request gelöscht wird
+   - `requestStatusChange`: Benachrichtigt den Ersteller, wenn sich der Status eines Requests ändert, mit spezifischen Nachrichten für verschiedene Status (approved, denied, to_improve)
+
+3. **User-Trigger**:
+   - `userCreate`: Benachrichtigt Administratoren, wenn ein neuer Benutzer erstellt wird
+   - `userUpdate`: Benachrichtigt den aktualisierten Benutzer und Administratoren, wenn ein Benutzer aktualisiert wird
+   - `userDelete`: Benachrichtigt Administratoren, wenn ein Benutzer gelöscht wird
+   - `userRoleUpdate`: Benachrichtigt den betroffenen Benutzer und Administratoren, wenn die Rollen eines Benutzers aktualisiert werden
+
+4. **Role-Trigger**:
+   - `roleCreate`: Benachrichtigt Administratoren, wenn eine neue Rolle erstellt wird
+   - `roleUpdate`: Benachrichtigt Administratoren und Benutzer mit dieser Rolle, wenn eine Rolle aktualisiert wird
+   - `roleDelete`: Benachrichtigt Administratoren und Benutzer mit dieser Rolle, wenn eine Rolle gelöscht wird
+
+5. **Worktime-Trigger**:
+   - `worktimeStart`: Benachrichtigt den Benutzer, wenn die Zeiterfassung gestartet wird
+   - `worktimeStop`: Benachrichtigt den Benutzer, wenn die Zeiterfassung beendet wird

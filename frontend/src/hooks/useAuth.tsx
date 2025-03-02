@@ -10,7 +10,8 @@ interface Role {
     name: string;
     permissions: Array<{
         id: number;
-        page: string;
+        entity: string;
+        entityType: string;
         accessLevel: string;
     }>;
 }

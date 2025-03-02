@@ -17,9 +17,10 @@ type AccessLevel = 'none' | 'read' | 'write' | 'both';
 /**
  * Middleware zur Überprüfung von Benutzerberechtigungen
  * @param requiredAccess - Erforderliche Zugriffsebene ('read', 'write', 'both')
+ * @param entityType - Typ der Entität ('page' oder 'table')
  * @returns Express Middleware
  */
-export const checkPermission = (requiredAccess: AccessLevel) => {
+export const checkPermission = (requiredAccess: AccessLevel, entityType: string = 'page') => {
     return async (req: Request, res: Response, next: NextFunction) => {
         try {
             const userId = parseInt(req.userId, 10);
@@ -54,22 +55,24 @@ export const checkPermission = (requiredAccess: AccessLevel) => {
                 });
             }
 
-            // Bestimme die aktuelle Seite aus der URL
-            const currentPage = req.baseUrl.split('/').pop() || 'dashboard';
-            console.log(`[PERMISSION] Aktuelle Seite: ${currentPage}`);
+            // Bestimme die aktuelle Entität aus der URL
+            const currentEntity = req.baseUrl.split('/').pop() || 'dashboard';
+            console.log(`[PERMISSION] Aktuelle Entität: ${currentEntity}, Typ: ${entityType}`);
 
             // Finde die relevante Berechtigung
-            const permission = role.permissions.find(p => p.page === currentPage);
+            const permission = role.permissions.find(p => 
+                p.entity === currentEntity && p.entityType === entityType
+            );
 
             if (!permission) {
-                console.log(`[PERMISSION] Keine Berechtigung gefunden für Seite: ${currentPage}`);
+                console.log(`[PERMISSION] Keine Berechtigung gefunden für Entität: ${currentEntity}, Typ: ${entityType}`);
                 return res.status(403).json({ 
-                    message: 'Keine Berechtigung für diese Seite',
-                    error: 'NO_PAGE_PERMISSION'
+                    message: `Keine Berechtigung für ${entityType} ${currentEntity}`,
+                    error: 'NO_ENTITY_PERMISSION'
                 });
             }
 
-            console.log(`[PERMISSION] Gefundene Berechtigung: ${permission.accessLevel} für Seite ${permission.page}`);
+            console.log(`[PERMISSION] Gefundene Berechtigung: ${permission.accessLevel} für ${entityType} ${permission.entity}`);
 
             // Prüfe die Zugriffsebene
             const hasAccess = checkAccessLevel(permission.accessLevel as AccessLevel, requiredAccess);
@@ -84,7 +87,7 @@ export const checkPermission = (requiredAccess: AccessLevel) => {
 
             // Füge die Berechtigungen zum Request hinzu
             req.userPermissions = role.permissions;
-            console.log(`[PERMISSION] Zugriff gewährt für ${currentPage}`);
+            console.log(`[PERMISSION] Zugriff gewährt für ${entityType} ${currentEntity}`);
             next();
         } catch (error) {
             console.error('Error in permission middleware:', error);

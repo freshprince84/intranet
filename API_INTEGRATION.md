@@ -2,6 +2,35 @@
 
 Diese Dokumentation beschreibt die besten Praktiken für die Integration zwischen Frontend und Backend in unserem Intranet-Projekt. Sie adressiert spezifische Probleme, die wir bei der Entwicklung identifiziert haben, und bietet Lösungen, um diese in Zukunft zu vermeiden.
 
+## API-Konfiguration
+
+### Server-Konfiguration
+- Backend läuft auf Port 5000 (http://localhost:5000 oder http://192.168.1.1:5000)
+- Frontend läuft auf Port 3000 (http://localhost:3000 oder http://192.168.1.1:3000)
+- Prisma Studio läuft auf Port 5555 (http://localhost:5555)
+- Zugriff ist auch über IP-Adresse möglich: `192.168.1.1:5000` und `192.168.1.1:3000`
+
+### Wichtige Hinweise zur API-Nutzung
+- API-Aufrufe erfolgen über die zentrale Konfiguration in `frontend/src/config/api.ts`
+- Bei Import der API-Konfiguration muss die vollständige Dateiendung angegeben werden:
+  ```typescript
+  // KORREKT:
+  import { API_URL } from '../config/api.ts';
+  
+  // FALSCH (führt zu Kompilierungsfehlern):
+  import { API_URL } from '../config/api';
+  ```
+- API-Endpunkte werden OHNE /api aufgerufen, z.B.:
+  ```javascript
+  // Korrekt
+  ${API_URL}/worktime/stats
+  ${API_URL}/requests
+  
+  // NICHT mehr verwendet
+  ${API_URL}/api/worktime/stats
+  ${API_URL}/api/requests
+  ```
+
 ## 1. Typsicherheit zwischen Frontend und Backend
 
 ### 1.1. Problem: TypeScript-Interface-Konflikte
@@ -305,3 +334,110 @@ Bei der Integration einer neuen Tabelle oder eines neuen Features:
    - [ ] Fehlerszenarien testen (Netzwerkfehler, leere Antworten, etc.)
 
 Durch die Befolgung dieser Richtlinien können wir viele der häufigsten Probleme bei der Integration von Frontend und Backend vermeiden und eine robustere Anwendung entwickeln.
+
+## Berechtigungsstruktur
+
+### Erweiterte Berechtigungsprüfung
+
+Die Berechtigungsstruktur wurde erweitert, um sowohl Seiten- als auch Tabellenberechtigungen zu unterstützen:
+
+```typescript
+// In permissionMiddleware.ts
+interface Permission {
+  entity: string;     // Früher 'page', jetzt für Seiten und Tabellen
+  entityType: string; // 'page' oder 'table' 
+  accessLevel: string;
+}
+
+export const hasPermission = (
+  permissions: Permission[], 
+  entity: string, 
+  accessLevel: 'read' | 'write', 
+  entityType: 'page' | 'table' = 'page'
+): boolean => {
+  const permission = permissions.find(
+    p => p.entity === entity && p.entityType === entityType
+  );
+  
+  if (!permission) return false;
+  
+  if (permission.accessLevel === 'both') return true;
+  return permission.accessLevel === accessLevel;
+};
+```
+
+### Endpunkte für Berechtigungsverwaltung
+
+#### Alle Berechtigungen abrufen
+
+```typescript
+// GET /api/permissions
+router.get('/permissions', authMiddleware, async (req, res) => {
+  try {
+    const permissions = await prisma.permission.findMany({
+      include: {
+        role: true
+      }
+    });
+    res.json(permissions);
+  } catch (error) {
+    console.error('Fehler beim Abrufen der Berechtigungen:', error);
+    res.status(500).json({ message: 'Interner Serverfehler' });
+  }
+});
+```
+
+#### Berechtigungen für eine Entität abrufen
+
+```typescript
+// GET /api/permissions/:entity/:entityType
+router.get('/permissions/:entity/:entityType', authMiddleware, async (req, res) => {
+  try {
+    const { entity, entityType } = req.params;
+    
+    const permissions = await prisma.permission.findMany({
+      where: {
+        entity,
+        entityType
+      },
+      include: {
+        role: true
+      }
+    });
+    
+    res.json(permissions);
+  } catch (error) {
+    console.error('Fehler beim Abrufen der Berechtigungen:', error);
+    res.status(500).json({ message: 'Interner Serverfehler' });
+  }
+});
+```
+
+#### Berechtigung erstellen
+
+```typescript
+// POST /api/permissions
+router.post('/permissions', authMiddleware, async (req, res) => {
+  try {
+    const { entity, entityType, accessLevel, roleId } = req.body;
+    
+    if (!entity || !accessLevel || !roleId) {
+      return res.status(400).json({ message: 'Entity, accessLevel und roleId sind erforderlich' });
+    }
+    
+    const permission = await prisma.permission.create({
+      data: {
+        entity,
+        entityType: entityType || 'page',
+        accessLevel,
+        roleId
+      }
+    });
+    
+    res.status(201).json(permission);
+  } catch (error) {
+    console.error('Fehler beim Erstellen der Berechtigung:', error);
+    res.status(500).json({ message: 'Interner Serverfehler' });
+  }
+});
+```

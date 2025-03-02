@@ -60,7 +60,8 @@ model UserRole {
 
 model Permission {
   id          Int      @id @default(autoincrement())
-  page        String
+  entity      String   // Früher 'page', jetzt für Seiten und Tabellen
+  entityType  String   @default("page") // "page" oder "table"
   accessLevel String
   role        Role     @relation(fields: [roleId], references: [id])
   roleId      Int
@@ -332,20 +333,31 @@ async function main() {
   await prisma.permission.createMany({
     skipDuplicates: true,
     data: [
-      { roleId: adminRole.id, page: 'dashboard', accessLevel: 'both' },
-      { roleId: adminRole.id, page: 'worktracker', accessLevel: 'both' },
-      { roleId: adminRole.id, page: 'requests', accessLevel: 'both' },
-      { roleId: adminRole.id, page: 'tasks', accessLevel: 'both' },
-      { roleId: adminRole.id, page: 'roles', accessLevel: 'both' },
-      { roleId: adminRole.id, page: 'settings', accessLevel: 'both' },
+      // Seitenberechtigungen für Admin
+      { roleId: adminRole.id, entity: 'dashboard', entityType: 'page', accessLevel: 'both' },
+      { roleId: adminRole.id, entity: 'worktracker', entityType: 'page', accessLevel: 'both' },
+      { roleId: adminRole.id, entity: 'requests', entityType: 'page', accessLevel: 'both' },
+      { roleId: adminRole.id, entity: 'tasks', entityType: 'page', accessLevel: 'both' },
+      { roleId: adminRole.id, entity: 'roles', entityType: 'page', accessLevel: 'both' },
+      { roleId: adminRole.id, entity: 'settings', entityType: 'page', accessLevel: 'both' },
       
-      { roleId: userRole.id, page: 'dashboard', accessLevel: 'read' },
-      { roleId: userRole.id, page: 'worktracker', accessLevel: 'both' },
-      { roleId: userRole.id, page: 'requests', accessLevel: 'read' },
-      { roleId: userRole.id, page: 'tasks', accessLevel: 'read' },
+      // Tabellenberechtigungen für Admin
+      { roleId: adminRole.id, entity: 'requests', entityType: 'table', accessLevel: 'both' },
+      { roleId: adminRole.id, entity: 'tasks', entityType: 'table', accessLevel: 'both' },
       
-      { roleId: hamburgerRole.id, page: 'dashboard', accessLevel: 'read' },
-      { roleId: hamburgerRole.id, page: 'worktracker', accessLevel: 'read' }
+      // Seitenberechtigungen für User
+      { roleId: userRole.id, entity: 'dashboard', entityType: 'page', accessLevel: 'read' },
+      { roleId: userRole.id, entity: 'worktracker', entityType: 'page', accessLevel: 'both' },
+      { roleId: userRole.id, entity: 'requests', entityType: 'page', accessLevel: 'read' },
+      { roleId: userRole.id, entity: 'tasks', entityType: 'page', accessLevel: 'read' },
+      
+      // Tabellenberechtigungen für User
+      { roleId: userRole.id, entity: 'requests', entityType: 'table', accessLevel: 'read' },
+      { roleId: userRole.id, entity: 'tasks', entityType: 'table', accessLevel: 'read' },
+      
+      // Seitenberechtigungen für Hamburger-Rolle
+      { roleId: hamburgerRole.id, entity: 'dashboard', entityType: 'page', accessLevel: 'read' },
+      { roleId: hamburgerRole.id, entity: 'worktracker', entityType: 'page', accessLevel: 'read' }
     ]
   });
 
@@ -543,6 +555,162 @@ export interface NotificationSettings {
          roleId?: number;
          userPermissions?: any[];
        }
+     }
+   }
+   ```
+
+## 8. Authentifizierung und Rollenverwaltung
+
+### 8.1 Authentifizierungs-Middleware
+
+Die Authentifizierung erfolgt über eine Middleware-Funktion, die JWT-Tokens validiert und Benutzerinformationen an den Request anhängt:
+
+```typescript
+// Middleware-Funktion für die Authentifizierung
+export const authMiddleware = async (req, res, next) => {
+  try {
+    // Token aus dem Authorization-Header extrahieren
+    const authHeader = req.headers.authorization;
+    if (!authHeader) return res.status(401).json({ message: 'Authentifizierung erforderlich' });
+    
+    const token = authHeader.split(' ')[1];
+    if (!token) return res.status(401).json({ message: 'Token erforderlich' });
+    
+    // Token validieren
+    const decoded = jwt.verify(token, SECRET_KEY);
+    
+    // Benutzer mit Rollen und Berechtigungen abrufen
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.userId },
+      include: { 
+        roles: { include: { role: { include: { permissions: true } } } },
+        settings: true
+      }
+    });
+    
+    if (!user) return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+    
+    // Benutzer an den Request anhängen
+    req.user = user;
+    
+    // Kompatibilitätsfelder für Legacy-Code
+    req.userId = String(user.id);
+    
+    // Aktive Rolle finden und setzen
+    const activeRole = user.roles.find(r => r.lastUsed);
+    if (activeRole) {
+      req.roleId = String(activeRole.role.id);
+    }
+    
+    next();
+  } catch (error) {
+    console.error('Fehler in der Auth-Middleware:', error);
+    // Fehlerbehandlung...
+  }
+};
+
+// Export unter beiden Namen für Kompatibilität
+export const authenticateToken = authMiddleware;
+export default authMiddleware;
+```
+
+> **Wichtig:** Sowohl `authMiddleware` als auch `authenticateToken` sind derselbe Export. Bei der Migration von alten Codeteilen muss sichergestellt werden, dass alle Imports korrekt sind.
+
+### 8.2 Rollenwechsel
+
+Der Rollenwechsel erfolgt über den Endpunkt `/api/users/switch-role` und wird wie folgt implementiert:
+
+```typescript
+// Aktive Rolle eines Benutzers wechseln
+export const switchUserRole = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    // Benutzer-ID aus Token-Info oder Request-Body
+    const userId = req.user?.id || parseInt(req.userId, 10);
+    const { roleId } = req.body;
+    
+    // Validierungen...
+    
+    // Prüfen, ob die Rolle dem Benutzer zugewiesen ist
+    const userRole = await prisma.userRole.findFirst({
+      where: { userId, roleId }
+    });
+    
+    if (!userRole) {
+      return res.status(404).json({
+        message: 'Diese Rolle ist dem Benutzer nicht zugewiesen'
+      });
+    }
+    
+    // Transaktion für den Rollenwechsel
+    await prisma.$transaction(async (tx) => {
+      // Alle Rollen des Benutzers auf lastUsed=false setzen
+      await tx.userRole.updateMany({
+        where: { userId },
+        data: { lastUsed: false }
+      });
+      
+      // Die ausgewählte Rolle auf lastUsed=true setzen
+      await tx.userRole.update({
+        where: { id: userRole.id },
+        data: { lastUsed: true }
+      });
+    });
+    
+    // Benutzer mit aktualisierten Rollen zurückgeben
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        roles: { include: { role: { include: { permissions: true } } } },
+        settings: true
+      }
+    });
+    
+    return res.json(updatedUser);
+  } catch (error) {
+    console.error('Error in switchUserRole:', error);
+    res.status(500).json({ message: 'Fehler beim Wechseln der Benutzerrolle' });
+  }
+};
+```
+
+### 8.3 Wichtige Hinweise für TypeScript-Imports
+
+Bei der Verwendung von TypeScript in Express-Projekten gibt es einige wichtige Punkte zu beachten:
+
+1. **Keine .ts-Suffixe in Imports:** Imports sollten keine `.ts`-Endungen enthalten:
+   ```typescript
+   // Richtig
+   import { authMiddleware } from '../middleware/auth';
+   
+   // Falsch - verursacht Fehler im Build
+   import { authMiddleware } from '../middleware/auth.ts';
+   ```
+
+2. **Kompatibilitätsexporte:** Wenn Funktionen unter mehreren Namen verwendet werden, sollten alle Namen exportiert werden:
+   ```typescript
+   // Beide Exporte für die gleiche Funktion
+   export const authMiddleware = async (req, res, next) => { /* ... */ };
+   export const authenticateToken = authMiddleware;
+   ```
+
+3. **Typenerweiterung für Request-Objekte:** TypeScript-Definitionen für Request-Objekte sollten korrekt erweitert werden:
+   ```typescript
+   declare global {
+     namespace Express {
+       interface Request {
+         user?: any;
+         userId: string;
+         roleId: string;
+       }
+     }
+   }
+   ```
+
+4. **TypeScript-Konfiguration:** In der `tsconfig.json` sollte folgende Option deaktiviert sein:
+   ```json
+   {
+     "compilerOptions": {
+       // "rewriteRelativeImportExtensions": false, // Nicht aktivieren!
      }
    }
    ```

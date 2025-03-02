@@ -153,7 +153,7 @@ const Profile: React.FC = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
+      <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center">
             <UserCircleIcon className="h-6 w-6 mr-2 dark:text-white" />

@@ -4,6 +4,7 @@ import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTheme } from '../contexts/ThemeContext.tsx';
 import { Cog6ToothIcon, BellIcon, UserCircleIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
 import NotificationSettingsComponent from '../components/NotificationSettings.tsx';
+import { API_URL } from '../config/api.ts';
 
 const Settings: React.FC = () => {
     const { user } = useAuth();
@@ -37,27 +38,23 @@ const Settings: React.FC = () => {
             setSelectedFile(file);
             setPreviewUrl(URL.createObjectURL(file));
             setError(null);
+            
+            // Automatisch nach Auswahl hochladen
+            uploadFile(file);
         }
     };
-
-    // Tab-Wechsel Handler - Fehler beim Wechsel zurücksetzen
-    const handleTabChange = (tab: 'personal' | 'notifications' | 'system') => {
-        setActiveTab(tab);
-        setError(null);
-    };
-
-    const handleUpload = async () => {
-        if (!selectedFile) return;
-
+    
+    // Separate uploadFile Funktion für bessere Übersichtlichkeit
+    const uploadFile = async (file: File) => {
         setIsUploading(true);
         setError(null);
 
         const formData = new FormData();
-        formData.append('logo', selectedFile);
+        formData.append('logo', file);
 
         try {
             console.log('Starting upload...');
-            console.log('Selected file:', selectedFile);
+            console.log('Selected file:', file);
             const token = localStorage.getItem('token');
             console.log('Token verfügbar:', !!token);
 
@@ -67,11 +64,11 @@ const Settings: React.FC = () => {
                 headers['Authorization'] = `Bearer ${token}`;
             }
 
-            const response = await fetch('http://localhost:5000/api/settings/logo', {
+            const response = await fetch(`${API_URL}/settings/logo`, {
                 method: 'POST',
                 body: formData,
-                headers,
-                credentials: 'include'
+                headers
+                // 'credentials: include' entfernt, um CORS-Probleme zu vermeiden
             });
 
             console.log('Response Status:', response.status);
@@ -86,6 +83,22 @@ const Settings: React.FC = () => {
                 const responseData = JSON.parse(responseText);
                 console.log('Response Data:', responseData);
                 alert('Logo erfolgreich hochgeladen');
+                
+                // Favicon nach Upload aktualisieren
+                const faviconLink = document.getElementById('favicon') as HTMLLinkElement;
+                if (faviconLink) {
+                    // Füge einen Zeitstempel hinzu, um das Caching zu verhindern
+                    const timestamp = new Date().getTime();
+                    try {
+                        const base64Response = await fetch(`${API_URL}/settings/logo/base64`);
+                        if (base64Response.ok) {
+                            const data = await base64Response.json();
+                            faviconLink.href = data.logo;
+                        }
+                    } catch (error) {
+                        console.error('Favicon konnte nicht aktualisiert werden:', error);
+                    }
+                }
             } catch (parseError) {
                 console.error('Fehler beim Parsen der Antwort:', parseError);
                 throw new Error('Ungültiges Antwortformat vom Server');
@@ -102,6 +115,12 @@ const Settings: React.FC = () => {
         }
     };
 
+    // Tab-Wechsel Handler - Fehler beim Wechsel zurücksetzen
+    const handleTabChange = (tab: 'personal' | 'notifications' | 'system') => {
+        setActiveTab(tab);
+        setError(null);
+    };
+
     // Wenn kein Benutzer oder Berechtigungen geladen werden
     if (!user) {
         return <div>Laden...</div>;
@@ -109,7 +128,7 @@ const Settings: React.FC = () => {
 
     return (
         <div className="p-6">
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
                 {/* Header mit Icon */}
                 <div className="flex items-center mb-6">
                     <Cog6ToothIcon className="h-6 w-6 mr-2" />
@@ -186,34 +205,38 @@ const Settings: React.FC = () => {
 
                 {activeTab === 'system' && (
                     <div className="space-y-4">
-                        <div>
-                            <h3 className="text-lg font-medium mb-2 dark:text-white">Logo hochladen</h3>
-                            <p className="text-gray-600 dark:text-gray-400 mb-4">Laden Sie ein Logo für Ihr Unternehmen hoch</p>
-                        </div>
-                        
-                        <div className="flex items-center space-x-4">
-                            <input
-                                type="file"
-                                accept="image/png,image/jpeg"
-                                onChange={handleFileSelect}
-                                className="block w-full text-sm text-gray-500 dark:text-gray-400
-                                    file:mr-4 file:py-2 file:px-4
-                                    file:rounded-full file:border-0
-                                    file:text-sm file:font-semibold
-                                    file:bg-blue-50 file:text-blue-700
-                                    dark:file:bg-blue-900 dark:file:text-blue-300
-                                    hover:file:bg-blue-100 dark:hover:file:bg-blue-800"
-                            />
-                            <button
-                                onClick={handleUpload}
-                                disabled={!selectedFile || isUploading}
-                                className={`px-4 py-2 rounded-md text-white font-medium
-                                    ${!selectedFile || isUploading
-                                        ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
-                                        : 'bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800'}`}
-                            >
-                                {isUploading ? 'Wird hochgeladen...' : 'Hochladen'}
-                            </button>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h3 className="text-lg font-medium mb-2 dark:text-white">Logo hochladen</h3>
+                                <p className="text-gray-600 dark:text-gray-400">Laden Sie ein Logo für Ihr Unternehmen hoch</p>
+                            </div>
+                            <div>
+                                <div className="group relative">
+                                    <input
+                                        type="file"
+                                        accept="image/png,image/jpeg"
+                                        onChange={handleFileSelect}
+                                        className={`block text-sm text-gray-500 dark:text-gray-400
+                                            file:mr-4 file:py-2 file:px-4
+                                            file:rounded-full file:border-0
+                                            file:text-sm file:font-semibold
+                                            file:bg-blue-50 file:text-blue-700
+                                            dark:file:bg-blue-900 dark:file:text-blue-300
+                                            hover:file:bg-blue-100 dark:hover:file:bg-blue-800
+                                            ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        disabled={isUploading}
+                                    />
+                                    <div className="absolute left-0 bottom-[calc(100%+0.5rem)] px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-normal max-w-xs pointer-events-none z-50">
+                                        <p>Erlaubte Dateitypen: PNG, JPEG</p>
+                                        <p>Maximale Dateigröße: 5MB</p>
+                                    </div>
+                                </div>
+                                {isUploading && (
+                                    <div className="text-blue-600 dark:text-blue-400 text-sm">
+                                        Wird hochgeladen...
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {error && (
@@ -232,11 +255,6 @@ const Settings: React.FC = () => {
                                 />
                             </div>
                         )}
-
-                        <div className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-                            <p>Erlaubte Dateitypen: PNG, JPEG</p>
-                            <p>Maximale Dateigröße: 5MB</p>
-                        </div>
                     </div>
                 )}
             </div>

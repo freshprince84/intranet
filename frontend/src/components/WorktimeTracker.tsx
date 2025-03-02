@@ -364,7 +364,7 @@ const WorktimeTracker: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 mb-6">
                 <div className="flex justify-center items-center h-32">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
                 </div>
@@ -373,7 +373,7 @@ const WorktimeTracker: React.FC = () => {
     }
 
     return (
-        <div className="bg-white rounded-lg shadow p-6 mb-6">
+        <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 mb-6">
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold flex items-center">
                     <ClockIcon className="h-6 w-6 mr-2" />
@@ -800,7 +800,7 @@ const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 w-full max-w-4xl max-h-[90vh] flex flex-col">
                 <div className="p-4 border-b flex items-center justify-between">
                     <h2 className="text-xl font-semibold">
                         Zeiteinträge für {formatDate(selectedDate)}

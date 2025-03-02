@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth.tsx';
+import { usePermissions } from '../hooks/usePermissions.ts';
 import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
@@ -38,6 +39,7 @@ interface SortConfig {
 
 const Worktracker: React.FC = () => {
     const { user } = useAuth();
+    const { hasPermission } = usePermissions();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -107,7 +109,7 @@ const Worktracker: React.FC = () => {
                 return;
             }
 
-            await axios.put(API_ENDPOINTS.TASKS.DETAIL(taskId), 
+            await axios.put(API_ENDPOINTS.TASKS.BY_ID(taskId), 
                 { status: newStatus },
                 {
                     headers: {
@@ -141,8 +143,20 @@ const Worktracker: React.FC = () => {
         return task.qualityControl?.id === user?.id;
     };
 
+    const handleSort = (key: SortConfig['key']) => {
+        setSortConfig(current => ({
+            key,
+            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+        }));
+    };
+
     const renderStatusButtons = (task: Task): JSX.Element[] => {
         const buttons: JSX.Element[] = [];
+        
+        // Prüfe, ob der Benutzer Schreibberechtigungen für Tasks hat
+        const canModifyTasks = hasPermission('tasks', 'write', 'table');
+        
+        if (!canModifyTasks) return buttons;
         
         // Zurück-Button (links)
         if (task.status === 'in_progress' && isResponsibleForTask(task)) {
@@ -253,7 +267,7 @@ const Worktracker: React.FC = () => {
         });
 
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen">
             <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
                 {/* Zeiterfassung */}
                 <div className="mb-8">
@@ -261,7 +275,7 @@ const Worktracker: React.FC = () => {
                 </div>
 
                 {/* Tasks */}
-                <div className="bg-white rounded-lg shadow p-6">
+                <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full">
                     <div className="flex items-center mb-4">
                         <CheckCircleIcon className="h-6 w-6 mr-2" />
                         <h2 className="text-xl font-semibold">To Do's</h2>
@@ -288,14 +302,17 @@ const Worktracker: React.FC = () => {
                     <div className="mb-4">
                         <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
                             <div className="flex flex-1 gap-4 items-center">
-                                <button
-                                    onClick={() => setIsCreateModalOpen(true)}
-                                    className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
-                                    title="Neue Aufgabe erstellen"
-                                    aria-label="Neue Aufgabe erstellen"
-                                >
-                                    <PlusIcon className="h-4 w-4" />
-                                </button>
+                                {hasPermission('tasks', 'write', 'table') && (
+                                    <button
+                                        onClick={() => setIsCreateModalOpen(true)}
+                                        className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
+                                        style={{ width: '30.19px', height: '30.19px' }}
+                                        title="Neue Aufgabe erstellen"
+                                        aria-label="Neue Aufgabe erstellen"
+                                    >
+                                        <PlusIcon className="h-4 w-4" />
+                                    </button>
+                                )}
                                 <input
                                     type="text"
                                     placeholder="Suchen..."
@@ -326,23 +343,41 @@ const Worktracker: React.FC = () => {
                         <table className="min-w-full divide-y divide-gray-200">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Titel
+                                    <th 
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleSort('title')}
+                                    >
+                                        Titel {sortConfig.key === 'title' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Status
+                                    <th 
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleSort('status')}
+                                    >
+                                        Status {sortConfig.key === 'status' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Verantwortlich
+                                    <th 
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleSort('responsible.firstName')}
+                                    >
+                                        Verantwortlich {sortConfig.key === 'responsible.firstName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Qualitätskontrolle
+                                    <th 
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleSort('qualityControl.firstName')}
+                                    >
+                                        Qualitätskontrolle {sortConfig.key === 'qualityControl.firstName' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Niederlassung
+                                    <th 
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleSort('branch.name')}
+                                    >
+                                        Niederlassung {sortConfig.key === 'branch.name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Fälligkeit
+                                    <th 
+                                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                                        onClick={() => handleSort('dueDate')}
+                                    >
+                                        Fälligkeit {sortConfig.key === 'dueDate' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Aktionen
@@ -378,12 +413,14 @@ const Worktracker: React.FC = () => {
                                         </td>
                                         <td className="px-6 py-2 whitespace-nowrap text-right text-sm font-medium">
                                             <div className="flex justify-end space-x-2">
-                                                <button
-                                                    onClick={() => handleEditClick(task)}
-                                                    className="text-blue-600 hover:text-blue-900"
-                                                >
-                                                    <PencilIcon className="h-5 w-5" />
-                                                </button>
+                                                {hasPermission('tasks', 'write', 'table') && (
+                                                    <button
+                                                        onClick={() => handleEditClick(task)}
+                                                        className="text-blue-600 hover:text-blue-900"
+                                                    >
+                                                        <PencilIcon className="h-5 w-5" />
+                                                    </button>
+                                                )}
                                                 {renderStatusButtons(task)}
                                             </div>
                                         </td>

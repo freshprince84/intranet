@@ -14,6 +14,8 @@ const RoleManagement: React.FC = () => {
         return <div className="p-4 text-red-500">Sie haben keine Berechtigung, diese Seite anzuzeigen.</div>;
     }
 
+    const canWriteRoles = hasPermission('roles', 'write') || hasPermission('roles', 'both');
+
     const handleError = (error: string) => {
         setErrorMessage(error);
         // Optional: Automatisches Ausblenden nach einigen Sekunden
@@ -21,7 +23,7 @@ const RoleManagement: React.FC = () => {
     };
 
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
             <h1 className="text-2xl font-bold mb-6 dark:text-white">Rollenverwaltung</h1>
             
             {errorMessage && (
@@ -30,7 +32,7 @@ const RoleManagement: React.FC = () => {
                 </div>
             )}
             
-            <RoleManagementTab onError={handleError} />
+            <RoleManagementTab onError={handleError} readOnly={!canWriteRoles} />
         </div>
     );
 };

@@ -124,7 +124,7 @@ const WorktimeList: React.FC = () => {
     if (error) return <div className="p-4 text-red-600">{error}</div>;
 
     return (
-        <div className="bg-white rounded-lg shadow">
+        <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700">
             <div className="p-4 border-b">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold">Zeiteinträge</h2>

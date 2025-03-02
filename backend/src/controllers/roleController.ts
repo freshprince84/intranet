@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
+import { createNotificationIfEnabled } from './notificationController';
 
 const prisma = new PrismaClient();
 
@@ -8,7 +9,8 @@ interface RoleParams {
 }
 
 interface Permission {
-    page: string;
+    entity: string;
+    entityType: string;
     accessLevel: string;
 }
 
@@ -107,6 +109,13 @@ export const createRole = async (req: Request<{}, {}, CreateRoleBody>, res: Resp
             });
         }
 
+        console.log('Berechtigungsdetails:');
+        permissions.forEach((perm, idx) => {
+            console.log(`Permission ${idx+1}:`, JSON.stringify(perm));
+            console.log(`  - Schlüssel: ${Object.keys(perm).join(', ')}`);
+            console.log(`  - entity: ${perm.entity}, entityType: ${perm.entityType || 'nicht angegeben'}, accessLevel: ${perm.accessLevel}`);
+        });
+
         try {
             const role = await prisma.role.create({
                 data: {
@@ -114,7 +123,8 @@ export const createRole = async (req: Request<{}, {}, CreateRoleBody>, res: Resp
                     description,
                     permissions: {
                         create: permissions.map(permission => ({
-                            page: permission.page,
+                            entity: permission.entity,
+                            entityType: permission.entityType || 'page',
                             accessLevel: permission.accessLevel
                         }))
                     }
@@ -123,6 +133,40 @@ export const createRole = async (req: Request<{}, {}, CreateRoleBody>, res: Resp
                     permissions: true
                 }
             });
+            
+            console.log('Neue Rolle wurde erstellt, überprüfe Permissions:');
+            if (role.permissions.length === 0) {
+                console.error('WARNUNG: Rolle wurde erstellt, aber keine Berechtigungen wurden angelegt!');
+            } else {
+                console.log(`Rolle hat ${role.permissions.length} Berechtigungen:`);
+                role.permissions.forEach((perm, idx) => {
+                    console.log(`Gespeicherte Permission ${idx+1}:`, JSON.stringify(perm));
+                });
+            }
+            
+            // Benachrichtigung für Administratoren senden
+            const admins = await prisma.user.findMany({
+                where: {
+                    roles: {
+                        some: {
+                            role: {
+                                name: 'Admin'
+                            }
+                        }
+                    }
+                }
+            });
+
+            for (const admin of admins) {
+                await createNotificationIfEnabled({
+                    userId: admin.id,
+                    title: 'Neue Rolle erstellt',
+                    message: `Eine neue Rolle "${name}" wurde erstellt.`,
+                    type: NotificationType.role,
+                    relatedEntityId: role.id,
+                    relatedEntityType: 'create'
+                });
+            }
             
             console.log('Neue Rolle erfolgreich erstellt:', role);
             res.status(201).json(role);
@@ -173,6 +217,12 @@ export const updateRole = async (req: Request<RoleParams, {}, UpdateRoleBody>, r
 
         console.log(`Aktualisierung für Rolle mit ID ${roleId} begonnen...`);
         console.log('Neue Daten:', { name, description, permissions: permissions.length });
+        
+        // Detaillierte Ausgabe der Berechtigungen
+        console.log('Detaillierte Berechtigungen:');
+        permissions.forEach((perm, index) => {
+            console.log(`Permission ${index + 1}:`, JSON.stringify(perm));
+        });
 
         // Transaktion verwenden, um sicherzustellen, dass alle Schritte erfolgreich sind oder komplett zurückgerollt werden
         const updatedRole = await prisma.$transaction(async (tx) => {
@@ -202,7 +252,8 @@ export const updateRole = async (req: Request<RoleParams, {}, UpdateRoleBody>, r
                     description,
                     permissions: {
                         create: permissions.map(permission => ({
-                            page: permission.page,
+                            entity: permission.entity,
+                            entityType: permission.entityType || 'page',
                             accessLevel: permission.accessLevel
                         }))
                     }
@@ -214,8 +265,68 @@ export const updateRole = async (req: Request<RoleParams, {}, UpdateRoleBody>, r
             });
 
             console.log(`Rolle '${role.name}' erfolgreich aktualisiert mit ${role.permissions.length} neuen Berechtigungen`);
+            
+            // Überprüfe die gespeicherten Berechtigungen
+            if (role.permissions.length === 0) {
+                console.error('WARNUNG: Rolle wurde aktualisiert, aber keine Berechtigungen wurden angelegt!');
+            } else {
+                console.log('Details der gespeicherten Berechtigungen:');
+                role.permissions.forEach((perm, idx) => {
+                    console.log(`Gespeicherte Permission ${idx+1}:`, JSON.stringify(perm));
+                });
+            }
+            
             return role;
         });
+
+        // Benachrichtigung für Administratoren senden
+        const admins = await prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                }
+            }
+        });
+
+        for (const admin of admins) {
+            await createNotificationIfEnabled({
+                userId: admin.id,
+                title: 'Rolle aktualisiert',
+                message: `Die Rolle "${updatedRole.name}" wurde aktualisiert.`,
+                type: NotificationType.role,
+                relatedEntityId: updatedRole.id,
+                relatedEntityType: 'update'
+            });
+        }
+
+        // Benachrichtigung für Benutzer mit dieser Rolle senden
+        const usersWithRole = await prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        roleId: roleId
+                    }
+                }
+            }
+        });
+
+        for (const user of usersWithRole) {
+            // Nicht an Administratoren senden, die bereits benachrichtigt wurden
+            if (!admins.some(admin => admin.id === user.id)) {
+                await createNotificationIfEnabled({
+                    userId: user.id,
+                    title: 'Deine Rolle wurde aktualisiert',
+                    message: `Die Rolle "${updatedRole.name}", die dir zugewiesen ist, wurde aktualisiert.`,
+                    type: NotificationType.role,
+                    relatedEntityId: updatedRole.id,
+                    relatedEntityType: 'update'
+                });
+            }
+        }
 
         res.json(updatedRole);
     } catch (error) {
@@ -249,125 +360,98 @@ export const updateRole = async (req: Request<RoleParams, {}, UpdateRoleBody>, r
 export const deleteRole = async (req: Request<RoleParams>, res: Response) => {
     try {
         const roleId = parseInt(req.params.id, 10);
-        
         if (isNaN(roleId)) {
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
         }
 
-        // Verhindere das Löschen der Standardrolle 999
-        if (roleId === 999) {
-            return res.status(403).json({ 
-                message: 'Die Standardrolle (ID 999) kann nicht gelöscht werden' 
-            });
-        }
-        
-        await prisma.$transaction(async (tx) => {
-            // 1. Prüfe, ob die Rolle existiert
-            const role = await tx.role.findUnique({
-                where: { id: roleId },
-                include: {
-                    users: true,
-                    permissions: true
-                }
-            });
-
-            if (!role) {
-                throw new Error(`Rolle mit ID ${roleId} wurde nicht gefunden`);
+        // Rolle vor dem Löschen abrufen
+        const role = await prisma.role.findUnique({
+            where: { id: roleId },
+            include: {
+                users: true
             }
-
-            console.log(`Rolle gefunden: ${role.name}, ${role.users.length} Benutzerverknüpfungen, ${role.permissions.length} Berechtigungen`);
-
-            // 2. Für jeden Benutzer mit dieser Rolle prüfen, ob es die lastUsed-Rolle ist
-            if (role.users.length > 0) {
-                const usersWithThisRoleAsLastUsed = await tx.userRole.findMany({
-                    where: { 
-                        roleId: roleId,
-                        lastUsed: true
-                    },
-                    include: {
-                        user: true
-                    }
-                });
-                
-                console.log(`${usersWithThisRoleAsLastUsed.length} Benutzer haben diese Rolle als lastUsed markiert`);
-                
-                // Für jeden Benutzer, der diese Rolle als lastUsed hat, die nächsthöhere ID zuweisen
-                for (const userRole of usersWithThisRoleAsLastUsed) {
-                    // Finde alle anderen Rollen dieses Benutzers
-                    const otherUserRoles = await tx.userRole.findMany({
-                        where: {
-                            userId: userRole.userId,
-                            roleId: {
-                                not: roleId
-                            }
-                        },
-                        orderBy: {
-                            roleId: 'asc'
-                        },
-                        include: {
-                            role: true
-                        }
-                    });
-                    
-                    console.log(`Benutzer ${userRole.userId} hat ${otherUserRoles.length} andere Rollen`);
-                    
-                    if (otherUserRoles.length > 0) {
-                        // Finde Rollen mit höherer ID als die gelöschte
-                        const higherRoles = otherUserRoles.filter(ur => ur.roleId > roleId);
-                        
-                        // Wenn keine höhere ID gefunden wurde, nimm die erste verfügbare Rolle
-                        const replacementRole = higherRoles.length > 0 ? higherRoles[0] : otherUserRoles[0];
-                        
-                        // Markiere die Ersatzrolle als lastUsed
-                        await tx.userRole.update({
-                            where: {
-                                id: replacementRole.id
-                            },
-                            data: {
-                                lastUsed: true
-                            }
-                        });
-                        
-                        console.log(`Benutzer ${userRole.userId} erhält Rolle ${replacementRole.roleId} (${replacementRole.role.name}) als neue lastUsed-Rolle`);
-                    } else {
-                        console.log(`Warnung: Benutzer ${userRole.userId} hat keine anderen Rollen, nach dem Löschen keine aktive Rolle mehr`);
-                    }
-                }
-            }
-
-            // 3. Lösche alle Benutzer-Rollen-Verknüpfungen
-            const deletedUserRoles = await tx.userRole.deleteMany({
-                where: { roleId: roleId }
-            });
-            console.log(`${deletedUserRoles.count} Benutzer-Rollen-Verknüpfungen gelöscht`);
-
-            // 4. Lösche alle Berechtigungen der Rolle
-            const deletedPermissions = await tx.permission.deleteMany({
-                where: { roleId: roleId }
-            });
-            console.log(`${deletedPermissions.count} Berechtigungen gelöscht`);
-
-            // 5. Lösche die Rolle selbst
-            const deletedRole = await tx.role.delete({
-                where: { id: roleId }
-            });
-            console.log(`Rolle '${deletedRole.name}' erfolgreich gelöscht`);
         });
 
-        res.json({ message: 'Rolle erfolgreich gelöscht' });
+        if (!role) {
+            return res.status(404).json({ message: 'Rolle nicht gefunden' });
+        }
+
+        // Benutzer mit dieser Rolle abrufen
+        const usersWithRole = await prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        roleId: roleId
+                    }
+                }
+            }
+        });
+
+        // Transaktion für das Löschen verwenden
+        await prisma.$transaction([
+            // 1. Lösche alle Berechtigungen dieser Rolle
+            prisma.permission.deleteMany({
+                where: { roleId: roleId }
+            }),
+            // 2. Lösche alle Benutzer-Rollen-Verknüpfungen
+            prisma.userRole.deleteMany({
+                where: { roleId: roleId }
+            }),
+            // 3. Lösche die Rolle selbst
+            prisma.role.delete({
+                where: { id: roleId }
+            })
+        ]);
+
+        // Benachrichtigung für Administratoren senden
+        const admins = await prisma.user.findMany({
+            where: {
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                }
+            }
+        });
+
+        for (const admin of admins) {
+            await createNotificationIfEnabled({
+                userId: admin.id,
+                title: 'Rolle gelöscht',
+                message: `Die Rolle "${role.name}" wurde gelöscht.`,
+                type: NotificationType.role,
+                relatedEntityId: roleId,
+                relatedEntityType: 'delete'
+            });
+        }
+
+        // Benachrichtigung für Benutzer mit dieser Rolle senden
+        for (const user of usersWithRole) {
+            // Nicht an Administratoren senden, die bereits benachrichtigt wurden
+            if (!admins.some(admin => admin.id === user.id)) {
+                await createNotificationIfEnabled({
+                    userId: user.id,
+                    title: 'Rolle entfernt',
+                    message: `Die Rolle "${role.name}", die dir zugewiesen war, wurde gelöscht.`,
+                    type: NotificationType.role,
+                    relatedEntityId: roleId,
+                    relatedEntityType: 'delete'
+                });
+            }
+        }
+
+        res.status(204).send();
     } catch (error) {
         console.error('Error in deleteRole:', error);
         if (error instanceof Prisma.PrismaClientKnownRequestError) {
-            // Spezifische Fehlerbehandlung für Prisma-Fehler
             let errorMessage = 'Fehler beim Löschen der Rolle';
-
-            // Behandlung von Foreign-Key-Fehlern
-            if (error.code === 'P2003') {
-                errorMessage = 'Die Rolle kann nicht gelöscht werden, da sie noch mit Benutzern verknüpft ist';
-            } else if (error.code === 'P2025') {
-                errorMessage = 'Rolle wurde nicht gefunden oder bereits gelöscht';
+            
+            if (error.code === 'P2025') {
+                errorMessage = 'Rolle wurde nicht gefunden';
             }
-
+            
             res.status(400).json({ 
                 message: errorMessage,
                 code: error.code,
