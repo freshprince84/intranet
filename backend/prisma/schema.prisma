@@ -17,23 +17,33 @@ model User {
   bankDetails              String?
   contract                 String?
   salary                   Float?
+  normalWorkingHours       Float                     @default(7.6)
+  approvedOvertimeHours    Float                     @default(0)
+  country                  String                    @default("CO")
+  language                 String                    @default("es")
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   email                    String                    @unique
+  payrollCountry           String                    @default("CH")
+  hourlyRate               Decimal?
+  contractType             String?
+  monthlySalary            Float?
+  carticlesCreated         CerebroCarticle[]         @relation("CarticleCreator")
+  carticlesUpdated         CerebroCarticle[]         @relation("CarticleUpdater")
+  externalLinks            CerebroExternalLink[]
+  cerebroMedia             CerebroMedia[]
+  payrolls                 EmployeePayroll[]
   notifications            Notification[]
   requestsRequester        Request[]                 @relation("requester")
   requestsResponsible      Request[]                 @relation("responsible")
   settings                 Settings?
-  tableSettings            UserTableSettings[]
   tasksQualityControl      Task[]                    @relation("quality_control")
   tasksResponsible         Task[]                    @relation("responsible")
   userNotificationSettings UserNotificationSettings?
   roles                    UserRole[]
+  tableSettings            UserTableSettings[]
   branches                 UsersBranches[]
   workTimes                WorkTime[]
-  payrollCountry           String                    @default("CH")
-  hourlyRate               Decimal?
-  payrolls                 EmployeePayroll[]
 }
 
 model Role {
@@ -60,8 +70,8 @@ model UserRole {
 model Permission {
   id          Int      @id @default(autoincrement())
   roleId      Int
-  entity      String   // Früher 'page', jetzt für Seiten und Tabellen
-  entityType  String   @default("page") // "page" oder "table"
+  entity      String
+  entityType  String   @default("page")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   accessLevel String
@@ -97,6 +107,7 @@ model WorkTime {
   branchId  Int
   startTime DateTime
   endTime   DateTime?
+  timezone  String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   branch    Branch    @relation(fields: [branchId], references: [id])
@@ -104,36 +115,38 @@ model WorkTime {
 }
 
 model Task {
-  id               Int        @id @default(autoincrement())
+  id               Int                   @id @default(autoincrement())
   title            String
   description      String?
-  status           TaskStatus @default(open)
+  status           TaskStatus            @default(open)
   responsibleId    Int
   qualityControlId Int
   branchId         Int
   dueDate          DateTime?
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
-  branch           Branch     @relation(fields: [branchId], references: [id])
-  qualityControl   User       @relation("quality_control", fields: [qualityControlId], references: [id])
-  responsible      User       @relation("responsible", fields: [responsibleId], references: [id])
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  branch           Branch                @relation(fields: [branchId], references: [id])
+  qualityControl   User                  @relation("quality_control", fields: [qualityControlId], references: [id])
+  responsible      User                  @relation("responsible", fields: [responsibleId], references: [id])
+  carticles        TaskCerebroCarticle[]
 }
 
 model Request {
-  id            Int           @id @default(autoincrement())
+  id            Int                      @id @default(autoincrement())
   title         String
   description   String?
-  status        RequestStatus @default(approval)
+  status        RequestStatus            @default(approval)
   requesterId   Int
   responsibleId Int
   branchId      Int
   dueDate       DateTime?
-  createTodo    Boolean       @default(false)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  branch        Branch        @relation(fields: [branchId], references: [id])
-  requester     User          @relation("requester", fields: [requesterId], references: [id])
-  responsible   User          @relation("responsible", fields: [responsibleId], references: [id])
+  createTodo    Boolean                  @default(false)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  branch        Branch                   @relation(fields: [branchId], references: [id])
+  requester     User                     @relation("requester", fields: [requesterId], references: [id])
+  responsible   User                     @relation("responsible", fields: [responsibleId], references: [id])
+  carticles     RequestCerebroCarticle[]
 }
 
 model Settings {
@@ -148,14 +161,14 @@ model Settings {
 }
 
 model UserTableSettings {
-  id           Int      @id @default(autoincrement())
-  userId       Int
-  tableId      String   // Identifier für die Tabelle (z.B. "dashboard_requests", "requests", "tasks")
-  columnOrder  String   // JSON-String mit der Reihenfolge der Spalten
-  hiddenColumns String   // JSON-String mit versteckten Spalten
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  user         User     @relation(fields: [userId], references: [id])
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  tableId       String
+  columnOrder   String
+  hiddenColumns String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, tableId])
 }
@@ -171,6 +184,8 @@ model Notification {
   relatedEntityType String?
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
+  carticleId        Int?
+  carticle          CerebroCarticle? @relation(fields: [carticleId], references: [id])
   user              User             @relation(fields: [userId], references: [id])
 }
 
@@ -192,8 +207,15 @@ model NotificationSettings {
   roleDelete          Boolean  @default(true)
   worktimeStart       Boolean  @default(true)
   worktimeStop        Boolean  @default(true)
+  worktimeAutoStop    Boolean  @default(true)
+  worktimeManagerStop Boolean  @default(true)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  carticleCreate      Boolean  @default(true)
+  carticleDelete      Boolean  @default(true)
+  carticleLink        Boolean  @default(true)
+  carticleMention     Boolean  @default(true)
+  carticleUpdate      Boolean  @default(true)
 }
 
 model UserNotificationSettings {
@@ -215,28 +237,123 @@ model UserNotificationSettings {
   roleDelete          Boolean?
   worktimeStart       Boolean?
   worktimeStop        Boolean?
+  worktimeAutoStop    Boolean? @default(true)
+  worktimeManagerStop Boolean?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+  carticleCreate      Boolean?
+  carticleDelete      Boolean?
+  carticleLink        Boolean?
+  carticleMention     Boolean?
+  carticleUpdate      Boolean?
   user                User     @relation(fields: [userId], references: [id])
 }
 
 model EmployeePayroll {
-  id              Int      @id @default(autoincrement())
-  userId          Int
-  user            User     @relation(fields: [userId], references: [id])
-  periodStart     DateTime
-  periodEnd       DateTime
-  regularHours    Float
-  overtimeHours   Float
-  nightHours      Float
-  holidayHours    Float
-  hourlyRate      Decimal
-  grossPay        Decimal
-  socialSecurity  Decimal
-  taxes           Decimal
-  netPay          Decimal
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                             Int      @id @default(autoincrement())
+  userId                         Int
+  periodStart                    DateTime
+  periodEnd                      DateTime
+  regularHours                   Float
+  overtimeHours                  Float
+  nightHours                     Float
+  holidayHours                   Float
+  sundayHolidayHours             Float    @default(0)
+  overtimeNightHours             Float    @default(0)
+  overtimeSundayHolidayHours     Float    @default(0)
+  overtimeNightSundayHolidayHours Float   @default(0)
+  hourlyRate                     Decimal
+  grossPay                       Decimal
+  socialSecurity                 Decimal
+  taxes                          Decimal
+  netPay                         Decimal
+  deductions                     Decimal  @default(0)
+  currency                       String   @default("CHF")
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
+  user                           User     @relation(fields: [userId], references: [id])
+}
+
+model CerebroCarticle {
+  id            Int                      @id @default(autoincrement())
+  title         String
+  content       String?
+  slug          String                   @unique
+  parentId      Int?
+  createdById   Int
+  updatedById   Int?
+  isPublished   Boolean                  @default(false)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  createdBy     User                     @relation("CarticleCreator", fields: [createdById], references: [id])
+  parent        CerebroCarticle?         @relation("Hierarchy", fields: [parentId], references: [id])
+  children      CerebroCarticle[]        @relation("Hierarchy")
+  updatedBy     User?                    @relation("CarticleUpdater", fields: [updatedById], references: [id])
+  externalLinks CerebroExternalLink[]
+  media         CerebroMedia[]
+  notifications Notification[]
+  requests      RequestCerebroCarticle[]
+  tasks         TaskCerebroCarticle[]
+  tags          CerebroTag[]             @relation("CerebroCarticleToCerebroTag")
+}
+
+model TaskCerebroCarticle {
+  id         Int             @id @default(autoincrement())
+  taskId     Int
+  carticleId Int
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  carticle   CerebroCarticle @relation(fields: [carticleId], references: [id])
+  task       Task            @relation(fields: [taskId], references: [id])
+
+  @@unique([taskId, carticleId])
+}
+
+model RequestCerebroCarticle {
+  id         Int             @id @default(autoincrement())
+  requestId  Int
+  carticleId Int
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  carticle   CerebroCarticle @relation(fields: [carticleId], references: [id])
+  request    Request         @relation(fields: [requestId], references: [id])
+
+  @@unique([requestId, carticleId])
+}
+
+model CerebroMedia {
+  id          Int             @id @default(autoincrement())
+  path        String
+  filename    String
+  mimetype    String
+  size        Int
+  carticleId  Int
+  createdById Int
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  carticle    CerebroCarticle @relation(fields: [carticleId], references: [id])
+  createdBy   User            @relation(fields: [createdById], references: [id])
+}
+
+model CerebroExternalLink {
+  id          Int             @id @default(autoincrement())
+  url         String
+  title       String?
+  type        String
+  carticleId  Int
+  createdById Int
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  carticle    CerebroCarticle @relation(fields: [carticleId], references: [id])
+  createdBy   User            @relation(fields: [createdById], references: [id])
+}
+
+model CerebroTag {
+  id        Int               @id @default(autoincrement())
+  name      String            @unique
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  carticles CerebroCarticle[] @relation("CerebroCarticleToCerebroTag")
 }
 
 enum TaskStatus {
@@ -268,4 +385,6 @@ enum NotificationType {
   role
   worktime
   system
+  cerebro
+  worktime_manager_stop
 }

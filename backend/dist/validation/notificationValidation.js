@@ -10,6 +10,8 @@ var NotificationType;
     NotificationType["role"] = "role";
     NotificationType["worktime"] = "worktime";
     NotificationType["system"] = "system";
+    NotificationType["cerebro"] = "cerebro";
+    NotificationType["worktime_manager_stop"] = "worktime_manager_stop";
 })(NotificationType || (exports.NotificationType = NotificationType = {}));
 // Validierung für Benachrichtigungen
 const validateNotification = (data) => {
@@ -55,7 +57,8 @@ const validateNotificationSettings = (data) => {
         'requestCreate', 'requestUpdate', 'requestDelete', 'requestStatusChange',
         'userCreate', 'userUpdate', 'userDelete',
         'roleCreate', 'roleUpdate', 'roleDelete',
-        'worktimeStart', 'worktimeStop'
+        'worktimeStart', 'worktimeStop', 'worktimeAutoStop', 'worktimeManagerStop',
+        'carticleCreate', 'carticleUpdate', 'carticleDelete', 'carticleLink', 'carticleMention'
     ];
     for (const field of booleanFields) {
         if (data[field] !== undefined && typeof data[field] !== 'boolean') {

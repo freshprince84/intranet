@@ -9,6 +9,7 @@ import ProtectedRoute from './components/ProtectedRoute.tsx';
 import PublicRoute from './components/PublicRoute.tsx';
 import UserManagement from './pages/UserManagement.tsx';
 import Worktracker from './pages/Worktracker.tsx';
+import TeamWorktimeControl from './pages/TeamWorktimeControl.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
 import { SidebarProvider } from './contexts/SidebarContext.tsx';
 import Layout from './components/Layout.tsx';
@@ -16,6 +17,8 @@ import Profile from './pages/Profile.tsx';
 import { WorktimeProvider } from './contexts/WorktimeContext.tsx';
 import NotificationList from './components/NotificationList.tsx';
 import FaviconLoader from './components/FaviconLoader.tsx';
+import Cerebro from './pages/Cerebro.tsx';
+import Payroll from './pages/Payroll.tsx';
 
 const App: React.FC = () => {
     return (
@@ -47,10 +50,21 @@ const App: React.FC = () => {
                                     <Route index element={<Navigate to="/dashboard" replace />} />
                                     <Route path="/dashboard" element={<Dashboard />} />
                                     <Route path="/worktracker" element={<Worktracker />} />
+                                    <Route path="/team-worktime-control" element={
+                                        <ProtectedRoute entity="team_worktime_control" accessLevel="read">
+                                            <TeamWorktimeControl />
+                                        </ProtectedRoute>
+                                    } />
                                     <Route path="/users" element={<UserManagement />} />
                                     <Route path="/settings" element={<Settings />} />
                                     <Route path="/profile" element={<Profile />} />
                                     <Route path="/notifications" element={<NotificationList />} />
+                                    <Route path="/cerebro/*" element={<Cerebro />} />
+                                    <Route path="/payroll" element={
+                                        <ProtectedRoute entity="payroll" accessLevel="read">
+                                            <Payroll />
+                                        </ProtectedRoute>
+                                    } />
                                 </Route>
                             </Routes>
                         </Router>

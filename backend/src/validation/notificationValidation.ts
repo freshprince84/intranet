@@ -5,7 +5,9 @@ export enum NotificationType {
   user = 'user',
   role = 'role',
   worktime = 'worktime',
-  system = 'system'
+  system = 'system',
+  cerebro = 'cerebro',
+  worktime_manager_stop = 'worktime_manager_stop'
 }
 
 // Interface für Benachrichtigungsdaten
@@ -37,6 +39,13 @@ export interface NotificationSettingsData {
   roleDelete?: boolean;
   worktimeStart?: boolean;
   worktimeStop?: boolean;
+  worktimeAutoStop?: boolean;
+  worktimeManagerStop?: boolean;
+  carticleCreate?: boolean;
+  carticleUpdate?: boolean;
+  carticleDelete?: boolean;
+  carticleLink?: boolean;
+  carticleMention?: boolean;
 }
 
 // Interface für Benutzer-Benachrichtigungseinstellungen
@@ -87,7 +96,8 @@ export const validateNotificationSettings = (data: any): string | null => {
     'requestCreate', 'requestUpdate', 'requestDelete', 'requestStatusChange',
     'userCreate', 'userUpdate', 'userDelete',
     'roleCreate', 'roleUpdate', 'roleDelete',
-    'worktimeStart', 'worktimeStop'
+    'worktimeStart', 'worktimeStop', 'worktimeAutoStop', 'worktimeManagerStop',
+    'carticleCreate', 'carticleUpdate', 'carticleDelete', 'carticleLink', 'carticleMention'
   ];
 
   for (const field of booleanFields) {

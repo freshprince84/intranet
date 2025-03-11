@@ -22,8 +22,14 @@
     "date-fns": "^4.1.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-markdown": "^10.0.0",
     "react-router-dom": "^6.29.0",
     "react-scripts": "5.0.1",
+    "react-toastify": "^11.0.5",
+    "rehype-raw": "^7.0.0",
+    "remark-gfm": "^4.0.1",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.1.1",
     "typescript": "^4.9.5",
     "web-vitals": "^2.1.4"
   },
@@ -54,6 +60,7 @@
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/postcss": "^4.0.8",
+    "@types/react-toastify": "^4.0.2",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.3",
     "postcss-flexbugs-fixes": "^5.0.2",

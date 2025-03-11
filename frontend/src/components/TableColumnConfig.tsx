@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { EyeIcon, EyeSlashIcon, Bars2Icon } from '@heroicons/react/24/outline';
 
 interface Column {
@@ -12,6 +12,7 @@ interface TableColumnConfigProps {
   columnOrder: string[];
   onToggleColumnVisibility: (columnId: string) => void;
   onMoveColumn: (dragIndex: number, hoverIndex: number) => void;
+  onClose: () => void;
 }
 
 interface DraggableItemProps {
@@ -78,7 +79,8 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
   visibleColumns,
   columnOrder,
   onToggleColumnVisibility,
-  onMoveColumn
+  onMoveColumn,
+  onClose
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -112,6 +114,12 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
     }
     setDraggedIndex(null);
     setOverIndex(null);
+  };
+
+  // Handler zum Schließen des Menüs
+  const handleClose = () => {
+    setIsOpen(false);
+    onClose();
   };
 
   return (
@@ -154,7 +162,7 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
           </ul>
           <div className="p-2 border-t border-gray-200 text-right">
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={handleClose}
               className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               Schließen

@@ -1,11 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { userApi, roleApi } from '../api/apiClient.ts';
 import { User, Role } from '../types/interfaces.ts';
-import { CheckIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, PlusIcon, PencilIcon } from '@heroicons/react/24/outline';
 
 interface UserManagementTabProps {
   onError: (error: string) => void;
 }
+
+// Länder für die Auswahl
+const COUNTRIES = [
+  { code: 'CO', name: 'Kolumbien' },
+  { code: 'CH', name: 'Schweiz' },
+  { code: 'DE', name: 'Deutschland' },
+  { code: 'AT', name: 'Österreich' }
+];
+
+// Länder für die Payroll-Auswahl
+const PAYROLL_COUNTRIES = [
+  { code: 'CH', name: 'Schweiz' },
+  { code: 'CO', name: 'Kolumbien' }
+];
+
+// Vertragsarten für Kolumbien
+const CONTRACT_TYPES = [
+  { code: 'tiempo_completo', name: 'Tiempo Completo (>21 Tage/Monat)' },
+  { code: 'tiempo_parcial_7', name: 'Tiempo Parcial (≤7 Tage/Monat)' },
+  { code: 'tiempo_parcial_14', name: 'Tiempo Parcial (≤14 Tage/Monat)' },
+  { code: 'tiempo_parcial_21', name: 'Tiempo Parcial (≤21 Tage/Monat)' },
+  { code: 'servicios_externos', name: 'Servicios Externos (Stundenbasiert)' }
+];
+
+// Sprachen für die Auswahl
+const LANGUAGES = [
+  { code: 'es', name: 'Spanisch' },
+  { code: 'de', name: 'Deutsch' },
+  { code: 'en', name: 'Englisch' }
+];
 
 // Gemeinsame Debug-Komponente hinzufügen
 const RoleDebugInfo = ({ title, data }: { title: string, data: any }) => (
@@ -174,13 +204,11 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
     }
   };
 
-  // Handler für Änderungen an Benutzerdaten
-  const handleUserInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setUserFormData(prev => ({
-      ...prev,
-      [name]: value === '' ? null : value
-    }));
+  // Erweitere den handleUserInputChange
+  const handleUserInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const finalValue = type === 'number' ? Number(value) : value;
+    setUserFormData({ ...userFormData, [name]: finalValue });
   };
 
   // Speichern der Benutzerdaten
@@ -277,7 +305,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   };
 
   return (
-    <div>
+    <div className="container mx-auto px-4 py-8">
       {userSuccess && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
           {userSuccess}
@@ -310,9 +338,9 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
             {!isEditingUser && (
               <button
                 onClick={startEditingUser}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+                className="text-blue-600 hover:text-blue-900"
               >
-                Bearbeiten
+                <PencilIcon className="h-5 w-5" />
               </button>
             )}
           </div>
@@ -428,23 +456,160 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   onChange={handleUserInputChange}
                   disabled={!isEditingUser}
                   className="w-full px-3 py-2 border rounded-md"
-                  step="0.01"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Normale Arbeitszeit (Stunden)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  name="normalWorkingHours"
+                  value={isEditingUser ? userFormData.normalWorkingHours || 7.6 : selectedUser.normalWorkingHours || 7.6}
+                  onChange={handleUserInputChange}
+                  disabled={!isEditingUser}
+                  className="w-full px-3 py-2 border rounded-md"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Land
+                </label>
+                <select
+                  name="country"
+                  value={isEditingUser ? userFormData.country || 'CO' : selectedUser.country || 'CO'}
+                  onChange={handleUserInputChange}
+                  disabled={!isEditingUser}
+                  className="w-full px-3 py-2 border rounded-md"
+                >
+                  {COUNTRIES.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Sprache
+                </label>
+                <select
+                  name="language"
+                  value={isEditingUser ? userFormData.language || 'es' : selectedUser.language || 'es'}
+                  onChange={handleUserInputChange}
+                  disabled={!isEditingUser}
+                  className="w-full px-3 py-2 border rounded-md"
+                >
+                  {LANGUAGES.map((language) => (
+                    <option key={language.code} value={language.code}>
+                      {language.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Lohnabrechnung-Einstellungen */}
+            <div className="mt-6 border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4">Lohnabrechnung-Einstellungen</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Abrechnungsland
+                  </label>
+                  <select
+                    name="payrollCountry"
+                    value={userFormData.payrollCountry || selectedUser.payrollCountry || 'CH'}
+                    onChange={handleUserInputChange}
+                    className="border border-gray-300 rounded-md p-2 w-full"
+                  >
+                    {PAYROLL_COUNTRIES.map(country => (
+                      <option key={country.code} value={country.code}>
+                        {country.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                
+                {(userFormData.payrollCountry === 'CO' || 
+                  (selectedUser.payrollCountry === 'CO' && !userFormData.payrollCountry)) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Vertragsart
+                    </label>
+                    <select
+                      name="contractType"
+                      value={userFormData.contractType || selectedUser.contractType || ''}
+                      onChange={handleUserInputChange}
+                      className="border border-gray-300 rounded-md p-2 w-full"
+                    >
+                      <option value="">Bitte auswählen</option>
+                      {CONTRACT_TYPES.map(type => (
+                        <option key={type.code} value={type.code}>
+                          {type.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Stundensatz ({(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? 'CHF' : 'COP'})
+                  </label>
+                  <input
+                    type="number"
+                    name="hourlyRate"
+                    min="0"
+                    step={(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? '0.05' : '1'}
+                    value={userFormData.hourlyRate !== undefined ? userFormData.hourlyRate : selectedUser.hourlyRate || ''}
+                    onChange={handleUserInputChange}
+                    className="border border-gray-300 rounded-md p-2 w-full"
+                    placeholder={(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? 'z.B. 45.00' : 'z.B. 50000'}
+                  />
+                </div>
+                
+                {((userFormData.payrollCountry === 'CO' || selectedUser.payrollCountry === 'CO') && 
+                  (userFormData.contractType !== 'servicios_externos' && selectedUser.contractType !== 'servicios_externos') &&
+                  (userFormData.contractType || selectedUser.contractType)) && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Monatliches Gehalt (COP)
+                    </label>
+                    <input
+                      type="number"
+                      name="monthlySalary"
+                      min="0"
+                      step="1000"
+                      value={userFormData.monthlySalary !== undefined ? userFormData.monthlySalary : selectedUser.monthlySalary || ''}
+                      onChange={handleUserInputChange}
+                      className="border border-gray-300 rounded-md p-2 w-full"
+                      placeholder="z.B. 3500000"
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
             {isEditingUser && (
-              <div className="flex space-x-2 justify-end mt-4">
+              <div className="col-span-1 md:col-span-2 flex justify-end">
                 <button
                   type="button"
                   onClick={() => setIsEditingUser(false)}
-                  className="bg-gray-300 px-4 py-2 rounded-md hover:bg-gray-400"
+                  className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded mr-2"
                 >
                   Abbrechen
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
                 >
                   Speichern
                 </button>

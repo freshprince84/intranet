@@ -8,6 +8,9 @@ export interface User {
   bankDetails: string | null;
   contract: string | null;
   salary: number | null;
+  normalWorkingHours: number;
+  country: string;
+  language: string;
   roles: UserRole[];
 }
 

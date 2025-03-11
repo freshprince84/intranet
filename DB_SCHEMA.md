@@ -6,26 +6,29 @@ Dieses Dokument beschreibt die Struktur der Datenbank für das Intranet-Projekt.
 
 ```prisma
 model User {
-  id            Int       @id @default(autoincrement())
-  username      String    @unique
-  email         String    @unique
-  password      String
-  firstName     String
-  lastName      String
-  birthday      DateTime?
-  bankDetails   String?
-  contract      String?
-  salary        Float?
-  roles         UserRole[]
-  branches      UsersBranches[]
-  workTimes     WorkTime[]
-  tasksResponsible Task[] @relation("responsible")
-  tasksQualityControl Task[] @relation("quality_control")
-  requestsRequester Request[] @relation("requester")
+  id                 Int       @id @default(autoincrement())
+  username           String    @unique
+  email              String    @unique
+  password           String
+  firstName          String
+  lastName           String
+  birthday           DateTime?
+  bankDetails        String?
+  contract           String?
+  salary             Float?
+  normalWorkingHours Float     @default(7.6)  // Standard: 7,6h für Kolumbien
+  country            String    @default("CO") // Standard: Kolumbien
+  language           String    @default("es") // Standard: Spanisch
+  roles              UserRole[]
+  branches           UsersBranches[]
+  workTimes          WorkTime[]
+  tasksResponsible   Task[]    @relation("responsible")
+  tasksQualityControl Task[]   @relation("quality_control")
+  requestsRequester  Request[] @relation("requester")
   requestsResponsible Request[] @relation("responsible")
-  settings      Settings?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  settings           Settings?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 }
 
 model Role {
@@ -102,8 +105,9 @@ model WorkTime {
   userId    Int
   branch    Branch    @relation(fields: [branchId], references: [id])
   branchId  Int
-  startTime DateTime
-  endTime   DateTime?
+  startTime DateTime  // Enthält die lokale Systemzeit des Benutzers ohne UTC-Konvertierung 
+  endTime   DateTime? // Enthält die lokale Systemzeit des Benutzers ohne UTC-Konvertierung
+  timezone  String?   // Speichert die Zeitzone des Benutzers, z.B. "America/Bogota"
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -183,6 +187,7 @@ model NotificationSettings {
   roleDelete        Boolean   @default(true)
   worktimeStart     Boolean   @default(true)
   worktimeStop      Boolean   @default(true)
+  worktimeAutoStop  Boolean   @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
@@ -207,6 +212,7 @@ model UserNotificationSettings {
   roleDelete        Boolean?
   worktimeStart     Boolean?
   worktimeStop      Boolean?
+  worktimeAutoStop  Boolean?  @default(true)
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 }
@@ -307,11 +313,13 @@ Die Anwendung umfasst ein umfassendes Benachrichtigungssystem, das Benutzer übe
 - Steuert, welche Ereignistypen systemweit Benachrichtigungen auslösen:
   - Erstellen, Bearbeiten und Löschen von Tasks, Requests, Benutzern und Rollen
   - Statusänderungen bei Tasks und Requests
-  - Start und Stopp von Zeiterfassungen
+  - Start, Stopp und automatisches Stoppen von Zeiterfassungen
 
 ### UserNotificationSettings-Modell
 - Ermöglicht benutzerspezifische Überschreibungen der systemweiten Einstellungen
 - Jeder Benutzer kann individuell entscheiden, welche Benachrichtigungen er erhalten möchte
+- Neue Benachrichtigungstypen:
+  - `worktimeAutoStop`: Benachrichtigung bei automatischem Stoppen der Zeiterfassung bei Erreichen der täglichen Arbeitszeit
 - Neue Funktionalitäten in der Benutzeroberfläche:
   - Globaler "Alle Benachrichtigungen" Toggle zum Ein-/Ausschalten aller Benachrichtigungen
   - Pro Kategorie (Aufgaben, Anfragen, Benutzer, Rollen, Arbeitszeit) ein "Alle" Toggle

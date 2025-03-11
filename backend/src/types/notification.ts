@@ -41,6 +41,7 @@ export interface NotificationSettingsUpdateInput {
   roleDelete?: boolean;
   worktimeStart?: boolean;
   worktimeStop?: boolean;
+  worktimeAutoStop?: boolean;
 }
 
 export interface UserNotificationSettingsUpdateInput {
@@ -60,5 +61,6 @@ export interface UserNotificationSettingsUpdateInput {
   roleDelete?: boolean;
   worktimeStart?: boolean;
   worktimeStop?: boolean;
+  worktimeAutoStop?: boolean;
   userId: number;
 } 

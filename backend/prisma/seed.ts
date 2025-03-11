@@ -24,6 +24,7 @@ async function main() {
       where: { name: 'Admin' },
       update: {},
       create: {
+        id: 1,
         name: 'Admin',
         description: 'Administrator mit allen Rechten',
       },
@@ -33,6 +34,7 @@ async function main() {
       where: { name: 'Hamburger' },
       update: {},
       create: {
+        id: 999,
         name: 'Hamburger',
         description: 'Hamburger-Rolle für neue Benutzer',
       },
@@ -47,12 +49,15 @@ async function main() {
       { entity: 'usermanagement', entityType: 'page', accessLevel: 'both' },
       { entity: 'settings', entityType: 'page', accessLevel: 'both' },
       { entity: 'profile', entityType: 'page', accessLevel: 'both' },
+      { entity: 'cerebro', entityType: 'page', accessLevel: 'both' },
+      { entity: 'team_worktime_control', entityType: 'page', accessLevel: 'both' },
       
       // Tabellen-Berechtigungen
       { entity: 'requests', entityType: 'table', accessLevel: 'both' },
       { entity: 'tasks', entityType: 'table', accessLevel: 'both' },
       { entity: 'users', entityType: 'table', accessLevel: 'both' },
       { entity: 'roles', entityType: 'table', accessLevel: 'both' }, // WICHTIG: Berechtigung für Rollen-Verwaltung
+      { entity: 'team_worktime', entityType: 'table', accessLevel: 'both' },
     ];
 
     // Berechtigungen für Hamburger-Rolle - NUR BASIS-RECHTE
@@ -61,6 +66,7 @@ async function main() {
       { entity: 'dashboard', entityType: 'page', accessLevel: 'both' },
       { entity: 'settings', entityType: 'page', accessLevel: 'both' },
       { entity: 'profile', entityType: 'page', accessLevel: 'both' },
+      { entity: 'cerebro', entityType: 'page', accessLevel: 'both' },
     ];
 
     // Admin-Berechtigungen erstellen
@@ -88,9 +94,10 @@ async function main() {
     }
 
     // Erstelle Benutzer-Rolle
-    const userRole = await prisma.role.create({
-      data: {
-        id: 2,
+    const userRole = await prisma.role.upsert({
+      where: { name: 'User' },
+      update: {},
+      create: {
         name: 'User',
         description: 'Standardbenutzer',
         permissions: {
@@ -119,8 +126,10 @@ async function main() {
     // Erstelle Admin-Benutzer
     const hashedPassword = await bcrypt.hash('admin123', 10);
     // @ts-ignore - Ignoriere den Email-Typfehler, der entsteht durch veraltete Typen
-    const adminUser = await prisma.user.create({
-      data: {
+    const adminUser = await prisma.user.upsert({
+      where: { username: 'admin' },
+      update: {},
+      create: {
         username: 'admin',
         email: 'admin@example.com',
         password: hashedPassword,
@@ -148,8 +157,15 @@ async function main() {
     console.log('Admin-Benutzer erstellt');
 
     // Erstelle Standard-Tabelleneinstellungen für den Admin
-    await prisma.userTableSettings.create({
-      data: {
+    await prisma.userTableSettings.upsert({
+      where: {
+        userId_tableId: {
+          userId: adminUser.id,
+          tableId: 'worktracker_tasks'
+        }
+      },
+      update: {},
+      create: {
         userId: adminUser.id,
         tableId: 'worktracker_tasks',
         columnOrder: JSON.stringify(['title', 'status', 'responsibleAndQualityControl', 'branch', 'dueDate', 'actions']),
@@ -161,15 +177,24 @@ async function main() {
     // Erstelle Test-Niederlassungen
     const branches = ['Hauptsitz', 'Manila', 'Parque Poblado'];
     for (const branchName of branches) {
-      const branch = await prisma.branch.create({
-        data: {
+      const branch = await prisma.branch.upsert({
+        where: { name: branchName },
+        update: {},
+        create: {
           name: branchName
         }
       });
       
       // Verknüpfe Admin mit jeder Niederlassung
-      await prisma.usersBranches.create({
-        data: {
+      await prisma.usersBranches.upsert({
+        where: { 
+          userId_branchId: { 
+            userId: adminUser.id, 
+            branchId: branch.id 
+          } 
+        },
+        update: {},
+        create: {
           userId: adminUser.id,
           branchId: branch.id
         }

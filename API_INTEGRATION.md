@@ -1,18 +1,18 @@
-# API-Integration: Best Practices und Fallstricke
+# API-Integration: Best Practices und Endpoint-Dokumentation
 
-Diese Dokumentation beschreibt die besten Praktiken für die Integration zwischen Frontend und Backend in unserem Intranet-Projekt. Sie adressiert spezifische Probleme, die wir bei der Entwicklung identifiziert haben, und bietet Lösungen, um diese in Zukunft zu vermeiden.
+Diese Dokumentation beschreibt die korrekten Praktiken für die Integration zwischen Frontend und Backend im Intranet-Projekt und enthält eine vollständige Liste der verfügbaren API-Endpunkte.
 
 ## API-Konfiguration
 
 ### Server-Konfiguration
-- Backend läuft auf Port 5000 (http://localhost:5000 oder http://192.168.1.1:5000)
-- Frontend läuft auf Port 3000 (http://localhost:3000 oder http://192.168.1.1:3000)
+- Backend läuft auf Port 5000 (http://localhost:5000)
+- Frontend läuft auf Port 3000 (http://localhost:3000)
 - Prisma Studio läuft auf Port 5555 (http://localhost:5555)
-- Zugriff ist auch über IP-Adresse möglich: `192.168.1.1:5000` und `192.168.1.1:3000`
+- Zugriff ist auch über IP-Adresse möglich
 
-### Wichtige Hinweise zur API-Nutzung
+### ⚠️ Wichtige Hinweise zur API-Nutzung
 - API-Aufrufe erfolgen über die zentrale Konfiguration in `frontend/src/config/api.ts`
-- Bei Import der API-Konfiguration muss die vollständige Dateiendung angegeben werden:
+- Bei Import der API-Konfiguration **muss** die vollständige Dateiendung angegeben werden:
   ```typescript
   // KORREKT:
   import { API_URL } from '../config/api.ts';
@@ -30,6 +30,119 @@ Diese Dokumentation beschreibt die besten Praktiken für die Integration zwische
   ${API_URL}/api/worktime/stats
   ${API_URL}/api/requests
   ```
+
+## Vollständige API-Endpunkte
+
+### Authentifizierung
+- `POST /auth/register`: Registrierung
+- `POST /auth/login`: Login
+- `GET /auth/user`: Aktueller Benutzer
+- `POST /auth/logout`: Logout
+
+### Benutzerprofil
+- `GET /users/profile`: Profildaten abrufen
+- `PUT /users/profile`: Profil aktualisieren
+- `PUT /users/switch-role`: Rolle wechseln
+
+### Requests
+- `GET /requests`: Alle Requests abrufen
+- `POST /requests`: Neuen Request erstellen
+- `PUT /requests/:id`: Request aktualisieren
+- `GET /requests/:id`: Request-Details abrufen
+- `DELETE /requests/:id`: Request löschen
+
+### Tasks
+- `GET /tasks`: Alle Tasks abrufen
+- `GET /tasks/:id`: Task-Details abrufen
+- `POST /tasks`: Neuen Task erstellen
+- `PUT /tasks/:id`: Task aktualisieren
+- `DELETE /tasks/:id`: Task löschen
+
+### Rollen
+- `GET /roles`: Alle Rollen abrufen
+- `GET /roles/:id`: Rollen-Details abrufen
+- `POST /roles`: Neue Rolle erstellen
+- `PUT /roles/:id`: Rolle aktualisieren
+- `DELETE /roles/:id`: Rolle löschen
+- `GET /roles/:id/permissions`: Berechtigungen einer Rolle abrufen
+
+### Berechtigungen
+- `GET /permissions`: Alle Berechtigungen abrufen
+- `GET /permissions/:entity/:entityType`: Berechtigungen für eine bestimmte Entität abrufen
+- `POST /permissions`: Neue Berechtigung erstellen
+- `PUT /permissions/:id`: Berechtigung aktualisieren
+- `DELETE /permissions/:id`: Berechtigung löschen
+
+### Niederlassungen
+- `GET /branches`: Alle Niederlassungen abrufen
+
+### Arbeitszeiterfassung
+- `POST /worktime/start`: Startet die Zeiterfassung
+  - Body: `{ branchId: number, startTime?: Date }`
+- `POST /worktime/stop`: Beendet die Zeiterfassung
+  - Body: `{ endTime?: Date }`
+- `GET /worktime`: Liste aller Zeiteinträge
+  - Query: `date` (optional, filtert nach Datum)
+- `PUT /worktime/:id`: Aktualisiert einen Zeiteintrag
+  - Body: `{ startTime?: Date, endTime?: Date, branchId?: number }`
+- `DELETE /worktime/:id`: Löscht einen Zeiteintrag
+- `GET /worktime/stats`: Statistiken abrufen
+  - Query: `week` (Datum innerhalb der gewünschten Woche)
+- `GET /worktime/export`: Exportiert Zeiteinträge als Excel
+  - Query: `week` (Datum innerhalb der gewünschten Woche)
+- `GET /worktime/active`: Prüft, ob aktuell eine Zeiterfassung läuft
+
+### Notification-System
+- `GET /notifications`: Alle Benachrichtigungen abrufen
+- `GET /notifications/:id`: Benachrichtigung-Details abrufen
+- `POST /notifications`: Neue Benachrichtigung erstellen
+- `PUT /notifications/:id`: Benachrichtigung aktualisieren (z.B. als gelesen markieren)
+- `DELETE /notifications/:id`: Benachrichtigung löschen
+
+### Settings
+- `GET /settings`: Benutzereinstellungen abrufen
+- `PUT /settings`: Benutzereinstellungen aktualisieren
+
+### Cerebro Wiki
+- `GET /cerebro/articles`: Alle Artikel abrufen
+- `GET /cerebro/articles/:id`: Artikel-Details abrufen
+- `POST /cerebro/articles`: Neuen Artikel erstellen
+- `PUT /cerebro/articles/:id`: Artikel aktualisieren
+- `DELETE /cerebro/articles/:id`: Artikel löschen
+- `GET /cerebro/articles/:slug`: Artikel per Slug abrufen
+- `POST /cerebro/media`: Medien hochladen
+- `POST /cerebro/links`: Externe Links hinzufügen
+
+## Best Practices für robuste API-Integration
+
+### 1. Typsicherheit zwischen Frontend und Backend
+
+- Zentralisieren Sie globale Interface-Erweiterungen in Typ-Dateien
+- Importieren Sie diese Typen in allen relevanten Dateien
+- Vermeiden Sie Namespace-Konflikte bei globalen Erweiterungen
+
+### 2. Defensive Programmierung im Frontend
+
+- Immer gültige Fallback-Werte zurückgeben
+- API-Antworten vor Zugriff auf Eigenschaften prüfen
+- Bei Array-Operationen immer prüfen, ob die Daten ein Array sind
+
+### 3. Konsistente Feldnamen verwenden
+
+- Exakte Übernahme der Prisma-Feldnamen im Frontend
+- Änderungsprozess für Schemaänderungen etablieren
+
+### 4. Standardisierte API-Antwortformate
+
+- Listen-Antworten: `{ data: items[], meta: { total, page, limit, pages } }`
+- Einzelne Ressourcen: `{ data: item, meta: { ... } }`
+- Fehlermeldungen: `{ error: 'Fehlermeldung', details: { ... } }`
+
+### 5. Fehlerbehandlung
+
+- Konsistente Fehlerbehandlung im Frontend
+- Benutzerfreundliche Fehlermeldungen
+- Loggen von Fehlern für Debugging
 
 ## 1. Typsicherheit zwischen Frontend und Backend
 

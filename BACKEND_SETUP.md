@@ -455,14 +455,22 @@ Konfiguriere die Build- und Start-Skripte in `package.json`:
 - `GET /api/branches`: Alle Niederlassungen abrufen
 
 ### Arbeitszeiterfassung
-- `POST /api/worktime/start`: Startet die Zeiterfassung
+- `POST /api/worktime/start`: Startet die Zeiterfassung (prüft auf Erreichen der täglichen Arbeitszeit)
+  - Berücksichtigt die lokale Systemzeit des Benutzers ohne Zeitzonenumrechnung
+  - Speichert die aktuelle Zeitzone des Benutzers für konsistente Anzeige
 - `POST /api/worktime/stop`: Beendet die Zeiterfassung
+  - Verwendet die lokale Systemzeit des Benutzers ohne Zeitzonenumrechnung
 - `GET /api/worktime`: Liste aller Zeiteinträge
 - `PUT /api/worktime/:id`: Aktualisiert einen Zeiteintrag
 - `DELETE /api/worktime/:id`: Löscht einen Zeiteintrag
 - `GET /api/worktime/stats`: Statistiken abrufen
+  - Zeigt Statistiken basierend auf der lokalen Zeitzone des Benutzers an
 - `GET /api/worktime/export`: Exportiert Zeiteinträge als Excel
 - `GET /api/worktime/active`: Prüft, ob aktuell eine Zeiterfassung läuft
+- Automatische Funktion: Prüft alle 5 Minuten aktive Zeiterfassungen und stoppt sie bei Erreichen der täglichen Arbeitszeit
+  - Verwendet die lokale Systemzeit des Benutzers ohne Zeitzonenumrechnung
+  - Sorgt für konsistente Zeitberechnungen mit `localNow` bei der automatischen Beendigung
+  - Speichert die korrekte lokale Endzeit ohne UTC-Konvertierung
 
 ### Notifications
 - `GET /api/notifications`: Alle Benachrichtigungen abrufen

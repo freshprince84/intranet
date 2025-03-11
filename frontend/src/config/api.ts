@@ -64,6 +64,38 @@ export const API_ENDPOINTS = {
         BASE: `${API_URL}/users`,
         BY_ID: (id: number) => `${API_URL}/users/${id}`,
         CHANGE_ROLE: (id: number) => `${API_URL}/users/${id}/role`
+    },
+    // Team Worktime Control
+    TEAM_WORKTIME: {
+        ACTIVE: `${API_URL}/team-worktime/active`,
+        STOP_USER: `${API_URL}/team-worktime/stop-user`,
+        USER_DAY: `${API_URL}/team-worktime/user-day`,
+        UPDATE: `${API_URL}/team-worktime/update`,
+        OVERTIME: `${API_URL}/team-worktime/overtime`
+    },
+    // Cerebro Wiki-System
+    CEREBRO: {
+        // Artikel
+        ARTICLES: {
+            BASE: `${API_URL}/cerebro/carticles`,
+            BY_ID: (id: number) => `${API_URL}/cerebro/carticles/${id}`,
+            BY_SLUG: (slug: string) => `${API_URL}/cerebro/carticles/slug/${slug}`,
+            STRUCTURE: `${API_URL}/cerebro/carticles/structure`,
+            SEARCH: (query: string) => `${API_URL}/cerebro/carticles/search?q=${encodeURIComponent(query)}`
+        },
+        // Medien
+        MEDIA: {
+            UPLOAD: `${API_URL}/cerebro/media/upload`,
+            BY_ARTICLE: (carticleId: number) => `${API_URL}/cerebro/media/carticle/${carticleId}`,
+            BY_ID: (id: number) => `${API_URL}/cerebro/media/${id}`
+        },
+        // Externe Links
+        EXTERNAL_LINKS: {
+            BASE: `${API_URL}/cerebro/external-links`,
+            BY_ARTICLE: (carticleId: number) => `${API_URL}/cerebro/external-links/carticle/${carticleId}`,
+            BY_ID: (id: number) => `${API_URL}/cerebro/external-links/${id}`,
+            PREVIEW: (url: string) => `${API_URL}/cerebro/external-links/preview?url=${encodeURIComponent(url)}`
+        }
     }
 };
 

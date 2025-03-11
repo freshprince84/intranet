@@ -1,0 +1,11 @@
+-- AlterTable
+ALTER TABLE "EmployeePayroll" ADD COLUMN     "currency" TEXT NOT NULL DEFAULT 'CHF',
+ADD COLUMN     "deductions" DECIMAL(65,30) NOT NULL DEFAULT 0,
+ADD COLUMN     "overtimeNightHours" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "overtimeNightSundayHolidayHours" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "overtimeSundayHolidayHours" DOUBLE PRECISION NOT NULL DEFAULT 0,
+ADD COLUMN     "sundayHolidayHours" DOUBLE PRECISION NOT NULL DEFAULT 0;
+
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "contractType" TEXT,
+ADD COLUMN     "monthlySalary" DOUBLE PRECISION;

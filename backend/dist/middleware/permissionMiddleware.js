@@ -9,96 +9,73 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isAdmin = exports.checkPermission = void 0;
+exports.isAdmin = exports.checkUserPermission = exports.checkPermission = void 0;
 const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 /**
- * Middleware zur Überprüfung von Benutzerberechtigungen
- * @param requiredAccess - Erforderliche Zugriffsebene ('read', 'write', 'both')
- * @param entityType - Typ der Entität ('page' oder 'table')
+ * Middleware zur Überprüfung von Berechtigungen
+ * @param entity - Entität (z.B. 'page', 'table' oder 'cerebro')
+ * @param requiredAccess - Erforderliche Zugriffsebene ('read' oder 'write')
+ * @param entityType - Typ der Entität ('page', 'table' oder 'cerebro')
  * @returns Express Middleware
  */
-const checkPermission = (requiredAccess, entityType = 'page') => {
+const checkPermission = (entity, requiredAccess, entityType = 'page') => {
     return (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
         try {
             const userId = parseInt(req.userId, 10);
             const roleId = parseInt(req.roleId, 10);
-            if (isNaN(userId)) {
-                return res.status(401).json({
-                    message: 'Nicht authentifiziert',
-                    error: 'NOT_AUTHENTICATED'
-                });
+            if (isNaN(userId) || isNaN(roleId)) {
+                return res.status(401).json({ message: 'Nicht authentifiziert' });
             }
-            if (isNaN(roleId)) {
-                return res.status(403).json({
-                    message: 'Keine Rolle im Token',
-                    error: 'NO_ROLE_IN_TOKEN'
-                });
-            }
-            console.log(`[PERMISSION] Prüfe Berechtigung - UserId: ${userId}, RoleId: ${roleId}`);
-            // Hole die Rolle und deren Berechtigungen direkt mit der roleId aus dem Token
-            const role = yield prisma.role.findUnique({
-                where: { id: roleId },
-                include: { permissions: true }
-            });
-            if (!role) {
-                return res.status(403).json({
-                    message: 'Rolle nicht gefunden',
-                    error: 'ROLE_NOT_FOUND'
-                });
-            }
-            // Bestimme die aktuelle Entität aus der URL
-            const currentEntity = req.baseUrl.split('/').pop() || 'dashboard';
-            console.log(`[PERMISSION] Aktuelle Entität: ${currentEntity}, Typ: ${entityType}`);
-            // Finde die relevante Berechtigung
-            const permission = role.permissions.find(p => p.entity === currentEntity && p.entityType === entityType);
-            if (!permission) {
-                console.log(`[PERMISSION] Keine Berechtigung gefunden für Entität: ${currentEntity}, Typ: ${entityType}`);
-                return res.status(403).json({
-                    message: `Keine Berechtigung für ${entityType} ${currentEntity}`,
-                    error: 'NO_ENTITY_PERMISSION'
-                });
-            }
-            console.log(`[PERMISSION] Gefundene Berechtigung: ${permission.accessLevel} für ${entityType} ${permission.entity}`);
-            // Prüfe die Zugriffsebene
-            const hasAccess = checkAccessLevel(permission.accessLevel, requiredAccess);
+            // Prüfe, ob der Benutzer die erforderliche Berechtigung hat
+            const hasAccess = yield (0, exports.checkUserPermission)(userId, roleId, entity, requiredAccess, entityType);
             if (!hasAccess) {
-                console.log(`[PERMISSION] Unzureichende Berechtigungen: Hat ${permission.accessLevel}, benötigt ${requiredAccess}`);
                 return res.status(403).json({
-                    message: 'Unzureichende Berechtigungen',
-                    error: 'INSUFFICIENT_PERMISSIONS'
+                    message: 'Zugriff verweigert',
+                    details: `Keine ausreichenden Berechtigungen für ${entityType} ${entity}`
                 });
             }
-            // Füge die Berechtigungen zum Request hinzu
-            req.userPermissions = role.permissions;
-            console.log(`[PERMISSION] Zugriff gewährt für ${entityType} ${currentEntity}`);
             next();
         }
         catch (error) {
-            console.error('Error in permission middleware:', error);
-            res.status(500).json({
-                message: 'Fehler bei der Berechtigungsprüfung',
-                error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-            });
+            console.error('Fehler bei der Berechtigungsprüfung:', error);
+            res.status(500).json({ message: 'Interner Server-Fehler' });
         }
     });
 };
 exports.checkPermission = checkPermission;
-/**
- * Prüft, ob die vorhandene Zugriffsebene ausreichend ist
- * @param hasLevel - Vorhandene Zugriffsebene
- * @param needsLevel - Benötigte Zugriffsebene
- * @returns boolean
- */
-function checkAccessLevel(hasLevel, needsLevel) {
-    if (hasLevel === 'none')
-        return false;
-    if (hasLevel === 'both')
+// Hilfsfunktion zur Überprüfung der Berechtigungen eines Benutzers
+const checkUserPermission = (userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1) => __awaiter(void 0, [userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1], void 0, function* (userId, roleId, currentEntity, requiredAccess, entityType = 'page') {
+    try {
+        // Hole die Berechtigungen für die aktuelle Rolle des Benutzers
+        const role = yield prisma.role.findUnique({
+            where: { id: roleId },
+            include: { permissions: true }
+        });
+        if (!role) {
+            return false;
+        }
+        // Suche nach der Berechtigung für die angeforderte Entität
+        const permission = role.permissions.find(p => p.entity === currentEntity && p.entityType === entityType);
+        if (!permission) {
+            return false;
+        }
+        // Prüfe, ob die Berechtigung ausreichend ist
+        const hasAccess = permission.accessLevel === 'both' ||
+            (requiredAccess === 'read' && (permission.accessLevel === 'read' || permission.accessLevel === 'write')) ||
+            (requiredAccess === 'write' && permission.accessLevel === 'write');
+        if (!hasAccess) {
+            return false;
+        }
+        // Zugriff gewähren, wenn alle Prüfungen bestanden wurden
         return true;
-    if (needsLevel === 'both')
-        return false; // Nur 'both' kann 'both' erfüllen
-    return hasLevel === needsLevel; // Exakte Übereinstimmung oder 'both' (wegen vorherigem Check)
-}
+    }
+    catch (error) {
+        console.error('Fehler bei der Berechtigungsprüfung:', error);
+        return false;
+    }
+});
+exports.checkUserPermission = checkUserPermission;
 /**
  * Middleware zur Überprüfung von Admin-Berechtigungen
  */

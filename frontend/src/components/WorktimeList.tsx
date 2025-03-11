@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { API_ENDPOINTS } from '../config/api.ts';
+import { formatTime, calculateDuration } from '../utils/dateUtils.ts';
+import axios from 'axios';
 
 interface WorkTime {
     id: number;
@@ -37,18 +40,15 @@ const WorktimeList: React.FC = () => {
     const fetchWorktimes = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/worktime?date=${dateFilter}`, {
+            
+            // Verwende die API_ENDPOINTS-Konstante anstelle der direkten URL
+            const response = await axios.get(`${API_ENDPOINTS.WORKTIME.BASE}?date=${dateFilter}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
             
-            if (!response.ok) {
-                throw new Error('Fehler beim Laden der Zeiteinträge');
-            }
-
-            const data = await response.json();
-            setWorktimes(data);
+            setWorktimes(response.data);
             setError(null);
         } catch (error) {
             console.error('Fehler:', error);
@@ -65,19 +65,6 @@ const WorktimeList: React.FC = () => {
         }));
     };
 
-    const calculateDuration = (startTime: string, endTime: string | null): string => {
-        if (!endTime) return '-';
-        
-        const start = new Date(startTime);
-        const end = new Date(endTime);
-        const diff = end.getTime() - start.getTime();
-        
-        const hours = Math.floor(diff / (1000 * 60 * 60));
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-        
-        return `${hours}h ${minutes}m`;
-    };
-
     const handleDelete = async (id: number) => {
         if (!window.confirm('Möchten Sie diesen Zeiteintrag wirklich löschen?')) {
             return;
@@ -85,16 +72,13 @@ const WorktimeList: React.FC = () => {
 
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`http://localhost:5000/api/worktime/${id}`, {
-                method: 'DELETE',
+            
+            // Verwende die API_ENDPOINTS-Konstante anstelle der direkten URL
+            const response = await axios.delete(`${API_ENDPOINTS.WORKTIME.BASE}/${id}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
-
-            if (!response.ok) {
-                throw new Error('Fehler beim Löschen des Zeiteintrags');
-            }
 
             await fetchWorktimes();
         } catch (error) {
@@ -174,13 +158,10 @@ const WorktimeList: React.FC = () => {
                         {sortedWorktimes.map((worktime) => (
                             <tr key={worktime.id} className="hover:bg-gray-50">
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {format(new Date(worktime.startTime), 'HH:mm', { locale: de })}
+                                    {formatTime(worktime.startTime)}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {worktime.endTime 
-                                        ? format(new Date(worktime.endTime), 'HH:mm', { locale: de })
-                                        : '-'
-                                    }
+                                    {worktime.endTime ? formatTime(worktime.endTime) : '-'}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                     {calculateDuration(worktime.startTime, worktime.endTime)}

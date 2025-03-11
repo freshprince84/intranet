@@ -11,6 +11,10 @@ import worktimeRoutes from './routes/worktime';
 import settingsRoutes from './routes/settings';
 import notificationRoutes from './routes/notifications';
 import tableSettingsRoutes from './routes/tableSettings';
+import cerebroRoutes from './routes/cerebro';
+import teamWorktimeRoutes from './routes/teamWorktimeRoutes';
+import payrollRoutes from './routes/payroll';
+import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 
 const app = express();
 
@@ -21,6 +25,20 @@ app.use(express.json());
 // Uploads-Verzeichnis
 const uploadsPath = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsPath));
+
+// Sicherstellen, dass das Cerebro-Uploads-Verzeichnis existiert
+const cerebroUploadsPath = path.join(uploadsPath, 'cerebro');
+import fs from 'fs';
+if (!fs.existsSync(cerebroUploadsPath)) {
+  fs.mkdirSync(cerebroUploadsPath, { recursive: true });
+}
+
+// Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 5 Minuten)
+const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 5 Minuten
+setInterval(async () => {
+  console.log('Starte automatische Überprüfung der Arbeitszeiten...');
+  await checkAndStopExceededWorktimes();
+}, CHECK_INTERVAL_MS);
 
 // Routen
 app.use('/api/auth', authRoutes);
@@ -33,6 +51,9 @@ app.use('/api/worktime', worktimeRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/table-settings', tableSettingsRoutes);
+app.use('/api/cerebro', cerebroRoutes);
+app.use('/api/team-worktime', teamWorktimeRoutes);
+app.use('/api/payroll', payrollRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

@@ -1,16 +1,18 @@
-import React, { useState, useEffect } from 'react';
-import { format, startOfWeek, endOfWeek, eachDayOfInterval, getWeek, getYear } from 'date-fns';
+import React, { useState, useEffect, useCallback } from 'react';
+import { format, startOfWeek, endOfWeek, eachDayOfInterval, getWeek, getYear, parse, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ChartBarIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { API_URL } from '../config/api.ts';
 import WorktimeList from './WorktimeList.tsx';
 import axios from 'axios';
+import { WorktimeModal } from './WorktimeModal.tsx';
+import { convertWeekToDate, getWeekDays } from '../utils/dateUtils.ts';
 
 // Neue Schnittstelle für das WorktimeModal mit selectedDate
 interface WorktimeModalProps {
     isOpen: boolean;
     onClose: () => void;
-    selectedDate: string;
+    selectedDate: string; // Im Kontext von WorktimeStats ist selectedDate immer erforderlich
 }
 
 interface WorktimeStats {
@@ -28,19 +30,29 @@ const WorktimeStats: React.FC = () => {
     const [stats, setStats] = useState<WorktimeStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [maxHours, setMaxHours] = useState<number>(8); // Standard 8 Stunden
     
     // Aktuelle Woche im Format YYYY-Www für das Input-Element
     const today = new Date();
+    console.log(`Initialisierung - heute: ${today.toISOString()}`);
+    
     const currentWeekInput = `${getYear(today)}-W${String(getWeek(today, { locale: de })).padStart(2, '0')}`;
+    console.log(`Initialisierung - currentWeekInput: ${currentWeekInput}`);
+    
     const [selectedWeekInput, setSelectedWeekInput] = useState<string>(currentWeekInput);
     
-    // Datum für die API im Format YYYY-MM-DD
-    const [selectedWeekDate, setSelectedWeekDate] = useState<string>(format(today, 'yyyy-MM-dd'));
+    // Berechne das Datum des Montags der aktuellen Woche
+    const currentMonday = startOfWeek(today, { weekStartsOn: 1 });
+    console.log(`Initialisierung - currentMonday: ${currentMonday} (${format(currentMonday, 'yyyy-MM-dd')})`);
+    
+    const [selectedWeekDate, setSelectedWeekDate] = useState<string>(format(currentMonday, 'yyyy-MM-dd'));
+    console.log(`Initialisierung - selectedWeekDate: ${selectedWeekDate}`);
     
     // State für das WorktimeModal
     const [showWorkTimeModal, setShowWorkTimeModal] = useState(false);
     const [selectedDateForModal, setSelectedDateForModal] = useState<string>('');
 
+    // useEffect-Hook für das Laden der Statistikdaten
     useEffect(() => {
         fetchStats();
     }, [selectedWeekDate]);
@@ -48,37 +60,90 @@ const WorktimeStats: React.FC = () => {
     const fetchStats = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/worktime/stats?week=${selectedWeekDate}`, {
+            
+            console.log(`FETCH STATS für selectedWeekDate: ${selectedWeekDate}`);
+            
+            // WICHTIGES FIX: Wenn wir selectedWeekDate verwenden, müssen wir NICHTS mehr berechnen,
+            // da es bereits der Montag der Woche ist (berechnet von convertWeekToDate)
+            const dateToSend = selectedWeekDate;
+            
+            console.log(`SENDE AN API: week=${dateToSend}`);
+            
+            // Sende das Datum direkt ohne weitere Umrechnung
+            const response = await fetch(`${API_URL}/worktime/stats?week=${dateToSend}`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
-
+            
             if (!response.ok) {
                 throw new Error('Fehler beim Laden der Statistiken');
             }
-
+            
             const data = await response.json();
             
-            // Datum für jeden Tag in weeklyData hinzufügen
-            const start = startOfWeek(new Date(selectedWeekDate), { weekStartsOn: 1, locale: de });
-            const enrichedData = {
-                ...data,
-                weeklyData: data.weeklyData.map((dayData: any, index: number) => {
-                    const date = new Date(start);
-                    date.setDate(start.getDate() + index);
-                    return {
-                        ...dayData,
-                        date: format(date, 'yyyy-MM-dd')
-                    };
-                })
-            };
+            // Wichtig: Stelle sicher, dass die weeklyData das richtige date-Format haben
+            if (data && data.weeklyData) {
+                // Benutze direkt das selectedWeekDate als Start der Woche (Montag)
+                console.log(`Woche beginnt direkt mit selectedWeekDate: ${selectedWeekDate}`);
+                
+                // Behalte das originale Mapping (1-basiert)
+                const weekdayMapping = {
+                    "Montag": 1,
+                    "Dienstag": 2,
+                    "Mittwoch": 3,
+                    "Donnerstag": 4,
+                    "Freitag": 5,
+                    "Samstag": 6,
+                    "Sonntag": 7
+                };
+                
+                // Berechne die Tagesdaten basierend auf selectedWeekDate
+                // Wir brauchen keine Date-Objekte, wir können direkt die Tage berechnen
+                const weekDates = [
+                    selectedWeekDate, // Montag (Index 0)
+                    // Berechne die nächsten Tage durch einfaches Inkrementieren des Datums
+                    incrementDateString(selectedWeekDate, 1), // Dienstag (Index 1)
+                    incrementDateString(selectedWeekDate, 2), // Mittwoch (Index 2)
+                    incrementDateString(selectedWeekDate, 3), // Donnerstag (Index 3)
+                    incrementDateString(selectedWeekDate, 4), // Freitag (Index 4)
+                    incrementDateString(selectedWeekDate, 5), // Samstag (Index 5)
+                    incrementDateString(selectedWeekDate, 6)  // Sonntag (Index 6)
+                ];
+                
+                console.log("Berechnete Wochentage:", weekDates);
+                
+                // Konvertiere die Wochentage in Daten im YYYY-MM-DD Format
+                const enrichedData = {
+                    ...data,
+                    weeklyData: data.weeklyData.map((item) => {
+                        // Finde den korrekten Index für den Wochentag
+                        const dayIndex = weekdayMapping[item.day as keyof typeof weekdayMapping];
+                        if (dayIndex === undefined) {
+                            console.error(`Unbekannter Wochentag: ${item.day}`);
+                            return item; // Bei unbekanntem Wochentag, Eintrag unverändert zurückgeben
+                        }
+                        
+                        // Benutze direkt das berechnete Datum aus dem Array
+                        // Da unser weekdayMapping bei 1 beginnt, müssen wir 1 subtrahieren
+                        const formattedDate = weekDates[dayIndex - 1];
+                        console.log(`Verwende Datum für ${item.day} (Index ${dayIndex}): ${formattedDate}`);
+                        return {
+                            ...item,
+                            date: formattedDate
+                        };
+                    })
+                };
+                
+                setStats(enrichedData);
+            } else {
+                setStats(data);
+            }
             
-            setStats(enrichedData);
             setError(null);
-        } catch (error) {
-            console.error('Fehler beim Laden der Statistiken:', error);
-            setError('Die Statistiken konnten nicht geladen werden.');
+        } catch (err: any) {
+            console.error('Fehler beim Abrufen der Statistikdaten:', err);
+            setError(err?.response?.data?.message || 'Fehler beim Laden der Daten');
         } finally {
             setLoading(false);
         }
@@ -112,37 +177,6 @@ const WorktimeStats: React.FC = () => {
         }
     };
 
-    const getWeekDays = () => {
-        if (!selectedWeekDate) return [];
-        
-        const start = startOfWeek(new Date(selectedWeekDate), { weekStartsOn: 1, locale: de });
-        const end = endOfWeek(new Date(selectedWeekDate), { weekStartsOn: 1, locale: de });
-        
-        return eachDayOfInterval({ start, end }).map(day => format(day, 'EEEE', { locale: de }));
-    };
-
-    // Konvertiert das Wochenformat (YYYY-Www) in ein Datum (YYYY-MM-DD)
-    const convertWeekToDate = (weekString: string): string => {
-        try {
-            // Format: YYYY-Www
-            const year = parseInt(weekString.substring(0, 4));
-            const week = parseInt(weekString.substring(6));
-            
-            // Berechne das Datum des ersten Tags der Woche
-            const firstDayOfYear = new Date(year, 0, 1);
-            const dayOffset = 1 + (week - 1) * 7; // Erster Tag der Woche
-            const weekDate = new Date(year, 0, dayOffset);
-            
-            // Stelle sicher, dass wir den Montag der Woche bekommen
-            const monday = startOfWeek(weekDate, { weekStartsOn: 1 });
-            
-            return format(monday, 'yyyy-MM-dd');
-        } catch (error) {
-            console.error('Fehler beim Konvertieren des Wochendatums:', error);
-            return format(new Date(), 'yyyy-MM-dd');
-        }
-    };
-
     const handleWeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newWeekInput = e.target.value;
         if (!newWeekInput) return;
@@ -154,8 +188,24 @@ const WorktimeStats: React.FC = () => {
         setSelectedWeekDate(newWeekDate);
     };
 
-    // Neue Funktion zum Öffnen des Modals mit dem ausgewählten Datum
+    // Funktion zum Öffnen des Modals für den ausgewählten Tag
     const openWorkTimeModal = (date: string) => {
+        // Sicherheitsprüfung: Falls date undefined ist, nichts tun
+        if (!date) {
+            console.error('Kein Datum für Modal angegeben');
+            return;
+        }
+        
+        // Klare Debug-Ausgabe ohne unnötige Komplexität
+        console.log(`Modal wird geöffnet mit Datum: ${date}`);
+        
+        // Einfache Sicherheitsüberprüfung: Stelle sicher, dass ein gültiges Datumsformat verwendet wird
+        if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            console.error(`Ungültiges Datum für Modal: ${date}`);
+            return;
+        }
+        
+        // Keine weitere Manipulationen am Datum - nutze direkt den übergebenen Wert
         setSelectedDateForModal(date);
         setShowWorkTimeModal(true);
     };
@@ -165,19 +215,26 @@ const WorktimeStats: React.FC = () => {
         setShowWorkTimeModal(false);
     };
 
+    useEffect(() => {
+        if (!loading && stats && stats.weeklyData) {
+            // Finde den höchsten Stundenwert für die Skalierung
+            const maxHours = stats.weeklyData.reduce((max, day) => {
+                const hours = typeof day.hours === 'number' ? day.hours : parseFloat(day.hours);
+                return hours > max ? hours : max;
+            }, 0);
+            
+            setMaxHours(maxHours);
+        }
+    }, [loading, stats]);
+
     if (loading) return <div className="p-4">Lädt...</div>;
     if (error) return <div className="p-4 text-red-600">{error}</div>;
     if (!stats) return null;
 
-    const weekDays = getWeekDays();
+    const weekDays = getWeekDays(selectedWeekDate);
     
     // Finde den höchsten Stundenwert für die Skalierung
-    const maxHours = stats.weeklyData.reduce((max, day) => {
-        const hours = typeof day.hours === 'number' ? day.hours : parseFloat(day.hours);
-        return hours > max ? hours : max;
-    }, 0);
-    
-    // Feste Skala auf den höchsten Wert + 10% Puffer, mindestens aber 8 Stunden
+    // Der scaleMax-Wert wird aus dem State-maxHours berechnet
     const scaleMax = Math.max(8, Math.ceil(maxHours * 1.1));
     
     // Konstante für die Sollarbeitszeit (7,6 Stunden)
@@ -288,11 +345,16 @@ const WorktimeStats: React.FC = () => {
                                 // Berechnung der Höhe für den Teil unter der Sollarbeitszeit
                                 const normalHeight = Math.min(hours, targetWorkHours) / scaleMax * 100;
                                 
+                                // Verwende das bereits berechnete Datum aus weeklyData - keine weitere Berechnung notwendig!
+                                const formattedDate = dayData.date;
+                                
+                                console.log(`Balken ${index} - Tag: ${dayData.day}, Datum aus weeklyData: ${formattedDate}`);
+                                
                                 return (
                                     <div key={index} className="flex flex-col items-center" style={{ width: '13%' }}>
                                         <div 
                                             className="relative w-5/12 h-full flex flex-col justify-end cursor-pointer" 
-                                            onClick={() => openWorkTimeModal(dayData.date)}
+                                            onClick={() => openWorkTimeModal(formattedDate)}
                                             title="Klicken, um Zeiteinträge für diesen Tag anzuzeigen"
                                         >
                                             {/* Teil über der Sollarbeitszeit (rot) */}
@@ -335,7 +397,7 @@ const WorktimeStats: React.FC = () => {
                         {stats.weeklyData.map((dayData, index) => (
                             <div key={index} className="flex flex-col items-center" style={{ width: '13%' }}>
                                 <div className="text-sm text-gray-600">
-                                    {weekDays[index]?.substring(0, 2) || dayData.day.substring(0, 2)}
+                                    {dayData.day.substring(0, 2)}
                                 </div>
                                 <div className="text-sm font-medium">
                                     {dayData.hours.toFixed(1)}h
@@ -358,208 +420,20 @@ const WorktimeStats: React.FC = () => {
     );
 };
 
-// WorktimeModal Komponente, angepasst von WorktimeTracker
-const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, selectedDate }) => {
-    const [worktimes, setWorktimes] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [totalDuration, setTotalDuration] = useState<string>('0h 0m');
-
-    // Formatiere nur das Datum
-    const formatDate = (dateString: string) => {
-        if (!dateString) return '-';
-        
-        // Wir erstellen ein neues Date-Objekt und setzen die Uhrzeit auf 12:00 Mittag
-        // um Probleme mit Zeitzonen zu vermeiden
-        const dateParts = dateString.split('-');
-        if (dateParts.length !== 3) return '-';
-        
-        const year = parseInt(dateParts[0]);
-        const month = parseInt(dateParts[1]) - 1; // Monate sind 0-basiert in JavaScript
-        const day = parseInt(dateParts[2]);
-        
-        const date = new Date(year, month, day, 12, 0, 0);
-        
-        return date.toLocaleDateString('de-DE', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        });
-    };
-
-    // Formatiere nur die Uhrzeit
-    const formatTime = (dateString: string) => {
-        if (!dateString) return '-';
-        
-        try {
-            const date = new Date(dateString);
-            
-            // Formatiere die Zeit manuell, um Zeitzonen-Probleme zu vermeiden
-            const hours = date.getHours().toString().padStart(2, '0');
-            const minutes = date.getMinutes().toString().padStart(2, '0');
-            
-            return `${hours}:${minutes}`;
-        } catch (error) {
-            console.error(`Fehler beim Formatieren der Zeit für ${dateString}:`, error);
-            return '-';
-        }
-    };
-
-    // Prüfe, ob ein Worktime-Eintrag für den ausgewählten Tag relevant ist
-    const isWorktimeRelevantForSelectedDate = (worktime: any): boolean => {
-        try {
-            const startDate = new Date(worktime.startTime);
-            const utcDateStr = `${startDate.getUTCFullYear()}-${(startDate.getUTCMonth() + 1).toString().padStart(2, '0')}-${startDate.getUTCDate().toString().padStart(2, '0')}`;
-            
-            return utcDateStr === selectedDate;
-        } catch (error) {
-            console.error("Fehler beim Prüfen der Relevanz eines Worktime-Eintrags:", error);
-            return false;
-        }
-    };
-
-    // Berechne die Dauer eines Zeiteintrags
-    const calculateDuration = (startTime: string, endTime: string | null): string => {
-        if (!startTime || !endTime) return '-';
-        
-        try {
-            const start = new Date(startTime);
-            const end = new Date(endTime);
-            
-            const durationMs = end.getTime() - start.getTime();
-            const durationMinutes = Math.floor(durationMs / (1000 * 60));
-            
-            const hours = Math.floor(durationMinutes / 60);
-            const minutes = durationMinutes % 60;
-            
-            return `${hours}h ${minutes}m`;
-        } catch (error) {
-            console.error('Fehler bei der Dauerberechnung:', error);
-            return '-';
-        }
-    };
-
-    const fetchWorktimes = async () => {
-        try {
-            setLoading(true);
-            
-            const token = localStorage.getItem('token');
-            if (!token) {
-                console.error('Kein Authentifizierungstoken gefunden');
-                return;
-            }
-            
-            const response = await axios.get(`${API_URL}/worktime`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            
-            // Filtern der Einträge nach dem ausgewählten Datum
-            const relevantWorktimes = response.data.filter(isWorktimeRelevantForSelectedDate);
-            
-            setWorktimes(relevantWorktimes);
-            
-            // Berechne die Gesamtdauer aller Zeiteinträge für den Tag
-            let totalMinutes = 0;
-            
-            relevantWorktimes.forEach(worktime => {
-                if (worktime.startTime && worktime.endTime) {
-                    const start = new Date(worktime.startTime);
-                    const end = new Date(worktime.endTime);
-                    const durationMs = end.getTime() - start.getTime();
-                    const durationMinutes = Math.floor(durationMs / (1000 * 60));
-                    totalMinutes += durationMinutes;
-                }
-            });
-            
-            const totalHours = Math.floor(totalMinutes / 60);
-            const remainingMinutes = totalMinutes % 60;
-            setTotalDuration(`${totalHours}h ${remainingMinutes}m`);
-            
-        } catch (error) {
-            console.error('Fehler beim Laden der Zeiteinträge:', error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        if (isOpen) {
-            fetchWorktimes();
-        }
-    }, [isOpen, selectedDate]);
-
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-semibold">
-                        Zeiteinträge für {formatDate(selectedDate)}
-                    </h2>
-                    <button 
-                        onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700"
-                    >
-                        ×
-                    </button>
-                </div>
-                
-                {loading ? (
-                    <div className="py-12 text-center">Lade Zeiteinträge...</div>
-                ) : worktimes.length === 0 ? (
-                    <div className="py-12 text-center text-gray-500">
-                        Keine Zeiteinträge für diesen Tag gefunden.
-                    </div>
-                ) : (
-                    <>
-                        <div className="mb-4 text-right text-lg">
-                            <span className="font-medium">Gesamtzeit:</span> {totalDuration}
-                        </div>
-                        <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Beginn
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Ende
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Dauer
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Niederlassung
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {worktimes.map((worktime) => (
-                                        <tr key={worktime.id}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                {formatTime(worktime.startTime)}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                {worktime.endTime ? formatTime(worktime.endTime) : 'Aktiv'}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                {worktime.endTime ? calculateDuration(worktime.startTime, worktime.endTime) : '-'}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                {worktime.branch?.name || '-'}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </>
-                )}
-            </div>
-        </div>
-    );
+// Hilfsfunktion zum Inkrementieren eines Datums im String-Format 'YYYY-MM-DD'
+const incrementDateString = (dateString: string, daysToAdd: number): string => {
+    // Zerlege das Datum
+    const [year, month, day] = dateString.split('-').map(num => parseInt(num));
+    
+    // Erstelle ein Date-Objekt für diese Berechnung, aber mit Mittag als Uhrzeit
+    // um Zeitzonenprobleme zu vermeiden
+    const date = new Date(year, month - 1, day, 12, 0, 0);
+    
+    // Füge die Tage hinzu
+    date.setDate(date.getDate() + daysToAdd);
+    
+    // Formatiere das Datum zurück als 'YYYY-MM-DD'
+    return format(date, 'yyyy-MM-dd');
 };
 
 export default WorktimeStats; 

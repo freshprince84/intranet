@@ -36,7 +36,8 @@ JWT_SECRET=dein_jwt_secret
 PORT=5000
 ```
 
-6. Erstelle und bearbeite das Prisma-Schema in `prisma/schema.prisma`
+6. Erstelle das Prisma-Schema in `prisma/schema.prisma`
+   - Für das vollständige Datenbankschema siehe [DB_SCHEMA.md](DB_SCHEMA.md)
 
 7. Generiere die Prisma-Client-Typen:
 ```bash
@@ -117,7 +118,7 @@ npm run dev
 
 ## Datenbankstruktur
 
-Das Datenmodell ist vollständig in der `prisma/schema.prisma`-Datei definiert, einschließlich:
+Die Datenbank wird über Prisma verwaltet. Das Datenmodell umfasst folgende Hauptkomponenten:
 
 - Benutzer (User)
 - Rollen (Role)
@@ -128,11 +129,9 @@ Das Datenmodell ist vollständig in der `prisma/schema.prisma`-Datei definiert, 
 - Anfragen (Request)
 - Benutzereinstellungen (Settings)
 
-Beziehungstabellen:
-- UserRole
-- UsersBranches
+**Wichtig**: Für detaillierte Informationen zum Datenbankschema siehe [DB_SCHEMA.md](DB_SCHEMA.md).
 
-Das Prisma-Schema enthält alle notwendigen Relationen und Constraints zwischen diesen Entitäten. Bei jeder Schemaänderung muss eine Migration erstellt werden mit:
+Bei jeder Schemaänderung muss eine Migration erstellt werden mit:
 
 ```bash
 npx prisma migrate dev --name beschreibung_der_aenderung

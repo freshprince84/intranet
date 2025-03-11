@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth.tsx';
-import { UserCircleIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { API_URL } from '../config/api.ts';
 
 interface UserProfile {
@@ -14,7 +14,25 @@ interface UserProfile {
   bankDetails: string | null;
   contract: string | null;
   salary: number | null;
+  normalWorkingHours: number;
+  country: string;
+  language: string;
 }
+
+// Länder für die Auswahl
+const COUNTRIES = [
+  { code: 'CO', name: 'Kolumbien' },
+  { code: 'CH', name: 'Schweiz' },
+  { code: 'DE', name: 'Deutschland' },
+  { code: 'AT', name: 'Österreich' }
+];
+
+// Sprachen für die Auswahl
+const LANGUAGES = [
+  { code: 'es', name: 'Spanisch' },
+  { code: 'de', name: 'Deutsch' },
+  { code: 'en', name: 'Englisch' }
+];
 
 const Profile: React.FC = () => {
   const { user: authUser } = useAuth();
@@ -35,7 +53,10 @@ const Profile: React.FC = () => {
         birthday: null,
         bankDetails: null,
         contract: null,
-        salary: null
+        salary: null,
+        normalWorkingHours: 0,
+        country: '',
+        language: ''
       };
       setUser(initialUserData);
       setFormData(initialUserData);
@@ -162,9 +183,9 @@ const Profile: React.FC = () => {
           {!isEditing && (
             <button
               onClick={startEditing}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+              className="text-blue-600 hover:text-blue-900"
             >
-              Bearbeiten
+              <PencilIcon className="h-5 w-5" />
             </button>
           )}
         </div>
@@ -293,6 +314,60 @@ const Profile: React.FC = () => {
                 disabled={!isEditing}
                 className="w-full px-3 py-2 border rounded-md"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Normal Working Hours
+              </label>
+              <input
+                type="number"
+                name="normalWorkingHours"
+                value={isEditing ? formData.normalWorkingHours || '' : user.normalWorkingHours || ''}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border rounded-md"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Country
+              </label>
+              <select
+                name="country"
+                value={isEditing ? formData.country || '' : user.country || ''}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border rounded-md"
+              >
+                <option value="">Select a country</option>
+                {COUNTRIES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Language
+              </label>
+              <select
+                name="language"
+                value={isEditing ? formData.language || '' : user.language || ''}
+                onChange={handleInputChange}
+                disabled={!isEditing}
+                className="w-full px-3 py-2 border rounded-md"
+              >
+                <option value="">Select a language</option>
+                {LANGUAGES.map((language) => (
+                  <option key={language.code} value={language.code}>
+                    {language.name}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

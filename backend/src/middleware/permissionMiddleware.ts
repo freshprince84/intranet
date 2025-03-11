@@ -21,12 +21,12 @@ interface AuthenticatedRequest extends Request {
 
 /**
  * Middleware zur Überprüfung von Berechtigungen
- * @param entity - Entität (z.B. 'page' oder 'table')
+ * @param entity - Entität (z.B. 'page', 'table' oder 'cerebro')
  * @param requiredAccess - Erforderliche Zugriffsebene ('read' oder 'write')
- * @param entityType - Typ der Entität ('page' oder 'table')
+ * @param entityType - Typ der Entität ('page', 'table' oder 'cerebro')
  * @returns Express Middleware
  */
-export const checkPermission = (entity: string, requiredAccess: 'read' | 'write', entityType: 'page' | 'table' = 'page') => {
+export const checkPermission = (entity: string, requiredAccess: 'read' | 'write', entityType: 'page' | 'table' | 'cerebro' = 'page') => {
     return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
         try {
             const userId = parseInt(req.userId, 10);
@@ -60,7 +60,7 @@ export const checkUserPermission = async (
     roleId: number, 
     currentEntity: string, 
     requiredAccess: 'read' | 'write',
-    entityType: 'page' | 'table' = 'page'
+    entityType: 'page' | 'table' | 'cerebro' = 'page'
 ): Promise<boolean> => {
     try {
         // Hole die Berechtigungen für die aktuelle Rolle des Benutzers

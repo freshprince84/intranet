@@ -50,10 +50,15 @@ async function isNotificationEnabled(
       break;
     case NotificationType.worktime:
       if (relatedEntityType === 'start') {
-        enabled = userSettings?.worktimeStart ?? true;
+        enabled = userSettings?.worktimeStart ?? systemSettings.worktimeStart;
       } else if (relatedEntityType === 'stop') {
-        enabled = userSettings?.worktimeStop ?? true;
+        enabled = userSettings?.worktimeStop ?? systemSettings.worktimeStop;
+      } else if (relatedEntityType === 'auto_stop') {
+        enabled = userSettings?.worktimeAutoStop ?? systemSettings.worktimeAutoStop;
       }
+      break;
+    case NotificationType.worktime_manager_stop:
+      enabled = userSettings?.worktimeManagerStop ?? systemSettings.worktimeManagerStop;
       break;
     case NotificationType.system:
       enabled = true; // System-Benachrichtigungen sind immer aktiviert

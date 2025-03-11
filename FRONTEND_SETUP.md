@@ -182,7 +182,7 @@ export interface Notification {
 }
 
 // Typen für Benachrichtigungseinstellungen
-export interface NotificationSettings {
+interface NotificationSettings {
   taskCreate: boolean;
   taskUpdate: boolean;
   taskDelete: boolean;
@@ -199,6 +199,7 @@ export interface NotificationSettings {
   roleDelete: boolean;
   worktimeStart: boolean;
   worktimeStop: boolean;
+  worktimeAutoStop: boolean;
 }
 
 // API-Funktionen für Benachrichtigungen
@@ -1012,8 +1013,52 @@ Das System verwendet die zentrale Funktion `createNotificationIfEnabled` für al
 5. **Worktime-Trigger**:
    - `worktimeStart`: Benachrichtigt den Benutzer, wenn die Zeiterfassung gestartet wird
    - `worktimeStop`: Benachrichtigt den Benutzer, wenn die Zeiterfassung beendet wird
+   - `worktimeAutoStop`: Benachrichtigt den Benutzer, wenn die Zeiterfassung automatisch beendet wird, weil die tägliche Arbeitszeit erreicht wurde
 
-## 8.2. Tabellenstandards
+## 8.2. Zeitzonenbehandlung in der Zeiterfassung
+
+Die Zeiterfassung berücksichtigt die lokale Systemzeit des Benutzers ohne Zeitzonenumrechnung:
+
+### 8.2.1. Datenspeicherung und -anzeige
+
+- **Speicherung**: Zeiten werden immer in der lokalen Systemzeit des Benutzers in der Datenbank gespeichert
+- **Zeitzonenfeld**: Die aktuelle Zeitzone des Benutzers wird im `timezone`-Feld gespeichert (z.B. "America/Bogota")
+- **Anzeige**: Datumsangaben werden ohne Zeitzonenumrechnung angezeigt
+
+### 8.2.2. Frontend-Zeitzonenkorrektur
+
+Bei der Erstellung neuer Zeiterfassungen wird die lokale Zeit korrekt an den Server gesendet:
+
+```javascript
+// Zeitzonenkorrektur beim Senden von Zeitstempeln
+const correctedTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+```
+
+### 8.2.3. Formatierung von Datumsangaben
+
+Die Formatierung lokaler Zeiten:
+
+```javascript
+// Formatierung ohne UTC-Konvertierung
+const formatLocalDate = (dateString) => {
+  if (typeof dateString === 'string' && dateString.endsWith('Z')) {
+    dateString = dateString.substring(0, dateString.length - 1);
+  }
+  
+  const date = new Date(dateString);
+  
+  // Lokale Komponenten verwenden statt UTC
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  
+  return `${day}.${month}.${year}, ${hours}:${minutes}`;
+};
+```
+
+## 8.3. Tabellenstandards
 
 Alle Tabellen im Frontend müssen den folgenden Standards entsprechen, um eine einheitliche Benutzerfreundlichkeit und Konsistenz in der gesamten Anwendung zu gewährleisten:
 
@@ -1153,8 +1198,38 @@ Das System verwendet die zentrale Funktion `createNotificationIfEnabled` für al
 5. **Worktime-Trigger**:
    - `worktimeStart`: Benachrichtigt den Benutzer, wenn die Zeiterfassung gestartet wird
    - `worktimeStop`: Benachrichtigt den Benutzer, wenn die Zeiterfassung beendet wird
+   - `worktimeAutoStop`: Benachrichtigt den Benutzer, wenn die Zeiterfassung automatisch beendet wird, weil die tägliche Arbeitszeit erreicht wurde
 
-## Table Column Configuration
+## 11. Zeitzonenhandling in der Arbeitszeiterfassung
+
+### Verwendete Komponenten
+- `WorktimeTracker.tsx`: Hauptkomponente für die Zeiterfassung im Frontend
+- `WorktimeList.tsx`: Komponente zur Anzeige der Zeiterfassungseinträge
+
+### Zeitzonenbehandlung
+Das System verwendet durchgängig die lokale Systemzeit des Benutzers ohne UTC-Konvertierung:
+
+1. **Datenspeicherung und -anzeige**:
+   - Startzeiten und Endzeiten werden in der lokalen Systemzeit des Benutzers gespeichert
+   - Die Anzeige erfolgt ohne Zeitzonenkonvertierung, um Verwirrung zu vermeiden
+   - Im WorkTime-Modell wird die Zeitzone des Benutzers gespeichert, um die korrekte Anzeige zu gewährleisten
+
+2. **Frontend-Zeitzonenkorrektur**:
+   - Bei Senden neuer Zeiterfassungen wird die Zeit direkt als lokale Zeit gesendet
+   - Die Variable `localNow` wird für konsistente Zeitberechnungen bei automatischen Prozessen verwendet
+   - Keine manuelle Umrechnung zwischen UTC und lokaler Zeit im Frontend notwendig
+
+3. **Formatierung**:
+   - Lokale Zeiten werden ohne UTC-Konvertierung formatiert
+   - Das Feld `timezone` wird verwendet, um dem Benutzer seine aktuelle Zeitzone anzuzeigen
+
+### Best Practices
+- Immer `new Date()` für die lokale Zeit verwenden
+- Bei Zeitberechnungen mit `getTime()` konsistent gleiche Zeitstempel verwenden
+- Keine manuelle UTC-Konvertierung implementieren
+- Bei automatischen Prozessen (wie dem automatischen Stoppen) die lokale Systemzeit des Benutzers berücksichtigen
+
+## 12. Table Column Configuration
 
 Das Frontend verwendet ein System für benutzerdefinierte Tabellenkonfigurationen, das es Benutzern ermöglicht, die Anzeige von Tabellen nach ihren Präferenzen anzupassen.
 

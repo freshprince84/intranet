@@ -5,7 +5,8 @@ const data = JSON.stringify({
   email: 'cursor@example.com',
   password: 'Cursor123!',
   first_name: 'Cursor',
-  last_name: 'AI'
+  last_name: 'AI',
+  role_id: 999
 });
 
 const options = {
