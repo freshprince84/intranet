@@ -17,9 +17,6 @@ export const API_URL = process.env.NODE_ENV === 'development'
   ? `${API_BASE_URL}/api`
   : '/api';
 
-// Konsolenausgabe zur Überprüfung der generierten API_URL
-console.log('Verwendete API_URL:', API_URL);
-
 // WICHTIG: Diese Endpunkte werden zur baseURL hinzugefügt, die bereits API_URL enthält
 // Daher dürfen die Endpunkte hier NICHT mit API_URL beginnen!
 export const API_ENDPOINTS = {
@@ -62,7 +59,8 @@ export const API_ENDPOINTS = {
         BY_USER: (userId: number) => `/worktime/user/${userId}`,
         START: '/worktime/start',
         STOP: '/worktime/stop',
-        ACTIVE: '/worktime/active'
+        ACTIVE: '/worktime/active',
+        STATS: '/worktime/stats'
     },
     // Niederlassungen
     BRANCHES: {

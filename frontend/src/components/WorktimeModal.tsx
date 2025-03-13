@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { format, parseISO } from 'date-fns';
 import { formatDate, formatTime, calculateDuration, isWorktimeRelevantForSelectedDate } from '../utils/dateUtils.ts';
+import { worktimeApi, Worktime, ActiveWorktime } from '../api/worktimeApi.ts';
 
 // Schnittstelle für das WorktimeModal
 export interface WorktimeModalProps {
@@ -16,11 +16,11 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
     const today = new Date();
     const defaultDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
     
-    const [worktimes, setWorktimes] = useState<any[]>([]);
+    const [worktimes, setWorktimes] = useState<Worktime[]>([]);
     const [selectedDate, setSelectedDate] = useState<string>(initialSelectedDate || defaultDate);
     const [loading, setLoading] = useState(true);
     const [totalDuration, setTotalDuration] = useState<string>('0h 0m');
-    const [activeWorktime, setActiveWorktime] = useState<any | null>(null);
+    const [activeWorktime, setActiveWorktime] = useState<ActiveWorktime | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     // Prüfe, ob die aktive Zeiterfassung am ausgewählten Tag begonnen hat
@@ -44,53 +44,30 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
             setError(null);
             setLoading(true);
             
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setError('Nicht authentifiziert');
-                setLoading(false);
-                return;
-            }
-            
-            const formattedDate = selectedDate;
-            
-            // Verwende die korrekte API_ENDPOINTS-Struktur
-            console.log(`Versuche Arbeitszeiten zu laden für Datum: ${formattedDate}`);
-            console.log(`API-Endpunkt: ${API_ENDPOINTS.WORKTIME.BASE}?date=${formattedDate}`);
-            
-            const response = await axiosInstance.get(API_ENDPOINTS.WORKTIME.BASE, {
-                params: {
-                    date: formattedDate
-                }
-            });
-            
-            const sortedWorktimes = [...response.data].sort((a, b) => {
+            // Verwende den worktimeApi-Client für konsistente API-Aufrufe
+            // und bessere Fehlerbehandlung
+            const worktimesData = await worktimeApi.getWorktimesByDate(selectedDate);
+            const sortedWorktimes = [...worktimesData].sort((a, b) => {
                 return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
             });
             
             setWorktimes(sortedWorktimes);
             
             // Auch die aktive Zeiterfassung abrufen
-            const activeResponse = await axiosInstance.get(API_ENDPOINTS.WORKTIME.ACTIVE);
-            
-            if (activeResponse.data && Object.keys(activeResponse.data).length > 0) {
-                setActiveWorktime(activeResponse.data);
-            } else {
+            try {
+                const activeWorktimeData = await worktimeApi.getActiveWorktime();
+                setActiveWorktime(activeWorktimeData);
+            } catch (activeError) {
+                console.error('Fehler beim Laden der aktiven Zeiterfassung:', activeError);
+                // Keine Fehleranzeige für den Benutzer, da dies ein optionaler Aufruf ist
+                // Setze activeWorktime auf null, wenn ein Fehler auftritt
                 setActiveWorktime(null);
             }
             
             setLoading(false);
         } catch (error) {
             console.error('Fehler beim Laden der Zeiterfassungen:', error);
-            let errorMessage = 'Fehler beim Laden der Zeiterfassungen';
-            
-            // Spezifischere Fehlermeldung je nach Art des Fehlers
-            if (error.code === 'ERR_NETWORK') {
-                errorMessage = 'Netzwerkfehler: Server nicht erreichbar';
-            } else if (error.response && error.response.status) {
-                errorMessage = `Serverfehler: ${error.response.status} - ${error.response.data?.message || 'Unbekannter Fehler'}`;
-            }
-            
-            setError(errorMessage);
+            setError('Fehler beim Laden der Zeiterfassungen');
             setLoading(false);
         }
     };
@@ -247,13 +224,13 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                                             {calculateDuration(worktime.startTime, worktime.endTime)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                            {worktime.branch.name}
+                                            {worktime.branch?.name || 'Unbekannte Niederlassung'}
                                         </td>
                                     </tr>
                                 ))}
                                 
                                 {/* Aktive Zeiterfassung anzeigen, wenn sie für den ausgewählten Tag relevant ist */}
-                                {isActiveWorktimeRelevant() && (
+                                {activeWorktime && isActiveWorktimeRelevant() && (
                                     <tr className="bg-green-50 hover:bg-green-100">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                             {formatTime(activeWorktime.startTime)}
@@ -284,6 +261,30 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                                 </tr>
                             </tfoot>
                         </table>
+                    )}
+                </div>
+
+                <div className="mt-4">
+                    <h3 className="text-lg font-medium">Aktive Zeiterfassung</h3>
+                    {activeWorktime ? (
+                        <div className="mt-2 p-4 bg-green-50 rounded-lg border border-green-200">
+                            <div className="text-sm">
+                                <span className="font-medium">Gestartet: </span>
+                                {formatTime(activeWorktime.startTime)}
+                            </div>
+                            <div className="text-sm">
+                                <span className="font-medium">Dauer: </span>
+                                {calculateActiveDuration()}
+                            </div>
+                            <div className="text-sm">
+                                <span className="font-medium">Niederlassung: </span>
+                                {activeWorktime.branch?.name || 'Unbekannte Niederlassung'}
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                            <p className="text-sm text-gray-600">Keine aktive Zeiterfassung</p>
+                        </div>
                     )}
                 </div>
             </div>
