@@ -31,21 +31,13 @@ const payroll_1 = __importDefault(require("./routes/payroll"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const app = (0, express_1.default)();
 // Middleware
-app.use((0, cors_1.default)({
-    origin: (origin, callback) => {
-        // Erlaube Zugriff vom Frontend-Server und API-Anfragen ohne Origin (z.B. von curl)
-        const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001', undefined];
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, origin);
-        }
-        else {
-            // Für Produktionsumgebung könnten wir hier weitere Domains hinzufügen
-            callback(null, false);
-        }
-    },
-    credentials: true
-}));
 app.use(express_1.default.json());
+app.use((0, cors_1.default)({
+    origin: true, // Erlaubt alle Origins
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
 // Uploads-Verzeichnis
 const uploadsPath = path_1.default.join(__dirname, '../uploads');
 app.use('/uploads', express_1.default.static(uploadsPath));
