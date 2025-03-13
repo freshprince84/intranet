@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 
 interface EditRequestModalProps {
@@ -59,9 +61,7 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
 
         console.log('Lade Benutzer für EditRequestModal...');
         
-        const response = await axios.get('http://localhost:5000/api/users', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await axiosInstance.get(API_ENDPOINTS.USERS.BASE);
         
         console.log('Benutzer geladen:', response.data.length);
         setUsers(response.data);
@@ -82,6 +82,7 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
 
     const fetchBranches = async () => {
       try {
+        setError(null);
         const token = localStorage.getItem('token');
         if (!token) {
           setError('Nicht authentifiziert');
@@ -90,9 +91,7 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
 
         console.log('Lade Niederlassungen für EditRequestModal...');
         
-        const response = await axios.get('http://localhost:5000/api/branches', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
         
         console.log('Niederlassungen geladen:', response.data.length);
         setBranches(response.data);
@@ -126,20 +125,14 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
         return;
       }
 
-      await axios.put(
-        `http://localhost:5000/api/requests/${request.id}`,
+      await axiosInstance.put(
+        API_ENDPOINTS.REQUESTS.BY_ID(request.id),
         {
           title,
           responsible_id: Number(responsibleId),
           branch_id: Number(branchId),
           due_date: dueDate,
           create_todo: createTodo
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
         }
       );
 
