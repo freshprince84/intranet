@@ -27,6 +27,7 @@ Diese Datei dient lediglich als Hinweis, welche Dokumentationsdateien zu beachte
 - [ROLE_SWITCH.md](mdc:ROLE_SWITCH.md) - Funktionalität zum Wechseln der Benutzerrollen
 - [CHANGELOG.md](mdc:CHANGELOG.md) - Änderungshistorie des Projekts
 - [CEREBRO_WIKI.md](mdc:CEREBRO_WIKI.md) - Spezifikation und Implementierungsplan für das Cerebro Wiki-System
+- [multi-app-hosting-anleitung.md](mdc:multi-app-hosting-anleitung.md) - Anleitung zum Hosten mehrerer Node.js-Anwendungen auf einem Hetzner Server
 
 ## Wichtig: Änderungen dokumentieren!
 Bei allen Änderungen am Code muss die entsprechende Dokumentation aktualisiert und in die CHANGELOG.md eingetragen werden.

@@ -53,7 +53,15 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
             
             const formattedDate = selectedDate;
             
-            const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.BASE}?date=${formattedDate}`);
+            // Verwende die korrekte API_ENDPOINTS-Struktur
+            console.log(`Versuche Arbeitszeiten zu laden für Datum: ${formattedDate}`);
+            console.log(`API-Endpunkt: ${API_ENDPOINTS.WORKTIME.BASE}?date=${formattedDate}`);
+            
+            const response = await axiosInstance.get(API_ENDPOINTS.WORKTIME.BASE, {
+                params: {
+                    date: formattedDate
+                }
+            });
             
             const sortedWorktimes = [...response.data].sort((a, b) => {
                 return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
@@ -73,7 +81,16 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
             setLoading(false);
         } catch (error) {
             console.error('Fehler beim Laden der Zeiterfassungen:', error);
-            setError('Fehler beim Laden der Zeiterfassungen');
+            let errorMessage = 'Fehler beim Laden der Zeiterfassungen';
+            
+            // Spezifischere Fehlermeldung je nach Art des Fehlers
+            if (error.code === 'ERR_NETWORK') {
+                errorMessage = 'Netzwerkfehler: Server nicht erreichbar';
+            } else if (error.response && error.response.status) {
+                errorMessage = `Serverfehler: ${error.response.status} - ${error.response.data?.message || 'Unbekannter Fehler'}`;
+            }
+            
+            setError(errorMessage);
             setLoading(false);
         }
     };

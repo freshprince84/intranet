@@ -2,11 +2,24 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, getWeek, getYear, parse, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ChartBarIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
-import { API_URL } from '../config/api.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import WorktimeList from './WorktimeList.tsx';
 import axios from 'axios';
 import { WorktimeModal } from './WorktimeModal.tsx';
 import { convertWeekToDate, getWeekDays } from '../utils/dateUtils.ts';
+import axiosInstance from '../config/axios.ts';
+import { Pie } from 'react-chartjs-2';
+import {
+    Chart as ChartJS,
+    ArcElement,
+    Tooltip,
+    Legend,
+    CategoryScale,
+    LinearScale
+} from 'chart.js';
+
+// Registriere die benötigten ChartJS-Komponenten
+ChartJS.register(ArcElement, Tooltip, Legend, CategoryScale, LinearScale);
 
 // Neue Schnittstelle für das WorktimeModal mit selectedDate
 interface WorktimeModalProps {
@@ -26,11 +39,25 @@ interface WorktimeStats {
     }[];
 }
 
+// Definiere Interface für Pie Chart Daten
+interface PieChartData {
+    labels: string[];
+    datasets: {
+        label: string;
+        data: number[];
+        backgroundColor: string[];
+        borderColor: string[];
+        borderWidth: number;
+    }[];
+}
+
 const WorktimeStats: React.FC = () => {
     const [stats, setStats] = useState<WorktimeStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [maxHours, setMaxHours] = useState<number>(8); // Standard 8 Stunden
+    const [pieChartData, setPieChartData] = useState<PieChartData | null>(null);
+    const [exporting, setExporting] = useState<boolean>(false);
     
     // Aktuelle Woche im Format YYYY-Www für das Input-Element
     const today = new Date();
@@ -59,121 +86,124 @@ const WorktimeStats: React.FC = () => {
 
     const fetchStats = async () => {
         try {
+            setLoading(true);
+            setError(null);
+            
             const token = localStorage.getItem('token');
+            if (!token) {
+                setError('Nicht authentifiziert');
+                setLoading(false);
+                return;
+            }
             
-            console.log(`FETCH STATS für selectedWeekDate: ${selectedWeekDate}`);
-            
-            // WICHTIGES FIX: Wenn wir selectedWeekDate verwenden, müssen wir NICHTS mehr berechnen,
-            // da es bereits der Montag der Woche ist (berechnet von convertWeekToDate)
             const dateToSend = selectedWeekDate;
-            
             console.log(`SENDE AN API: week=${dateToSend}`);
             
-            // Sende das Datum direkt ohne weitere Umrechnung
-            const response = await fetch(`${API_URL}/worktime/stats?week=${dateToSend}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
+            // Verwende axiosInstance statt fetch für konsistentes Verhalten
+            console.log(`API-Endpunkt: ${API_ENDPOINTS.WORKTIME.BASE}/stats?week=${dateToSend}`);
+            
+            const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.BASE}/stats`, {
+                params: {
+                    week: dateToSend
                 }
             });
             
-            if (!response.ok) {
-                throw new Error('Fehler beim Laden der Statistiken');
-            }
+            const data = response.data;
+            setStats(data);
             
-            const data = await response.json();
-            
-            // Wichtig: Stelle sicher, dass die weeklyData das richtige date-Format haben
+            // Generiere den Kuchengrafik-Datensatz, wenn Daten vorhanden sind
             if (data && data.weeklyData) {
-                // Benutze direkt das selectedWeekDate als Start der Woche (Montag)
-                console.log(`Woche beginnt direkt mit selectedWeekDate: ${selectedWeekDate}`);
-                
-                // Behalte das originale Mapping (1-basiert)
-                const weekdayMapping = {
-                    "Montag": 1,
-                    "Dienstag": 2,
-                    "Mittwoch": 3,
-                    "Donnerstag": 4,
-                    "Freitag": 5,
-                    "Samstag": 6,
-                    "Sonntag": 7
-                };
-                
-                // Berechne die Tagesdaten basierend auf selectedWeekDate
-                // Wir brauchen keine Date-Objekte, wir können direkt die Tage berechnen
-                const weekDates = [
-                    selectedWeekDate, // Montag (Index 0)
-                    // Berechne die nächsten Tage durch einfaches Inkrementieren des Datums
-                    incrementDateString(selectedWeekDate, 1), // Dienstag (Index 1)
-                    incrementDateString(selectedWeekDate, 2), // Mittwoch (Index 2)
-                    incrementDateString(selectedWeekDate, 3), // Donnerstag (Index 3)
-                    incrementDateString(selectedWeekDate, 4), // Freitag (Index 4)
-                    incrementDateString(selectedWeekDate, 5), // Samstag (Index 5)
-                    incrementDateString(selectedWeekDate, 6)  // Sonntag (Index 6)
-                ];
-                
-                console.log("Berechnete Wochentage:", weekDates);
-                
-                // Konvertiere die Wochentage in Daten im YYYY-MM-DD Format
-                const enrichedData = {
-                    ...data,
-                    weeklyData: data.weeklyData.map((item) => {
-                        // Finde den korrekten Index für den Wochentag
-                        const dayIndex = weekdayMapping[item.day as keyof typeof weekdayMapping];
-                        if (dayIndex === undefined) {
-                            console.error(`Unbekannter Wochentag: ${item.day}`);
-                            return item; // Bei unbekanntem Wochentag, Eintrag unverändert zurückgeben
+                setPieChartData({
+                    labels: data.weeklyData.map((day: any) => day.day),
+                    datasets: [
+                        {
+                            label: 'Stunden',
+                            data: data.weeklyData.map((day: any) => day.hours),
+                            backgroundColor: [
+                                'rgba(54, 162, 235, 0.2)',
+                                'rgba(255, 99, 132, 0.2)',
+                                'rgba(255, 206, 86, 0.2)',
+                                'rgba(75, 192, 192, 0.2)',
+                                'rgba(153, 102, 255, 0.2)',
+                                'rgba(255, 159, 64, 0.2)',
+                                'rgba(255, 99, 132, 0.2)'
+                            ],
+                            borderColor: [
+                                'rgba(54, 162, 235, 1)',
+                                'rgba(255, 99, 132, 1)',
+                                'rgba(255, 206, 86, 1)',
+                                'rgba(75, 192, 192, 1)',
+                                'rgba(153, 102, 255, 1)',
+                                'rgba(255, 159, 64, 1)',
+                                'rgba(255, 99, 132, 1)'
+                            ],
+                            borderWidth: 1,
                         }
-                        
-                        // Benutze direkt das berechnete Datum aus dem Array
-                        // Da unser weekdayMapping bei 1 beginnt, müssen wir 1 subtrahieren
-                        const formattedDate = weekDates[dayIndex - 1];
-                        console.log(`Verwende Datum für ${item.day} (Index ${dayIndex}): ${formattedDate}`);
-                        return {
-                            ...item,
-                            date: formattedDate
-                        };
-                    })
-                };
-                
-                setStats(enrichedData);
-            } else {
-                setStats(data);
+                    ]
+                });
             }
             
-            setError(null);
-        } catch (err: any) {
-            console.error('Fehler beim Abrufen der Statistikdaten:', err);
-            setError(err?.response?.data?.message || 'Fehler beim Laden der Daten');
-        } finally {
+            setLoading(false);
+        } catch (error) {
+            console.error('Fehler beim Laden der Statistiken:', error);
+            let errorMessage = 'Fehler beim Laden der Statistiken';
+            
+            // Spezifischere Fehlermeldung je nach Art des Fehlers
+            if (error.code === 'ERR_NETWORK') {
+                errorMessage = 'Netzwerkfehler: Server nicht erreichbar';
+            } else if (error.response && error.response.status) {
+                errorMessage = `Serverfehler: ${error.response.status} - ${error.response.data?.message || 'Unbekannter Fehler'}`;
+            }
+            
+            setError(errorMessage);
             setLoading(false);
         }
     };
 
     const handleExport = async () => {
         try {
+            setExporting(true);
+            
             const token = localStorage.getItem('token');
-            const response = await fetch(`${API_URL}/worktime/export?week=${selectedWeekDate}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error('Fehler beim Exportieren der Statistiken');
+            if (!token) {
+                setError('Nicht authentifiziert');
+                setExporting(false);
+                return;
             }
-
-            const blob = await response.blob();
+            
+            console.log(`API-Endpunkt für Export: ${API_ENDPOINTS.WORKTIME.BASE}/export?week=${selectedWeekDate}`);
+            
+            // Verwende axiosInstance mit responseType 'blob'
+            const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.BASE}/export`, {
+                params: {
+                    week: selectedWeekDate
+                },
+                responseType: 'blob'
+            });
+            
+            // Erstelle einen Blob und einen Download-Link
+            const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Arbeitszeitstatistik_KW${selectedWeekInput.split('W')[1]}.xlsx`;
+            a.download = `Arbeitszeitstatistik_${selectedWeekDate}.xlsx`;
             document.body.appendChild(a);
             a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
+            
+            setExporting(false);
         } catch (error) {
-            console.error('Fehler beim Exportieren:', error);
-            setError('Die Statistiken konnten nicht exportiert werden.');
+            console.error('Fehler beim Exportieren der Zeiterfassung:', error);
+            let errorMessage = 'Fehler beim Exportieren';
+            
+            // Spezifischere Fehlermeldung je nach Art des Fehlers
+            if (error.code === 'ERR_NETWORK') {
+                errorMessage = 'Netzwerkfehler: Server nicht erreichbar';
+            } else if (error.response && error.response.status) {
+                errorMessage = `Serverfehler: ${error.response.status} - ${error.response.data?.message || 'Unbekannter Fehler'}`;
+            }
+            
+            setError(errorMessage);
+            setExporting(false);
         }
     };
 

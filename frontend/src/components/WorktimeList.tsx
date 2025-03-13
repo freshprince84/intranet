@@ -49,13 +49,29 @@ const WorktimeList: React.FC = () => {
                 return;
             }
             
-            const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.BASE}?date=${dateFilter}`);
+            console.log(`Versuche Arbeitszeiten zu laden für Datum: ${dateFilter}`);
+            console.log(`API-Endpunkt: ${API_ENDPOINTS.WORKTIME.BASE}?date=${dateFilter}`);
+            
+            const response = await axiosInstance.get(API_ENDPOINTS.WORKTIME.BASE, {
+                params: {
+                    date: dateFilter
+                }
+            });
             
             setWorktimes(response.data);
             setLoading(false);
         } catch (error) {
             console.error('Fehler beim Laden der Zeiterfassungen:', error);
-            setError('Fehler beim Laden der Zeiterfassungen');
+            let errorMessage = 'Fehler beim Laden der Zeiterfassungen';
+            
+            // Spezifischere Fehlermeldung je nach Art des Fehlers
+            if (error.code === 'ERR_NETWORK') {
+                errorMessage = 'Netzwerkfehler: Server nicht erreichbar';
+            } else if (error.response && error.response.status) {
+                errorMessage = `Serverfehler: ${error.response.status} - ${error.response.data?.message || 'Unbekannter Fehler'}`;
+            }
+            
+            setError(errorMessage);
             setLoading(false);
         }
     };
