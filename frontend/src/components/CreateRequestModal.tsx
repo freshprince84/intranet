@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import axios from 'axios'; // Für type checking
+import axiosInstance from '../config/axios.ts'; // Importiere die konfigurierte axios-Instanz
 import { useAuth } from '../hooks/useAuth.tsx';
 import { API_ENDPOINTS } from '../config/api.ts';
 
@@ -50,12 +51,8 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
         
         try {
           const [usersResponse, branchesResponse] = await Promise.all([
-            axios.get(API_ENDPOINTS.USERS.BASE, {
-              headers: { Authorization: `Bearer ${token}` }
-            }),
-            axios.get(API_ENDPOINTS.BRANCHES.BASE, {
-              headers: { Authorization: `Bearer ${token}` }
-            })
+            axiosInstance.get(API_ENDPOINTS.USERS.BASE),
+            axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE)
           ]);
 
           console.log('Benutzer geladen:', usersResponse.data.length);
@@ -112,7 +109,7 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
         throw new Error('Ungültige ID-Werte für Verantwortlichen oder Niederlassung');
       }
 
-      const response = await axios.post(API_ENDPOINTS.REQUESTS.BASE, 
+      const response = await axiosInstance.post(API_ENDPOINTS.REQUESTS.BASE, 
         {
           title: formData.title,
           description: formData.description || '',
@@ -122,12 +119,6 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
           due_date: formData.due_date || null,
           create_todo: formData.create_todo,
           status: 'approval'
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
         }
       );
 

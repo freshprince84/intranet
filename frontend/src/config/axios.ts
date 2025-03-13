@@ -1,7 +1,11 @@
+/// <reference types="node" />
+
 import axios from 'axios';
 
-// API-Basis-URL direkt definieren
-const API_BASE_URL = 'http://localhost:5000';
+// Dynamische API-Basis-URL basierend auf der Umgebung
+const API_BASE_URL = process.env.NODE_ENV === 'development'
+  ? `http://${window.location.hostname}:5000`
+  : `/api`; // Im Produktionsbetrieb verwenden wir relative URLs!
 
 const instance = axios.create({
   baseURL: API_BASE_URL,

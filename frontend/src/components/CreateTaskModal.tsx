@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axiosInstance from '../config/axios.ts';
 import axios from 'axios';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
@@ -51,11 +52,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
 
             console.log('Lade Benutzer für CreateTaskModal...');
             
-            const response = await axios.get(API_ENDPOINTS.USERS.BASE, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await axiosInstance.get(API_ENDPOINTS.USERS.BASE);
             
             console.log('Benutzer geladen:', response.data.length);
             setUsers(response.data || []);
@@ -85,11 +82,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
 
             console.log('Lade Niederlassungen für CreateTaskModal...');
             
-            const response = await axios.get(API_ENDPOINTS.BRANCHES.BASE, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
             
             console.log('Niederlassungen geladen:', response.data.length);
             setBranches(response.data || []);
@@ -140,7 +133,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
                 return;
             }
 
-            const response = await axios.post(API_ENDPOINTS.TASKS.BASE, 
+            const response = await axiosInstance.post(API_ENDPOINTS.TASKS.BASE, 
                 {
                     title,
                     description: description || null,
@@ -149,12 +142,6 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
                     qualityControlId: qualityControl,
                     branchId: branch,
                     dueDate: dueDate || null
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
                 }
             );
 

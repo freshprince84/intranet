@@ -6,7 +6,7 @@
 // API-Basis-URL basierend auf der Umgebung
 export const API_BASE_URL = process.env.NODE_ENV === 'development'
   ? `http://${window.location.hostname}:5000`
-  : `http://${window.location.hostname}:5000`;
+  : ''; // Leerer String für Produktionsumgebung, dadurch werden alle Pfade relativ
 
 // Vollständige API-URL (BASE_URL + /api)
 export const API_URL = `${API_BASE_URL}/api`;
