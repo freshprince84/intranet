@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { UserCircleIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { API_URL } from '../config/api.ts';
@@ -71,11 +72,7 @@ const Profile: React.FC = () => {
         throw new Error('Kein Token gefunden');
       }
 
-      const response = await axios.get(`${API_URL}/users/profile`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.get('/users/profile');
       
       console.log('Profile response:', response.data);
       if (response.data) {
@@ -133,11 +130,7 @@ const Profile: React.FC = () => {
 
       console.log('Sending data to backend:', dataToSend);
       
-      const response = await axios.put(`${API_URL}/users/profile`, dataToSend, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await axiosInstance.put('/users/profile', dataToSend);
       
       console.log('Update response:', response.data);
       

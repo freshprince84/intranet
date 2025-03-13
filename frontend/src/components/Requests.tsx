@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
@@ -121,7 +122,7 @@ const Requests: React.FC = () => {
   const fetchRequests = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/requests`);
+      const response = await axiosInstance.get('/requests');
       setRequests(response.data);
       setError(null);
     } catch (err) {
@@ -174,7 +175,7 @@ const Requests: React.FC = () => {
         return;
       }
 
-      await axios.put(`${API_URL}/requests/${requestId}`, 
+      await axiosInstance.put(`/requests/${requestId}`, 
         { 
           status: newStatus,
           create_todo: currentRequest.createTodo
