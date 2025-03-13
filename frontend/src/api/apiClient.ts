@@ -1,21 +1,16 @@
 import axios, { AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios';
+import axiosInstance from '../config/axios.ts';
 import { API_URL } from '../config/api.ts';
 
-// Konfiguriere axios für alle Requests
+// Debugausgaben für die API-Konfiguration
 console.log('DEBUGAUSGABE API-Client: API_URL ist:', API_URL);
 
-// Initialisiere API-Client mit der API_URL
-const apiClient = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
+// Verwende die konfigurierte Instanz aus config/axios.ts
+const apiClient = axiosInstance;
 
-// Request Interceptor
+// Request Interceptor für Debugging (zusätzlich zu dem in axios.ts)
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
     // Vollständige URL ausgeben
     const fullUrl = `${config.baseURL}${config.url}`;
     console.log('DEBUGAUSGABE API-Client: Vollständige Request URL:', fullUrl);
@@ -23,10 +18,8 @@ apiClient.interceptors.request.use(
     console.log('DEBUGAUSGABE API-Client: Request-Headers:', config.headers);
     console.log('DEBUGAUSGABE API-Client: Request-Daten:', config.data);
     
+    const token = localStorage.getItem('token');
     console.log('DEBUGAUSGABE API-Client: Token vorhanden:', !!token);
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
     
     return config;
   },
@@ -36,7 +29,7 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Response Interceptor
+// Response Interceptor für Debugging (zusätzlich zu dem in axios.ts)
 apiClient.interceptors.response.use(
   (response) => {
     console.log('DEBUGAUSGABE API-Client: Response erhalten:', response.status, response.config.url);

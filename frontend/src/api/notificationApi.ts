@@ -1,6 +1,4 @@
 import apiClient from './apiClient.ts';
-import axios from 'axios';
-import { API_BASE_URL } from '../config/api.ts';
 
 export interface Notification {
   id: number;
@@ -50,7 +48,7 @@ export const notificationApi = {
   // Benachrichtigungen abrufen
   getNotifications: async (page: number = 1, limit: number = 10): Promise<NotificationResponse> => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/notifications?page=${page}&limit=${limit}`);
+      const response = await apiClient.get(`/notifications?page=${page}&limit=${limit}`);
       console.log('Notifications API Response:', response.data);
       
       return response.data;
@@ -63,7 +61,7 @@ export const notificationApi = {
   // Ungelesene Benachrichtigungen zählen
   getUnreadCount: async (): Promise<number> => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/api/notifications/unread/count`);
+      const response = await apiClient.get(`/notifications/unread/count`);
       console.log('Unread Count API Response:', response.data);
       
       if (response.data && typeof response.data.count === 'number') {
@@ -80,7 +78,7 @@ export const notificationApi = {
   // Benachrichtigung als gelesen markieren
   markAsRead: async (id: number) => {
     try {
-      const response = await axios.patch(`${API_BASE_URL}/api/notifications/${id}/read`);
+      const response = await apiClient.patch(`/notifications/${id}/read`);
       return response.data;
     } catch (error) {
       console.error(`Fehler beim Markieren der Benachrichtigung ${id} als gelesen:`, error);
@@ -91,7 +89,7 @@ export const notificationApi = {
   // Alle Benachrichtigungen als gelesen markieren
   markAllAsRead: async () => {
     try {
-      const response = await axios.patch(`${API_BASE_URL}/api/notifications/read-all`);
+      const response = await apiClient.patch(`/notifications/read-all`);
       return response.data;
     } catch (error) {
       console.error('Fehler beim Markieren aller Benachrichtigungen als gelesen:', error);
@@ -102,7 +100,7 @@ export const notificationApi = {
   // Benachrichtigung löschen
   deleteNotification: async (id: number) => {
     try {
-      const response = await axios.delete(`${API_BASE_URL}/api/notifications/${id}`);
+      const response = await apiClient.delete(`/notifications/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Fehler beim Löschen der Benachrichtigung ${id}:`, error);
@@ -113,7 +111,7 @@ export const notificationApi = {
   // Alle Benachrichtigungen löschen
   deleteAllNotifications: async () => {
     try {
-      const response = await axios.delete(`${API_BASE_URL}/api/notifications`);
+      const response = await apiClient.delete(`/notifications`);
       return response.data;
     } catch (error) {
       console.error('Fehler beim Löschen aller Benachrichtigungen:', error);
@@ -128,7 +126,7 @@ export const notificationSettingsApi = {
   getSystemSettings: async () => {
     try {
       console.log('Rufe System-Einstellungen ab...');
-      const response = await axios.get(`${API_BASE_URL}/api/settings/notifications`);
+      const response = await apiClient.get(`/settings/notifications`);
       return response.data;
     } catch (error) {
       console.error('Fehler beim Abrufen der System-Einstellungen:', error);
@@ -139,7 +137,7 @@ export const notificationSettingsApi = {
   // System-weite Benachrichtigungseinstellungen aktualisieren
   updateSystemSettings: async (settings: NotificationSettings) => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/api/settings/notifications`, settings);
+      const response = await apiClient.put(`/settings/notifications`, settings);
       return response.data;
     } catch (error) {
       console.error('Fehler beim Aktualisieren der System-Einstellungen:', error);
@@ -151,7 +149,7 @@ export const notificationSettingsApi = {
   getUserSettings: async () => {
     try {
       console.log('Rufe Benutzer-Einstellungen ab...');
-      const response = await axios.get(`${API_BASE_URL}/api/settings/notifications/user`);
+      const response = await apiClient.get(`/settings/notifications/user`);
       return response.data;
     } catch (error) {
       console.error('Fehler beim Abrufen der Benutzer-Einstellungen:', error);
@@ -162,7 +160,7 @@ export const notificationSettingsApi = {
   // Benutzer-spezifische Benachrichtigungseinstellungen aktualisieren
   updateUserSettings: async (settings: Partial<NotificationSettings>) => {
     try {
-      const response = await axios.put(`${API_BASE_URL}/api/settings/notifications/user`, settings);
+      const response = await apiClient.put(`/settings/notifications/user`, settings);
       return response.data;
     } catch (error) {
       console.error('Fehler beim Aktualisieren der Benutzer-Einstellungen:', error);

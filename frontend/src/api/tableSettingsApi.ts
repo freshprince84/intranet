@@ -1,4 +1,5 @@
-import axios from 'axios';
+// import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
 import { API_URL } from '../config/api.ts';
 
 export interface TableSettings {
@@ -16,7 +17,7 @@ export const tableSettingsApi = {
   getTableSettings: async (tableId: string): Promise<TableSettings> => {
     try {
       // Zuerst versuchen, Einstellungen vom API-Server zu laden
-      const response = await axios.get(`${API_URL}/table-settings/${tableId}`);
+      const response = await axiosInstance.get(`/table-settings/${tableId}`);
       return response.data;
     } catch (error) {
       console.error('Fehler beim Abrufen der Tabelleneinstellungen vom Server:', error);
@@ -30,10 +31,10 @@ export const tableSettingsApi = {
           return JSON.parse(storedSettings);
         }
       } catch (localError) {
-        console.error('Fehler beim Abrufen der Tabelleneinstellungen aus dem localStorage:', localError);
+        console.error('Fehler beim Laden aus localStorage:', localError);
       }
       
-      // Standardwerte zurückgeben, falls ein Fehler auftritt
+      // Default-Einstellungen zurückgeben, wenn keine gespeicherten verfügbar sind
       return {
         tableId,
         columnOrder: [],
@@ -41,34 +42,26 @@ export const tableSettingsApi = {
       };
     }
   },
-
-  // Benutzerspezifische Tabelleneinstellungen speichern
-  saveTableSettings: async (settings: TableSettings): Promise<TableSettings> => {
+  
+  // Tabelleneinstellungen speichern (server-side und localStorage)
+  saveTableSettings: async (settings: TableSettings): Promise<void> => {
     try {
-      // Versuch, Einstellungen an den API-Server zu senden
-      const response = await axios.post(`${API_URL}/table-settings`, settings);
+      // Zum API-Server senden
+      await axiosInstance.post(`/table-settings`, settings);
       
-      // Fallback: In localStorage speichern
-      try {
-        const localStorageKey = getLocalStorageKey(settings.tableId);
-        localStorage.setItem(localStorageKey, JSON.stringify(settings));
-      } catch (localError) {
-        console.error('Fehler beim Speichern der Tabelleneinstellungen im localStorage:', localError);
-      }
-      
-      return response.data;
+      // Auch im localStorage speichern
+      const localStorageKey = getLocalStorageKey(settings.tableId);
+      localStorage.setItem(localStorageKey, JSON.stringify(settings));
     } catch (error) {
       console.error('Fehler beim Speichern der Tabelleneinstellungen auf dem Server:', error);
       
-      // Fallback: Nur in localStorage speichern, wenn API-Aufruf fehlschlägt
+      // Trotzdem im localStorage speichern
       try {
         const localStorageKey = getLocalStorageKey(settings.tableId);
         localStorage.setItem(localStorageKey, JSON.stringify(settings));
       } catch (localError) {
-        console.error('Fehler beim Speichern der Tabelleneinstellungen im localStorage:', localError);
+        console.error('Fehler beim Speichern im localStorage:', localError);
       }
-      
-      return settings;
     }
   },
   

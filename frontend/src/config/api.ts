@@ -5,15 +5,17 @@
 
 // API-Basis-URL basierend auf der Umgebung
 export const API_BASE_URL = process.env.NODE_ENV === 'development'
-  ? `http://${window.location.hostname}:5000`
+  ? window.location.hostname === 'localhost'
+    ? 'http://localhost:5000'  // Lokale Entwicklung auf localhost
+    : `http://${window.location.hostname}:5000`  // Entwicklung über IP
   : ''; // Leerer String für Produktionsumgebung, dadurch werden alle Pfade relativ
 
 // Vollständige API-URL
-// In der Entwicklung vollständige URL mit /api
-// In Produktion /api, da die Nginx-Konfiguration dies bereits korrekt weiterleitet
+// Im Entwicklungsmodus: vollständige URL mit /api
+// Im Produktionsmodus: nur '/api' als Präfix, da die Nginx-Konfiguration dies bereits korrekt weiterleitet
 export const API_URL = process.env.NODE_ENV === 'development'
   ? `${API_BASE_URL}/api`
-  : '/api'; // Hier war der Fehler - war leerer String, muss /api sein
+  : '/api';
 
 // Alle API-Endpunkte
 export const API_ENDPOINTS = {

@@ -1,14 +1,12 @@
 /// <reference types="node" />
 
 import axios from 'axios';
+import { API_URL } from './api.ts';
 
-// Dynamische API-Basis-URL basierend auf der Umgebung
-const API_BASE_URL = process.env.NODE_ENV === 'development'
-  ? `http://${window.location.hostname}:5000`
-  : '/api'; // Im Produktionsbetrieb verwenden wir '/api' als Basis
-
+// Konfigurierte Axios-Instanz erstellen
+// Diese Instanz soll in der gesamten Anwendung verwendet werden
 const instance = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: API_URL, // Verwende die zentrale API_URL aus api.ts
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json'
@@ -34,5 +32,9 @@ instance.interceptors.request.use(
     return Promise.reject(error);
   }
 );
+
+// Globale Axios-Defaults für Abwärtskompatibilität setzen
+// WICHTIG: Wo immer möglich, sollte stattdessen die Instanz verwendet werden
+axios.defaults.baseURL = API_URL;
 
 export default instance; 

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
 import { API_BASE_URL, API_URL, API_ENDPOINTS } from '../config/api.ts';
 
 // API-Endpunkte aus der zentralen Konfiguration verwenden
@@ -53,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const token = localStorage.getItem('token');
         if (token) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             fetchCurrentUser();
         } else {
             setIsLoading(false);
@@ -61,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const fetchCurrentUser = async () => {
         try {
-            const response = await axios.get(`${API_URL}/users/profile`);
+            const response = await axiosInstance.get(`${API_URL}/users/profile`);
             
             if (response.data && response.data.roles) {
                 const activeRole = response.data.roles.find((r: UserRole) => r.lastUsed);
@@ -83,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (error) {
             localStorage.removeItem('token');
             delete axios.defaults.headers.common['Authorization'];
+            delete axiosInstance.defaults.headers.common['Authorization'];
         } finally {
             setIsLoading(false);
         }
@@ -90,7 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const login = async (username: string, password: string) => {
         try {
-            const response = await axios.post(`${AUTH_ENDPOINTS.LOGIN}`, { username, password });
+            const response = await axiosInstance.post(`${AUTH_ENDPOINTS.LOGIN}`, { username, password });
             const { token, user } = response.data;
             
             if (!user || !user.id || !user.username || !user.firstName || !user.lastName || !user.roles) {
@@ -99,6 +102,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             
             localStorage.setItem('token', token);
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+            axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             
             const hasActiveRole = user.roles.some((r: any) => r.lastUsed === true);
             
@@ -121,19 +125,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const logout = async () => {
         try {
-            await axios.post(AUTH_ENDPOINTS.LOGOUT);
+            await axiosInstance.post(AUTH_ENDPOINTS.LOGOUT);
         } catch (error) {
             // Fehler beim Logout ignorieren
         } finally {
             localStorage.removeItem('token');
             delete axios.defaults.headers.common['Authorization'];
+            delete axiosInstance.defaults.headers.common['Authorization'];
             setUser(null);
         }
     };
 
     const switchRole = async (roleId: number) => {
         try {
-            const response = await axios.put(`${API_URL}/users/switch-role`, { roleId });
+            const response = await axiosInstance.put(`${API_URL}/users/switch-role`, { roleId });
             
             if (response.data) {
                 setUser(response.data);
