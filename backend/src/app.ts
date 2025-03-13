@@ -19,20 +19,13 @@ import { checkAndStopExceededWorktimes } from './controllers/worktimeController'
 const app = express();
 
 // Middleware
-app.use(cors({
-  origin: (origin, callback) => {
-    // Erlaube Zugriff vom Frontend-Server und API-Anfragen ohne Origin (z.B. von curl)
-    const allowedOrigins = ['http://localhost:3000', 'http://localhost:3001', undefined];
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, origin);
-    } else {
-      // Für Produktionsumgebung könnten wir hier weitere Domains hinzufügen
-      callback(null, false);
-    }
-  },
-  credentials: true
-}));
 app.use(express.json());
+app.use(cors({
+  origin: true, // Erlaubt alle Origins
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 // Uploads-Verzeichnis
 const uploadsPath = path.join(__dirname, '../uploads');
