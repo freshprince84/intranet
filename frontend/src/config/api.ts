@@ -10,10 +10,10 @@ export const API_BASE_URL = process.env.NODE_ENV === 'development'
 
 // Vollständige API-URL
 // In der Entwicklung vollständige URL mit /api
-// In Produktion nur leerer String, da die baseURL in axios.ts bereits /api enthält
+// In Produktion /api, da die Nginx-Konfiguration dies bereits korrekt weiterleitet
 export const API_URL = process.env.NODE_ENV === 'development'
   ? `${API_BASE_URL}/api`
-  : '';
+  : '/api'; // Hier war der Fehler - war leerer String, muss /api sein
 
 // Alle API-Endpunkte
 export const API_ENDPOINTS = {
