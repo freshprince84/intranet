@@ -48,19 +48,19 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      <main className="max-w-7xl mx-auto py-6 px-2 sm:px-4 lg:px-6">
-        <div className="py-4">
+      <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
+        <div className="py-1">
           <WorktimeStats />
         </div>
 
-        <div className="mt-6">
+        <div className="mt-2 sm:mt-4 md:mt-6">
           <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full">
             <div>
               <Requests />
             </div>
           </div>
         </div>
-      </main>
+      </div>
     </div>
   );
 };

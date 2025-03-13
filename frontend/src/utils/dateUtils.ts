@@ -204,4 +204,30 @@ export const getWeekDays = (weekStartDate: string): Array<{ date: string; day: s
     }
     
     return weekDays;
+};
+
+/**
+ * Formatiert ein ISO-DateTime für die Anzeige im deutschen Format mit Uhrzeit.
+ * Diese Funktion wird speziell für Cerebro-Artikel verwendet.
+ * @param dateTimeString Das zu formatierende Datum im ISO-Format (z.B. 2023-06-15T14:30:00Z)
+ * @returns Formatiertes Datum und Uhrzeit im Format DD.MM.YYYY HH:MM
+ */
+export const formatDateTimeForCerebro = (dateTimeString: string): string => {
+    if (!dateTimeString) return '-';
+    
+    try {
+        const date = new Date(dateTimeString);
+        
+        // Datum und Uhrzeit im deutschen Format
+        return date.toLocaleDateString('de-DE', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    } catch (error) {
+        console.error('Fehler beim Formatieren des Datums und der Zeit:', error);
+        return '-';
+    }
 }; 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth.tsx';
+import { API_ENDPOINTS } from '../config/api.ts';
 
 interface User {
   id: number;
@@ -49,10 +50,10 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
         
         try {
           const [usersResponse, branchesResponse] = await Promise.all([
-            axios.get('http://localhost:5000/api/users', {
+            axios.get(API_ENDPOINTS.USERS.BASE, {
               headers: { Authorization: `Bearer ${token}` }
             }),
-            axios.get('http://localhost:5000/api/branches', {
+            axios.get(API_ENDPOINTS.BRANCHES.BASE, {
               headers: { Authorization: `Bearer ${token}` }
             })
           ]);
@@ -60,8 +61,8 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
           console.log('Benutzer geladen:', usersResponse.data.length);
           console.log('Niederlassungen geladen:', branchesResponse.data.length);
           
-          setUsers(usersResponse.data);
-          setBranches(branchesResponse.data);
+          setUsers(usersResponse.data || []);
+          setBranches(branchesResponse.data || []);
         } catch (err) {
           console.error('Fehler beim Laden der Daten:', err);
           
@@ -111,7 +112,7 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
         throw new Error('Ungültige ID-Werte für Verantwortlichen oder Niederlassung');
       }
 
-      const response = await axios.post('http://localhost:5000/api/requests', 
+      const response = await axios.post(API_ENDPOINTS.REQUESTS.BASE, 
         {
           title: formData.title,
           description: formData.description || '',
@@ -204,7 +205,7 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
               onChange={(e) => setFormData({ ...formData, responsible_id: e.target.value })}
             >
               <option value="">Bitte wählen...</option>
-              {users.map(user => (
+              {Array.isArray(users) && users.map(user => (
                 <option key={user.id} value={user.id}>
                   {formatUserName(user)}
                 </option>
@@ -221,7 +222,7 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
               onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
             >
               <option value="">Bitte wählen...</option>
-              {branches.map(branch => (
+              {Array.isArray(branches) && branches.map(branch => (
                 <option key={branch.id} value={branch.id}>
                   {branch.name}
                 </option>

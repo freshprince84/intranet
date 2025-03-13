@@ -183,115 +183,118 @@ const TeamWorktimeControl: React.FC = () => {
   }, [selectedDate, teamMembers, activeTab]);
   
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Workcenter</h1>
-      <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-        {/* Header mit Icon */}
-        <div className="flex items-center mb-6">
-          <UsersIcon className="h-6 w-6 text-gray-900 mr-2" />
-          <h2 className="text-xl font-semibold">Team Worktime Control</h2>
-        </div>
-        
-        {/* Fehlermeldung */}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-        
-        {/* Tabs für Navigation */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab(TeamWorktimeTab.ACTIVE_USERS)}
-              className={`${
-                activeTab === TeamWorktimeTab.ACTIVE_USERS
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
-            >
-              <ClockIcon className="h-5 w-5 mr-2" />
-              Aktive Zeiterfassungen
-            </button>
-            <button
-              onClick={() => setActiveTab(TeamWorktimeTab.TEAM_OVERVIEW)}
-              className={`${
-                activeTab === TeamWorktimeTab.TEAM_OVERVIEW
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
-            >
-              <UsersIcon className="h-5 w-5 mr-2" />
-              Teammitglieder Übersicht
-            </button>
-          </nav>
-        </div>
-        
-        {/* Tab-Inhalte */}
-        {activeTab === TeamWorktimeTab.ACTIVE_USERS && (
-          <ActiveUsersList
-            activeUsers={activeUsers}
-            loading={loading}
-            onStopWorktime={stopUserWorktime}
-            onRefresh={fetchActiveUsers}
-          />
-        )}
-        
-        {activeTab === TeamWorktimeTab.TEAM_OVERVIEW && (
-          <div>
-            {/* Datumsauswahl */}
-            <div className="mb-6">
-              <div className="flex items-center mb-4">
-                <CalendarIcon className="h-5 w-5 text-gray-500 mr-2" />
-                <label htmlFor="date-select" className="block text-sm font-medium text-gray-700">
-                  Datum auswählen
-                </label>
-              </div>
-              <input
-                type="date"
-                id="date-select"
-                className="block w-full max-w-xs pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-              />
+    <div className="min-h-screen">
+      <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
+        <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+          {/* Header mit Icon */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <UsersIcon className="h-6 w-6 text-gray-900 mr-2" />
+              <h2 className="text-xl font-semibold">Workcenter</h2>
             </div>
-            
-            {/* Team-Übersicht */}
-            {loading ? (
-              <div className="text-center py-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-                <p className="mt-2 text-sm text-gray-500">Lade Daten...</p>
+          </div>
+          
+          {/* Fehlermeldung */}
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              {error}
+            </div>
+          )}
+          
+          {/* Tabs für Navigation */}
+          <div className="border-b border-gray-200 mb-6">
+            <nav className="-mb-px flex space-x-8">
+              <button
+                onClick={() => setActiveTab(TeamWorktimeTab.ACTIVE_USERS)}
+                className={`${
+                  activeTab === TeamWorktimeTab.ACTIVE_USERS
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+              >
+                <ClockIcon className="h-5 w-5 mr-2" />
+                Aktive Zeiterfassungen
+              </button>
+              <button
+                onClick={() => setActiveTab(TeamWorktimeTab.TEAM_OVERVIEW)}
+                className={`${
+                  activeTab === TeamWorktimeTab.TEAM_OVERVIEW
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+              >
+                <UsersIcon className="h-5 w-5 mr-2" />
+                Teammitglieder Übersicht
+              </button>
+            </nav>
+          </div>
+          
+          {/* Tab-Inhalte */}
+          {activeTab === TeamWorktimeTab.ACTIVE_USERS && (
+            <ActiveUsersList
+              activeUsers={activeUsers}
+              loading={loading}
+              onStopWorktime={stopUserWorktime}
+              onRefresh={fetchActiveUsers}
+            />
+          )}
+          
+          {activeTab === TeamWorktimeTab.TEAM_OVERVIEW && (
+            <div>
+              {/* Datumsauswahl */}
+              <div className="mb-6">
+                <div className="flex items-center mb-4">
+                  <CalendarIcon className="h-5 w-5 text-gray-500 mr-2" />
+                  <label htmlFor="date-select" className="block text-sm font-medium text-gray-700">
+                    Datum auswählen
+                  </label>
+                </div>
+                <input
+                  type="date"
+                  id="date-select"
+                  className="block w-full max-w-xs pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                />
               </div>
-            ) : teamMembers.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="text-sm text-gray-500">Keine Teammitglieder gefunden.</p>
-              </div>
-            ) : (
-              <div className="space-y-8">
-                {teamMembers.map(member => (
-                  <div key={member.id} className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {member.firstName} {member.lastName}
-                      </h3>
-                      <UserOvertimeEditor
-                        user={member}
-                        onUpdate={updateApprovedOvertimeHours}
+              
+              {/* Team-Übersicht */}
+              {loading ? (
+                <div className="text-center py-4">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+                  <p className="mt-2 text-sm text-gray-500">Lade Daten...</p>
+                </div>
+              ) : teamMembers.length === 0 ? (
+                <div className="text-center py-4">
+                  <p className="text-sm text-gray-500">Keine Teammitglieder gefunden.</p>
+                </div>
+              ) : (
+                <div className="space-y-8">
+                  {teamMembers.map(member => (
+                    <div key={member.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-medium text-gray-900">
+                          {member.firstName} {member.lastName}
+                        </h3>
+                        <UserOvertimeEditor
+                          user={member}
+                          onUpdate={updateApprovedOvertimeHours}
+                          loading={loading}
+                        />
+                      </div>
+                      
+                      <UserWorktimeTable
+                        worktimes={teamWorktimes[member.id] || []}
                         loading={loading}
+                        onUpdate={updateWorktime}
                       />
                     </div>
-                    
-                    <UserWorktimeTable
-                      worktimes={teamWorktimes[member.id] || []}
-                      loading={loading}
-                      onUpdate={updateWorktime}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

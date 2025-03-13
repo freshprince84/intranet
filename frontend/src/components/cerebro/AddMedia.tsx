@@ -16,8 +16,10 @@ const AddMedia: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number>(0);
   
-  // Überprüfen der Berechtigungen
-  const canAddMedia = hasPermission('cerebro_media', 'write', 'cerebro');
+  // Überprüfen der Berechtigungen an die richtigen Berechtigungen anpassen
+  const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
+  const hasCerebroPagePermission = hasPermission('cerebro', 'both', 'page');
+  const canAddMedia = hasCerebroButtonPermission || hasCerebroPagePermission;
   
   // Datei auswählen
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {

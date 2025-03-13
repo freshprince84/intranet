@@ -1,7 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, Outlet } from 'react-router-dom';
+import { useNavigate, useParams, Outlet, Link } from 'react-router-dom';
 import { cerebroApi, CerebroArticleStructure } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
+import { 
+  Bars3Icon, 
+  XMarkIcon, 
+  PlusIcon as HPlusIcon, 
+  MinusIcon, 
+  MagnifyingGlassIcon 
+} from '@heroicons/react/24/outline';
+
+// Icon-Komponenten
+const PlusIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+  </svg>
+);
+const SearchIcon = () => (
+  <MagnifyingGlassIcon className="h-5 w-5 text-gray-500" />
+);
 
 interface ArticleTreeProps {
   articles: CerebroArticleStructure[];
@@ -10,6 +27,15 @@ interface ArticleTreeProps {
   expandedIds?: Set<string>;
   onToggleExpand?: (id: string) => void;
   onArticleClick?: (slug: string) => void;
+}
+
+interface MarkdownFile {
+  path: string;
+  title: string;
+}
+
+interface ArticleStructureProps {
+  mdFiles: MarkdownFile[];
 }
 
 // Rekursive Komponente für die Baumansicht
@@ -49,31 +75,30 @@ const ArticleTree: React.FC<ArticleTreeProps> = ({
         return (
           <li key={article.id} className="mb-1">
             <div 
-              className={`flex items-center p-2 rounded hover:bg-gray-100 cursor-pointer ${
-                isActive ? 'bg-blue-100 font-semibold text-blue-700' : ''
+              className={`flex items-center py-1 px-2 rounded cursor-pointer ${
+                isActive 
+                  ? 'bg-blue-100 text-blue-800' 
+                  : 'hover:bg-gray-100'
               }`}
               onClick={() => handleArticleClick(article.slug)}
             >
-              {hasChildren ? (
+              {hasChildren && (
                 <button
                   onClick={(e) => handleExpandToggle(e, article.id)}
-                  className="p-1 mr-1 rounded hover:bg-gray-200 focus:outline-none"
+                  className="mr-1 w-4 h-4 flex items-center justify-center text-gray-500"
                 >
-                  <span className="inline-block w-4 h-4 text-center leading-4">
-                    {isExpanded ? '▼' : '►'}
-                  </span>
+                  {isExpanded ? <MinusIcon className="h-4 w-4" /> : <HPlusIcon className="h-4 w-4" />}
                 </button>
-              ) : (
-                <span className="mr-2 text-gray-500 inline-block w-4 h-4 text-center leading-4">
-                  📄
-                </span>
               )}
-              <span className="truncate">{article.title}</span>
+              
+              <span className="flex-1 truncate">
+                {article.title}
+              </span>
             </div>
             
             {hasChildren && isExpanded && (
-              <ArticleTree
-                articles={article.children}
+              <ArticleTree 
+                articles={article.children} 
                 currentSlug={currentSlug}
                 level={level + 1}
                 expandedIds={expandedIds}
@@ -89,22 +114,34 @@ const ArticleTree: React.FC<ArticleTreeProps> = ({
 };
 
 // Hauptkomponente für die Artikelstruktur
-const ArticleStructure: React.FC = () => {
+const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
   const navigate = useNavigate();
   const [structure, setStructure] = useState<CerebroArticleStructure[]>([]);
+  const [databaseArticles, setDatabaseArticles] = useState<CerebroArticleStructure[]>([]);
+  const [markdownFolder, setMarkdownFolder] = useState<CerebroArticleStructure | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [canCreateArticle, setCanCreateArticle] = useState<boolean>(false);
   
   const { slug } = useParams<{ slug: string }>();
   const { hasPermission } = usePermissions();
   
+  // Berechtigungsprüfung für den Neuer Artikel-Button
   useEffect(() => {
-    setCanCreateArticle(hasPermission('cerebro.article.create'));
+    // Prüfe nur die vorhandenen Berechtigungen aus dem Bild
+    const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
+    const hasCerebroPagePermission = hasPermission('cerebro', 'both', 'page');
+    
+    console.log('Berechtigungsprüfung:');
+    console.log('cerebro.both.button:', hasCerebroButtonPermission);
+    console.log('cerebro.both.page:', hasCerebroPagePermission);
+    
+    // Setze canCreateArticle auf true, wenn mindestens eine der Berechtigungen vorhanden ist
+    setCanCreateArticle(hasCerebroButtonPermission || hasCerebroPagePermission);
   }, [hasPermission]);
   
   useEffect(() => {
@@ -130,61 +167,58 @@ const ArticleStructure: React.FC = () => {
     }
   }, [isMobile]);
   
-  // Artikelstruktur laden
+  // Lade die Artikelstruktur aus der Datenbank
   useEffect(() => {
-    const fetchStructure = async () => {
+    const fetchArticlesStructure = async () => {
       try {
         setLoading(true);
-        const data = await cerebroApi.articles.getArticlesStructure();
-        setStructure(data);
+        // Hole die Artikelstruktur
+        const structureData = await cerebroApi.articles.getArticlesStructure();
         
-        // Automatisch expandieren, um den aktuellen Artikel anzuzeigen
-        if (slug) {
-          const findAndExpandParents = (
-            articles: CerebroArticleStructure[],
-            targetSlug: string,
-            parentIds: string[] = []
-          ): string[] | null => {
-            for (const article of articles) {
-              if (article.slug === targetSlug) {
-                return parentIds;
-              }
-              
-              if (article.children && article.children.length > 0) {
-                const found = findAndExpandParents(
-                  article.children,
-                  targetSlug,
-                  [...parentIds, article.id]
-                );
-                
-                if (found) {
-                  return found;
-                }
-              }
-            }
-            
-            return null;
-          };
+        // Finde den Markdown-Ordner
+        const markdownFolderItem = structureData.find(article => article.title === 'Markdown-Dateien');
+        
+        if (markdownFolderItem) {
+          setMarkdownFolder(markdownFolderItem);
           
-          const parentIds = findAndExpandParents(data, slug);
-          if (parentIds) {
-            setExpandedIds(new Set(parentIds));
-          }
+          // Expandiere den Markdown-Ordner standardmäßig, damit die Dateien sichtbar sind
+          setExpandedIds(prev => {
+            const newSet = new Set(prev);
+            newSet.add(markdownFolderItem.id);
+            return newSet;
+          });
+        } else {
+          console.warn('Markdown-Ordner nicht gefunden!');
         }
         
-        setError(null);
-        setCanCreateArticle(true);
+        // Setze alle Artikel außer dem Markdown-Ordner in databaseArticles
+        setDatabaseArticles(
+          structureData.filter(article => article.title !== 'Markdown-Dateien')
+        );
+        
+        setLoading(false);
       } catch (err) {
         console.error('Fehler beim Laden der Artikelstruktur:', err);
         setError('Fehler beim Laden der Artikelstruktur. Bitte versuchen Sie es später erneut.');
-      } finally {
         setLoading(false);
       }
     };
     
-    fetchStructure();
-  }, [slug]);
+    fetchArticlesStructure();
+  }, []);
+
+  // Handling für die Suche
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/cerebro/search?q=${encodeURIComponent(searchTerm)}`);
+      if (isMobile) {
+        setSidebarOpen(false);
+      }
+    }
+  };
   
+  // Auf/Zuklappen von Kategorien
   const handleToggleExpand = (id: string) => {
     setExpandedIds(prev => {
       const newSet = new Set(prev);
@@ -196,118 +230,161 @@ const ArticleStructure: React.FC = () => {
       return newSet;
     });
   };
-
+  
+  // Sidebar Toggle für Mobile
   const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
+    const newState = !sidebarOpen;
+    setSidebarOpen(newState);
+    
+    // Sende Event an die übergeordnete Komponente
+    const event = new CustomEvent('cerebro-sidebar-toggle', { 
+      detail: { open: newState } 
+    });
+    window.dispatchEvent(event);
   };
   
   return (
-    <div className="min-h-screen">
-      {/* Toggle-Button für Mobilgeräte - Nach oben links verschoben */}
-      <div className="fixed z-20 top-4 left-4 md:hidden">
-        <button
-          className="bg-gray-200 hover:bg-gray-300 text-gray-800 p-2 rounded-full shadow-md"
+    <nav className="h-full overflow-hidden flex flex-col">
+      {/* Mobile Toggle-Button - nur für sehr kleine Geräte sichtbar */}
+      {isMobile && (
+        <button 
+          className="fixed top-[85px] left-4 z-40 p-2 rounded-full text-gray-600 hover:bg-gray-100 md:hidden"
           onClick={toggleSidebar}
-          aria-label={sidebarOpen ? "Seitenleiste schließen" : "Seitenleiste öffnen"}
+          aria-label={sidebarOpen ? "Menü schließen" : "Menü öffnen"}
         >
-          {sidebarOpen ? '✕' : '☰'}
+          {sidebarOpen ? <XMarkIcon className="h-5 w-5" /> : <Bars3Icon className="h-5 w-5" />}
         </button>
-      </div>
+      )}
       
-      {/* Hauptcontainer */}
-      <div className="flex flex-col md:flex-row">
-        {/* Seitenleiste mit angepassten Breiten */}
-        <div 
-          className={`
-            fixed top-0 bottom-0 z-20 transition-all duration-300 
-            bg-white overflow-y-auto 
-            ${sidebarOpen ? 'left-0 w-3/4 sm:w-3/5 md:w-1/3 lg:w-1/4' : '-left-full md:left-0 w-0 md:w-1/3 lg:w-1/4'}
-            md:relative md:border-r-0 md:shadow-none md:p-0
-          `}
-        >
-          {/* Schließen-Button innerhalb der Sidebar für Mobile */}
-          {isMobile && sidebarOpen && (
-            <button
-              className="absolute top-2 right-2 bg-gray-200 hover:bg-gray-300 text-gray-800 p-1 rounded-full"
-              onClick={toggleSidebar}
-              aria-label="Seitenleiste schließen"
-            >
-              ✕
-            </button>
-          )}
+      {/* Sidebar mit Artikelstruktur */}
+      <div 
+        className={`
+          bg-white flex flex-col h-full
+          ${isMobile 
+            ? 'fixed top-[150px] left-0 z-20 transition-transform duration-300 ease-in-out w-60 max-h-[calc(100vh-228px)] border-r border-gray-200' 
+            : 'w-full h-full border-r border-gray-200'}
+          ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'}
+        `}
+      >
+        <div className={`p-2 ${isMobile ? 'pt-4' : 'pt-6'} flex-grow flex flex-col overflow-hidden`}>
+          {/* X-Button zum Schließen ENTFERNT */}
           
-          {/* Inhalt der Seitenleiste */}
-          <div className="p-2 md:p-4">
-            <h2 className="text-xl font-semibold mb-2">Cerebro Navigation</h2>
-            {/* Suchfeld */}
-            <div className="mb-2">
-              <input
-                type="text"
-                placeholder="Artikel suchen..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full p-1 border border-gray-300 rounded"
-              />
-            </div>
-            
-            {/* Button für neuen Artikel */}
+          {/* Suchformular mit Button daneben */}
+          <div className="mb-3 flex items-center space-x-2">
+            {/* Neuer Artikel Button links vom Suchfeld */}
             {canCreateArticle && (
-              <button
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-2 rounded mb-2 flex items-center justify-center"
-                onClick={() => navigate('/cerebro/create')}
-              >
-                <span className="mr-1">+</span> Neuer Artikel
-              </button>
+              <div className="relative group">
+                <button
+                  className="p-2 rounded-full text-blue-600 hover:bg-blue-50"
+                  onClick={() => navigate('/cerebro/create')}
+                  aria-label="Neuen Artikel erstellen"
+                >
+                  <HPlusIcon className="h-5 w-5" />
+                </button>
+                {/* Tooltip */}
+                <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                  Neuen Artikel erstellen
+                </div>
+              </div>
             )}
             
-            {/* Artikelbaum mit Ladeanimation oder Fehlermeldung */}
-            <div className="mt-1">
-              {loading && (
-                <div className="flex justify-center items-center p-4">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                </div>
-              )}
-              
-              {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-2 py-2 rounded text-sm">
-                  {error}
-                </div>
-              )}
-              
-              {!loading && !error && structure.length === 0 && (
-                <p className="text-gray-500 italic text-sm">Keine Artikel gefunden.</p>
-              )}
-              
-              {!loading && !error && structure.length > 0 && (
+            <form onSubmit={handleSearch} className="flex-1">
+              <div className="flex">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Suchen..."
+                  className="w-full px-3 py-1 border border-gray-300 rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <button
+                  type="submit"
+                  className="p-2 rounded-r-md border border-l-0 border-gray-300 bg-white hover:bg-gray-50"
+                  aria-label="Suchen"
+                >
+                  <SearchIcon />
+                </button>
+              </div>
+            </form>
+          </div>
+          
+          {/* Artikelbaum mit Ladeanimation oder Fehlermeldung */}
+          <div className="overflow-y-auto flex-grow">
+            {/* Ladeanimation */}
+            {loading && (
+              <div className="flex justify-center items-center p-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+              </div>
+            )}
+            
+            {/* Fehlermeldung */}
+            {error && (
+              <div className="bg-red-100 border border-red-400 text-red-700 px-2 py-2 rounded text-sm">
+                {error}
+              </div>
+            )}
+            
+            {/* Normale Artikel aus der Datenbank */}
+            {!loading && databaseArticles.length > 0 && (
+              <div className="space-y-1 mb-4">
+                <h3 className="font-medium text-gray-700 mb-2">Artikel</h3>
                 <ArticleTree 
-                  articles={structure} 
-                  currentSlug={slug} 
+                  articles={databaseArticles} 
+                  currentSlug={slug}
                   expandedIds={expandedIds}
                   onToggleExpand={handleToggleExpand}
-                  onArticleClick={(newSlug) => {
-                    navigate(`/cerebro/${newSlug}`);
-                    if (isMobile) setSidebarOpen(false);
-                  }} 
+                  onArticleClick={(slug) => navigate(`/cerebro/${slug}`)}
                 />
-              )}
-            </div>
+              </div>
+            )}
+            
+            {/* Markdown-Dateien-Bereich */}
+            {!loading && markdownFolder && (
+              <div className="mt-4">
+                <div className="flex items-center">
+                  <button
+                    onClick={() => handleToggleExpand(markdownFolder.id)}
+                    className="mr-1 w-4 h-4 flex items-center justify-center text-gray-500"
+                  >
+                    {expandedIds.has(markdownFolder.id) ? <MinusIcon className="h-4 w-4" /> : <HPlusIcon className="h-4 w-4" />}
+                  </button>
+                  <h3 className="font-medium text-gray-700">{markdownFolder.title}</h3>
+                </div>
+                
+                {/* Wenn expandiert, zeige die Markdown-Dateien an */}
+                {expandedIds.has(markdownFolder.id) && markdownFolder.children?.length > 0 && (
+                  <div className="ml-4 mt-2 space-y-1">
+                    {markdownFolder.children.map((mdFile) => (
+                      <Link 
+                        key={mdFile.id}
+                        to={`/cerebro/${mdFile.slug}`}
+                        className={`block truncate px-2 py-1 rounded-md ${
+                          mdFile.slug === slug
+                            ? 'bg-blue-100 text-blue-800'
+                            : 'hover:bg-gray-100'
+                        }`}
+                      >
+                        {mdFile.title}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
-        
-        {/* Hauptinhalt */}
-        <div className="flex-1 md:ml-0">
-          <Outlet />
-        </div>
-        
-        {/* Overlay für Mobile - Klicken schließt die Sidebar */}
-        {isMobile && sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
-            onClick={toggleSidebar}
-          ></div>
-        )}
       </div>
-    </div>
+      
+      {/* Overlay für Mobile - Klicken schließt die Sidebar - ENTFERNT, damit der Artikel nicht ausgegraut wird */}
+      {/* 
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-10 md:hidden"
+          onClick={toggleSidebar}
+        ></div>
+      )}
+      */}
+    </nav>
   );
 };
 

@@ -2,31 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
 import { cerebroApi, CerebroArticleDetail, CerebroMedia, CerebroExternalLink } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
-import ArticleStructure from './ArticleStructure.tsx';
 import GitHubMarkdownViewer from './GitHubMarkdownViewer.tsx';
 import CollapsibleCode from './CollapsibleCode.tsx';
+import { formatDateTimeForCerebro } from '../../utils/dateUtils.ts';
 
-// Icons
+// Heroicons
 import { 
-  FaEdit, 
-  FaTrash, 
-  FaArrowLeft, 
-  FaDownload, 
-  FaLink, 
-  FaPlus,
-  FaExternalLinkAlt,
-  FaClock,
-  FaUser,
-  FaFileAlt,
-  FaImage,
-  FaVideo,
-  FaFilePdf,
-  FaSpinner,
-  FaFileImage,
-  FaGithub
-} from 'react-icons/fa';
+  ArrowLeftIcon,
+  PencilIcon,
+  TrashIcon,
+  PlusIcon,
+  UserCircleIcon,
+  ClockIcon,
+  ArrowDownTrayIcon,
+  LinkIcon,
+  DocumentIcon,
+  PhotoIcon,
+  FilmIcon,
+  DocumentTextIcon,
+  ArrowTopRightOnSquareIcon
+} from '@heroicons/react/24/outline';
 
 // Typen für die Medienvorschau
 type MediaType = 'image' | 'video' | 'pdf' | 'other';
@@ -39,23 +37,23 @@ const getMediaType = (mimetype: string): MediaType => {
   return 'other';
 };
 
-// vereinfachte Icon-Implementierung
+// Icon-Implementierung mit Heroicons
 const Icon = {
-  Image: () => <span className="text-blue-500 text-2xl">📷</span>,
-  Video: () => <span className="text-red-500 text-2xl">📹</span>,
-  PDF: () => <span className="text-red-700 text-2xl">📄</span>,
-  File: () => <span className="text-gray-500 text-2xl">📋</span>,
-  Download: () => <span className="mr-1">⬇️</span>,
-  GitHub: () => <span className="text-gray-800">📦</span>,
-  ExternalLink: () => <span className="text-green-600">🔗</span>,
-  Link: () => <span className="mr-1">🌐</span>,
+  Image: () => <PhotoIcon className="h-6 w-6 text-blue-500" />,
+  Video: () => <FilmIcon className="h-6 w-6 text-red-500" />,
+  PDF: () => <DocumentTextIcon className="h-6 w-6 text-red-700" />,
+  File: () => <DocumentIcon className="h-6 w-6 text-gray-500" />,
+  Download: () => <ArrowDownTrayIcon className="h-5 w-5 mr-1" />,
+  GitHub: () => <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-800" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>,
+  ExternalLink: () => <ArrowTopRightOnSquareIcon className="h-5 w-5 text-green-600" />,
+  Link: () => <LinkIcon className="h-5 w-5 mr-1" />,
   Spinner: () => <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>,
-  ArrowLeft: () => <span className="mr-2">←</span>,
-  Edit: () => <span className="mr-1">✏️</span>,
-  Trash: () => <span className="mr-1">🗑️</span>,
-  User: () => <span className="mr-1">👤</span>,
-  Clock: () => <span className="mr-1">🕒</span>,
-  Plus: () => <span className="mr-1">+</span>
+  ArrowLeft: () => <ArrowLeftIcon className="h-5 w-5 mr-2" />,
+  Edit: () => <PencilIcon className="h-5 w-5 mr-1" />,
+  Trash: () => <TrashIcon className="h-5 w-5 mr-1" />,
+  User: () => <UserCircleIcon className="h-5 w-5 mr-1" />,
+  Clock: () => <ClockIcon className="h-5 w-5 mr-1" />,
+  Plus: () => <PlusIcon className="h-5 w-5 mr-1" />
 };
 
 // Medienvorschau-Komponente
@@ -237,24 +235,42 @@ const ArticleView: React.FC = () => {
   const [article, setArticle] = useState<CerebroArticleDetail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [githubLinks, setGithubLinks] = useState<CerebroExternalLink[]>([]);
+  const [externalLinks, setExternalLinks] = useState<CerebroExternalLink[]>([]);
+  const [mediaFiles, setMediaFiles] = useState<CerebroMedia[]>([]);
+  const [selectedGithubLink, setSelectedGithubLink] = useState<CerebroExternalLink | null>(null);
   
-  const canEdit = hasPermission('cerebro', 'write', 'cerebro');
-  const canAddMedia = hasPermission('cerebro_media', 'write', 'cerebro');
-  const canAddLinks = hasPermission('cerebro_links', 'write', 'cerebro');
+  // Überprüfen der Berechtigungen an die richtigen Berechtigungen anpassen
+  const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
+  const hasCerebroPagePermission = hasPermission('cerebro', 'both', 'page');
   
-  // Artikel laden
   useEffect(() => {
     const fetchArticle = async () => {
       if (!slug) return;
       
       try {
         setLoading(true);
-        const data = await cerebroApi.articles.getArticleBySlug(slug);
-        setArticle(data);
+        
+        // Artikel und verknüpfte Daten laden
+        const articleData = await cerebroApi.articles.getArticleBySlug(slug);
+        setArticle(articleData);
+        
+        // Sortiere GitHub-Markdown Links und andere externe Links
+        const github = articleData.externalLinks.filter(link => link.type === 'github_markdown');
+        const other = articleData.externalLinks.filter(link => link.type !== 'github_markdown');
+        
+        setGithubLinks(github);
+        setExternalLinks(other);
+        setMediaFiles(articleData.media);
+        
+        if (github.length > 0) {
+          setSelectedGithubLink(github[0]);
+        }
+        
         setError(null);
       } catch (err) {
-        console.error(`Fehler beim Laden des Artikels mit Slug ${slug}:`, err);
-        setError('Fehler beim Laden des Artikels. Bitte versuchen Sie es später erneut.');
+        console.error('Fehler beim Laden des Artikels:', err);
+        setError('Der Artikel konnte nicht geladen werden. Bitte versuchen Sie es später erneut.');
       } finally {
         setLoading(false);
       }
@@ -263,318 +279,329 @@ const ArticleView: React.FC = () => {
     fetchArticle();
   }, [slug]);
   
-  // Artikel löschen
-  const handleDelete = async () => {
-    if (!article) return;
-    
-    const confirm = window.confirm(`Sind Sie sicher, dass Sie den Artikel "${article.title}" löschen möchten?`);
-    if (!confirm) return;
+  const handleDeleteArticle = async () => {
+    if (!article || !window.confirm('Sind Sie sicher, dass Sie diesen Artikel löschen möchten?')) {
+      return;
+    }
     
     try {
-      setLoading(true);
       await cerebroApi.articles.deleteArticle(article.id);
       navigate('/cerebro');
     } catch (err) {
-      console.error(`Fehler beim Löschen des Artikels mit ID ${article.id}:`, err);
-      setError('Fehler beim Löschen des Artikels. Bitte versuchen Sie es später erneut.');
-      setLoading(false);
+      console.error('Fehler beim Löschen des Artikels:', err);
+      alert('Fehler beim Löschen des Artikels. Bitte versuchen Sie es später erneut.');
     }
-  };
-  
-  // Formatierungsfunktion für Datum
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('de-DE', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
   
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center p-8">
         <Icon.Spinner />
       </div>
     );
   }
   
-  if (error) {
+  if (error || !article) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-        <button
-          className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded flex items-center"
+      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+        <h3 className="font-bold">Fehler</h3>
+        <p>{error || 'Artikel nicht gefunden'}</p>
+        <button 
           onClick={() => navigate('/cerebro')}
+          className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center"
         >
-          <Icon.ArrowLeft /> Zurück zur Übersicht
+          <Icon.ArrowLeft /> Zurück
         </button>
       </div>
     );
   }
   
-  if (!article) {
+  // Artikel-Komponente rendern
+  const renderContent = () => {
+    // Prüfe, ob der Artikel mit GitHub-Markdown verknüpft ist und ein Link ausgewählt ist
+    if (selectedGithubLink) {
+      // GitHub-Markdown-Links parsen
+      const parseGitHubUrl = (url: string): { owner: string; repo: string; path: string; branch: string; } | null => {
+        try {
+          let owner = '';
+          let repo = '';
+          let path = '';
+          let branch = '';
+          
+          if (url.includes('raw.githubusercontent.com')) {
+            const parts = url.replace('https://raw.githubusercontent.com/', '').split('/');
+            owner = parts[0];
+            repo = parts[1];
+            branch = parts[2];
+            path = parts.slice(3).join('/');
+          } else if (url.includes('github.com')) {
+            const parts = url.replace('https://github.com/', '').split('/');
+            owner = parts[0];
+            repo = parts[1];
+            const typeIndex = parts.indexOf('blob') !== -1 ? parts.indexOf('blob') : parts.indexOf('raw');
+            branch = parts[typeIndex + 1];
+            path = parts.slice(typeIndex + 2).join('/');
+          } else {
+            return null;
+          }
+          
+          return { owner, repo, path, branch };
+        } catch (err) {
+          console.error('Fehler beim Parsen der GitHub-URL:', err);
+          return null;
+        }
+      };
+      
+      const githubInfo = parseGitHubUrl(selectedGithubLink.url);
+      
+      if (githubInfo) {
+        return (
+          <div>
+            <div className="bg-gray-100 p-2 rounded mb-4 flex justify-between items-center text-xs">
+              <div>
+                <span className="font-mono text-gray-600">{githubInfo.owner}/{githubInfo.repo}/{githubInfo.path}</span>
+                <span className="ml-2 px-2 py-1 bg-gray-200 rounded">{githubInfo.branch}</span>
+              </div>
+              <a 
+                href={selectedGithubLink.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-800 flex items-center"
+              >
+                <Icon.Link /> Auf GitHub ansehen
+              </a>
+            </div>
+            <GitHubMarkdownViewer
+              owner={githubInfo.owner}
+              repo={githubInfo.repo}
+              path={githubInfo.path}
+              branch={githubInfo.branch}
+            />
+          </div>
+        );
+      }
+    }
+    
+    // Standard-Markdown-Rendering für den Artikelinhalt
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-          Artikel nicht gefunden.
-        </div>
-        <button
-          className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded flex items-center"
-          onClick={() => navigate('/cerebro')}
-        >
-          <Icon.ArrowLeft /> Zurück zur Übersicht
-        </button>
-      </div>
+      <ReactMarkdown 
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw]}
+        components={{
+          code: ({ node, className, children, ...props }: any) => {
+            const match = /language-(\w+)/.exec(className || '');
+            if (!props.inline && match) {
+              const language = match[1];
+              const code = String(children).replace(/\n$/, '');
+              
+              if (code.length > 500) {
+                return (
+                  <CollapsibleCode language={language}>
+                    <pre className={`language-${language} bg-gray-100 p-4 rounded overflow-auto`}>
+                      <code className={className} {...props}>
+                        {code}
+                      </code>
+                    </pre>
+                  </CollapsibleCode>
+                );
+              }
+              
+              try {
+                return (
+                  <div className="bg-gray-800 p-4 rounded overflow-auto">
+                    <pre className={className}>
+                      <code {...props}>
+                        {code}
+                      </code>
+                    </pre>
+                  </div>
+                );
+              } catch (err) {
+                console.error('Error rendering syntax highlighter:', err);
+                return (
+                  <pre className={`language-${language} bg-gray-100 p-4 rounded overflow-auto`}>
+                    <code className={className} {...props}>
+                      {code}
+                    </code>
+                  </pre>
+                );
+              }
+            }
+            return (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            );
+          }
+        }}
+      >
+        {article.content}
+      </ReactMarkdown>
     );
-  }
+  };
   
   return (
-    <div className="container mx-auto px-4 py-6">
-      <div className="grid grid-cols-12 gap-6">
-        {/* Linke Seitenleiste mit Navigation */}
-        <div className="col-span-3">
-          <ArticleStructure />
+    <div className="bg-white p-6 rounded-lg shadow">
+      {/* Aktionsbereich oben (Button-Leiste) */}
+      <div className="flex justify-between items-center mb-4">
+        <button 
+          onClick={() => navigate('/cerebro')}
+          className="p-2 rounded-full text-gray-600 hover:bg-gray-100"
+          aria-label="Zurück"
+        >
+          <ArrowLeftIcon className="h-5 w-5" />
+        </button>
+        
+        <div className="flex space-x-2">
+          {hasCerebroButtonPermission && (
+            <>
+              <button 
+                onClick={() => navigate(`/cerebro/${slug}/edit`)}
+                className="p-2 rounded-full text-blue-600 hover:bg-blue-50"
+                aria-label="Bearbeiten"
+              >
+                <PencilIcon className="h-5 w-5" />
+              </button>
+              
+              <button 
+                onClick={handleDeleteArticle}
+                className="p-2 rounded-full text-red-600 hover:bg-red-50"
+                aria-label="Löschen"
+              >
+                <TrashIcon className="h-5 w-5" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      
+      {/* Artikelkopf mit Titel und Metadaten */}
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">{article.title}</h1>
+        <div className="flex text-gray-600 text-sm mt-2">
+          <div className="flex items-center mr-4">
+            <Icon.User /> 
+            <span>Erstellt von {article.creatorFirstName} {article.creatorLastName}</span>
+          </div>
+          <div className="flex items-center">
+            <Icon.Clock /> 
+            <span>Aktualisiert am {formatDateTimeForCerebro(article.updatedAt)}</span>
+          </div>
+        </div>
+      </div>
+      
+      <div className="mb-6">
+        {/* GitHub-Links als Tabs anzeigen, falls vorhanden */}
+        {githubLinks.length > 0 && (
+          <div className="mb-4">
+            <div className="border-b border-gray-200 mb-4">
+              <div className="flex">
+                {githubLinks.map(link => (
+                  <button
+                    key={link.id}
+                    className={`py-2 px-4 font-medium text-sm ${
+                      selectedGithubLink?.id === link.id
+                        ? 'border-b-2 border-blue-500 text-blue-600'
+                        : 'text-gray-500 hover:text-gray-700'
+                    }`}
+                    onClick={() => setSelectedGithubLink(link)}
+                  >
+                    {link.title || 'GitHub'}
+                  </button>
+                ))}
+                <button
+                  className={`py-2 px-4 font-medium text-sm ${
+                    !selectedGithubLink
+                      ? 'border-b-2 border-blue-500 text-blue-600'
+                      : 'text-gray-500 hover:text-gray-700'
+                  }`}
+                  onClick={() => setSelectedGithubLink(null)}
+                >
+                  Artikel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Inhalt des Artikels oder ausgewählter GitHub-Markdown */}
+        <div className="prose max-w-none">
+          {renderContent()}
+        </div>
+      </div>
+      
+      {/* Medien-Bereich */}
+      <div className="mb-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold mb-2">Medien</h2>
+          {hasCerebroButtonPermission && (
+            <Link 
+              to={`/cerebro/${slug}/media/add`}
+              className="p-2 rounded-full text-green-600 hover:bg-green-50"
+              aria-label="Medien hinzufügen"
+            >
+              <PlusIcon className="h-5 w-5" />
+            </Link>
+          )}
         </div>
         
-        {/* Hauptinhalt */}
-        <div className="col-span-9">
-          {/* Aktionsbuttons */}
-          <div className="flex justify-between items-center mb-6">
-            <button
-              className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded flex items-center"
-              onClick={() => navigate('/cerebro')}
-            >
-              <Icon.ArrowLeft /> Zurück
-            </button>
-            
+        {mediaFiles.length === 0 ? (
+          <p className="text-gray-500">Keine Medien vorhanden.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            {mediaFiles.map(media => (
+              <MediaPreview key={media.id} media={media} />
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {/* Externe Links Bereich */}
+      <div className="mb-6">
+        <div className="flex justify-between items-center">
+          <h2 className="text-xl font-bold mb-2">Externe Links</h2>
+          {hasCerebroButtonPermission && (
             <div className="flex space-x-2">
-              {canEdit && (
-                <>
-                  <button
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded flex items-center"
-                    onClick={() => navigate(`/cerebro/${slug}/edit`)}
-                  >
-                    <Icon.Edit /> Bearbeiten
-                  </button>
-                  <button
-                    className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded flex items-center"
-                    onClick={handleDelete}
-                  >
-                    <Icon.Trash /> Löschen
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-          
-          {/* Brotkrümelnavigation */}
-          <nav className="text-sm mb-4">
-            <ol className="list-none p-0 inline-flex">
-              <li className="flex items-center">
-                <Link to="/cerebro" className="text-blue-600 hover:text-blue-800">
-                  Wiki
-                </Link>
-                <span className="mx-2">/</span>
-              </li>
-              {article.parentTitle && (
-                <li className="flex items-center">
-                  <Link to={`/cerebro/${article.parentSlug}`} className="text-blue-600 hover:text-blue-800">
-                    {article.parentTitle}
-                  </Link>
-                  <span className="mx-2">/</span>
-                </li>
-              )}
-              <li className="text-gray-700">{article.title}</li>
-            </ol>
-          </nav>
-          
-          {/* Artikelheader */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">{article.title}</h1>
-            <div className="flex items-center text-sm text-gray-600 mb-4">
-              <div className="flex items-center mr-4">
-                <Icon.User />
-                Erstellt von {article.creatorFirstName} {article.creatorLastName} ({formatDate(article.createdAt)})
-              </div>
-              {article.updatedById && (
-                <div className="flex items-center">
-                  <Icon.Clock />
-                  Aktualisiert von {article.updaterFirstName} {article.updaterLastName} ({formatDate(article.updatedAt)})
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Artikelinhalt */}
-          <div className="bg-white rounded-lg shadow p-6 mb-6 prose prose-sm md:prose lg:prose-lg max-w-none">
-            {article.content ? (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  a: ({ node, ...props }) => (
-                    <a {...props} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800" />
-                  ),
-                  pre: ({ node, ...props }) => {
-                    // Sprache aus dem Code-Block extrahieren, falls vorhanden
-                    let language = '';
-                    let filename = '';
-                    
-                    if (props.children && typeof props.children === 'object' && 'props' in props.children) {
-                      const codeProps = props.children.props;
-                      
-                      // Sprache aus className (z.B. "language-javascript") extrahieren
-                      if (codeProps.className && typeof codeProps.className === 'string') {
-                        const match = codeProps.className.match(/language-(\w+)/);
-                        if (match && match[1]) {
-                          language = match[1];
-                        }
-                      }
-                      
-                      // Nach Dateinamen-Metadaten suchen (wenn als Kommentar im Code verwendet)
-                      if (codeProps.children && typeof codeProps.children === 'string') {
-                        const firstLine = codeProps.children.split('\n')[0];
-                        // Prüfen, ob die erste Zeile einen Dateinamen enthält (z.B. "// filename: example.js")
-                        const filenameMatch = firstLine.match(/(?:\/\/|#)\s*filename:\s*(.+)$/i);
-                        if (filenameMatch && filenameMatch[1]) {
-                          filename = filenameMatch[1].trim();
-                          // Erste Zeile entfernen, wenn sie als Kommentar erkannt wurde
-                          codeProps.children = codeProps.children.replace(firstLine + '\n', '');
-                        }
-                      }
-                    }
-                    
-                    return (
-                      <CollapsibleCode language={language} filename={filename}>
-                        <pre {...props} className="bg-gray-100 p-2 rounded overflow-x-auto m-0" />
-                      </CollapsibleCode>
-                    );
-                  },
-                  code: ({ node, className, children, ...props }) => {
-                    const match = /language-(\w+)/.exec(className || '');
-                    const isInline = !match;
-                    return isInline ? (
-                      <code {...props} className="bg-gray-100 px-1 rounded text-sm">
-                        {children}
-                      </code>
-                    ) : (
-                      <code {...props} className="block">
-                        {children}
-                      </code>
-                    );
-                  },
-                  img: ({ node, ...props }) => (
-                    <img {...props} className="max-w-full h-auto rounded" />
-                  ),
-                }}
+              <Link 
+                to={`/cerebro/${slug}/link/add`}
+                className="p-2 rounded-full text-green-600 hover:bg-green-50"
+                aria-label="Link hinzufügen"
               >
-                {article.content}
-              </ReactMarkdown>
-            ) : (
-              <p className="text-gray-500 italic">Dieser Artikel hat noch keinen Inhalt.</p>
-            )}
-          </div>
-          
-          {/* Medien */}
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Medien</h2>
-              {canAddMedia && (
-                <button
-                  className="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-3 rounded flex items-center text-sm"
-                  onClick={() => navigate(`/cerebro/${slug}/media/add`)}
-                >
-                  <Icon.Plus /> Medien hinzufügen
-                </button>
-              )}
+                <PlusIcon className="h-5 w-5" />
+              </Link>
+              
+              <Link 
+                to={`/cerebro/${slug}/github/add`}
+                className="p-2 rounded-full text-gray-700 hover:bg-gray-100"
+                aria-label="GitHub Markdown hinzufügen"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+              </Link>
             </div>
-            
-            {article.media && article.media.length > 0 ? (
-              <div>
-                {article.media.map((media) => (
-                  <MediaPreview key={media.id} media={media} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 italic">Keine Medien vorhanden.</p>
-            )}
+          )}
+        </div>
+        
+        {externalLinks.length === 0 ? (
+          <p className="text-gray-500">Keine externen Links vorhanden.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            {externalLinks.map(link => (
+              <ExternalLinkPreview key={link.id} link={link} />
+            ))}
           </div>
-          
-          {/* Externe Links */}
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Externe Links</h2>
-              <div className="flex space-x-2">
-                {canAddLinks && (
-                  <button
-                    className="bg-green-600 hover:bg-green-700 text-white font-medium py-1 px-3 rounded flex items-center text-sm"
-                    onClick={() => navigate(`/cerebro/${slug}/link/add`)}
-                  >
-                    <span className="mr-1">+</span> Link hinzufügen
-                  </button>
-                )}
-                {canAddLinks && (
-                  <button
-                    className="bg-gray-700 hover:bg-gray-800 text-white font-medium py-1 px-3 rounded flex items-center text-sm"
-                    onClick={() => navigate(`/cerebro/${slug}/github/add`)}
-                  >
-                    <span className="mr-1">+</span> GitHub MD
-                  </button>
-                )}
-              </div>
-            </div>
-            
-            {article.externalLinks && article.externalLinks.length > 0 ? (
-              <div>
-                {article.externalLinks.map((link) => (
-                  <ExternalLinkPreview key={link.id} link={link} />
-                ))}
-              </div>
-            ) : (
-              <p className="text-gray-500 italic">Keine externen Links vorhanden.</p>
-            )}
-          </div>
-          
-          {/* Verknüpfte Tasks und Requests */}
-          <div className="grid grid-cols-2 gap-6 mb-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Verknüpfte Tasks</h2>
-              {article.tasks && article.tasks.length > 0 ? (
-                <ul className="divide-y">
-                  {article.tasks.map((task) => (
-                    <li key={task.id} className="py-2">
-                      <Link to={`/tasks/${task.id}`} className="text-blue-600 hover:text-blue-800">
-                        {task.title}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500 italic">Keine Tasks verknüpft.</p>
-              )}
-            </div>
-            
-            <div className="bg-white rounded-lg shadow p-6">
-              <h2 className="text-xl font-semibold mb-4">Verknüpfte Requests</h2>
-              {article.requests && article.requests.length > 0 ? (
-                <ul className="divide-y">
-                  {article.requests.map((request) => (
-                    <li key={request.id} className="py-2">
-                      <Link to={`/requests/${request.id}`} className="text-blue-600 hover:text-blue-800">
-                        {request.title}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-500 italic">Keine Requests verknüpft.</p>
-              )}
-            </div>
-          </div>
+        )}
+      </div>
+      
+      {/* Verknüpfte Tasks und Requests */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="border rounded p-4">
+          <h2 className="text-xl font-bold mb-2">Verknüpfte Tasks</h2>
+          <p className="text-gray-500">Keine Tasks verknüpft.</p>
+        </div>
+        
+        <div className="border rounded p-4">
+          <h2 className="text-xl font-bold mb-2">Verknüpfte Requests</h2>
+          <p className="text-gray-500">Keine Requests verknüpft.</p>
         </div>
       </div>
     </div>

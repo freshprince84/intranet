@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import { API_ENDPOINTS } from '../config/api.ts';
 
 interface User {
     id: number;
@@ -50,14 +51,14 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
 
             console.log('Lade Benutzer für CreateTaskModal...');
             
-            const response = await axios.get('http://localhost:5000/api/users', {
+            const response = await axios.get(API_ENDPOINTS.USERS.BASE, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
             
             console.log('Benutzer geladen:', response.data.length);
-            setUsers(response.data);
+            setUsers(response.data || []);
         } catch (err) {
             console.error('Fehler beim Laden der Benutzer:', err);
             
@@ -84,14 +85,14 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
 
             console.log('Lade Niederlassungen für CreateTaskModal...');
             
-            const response = await axios.get('http://localhost:5000/api/branches', {
+            const response = await axios.get(API_ENDPOINTS.BRANCHES.BASE, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
             
             console.log('Niederlassungen geladen:', response.data.length);
-            setBranches(response.data);
+            setBranches(response.data || []);
         } catch (err) {
             console.error('Fehler beim Laden der Niederlassungen:', err);
             
@@ -139,7 +140,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
                 return;
             }
 
-            const response = await axios.post('http://localhost:5000/api/tasks', 
+            const response = await axios.post(API_ENDPOINTS.TASKS.BASE, 
                 {
                     title,
                     description: description || null,
@@ -247,7 +248,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
                                 required
                             >
                                 <option value="">Bitte wählen</option>
-                                {users.map(user => (
+                                {Array.isArray(users) && users.map(user => (
                                     <option key={user.id} value={user.id}>
                                         {user.firstName} {user.lastName}
                                     </option>
@@ -266,7 +267,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
                                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
                                 <option value="">Keine Qualitätskontrolle</option>
-                                {users.map(user => (
+                                {Array.isArray(users) && users.map(user => (
                                     <option key={user.id} value={user.id}>
                                         {user.firstName} {user.lastName}
                                     </option>
@@ -286,7 +287,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
                                 required
                             >
                                 <option value="">Bitte wählen</option>
-                                {branches.map(branch => (
+                                {Array.isArray(branches) && branches.map(branch => (
                                     <option key={branch.id} value={branch.id}>
                                         {branch.name}
                                     </option>

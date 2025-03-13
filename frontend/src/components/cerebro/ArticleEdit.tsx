@@ -112,8 +112,10 @@ const ArticleEdit: React.FC = () => {
   const [autoDetectedMedia, setAutoDetectedMedia] = useState<string[]>([]);
   const [autoDetectedLinks, setAutoDetectedLinks] = useState<string[]>([]);
   
-  // Überprüfen der Berechtigungen
-  const canEditArticles = hasPermission('cerebro', 'write', 'cerebro');
+  // Überprüfen der Berechtigungen - an die richtigen Berechtigungen anpassen
+  const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
+  const hasCerebroPagePermission = hasPermission('cerebro', 'both', 'page');
+  const canEditArticles = hasCerebroButtonPermission || hasCerebroPagePermission;
   
   // Daten laden
   useEffect(() => {

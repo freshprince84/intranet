@@ -23,8 +23,10 @@ const AddExternalLink: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<LinkPreview | null>(null);
   
-  // Überprüfen der Berechtigungen
-  const canAddLinks = hasPermission('cerebro_links', 'write', 'cerebro');
+  // Überprüfen der Berechtigungen an die richtigen Berechtigungen anpassen
+  const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
+  const hasCerebroPagePermission = hasPermission('cerebro', 'both', 'page');
+  const canAddLinks = hasCerebroButtonPermission || hasCerebroPagePermission;
   
   // URL-Änderung mit Debounce
   useEffect(() => {

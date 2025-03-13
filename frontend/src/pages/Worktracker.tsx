@@ -459,7 +459,7 @@ const Worktracker: React.FC = () => {
 
     return (
         <div className="min-h-screen">
-            <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
                 {/* Zeiterfassung */}
                 <div className="mb-8">
                     <WorktimeTracker />

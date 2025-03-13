@@ -85,4 +85,60 @@ Für alle Tabellen im System gelten folgende Standards:
 - Tabellen in `Requests.tsx` und in der Task-Liste in `WorkTracker.tsx` dienen als Referenzimplementierungen
 - Die Funktion `renderSortableHeader` in diesen Komponenten zeigt die korrekte Implementierung von sortierbaren Spaltenüberschriften
 
-Diese Richtlinien gelten für alle Tabellenkomponenten im Projekt und müssen konsequent eingehalten werden. 
+Diese Richtlinien gelten für alle Tabellenkomponenten im Projekt und müssen konsequent eingehalten werden.
+
+### UI-Seiten und Container-Strukturen
+
+Für alle Hauptseiten des Systems gelten folgende einheitliche Container-Strukturen:
+
+#### Liste der Pages und deren oberste Boxen
+
+1. **Dashboard.tsx**
+   - Oberste Box: `<WorktimeStats />` innerhalb eines Container-Divs mit `className="py-4"`
+   - Container hat einen Abstand zum oberen Rand durch `py-6` im `main`-Element
+
+2. **Cerebro.tsx**
+   - Oberste Box: Gesamtstruktur innerhalb von `<div className="flex flex-col md:flex-row min-h-screen w-full">`
+   - Kein expliziter Abstand zum oberen Rand definiert
+
+3. **Profile.tsx**
+   - Oberste Box: `<div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">`
+   - Container hat einen Abstand zum oberen Rand durch `py-8` im umgebenden Div
+
+4. **TeamWorktimeControl.tsx**
+   - Oberste Box: `<div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">`
+   - Container hat einen Abstand zum oberen Rand durch `py-8` im umgebenden Div
+
+5. **UserManagement.tsx**
+   - Oberste Box: `<div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">`
+   - Container hat einen Abstand zum oberen Rand durch `p-4` im umgebenden Div
+
+6. **Worktracker.tsx**
+   - Oberste Box für Zeiterfassung: `<div className="mb-8"><WorktimeTracker /></div>`
+   - Oberste Box für Tasks: `<div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full">`
+   - Container hat einen Abstand zum oberen Rand durch `py-6` im umgebenden Div
+
+7. **Settings.tsx**
+   - Oberste Box: `<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">`
+   - Container hat einen Abstand zum oberen Rand durch `p-6` im umgebenden Div
+
+8. **RoleManagement.tsx**
+   - Oberste Box: Ähnliche Struktur wie UserManagement
+   - Container hat einen Abstand zum oberen Rand durch `p-4` im umgebenden Div
+
+9. **Payroll.tsx**
+   - Aktuelle Struktur: Kein Box-Container wie die anderen Seiten
+   - Benötigt: Box-Container mit Rahmen und Rundung wie die anderen Seiten, mit Titel "Lohnabrechnung" und einem passenden Icon
+
+#### Designvorgaben für Container
+
+- Alle Hauptseiten sollten eine einheitliche Box-Struktur mit folgenden Eigenschaften haben:
+  - Weißer Hintergrund (`bg-white`, bei Dark Mode: `dark:bg-gray-800`)
+  - Abgerundete Ecken (`rounded-lg`)
+  - Rahmen (`border border-gray-300`, bei Dark Mode: `dark:border-gray-700`)
+  - Innenabstand (`p-6`)
+  - Titelzeile mit Icon links vom Titel
+  
+- Abstände zum oberen Seitenrand:
+  - Einheitlich `py-4` für alle Seiten
+  - Bei Tablet- und Mobilansichten: reduzierter Abstand von 50% (entspricht `py-2`) 

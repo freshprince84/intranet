@@ -19,7 +19,10 @@ async function main() {
   try {
     console.log('Starte Seeding...');
 
-    // Rollen erstellen
+    // 1. ROLLEN ERSTELLEN
+    console.log('Erstelle Rollen...');
+    
+    // Admin-Rolle (ID 1)
     const adminRole = await prisma.role.upsert({
       where: { name: 'Admin' },
       update: {},
@@ -29,7 +32,19 @@ async function main() {
         description: 'Administrator mit allen Rechten',
       },
     });
-
+    
+    // User-Rolle (ID 2)
+    const userRole = await prisma.role.upsert({
+      where: { name: 'User' },
+      update: {},
+      create: {
+        id: 2,
+        name: 'User',
+        description: 'Standardbenutzer',
+      },
+    });
+    
+    // Hamburger-Rolle (ID 999)
     const hamburgerRole = await prisma.role.upsert({
       where: { name: 'Hamburger' },
       update: {},
@@ -39,9 +54,11 @@ async function main() {
         description: 'Hamburger-Rolle für neue Benutzer',
       },
     });
-
-    // Berechtigungen für Admin-Rolle - ALLE RECHTE
-    // Admin bekommt Berechtigung für alle Seiten und Tabellen mit "both" Zugriff
+    
+    // 2. BERECHTIGUNGEN DEFINIEREN
+    console.log('Definiere Berechtigungen...');
+    
+    // Admin-Berechtigungen - ALLE RECHTE
     const adminPermissions = [
       // Seiten-Berechtigungen
       { entity: 'dashboard', entityType: 'page', accessLevel: 'both' },
@@ -50,25 +67,40 @@ async function main() {
       { entity: 'settings', entityType: 'page', accessLevel: 'both' },
       { entity: 'profile', entityType: 'page', accessLevel: 'both' },
       { entity: 'cerebro', entityType: 'page', accessLevel: 'both' },
+      { entity: 'cerebro', entityType: 'button', accessLevel: 'both' },
       { entity: 'team_worktime_control', entityType: 'page', accessLevel: 'both' },
+      { entity: 'payroll', entityType: 'page', accessLevel: 'both' },
       
       // Tabellen-Berechtigungen
       { entity: 'requests', entityType: 'table', accessLevel: 'both' },
       { entity: 'tasks', entityType: 'table', accessLevel: 'both' },
       { entity: 'users', entityType: 'table', accessLevel: 'both' },
-      { entity: 'roles', entityType: 'table', accessLevel: 'both' }, // WICHTIG: Berechtigung für Rollen-Verwaltung
+      { entity: 'roles', entityType: 'table', accessLevel: 'both' },
       { entity: 'team_worktime', entityType: 'table', accessLevel: 'both' },
     ];
-
-    // Berechtigungen für Hamburger-Rolle - NUR BASIS-RECHTE
+    
+    // User-Berechtigungen - EINGESCHRÄNKTE RECHTE
+    const userPermissions = [
+      // Seiten
+      { entity: 'dashboard', entityType: 'page', accessLevel: 'read' },
+      { entity: 'worktracker', entityType: 'page', accessLevel: 'both' },
+      { entity: 'settings', entityType: 'page', accessLevel: 'read' },
+      { entity: 'requests', entityType: 'table', accessLevel: 'both' },
+      { entity: 'tasks', entityType: 'table', accessLevel: 'both' },
+    ];
+    
+    // Hamburger-Berechtigungen - BASIS-RECHTE
     const hamburgerPermissions = [
-      // Nur eingeschränkte Berechtigungen
       { entity: 'dashboard', entityType: 'page', accessLevel: 'both' },
       { entity: 'settings', entityType: 'page', accessLevel: 'both' },
       { entity: 'profile', entityType: 'page', accessLevel: 'both' },
       { entity: 'cerebro', entityType: 'page', accessLevel: 'both' },
+      { entity: 'cerebro', entityType: 'button', accessLevel: 'both' },
     ];
-
+    
+    // 3. BERECHTIGUNGEN IN DER DATENBANK ERSTELLEN
+    console.log('Erstelle Berechtigungen in der Datenbank...');
+    
     // Admin-Berechtigungen erstellen
     for (const permission of adminPermissions) {
       await prisma.permission.create({
@@ -80,7 +112,19 @@ async function main() {
         }
       });
     }
-
+    
+    // User-Berechtigungen erstellen
+    for (const permission of userPermissions) {
+      await prisma.permission.create({
+        data: {
+          entity: permission.entity,
+          entityType: permission.entityType,
+          accessLevel: permission.accessLevel,
+          roleId: userRole.id
+        }
+      });
+    }
+    
     // Hamburger-Berechtigungen erstellen
     for (const permission of hamburgerPermissions) {
       await prisma.permission.create({
@@ -92,40 +136,12 @@ async function main() {
         }
       });
     }
-
-    // Erstelle Benutzer-Rolle
-    const userRole = await prisma.role.upsert({
-      where: { name: 'User' },
-      update: {},
-      create: {
-        name: 'User',
-        description: 'Standardbenutzer',
-        permissions: {
-          create: [
-            // Immer sichtbare Seiten (für die Vollständigkeit)
-            // @ts-ignore
-            { entity: 'dashboard', entityType: 'page', accessLevel: AccessLevel.read },
-            // @ts-ignore
-            { entity: 'settings', entityType: 'page', accessLevel: AccessLevel.read },
-            
-            // Zusätzliche Seiten mit Berechtigungen
-            // @ts-ignore
-            { entity: 'worktracker', entityType: 'page', accessLevel: AccessLevel.both },
-            
-            // Tabellen-Berechtigungen
-            // @ts-ignore
-            { entity: 'requests', entityType: 'table', accessLevel: AccessLevel.read },
-            // @ts-ignore
-            { entity: 'tasks', entityType: 'table', accessLevel: AccessLevel.both }
-          ]
-        }
-      }
-    });
-    console.log('Benutzer-Rolle erstellt');
-
-    // Erstelle Admin-Benutzer
+    
+    // 4. BENUTZER ERSTELLEN
+    console.log('Erstelle Benutzer...');
+    
+    // Admin-Benutzer
     const hashedPassword = await bcrypt.hash('admin123', 10);
-    // @ts-ignore - Ignoriere den Email-Typfehler, der entsteht durch veraltete Typen
     const adminUser = await prisma.user.upsert({
       where: { username: 'admin' },
       update: {},
@@ -154,9 +170,11 @@ async function main() {
         }
       }
     });
-    console.log('Admin-Benutzer erstellt');
-
-    // Erstelle Standard-Tabelleneinstellungen für den Admin
+    
+    // 5. ERSTELLE STANDARDEINSTELLUNGEN
+    console.log('Erstelle Standardeinstellungen...');
+    
+    // Tabelleneinstellungen für Admin
     await prisma.userTableSettings.upsert({
       where: {
         userId_tableId: {
@@ -172,9 +190,10 @@ async function main() {
         hiddenColumns: JSON.stringify([])
       }
     });
-    console.log('Standard-Tabelleneinstellungen für Admin erstellt');
-
-    // Erstelle Test-Niederlassungen
+    
+    // 6. ERSTELLE NIEDERLASSUNGEN
+    console.log('Erstelle Niederlassungen...');
+    
     const branches = ['Hauptsitz', 'Manila', 'Parque Poblado'];
     for (const branchName of branches) {
       const branch = await prisma.branch.upsert({
@@ -200,8 +219,76 @@ async function main() {
         }
       });
     }
-    console.log('Niederlassungen erstellt und mit Admin verknüpft');
-
+    
+    // 7. ERSTELLE CEREBRO MARKDOWN-DATEIEN
+    console.log('Erstelle Cerebro Markdown-Dateien...');
+    
+    // Erstelle einen übergeordneten Ordner für Markdown-Dateien
+    const markdownFolder = await prisma.cerebroCarticle.upsert({
+      where: { slug: 'markdown-folder' },
+      update: {},
+      create: {
+        title: 'Markdown-Dateien',
+        slug: 'markdown-folder',
+        content: 'Sammlung wichtiger Dokumentationsdateien aus dem GitHub Repository.',
+        createdById: adminUser.id,
+        isPublished: true
+      }
+    });
+    
+    // Liste der wichtigen Markdown-Dateien
+    const IMPORTANT_MD_FILES = [
+      { path: 'README.md', title: 'Readme - Überblick', slug: 'readme' },
+      { path: 'PROJECT_SETUP.md', title: 'Projekt-Einrichtung', slug: 'project-setup' },
+      { path: 'DB_SCHEMA.md', title: 'Datenbankschema', slug: 'db-schema' },
+      { path: 'BACKEND_SETUP.md', title: 'Backend-Setup', slug: 'backend-setup' },
+      { path: 'FRONTEND_SETUP.md', title: 'Frontend-Setup', slug: 'frontend-setup' },
+      { path: 'CEREBRO_WIKI.md', title: 'Cerebro Wiki-System', slug: 'cerebro-wiki' },
+      { path: 'API_INTEGRATION.md', title: 'API-Integration', slug: 'api-integration' },
+      { path: 'ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität', slug: 'role-switch' },
+      { path: 'CHANGELOG.md', title: 'Änderungshistorie', slug: 'changelog' }
+    ];
+    
+    // Erstelle für jede Markdown-Datei einen Eintrag in der Datenbank
+    for (const mdFile of IMPORTANT_MD_FILES) {
+      await prisma.cerebroCarticle.upsert({
+        where: { slug: mdFile.slug },
+        update: {},
+        create: {
+          title: mdFile.title,
+          slug: mdFile.slug,
+          content: `# ${mdFile.title}\n\nDiese Datei wird automatisch aus dem GitHub Repository geladen.`,
+          parentId: markdownFolder.id,  // Setze die Markdown-Datei als Kind des Ordners
+          createdById: adminUser.id,
+          isPublished: true
+        }
+      });
+      
+      // Erstelle einen GitHub-Link zur Markdown-Datei
+      try {
+        const existingLink = await prisma.cerebroExternalLink.findFirst({
+          where: {
+            url: `https://github.com/freshprince84/intranet/blob/main/${mdFile.path}`,
+            carticleId: (await prisma.cerebroCarticle.findUnique({ where: { slug: mdFile.slug } }))!.id
+          }
+        });
+        
+        if (!existingLink) {
+          await prisma.cerebroExternalLink.create({
+            data: {
+              url: `https://github.com/freshprince84/intranet/blob/main/${mdFile.path}`,
+              title: `GitHub: ${mdFile.title}`,
+              type: 'github_markdown',
+              carticleId: (await prisma.cerebroCarticle.findUnique({ where: { slug: mdFile.slug } }))!.id,
+              createdById: adminUser.id
+            }
+          });
+        }
+      } catch (error) {
+        console.error(`Fehler beim Erstellen des Links für ${mdFile.title}:`, error);
+      }
+    }
+    
     console.log('Seeding abgeschlossen!');
   } catch (error) {
     console.error('Fehler beim Seeding:', error);

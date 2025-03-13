@@ -1,185 +1,228 @@
-import React, { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { cerebroApi } from '../../api/cerebroApi.ts';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import React, { useState, useEffect } from 'react';
+import { cerebroApi, CerebroExternalLink } from '../../api/cerebroApi.ts';
 
-interface FormData {
-  url: string;
-  title: string;
+interface GitHubLinkManagerProps {
+  articleSlug: string;
+  articleId?: string;
+  onLinkAdded?: (link: CerebroExternalLink) => void;
+  onLinkRemoved?: (linkId: string) => void;
 }
 
-/**
- * GitHubLinkManager Komponente erlaubt das Hinzufügen von GitHub Markdown-Links zu Cerebro-Artikeln
- */
-const GitHubLinkManager: React.FC = () => {
-  const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
-  
-  const [formData, setFormData] = useState<FormData>({
+const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({ 
+  articleSlug, 
+  articleId,
+  onLinkAdded,
+  onLinkRemoved
+}) => {
+  const [links, setLinks] = useState<CerebroExternalLink[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [newLink, setNewLink] = useState<{
+    url: string;
+    title: string;
+    type: string;
+  }>({
     url: '',
     title: '',
+    type: 'github_markdown'
   });
-  const [saving, setSaving] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-  
-  const parseGitHubUrl = (url: string): { owner: string; repo: string; path: string; branch: string; } | null => {
-    try {
-      // Unterstützt folgende URL-Formate:
-      // https://github.com/username/repo/blob/branch/path/to/file.md
-      // https://github.com/username/repo/raw/branch/path/to/file.md
-      // https://raw.githubusercontent.com/username/repo/branch/path/to/file.md
-      
-      let owner = '';
-      let repo = '';
-      let path = '';
-      let branch = '';
-      
-      if (url.includes('raw.githubusercontent.com')) {
-        // Format: https://raw.githubusercontent.com/username/repo/branch/path/to/file.md
-        const parts = url.replace('https://raw.githubusercontent.com/', '').split('/');
-        owner = parts[0];
-        repo = parts[1];
-        branch = parts[2];
-        path = parts.slice(3).join('/');
-      } else if (url.includes('github.com')) {
-        // Format: https://github.com/username/repo/blob/branch/path/to/file.md
-        const parts = url.replace('https://github.com/', '').split('/');
-        owner = parts[0];
-        repo = parts[1];
-        const typeIndex = parts.indexOf('blob') !== -1 ? parts.indexOf('blob') : parts.indexOf('raw');
-        branch = parts[typeIndex + 1];
-        path = parts.slice(typeIndex + 2).join('/');
-      } else {
-        return null;
+
+  // GitHub-Links für den aktuellen Artikel laden
+  useEffect(() => {
+    if (!articleId) return;
+
+    const fetchLinks = async () => {
+      try {
+        setLoading(true);
+        const fetchedLinks = await cerebroApi.externalLinks.getLinksByArticle(articleId);
+        // Filtere nur GitHub-Links
+        setLinks(fetchedLinks.filter(link => 
+          link.type === 'github_markdown' || 
+          link.url.includes('github.com') || 
+          link.url.includes('raw.githubusercontent.com')
+        ));
+        setError(null);
+      } catch (err) {
+        console.error('Fehler beim Laden der GitHub-Links:', err);
+        setError('Die GitHub-Links konnten nicht geladen werden.');
+      } finally {
+        setLoading(false);
       }
-      
-      // Sicherstellen, dass es sich um eine Markdown-Datei handelt
-      if (!path.endsWith('.md') && !path.endsWith('.markdown')) {
-        return null;
-      }
-      
-      return { owner, repo, path, branch };
-    } catch (err) {
-      console.error('Fehler beim Parsen der GitHub-URL:', err);
-      return null;
-    }
-  };
-  
-  const handleSubmit = async (e: React.FormEvent) => {
+    };
+
+    fetchLinks();
+  }, [articleId]);
+
+  // Neuen GitHub-Link hinzufügen
+  const addGitHubLink = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!slug) {
-      setError('Fehler: Kein Artikel-Slug angegeben.');
+    if (!newLink.url.trim()) {
+      setError('Bitte geben Sie eine gültige GitHub-URL ein');
       return;
     }
-    
-    // GitHub URL parsen
-    const githubInfo = parseGitHubUrl(formData.url);
-    if (!githubInfo) {
-      setError('Ungültige GitHub URL. Bitte geben Sie eine URL zu einer Markdown-Datei auf GitHub an.');
-      return;
-    }
-    
+
     try {
-      setSaving(true);
+      setLoading(true);
       
-      // Externen Link erstellen
-      await cerebroApi.externalLinks.createExternalLink({
-        carticleSlug: slug,
-        url: formData.url,
-        title: formData.title || `GitHub: ${githubInfo.path}`,
+      // Wenn keine Titel angegeben wurde, extrahiere den Dateinamen aus der URL
+      let title = newLink.title.trim();
+      if (!title) {
+        const urlParts = newLink.url.split('/');
+        title = urlParts[urlParts.length - 1];
+      }
+      
+      const linkData = {
+        carticleSlug: articleSlug,
+        url: newLink.url,
+        title: `GitHub: ${title}`,
         type: 'github_markdown'
-      });
+      };
       
-      toast.success('GitHub Markdown-Link erfolgreich hinzugefügt!');
+      const createdLink = await cerebroApi.externalLinks.createExternalLink(linkData);
       
-      // Zurück zum Artikel navigieren
-      navigate(`/cerebro/${slug}`);
+      setLinks(prev => [...prev, createdLink]);
+      setNewLink({ url: '', title: '', type: 'github_markdown' });
+      setError(null);
+      
+      if (onLinkAdded) {
+        onLinkAdded(createdLink);
+      }
     } catch (err) {
-      console.error('Fehler beim Speichern des GitHub-Links:', err);
-      setError('Fehler beim Speichern des GitHub-Links. Bitte versuchen Sie es später erneut.');
+      console.error('Fehler beim Erstellen des GitHub-Links:', err);
+      setError('Der GitHub-Link konnte nicht erstellt werden.');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
-  
+
+  // GitHub-Link entfernen
+  const removeLink = async (linkId: string) => {
+    try {
+      setLoading(true);
+      await cerebroApi.externalLinks.deleteLink(linkId);
+      setLinks(prev => prev.filter(link => link.id !== linkId));
+      
+      if (onLinkRemoved) {
+        onLinkRemoved(linkId);
+      }
+    } catch (err) {
+      console.error('Fehler beim Löschen des GitHub-Links:', err);
+      setError('Der GitHub-Link konnte nicht gelöscht werden.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // URL-Format validieren (für GitHub-URLs)
+  const isValidGitHubUrl = (url: string): boolean => {
+    return (
+      url.includes('github.com') || 
+      url.includes('raw.githubusercontent.com')
+    ) && url.trim().length > 0;
+  };
+
   return (
-    <>
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold mb-4">GitHub Markdown-Link hinzufügen</h2>
-        
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-        
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              GitHub URL <span className="text-red-500">*</span>
+    <div className="github-link-manager">
+      <h3 className="text-lg font-medium mb-2">GitHub Markdown-Dateien</h3>
+      
+      {/* Fehleranzeige */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
+      
+      {/* Formular zum Hinzufügen eines neuen GitHub-Links */}
+      <form onSubmit={addGitHubLink} className="mb-4">
+        <div className="flex flex-col space-y-2">
+          <div>
+            <label htmlFor="github-url" className="block text-sm font-medium text-gray-700 mb-1">
+              GitHub URL
             </label>
             <input
-              type="text"
-              name="url"
-              value={formData.url}
-              onChange={handleChange}
-              placeholder="https://github.com/username/repo/blob/main/README.md"
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              id="github-url"
+              type="url"
+              value={newLink.url}
+              onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+              placeholder="https://github.com/username/repo/blob/main/file.md"
+              className={`w-full px-3 py-2 border rounded-md ${
+                !isValidGitHubUrl(newLink.url) && newLink.url.length > 0
+                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                  : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+              }`}
               required
             />
-            <p className="text-sm text-gray-500 mt-1">
-              URL zu einer Markdown-Datei auf GitHub (z.B. README.md)
-            </p>
+            {!isValidGitHubUrl(newLink.url) && newLink.url.length > 0 && (
+              <p className="mt-1 text-sm text-red-600">
+                Bitte geben Sie eine gültige GitHub-URL ein.
+              </p>
+            )}
           </div>
           
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Titel
+          <div>
+            <label htmlFor="github-title" className="block text-sm font-medium text-gray-700 mb-1">
+              Titel (optional)
             </label>
             <input
+              id="github-title"
               type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="GitHub Repository Dokumentation"
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={newLink.title}
+              onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
+              placeholder="z.B. Readme, Dokumentation, etc."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
             />
-            <p className="text-sm text-gray-500 mt-1">
-              Optional: Ein beschreibender Titel für diesen Link
-            </p>
           </div>
           
-          <div className="flex justify-end space-x-2">
-            <button
-              type="button"
-              onClick={() => navigate(`/cerebro/${slug}`)}
-              className="px-4 py-2 border border-gray-300 rounded text-gray-700 hover:bg-gray-50"
-              disabled={saving}
-            >
-              Abbrechen
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              disabled={saving}
-            >
-              {saving ? 'Wird gespeichert...' : 'Hinzufügen'}
-            </button>
-          </div>
-        </form>
+          <button
+            type="submit"
+            disabled={loading || !isValidGitHubUrl(newLink.url)}
+            className={`mt-2 px-4 py-2 rounded-md text-white ${
+              loading || !isValidGitHubUrl(newLink.url)
+                ? 'bg-blue-400 cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+          >
+            {loading ? 'Wird hinzugefügt...' : 'GitHub-Link hinzufügen'}
+          </button>
+        </div>
+      </form>
+      
+      {/* Liste der vorhandenen GitHub-Links */}
+      <div className="space-y-3">
+        <h4 className="text-md font-medium text-gray-700">Verknüpfte Markdown-Dateien</h4>
+        
+        {loading && links.length === 0 ? (
+          <div className="text-gray-500 italic">Lade GitHub-Links...</div>
+        ) : links.length === 0 ? (
+          <div className="text-gray-500 italic">Keine GitHub-Links vorhanden</div>
+        ) : (
+          links.map((link) => (
+            <div key={link.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-md">
+              <div className="truncate flex-1">
+                <a 
+                  href={link.url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
+                  {link.title || link.url}
+                </a>
+              </div>
+              
+              <button
+                onClick={() => removeLink(link.id)}
+                className="ml-2 text-red-600 hover:text-red-800"
+                title="GitHub-Link entfernen"
+                disabled={loading}
+              >
+                Entfernen
+              </button>
+            </div>
+          ))
+        )}
       </div>
-      <ToastContainer position="bottom-right" autoClose={3000} />
-    </>
+    </div>
   );
 };
 

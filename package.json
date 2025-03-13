@@ -12,9 +12,14 @@
   },
   "dependencies": {
     "@prisma/client": "^6.4.1",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "concurrently": "^8.2.2",
+    "github-markdown-css": "^5.8.1",
+    "prismjs": "^1.30.0",
     "react-icons": "^4.12.0",
-    "react-quill": "^2.0.0"
+    "react-quill": "^2.0.0",
+    "react-syntax-highlighter": "^15.6.1",
+    "rehype-sanitize": "^6.0.0"
   },
   "author": "",
   "license": "ISC",
