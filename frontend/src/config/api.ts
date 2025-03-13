@@ -8,8 +8,12 @@ export const API_BASE_URL = process.env.NODE_ENV === 'development'
   ? `http://${window.location.hostname}:5000`
   : ''; // Leerer String für Produktionsumgebung, dadurch werden alle Pfade relativ
 
-// Vollständige API-URL (BASE_URL + /api)
-export const API_URL = `${API_BASE_URL}/api`;
+// Vollständige API-URL
+// In der Entwicklung vollständige URL mit /api
+// In Produktion nur leerer String, da die baseURL in axios.ts bereits /api enthält
+export const API_URL = process.env.NODE_ENV === 'development'
+  ? `${API_BASE_URL}/api`
+  : '';
 
 // Alle API-Endpunkte
 export const API_ENDPOINTS = {

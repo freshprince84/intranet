@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { formatTime, calculateDuration } from '../utils/dateUtils.ts';
-import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
 
 interface WorkTime {
     id: number;
@@ -39,21 +39,23 @@ const WorktimeList: React.FC = () => {
 
     const fetchWorktimes = async () => {
         try {
-            const token = localStorage.getItem('token');
+            setLoading(true);
+            setError(null);
             
-            // Verwende die API_ENDPOINTS-Konstante anstelle der direkten URL
-            const response = await axios.get(`${API_ENDPOINTS.WORKTIME.BASE}?date=${dateFilter}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setError('Nicht authentifiziert');
+                setLoading(false);
+                return;
+            }
+            
+            const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.BASE}?date=${dateFilter}`);
             
             setWorktimes(response.data);
-            setError(null);
+            setLoading(false);
         } catch (error) {
-            console.error('Fehler:', error);
-            setError('Fehler beim Laden der Zeiteinträge');
-        } finally {
+            console.error('Fehler beim Laden der Zeiterfassungen:', error);
+            setError('Fehler beim Laden der Zeiterfassungen');
             setLoading(false);
         }
     };
@@ -66,24 +68,25 @@ const WorktimeList: React.FC = () => {
     };
 
     const handleDelete = async (id: number) => {
-        if (!window.confirm('Möchten Sie diesen Zeiteintrag wirklich löschen?')) {
-            return;
-        }
-
+        if (!window.confirm('Möchten Sie diesen Zeiteintrag wirklich löschen?')) return;
+        
         try {
-            const token = localStorage.getItem('token');
+            setLoading(true);
             
-            // Verwende die API_ENDPOINTS-Konstante anstelle der direkten URL
-            const response = await axios.delete(`${API_ENDPOINTS.WORKTIME.BASE}/${id}`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-
-            await fetchWorktimes();
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setError('Nicht authentifiziert');
+                setLoading(false);
+                return;
+            }
+            
+            await axiosInstance.delete(`${API_ENDPOINTS.WORKTIME.BY_ID(id)}`);
+            
+            fetchWorktimes(); // Lade die Daten neu
         } catch (error) {
-            console.error('Fehler:', error);
-            alert('Fehler beim Löschen des Zeiteintrags');
+            console.error('Fehler beim Löschen des Zeiteintrags:', error);
+            setError('Fehler beim Löschen des Zeiteintrags');
+            setLoading(false);
         }
     };
 

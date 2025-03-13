@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { format, parseISO } from 'date-fns';
 import { formatDate, formatTime, calculateDuration, isWorktimeRelevantForSelectedDate } from '../utils/dateUtils.ts';
@@ -21,6 +21,7 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
     const [loading, setLoading] = useState(true);
     const [totalDuration, setTotalDuration] = useState<string>('0h 0m');
     const [activeWorktime, setActiveWorktime] = useState<any | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     // Prüfe, ob die aktive Zeiterfassung am ausgewählten Tag begonnen hat
     const isActiveWorktimeRelevant = (): boolean => {
@@ -38,45 +39,44 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
         }
     };
 
-    const fetchWorktimes = useCallback(async () => {
+    const fetchWorktimes = async () => {
         try {
+            setError(null);
             setLoading(true);
             
             const token = localStorage.getItem('token');
             if (!token) {
-                console.error('Kein Authentifizierungstoken gefunden');
+                setError('Nicht authentifiziert');
+                setLoading(false);
                 return;
             }
             
-            // WICHTIG: Wir holen ALLE Einträge und filtern selbst im Frontend
-            const response = await axios.get(API_ENDPOINTS.WORKTIME.BASE, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+            const formattedDate = selectedDate;
+            
+            const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.BASE}?date=${formattedDate}`);
+            
+            const sortedWorktimes = [...response.data].sort((a, b) => {
+                return new Date(a.startTime).getTime() - new Date(b.startTime).getTime();
             });
             
-            // Setze alle Einträge (wir filtern später im UI)
-            setWorktimes(response.data);
-
-            // Aktive Zeiterfassung abrufen
-            const activeResponse = await axios.get(API_ENDPOINTS.WORKTIME.ACTIVE, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            setWorktimes(sortedWorktimes);
             
-            if (activeResponse.data && activeResponse.data.active === true) {
-                const activeData = activeResponse.data;
-                setActiveWorktime(activeData);
+            // Auch die aktive Zeiterfassung abrufen
+            const activeResponse = await axiosInstance.get(API_ENDPOINTS.WORKTIME.ACTIVE);
+            
+            if (activeResponse.data && Object.keys(activeResponse.data).length > 0) {
+                setActiveWorktime(activeResponse.data);
             } else {
                 setActiveWorktime(null);
             }
+            
+            setLoading(false);
         } catch (error) {
-            console.error('Fehler beim Laden der Zeiteinträge:', error);
-        } finally {
+            console.error('Fehler beim Laden der Zeiterfassungen:', error);
+            setError('Fehler beim Laden der Zeiterfassungen');
             setLoading(false);
         }
-    }, [selectedDate]);
+    };
 
     useEffect(() => {
         if (isOpen) {

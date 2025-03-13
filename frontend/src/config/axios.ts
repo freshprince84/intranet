@@ -5,7 +5,7 @@ import axios from 'axios';
 // Dynamische API-Basis-URL basierend auf der Umgebung
 const API_BASE_URL = process.env.NODE_ENV === 'development'
   ? `http://${window.location.hostname}:5000`
-  : `/api`; // Im Produktionsbetrieb verwenden wir relative URLs!
+  : '/api'; // Im Produktionsbetrieb verwenden wir '/api' als Basis
 
 const instance = axios.create({
   baseURL: API_BASE_URL,

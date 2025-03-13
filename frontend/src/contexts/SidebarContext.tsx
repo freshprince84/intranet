@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 
 interface SidebarContextType {
@@ -33,7 +35,7 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ child
         
         // An den Server senden, wenn der Benutzer eingeloggt ist
         if (user) {
-            axios.put(`http://localhost:5000/api/users/settings`, {
+            axiosInstance.put(`${API_ENDPOINTS.USERS.BASE}/settings`, {
                 sidebarCollapsed: newState
             }).catch(error => {
                 console.error('Fehler beim Speichern der Seitenleisteneinstellung:', error);
