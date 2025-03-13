@@ -63,7 +63,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const fetchCurrentUser = async () => {
         try {
-            const response = await axiosInstance.get(`${API_URL}/users/profile`);
+            const response = await axiosInstance.get('/users/profile');
             
             if (response.data && response.data.roles) {
                 const activeRole = response.data.roles.find((r: UserRole) => r.lastUsed);
@@ -93,7 +93,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const login = async (username: string, password: string) => {
         try {
-            const response = await axiosInstance.post(`${AUTH_ENDPOINTS.LOGIN}`, { username, password });
+            const response = await axiosInstance.post('/auth/login', { username, password });
             const { token, user } = response.data;
             
             if (!user || !user.id || !user.username || !user.firstName || !user.lastName || !user.roles) {
@@ -125,7 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const logout = async () => {
         try {
-            await axiosInstance.post(AUTH_ENDPOINTS.LOGOUT);
+            await axiosInstance.post('/auth/logout');
         } catch (error) {
             // Fehler beim Logout ignorieren
         } finally {
@@ -138,7 +138,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     const switchRole = async (roleId: number) => {
         try {
-            const response = await axiosInstance.put(`${API_URL}/users/switch-role`, { roleId });
+            const response = await axiosInstance.put('/users/switch-role', { roleId });
             
             if (response.data) {
                 setUser(response.data);

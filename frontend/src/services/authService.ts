@@ -1,4 +1,5 @@
 import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
 import { API_URL } from '../config/api.ts';
 
 interface LoginData {
@@ -34,7 +35,7 @@ interface AuthResponse {
 
 const authService = {
   async login(data: LoginData): Promise<AuthResponse> {
-    const response = await axios.post(`${API_URL}/auth/login`, data);
+    const response = await axiosInstance.post('/auth/login', data);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -43,7 +44,7 @@ const authService = {
   },
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await axios.post(`${API_URL}/auth/register`, data);
+    const response = await axiosInstance.post('/auth/register', data);
     if (response.data.token) {
       localStorage.setItem('token', response.data.token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
@@ -54,7 +55,7 @@ const authService = {
   async logout(): Promise<void> {
     const token = localStorage.getItem('token');
     if (token) {
-      await axios.post(`${API_URL}/auth/logout`, {}, {
+      await axiosInstance.post('/auth/logout', {}, {
         headers: { Authorization: `Bearer ${token}` }
       });
     }

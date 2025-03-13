@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import NotificationBell from './NotificationBell.tsx';
 import { API_URL } from '../config/api.ts';
+import axiosInstance from '../config/axios.ts';
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
@@ -10,7 +11,7 @@ const Header: React.FC = () => {
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isRoleSubMenuOpen, setIsRoleSubMenuOpen] = useState(false);
-    const [logoSrc, setLogoSrc] = useState<string>(`${API_URL}/settings/logo`);
+    const [logoSrc, setLogoSrc] = useState<string>('/settings/logo');
     const [logoLoadFailed, setLogoLoadFailed] = useState<boolean>(false);
     const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
     const roleMenuButtonRef = useRef<HTMLButtonElement>(null);
@@ -20,16 +21,10 @@ const Header: React.FC = () => {
     useEffect(() => {
         if (logoLoadFailed) {
             console.log("Versuche Logo über Base64-API zu laden...");
-            fetch(`${API_URL}/settings/logo/base64`)
+            axiosInstance.get('/settings/logo/base64')
                 .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`Status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log("Base64-Logo geladen, Größe:", data.size, "Bytes");
-                    setLogoSrc(data.logo);
+                    console.log("Base64-Logo geladen, Größe:", response.data.size, "Bytes");
+                    setLogoSrc(response.data.logo);
                 })
                 .catch(error => {
                     console.error("Fehler beim Laden des Base64-Logos:", error);
