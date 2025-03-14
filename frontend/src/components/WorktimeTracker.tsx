@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { ClockIcon, ListBulletIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
+import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { useWorktime } from '../contexts/WorktimeContext.tsx';
 import { WorktimeModal } from './WorktimeModal.tsx';
@@ -119,7 +120,7 @@ const WorktimeTracker: React.FC = () => {
             } catch (error) {
                 console.error('Fehler beim Abrufen der aktiven Zeiterfassung:', error);
                 
-                if (axiosInstance.isAxiosError(error)) {
+                if (axios.isAxiosError(error)) {
                     if (error.code === 'ERR_NETWORK') {
                         setStatusError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
                     } else {
@@ -132,7 +133,7 @@ const WorktimeTracker: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [user?.id]);
+    }, [user?.id, updateTrackingStatus]);
     
     // Initiale Prüfung, ob bereits eine aktive Zeiterfassung läuft
     useEffect(() => {
@@ -229,8 +230,10 @@ const WorktimeTracker: React.FC = () => {
                 API_ENDPOINTS.WORKTIME.START,
                 {
                     branchId: selectedBranch,
-                    // Die aktuelle Zeit mit Berücksichtigung der Zeitzone
-                    startTime: new Date().toISOString()
+                    // Die aktuelle Zeit mit Berücksichtigung der Zeitzonenverschiebung senden
+                    // Da die Datenbank in UTC speichert, müssen wir die lokale Zeit so senden,
+                    // dass sie nach der automatischen UTC-Umwandlung korrekt ist
+                    startTime: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
                 },
                 {
                     headers: {
@@ -282,7 +285,7 @@ const WorktimeTracker: React.FC = () => {
                 API_ENDPOINTS.WORKTIME.STOP,
                 {
                     // Die aktuelle Zeit mit Berücksichtigung der Zeitzonenverschiebung senden
-                    endTime: new Date().toISOString()
+                    endTime: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
                 },
                 {
                     headers: {
@@ -344,7 +347,7 @@ const WorktimeTracker: React.FC = () => {
                 API_ENDPOINTS.WORKTIME.STOP,
                 {
                     // Die aktuelle Zeit mit Berücksichtigung der Zeitzonenverschiebung senden
-                    endTime: new Date().toISOString(),
+                    endTime: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000),
                     force: true
                 },
                 {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { UsersIcon, ClockIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -30,8 +30,8 @@ const TeamWorktimeControl: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Lade aktive Benutzer
-  const fetchActiveUsers = async () => {
+  // Funktion zum Abrufen der aktiven Benutzer
+  const fetchActiveUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -44,7 +44,7 @@ const TeamWorktimeControl: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
   
   // Lade Team-Mitglieder
   const fetchTeamMembers = async () => {
@@ -102,7 +102,7 @@ const TeamWorktimeControl: React.FC = () => {
       
       await axios.post(API_ENDPOINTS.TEAM_WORKTIME.STOP_USER, {
         userId,
-        endTime
+        endTime: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
       });
       
       // Aktualisiere die Liste der aktiven Benutzer
@@ -166,7 +166,7 @@ const TeamWorktimeControl: React.FC = () => {
     const intervalId = setInterval(fetchActiveUsers, 30000);
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [fetchActiveUsers]);
   
   // Lade Team-Mitglieder beim ersten Rendern und beim Wechsel zum Team-Übersicht-Tab
   useEffect(() => {

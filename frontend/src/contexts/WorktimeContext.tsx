@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 
 interface WorktimeContextType {
@@ -28,11 +28,7 @@ export const WorktimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const token = localStorage.getItem('token');
             if (!token) return;
             
-            const response = await axios.get(API_ENDPOINTS.WORKTIME.ACTIVE, {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
-            });
+            const response = await axiosInstance.get(API_ENDPOINTS.WORKTIME.ACTIVE);
             
             const data = response.data;
             if (data && data.active === true) {
@@ -48,13 +44,16 @@ export const WorktimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Prüfe den Tracking-Status beim Start
     useEffect(() => {
+        // Initiale Prüfung
         checkTrackingStatus();
 
         // Polling für regelmäßige Statusprüfung alle 30 Sekunden
-        const intervalId = setInterval(checkTrackingStatus, 30000);
+        const intervalId = setInterval(() => {
+            checkTrackingStatus();
+        }, 30000);
         
         return () => clearInterval(intervalId);
-    }, []);
+    }, []); // Leere Abhängigkeitsliste, da checkTrackingStatus im Komponentenkontext definiert ist
 
     return (
         <WorktimeContext.Provider value={{ isTracking, updateTrackingStatus, checkTrackingStatus }}>

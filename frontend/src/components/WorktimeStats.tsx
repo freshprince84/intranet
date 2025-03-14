@@ -4,9 +4,10 @@ import { de } from 'date-fns/locale';
 import { ChartBarIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { API_URL, API_ENDPOINTS } from '../config/api.ts';
 import WorktimeList from './WorktimeList.tsx';
+import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
 import { WorktimeModal } from './WorktimeModal.tsx';
 import { convertWeekToDate, getWeekDays } from '../utils/dateUtils.ts';
-import { worktimeApi, WorktimeStats as WorktimeStatsType } from '../api/worktimeApi.ts';
 
 // Neue Schnittstelle für das WorktimeModal mit selectedDate
 interface WorktimeModalProps {
@@ -15,8 +16,19 @@ interface WorktimeModalProps {
     selectedDate: string; // Im Kontext von WorktimeStats ist selectedDate immer erforderlich
 }
 
+interface WorktimeStats {
+    totalHours: number;
+    averageHoursPerDay: number;
+    daysWorked: number;
+    weeklyData: {
+        day: string;
+        hours: number;
+        date: string; // Datum im Format YYYY-MM-DD
+    }[];
+}
+
 const WorktimeStats: React.FC = () => {
-    const [stats, setStats] = useState<WorktimeStatsType | null>(null);
+    const [stats, setStats] = useState<WorktimeStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [maxHours, setMaxHours] = useState<number>(8); // Standard 8 Stunden
@@ -48,6 +60,8 @@ const WorktimeStats: React.FC = () => {
 
     const fetchStats = async () => {
         try {
+            const token = localStorage.getItem('token');
+            
             console.log(`FETCH STATS für selectedWeekDate: ${selectedWeekDate}`);
             
             // WICHTIGES FIX: Wenn wir selectedWeekDate verwenden, müssen wir NICHTS mehr berechnen,
@@ -56,8 +70,11 @@ const WorktimeStats: React.FC = () => {
             
             console.log(`SENDE AN API: week=${dateToSend}`);
             
-            // Verwende den worktimeApi-Client statt axiosInstance direkt
-            const data = await worktimeApi.getWorktimeStats(dateToSend);
+            // Verwende axiosInstance statt fetch
+            const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.STATS}?week=${dateToSend}`);
+            
+            // Direkt auf response.data zugreifen statt response.json() zu verwenden
+            const data = response.data;
             
             // Wichtig: Stelle sicher, dass die weeklyData das richtige date-Format haben
             if (data && data.weeklyData) {
@@ -128,19 +145,16 @@ const WorktimeStats: React.FC = () => {
 
     const handleExport = async () => {
         try {
-            console.log(`Exportiere Arbeitszeiten für Woche: ${selectedWeekDate}`);
-            
-            // Stelle sicher, dass selectedWeekInput.split('W')[1] nicht undefined ist
-            const weekNumber = selectedWeekInput.split('W')[1] || '00';
-            
-            // Verwende den worktimeApi-Client für den Export
-            const blob = await worktimeApi.exportWorktimes(selectedWeekDate);
-            
-            // Erstelle einen Download für die Datei
+            const token = localStorage.getItem('token');
+            const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.BASE}/export?week=${selectedWeekDate}`, {
+                responseType: 'blob'
+            });
+
+            const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Arbeitszeitstatistik_KW${weekNumber}.xlsx`;
+            a.download = `Arbeitszeitstatistik_KW${selectedWeekInput.split('W')[1]}.xlsx`;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -328,7 +342,7 @@ const WorktimeStats: React.FC = () => {
                                     <div key={index} className="flex flex-col items-center" style={{ width: '13%' }}>
                                         <div 
                                             className="relative w-5/12 h-full flex flex-col justify-end cursor-pointer" 
-                                            onClick={() => formattedDate ? openWorkTimeModal(formattedDate) : null}
+                                            onClick={() => openWorkTimeModal(formattedDate)}
                                             title="Klicken, um Zeiteinträge für diesen Tag anzuzeigen"
                                         >
                                             {/* Teil über der Sollarbeitszeit (rot) */}

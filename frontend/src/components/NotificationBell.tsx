@@ -155,7 +155,7 @@ const NotificationBell: React.FC = () => {
     const interval = setInterval(fetchUnreadCount, 60000);
     
     return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
+  }, []);
 
   useEffect(() => {
     if (open) {
