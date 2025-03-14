@@ -238,31 +238,37 @@ async function main() {
     
     // Liste der wichtigen Markdown-Dateien
     const IMPORTANT_MD_FILES = [
-      { path: 'README.md', title: 'Readme - Überblick', slug: 'readme' },
-      { path: 'DESIGN_STANDARDS.md', title: 'Design-Standards', slug: 'design-standards' },
-      { path: 'MODUL_ZEITERFASSUNG.md', title: 'Modul: Zeiterfassung', slug: 'modul-zeiterfassung' },
-      { path: 'CODING_STANDARDS.md', title: 'Coding-Standards', slug: 'coding-standards' },
-      { path: 'DOKUMENTATIONSSTANDARDS.md', title: 'Dokumentationsstandards', slug: 'dokumentationsstandards' },
-      { path: 'CHANGELOG.md', title: 'Änderungshistorie', slug: 'changelog' },
-      { path: 'CEREBRO_WIKI.md', title: 'Cerebro Wiki-System', slug: 'cerebro-wiki' },
-      { path: 'PROJECT_SETUP.md', title: 'Projekt-Einrichtung', slug: 'project-setup' },
-      { path: 'DB_SCHEMA.md', title: 'Datenbankschema', slug: 'db-schema' },
-      { path: 'API_INTEGRATION.md', title: 'API-Integration', slug: 'api-integration' },
-      { path: 'ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität', slug: 'role-switch' }
+      { path: 'README.md', title: 'Readme - Überblick', slug: 'readme', position: 1 },
+      { path: 'PROJECT_SETUP.md', title: 'Projekt-Einrichtung', slug: 'project-setup', position: 2 },
+      { path: 'DOKUMENTATIONSSTANDARDS.md', title: 'Dokumentationsstandards', slug: 'dokumentationsstandards', position: 3 },
+      { path: 'DESIGN_STANDARDS.md', title: 'Design-Standards', slug: 'design-standards', position: 4 },
+      { path: 'CODING_STANDARDS.md', title: 'Coding-Standards', slug: 'coding-standards', position: 5 },
+      { path: 'MODUL_ZEITERFASSUNG.md', title: 'Modul: Zeiterfassung', slug: 'modul-zeiterfassung', position: 6 },
+      { path: 'MODUL_CEREBRO.md', title: 'Cerebro Wiki-System', slug: 'cerebro-wiki', position: 7 },
+      { path: 'MODUL_TEAMKONTROLLE.md', title: 'Modul: Teamkontrolle', slug: 'modul-teamkontrolle', position: 8 },
+      { path: 'MODUL_ABRECHNUNG.md', title: 'Modul: Abrechnung', slug: 'modul-abrechnung', position: 9 },
+      { path: 'DB_SCHEMA.md', title: 'Datenbankschema', slug: 'db-schema', position: 10 },
+      { path: 'API_INTEGRATION.md', title: 'API-Integration', slug: 'api-integration', position: 11 },
+      { path: 'ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität', slug: 'role-switch', position: 12 },
+      { path: 'CHANGELOG.md', title: 'Änderungshistorie', slug: 'changelog', position: 13 }
     ];
     
     // Erstelle für jede Markdown-Datei einen Eintrag in der Datenbank
     for (const mdFile of IMPORTANT_MD_FILES) {
       await prisma.cerebroCarticle.upsert({
         where: { slug: mdFile.slug },
-        update: {},
+        update: {
+          title: mdFile.title,
+          position: mdFile.position
+        },
         create: {
           title: mdFile.title,
           slug: mdFile.slug,
           content: `# ${mdFile.title}\n\nDiese Datei wird automatisch aus dem GitHub Repository geladen.`,
           parentId: markdownFolder.id,  // Setze die Markdown-Datei als Kind des Ordners
           createdById: adminUser.id,
-          isPublished: true
+          isPublished: true,
+          position: mdFile.position
         }
       });
       

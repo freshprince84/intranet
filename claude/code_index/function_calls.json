@@ -1,0 +1,123 @@
+{
+  "function_calls": [
+    {
+      "caller": {
+        "file": "frontend/src/pages/Worktracker.tsx",
+        "function": "startWorktime",
+        "component": "Worktracker"
+      },
+      "callee": {
+        "file": "frontend/src/contexts/WorktimeContext.tsx",
+        "function": "startTracking",
+        "component": "WorktimeProvider"
+      },
+      "description": "Startet die Arbeitszeitverfolgung durch Aufruf der Kontext-Funktion",
+      "parameters": ["comment (optional)"],
+      "return_value": "Promise<void>",
+      "error_handling": "Try-catch mit Toast-Benachrichtigung",
+      "notes": "Stellt sicher, dass der Zeitstempel in UTC gespeichert wird"
+    },
+    {
+      "caller": {
+        "file": "frontend/src/pages/Worktracker.tsx",
+        "function": "stopWorktime",
+        "component": "Worktracker"
+      },
+      "callee": {
+        "file": "frontend/src/contexts/WorktimeContext.tsx",
+        "function": "stopTracking",
+        "component": "WorktimeProvider"
+      },
+      "description": "Beendet die Arbeitszeitverfolgung durch Aufruf der Kontext-Funktion",
+      "parameters": ["comment (optional)"],
+      "return_value": "Promise<void>",
+      "error_handling": "Try-catch mit Toast-Benachrichtigung",
+      "notes": "Stellt sicher, dass der Zeitstempel in UTC gespeichert wird"
+    },
+    {
+      "caller": {
+        "file": "frontend/src/contexts/WorktimeContext.tsx",
+        "function": "startTracking",
+        "component": "WorktimeProvider"
+      },
+      "callee": {
+        "file": "frontend/src/api/worktimeApi.ts",
+        "function": "startWorktime",
+        "component": "worktimeApi"
+      },
+      "description": "API-Aufruf zum Starten der Arbeitszeit",
+      "parameters": ["userId", "comment (optional)"],
+      "return_value": "Promise<WorktimeSession>",
+      "error_handling": "API-Fehler werden weitergeleitet",
+      "notes": "Verwendet axios für API-Aufrufe"
+    },
+    {
+      "caller": {
+        "file": "frontend/src/contexts/WorktimeContext.tsx",
+        "function": "stopTracking",
+        "component": "WorktimeProvider"
+      },
+      "callee": {
+        "file": "frontend/src/api/worktimeApi.ts",
+        "function": "stopWorktime",
+        "component": "worktimeApi"
+      },
+      "description": "API-Aufruf zum Beenden der Arbeitszeit",
+      "parameters": ["sessionId", "comment (optional)"],
+      "return_value": "Promise<WorktimeSession>",
+      "error_handling": "API-Fehler werden weitergeleitet",
+      "notes": "Verwendet axios für API-Aufrufe"
+    },
+    {
+      "caller": {
+        "file": "frontend/src/pages/TeamWorktimeControl.tsx",
+        "function": "fetchTeamWorktimes",
+        "component": "TeamWorktimeControl"
+      },
+      "callee": {
+        "file": "frontend/src/api/worktimeApi.ts",
+        "function": "getTeamWorktimes",
+        "component": "worktimeApi"
+      },
+      "description": "Abrufen der Teamarbeitszeiten",
+      "parameters": ["teamId", "startDate", "endDate"],
+      "return_value": "Promise<TeamWorktimeData[]>",
+      "error_handling": "Try-catch mit Toast-Benachrichtigung",
+      "notes": "Verwendet Datumsfilter für den angegebenen Zeitraum"
+    },
+    {
+      "caller": {
+        "file": "frontend/src/pages/Payroll.tsx",
+        "function": "calculatePayroll",
+        "component": "Payroll"
+      },
+      "callee": {
+        "file": "frontend/src/api/payrollApi.ts",
+        "function": "generatePayroll",
+        "component": "payrollApi"
+      },
+      "description": "Generiert die Gehaltsabrechnung für den angegebenen Zeitraum",
+      "parameters": ["userId", "startDate", "endDate"],
+      "return_value": "Promise<PayrollData>",
+      "error_handling": "Try-catch mit Fehlerzustandsaktualisierung",
+      "notes": "Berechnet Brutto- und Nettobeträge basierend auf Arbeitszeiten"
+    },
+    {
+      "caller": {
+        "file": "frontend/src/hooks/useAuth.tsx",
+        "function": "login",
+        "component": "AuthProvider"
+      },
+      "callee": {
+        "file": "frontend/src/api/authApi.ts",
+        "function": "login",
+        "component": "authApi"
+      },
+      "description": "Authentifiziert den Benutzer mit den angegebenen Anmeldeinformationen",
+      "parameters": ["email", "password"],
+      "return_value": "Promise<AuthData>",
+      "error_handling": "Try-catch mit Toast-Benachrichtigung",
+      "notes": "Speichert Token im lokalen Speicher und Kontext"
+    }
+  ]
+} 

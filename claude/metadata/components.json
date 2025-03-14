@@ -1,0 +1,106 @@
+{
+  "components": {
+    "App": {
+      "path": "frontend/src/App.tsx",
+      "type": "main",
+      "imports": [
+        "AuthProvider", "ThemeProvider", "SidebarProvider", "WorktimeProvider",
+        "Login", "Register", "Dashboard", "Settings", "UserManagement", "Worktracker", 
+        "TeamWorktimeControl", "Layout", "Profile", "NotificationList", "FaviconLoader",
+        "Cerebro", "Payroll", "ProtectedRoute", "PublicRoute"
+      ],
+      "providers": [
+        "AuthProvider", "ThemeProvider", "SidebarProvider", "WorktimeProvider"
+      ],
+      "routes": [
+        "/login", "/register", "/dashboard", "/worktracker", "/team-worktime-control",
+        "/users", "/settings", "/profile", "/notifications", "/cerebro", "/payroll"
+      ]
+    },
+    "Layout": {
+      "path": "frontend/src/components/Layout.tsx",
+      "type": "layout",
+      "description": "Hauptlayout für authentifizierte Benutzer, enthält Sidebar und Hauptinhalt"
+    },
+    "ProtectedRoute": {
+      "path": "frontend/src/components/ProtectedRoute.tsx",
+      "type": "routing",
+      "description": "Route-Wrapper für geschützte Seiten, prüft Authentifizierung und Berechtigungen"
+    },
+    "PublicRoute": {
+      "path": "frontend/src/components/PublicRoute.tsx",
+      "type": "routing",
+      "description": "Route-Wrapper für öffentliche Seiten"
+    },
+    "AuthProvider": {
+      "path": "frontend/src/hooks/useAuth.tsx",
+      "type": "context_provider",
+      "description": "Authentifizierungskontext für die gesamte App"
+    },
+    "ThemeProvider": {
+      "path": "frontend/src/contexts/ThemeContext.tsx",
+      "type": "context_provider",
+      "description": "Theme-Kontext für Dark/Light Mode"
+    },
+    "SidebarProvider": {
+      "path": "frontend/src/contexts/SidebarContext.tsx",
+      "type": "context_provider",
+      "description": "Kontext für den Seitenleistenzustand"
+    },
+    "WorktimeProvider": {
+      "path": "frontend/src/contexts/WorktimeContext.tsx",
+      "type": "context_provider",
+      "description": "Kontext für Arbeitszeitverfolgung"
+    },
+    "Worktracker": {
+      "path": "frontend/src/pages/Worktracker.tsx",
+      "type": "page",
+      "description": "Seite für die Arbeitszeiterfassung",
+      "route": "/worktracker"
+    },
+    "TeamWorktimeControl": {
+      "path": "frontend/src/pages/TeamWorktimeControl.tsx",
+      "type": "page",
+      "description": "Seite für die Überwachung der Teamarbeitszeit",
+      "route": "/team-worktime-control",
+      "permissions": {
+        "entity": "team_worktime_control",
+        "minimumAccess": "read"
+      }
+    },
+    "Payroll": {
+      "path": "frontend/src/pages/Payroll.tsx",
+      "type": "page",
+      "description": "Seite für die Gehaltsabrechnung",
+      "route": "/payroll",
+      "permissions": {
+        "entity": "payroll",
+        "minimumAccess": "read"
+      }
+    },
+    "Cerebro": {
+      "path": "frontend/src/pages/Cerebro.tsx",
+      "type": "page",
+      "description": "Verwaltungstools und Insights",
+      "route": "/cerebro"
+    }
+  },
+  "modules": {
+    "Authentication": {
+      "components": ["AuthProvider", "Login", "Register", "ProtectedRoute", "PublicRoute"],
+      "description": "Verwaltet Benutzerauthentifizierung und -autorisierung"
+    },
+    "Worktime": {
+      "components": ["Worktracker", "TeamWorktimeControl", "WorktimeProvider"],
+      "description": "Arbeitszeiterfassung und -überwachung"
+    },
+    "Payroll": {
+      "components": ["Payroll"],
+      "description": "Gehaltsabrechnung und -verwaltung"
+    },
+    "UI": {
+      "components": ["Layout", "ThemeProvider", "SidebarProvider"],
+      "description": "UI-Grundstruktur und Theming"
+    }
+  }
+} 

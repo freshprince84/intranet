@@ -1,0 +1,156 @@
+{
+  "intents": [
+    {
+      "component": "Worktracker",
+      "file": "frontend/src/pages/Worktracker.tsx",
+      "primary_intent": "data_entry",
+      "secondary_intents": ["data_visualization", "user_interaction"],
+      "description": "Ermöglicht Benutzern das Starten und Stoppen der Arbeitszeiterfassung sowie das Hinzufügen von Kommentaren",
+      "key_operations": [
+        "Starten der Arbeitszeiterfassung",
+        "Stoppen der Arbeitszeiterfassung",
+        "Anzeigen von aktuellen und vergangenen Sitzungen",
+        "Hinzufügen von Kommentaren zu Sitzungen"
+      ],
+      "data_flow": "Benutzeroberfläche → WorktimeContext → API → Datenbank",
+      "user_intents": [
+        "Arbeitszeiterfassung starten/stoppen",
+        "Aktuelle Arbeitszeit einsehen",
+        "Arbeitszeiten des Tages/der Woche überprüfen"
+      ]
+    },
+    {
+      "component": "TeamWorktimeControl",
+      "file": "frontend/src/pages/TeamWorktimeControl.tsx",
+      "primary_intent": "data_visualization",
+      "secondary_intents": ["reporting", "management"],
+      "description": "Zeigt Arbeitszeitdaten für ein ganzes Team an und ermöglicht die Filterung nach Zeiträumen",
+      "key_operations": [
+        "Anzeigen der Arbeitszeiten aller Teammitglieder",
+        "Filtern von Daten nach Zeitraum",
+        "Exportieren von Berichten",
+        "Überprüfen von Teammitgliedern"
+      ],
+      "data_flow": "API → WorktimeContext → Benutzeroberfläche",
+      "user_intents": [
+        "Teamarbeitszeit überwachen",
+        "Berichte generieren",
+        "Effizienz analysieren"
+      ]
+    },
+    {
+      "component": "Payroll",
+      "file": "frontend/src/pages/Payroll.tsx",
+      "primary_intent": "calculation",
+      "secondary_intents": ["data_visualization", "reporting"],
+      "description": "Berechnet und zeigt Gehaltsabrechnungen basierend auf erfassten Arbeitszeiten",
+      "key_operations": [
+        "Berechnen von Brutto- und Nettobeträgen",
+        "Anwenden von Abzügen",
+        "Generieren von Abrechnungen",
+        "Exportieren von Berichten"
+      ],
+      "data_flow": "API → Berechnungslogik → Benutzeroberfläche",
+      "user_intents": [
+        "Gehalt berechnen",
+        "Abrechnungen generieren",
+        "Finanzberichte erstellen"
+      ]
+    },
+    {
+      "component": "WorktimeProvider",
+      "file": "frontend/src/contexts/WorktimeContext.tsx",
+      "primary_intent": "state_management",
+      "secondary_intents": ["data_fetching", "caching"],
+      "description": "Verwaltet den Zustand der Arbeitszeiterfassung und stellt Funktionen für alle arbeitszeitbezogenen Komponenten bereit",
+      "key_operations": [
+        "Verwalten des aktuellen Sitzungsstatus",
+        "Speichern und Abrufen von Sitzungsdaten",
+        "Kommunikation mit der API",
+        "Bereitstellen von Funktionen für Komponenten"
+      ],
+      "data_flow": "API ↔ Kontext ↔ Komponenten",
+      "technical_intents": [
+        "Zustandsverwaltung",
+        "API-Interaktion",
+        "Datenbereitstellung"
+      ]
+    },
+    {
+      "component": "AuthProvider",
+      "file": "frontend/src/hooks/useAuth.tsx",
+      "primary_intent": "authentication",
+      "secondary_intents": ["state_management", "authorization"],
+      "description": "Verwaltet den Authentifizierungszustand und stellt Funktionen für die Benutzeranmeldung, -abmeldung und Autorisierung bereit",
+      "key_operations": [
+        "Benutzeranmeldung",
+        "Benutzerabmeldung",
+        "Token-Verwaltung",
+        "Berechtigungsprüfung"
+      ],
+      "data_flow": "API ↔ Kontext ↔ Geschützte Komponenten",
+      "technical_intents": [
+        "Authentifizierung",
+        "Autorisierung",
+        "Sitzungsverwaltung"
+      ]
+    },
+    {
+      "component": "ProtectedRoute",
+      "file": "frontend/src/components/ProtectedRoute.tsx",
+      "primary_intent": "authorization",
+      "secondary_intents": ["routing", "security"],
+      "description": "Schützt Routen vor unbefugtem Zugriff, indem die Benutzerauthentifizierung und Berechtigungen überprüft werden",
+      "key_operations": [
+        "Überprüfen der Benutzerauthentifizierung",
+        "Überprüfen der Benutzerberechtigungen",
+        "Umleiten bei fehlender Autorisierung",
+        "Rendern der geschützten Komponente bei erfolgreicher Autorisierung"
+      ],
+      "data_flow": "Route-Anfrage → Autorisierungsprüfung → Geschützte Komponente oder Umleitung",
+      "technical_intents": [
+        "Zugriffsschutz",
+        "Berechtigungsprüfung",
+        "Routenverwaltung"
+      ]
+    },
+    {
+      "component": "Layout",
+      "file": "frontend/src/components/Layout.tsx",
+      "primary_intent": "ui_structure",
+      "secondary_intents": ["navigation", "theming"],
+      "description": "Stellt das allgemeine Layout für authentifizierte Seiten bereit, einschließlich Seitenleiste, Hauptinhalt und Navigationskomponenten",
+      "key_operations": [
+        "Rendern der Seitenleiste",
+        "Rendern des Hauptinhalts",
+        "Verwalten des Themas",
+        "Bereitstellen von Navigationskomponenten"
+      ],
+      "data_flow": "App → Layout → Seiteninhalt",
+      "technical_intents": [
+        "Layoutverwaltung",
+        "UI-Organisation",
+        "Konsistente Benutzererfahrung"
+      ]
+    },
+    {
+      "component": "ThemeProvider",
+      "file": "frontend/src/contexts/ThemeContext.tsx",
+      "primary_intent": "theming",
+      "secondary_intents": ["state_management", "user_preference"],
+      "description": "Verwaltet das Thema der Anwendung (hell/dunkel) und speichert die Benutzereinstellungen",
+      "key_operations": [
+        "Speichern der Themaeinstellung",
+        "Umschalten zwischen Themen",
+        "Bereitstellen von Themeinformationen für Komponenten",
+        "Speichern von Benutzereinstellungen"
+      ],
+      "data_flow": "Benutzereinstellung → Kontext → Komponenten",
+      "technical_intents": [
+        "Themaverwaltung",
+        "Benutzereinstellungen",
+        "UI-Konsistenz"
+      ]
+    }
+  ]
+} 

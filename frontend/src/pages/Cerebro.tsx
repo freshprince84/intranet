@@ -122,10 +122,14 @@ const GitHubFileView: React.FC = () => {
         const knownMdFiles: Record<string, {path: string, title: string}> = {
           'readme': { path: 'README.md', title: 'Readme - Überblick' },
           'project-setup': { path: 'PROJECT_SETUP.md', title: 'Projekt-Einrichtung' },
+          'dokumentationsstandards': { path: 'DOKUMENTATIONSSTANDARDS.md', title: 'Dokumentationsstandards' },
+          'design-standards': { path: 'DESIGN_STANDARDS.md', title: 'Design-Standards' },
+          'coding-standards': { path: 'CODING_STANDARDS.md', title: 'Coding-Standards' },
+          'modul-zeiterfassung': { path: 'MODUL_ZEITERFASSUNG.md', title: 'Modul: Zeiterfassung' },
+          'cerebro-wiki': { path: 'MODUL_CEREBRO.md', title: 'Cerebro Wiki-System' },
+          'modul-teamkontrolle': { path: 'MODUL_TEAMKONTROLLE.md', title: 'Modul: Teamkontrolle' },
+          'modul-abrechnung': { path: 'MODUL_ABRECHNUNG.md', title: 'Modul: Abrechnung' },
           'db-schema': { path: 'DB_SCHEMA.md', title: 'Datenbankschema' },
-          'backend-setup': { path: 'BACKEND_SETUP.md', title: 'Backend-Setup' },
-          'frontend-setup': { path: 'FRONTEND_SETUP.md', title: 'Frontend-Setup' },
-          'cerebro-wiki': { path: 'CEREBRO_WIKI.md', title: 'Cerebro Wiki-System' },
           'api-integration': { path: 'API_INTEGRATION.md', title: 'API-Integration' },
           'role-switch': { path: 'ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität' },
           'changelog': { path: 'CHANGELOG.md', title: 'Änderungshistorie' }

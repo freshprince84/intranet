@@ -1,0 +1,169 @@
+{
+  "types": [
+    {
+      "name": "User",
+      "file": "frontend/src/types/user.ts",
+      "description": "Benutzertyp mit Authentifizierungs- und Profilinformationen",
+      "properties": [
+        {"name": "id", "type": "string", "description": "Eindeutige Benutzer-ID"},
+        {"name": "email", "type": "string", "description": "E-Mail-Adresse des Benutzers"},
+        {"name": "firstName", "type": "string", "description": "Vorname des Benutzers"},
+        {"name": "lastName", "type": "string", "description": "Nachname des Benutzers"},
+        {"name": "role", "type": "Role", "description": "Rolle des Benutzers im System"},
+        {"name": "team", "type": "Team | null", "description": "Team des Benutzers, falls zugewiesen"},
+        {"name": "isActive", "type": "boolean", "description": "Gibt an, ob der Benutzer aktiv ist"}
+      ],
+      "related_types": ["Role", "Team", "Permission"],
+      "consumers": [
+        "frontend/src/hooks/useAuth.tsx",
+        "frontend/src/pages/UserManagement.tsx",
+        "frontend/src/pages/Profile.tsx"
+      ]
+    },
+    {
+      "name": "WorktimeSession",
+      "file": "frontend/src/types/worktime.ts",
+      "description": "Repräsentiert eine Arbeitszeiterfassungssitzung",
+      "properties": [
+        {"name": "id", "type": "string", "description": "Eindeutige Sitzungs-ID"},
+        {"name": "userId", "type": "string", "description": "ID des Benutzers, der die Sitzung erstellt hat"},
+        {"name": "startTime", "type": "Date", "description": "Startzeit der Sitzung in UTC"},
+        {"name": "endTime", "type": "Date | null", "description": "Endzeit der Sitzung in UTC, null wenn noch aktiv"},
+        {"name": "startComment", "type": "string | null", "description": "Kommentar beim Starten"},
+        {"name": "endComment", "type": "string | null", "description": "Kommentar beim Beenden"},
+        {"name": "isActive", "type": "boolean", "description": "Gibt an, ob die Sitzung aktiv ist"}
+      ],
+      "related_types": ["User", "TeamWorktimeData"],
+      "consumers": [
+        "frontend/src/contexts/WorktimeContext.tsx",
+        "frontend/src/pages/Worktracker.tsx",
+        "frontend/src/pages/TeamWorktimeControl.tsx"
+      ]
+    },
+    {
+      "name": "TeamWorktimeData",
+      "file": "frontend/src/types/worktime.ts",
+      "description": "Aggregierte Arbeitszeitdaten für ein Team",
+      "properties": [
+        {"name": "userId", "type": "string", "description": "ID des Benutzers"},
+        {"name": "userName", "type": "string", "description": "Name des Benutzers"},
+        {"name": "totalHours", "type": "number", "description": "Gesamtstunden für den Zeitraum"},
+        {"name": "sessions", "type": "WorktimeSession[]", "description": "Liste der Arbeitszeiterfassungssitzungen"}
+      ],
+      "related_types": ["User", "WorktimeSession"],
+      "consumers": [
+        "frontend/src/pages/TeamWorktimeControl.tsx"
+      ]
+    },
+    {
+      "name": "PayrollData",
+      "file": "frontend/src/types/payroll.ts",
+      "description": "Abrechnungsdaten für einen Benutzer",
+      "properties": [
+        {"name": "userId", "type": "string", "description": "ID des Benutzers"},
+        {"name": "userName", "type": "string", "description": "Name des Benutzers"},
+        {"name": "period", "type": "{ start: Date, end: Date }", "description": "Abrechnungszeitraum"},
+        {"name": "totalHours", "type": "number", "description": "Gesamtstunden für den Zeitraum"},
+        {"name": "hourlyRate", "type": "number", "description": "Stundensatz des Benutzers"},
+        {"name": "grossAmount", "type": "number", "description": "Bruttobetrag"},
+        {"name": "netAmount", "type": "number", "description": "Nettobetrag"},
+        {"name": "deductions", "type": "Deduction[]", "description": "Liste der Abzüge"}
+      ],
+      "related_types": ["User", "Deduction", "WorktimeSession"],
+      "consumers": [
+        "frontend/src/pages/Payroll.tsx"
+      ]
+    },
+    {
+      "name": "Deduction",
+      "file": "frontend/src/types/payroll.ts",
+      "description": "Abzug vom Bruttogehalt",
+      "properties": [
+        {"name": "name", "type": "string", "description": "Name des Abzugs"},
+        {"name": "amount", "type": "number", "description": "Betrag des Abzugs"},
+        {"name": "percentage", "type": "number | null", "description": "Prozentualer Anteil, falls anwendbar"}
+      ],
+      "related_types": ["PayrollData"],
+      "consumers": [
+        "frontend/src/pages/Payroll.tsx"
+      ]
+    },
+    {
+      "name": "Role",
+      "file": "frontend/src/types/auth.ts",
+      "description": "Benutzerrolle mit Berechtigungen",
+      "properties": [
+        {"name": "id", "type": "string", "description": "Eindeutige Rollen-ID"},
+        {"name": "name", "type": "string", "description": "Name der Rolle"},
+        {"name": "permissions", "type": "Permission[]", "description": "Liste der Berechtigungen"}
+      ],
+      "related_types": ["User", "Permission"],
+      "consumers": [
+        "frontend/src/hooks/useAuth.tsx",
+        "frontend/src/components/ProtectedRoute.tsx",
+        "frontend/src/pages/UserManagement.tsx"
+      ]
+    },
+    {
+      "name": "Permission",
+      "file": "frontend/src/types/auth.ts",
+      "description": "Beschreibt eine einzelne Berechtigung",
+      "properties": [
+        {"name": "entity", "type": "string", "description": "Entität, auf die sich die Berechtigung bezieht"},
+        {"name": "action", "type": "string", "description": "Berechtigungsaktion (create, read, update, delete)"}
+      ],
+      "related_types": ["Role", "User"],
+      "consumers": [
+        "frontend/src/hooks/useAuth.tsx",
+        "frontend/src/components/ProtectedRoute.tsx"
+      ]
+    }
+  ],
+  "interfaces": [
+    {
+      "name": "AuthContextType",
+      "file": "frontend/src/hooks/useAuth.tsx",
+      "description": "Schnittstelle für den Authentifizierungskontext",
+      "methods": [
+        {"name": "login", "parameters": ["email: string", "password: string"], "returnType": "Promise<void>", "description": "Authentifiziert den Benutzer"},
+        {"name": "logout", "parameters": [], "returnType": "void", "description": "Meldet den Benutzer ab"},
+        {"name": "register", "parameters": ["userData: UserRegistrationData"], "returnType": "Promise<void>", "description": "Registriert einen neuen Benutzer"},
+        {"name": "hasPermission", "parameters": ["entity: string", "action: string"], "returnType": "boolean", "description": "Prüft, ob der aktuelle Benutzer eine bestimmte Berechtigung hat"}
+      ],
+      "properties": [
+        {"name": "user", "type": "User | null", "description": "Aktuell angemeldeter Benutzer oder null"},
+        {"name": "loading", "type": "boolean", "description": "Gibt an, ob die Authentifizierung lädt"},
+        {"name": "error", "type": "string | null", "description": "Authentifizierungsfehler, falls vorhanden"}
+      ],
+      "implementers": [
+        "AuthProvider in frontend/src/hooks/useAuth.tsx"
+      ],
+      "consumers": [
+        "ProtectedRoute", "Login", "Register", "UserManagement"
+      ]
+    },
+    {
+      "name": "WorktimeContextType",
+      "file": "frontend/src/contexts/WorktimeContext.tsx",
+      "description": "Schnittstelle für den Arbeitszeitkontext",
+      "methods": [
+        {"name": "startTracking", "parameters": ["comment?: string"], "returnType": "Promise<void>", "description": "Startet die Arbeitszeitverfolgung"},
+        {"name": "stopTracking", "parameters": ["comment?: string"], "returnType": "Promise<void>", "description": "Beendet die Arbeitszeitverfolgung"},
+        {"name": "fetchSessions", "parameters": ["startDate: Date", "endDate: Date"], "returnType": "Promise<void>", "description": "Lädt Arbeitszeiterfassungssitzungen für einen bestimmten Zeitraum"}
+      ],
+      "properties": [
+        {"name": "currentSession", "type": "WorktimeSession | null", "description": "Aktuelle Arbeitszeiterfassungssitzung oder null"},
+        {"name": "sessions", "type": "WorktimeSession[]", "description": "Liste der Arbeitszeiterfassungssitzungen"},
+        {"name": "isTracking", "type": "boolean", "description": "Gibt an, ob die Zeiterfassung aktiv ist"},
+        {"name": "loading", "type": "boolean", "description": "Gibt an, ob Daten geladen werden"},
+        {"name": "error", "type": "string | null", "description": "Fehler, falls vorhanden"}
+      ],
+      "implementers": [
+        "WorktimeProvider in frontend/src/contexts/WorktimeContext.tsx"
+      ],
+      "consumers": [
+        "Worktracker", "TeamWorktimeControl"
+      ]
+    }
+  ]
+} 

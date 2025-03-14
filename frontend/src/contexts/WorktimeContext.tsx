@@ -15,6 +15,7 @@ const WorktimeContext = createContext<WorktimeContextType>({
 });
 
 export const WorktimeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    /* CLAUDE-ANCHOR: 5f13e29c-4712-4dea-b8ac-eaf7d2e89b76 - WORKTIME_CONTEXT */
     const [isTracking, setIsTracking] = useState(false);
 
     // Funktion zum manuellen Setzen des Status

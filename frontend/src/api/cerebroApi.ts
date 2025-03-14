@@ -18,6 +18,7 @@ export interface CerebroArticle {
   childrenCount: number;
   mediaCount: number;
   linksCount: number;
+  position: number | null;
 }
 
 export interface CerebroArticleDetail extends CerebroArticle {
@@ -45,6 +46,7 @@ export interface CerebroArticleStructure {
   id: string;
   title: string;
   slug: string;
+  position?: number | null;
   children: CerebroArticleStructure[];
 }
 

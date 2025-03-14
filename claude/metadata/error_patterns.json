@@ -1,0 +1,102 @@
+{
+  "error_patterns": [
+    {
+      "id": "timezone-offset-issue",
+      "module": "worktime",
+      "description": "Zeitzonenprobleme bei der Arbeitszeiterfassung",
+      "symptoms": [
+        "Falsche Zeitstempel in der Datenbank",
+        "Diskrepanz zwischen angezeigten und gespeicherten Zeiten",
+        "Fehlerhafte Berechnungen der Arbeitszeit"
+      ],
+      "cause": "Lokale Zeitzonenverschiebungen werden nicht berücksichtigt oder falsch berechnet",
+      "solution": "Verwenden Sie Date.now() für konsistente UTC-Zeitstempel und führen Sie Zeitzonenkonvertierungen nur für die Anzeige durch",
+      "affected_files": [
+        "frontend/src/pages/Worktracker.tsx",
+        "frontend/src/pages/TeamWorktimeControl.tsx",
+        "frontend/src/contexts/WorktimeContext.tsx"
+      ],
+      "references": [
+        "MODUL_ZEITERFASSUNG.md"
+      ]
+    },
+    {
+      "id": "auth-token-expiry",
+      "module": "auth",
+      "description": "Probleme mit der Token-Ablaufzeit und Erneuerung",
+      "symptoms": [
+        "Sitzungen werden unerwartet beendet",
+        "Authentifizierungsfehler nach längerer Inaktivität",
+        "Fehler 401/403 bei API-Anfragen"
+      ],
+      "cause": "Token-Erneuerungslogik funktioniert nicht korrekt oder Token-Ablaufzeiten sind falsch konfiguriert",
+      "solution": "Implementieren Sie einen Refresh-Token-Mechanismus und verwenden Sie Interceptors für automatische Token-Erneuerung",
+      "affected_files": [
+        "frontend/src/hooks/useAuth.tsx",
+        "frontend/src/api/apiClient.ts",
+        "backend/src/controllers/authController.ts"
+      ],
+      "references": [
+        "API_INTEGRATION.md"
+      ]
+    },
+    {
+      "id": "prisma-connection-pooling",
+      "module": "database",
+      "description": "Probleme mit Prisma-Verbindungspooling",
+      "symptoms": [
+        "Datenbankverbindungsabbrüche",
+        "Fehler 'Too many connections'",
+        "Leistungsprobleme bei hoher Last"
+      ],
+      "cause": "Ineffiziente Verwaltung von Datenbankverbindungen oder fehlende Verbindungspooling-Konfiguration",
+      "solution": "Konfigurieren Sie Prisma mit geeigneten Verbindungspooling-Einstellungen und stellen Sie sicher, dass Verbindungen ordnungsgemäß geschlossen werden",
+      "affected_files": [
+        "backend/prisma/schema.prisma",
+        "backend/src/app.ts"
+      ],
+      "references": [
+        "BACKEND_SETUP.md"
+      ]
+    },
+    {
+      "id": "react-rerender-performance",
+      "module": "ui",
+      "description": "Performance-Probleme durch unnötige Neurendering",
+      "symptoms": [
+        "Träge UI-Reaktion",
+        "Hohe CPU-Auslastung",
+        "Verzögerungen bei der Benutzereingabe"
+      ],
+      "cause": "Fehlende Memoization, ineffiziente Rendern-Zyklen oder zu häufige Zustandsänderungen",
+      "solution": "Verwenden Sie React.memo, useMemo, useCallback und optimieren Sie die Komponentenhierarchie, um unnötige Renderingzyklen zu vermeiden",
+      "affected_files": [
+        "frontend/src/components/Layout.tsx",
+        "frontend/src/pages/Worktracker.tsx",
+        "frontend/src/contexts/WorktimeContext.tsx"
+      ],
+      "references": [
+        "CODING_STANDARDS.md"
+      ]
+    },
+    {
+      "id": "payroll-calculation-inconsistencies",
+      "module": "payroll",
+      "description": "Inkonsistenzen bei der Gehaltsberechnung",
+      "symptoms": [
+        "Unterschiedliche Berechnungsergebnisse für ähnliche Eingaben",
+        "Rundungsfehler bei Währungsbeträgen",
+        "Diskrepanzen zwischen Frontend- und Backend-Berechnungen"
+      ],
+      "cause": "Unterschiedliche Rundungslogik, Präzisionsfehler bei Fließkommaberechnungen oder Zeitzonenprobleme",
+      "solution": "Standardisieren Sie die Berechnungslogik zwischen Frontend und Backend, verwenden Sie Bibliotheken für Währungsberechnungen und führen Sie alle sensiblen Berechnungen serverseitig durch",
+      "affected_files": [
+        "frontend/src/pages/Payroll.tsx",
+        "backend/src/controllers/payrollController.ts"
+      ],
+      "references": [
+        "MODUL_ABRECHNUNG.md"
+      ]
+    }
+  ]
+} 

@@ -35,6 +35,7 @@ interface WorktimeModalProps {
 }
 
 const WorktimeTracker: React.FC = () => {
+    /* CLAUDE-ANCHOR: a7c238f1-9d6a-42e5-8af1-6d8b2e9a4f18 - WORKTIME_TRACKER_COMPONENT */
     const [isTracking, setIsTracking] = useState(false);
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [elapsedTime, setElapsedTime] = useState<string>('00:00:00');

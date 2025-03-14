@@ -1,0 +1,50 @@
+{
+  "classifications": {
+    "implementation": [
+      {"path": "frontend/src/App.tsx", "module": "core", "description": "Hauptanwendungskomponente mit Routing"},
+      {"path": "frontend/src/pages/Worktracker.tsx", "module": "worktime", "description": "Implementierung der Arbeitszeiterfassung"},
+      {"path": "frontend/src/pages/TeamWorktimeControl.tsx", "module": "worktime", "description": "Implementierung der Teamarbeitszeitüberwachung"},
+      {"path": "frontend/src/pages/Payroll.tsx", "module": "payroll", "description": "Implementierung der Gehaltsabrechnung"},
+      {"path": "frontend/src/components/Layout.tsx", "module": "ui", "description": "Hauptlayoutkomponente"},
+      {"path": "backend/src/app.ts", "module": "server", "description": "Express-Servereinrichtung"},
+      {"path": "backend/src/controllers", "module": "api", "description": "API-Controller-Implementierungen"}
+    ],
+    "interface": [
+      {"path": "frontend/src/types", "module": "core", "description": "TypeScript-Typendefinitionen für das Frontend"},
+      {"path": "backend/src/types", "module": "api", "description": "TypeScript-Typendefinitionen für das Backend"},
+      {"path": "backend/prisma/schema.prisma", "module": "database", "description": "Prisma-Datenbankschema"}
+    ],
+    "context": [
+      {"path": "frontend/src/contexts/WorktimeContext.tsx", "module": "worktime", "description": "Kontext für Arbeitszeitverwaltung"},
+      {"path": "frontend/src/contexts/AuthContext.tsx", "module": "auth", "description": "Kontext für Authentifizierung"},
+      {"path": "frontend/src/contexts/ThemeContext.tsx", "module": "ui", "description": "Kontext für Theming"},
+      {"path": "frontend/src/contexts/SidebarContext.tsx", "module": "ui", "description": "Kontext für Seitenleistenzustand"}
+    ],
+    "hooks": [
+      {"path": "frontend/src/hooks/useAuth.tsx", "module": "auth", "description": "Hook für Authentifizierung"},
+      {"path": "frontend/src/hooks", "module": "various", "description": "Verschiedene benutzerdefinierte React-Hooks"}
+    ],
+    "api": [
+      {"path": "frontend/src/api", "module": "api", "description": "Frontend-API-Integrationen"},
+      {"path": "backend/src/routes", "module": "api", "description": "Backend-API-Routen"},
+      {"path": "backend/src/controllers", "module": "api", "description": "Backend-API-Controller"}
+    ],
+    "utils": [
+      {"path": "frontend/src/utils", "module": "various", "description": "Frontend-Hilfsfunktionen"},
+      {"path": "backend/src/utils", "module": "various", "description": "Backend-Hilfsfunktionen"}
+    ],
+    "config": [
+      {"path": "frontend/src/config", "module": "core", "description": "Frontend-Konfigurationen"},
+      {"path": "backend/.env", "module": "server", "description": "Backend-Umgebungsvariablen"}
+    ],
+    "documentation": [
+      {"path": "README.md", "module": "core", "description": "Hauptprojektdokumentation"},
+      {"path": "MODUL_ZEITERFASSUNG.md", "module": "worktime", "description": "Dokumentation des Zeiterfassungsmoduls"},
+      {"path": "MODUL_TEAMKONTROLLE.md", "module": "worktime", "description": "Dokumentation des Teamkontrollmoduls"},
+      {"path": "MODUL_ABRECHNUNG.md", "module": "payroll", "description": "Dokumentation des Abrechnungsmoduls"},
+      {"path": "MODUL_CEREBRO.md", "module": "cerebro", "description": "Dokumentation des Cerebro-Moduls"},
+      {"path": "DESIGN_STANDARDS.md", "module": "ui", "description": "Design-Standards"},
+      {"path": "CODING_STANDARDS.md", "module": "core", "description": "Coding-Standards"}
+    ]
+  }
+} 
