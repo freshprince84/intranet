@@ -259,8 +259,7 @@ async function main() {
         where: { slug: mdFile.slug },
         update: {
           title: mdFile.title,
-          position: mdFile.position,
-          githubPath: mdFile.path
+          position: mdFile.position
         },
         create: {
           title: mdFile.title,
@@ -269,8 +268,7 @@ async function main() {
           parentId: markdownFolder.id,
           createdById: adminUser.id,
           isPublished: true,
-          position: mdFile.position,
-          githubPath: mdFile.path
+          position: mdFile.position
         }
       });
       
