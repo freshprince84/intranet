@@ -4,12 +4,11 @@
   "description": "Backend für das Intranet-Projekt",
   "main": "dist/index.js",
   "scripts": {
-    "start": "node dist/app.js",
-    "dev": "nodemon src/app.ts",
+    "start": "node dist/index.js",
+    "dev": "nodemon src/index.ts",
     "build": "tsc",
     "test": "jest",
-    "seed": "npx prisma db seed",
-    "update-github-paths": "ts-node scripts/update-github-paths.ts"
+    "seed": "npx prisma db seed"
   },
   "keywords": [],
   "author": "",

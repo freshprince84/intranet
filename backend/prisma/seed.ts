@@ -255,22 +255,52 @@ async function main() {
     
     // Erstelle für jede Markdown-Datei einen Eintrag in der Datenbank
     for (const mdFile of IMPORTANT_MD_FILES) {
-      await prisma.cerebroCarticle.upsert({
-        where: { slug: mdFile.slug },
-        update: {
-          title: mdFile.title,
-          position: mdFile.position
-        },
-        create: {
-          title: mdFile.title,
-          slug: mdFile.slug,
-          content: `# ${mdFile.title}\n\nDiese Datei wird automatisch aus dem GitHub Repository geladen.`,
-          parentId: markdownFolder.id,
-          createdById: adminUser.id,
-          isPublished: true,
-          position: mdFile.position
+      try {
+        // Versuche zuerst, den Artikel mit githubPath zu erstellen/aktualisieren
+        await prisma.cerebroCarticle.upsert({
+          where: { slug: mdFile.slug },
+          update: {
+            title: mdFile.title,
+            position: mdFile.position,
+            githubPath: mdFile.path 
+          },
+          create: {
+            title: mdFile.title,
+            slug: mdFile.slug,
+            content: `# ${mdFile.title}\n\nDiese Datei wird automatisch aus dem GitHub Repository geladen.`,
+            parentId: markdownFolder.id,
+            createdById: adminUser.id,
+            isPublished: true,
+            position: mdFile.position,
+            githubPath: mdFile.path
+          }
+        });
+      } catch (error) {
+        // Falls ein Fehler auftritt (z.B. weil githubPath nicht existiert),
+        // führe ein Fallback ohne githubPath aus
+        if (error instanceof Error && error.message.includes("githubPath")) {
+          console.log(`Hinweis: githubPath wird nicht unterstützt. Führe Upsert ohne githubPath für ${mdFile.slug} aus.`);
+          await prisma.cerebroCarticle.upsert({
+            where: { slug: mdFile.slug },
+            update: {
+              title: mdFile.title,
+              position: mdFile.position
+            },
+            create: {
+              title: mdFile.title,
+              slug: mdFile.slug,
+              content: `# ${mdFile.title}\n\nDiese Datei wird automatisch aus dem GitHub Repository geladen.`,
+              parentId: markdownFolder.id,
+              createdById: adminUser.id,
+              isPublished: true,
+              position: mdFile.position
+            }
+          });
+        } else {
+          // Falls ein anderer Fehler auftritt, wirf ihn weiter
+          throw error;
         }
-      });
+      }
       
       // Erstelle einen GitHub-Link zur Markdown-Datei
       try {

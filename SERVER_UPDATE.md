@@ -35,23 +35,14 @@ npx prisma generate
 
 ## Schritt 4: Datenbank-Seed ausführen
 
-Jetzt kann der Datenbank-Seed ausgeführt werden, um sicherzustellen, dass alle grundlegenden Daten vorhanden sind:
+Der Seed aktualisiert automatisch alle erforderlichen Daten, einschließlich der `githubPath`-Werte für die Dokumentation:
 
 ```bash
 cd /var/www/intranet/backend
 npx prisma db seed
 ```
 
-## Schritt 5: GitHub-Pfade aktualisieren
-
-Nach der Migration und dem Seed muss das Update-Skript ausgeführt werden, um die `githubPath`-Werte für alle Artikel zu aktualisieren:
-
-```bash
-cd /var/www/intranet/backend
-npm run update-github-paths
-```
-
-## Schritt 6: Frontend neu bauen
+## Schritt 5: Frontend neu bauen
 
 Das Frontend muss neu gebaut werden, um die Änderungen zu übernehmen:
 
@@ -60,29 +51,30 @@ cd /var/www/intranet/frontend
 npm run build
 ```
 
-## Schritt 7: Server neu starten (falls erforderlich)
+## Schritt 6: Server neu starten
 
-Je nach Konfiguration des Servers könnte ein Neustart erforderlich sein:
+Je nach Konfiguration des Servers müssen verschiedene Dienste neu gestartet werden:
 
 ```bash
-# Falls PM2 verwendet wird
-pm2 restart backend
-pm2 restart frontend
+# Backend-Dienst über PM2 neu starten
+pm2 restart intranet-backend
 
-# Falls systemd verwendet wird
-sudo systemctl restart intranet-backend
-sudo systemctl restart intranet-frontend
+# Frontend-Anwendung wird über einen Webserver bereitgestellt
+# Nginx neu starten (falls verwendet)
+sudo systemctl restart nginx
+
+# ODER Apache neu starten (falls verwendet)
+sudo systemctl restart apache2
 ```
 
 ## Wichtige Hinweise
 
 - Führe die Schritte **genau in dieser Reihenfolge** aus
-- Der Seed-Prozess wird auch ohne das `githubPath`-Feld funktionieren
-- Das Update-Skript fügt die `githubPath`-Werte hinzu, nachdem die Migration ausgeführt wurde
+- Die Migration des `githubPath`-Feldes ist eine einmalige Operation
+- Der Seed-Prozess ist robust und funktioniert sowohl vor als auch nach der Migration
 - Bei Problemen überprüfe die Logs: 
   ```bash
   cd /var/www/intranet/backend
   tail -f logs/app.log
   ```
-
-Die Migration und das Update der `githubPath`-Werte sind einmalige Operationen. Zukünftige Updates erfordern möglicherweise nicht alle diese Schritte. 
+- Wie im README.md erwähnt: "Server-Neustart nur nach Absprache" 

@@ -506,21 +506,6 @@ const Worktracker: React.FC = () => {
                                     )}
                                 </button>
                                 
-                                {/* Status-Filter */}
-                                        <select
-                                    className="px-2 py-2 border rounded-md h-10 text-sm"
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value as Task['status'] | 'all')}
-                                    title="Status-Filter"
-                                >
-                                    <option value="all">Alle Status</option>
-                                            <option value="open">Offen</option>
-                                            <option value="in_progress">In Bearbeitung</option>
-                                            <option value="improval">Zu verbessern</option>
-                                            <option value="quality_control">Qualitätskontrolle</option>
-                                            <option value="done">Erledigt</option>
-                                        </select>
-                                
                                 {/* Spalten-Konfiguration */}
                                 <TableColumnConfig 
                                     columns={availableColumns}
@@ -747,21 +732,6 @@ const Worktracker: React.FC = () => {
                                             </span>
                                         )}
                                 </button>
-                                
-                                {/* Status-Filter */}
-                                <select
-                                    className="px-2 py-2 border rounded-md h-10 text-sm"
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value as Task['status'] | 'all')}
-                                    title="Status-Filter"
-                                >
-                                    <option value="all">Alle Status</option>
-                                    <option value="open">Offen</option>
-                                    <option value="in_progress">In Bearbeitung</option>
-                                    <option value="improval">Zu verbessern</option>
-                                    <option value="quality_control">Qualitätskontrolle</option>
-                                    <option value="done">Erledigt</option>
-                                </select>
                                 
                                 {/* Spalten-Konfiguration */}
                                 <TableColumnConfig
