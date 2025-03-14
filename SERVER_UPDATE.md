@@ -63,9 +63,6 @@ pm2 restart intranet-backend
 # Nginx neu starten (falls verwendet)
 sudo systemctl restart nginx
 
-# ODER Apache neu starten (falls verwendet)
-sudo systemctl restart apache2
-```
 
 ## Wichtige Hinweise
 

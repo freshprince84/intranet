@@ -39,7 +39,7 @@ const Sidebar: React.FC = () => {
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768); // Mobile Erkennung
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const moreMenuRef = useRef<HTMLDivElement>(null);
-    const [visibleItemCount, setVisibleItemCount] = useState(5); // Anzahl der anzuzeigenden Elemente auf Mobilgeräten
+    const [visibleItemCount, setVisibleItemCount] = useState(6); // Anzahl der anzuzeigenden Elemente auf Mobilgeräten
 
     // Überwache Bildschirmgröße für responsives Verhalten
     useEffect(() => {
@@ -49,11 +49,11 @@ const Sidebar: React.FC = () => {
             // Basierend auf der Bildschirmbreite bestimmen, wie viele Elemente sichtbar sein sollen
             if (isMobileView) {
                 if (window.innerWidth < 360) {
-                    setVisibleItemCount(3);
-                } else if (window.innerWidth < 480) {
                     setVisibleItemCount(4);
-                } else {
+                } else if (window.innerWidth < 480) {
                     setVisibleItemCount(5);
+                } else {
+                    setVisibleItemCount(6);
                 }
             }
         };
@@ -88,42 +88,42 @@ const Sidebar: React.FC = () => {
         {
             name: 'Dashboard',
             path: '/dashboard',
-            icon: <HomeIcon className="h-6 w-6" />,
+            icon: <HomeIcon className="h-full w-full" />,
             page: 'dashboard',
             group: 'main'
         },
         {
             name: 'Worktracker',
             path: '/worktracker',
-            icon: <ClipboardDocumentListIcon className="h-6 w-6" />,
+            icon: <ClipboardDocumentListIcon className="h-full w-full" />,
             page: 'worktracker',
             group: 'main'
         },
         {
             name: 'Workcenter', // Umbenannt von "Team Worktime Control"
             path: '/team-worktime-control',
-            icon: <UsersIcon className="h-6 w-6" />,
+            icon: <UsersIcon className="h-full w-full" />,
             page: 'team_worktime_control',
             group: 'main'
         },
         {
             name: 'Lohnabrechnung',
             path: '/payroll',
-            icon: <CurrencyDollarIcon className="h-6 w-6" />,
+            icon: <CurrencyDollarIcon className="h-full w-full" />,
             page: 'payroll',
             group: 'main'
         },
         {
             name: 'Cerebro',
             path: '/cerebro',
-            icon: <BookOpenIcon className="h-6 w-6" />,
+            icon: <img src="/images/brain.png" alt="Cerebro" className="h-full w-full" />,
             page: 'cerebro',
             group: 'main'
         },
         {
             name: 'Benutzerverwaltung',
             path: '/users',
-            icon: <UserGroupIcon className="h-6 w-6" />,
+            icon: <UserGroupIcon className="h-full w-full" />,
             page: 'usermanagement',
             group: 'management'
         }
@@ -133,7 +133,7 @@ const Sidebar: React.FC = () => {
     const settingsItem: MenuItem = {
         name: 'Einstellungen',
         path: '/settings',
-        icon: <CogIcon className="h-6 w-6" />,
+        icon: <CogIcon className="h-full w-full" />,
         page: 'settings',
         group: 'settings'
     };
@@ -162,17 +162,18 @@ const Sidebar: React.FC = () => {
 
         return (
             <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 dark:bg-gray-800 dark:border-gray-700 z-10">
-                <nav className="flex justify-around items-center h-16">
+                <nav className="flex justify-between items-center h-16 px-4">
                     {visibleItems.map((item) => (
                         <Link 
                             key={item.path}
                             to={item.path} 
-                            className={`flex flex-col items-center justify-center px-2 py-1 text-xs ${
+                            className={`flex flex-col items-center justify-center px-0.5 py-1 text-[10px] ${
                                 isActive(item.path) ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
                             }`}
                         >
-                            <div className="h-6 w-6 mb-1">{item.icon}</div>
-                            <span>{item.name}</span>
+                            <div className="h-[26px] w-[26px] mb-0.5">{item.icon}</div>
+                            {/* Text nur auf größeren Mobilgeräten (>=480px) und Tablets anzeigen */}
+                            <span className="mt-0.5 footer-icon-text">{item.name}</span>
                         </Link>
                     ))}
                     
@@ -180,14 +181,16 @@ const Sidebar: React.FC = () => {
                         <div className="relative" ref={moreMenuRef}>
                             <button
                                 onClick={() => setShowMoreMenu(!showMoreMenu)}
-                                className={`flex flex-col items-center justify-center px-2 py-1 text-xs ${
+                                className={`flex flex-col items-center justify-center px-0.5 py-1 text-[10px] ${
                                     showMoreMenu ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
                                 }`}
+                                aria-label="Mehr Optionen anzeigen"
                             >
-                                <div className="h-6 w-6 mb-1">
-                                    <EllipsisHorizontalIcon className="h-6 w-6" />
+                                <div className="h-[26px] w-[26px] mb-0.5">
+                                    <EllipsisHorizontalIcon className="h-[26px] w-[26px]" />
                                 </div>
-                                <span>Mehr</span>
+                                {/* Text nur auf größeren Mobilgeräten (>=480px) und Tablets anzeigen */}
+                                <span className="mt-0.5 footer-icon-text">Mehr</span>
                             </button>
                             
                             {showMoreMenu && (
@@ -201,7 +204,7 @@ const Sidebar: React.FC = () => {
                                             }`}
                                             onClick={() => setShowMoreMenu(false)}
                                         >
-                                            <div className="h-5 w-5 mr-3">{item.icon}</div>
+                                            <div className="h-6 w-6 mr-3">{item.icon}</div>
                                             <span>{item.name}</span>
                                         </Link>
                                     ))}
@@ -239,7 +242,7 @@ const Sidebar: React.FC = () => {
                                     to={item.path} 
                                     className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative ${isActive(item.path) ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
                                 >
-                                    {item.icon}
+                                    <div className="h-6 w-6">{item.icon}</div>
                                     {!isCollapsed && <span>{item.name}</span>}
                                     {isCollapsed && (
                                         <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
@@ -262,7 +265,7 @@ const Sidebar: React.FC = () => {
                                     to={item.path} 
                                     className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative ${isActive(item.path) ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
                                 >
-                                    {item.icon}
+                                    <div className="h-6 w-6">{item.icon}</div>
                                     {!isCollapsed && <span>{item.name}</span>}
                                     {isCollapsed && (
                                         <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
@@ -280,7 +283,7 @@ const Sidebar: React.FC = () => {
                                     to="/settings" 
                                     className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative ${isActive('/settings') ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
                                 >
-                                    {settingsItem.icon}
+                                    <div className="h-6 w-6">{settingsItem.icon}</div>
                                     {!isCollapsed && <span>{settingsItem.name}</span>}
                                     {isCollapsed && (
                                         <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">

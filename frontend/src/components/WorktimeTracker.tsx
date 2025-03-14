@@ -409,7 +409,7 @@ const WorktimeTracker: React.FC = () => {
     }
 
     return (
-        <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 mb-6">
+        <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 sm:mb-6">
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold flex items-center">
                     <ClockIcon className="h-6 w-6 mr-2" />
@@ -489,14 +489,22 @@ const WorktimeTracker: React.FC = () => {
                 </button>
             </div>
 
-            {/* Informationen zur aktiven Zeiterfassung */}
-            {isTracking && activeWorktime && (
-                <div className="mt-6 p-3 bg-green-50 rounded-md text-sm">
-                    <p><strong>Aktive Zeiterfassung:</strong> {elapsedTime}</p>
-                    <p><strong>Gestartet:</strong> {formatStartDate(startTime || Date.now())}</p>
-                    <p><strong>Niederlassung:</strong> {branches.find(b => b.id === activeWorktime.branchId)?.name || 'Unbekannt'}</p>
-                </div>
-            )}
+            {/* Informationen zur aktiven Zeiterfassung oder Platzhalter */}
+            <div className={`p-2 my-2 rounded-md text-sm ${isTracking && activeWorktime ? 'bg-green-50' : 'bg-gray-50'}`}>
+                {isTracking && activeWorktime ? (
+                    <>
+                        <p><strong>Aktive Zeiterfassung:</strong> {elapsedTime}</p>
+                        <p><strong>Gestartet:</strong> {formatStartDate(startTime || Date.now())}</p>
+                        <p><strong>Niederlassung:</strong> {branches.find(b => b.id === activeWorktime.branchId)?.name || 'Unbekannt'}</p>
+                    </>
+                ) : (
+                    <>
+                        <p>&nbsp;</p>
+                        <p>&nbsp;</p>
+                        <p>&nbsp;</p>
+                    </>
+                )}
+            </div>
 
             {/* WorkTime Modal */}
             {showWorkTimeModal && (

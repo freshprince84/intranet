@@ -673,7 +673,7 @@ const Worktracker: React.FC = () => {
                             </div>
                     
                     {/* Zeiterfassung - auf Mobilgeräten fixiert über dem Footermenü */}
-                    <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-300 z-10 shadow-lg">
+                    <div className="fixed bottom-13 left-0 right-0 bg-white z-9 shadow-lg border-t-0">
                         <WorktimeTracker />
                         </div>
                 </div>

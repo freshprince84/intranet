@@ -14,7 +14,8 @@ Dieses Dokument definiert die verbindlichen Design-Standards für das Intranet-P
 8. [Buttons und Aktionselemente](#buttons-und-aktionselemente)
 9. [Berechtigungsbasierte UI-Anpassung](#berechtigungsbasierte-ui-anpassung)
 10. [Notification-Komponenten](#notification-komponenten)
-11. [Responsive Design](#responsive-design)
+11. [Scrollbars-Design](#scrollbars-design)
+12. [Responsive Design](#responsive-design)
 
 ## Allgemeine Designprinzipien
 
@@ -73,20 +74,57 @@ Alle Hauptcontainer auf Seiten müssen dem folgenden Design entsprechen:
 .content-box {
   background-color: white;
   border-radius: 0.5rem;
-  border: 1px solid #E5E7EB;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Dark Mode */
 .dark .content-box {
   background-color: #1F2937;
-  border-color: #374151;
 }
 ```
 
-### Box-Header mit Icon
+### Box-Display-Regeln
+
+- **Desktop-Ansicht** (>640px):
+  - Weißer Hintergrund
+  - Abgerundete Ecken (0.5rem)
+  - **Kein Rahmen**
+  - Leichter Schatten (0 2px 4px rgba(0, 0, 0, 0.1))
+  - Innenabstand (1.5rem)
+
+- **Mobile-Ansicht** (≤640px):
+  - Weißer Hintergrund
+  - Keine abgerundeten Ecken
+  - Kein Rahmen
+  - Kein Schatten
+  - Innenabstand (0.5rem an den Seiten, 1.5rem oben/unten)
+  - Volle Bildschirmbreite
+
+### System-Boxen
+Die folgenden Boxen sind offiziell im System definiert:
+
+#### Hauptboxen
+1. **Dashboard/Arbeitszeitstatistik Box**
+   - Zeigt Wochenstatistiken der Arbeitszeit als interaktives Diagramm
+   - Exportfunktion für Arbeitszeitdaten als Excel-Datei
+   - Farbliche Unterscheidung zwischen Zeiten unter (blau) und über (rot) der Sollarbeitszeit
+2. **Dashboard/Requests Box**
+3. **Worktracker/Zeiterfassung Box**
+4. **Worktracker/To Do's Box**
+5. **Settings Box**
+6. **UserManagement Box**
+7. **Profile Box**
+8. **NotificationList Box**
+9. **Workcenter Box** 
+10. **Lohnabrechnung Box**
+
+#### Authentifizierungsboxen (separat gelistet)
+- **Login Box**
+- **Register Box**
+
+### Box-Header Standard
 
 ```css
 /* Box-Header mit Icon */
@@ -271,22 +309,22 @@ Alle Hauptseiten müssen dem folgenden Layout entsprechen:
 ```css
 /* Hauptcontainer */
 .page-container {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 /* Abstand zu Headerleiste */
 .page-content {
-  margin-top: 1rem;
+  margin-top: 0.5rem;
 }
 
 @media (min-width: 768px) {
   .page-container {
-    padding: 2rem;
+    padding: 1.5rem;
   }
   
   /* Größerer Abstand auf Desktop */
   .page-content {
-    margin-top: 1.5rem;
+    margin-top: 1rem;
   }
 }
 
@@ -304,13 +342,29 @@ Alle Hauptseiten müssen dem folgenden Layout entsprechen:
 }
 ```
 
+### Page-Padding-Standards
+
+Die folgenden Padding-Werte sind für verschiedene Containertypen definiert:
+
+- **Mobile Ansicht** (< 640px):
+  - Hauptcontainer: `padding-top: 0.5rem` 
+  - Main-Tag: `padding: 0.5rem 0.75rem`
+  
+- **Tablet Ansicht** (640px - 1023px):
+  - Hauptcontainer: `padding-top: 1rem`
+  - Main-Tag: `padding: 0.75rem 1rem`
+  
+- **Desktop Ansicht** (≥ 1024px):
+  - Hauptcontainer: `padding-top: 1rem`
+  - Main-Tag: `padding: 0.75rem 1.25rem`
+
 ### Beispiel-Implementierung
 
 Die Worktracker-Seite dient als Referenzimplementierung für das Page-Design, insbesondere für den Abstand zwischen der obersten Box und der Headerleiste.
 
 ```jsx
 <div className="container mx-auto py-6">
-    <div className="mb-8">
+    <div className="mb-6">
         <WorktimeTracker />
     </div>
     
@@ -607,6 +661,90 @@ Alle Benachrichtigungen müssen dem folgenden Design entsprechen:
   color: #9CA3AF;
 }
 ```
+
+## Scrollbars-Design
+
+Alle Scrollbars im System müssen ein modernes, schlankes Design verwenden:
+
+```css
+/* Basis-Styling für alle Scrollbars im System */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark Mode Scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+```
+
+### Scrollbar-Layout-Prinzipien
+
+- **Mobile Ansicht**: Normale Scrollbar für die gesamte Seite, falls der Inhalt zu groß ist
+- **Tablet und Desktop Ansicht**: Keine Scrollbar für die gesamte Seite (fixed height container)
+  - Boxen mit zu viel Inhalt haben interne Scrollbars
+  - Wenn zu viele Boxen vorhanden sind, ist die Hauptseite scrollbar
+  - Dies verbessert das visuelle Erscheinungsbild auf großen Bildschirmen
+
+### Container-Klassen für Scrollbars
+
+Für Container mit Scrollbars müssen folgende Klassen verwendet werden:
+
+1. **Vertikale Scrollbars**:
+   ```jsx
+   <div className="overflow-y-container">
+     {/* Content */}
+   </div>
+   ```
+
+2. **Horizontale Scrollbars für Tabellen**:
+   ```jsx
+   <div className="table-scroll-container">
+     <table>
+       {/* Tabellen-Inhalt */}
+     </table>
+   </div>
+   ```
+
+3. **Scrollbare Box-Inhalte** (für Tablets und größer):
+   ```jsx
+   <div className="box-content-scrollable">
+     {/* Box-Inhalt, der potenziell zu hoch ist */}
+   </div>
+   ```
+
+### Richtlinien für Scrollbars
+
+- Verwende nur dann Scrollbars, wenn es absolut notwendig ist
+- Bevorzuge vertikales Scrollen gegenüber horizontalem Scrollen, besonders auf mobilen Geräten
+- Stelle sicher, dass der Inhalt mit einer Breite von mindestens 10px vom rechten Rand entfernt ist, um Platz für die Scrollbar zu lassen
+- Verwende `scrollbar-gutter: stable`, um Layout-Shifts zu vermeiden
+- Teste das Scroll-Verhalten sowohl mit Maus als auch mit Touch-Geräten
+- Bei Tablet und Desktop (≥768px) sollte die gesamte Seite ohne äußere Scrollbar angezeigt werden
+  - Header-Leiste bleibt fixiert am oberen Rand
+  - Bei Tablet ist ein Footer-Menü unten fixiert
+  - Bei Desktop sollte ein Abstand unter der letzten Box sein
 
 ## Responsive Design
 

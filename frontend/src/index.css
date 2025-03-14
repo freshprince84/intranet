@@ -6,7 +6,23 @@
 .min-h-screen > div.container,
 .min-h-screen > div.max-w-7xl, 
 .min-h-screen > main.max-w-7xl {
-  padding-top: 1.5rem !important; /* py-6 (1.5rem) ist der Referenzwert von Worktracker */
+  padding-top: 1rem !important; /* Reduziert von 1.5rem auf 1rem */
+}
+
+/* Text unter den Footer-Icons für sehr kleine Bildschirme ausblenden */
+@media (max-width: 479px) {
+  .footer-icon-text {
+    display: none;
+  }
+}
+
+/* Medienabfrage für mobile Geräte - noch kleineres Padding */
+@media (max-width: 640px) {
+  .min-h-screen > div.container,
+  .min-h-screen > div.max-w-7xl, 
+  .min-h-screen > main.max-w-7xl {
+    padding-top: 0.5rem !important; /* Noch kleiner für mobile Geräte */
+  }
 }
 
 /* Stelle sicher, dass alle obersten Boxen konsistente Abstände haben */
@@ -28,6 +44,34 @@ div[class*="bg-white"][class*="rounded-lg"][class*="border"] + div[class*="bg-wh
 .min-h-screen > div.p-4 {
   padding-top: 1rem !important;
   padding-bottom: 1rem !important;
+}
+
+/* Container für Tablet und Desktop - entfernt die äußere Scrollbar */
+@media (min-width: 768px) {
+  .fixed-height-container {
+    position: fixed;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+  
+  .fixed-height-container > div {
+    height: calc(100vh - 4rem);
+    overflow: hidden;
+  }
+  
+  /* Ermöglicht Scrollen innerhalb der Boxen */
+  .box-content-scrollable {
+    max-height: calc(100% - 3rem); /* Abzüglich Header-Höhe der Box */
+    overflow-y: auto;
+  }
+  
+  /* Ermöglicht Scrollen auf der Hauptseite, wenn zu viele Boxen vorhanden sind */
+  main.overflow-y-auto {
+    overflow-y: auto;
+    height: 100%;
+    padding-bottom: 2rem; /* Zusätzlicher Abstand am Ende der Seite */
+  }
 }
 
 body {
@@ -63,7 +107,7 @@ code {
   /* Selektor für die Tasks-Box (hat p-6 und w-full Klassen) */
   .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.p-6.w-full {
     order: 1 !important;
-    margin-bottom: 150px !important; /* Platz für die fixierte Zeiterfassung-Box */
+    margin-bottom: 170px !important; /* Erhöht von 150px auf 170px - mehr Platz für die fixierte Zeiterfassung-Box und den Footer */
   }
   
   /* Zeiterfassungs-Box (WorktimeTracker/WorktimeList) identifizieren und fixieren */
@@ -74,16 +118,16 @@ code {
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    z-index: 10 !important;
+    z-index: 9 !important;
     background-color: white !important;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
     margin-top: auto !important;
     margin-bottom: 0 !important;
-    padding-bottom: 0.5rem !important;
+    padding-bottom: 0 !important; /* Reduziert von 0.5rem auf 0 - kein Abstand zum Footer */
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
     width: 100% !important;
-    max-height: 130px !important; /* Begrenze die Höhe, damit sie nicht zu viel Platz einnimmt */
+    max-height: 150px !important; /* Erhöht von 130px auf 150px, damit alles sichtbar ist */
     overflow-y: auto !important;
   }
   
@@ -94,6 +138,28 @@ code {
     border-bottom-right-radius: 0 !important;
     max-height: 100% !important;
     margin-bottom: 0 !important;
+    padding-bottom: 0 !important; /* Kein Padding unten in der Box selbst */
+  }
+
+  /* Entferne den mb-6 Abstand bei der Zeiterfassungs-Box in der mobilen Ansicht */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 > .bg-white.rounded-lg.border.mb-6 {
+    margin-bottom: 0 !important;
+  }
+
+  /* Entferne Abstand unter der Infobox in der aktiven Zeiterfassung */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 .bg-green-50.rounded-md {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+  }
+
+  /* Reduziere das innere Padding der Zeiterfassungs-Box */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 .bg-white.rounded-lg.border {
+    padding: 0.75rem 0.5rem 0 0.5rem !important;
+  }
+
+  /* Reduziere den Abstand zwischen Überschrift und Toggle/Inhalt */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 .flex.items-center.justify-between.mb-4 {
+    margin-bottom: 0.25rem !important;
   }
 
   /* Optimierungen für Box-Titel und Such-/Filterbereich - ALLGEMEINE SELEKTOREN */
@@ -469,6 +535,27 @@ code {
     max-width: 100vw !important;
     box-sizing: border-box !important;
   }
+
+  /* Mobilansicht - Spezifische Änderungen für den WorktimeTracker und Footer */
+  @media (max-width: 640px) {
+    /* Footer-Navigation direkt an der Worktracker-Box platzieren */
+    nav.fixed.bottom-0 {
+      bottom: 0 !important;
+      margin-top: 0 !important;
+    }
+    
+    /* WorktimeTracker ohne Abstand zum Footer */
+    .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 .flex.items-start.justify-center.space-x-8 {
+      margin-bottom: 0.5rem !important;
+      padding-bottom: 0 !important;
+    }
+    
+    /* Abstand zwischen den Toggle-Elementen und der Infobox */
+    .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 .flex.items-start + div.bg-green-50 {
+      margin-top: 0.5rem !important;
+      margin-bottom: 0.5rem !important; /* Etwas Abstand zum unteren Rand */
+    }
+  }
 }
 
 /* Verkürzen von langen Texten in Tabellen */
@@ -538,4 +625,88 @@ code {
 
 .role-card-permission-tag {
   @apply text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded;
+}
+
+/* Box-Schatten für Desktop-Ansicht */
+@media (min-width: 641px) {
+  /* Alle Boxen mit typischen Klassen einen leichten Schatten geben und Rahmenlinien entfernen */
+  .bg-white.rounded-lg.border.border-gray-300, 
+  .bg-white.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  [class*="bg-white"][class*="rounded-lg"][class*="border"][class*="border-gray-300"],
+  .bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.p-6,
+  .bg-white.rounded-lg.border {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: none !important;
+  }
+}
+
+/* Modern Scrollbar Styling */
+/* Basis-Styling für alle Scrollbars im System */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Dark Mode Scrollbar */
+.dark ::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Firefox Scrollbar Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.02);
+}
+
+.dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+}
+
+/* Optimierung für Box-Container mit vertikalem Scrollen */
+.overflow-y-container {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable; /* Verhindert Layout-Shifts */
+}
+
+/* Optimierte horizontale Scrollbars für Tabellen */
+.table-scroll-container {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 6px; /* Platz für den Scrollbalken */
+}
+
+/* Utility-Klasse für den spezifischen Footer-Abstand */
+.bottom-13 {
+  bottom: 3.25rem !important; /* Optimaler Abstand zum Footer-Menü */
 }

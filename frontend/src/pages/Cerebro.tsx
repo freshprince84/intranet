@@ -26,12 +26,14 @@ const GITHUB_BRANCH = 'main';
 // Layout-Komponente, die die ArticleStructure enthält
 const CerebroLayout: React.FC = () => {
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
+  const [isTabletOrLarger, setIsTabletOrLarger] = useState<boolean>(window.innerWidth >= 768);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
   
   useEffect(() => {
     const handleResize = () => {
       const newIsMobile = window.innerWidth < 768;
       setIsMobile(newIsMobile);
+      setIsTabletOrLarger(window.innerWidth >= 768);
       
       // Auf großen Bildschirmen immer öffnen
       if (!newIsMobile) {
@@ -57,7 +59,7 @@ const CerebroLayout: React.FC = () => {
   }, []);
   
   return (
-    <div className="flex min-h-screen w-full">
+    <div className={`flex min-h-screen w-full ${isTabletOrLarger ? 'fixed-height-container' : ''}`}>
       {/* Sidebar mit fester Breite auf Desktop, auf Mobile schiebt sie den Inhalt */}
       <div 
         className={`
@@ -70,7 +72,9 @@ const CerebroLayout: React.FC = () => {
       </div>
       
       {/* Der Hauptinhalt nimmt den restlichen Platz ein */}
-      <main className="flex-grow overflow-auto p-4">
+      <main className={`flex-grow ${isMobile ? 'overflow-y-container' : 'overflow-y-auto'} ${
+        isMobile ? 'px-3 pt-2 pb-3' : 'px-4 pt-3 pb-4'
+      }`}>
         <Outlet />
       </main>
     </div>
