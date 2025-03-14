@@ -284,6 +284,7 @@ model CerebroCarticle {
   updatedById   Int?
   isPublished   Boolean                  @default(false)
   position      Int?                     @default(999)
+  githubPath    String?                  // Pfad zur GitHub Markdown-Datei, falls vorhanden
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
   createdBy     User                     @relation("CarticleCreator", fields: [createdById], references: [id])

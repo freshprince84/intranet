@@ -309,24 +309,29 @@ const PayrollComponent: React.FC = () => {
           {payrolls.length > 0 && (
             <div className="mb-6">
               <h2 className="text-xl font-semibold mb-4">Bestehende Abrechnungen</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
+              <div className="overflow-x-auto mobile-table-container">
+                <table className="min-w-full divide-y divide-gray-200 payroll-table">
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Zeitraum
+                        <span className="hidden sm:inline">Zeitraum</span>
+                        <span className="inline sm:hidden">Zeitr.</span>
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Gesamt Stunden
+                        <span className="hidden sm:inline">Gesamt Stunden</span>
+                        <span className="inline sm:hidden">Std.</span>
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Bruttolohn
+                        <span className="hidden sm:inline">Bruttolohn</span>
+                        <span className="inline sm:hidden">Brutto</span>
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Nettolohn
+                        <span className="hidden sm:inline">Nettolohn</span>
+                        <span className="inline sm:hidden">Netto</span>
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Aktionen
+                        <span className="hidden sm:inline">Aktionen</span>
+                        <span className="inline sm:hidden">Akt.</span>
                       </th>
                     </tr>
                   </thead>
@@ -348,18 +353,20 @@ const PayrollComponent: React.FC = () => {
                           {item.netPay} {item.currency}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <button 
-                            className="text-blue-600 hover:text-blue-800 mr-3"
-                            onClick={() => selectPayroll(item.id)}
-                          >
-                            Details
-                          </button>
-                          <button 
-                            className="text-green-600 hover:text-green-800"
-                            onClick={() => generatePDF(item.id)}
-                          >
-                            PDF
-                          </button>
+                          <div className="flex action-buttons">
+                            <button 
+                              className="text-blue-600 hover:text-blue-800 mr-3"
+                              onClick={() => selectPayroll(item.id)}
+                            >
+                              Details
+                            </button>
+                            <button 
+                              className="text-green-600 hover:text-green-800"
+                              onClick={() => generatePDF(item.id)}
+                            >
+                              PDF
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

@@ -124,36 +124,45 @@ const WorktimeList: React.FC = () => {
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
+            <div className="overflow-x-auto mobile-table-container">
+                <table className="min-w-full divide-y divide-gray-200 worktime-table">
                     <thead className="bg-gray-50">
                         <tr>
                             <th 
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('startTime')}
                             >
-                                Start {sortConfig.key === 'startTime' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                <span className="hidden sm:inline">Start</span>
+                                <span className="inline sm:hidden">Start</span>
+                                {sortConfig.key === 'startTime' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('endTime')}
                             >
-                                Ende {sortConfig.key === 'endTime' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                <span className="hidden sm:inline">Ende</span>
+                                <span className="inline sm:hidden">Ende</span>
+                                {sortConfig.key === 'endTime' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('duration')}
                             >
-                                Dauer {sortConfig.key === 'duration' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                <span className="hidden sm:inline">Dauer</span>
+                                <span className="inline sm:hidden">Dauer</span>
+                                {sortConfig.key === 'duration' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('branch.name')}
                             >
-                                Niederlassung {sortConfig.key === 'branch.name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                <span className="hidden sm:inline">Niederlassung</span>
+                                <span className="inline sm:hidden">Niedr.</span>
+                                {sortConfig.key === 'branch.name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Aktionen
+                                <span className="hidden sm:inline">Aktionen</span>
+                                <span className="inline sm:hidden">Akt.</span>
                             </th>
                         </tr>
                     </thead>
@@ -173,7 +182,7 @@ const WorktimeList: React.FC = () => {
                                     {worktime.branch.name}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div className="flex justify-end space-x-2">
+                                    <div className="flex justify-end space-x-2 action-buttons">
                                         <button
                                             onClick={() => {/* TODO: Implement edit */}}
                                             className="text-gray-600 hover:text-gray-900"

@@ -61,12 +61,12 @@ interface FilterState {
 
 // Definition der verfügbaren Spalten
 const availableColumns = [
-  { id: 'title', label: 'Titel' },
-  { id: 'status', label: 'Status' },
-  { id: 'requestedByResponsible', label: 'Angefragt von / Verantwortlicher' },
-  { id: 'branch', label: 'Niederlassung' },
-  { id: 'dueDate', label: 'Fälligkeit' },
-  { id: 'actions', label: 'Aktionen' }
+  { id: 'title', label: 'Titel', shortLabel: 'Titel' },
+  { id: 'status', label: 'Status', shortLabel: 'Status' },
+  { id: 'requestedByResponsible', label: 'Angefragt von / Verantwortlicher', shortLabel: 'Angefr. / Ver.' },
+  { id: 'branch', label: 'Niederlassung', shortLabel: 'Niedr.' },
+  { id: 'dueDate', label: 'Fälligkeit', shortLabel: 'Fällig' },
+  { id: 'actions', label: 'Aktionen', shortLabel: 'Akt.' }
 ];
 
 // Standardreihenfolge der Spalten
@@ -555,12 +555,13 @@ const Requests: React.FC = () => {
               columnOrder={settings.columnOrder}
               onToggleColumnVisibility={toggleColumnVisibility}
               onMoveColumn={handleMoveColumn}
+              onClose={() => {}}
             />
           </div>
         </div>
 
-        <div className="overflow-x-auto overflow-y-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto overflow-y-hidden mobile-table-container">
+          <table className="min-w-full divide-y divide-gray-200 requests-table">
             <thead className="bg-gray-50">
               <tr>
                 {/* Dynamisch generierte Spaltenüberschriften basierend auf den sichtbaren Spalten */}
@@ -582,7 +583,8 @@ const Requests: React.FC = () => {
                       >
                         <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
                           <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />
-                          {column.label}
+                          <span className="hidden sm:inline">{column.label}</span>
+                          <span className="inline sm:hidden">{column.shortLabel}</span>
                         </div>
                       </th>
                     );
@@ -608,7 +610,9 @@ const Requests: React.FC = () => {
                     >
                       <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
                         {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />}
-                        {column.label} {sortKey && sortConfig.key === sortKey && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                        <span className="hidden sm:inline">{column.label}</span>
+                        <span className="inline sm:hidden">{column.shortLabel}</span>
+                        {sortKey && sortConfig.key === sortKey && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                       </div>
                     </th>
                   );
@@ -643,14 +647,14 @@ const Requests: React.FC = () => {
                       switch (columnId) {
                         case 'title':
                           return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{request.title}</div>
+                            <td key={columnId} className="px-6 py-4">
+                              <div className="text-sm text-gray-900 break-words">{request.title}</div>
                             </td>
                           );
                         case 'status':
                           return (
                             <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)}`}>
+                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)} status-col`}>
                                 {request.status}
                               </span>
                             </td>
@@ -660,11 +664,13 @@ const Requests: React.FC = () => {
                             <td key={columnId} className="px-6 py-4 whitespace-nowrap">
                               <div className="flex flex-col">
                                 <div className="text-sm text-gray-900">
-                                  <span className="text-xs text-gray-500">Angefragt von:</span><br />
+                                  <span className="text-xs text-gray-500 hidden sm:inline">Angefragt von:</span>
+                                  <span className="text-xs text-gray-500 inline sm:hidden">Angefr. v.:</span><br />
                                   {`${request.requestedBy.firstName} ${request.requestedBy.lastName}`}
                                 </div>
                                 <div className="text-sm text-gray-900 mt-1">
-                                  <span className="text-xs text-gray-500">Verantwortlich:</span><br />
+                                  <span className="text-xs text-gray-500 hidden sm:inline">Verantwortlich:</span>
+                                  <span className="text-xs text-gray-500 inline sm:hidden">Ver.:</span><br />
                                   {`${request.responsible.firstName} ${request.responsible.lastName}`}
                                 </div>
                               </div>
@@ -687,18 +693,8 @@ const Requests: React.FC = () => {
                         case 'actions':
                           return (
                             <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex space-x-2">
-                                {hasPermission('requests', 'write', 'table') && (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedRequest(request);
-                                      setIsEditModalOpen(true);
-                                    }}
-                                    className="text-blue-600 hover:text-blue-900"
-                                  >
-                                    <PencilIcon className="h-5 w-5" />
-                                  </button>
-                                )}
+                              <div className="flex space-x-2 action-buttons">
+                                <div className="status-buttons">
                                 {request.status === 'approval' && hasPermission('requests', 'write', 'table') && (
                                   <>
                                     <button
@@ -749,6 +745,18 @@ const Requests: React.FC = () => {
                                     title="Erneut prüfen"
                                   >
                                     <ArrowPathIcon className="h-5 w-5" />
+                                  </button>
+                                )}
+                                </div>
+                                {hasPermission('requests', 'write', 'table') && (
+                                  <button
+                                    onClick={() => {
+                                      setSelectedRequest(request);
+                                      setIsEditModalOpen(true);
+                                    }}
+                                    className="text-blue-600 hover:text-blue-900 edit-button ml-0.5"
+                                  >
+                                    <PencilIcon className="h-5 w-5" />
                                   </button>
                                 )}
                               </div>

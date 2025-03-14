@@ -114,6 +114,72 @@ interface FilterState {
   description: string;
 }
 
+// RoleCard-Komponente für mobile Ansicht
+const RoleCard: React.FC<{
+  role: Role;
+  onEdit: (role: Role) => void;
+  onDelete: (roleId: number) => void;
+  canEdit: boolean;
+  canDelete: boolean;
+}> = ({ role, onEdit, onDelete, canEdit, canDelete }) => {
+  return (
+    <div className="role-card">
+      {/* Header mit Rollenname und Aktionen */}
+      <div className="role-card-header">
+        <h3 className="role-card-title">{role.name}</h3>
+        
+        <div className="flex space-x-2">
+          {canEdit && (
+            <button
+              onClick={() => onEdit(role)}
+              className="text-blue-600 hover:text-blue-800 p-1"
+              title="Rolle bearbeiten"
+            >
+              <PencilIcon className="h-5 w-5" />
+            </button>
+          )}
+          
+          {canDelete && (
+            <button
+              onClick={() => onDelete(role.id)}
+              className="text-red-600 hover:text-red-800 p-1"
+              title="Rolle löschen"
+            >
+              <TrashIcon className="h-5 w-5" />
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Beschreibung */}
+      <p className="role-card-description">{role.description || 'Keine Beschreibung'}</p>
+      
+      {/* Berechtigungen - kompakt */}
+      <div className="role-card-permissions">
+        <h4 className="role-card-permissions-title">Berechtigungen:</h4>
+        <div className="role-card-permissions-list">
+          {role.permissions
+            .filter(perm => perm.accessLevel !== 'none') // Nur relevante Berechtigungen anzeigen
+            .slice(0, 8) // Begrenze die Anzahl der angezeigten Berechtigungen
+            .map(permission => (
+              <span 
+                key={`${permission.entity}-${permission.entityType}`}
+                className="role-card-permission-tag"
+              >
+                {permission.entity}: {permission.accessLevel}
+              </span>
+            ))}
+          {role.permissions.filter(perm => perm.accessLevel !== 'none').length > 8 && (
+            <span className="role-card-permission-tag bg-gray-200">
+              +{role.permissions.filter(perm => perm.accessLevel !== 'none').length - 8} mehr
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, onError, readOnly = false }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
@@ -155,6 +221,19 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     description: ''
   });
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  
+  // Responsiveness Hook
+  const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
+  
+  // Überwache Bildschirmgröße
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Fehlerbehandlung
   const handleError = useCallback((err: any) => {
@@ -607,6 +686,156 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       });
   }, [roles, searchTerm, activeFilters]);
 
+  // Mobile Ansicht renderRoles-Funktion
+  const renderRoles = () => {
+    if (roles.length === 0) {
+      return (
+        <div className="p-4 bg-gray-50 rounded text-center">
+          <p>Keine Rollen gefunden. Erstellen Sie eine neue Rolle mit dem Button oben.</p>
+        </div>
+      );
+    }
+    
+    if (isMobile) {
+      // Card-Ansicht für mobile Geräte
+      return (
+        <div className="mt-4">
+          {filteredAndSortedRoles.map(role => (
+            <RoleCard 
+              key={role.id}
+              role={role}
+              onEdit={prepareRoleForEditing}
+              onDelete={handleDelete}
+              canEdit={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
+              canDelete={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
+            />
+          ))}
+        </div>
+      );
+    } else {
+      // Tabellen-Ansicht für größere Bildschirme
+      return (
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                {visibleColumnIds.map(columnId => {
+                  const column = availableColumns.find(col => col.id === columnId);
+                  if (!column) return null;
+                  
+                  return (
+                    <th 
+                      key={columnId}
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative ${columnId !== 'actions' ? 'cursor-move' : ''}`}
+                      draggable={columnId !== 'actions'}
+                      onDragStart={columnId !== 'actions' ? (e) => handleDragStart(e, columnId) : undefined}
+                      onDragOver={columnId !== 'actions' ? (e) => handleDragOver(e, columnId) : undefined}
+                      onDrop={columnId !== 'actions' ? (e) => handleDrop(e, columnId) : undefined}
+                      onDragEnd={columnId !== 'actions' ? handleDragEnd : undefined}
+                    >
+                      <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
+                        {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />}
+                        {column.label}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+              {filteredAndSortedRoles.map(role => (
+                <tr 
+                  key={role.id} 
+                  className="hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  {visibleColumnIds.map(columnId => {
+                    if (columnId === 'name') {
+                      return (
+                        <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{role.name}</div>
+                        </td>
+                      );
+                    }
+                    
+                    if (columnId === 'description') {
+                      return (
+                        <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500 dark:text-gray-400">{role.description || '-'}</div>
+                        </td>
+                      );
+                    }
+                    
+                    if (columnId === 'permissions') {
+                      // Zähle die Berechtigungen nach Typ
+                      const permissionCount = {
+                        read: role.permissions.filter(p => p.accessLevel === 'read').length,
+                        write: role.permissions.filter(p => p.accessLevel === 'write').length,
+                        both: role.permissions.filter(p => p.accessLevel === 'both').length,
+                        none: role.permissions.filter(p => p.accessLevel === 'none').length
+                      };
+                      
+                      return (
+                        <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex space-x-2">
+                            {permissionCount.read > 0 && (
+                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                {permissionCount.read} Lesen
+                              </span>
+                            )}
+                            {permissionCount.write > 0 && (
+                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                {permissionCount.write} Schreiben
+                              </span>
+                            )}
+                            {permissionCount.both > 0 && (
+                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                {permissionCount.both} Beide
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      );
+                    }
+                    
+                    if (columnId === 'actions') {
+                      return (
+                        <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex justify-end space-x-2">
+                            {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
+                              <button 
+                                onClick={() => prepareRoleForEditing(role)}
+                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                title="Rolle bearbeiten"
+                              >
+                                <PencilIcon className="h-5 w-5" />
+                              </button>
+                            )}
+                            
+                            {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
+                              <button 
+                                onClick={() => handleDelete(role.id)}
+                                className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                title="Rolle löschen"
+                              >
+                                <TrashIcon className="h-5 w-5" />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      );
+                    }
+                    
+                    return null;
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+  };
+
   return (
     <div>
       {/* Spaltenanzeige und Suche */}
@@ -660,6 +889,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
               columnOrder={settings.columnOrder}
               onToggleColumnVisibility={toggleColumnVisibility}
               onMoveColumn={handleMoveColumn}
+              onClose={() => {}}
             />
           </div>
         </div>
@@ -669,102 +899,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
           </div>
         ) : (
-          <div>
-            {roles.length === 0 ? (
-              <div className="p-4 bg-gray-50 rounded text-center">
-                <p>Keine Rollen gefunden. Erstellen Sie eine neue Rolle mit dem Button oben.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="bg-gray-50 dark:bg-gray-700">
-                    <tr>
-                      {visibleColumnIds.map(columnId => {
-                        const column = availableColumns.find(col => col.id === columnId);
-                        if (!column) return null;
-                        
-                        return (
-                          <th 
-                            key={columnId}
-                            className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative ${columnId !== 'actions' ? 'cursor-move' : ''}`}
-                            draggable={columnId !== 'actions'}
-                            onDragStart={columnId !== 'actions' ? (e) => handleDragStart(e, columnId) : undefined}
-                            onDragOver={columnId !== 'actions' ? (e) => handleDragOver(e, columnId) : undefined}
-                            onDrop={columnId !== 'actions' ? (e) => handleDrop(e, columnId) : undefined}
-                            onDragEnd={columnId !== 'actions' ? handleDragEnd : undefined}
-                          >
-                            <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
-                              {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />}
-                              {column.label}
-                            </div>
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                    {filteredAndSortedRoles.map(role => (
-                      <tr key={role.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                        {visibleColumnIds.map(columnId => {
-                          if (columnId === 'name') {
-                            return (
-                              <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                                {role.name}
-                              </td>
-                            );
-                          }
-                          if (columnId === 'description') {
-                            return (
-                              <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                                {role.description || '-'}
-                              </td>
-                            );
-                          }
-                          if (columnId === 'permissions') {
-                            return (
-                              <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                                {role.permissions.filter(p => p.accessLevel !== 'none').length} aktivierte Berechtigungen
-                              </td>
-                            );
-                          }
-                          if (columnId === 'actions') {
-                            return (
-                              <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <div className="flex justify-end space-x-2">
-                                  {/* Bearbeiten-Button wird nur angezeigt, wenn der Benutzer Schreibrechte hat und es sich nicht um eine geschützte Rolle handelt */}
-                                  {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
-                                    <button 
-                                      onClick={(e) => { e.preventDefault(); prepareRoleForEditing(role) }} 
-                                      className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                                      title="Rolle bearbeiten"
-                                    >
-                                      <PencilIcon className="h-5 w-5" />
-                                    </button>
-                                  )}
-                                  
-                                  {/* Löschen-Button wird nur angezeigt, wenn der Benutzer Schreibrechte hat und es sich nicht um eine geschützte Rolle handelt */}
-                                  {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
-                                    <button 
-                                      onClick={(e) => { e.preventDefault(); handleDelete(role.id) }} 
-                                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                      title="Rolle löschen"
-                                    >
-                                      <TrashIcon className="h-5 w-5" />
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            );
-                          }
-                          return null;
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          renderRoles()
         )}
       </div>
 

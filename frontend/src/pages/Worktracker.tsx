@@ -51,12 +51,12 @@ interface FilterState {
 
 // Definiere die verfügbaren Spalten für die Tabelle
 const availableColumns = [
-    { id: 'title', label: 'Titel' },
-    { id: 'status', label: 'Status' },
-    { id: 'responsibleAndQualityControl', label: 'Verantwortlich / Qualitätskontrolle' },
-    { id: 'branch', label: 'Niederlassung' },
-    { id: 'dueDate', label: 'Fälligkeitsdatum' },
-    { id: 'actions', label: 'Aktionen' },
+    { id: 'title', label: 'Titel', shortLabel: 'Titel' },
+    { id: 'status', label: 'Status', shortLabel: 'Status' },
+    { id: 'responsibleAndQualityControl', label: 'Verantwortlich / Qualitätskontrolle', shortLabel: 'Ver. / QK' },
+    { id: 'branch', label: 'Niederlassung', shortLabel: 'Niedr.' },
+    { id: 'dueDate', label: 'Fälligkeitsdatum', shortLabel: 'Fällig' },
+    { id: 'actions', label: 'Aktionen', shortLabel: 'Akt.' },
 ];
 
 // Standard-Spaltenreihenfolge
@@ -406,22 +406,18 @@ const Worktracker: React.FC = () => {
     }, [tasks, searchTerm, activeFilters, sortConfig]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
-    const handleMoveColumn = useCallback((dragIndex: number, hoverIndex: number) => {
-        // Erstelle eine neue Kopie der Spaltenreihenfolge
+    const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
+        // Neue Spaltenreihenfolge erstellen
         const newColumnOrder = [...settings.columnOrder];
+        const draggedColumn = newColumnOrder[dragIndex];
         
-        // Ermittle die zu verschiebenden Spalten
-        const movingColumn = newColumnOrder[dragIndex];
-        
-        // Entferne die Spalte an der alten Position
-        newColumnOrder.splice(dragIndex, 1);
-        
-        // Füge die Spalte an der neuen Position ein
-        newColumnOrder.splice(hoverIndex, 0, movingColumn);
+        // Spalten neu anordnen
+        newColumnOrder.splice(dragIndex, 1); // Entferne die gezogene Spalte
+        newColumnOrder.splice(hoverIndex, 0, draggedColumn); // Füge sie an der neuen Position ein
         
         // Aktualisiere die Spaltenreihenfolge
         updateColumnOrder(newColumnOrder);
-    }, [settings.columnOrder, updateColumnOrder]);
+    };
 
     // Handler für Drag & Drop direkt in der Tabelle
     const handleDragStart = (columnId: string) => {
@@ -460,158 +456,252 @@ const Worktracker: React.FC = () => {
     return (
         <div className="min-h-screen">
             <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
-                {/* Zeiterfassung */}
-                <div className="mb-8">
-                    <WorktimeTracker />
-                </div>
-
+                {/* Auf mobilen Geräten wird diese Reihenfolge angezeigt - Tasks oben, Zeiterfassung unten */}
+                <div className="block sm:hidden">
                 {/* Tasks */}
-                <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full">
-                    
-                    <CreateTaskModal 
-                        isOpen={isCreateModalOpen}
-                        onClose={() => setIsCreateModalOpen(false)}
-                        onTaskCreated={fetchTasks}
-                    />
-                    
-                    {selectedTask && (
-                        <EditTaskModal
-                            isOpen={isEditModalOpen}
-                            onClose={() => {
-                                setIsEditModalOpen(false);
-                                setSelectedTask(null);
-                            }}
-                            onTaskUpdated={fetchTasks}
-                            task={selectedTask}
-                        />
-                    )}
-                    
-                    {/* Filter Modal */}
-                    {isFilterModalOpen && (
-                        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-                            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-                                <div className="px-6 py-4 border-b flex justify-between items-center">
-                                    <h3 className="text-lg font-medium">Erweiterte Filter</h3>
+                    <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
+                        <div className="flex items-center justify-between">
+                            {/* Linke Seite: "Neuer Task"-Button */}
+                            <div className="flex items-center">
+                                {hasPermission('tasks', 'write', 'table') && (
                                     <button 
-                                        onClick={() => setIsFilterModalOpen(false)}
-                                        className="text-gray-400 hover:text-gray-500"
+                                        onClick={() => setIsCreateModalOpen(true)}
+                                        className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
+                                        style={{ width: '30.19px', height: '30.19px' }}
+                                        title="Neue Aufgabe erstellen"
+                                        aria-label="Neue Aufgabe erstellen"
                                     >
-                                        <XMarkIcon className="h-5 w-5" />
+                                        <PlusIcon className="h-4 w-4" />
                                     </button>
+                                )}
                                 </div>
-                                <div className="p-6 space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
+                            
+                            {/* Mitte: Titel */}
+                            <div className="flex items-center">
+                                <CheckCircleIcon className="h-6 w-6 mr-2" />
+                                <h2 className="text-xl font-semibold">To Do's</h2>
+                            </div>
+                            
+                            {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
+                            <div className="flex space-x-2 items-center">
                                         <input
                                             type="text"
-                                            className="w-full px-3 py-2 border rounded-md"
-                                            value={filterState.title}
-                                            onChange={(e) => setFilterState({...filterState, title: e.target.value})}
-                                            placeholder="Nach Titel filtern..."
-                                        />
-                                    </div>
+                                    placeholder="Suchen..."
+                                    className="px-3 py-2 border rounded-md h-10 w-full sm:w-auto"
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                                 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                {/* Filter-Button */}
+                                <button
+                                    className={`p-2 rounded-md border ${getActiveFilterCount() > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
+                                    onClick={() => setIsFilterModalOpen(true)}
+                                    title="Filter"
+                                >
+                                    <FunnelIcon className="h-5 w-5" />
+                                    {getActiveFilterCount() > 0 && (
+                                        <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                                            {getActiveFilterCount()}
+                                        </span>
+                                    )}
+                                </button>
+                                
+                                {/* Status-Filter */}
                                         <select
-                                            className="w-full px-3 py-2 border rounded-md bg-white"
-                                            value={filterState.status}
-                                            onChange={(e) => setFilterState({...filterState, status: e.target.value as Task['status'] | 'all'})}
-                                        >
-                                            <option value="all">Alle</option>
+                                    className="px-2 py-2 border rounded-md h-10 text-sm"
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value as Task['status'] | 'all')}
+                                    title="Status-Filter"
+                                >
+                                    <option value="all">Alle Status</option>
                                             <option value="open">Offen</option>
                                             <option value="in_progress">In Bearbeitung</option>
                                             <option value="improval">Zu verbessern</option>
                                             <option value="quality_control">Qualitätskontrolle</option>
                                             <option value="done">Erledigt</option>
                                         </select>
-                                    </div>
                                 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Verantwortlich / Qualitätskontrolle</label>
-                                        <div className="space-y-2">
-                                            <div>
-                                                <span className="text-xs text-gray-500">Verantwortlich:</span>
-                                                <input
-                                                    type="text"
-                                                    className="w-full px-3 py-2 border rounded-md mt-1"
-                                                    value={filterState.responsible}
-                                                    onChange={(e) => setFilterState({...filterState, responsible: e.target.value})}
-                                                    placeholder="Nach Verantwortlichem filtern..."
+                                {/* Spalten-Konfiguration */}
+                                <TableColumnConfig 
+                                    columns={availableColumns}
+                                    visibleColumns={visibleColumnIds}
+                                    columnOrder={settings.columnOrder}
+                                    onToggleColumnVisibility={toggleColumnVisibility}
+                                    onMoveColumn={handleMoveColumn}
+                                    onClose={() => {}}
                                                 />
                                             </div>
-                                            <div>
-                                                <span className="text-xs text-gray-500">Qualitätskontrolle:</span>
-                                                <input
-                                                    type="text"
-                                                    className="w-full px-3 py-2 border rounded-md mt-1"
-                                                    value={filterState.qualityControl}
-                                                    onChange={(e) => setFilterState({...filterState, qualityControl: e.target.value})}
-                                                    placeholder="Nach Qualitätskontrolle filtern..."
-                                                />
                                             </div>
+                        
+                        {/* Tabelle */}
+                        <div className="mobile-table-container mt-4 -mx-1 px-0 w-auto tasks-table">
+                            <table className="min-w-full divide-y divide-gray-200">
+                                <thead className="bg-gray-50">
+                                    <tr>
+                                        {visibleColumnIds.map((columnId) => {
+                                            const column = availableColumns.find(col => col.id === columnId);
+                                            if (!column) return null;
+                                            
+                                            return (
+                                                <th
+                                                    key={columnId}
+                                                    scope="col"
+                                                    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100' : ''}`}
+                                                    draggable={true}
+                                                    onDragStart={() => handleDragStart(columnId)}
+                                                    onDragOver={(e) => handleDragOver(e, columnId)}
+                                                    onDrop={(e) => handleDrop(e, columnId)}
+                                                    onDragEnd={handleDragEnd}
+                                                >
+                                                    <div className="flex items-center">
+                                                        {window.innerWidth <= 640 ? column.shortLabel : column.label}
+                                                        {columnId !== 'actions' && (
+                                                            <button 
+                                                                onClick={() => handleSort(columnId as keyof Task)}
+                                                                className="ml-1 focus:outline-none"
+                                                            >
+                                                                <ArrowsUpDownIcon className="h-4 w-4 text-gray-400" />
+                                                            </button>
+                                                        )}
                                         </div>
+                                                </th>
+                                            );
+                                        })}
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
+                                                <div className="flex justify-center">
+                                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
                                     </div>
-                                
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Niederlassung</label>
-                                        <input
-                                            type="text"
-                                            className="w-full px-3 py-2 border rounded-md"
-                                            value={filterState.branch}
-                                            onChange={(e) => setFilterState({...filterState, branch: e.target.value})}
-                                            placeholder="Nach Niederlassung filtern..."
-                                        />
+                                            </td>
+                                        </tr>
+                                    ) : error ? (
+                                        <tr>
+                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-500">
+                                                {error}
+                                            </td>
+                                        </tr>
+                                    ) : filteredAndSortedTasks.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500">
+                                                Keine Tasks gefunden.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredAndSortedTasks.map((task) => (
+                                            <tr key={task.id}>
+                                                {visibleColumnIds.map((columnId) => {
+                                                    if (columnId === 'title') {
+                                                        return (
+                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2">
+                                                                <div className="flex items-start">
+                                                                    <div className="text-sm font-medium text-gray-900">
+                                                                        {task.title}
                                     </div>
-                                
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Fälligkeit von</label>
-                                            <input
-                                                type="date"
-                                                className="w-full px-3 py-2 border rounded-md"
-                                                value={filterState.dueDateFrom}
-                                                onChange={(e) => setFilterState({...filterState, dueDateFrom: e.target.value})}
-                                            />
                                         </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Fälligkeit bis</label>
-                                            <input
-                                                type="date"
-                                                className="w-full px-3 py-2 border rounded-md"
-                                                value={filterState.dueDateTo}
-                                                onChange={(e) => setFilterState({...filterState, dueDateTo: e.target.value})}
-                                            />
+                                                                {task.description && task.description.trim() !== '' && (
+                                                                    <div className="text-xs text-gray-500 mt-1 hidden sm:block">
+                                                                        {task.description.length > 100 
+                                                                            ? `${task.description.substring(0, 100)}...` 
+                                                                            : task.description}
                                         </div>
+                                                                )}
+                                                            </td>
+                                                        );
+                                                    }
+                                                    if (columnId === 'status') {
+                                                        return (
+                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap">
+                                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)} status-col`}>
+                                                                    {task.status === 'open' && 'Offen'}
+                                                                    {task.status === 'in_progress' && 'In Bearbeitung'}
+                                                                    {task.status === 'improval' && 'Zu verbessern'}
+                                                                    {task.status === 'quality_control' && 'Qualitätskontrolle'}
+                                                                    {task.status === 'done' && 'Erledigt'}
+                                                                </span>
+                                                            </td>
+                                                        );
+                                                    }
+                                                    if (columnId === 'responsibleAndQualityControl') {
+                                                        return (
+                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap">
+                                                                <div className="flex flex-col">
+                                                                    <div className="text-sm text-gray-900">
+                                                                        <span className="text-xs text-gray-500 hidden sm:inline">Verantwortlich:</span>
+                                                                        <span className="text-xs text-gray-500 inline sm:hidden">Ver.:</span><br />
+                                                                        {`${task.responsible.firstName} ${task.responsible.lastName}`}
                                     </div>
+                                                                    <div className="text-sm text-gray-900 mt-1">
+                                                                        <span className="text-xs text-gray-500 hidden sm:inline">Qualitätskontrolle:</span>
+                                                                        <span className="text-xs text-gray-500 inline sm:hidden">QK:</span><br />
+                                                                        {task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-'}
                                 </div>
-                                <div className="px-6 py-4 bg-gray-50 flex justify-between rounded-b-lg">
+                                                                </div>
+                                                            </td>
+                                                        );
+                                                    }
+                                                    if (columnId === 'branch') {
+                                                        return (
+                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
+                                                                {task.branch.name}
+                                                            </td>
+                                                        );
+                                                    }
+                                                    if (columnId === 'dueDate') {
+                                                        return (
+                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
+                                                                {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
+                                                            </td>
+                                                        );
+                                                    }
+                                                    if (columnId === 'actions') {
+                                                        return (
+                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm font-medium">
+                                                                <div className="flex space-x-2 action-buttons">
+                                                                    <div className="status-buttons">
+                                                                        {renderStatusButtons(task)}
+                                                                    </div>
+                                                                    {(hasPermission('tasks', 'write', 'table') || isResponsibleForTask(task)) && (
                                     <button
-                                        onClick={resetFilters}
-                                        className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
+                                                                            onClick={() => handleEditClick(task)}
+                                                                            className="text-blue-600 hover:text-blue-900 edit-button"
+                                                                            title="Task bearbeiten"
                                     >
-                                        Filter zurücksetzen
+                                                                            <PencilIcon className="h-5 w-5" />
                                     </button>
-                                    <div className="space-x-2">
-                                        <button
-                                            onClick={() => setIsFilterModalOpen(false)}
-                                            className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none"
-                                        >
-                                            Abbrechen
-                                        </button>
-                                        <button
-                                            onClick={applyFilters}
-                                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
-                                        >
-                                            Filter anwenden
-                                        </button>
+                                                                    )}
                                     </div>
+                                                            </td>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })}
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
                                 </div>
                             </div>
-                        </div>
-                    )}
                     
-                    <div className="mb-4">
+                    {/* Zeiterfassung - auf Mobilgeräten fixiert über dem Footermenü */}
+                    <div className="fixed bottom-16 left-0 right-0 bg-white border-t border-gray-300 z-10 shadow-lg">
+                        <WorktimeTracker />
+                        </div>
+                </div>
+
+                {/* Auf größeren Geräten bleibt die ursprüngliche Reihenfolge - Zeiterfassung oben, Tasks unten */}
+                <div className="hidden sm:block">
+                    {/* Zeiterfassung */}
+                    <div className="mb-8">
+                        <WorktimeTracker />
+                    </div>
+                    
+                    {/* Tasks - vollständiger Inhalt für Desktop-Ansicht */}
+                    <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full">
                         <div className="flex items-center justify-between">
                             {/* Linke Seite: "Neuer Task"-Button */}
                             <div className="flex items-center">
@@ -650,15 +740,28 @@ const Worktracker: React.FC = () => {
                                     onClick={() => setIsFilterModalOpen(true)}
                                     title="Filter"
                                 >
-                                    <div className="relative">
-                                        <FunnelIcon className="w-5 h-5" />
+                                    <FunnelIcon className="h-5 w-5" />
                                         {getActiveFilterCount() > 0 && (
-                                            <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                                        <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
                                                 {getActiveFilterCount()}
                                             </span>
                                         )}
-                                    </div>
                                 </button>
+                                
+                                {/* Status-Filter */}
+                                <select
+                                    className="px-2 py-2 border rounded-md h-10 text-sm"
+                                    value={statusFilter}
+                                    onChange={(e) => setStatusFilter(e.target.value as Task['status'] | 'all')}
+                                    title="Status-Filter"
+                                >
+                                    <option value="all">Alle Status</option>
+                                    <option value="open">Offen</option>
+                                    <option value="in_progress">In Bearbeitung</option>
+                                    <option value="improval">Zu verbessern</option>
+                                    <option value="quality_control">Qualitätskontrolle</option>
+                                    <option value="done">Erledigt</option>
+                                </select>
                                 
                                 {/* Spalten-Konfiguration */}
                                 <TableColumnConfig
@@ -667,44 +770,41 @@ const Worktracker: React.FC = () => {
                                     columnOrder={settings.columnOrder}
                                     onToggleColumnVisibility={toggleColumnVisibility}
                                     onMoveColumn={handleMoveColumn}
+                                    onClose={() => {}}
                                 />
-                            </div>
                         </div>
                     </div>
 
-                    {/* Task-Tabelle */}
-                    <div className="overflow-x-auto mt-4">
-                        <table className="min-w-full divide-y divide-gray-200">
+                        {/* Tabelle */}
+                        <div className="mt-4 overflow-x-auto">
+                            <table className="min-w-full divide-y divide-gray-200 tasks-table">
                             <thead className="bg-gray-50">
                                 <tr>
-                                    {visibleColumnIds.map(columnId => {
+                                        {visibleColumnIds.map((columnId) => {
                                         const column = availableColumns.find(col => col.id === columnId);
                                         if (!column) return null;
-                                        
-                                        // Für alle Spalten außer 'actions'
-                                        let sortKey: SortConfig['key'] | undefined;
-                                        if (columnId === 'title') sortKey = 'title';
-                                        if (columnId === 'status') sortKey = 'status';
-                                        if (columnId === 'responsibleAndQualityControl') sortKey = 'responsible.firstName'; // Sortierung für kombinierte Spalte
-                                        if (columnId === 'branch') sortKey = 'branch.name';
-                                        if (columnId === 'dueDate') sortKey = 'dueDate';
 
                                         return (
                                             <th 
                                                 key={columnId}
-                                                className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative
-                                                    ${sortKey ? 'cursor-pointer hover:bg-gray-100' : ''}
-                                                    ${columnId !== 'actions' ? 'cursor-move' : ''}`}
-                                                onClick={sortKey ? () => handleSort(sortKey) : undefined}
-                                                draggable={columnId !== 'actions'}
-                                                onDragStart={columnId !== 'actions' ? () => handleDragStart(columnId) : undefined}
-                                                onDragOver={columnId !== 'actions' ? (e) => handleDragOver(e, columnId) : undefined}
-                                                onDrop={columnId !== 'actions' ? (e) => handleDrop(e, columnId) : undefined}
-                                                onDragEnd={columnId !== 'actions' ? handleDragEnd : undefined}
-                                            >
-                                                <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
-                                                    {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />}
-                                                    {column.label} {sortKey && sortConfig.key === sortKey && (sortConfig.direction === 'asc' ? '↑' : '↓')}
+                                                    scope="col"
+                                                    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100' : ''}`}
+                                                    draggable={true}
+                                                    onDragStart={() => handleDragStart(columnId)}
+                                                    onDragOver={(e) => handleDragOver(e, columnId)}
+                                                    onDrop={(e) => handleDrop(e, columnId)}
+                                                    onDragEnd={handleDragEnd}
+                                                >
+                                                    <div className="flex items-center">
+                                                        {window.innerWidth <= 640 ? column.shortLabel : column.label}
+                                                        {columnId !== 'actions' && (
+                                                            <button 
+                                                                onClick={() => handleSort(columnId as keyof Task)}
+                                                                className="ml-1 focus:outline-none"
+                                                            >
+                                                                <ArrowsUpDownIcon className="h-4 w-4 text-gray-400" />
+                                                            </button>
+                                                        )}
                                                 </div>
                                             </th>
                                         );
@@ -712,40 +812,52 @@ const Worktracker: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {filteredAndSortedTasks.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={visibleColumnIds.length} className="px-3 py-4 text-center text-gray-500">
-                                            <div className="flex flex-col items-center justify-center gap-4">
-                                                <p>Keine Tasks vorhanden</p>
-                                                {hasPermission('tasks', 'write', 'table') && (
-                                                    <button
-                                                        onClick={() => setIsCreateModalOpen(true)}
-                                                        className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
-                                                        style={{ width: '30.19px', height: '30.19px', marginTop: '1px', marginBottom: '1px' }}
-                                                        title="Neuen Task erstellen"
-                                                        aria-label="Neuen Task erstellen"
-                                                    >
-                                                        <PlusIcon className="h-4 w-4" />
-                                                    </button>
-                                                )}
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
+                                                <div className="flex justify-center">
+                                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
                                             </div>
                                         </td>
                                     </tr>
-                                ) : (
-                                    filteredAndSortedTasks.map(task => (
-                                        <tr key={task.id} className="hover:bg-gray-50">
-                                            {visibleColumnIds.map(columnId => {
+                                    ) : error ? (
+                                        <tr>
+                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-500">
+                                                {error}
+                                            </td>
+                                        </tr>
+                                    ) : filteredAndSortedTasks.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500">
+                                                Keine Tasks gefunden.
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredAndSortedTasks.map((task) => (
+                                            <tr key={task.id}>
+                                                {visibleColumnIds.map((columnId) => {
                                                 if (columnId === 'title') {
                                                     return (
-                                                        <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
+                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2">
+                                                                <div className="flex items-start">
+                                                                    <div className="text-sm font-medium text-gray-900">
                                                             {task.title}
+                                                                    </div>
+                                                                </div>
+                                                                {task.description && task.description.trim() !== '' && (
+                                                                    <div className="text-xs text-gray-500 mt-1 hidden sm:block">
+                                                                        {task.description.length > 100 
+                                                                            ? `${task.description.substring(0, 100)}...` 
+                                                                            : task.description}
+                                                                    </div>
+                                                                )}
                                                         </td>
                                                     );
                                                 }
                                                 if (columnId === 'status') {
                                                     return (
                                                         <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap">
-                                                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)}`}>
+                                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)} status-col`}>
                                                                 {task.status === 'open' && 'Offen'}
                                                                 {task.status === 'in_progress' && 'In Bearbeitung'}
                                                                 {task.status === 'improval' && 'Zu verbessern'}
@@ -760,11 +872,13 @@ const Worktracker: React.FC = () => {
                                                         <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap">
                                                             <div className="flex flex-col">
                                                                 <div className="text-sm text-gray-900">
-                                                                    <span className="text-xs text-gray-500">Verantwortlich:</span><br />
+                                                                        <span className="text-xs text-gray-500 hidden sm:inline">Verantwortlich:</span>
+                                                                        <span className="text-xs text-gray-500 inline sm:hidden">Ver.:</span><br />
                                                                     {`${task.responsible.firstName} ${task.responsible.lastName}`}
                                                                 </div>
                                                                 <div className="text-sm text-gray-900 mt-1">
-                                                                    <span className="text-xs text-gray-500">Qualitätskontrolle:</span><br />
+                                                                        <span className="text-xs text-gray-500 hidden sm:inline">Qualitätskontrolle:</span>
+                                                                        <span className="text-xs text-gray-500 inline sm:hidden">QK:</span><br />
                                                                     {task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-'}
                                                                 </div>
                                                             </div>
@@ -788,12 +902,14 @@ const Worktracker: React.FC = () => {
                                                 if (columnId === 'actions') {
                                                     return (
                                                         <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                            <div className="flex space-x-2">
+                                                                <div className="flex space-x-2 action-buttons">
+                                                                    <div className="status-buttons">
                                                                 {renderStatusButtons(task)}
+                                                                    </div>
                                                                 {(hasPermission('tasks', 'write', 'table') || isResponsibleForTask(task)) && (
                                                                     <button
                                                                         onClick={() => handleEditClick(task)}
-                                                                        className="text-blue-600 hover:text-blue-900"
+                                                                            className="text-blue-600 hover:text-blue-900 edit-button"
                                                                         title="Task bearbeiten"
                                                                     >
                                                                         <PencilIcon className="h-5 w-5" />
@@ -812,6 +928,151 @@ const Worktracker: React.FC = () => {
                         </table>
                     </div>
                 </div>
+                </div>
+                
+                {/* Die Modals für beide Ansichten (mobil und desktop) */}
+                <CreateTaskModal 
+                    isOpen={isCreateModalOpen}
+                    onClose={() => setIsCreateModalOpen(false)}
+                    onTaskCreated={fetchTasks}
+                />
+                
+                {selectedTask && (
+                    <EditTaskModal
+                        isOpen={isEditModalOpen}
+                        onClose={() => {
+                            setIsEditModalOpen(false);
+                            setSelectedTask(null);
+                        }}
+                        onTaskUpdated={fetchTasks}
+                        task={selectedTask}
+                    />
+                )}
+                
+                {/* Filter Modal */}
+                {isFilterModalOpen && (
+                    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                        <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+                            <div className="px-6 py-4 border-b flex justify-between items-center">
+                                <h3 className="text-lg font-medium">Erweiterte Filter</h3>
+                                <button 
+                                    onClick={() => setIsFilterModalOpen(false)}
+                                    className="text-gray-400 hover:text-gray-500"
+                                >
+                                    <XMarkIcon className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-3 py-2 border rounded-md"
+                                        value={filterState.title}
+                                        onChange={(e) => setFilterState({...filterState, title: e.target.value})}
+                                        placeholder="Nach Titel filtern..."
+                                    />
+                                </div>
+                            
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                                    <select
+                                        className="w-full px-3 py-2 border rounded-md bg-white"
+                                        value={filterState.status}
+                                        onChange={(e) => setFilterState({...filterState, status: e.target.value as Task['status'] | 'all'})}
+                                    >
+                                        <option value="all">Alle</option>
+                                        <option value="open">Offen</option>
+                                        <option value="in_progress">In Bearbeitung</option>
+                                        <option value="improval">Zu verbessern</option>
+                                        <option value="quality_control">Qualitätskontrolle</option>
+                                        <option value="done">Erledigt</option>
+                                    </select>
+                                </div>
+                            
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Verantwortlich / Qualitätskontrolle</label>
+                                    <div className="space-y-2">
+                                        <div>
+                                            <span className="text-xs text-gray-500">Verantwortlich:</span>
+                                            <input
+                                                type="text"
+                                                className="w-full px-3 py-2 border rounded-md mt-1"
+                                                value={filterState.responsible}
+                                                onChange={(e) => setFilterState({...filterState, responsible: e.target.value})}
+                                                placeholder="Nach Verantwortlichem filtern..."
+                                            />
+                                        </div>
+                                        <div>
+                                            <span className="text-xs text-gray-500">Qualitätskontrolle:</span>
+                                            <input
+                                                type="text"
+                                                className="w-full px-3 py-2 border rounded-md mt-1"
+                                                value={filterState.qualityControl}
+                                                onChange={(e) => setFilterState({...filterState, qualityControl: e.target.value})}
+                                                placeholder="Nach Qualitätskontrolle filtern..."
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Niederlassung</label>
+                                    <input
+                                        type="text"
+                                        className="w-full px-3 py-2 border rounded-md"
+                                        value={filterState.branch}
+                                        onChange={(e) => setFilterState({...filterState, branch: e.target.value})}
+                                        placeholder="Nach Niederlassung filtern..."
+                                    />
+                                </div>
+                            
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Fälligkeit von</label>
+                                        <input
+                                            type="date"
+                                            className="w-full px-3 py-2 border rounded-md"
+                                            value={filterState.dueDateFrom}
+                                            onChange={(e) => setFilterState({...filterState, dueDateFrom: e.target.value})}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">Fälligkeit bis</label>
+                                        <input
+                                            type="date"
+                                            className="w-full px-3 py-2 border rounded-md"
+                                            value={filterState.dueDateTo}
+                                            onChange={(e) => setFilterState({...filterState, dueDateTo: e.target.value})}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="px-6 py-4 bg-gray-50 flex justify-between rounded-b-lg">
+                                <button
+                                    onClick={resetFilters}
+                                    className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
+                                >
+                                    Filter zurücksetzen
+                                </button>
+                                <div className="space-x-2">
+                                    <button
+                                        onClick={() => setIsFilterModalOpen(false)}
+                                        className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none"
+                                    >
+                                        Abbrechen
+                                    </button>
+                                    <button
+                                        onClick={applyFilters}
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+                                    >
+                                        Filter anwenden
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

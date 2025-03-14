@@ -45,7 +45,418 @@ code {
 }
 
 /* Mobile-Anpassungen für alle Box-Komponenten */
+
+/* NEUE CSS-REGELN FÜR MOBILE TABELLENOPTIMIERUNG */
+
+/* Grundlegende Tabellenoptimierung für mobile Geräte */
 @media (max-width: 640px) {
+  /* Worktracker Seite - Box-Reihenfolge umkehren (nur mobile) */
+  /* Container für Worktracker-Seite */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: calc(100vh - 64px) !important; /* Höhe abzüglich Header */
+    padding-bottom: 0 !important; /* Kein Padding unten, da die Zeit-Box fixiert ist */
+  }
+  
+  /* Selektor für die Tasks-Box (hat p-6 und w-full Klassen) */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.p-6.w-full {
+    order: 1 !important;
+    margin-bottom: 150px !important; /* Platz für die fixierte Zeiterfassung-Box */
+  }
+  
+  /* Zeiterfassungs-Box (WorktimeTracker/WorktimeList) identifizieren und fixieren */
+  /* Selektor für die Zeiterfassungs-Box (MB-8 Klasse) */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 {
+    order: 2 !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 10 !important;
+    background-color: white !important;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1) !important;
+    margin-top: auto !important;
+    margin-bottom: 0 !important;
+    padding-bottom: 0.5rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    width: 100% !important;
+    max-height: 130px !important; /* Begrenze die Höhe, damit sie nicht zu viel Platz einnimmt */
+    overflow-y: auto !important;
+  }
+  
+  /* WorktimeList/WorktimeTracker speziell stylen */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 .bg-white.rounded-lg.border {
+    border-bottom: none !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    max-height: 100% !important;
+    margin-bottom: 0 !important;
+  }
+
+  /* Optimierungen für Box-Titel und Such-/Filterbereich - ALLGEMEINE SELEKTOREN */
+  div[class*="border"] > div.flex.items-center.mb-4.justify-between,
+  div[class*="bg-white"] > div.flex.items-center.mb-4.justify-between,
+  div.p-4.border-b,
+  div.p-4 > div.flex.items-center.justify-between.mb-4 {
+    gap: 0.25rem !important;
+    margin-bottom: 0.5rem !important;
+    padding: 0 0.25rem !important;
+  }
+  
+  /* Kleinere Boxentitel für ALLE Komponenten */
+  h2.text-xl,
+  h2.text-lg,
+  .text-xl,
+  .text-lg {
+    font-size: 1rem !important;
+    line-height: 1.25rem !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Kleinere Icons neben den Titeln - ALLGEMEINER SELEKTOR */
+  .flex.items-center svg.h-6,
+  .flex.items-center svg.w-6,
+  div[class*="flex"] svg[class*="h-6"],
+  div[class*="flex"] svg[class*="w-6"] {
+    height: 1.1rem !important;
+    width: 1.1rem !important;
+    margin-right: 0.25rem !important;
+  }
+  
+  /* Kompaktere Suchleiste - VERBESSERTE SELEKTOREN */
+  input[type="text"][placeholder*="Such"],
+  input[placeholder*="Such"],
+  input[type="text"].w-full,
+  input[type="text"].border {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+    height: 1.9rem !important;
+    max-width: 120px !important;
+  }
+  
+  /* Kompaktere Filter- und Spaltenauswahl-Buttons - ALLGEMEINER SELEKTOR */
+  button.rounded-md.border,
+  button.p-2 {
+    padding: 0.25rem !important;
+  }
+  
+  /* Verkleinerte Icons in den Filterbuttons */
+  button.rounded-md svg,
+  button.p-2 svg {
+    height: 0.9rem !important;
+    width: 0.9rem !important;
+  }
+
+  /* Kompaktere Abstände in der rechten Gruppe (Suchfeld, Filter, Spalten) */
+  .flex.space-x-2.items-center,
+  div[class*="flex"][class*="space-x"] {
+    gap: 0.25rem !important;
+    margin-left: auto !important;
+    --tw-space-x-reverse: 0 !important;
+    margin-right: calc(0.25rem * var(--tw-space-x-reverse)) !important;
+    margin-left: calc(0.25rem * calc(1 - var(--tw-space-x-reverse))) !important;
+  }
+
+  /* Reduzierter Abstand für den "Neuer Request/Task"-Button */
+  div.flex.items-center:first-child button {
+    margin-left: -0.25rem !important;
+  }
+
+  /* Zentrieren des Titels im verfügbaren Platz */
+  div > div.flex.items-center:nth-child(2) {
+    flex-shrink: 1 !important;
+    min-width: 0 !important;
+    justify-content: center !important;
+  }
+
+  /* Spezifische Anpassungen für WorktimeList und PayrollComponent */
+  .bg-white.rounded-lg.border h2,
+  .bg-white.rounded-lg.border.border-gray-300 h2,
+  div.p-4.border-b h2,
+  .p-4 h2,
+  .p-6 h2,
+  h2.text-xl.font-semibold,
+  h2.text-lg.font-semibold,
+  h2.text-lg.font-medium,
+  h3.text-lg.font-medium {
+    font-size: 1rem !important;
+    line-height: 1.25rem !important;
+    white-space: nowrap !important;
+  }
+  
+  /* Zusätzliche Selektoren für Icons in allen Komponenten */
+  svg.h-6,
+  svg.w-6,
+  svg.h-5,
+  svg.w-5 {
+    height: 1.1rem !important;
+    width: 1.1rem !important;
+  }
+  
+  /* Datumseingabefelder kompakter machen */
+  input[type="date"] {
+    font-size: 0.75rem !important;
+    padding: 0.25rem 0.5rem !important;
+    height: 1.9rem !important;
+  }
+  
+  /* Kompaktere Abstände in den Flex-Container-Headern */
+  .p-4.border-b .flex.items-center.justify-between,
+  .p-4 .flex.items-center.justify-between,
+  .p-6 .flex.items-center.justify-between {
+    margin-bottom: 0.5rem !important;
+    gap: 0.25rem !important;
+  }
+
+  /* Tabellenlayout fixieren für bessere Spaltenbreiten-Kontrolle */
+  table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  
+  /* Verkleinerte Zellabstände */
+  table th, 
+  table td {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  
+  /* Bessere Abstandsbalance - mehr Abstand links, weniger rechts */
+  table th:first-child,
+  table td:first-child {
+    padding-left: 0.75rem !important;
+  }
+  
+  table th:last-child,
+  table td:last-child {
+    padding-right: 0.4rem !important;
+  }
+  
+  /* Kleinere Schrift in Tabellen mit Zeilenumbruch für Spaltentitel */
+  table th {
+    font-size: 0.65rem !important;
+    line-height: 1.1 !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    height: auto !important;
+    vertical-align: bottom !important;
+  }
+
+  /* Entferne überflüssige Leerzeichen im Tabellenheader */
+  table th .flex.items-center {
+    gap: 0.1rem !important;
+  }
+  
+  table td {
+    font-size: 0.75rem !important;
+  }
+  
+  /* Optimierte Spaltenbreiten für mobile Ansicht */
+  /* Die Tabellen Requests, Tasks, UserWorktime und PayrollComponent */
+  .requests-table th, 
+  .tasks-table th,
+  .worktime-table th,
+  .payroll-table th {
+    white-space: normal !important;
+    padding-top: 0.5rem !important;
+    padding-bottom: 0.5rem !important;
+  }
+
+  /* Titelspalte fixiert auf ca. 20% mit Textumbruch */
+  .requests-table th:first-child,
+  .tasks-table th:first-child,
+  .requests-table td:first-child,
+  .tasks-table td:first-child {
+    width: 20% !important;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Text in Titelspalte umbrechen */
+  .requests-table td:first-child .text-sm,
+  .tasks-table td:first-child .text-sm,
+  .requests-table td:first-child,
+  .tasks-table td:first-child {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+  
+  /* Status-Spalte und Aktionen-Spalten schmaler machen */
+  .requests-table th:has(.status-col),
+  .tasks-table th:has(.status-col),
+  .requests-table td:has(.status-col),
+  .tasks-table td:has(.status-col) {
+    width: 60px !important;
+  }
+  
+  .requests-table th:last-child,
+  .tasks-table th:last-child,
+  .worktime-table th:last-child,
+  .payroll-table th:last-child,
+  .requests-table td:last-child,
+  .tasks-table td:last-child,
+  .worktime-table td:last-child,
+  .payroll-table td:last-child {
+    width: 70px !important;
+  }
+  
+  /* Button-Gruppen und Aktionen kompakter machen */
+  .action-buttons {
+    display: flex;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Status-Buttons in einer Zeile - allgemeine Regel für alle Tabellen */
+  .status-buttons {
+    display: flex;
+    flex-direction: row !important;
+    gap: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+    align-self: flex-start !important;
+    justify-content: flex-start !important; /* Für allgemeine Fälle immer links ausgerichtet */
+    position: relative !important;
+    min-height: 28px !important; /* Mindesthöhe sicherstellen */
+  }
+  
+  /* Spezielle Ausrichtung für Requests-Tabelle */
+  .requests-table .status-buttons {
+    width: auto !important; /* Requests haben variable Breite */
+    justify-content: flex-start !important; /* Links ausgerichtet */
+  }
+  
+  /* Spezielles Styling für Tasks-Tabelle */
+  .tasks-table .status-buttons {
+    width: 61px !important; /* Feste Breite für 2 Buttons */
+    margin-left: -5px !important; /* Verschiebung nach links */
+    justify-content: space-between !important; /* Verteilt auf die Breite */
+  }
+  
+  /* Allgemeine Positionierung für Buttons im Container */
+  .status-buttons button {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* Position einzelner Status-Buttons nur in Tasks-Tabelle */
+  .tasks-table .status-buttons button:only-child {
+    position: absolute !important;
+  }
+
+  /* Position für linken Button in Tasks, wenn nur einer da ist */
+  .tasks-table .status-buttons button:only-child[title*="Zurück"] {
+    left: -5px !important;
+  }
+
+  /* Position für rechten Button in Tasks, wenn nur einer da ist */
+  .tasks-table .status-buttons button:only-child:not([title*="Zurück"]) {
+    right: 5px !important;
+  }
+
+  /* Edit-Button ausrichten - allgemeine Regel */
+  .edit-button {
+    align-self: flex-start !important;
+    margin-left: 0 !important;
+  }
+  
+  /* Spezielle Ausrichtung für Edit-Button nur in Tasks-Tabelle */
+  .tasks-table .edit-button {
+    margin-left: 18px !important; /* Zentriert in Bezug auf Status-Buttons */
+  }
+  
+  /* Spezielle Ausrichtung für Edit-Button in Requests-Tabelle */
+  .requests-table .edit-button {
+    margin-left: 0 !important; /* Links ausgerichtet */
+  }
+  
+  /* Badges und Statusindikatoren verkleinern */
+  .inline-flex.text-xs {
+    padding: 0.1rem 0.3rem !important;
+    font-size: 0.65rem !important;
+  }
+  
+  /* Kleinere Icons */
+  .h-5.w-5 {
+    height: 1rem !important;
+    width: 1rem !important;
+  }
+
+  /* Sortierpfeile in Spaltenüberschriften verkleinern und besser positionieren */
+  table th .flex.items-center svg {
+    height: 0.6rem !important;
+    width: 0.6rem !important;
+    margin-right: 0.1rem !important;
+  }
+
+  /* Volle Bildschirmbreite für Container */
+  .min-h-screen > div.container,
+  .min-h-screen > div.max-w-7xl,
+  .min-h-screen > main.max-w-7xl {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Box bis zum Bildschirmrand */
+  .bg-white.rounded-lg.border.border-gray-300,
+  .bg-white.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  [class*="bg-white"][class*="rounded-lg"][class*="border"][class*="border-gray-300"] {
+    border-radius: 0 !important;
+    width: 100vw !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    max-width: 100vw !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  /* Tabellenbehälter ohne horizontalen Abstand - ausgewogene Randbreite */
+  .overflow-x-auto {
+    margin-left: -0.25rem !important;
+    margin-right: -0.25rem !important;
+    width: calc(100% + 0.5rem) !important;
+  }
+
+  /* Spezifische Optimierung für mobile Tabellen-Container mit ausgeglichenen Rändern */
+  .mobile-table-container {
+    margin-left: -0.25rem !important;
+    margin-right: -0.25rem !important;
+    width: calc(100% + 0.5rem) !important;
+    padding: 0 !important;
+    overflow-x: auto !important;
+  }
+
+  /* Alle Button-Container und Icons ausrichten */
+  .action-buttons,
+  .status-buttons,
+  .edit-button {
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+  
+  /* Zusätzliche Ausrichtung für Buttons in Actions-Spalte */
+  .requests-table td:last-child .action-buttons,
+  .tasks-table td:last-child .action-buttons,
+  .worktime-table td:last-child .action-buttons,
+  .payroll-table td:last-child .action-buttons {
+    align-items: flex-start !important;
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+  
+  /* Status-Buttons-Container immer gleich breit wie Edit-Button machen */
+  .status-buttons {
+    min-width: 1rem !important;
+    justify-content: flex-start !important;
+  }
+  
   /* Alle Boxen mit typischen "box"-Klassen werden angepasst */
   .bg-white.rounded-lg.border.border-gray-300,
   .bg-white.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
@@ -58,4 +469,73 @@ code {
     max-width: 100vw !important;
     box-sizing: border-box !important;
   }
+}
+
+/* Verkürzen von langen Texten in Tabellen */
+.mobile-compact .truncate-text {
+  max-width: 120px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+/* Tooltip für abgeschnittene Texte */
+.mobile-compact .truncate-text:hover::after {
+  content: attr(title);
+  position: absolute;
+  z-index: 100;
+  background-color: #1F2937;
+  color: white;
+  padding: 0.5rem;
+  border-radius: 0.25rem;
+  max-width: 250px;
+  white-space: normal;
+  margin-top: -2.5rem;
+  margin-left: -0.5rem;
+  font-size: 0.75rem;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+/* Größere Touch-Ziele für mobile Geräte */
+.mobile-compact .action-button {
+  min-width: 2rem;
+  min-height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+/* Card-Layout für Rollen (mobile Ansicht) */
+.role-card {
+  @apply bg-white rounded-lg shadow border border-gray-200 p-4 mb-4;
+}
+
+.role-card-header {
+  @apply flex justify-between items-start mb-2;
+}
+
+.role-card-title {
+  @apply text-lg font-medium text-gray-900;
+}
+
+.role-card-description {
+  @apply text-sm text-gray-600 mb-3;
+}
+
+.role-card-permissions {
+  @apply mt-2;
+}
+
+.role-card-permissions-title {
+  @apply text-sm font-medium text-gray-900 mb-1;
+}
+
+.role-card-permissions-list {
+  @apply flex flex-wrap gap-1;
+}
+
+.role-card-permission-tag {
+  @apply text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded;
 }

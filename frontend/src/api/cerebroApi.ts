@@ -19,6 +19,7 @@ export interface CerebroArticle {
   mediaCount: number;
   linksCount: number;
   position: number | null;
+  githubPath: string | null;  // Pfad zur GitHub Markdown-Datei
 }
 
 export interface CerebroArticleDetail extends CerebroArticle {

@@ -416,13 +416,6 @@ const WorktimeTracker: React.FC = () => {
                     Zeiterfassung
                 </h2>
                 <div className="flex items-center space-x-2">
-                    <button 
-                        onClick={handleRefreshStatus} 
-                        className="flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-600 p-2 rounded-md transition-colors duration-200"
-                        title="Status aktualisieren"
-                    >
-                        <ArrowPathIcon className="h-5 w-5" />
-                    </button>
                     <select
                         className="border rounded-md px-3 py-2"
                         value={selectedBranch || ''}

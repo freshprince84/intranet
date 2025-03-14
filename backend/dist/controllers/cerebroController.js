@@ -234,16 +234,37 @@ const getArticlesStructure = (req, res) => __awaiter(void 0, void 0, void 0, fun
                 id: true,
                 title: true,
                 slug: true,
-                parentId: true
+                parentId: true,
+                position: true
             },
-            orderBy: {
-                title: 'asc'
-            }
+            orderBy: [
+                {
+                    position: 'asc'
+                },
+                {
+                    title: 'asc'
+                }
+            ]
         });
         // Funktion zum Erstellen der Baumstruktur
         const buildTree = (articles, parentId = null) => {
             return articles
                 .filter(article => article.parentId === parentId)
+                .sort((a, b) => {
+                // Sortiere nach Position, falls beide Artikel eine Position haben
+                if (a.position !== null && b.position !== null) {
+                    return a.position - b.position;
+                }
+                // Artikel mit Position kommen vor Artikeln ohne Position
+                if (a.position !== null && b.position === null) {
+                    return -1;
+                }
+                if (a.position === null && b.position !== null) {
+                    return 1;
+                }
+                // Wenn beide keine Position haben, sortiere nach Titel
+                return a.title.localeCompare(b.title);
+            })
                 .map(article => ({
                 id: article.id,
                 title: article.title,

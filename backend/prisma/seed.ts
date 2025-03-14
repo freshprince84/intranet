@@ -259,16 +259,18 @@ async function main() {
         where: { slug: mdFile.slug },
         update: {
           title: mdFile.title,
-          position: mdFile.position
+          position: mdFile.position,
+          githubPath: mdFile.path
         },
         create: {
           title: mdFile.title,
           slug: mdFile.slug,
           content: `# ${mdFile.title}\n\nDiese Datei wird automatisch aus dem GitHub Repository geladen.`,
-          parentId: markdownFolder.id,  // Setze die Markdown-Datei als Kind des Ordners
+          parentId: markdownFolder.id,
           createdById: adminUser.id,
           isPublished: true,
-          position: mdFile.position
+          position: mdFile.position,
+          githubPath: mdFile.path
         }
       });
       

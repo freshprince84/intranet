@@ -110,6 +110,21 @@ const GitHubFileView: React.FC = () => {
         // Überprüfe, ob es einen Datenbankartikel mit diesem Slug gibt
         const article = await cerebroApi.articles.getArticleBySlug(slug);
         
+        // Prüfen, ob es ein GitHub Markdown-Artikel ist
+        // Dies wird in ArticleViewWithRouter bereits geprüft, aber wir prüfen es hier zur Sicherheit nochmal
+        const markdownFolder = await cerebroApi.articles.getArticleBySlug('markdown-folder');
+        if (markdownFolder && article.parentId === markdownFolder.id) {
+          // Hat der Artikel einen githubPath?
+          if (article.githubPath) {
+            setMdFile({
+              path: article.githubPath,
+              title: article.title
+            });
+            setLoading(false);
+            return;
+          }
+        }
+        
         // Es handelt sich um einen normalen Artikel, also kein GitHub-Datei-Pfad notwendig
         // Der Rest der Verarbeitung wird in der ArticleView-Komponente fortgesetzt
         
@@ -118,6 +133,7 @@ const GitHubFileView: React.FC = () => {
         // Falls der Artikel nicht gefunden wurde, versuche es als Markdown aus GitHub zu laden
         console.log("Artikel nicht in der Datenbank gefunden, versuche als Markdown-Datei zu laden");
         
+        // Fallback für den Fall, dass der Artikel nicht in der DB ist oder keinen githubPath hat
         // Lookup-Map für bekannte Markdown-Dateien und ihre richtigen Pfade
         const knownMdFiles: Record<string, {path: string, title: string}> = {
           'readme': { path: 'README.md', title: 'Readme - Überblick' },
@@ -134,6 +150,9 @@ const GitHubFileView: React.FC = () => {
           'role-switch': { path: 'ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität' },
           'changelog': { path: 'CHANGELOG.md', title: 'Änderungshistorie' }
         };
+        
+        // HINWEIS: Diese Map dient nur als Fallback und sollte nach einem kompletten Datenbank-Update
+        // mit githubPath-Werten für alle Artikel entfernt werden können
         
         // Für den Fall, dass es ein Custom-Artikel ist, mit korrektem Case im Namen
         if (knownMdFiles[slug]) {
@@ -230,15 +249,23 @@ const ArticleViewWithRouter: React.FC = () => {
         // Prüfe, ob der Artikel ein Markdown-Artikel ist
         try {
           const markdownFolder = await cerebroApi.articles.getArticleBySlug('markdown-folder');
-          if (markdownFolder && article.parentId === markdownFolder.id) {
+          
+          // Ein Artikel ist ein Markdown-Artikel, wenn:
+          // 1. Er ein Kind des markdown-folders ist ODER
+          // 2. Er einen githubPath hat
+          if ((markdownFolder && article.parentId === markdownFolder.id) || article.githubPath) {
             setIsMarkdownFile(true);
           } else {
             setIsMarkdownFile(false);
           }
         } catch (err) {
-          // Wenn der Markdown-Ordner nicht gefunden wird, ist es kein Markdown
+          // Wenn der Markdown-Ordner nicht gefunden wird, prüfe nur auf githubPath
           console.warn('Markdown-Ordner nicht gefunden:', err);
-          setIsMarkdownFile(false);
+          if (article.githubPath) {
+            setIsMarkdownFile(true);
+          } else {
+            setIsMarkdownFile(false);
+          }
         }
         
         setLoading(false);
