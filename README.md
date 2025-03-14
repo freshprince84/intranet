@@ -12,22 +12,32 @@ Eine TypeScript-basierte Webapplikation zur Verwaltung von Arbeitszeiten, Tasks 
 
 Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 
-### Einrichtung & Installation
-- [PROJECT_SETUP.md](PROJECT_SETUP.md) - Vollständige Einrichtung des Projekts
-- [BACKEND_SETUP.md](BACKEND_SETUP.md) - Details zur Backend-Konfiguration
-- [FRONTEND_SETUP.md](FRONTEND_SETUP.md) - Details zur Frontend-Konfiguration
-
-### Datenbank & API
-- [DB_SCHEMA.md](DB_SCHEMA.md) - Vollständiges Datenbankschema und Strukturen
-- [API_INTEGRATION.md](API_INTEGRATION.md) - API-Endpunkte und Integration
-
-### Funktionen & Module
-- [ROLE_SWITCH.md](ROLE_SWITCH.md) - Rollenbasierte Zugriffskontrolle
-- [CEREBRO_WIKI.md](CEREBRO_WIKI.md) - Cerebro Wiki-Modul
-- [PAYROLL_INTEGRATION_CH_CO.md](PAYROLL_INTEGRATION_CH_CO.md) - Gehaltsabrechnungs-Integration für CH/CO
-
-### Änderungen & Updates
+### Einstieg und Übersicht
+- [README.md](README.md) - Diese Übersicht
+- [DOKUMENTATIONSSTANDARDS.md](DOKUMENTATIONSSTANDARDS.md) - Standards für die Dokumentation
 - [CHANGELOG.md](CHANGELOG.md) - Änderungsverlauf des Projekts
+
+### Nutzerorientierte Dokumentation
+- [BENUTZERHANDBUCH.md](BENUTZERHANDBUCH.md) - Anleitung für Endbenutzer
+- [ADMINISTRATORHANDBUCH.md](ADMINISTRATORHANDBUCH.md) - Anleitung für Administratoren
+
+### Entwicklungsdokumentation
+- [ENTWICKLUNGSUMGEBUNG.md](ENTWICKLUNGSUMGEBUNG.md) - Setup der Entwicklungsumgebung
+- [ARCHITEKTUR.md](ARCHITEKTUR.md) - Systemarchitektur und Technologie-Stack
+- [CODING_STANDARDS.md](CODING_STANDARDS.md) - Programmierrichtlinien und Best Practices
+- [DESIGN_STANDARDS.md](DESIGN_STANDARDS.md) - UI/UX-Designrichtlinien und Komponenten
+
+### Technische Spezifikationen
+- [API_REFERENZ.md](API_REFERENZ.md) - Vollständige API-Dokumentation
+- [DATENBANKSCHEMA.md](DATENBANKSCHEMA.md) - Datenbankschema und -struktur
+- [BERECHTIGUNGSSYSTEM.md](BERECHTIGUNGSSYSTEM.md) - Rollen und Berechtigungskonzept
+- [DEPLOYMENT.md](DEPLOYMENT.md) - Server-Setup und Deployment-Prozess
+
+### Modulspezifische Dokumentation
+- [MODUL_ZEITERFASSUNG.md](MODUL_ZEITERFASSUNG.md) - Zeiterfassungssystem
+- [MODUL_CEREBRO.md](MODUL_CEREBRO.md) - Cerebro Wiki-System
+- [MODUL_TEAMKONTROLLE.md](MODUL_TEAMKONTROLLE.md) - Team-Worktime-Control
+- [MODUL_ABRECHNUNG.md](MODUL_ABRECHNUNG.md) - Lohnabrechnungsintegration
 
 ## Hauptfunktionen
 
@@ -38,15 +48,25 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - **Task-Management**: Workflow-System mit Qualitätskontrolle
 - **Notification-System**: Echtzeit-Benachrichtigungen für Systemereignisse
 - **Dark Mode**: System- oder benutzerdefiniert
+- **Cerebro Wiki**: Internes Wissensmanagementsystem
+- **Team-Worktime-Control**: Verwaltung von Teammitglieder-Arbeitszeiten
+- **Lohnabrechnung**: Integration für Schweiz und Kolumbien
 
 ## Schnellstart
 
-1. Folge den Anweisungen in [PROJECT_SETUP.md](PROJECT_SETUP.md)
+1. Klone das Repository:
+   ```bash
+   git clone https://github.com/freshprince84/intranet.git
+   cd intranet
+   ```
+
 2. Erstelle eine `.env`-Datei im `backend/`-Ordner (siehe `.env.example`)
+
 3. Installiere alle Abhängigkeiten:
    ```bash
    npm run install-all
    ```
+
 4. Starte die Entwicklungsumgebung:
    ```bash
    npm run dev
@@ -65,3 +85,16 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - Server-Neustart nur nach Absprache
 - Prisma-Schema-Änderungen erfordern Migration
 - API-Konfiguration in `frontend/src/config/api.ts`
+- Zeitzonenbehandlung ist kritisch für die Zeiterfassung (siehe [MODUL_ZEITERFASSUNG.md](MODUL_ZEITERFASSUNG.md))
+
+## Beitragen
+
+1. Lies die [CODING_STANDARDS.md](CODING_STANDARDS.md) und [DESIGN_STANDARDS.md](DESIGN_STANDARDS.md)
+2. Erstelle einen Feature-Branch (`git checkout -b feature/amazing-feature`)
+3. Committe deine Änderungen (`git commit -m 'Add some amazing feature'`)
+4. Pushe den Branch (`git push origin feature/amazing-feature`)
+5. Öffne einen Pull Request
+
+## Lizenz
+
+Dieses Projekt ist urheberrechtlich geschützt. Alle Rechte vorbehalten.

@@ -239,14 +239,16 @@ async function main() {
     // Liste der wichtigen Markdown-Dateien
     const IMPORTANT_MD_FILES = [
       { path: 'README.md', title: 'Readme - Überblick', slug: 'readme' },
+      { path: 'DESIGN_STANDARDS.md', title: 'Design-Standards', slug: 'design-standards' },
+      { path: 'MODUL_ZEITERFASSUNG.md', title: 'Modul: Zeiterfassung', slug: 'modul-zeiterfassung' },
+      { path: 'CODING_STANDARDS.md', title: 'Coding-Standards', slug: 'coding-standards' },
+      { path: 'DOKUMENTATIONSSTANDARDS.md', title: 'Dokumentationsstandards', slug: 'dokumentationsstandards' },
+      { path: 'CHANGELOG.md', title: 'Änderungshistorie', slug: 'changelog' },
+      { path: 'CEREBRO_WIKI.md', title: 'Cerebro Wiki-System', slug: 'cerebro-wiki' },
       { path: 'PROJECT_SETUP.md', title: 'Projekt-Einrichtung', slug: 'project-setup' },
       { path: 'DB_SCHEMA.md', title: 'Datenbankschema', slug: 'db-schema' },
-      { path: 'BACKEND_SETUP.md', title: 'Backend-Setup', slug: 'backend-setup' },
-      { path: 'FRONTEND_SETUP.md', title: 'Frontend-Setup', slug: 'frontend-setup' },
-      { path: 'CEREBRO_WIKI.md', title: 'Cerebro Wiki-System', slug: 'cerebro-wiki' },
       { path: 'API_INTEGRATION.md', title: 'API-Integration', slug: 'api-integration' },
-      { path: 'ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität', slug: 'role-switch' },
-      { path: 'CHANGELOG.md', title: 'Änderungshistorie', slug: 'changelog' }
+      { path: 'ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität', slug: 'role-switch' }
     ];
     
     // Erstelle für jede Markdown-Datei einen Eintrag in der Datenbank
