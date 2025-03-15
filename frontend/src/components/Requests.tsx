@@ -527,7 +527,7 @@ const Requests: React.FC = () => {
             <input
               type="text"
               placeholder="Suchen..."
-              className="px-3 py-2 border rounded-md h-10 w-full sm:w-auto"
+              className="px-3 py-2 border border-gray-300 rounded-md h-10 w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />

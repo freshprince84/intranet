@@ -5,6 +5,7 @@ import axiosInstance from '../config/axios.ts';
 import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { useWorktime } from '../contexts/WorktimeContext.tsx';
+import { useBranch } from '../contexts/BranchContext.tsx';
 import { WorktimeModal } from './WorktimeModal.tsx';
 
 // Wir entfernen die benutzerdefinierten API-URL-Definitionen und verwenden die direkte URL,
@@ -39,14 +40,13 @@ const WorktimeTracker: React.FC = () => {
     const [isTracking, setIsTracking] = useState(false);
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [elapsedTime, setElapsedTime] = useState<string>('00:00:00');
-    const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
-    const [branches, setBranches] = useState<Branch[]>([]);
     const [activeWorktime, setActiveWorktime] = useState<WorkTime | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [showWorkTimeModal, setShowWorkTimeModal] = useState(false);
     const [statusError, setStatusError] = useState<string | null>(null);
     const { user } = useAuth();
     const { updateTrackingStatus } = useWorktime();
+    const { branches, selectedBranch, setSelectedBranch } = useBranch();
 
     // Funktion zum Abrufen des aktiven Worktime-Status
     const checkActiveWorktime = useCallback(async () => {
@@ -176,33 +176,6 @@ const WorktimeTracker: React.FC = () => {
             }
         };
     }, [isTracking, startTime]);
-
-    // Lade Niederlassungen
-    useEffect(() => {
-        const fetchBranches = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    console.error('Kein Authentifizierungstoken gefunden');
-                    return;
-                }
-                
-                // Verwende axiosInstance statt direktem axios
-                const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
-                const data = response.data;
-                setBranches(data);
-                
-                // Setze die erste Niederlassung als Standard, falls keine ausgewählt und keine aktive Zeiterfassung besteht
-                if (data.length > 0 && !selectedBranch && !activeWorktime) {
-                    setSelectedBranch(data[0].id);
-                }
-            } catch (error) {
-                console.error('Fehler beim Laden der Niederlassungen:', error);
-            }
-        };
-
-        fetchBranches();
-    }, [activeWorktime, selectedBranch]);
 
     const handleToggleTracking = async () => {
         if (isTracking) {
@@ -415,21 +388,6 @@ const WorktimeTracker: React.FC = () => {
                     <ClockIcon className="h-6 w-6 mr-2" />
                     Zeiterfassung
                 </h2>
-                <div className="flex items-center space-x-2">
-                    <select
-                        className="border rounded-md px-3 py-2"
-                        value={selectedBranch || ''}
-                        onChange={(e) => setSelectedBranch(Number(e.target.value))}
-                        disabled={isTracking}
-                    >
-                        <option value="">Niederlassung wählen</option>
-                        {branches.map((branch) => (
-                            <option key={branch.id} value={branch.id}>
-                                {branch.name}
-                            </option>
-                        ))}
-                    </select>
-                </div>
             </div>
             
             {statusError && (
@@ -447,7 +405,7 @@ const WorktimeTracker: React.FC = () => {
             )}
             
             {/* Ein-/Ausschalter für die Zeiterfassung - verkleinert */}
-            <div className="flex items-start justify-center space-x-8">
+            <div className="flex items-start justify-center mb-4">
                 <div className="flex flex-col items-center">
                     <label className="relative inline-flex items-center cursor-pointer">
                         <input 
@@ -482,7 +440,7 @@ const WorktimeTracker: React.FC = () => {
                 {/* Icon-Button zum Öffnen des Modals */}
                 <button 
                     onClick={openWorkTimeModal}
-                    className="flex items-center justify-center bg-blue-100 hover:bg-blue-200 text-blue-600 p-2 rounded-full transition-colors duration-200 mt-1"
+                    className="bg-white text-blue-600 p-2 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center ml-8 mt-1"
                     title="Zeiten anzeigen"
                 >
                     <ListBulletIcon className="h-6 w-6" />

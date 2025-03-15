@@ -99,7 +99,7 @@ Alle Hauptcontainer auf Seiten müssen dem folgenden Design entsprechen:
   - Keine abgerundeten Ecken
   - Kein Rahmen
   - Kein Schatten
-  - Innenabstand (0.5rem an den Seiten, 1.5rem oben/unten)
+  - Innenabstand (0.75rem an den Seiten, 1.5rem oben/unten)
   - Volle Bildschirmbreite
 
 ### System-Boxen
@@ -123,6 +123,180 @@ Die folgenden Boxen sind offiziell im System definiert:
 #### Authentifizierungsboxen (separat gelistet)
 - **Login Box**
 - **Register Box**
+
+### Standardisierte Box-Typen
+
+Im System gibt es zwei Hauptvarianten von Boxen, die jeweils eigene Layouts und Strukturen haben:
+
+#### 1. Standard-Box ohne Tabelle
+
+Dieser Box-Typ wird für Komponenten ohne tabellarische Daten verwendet, wie die Zeiterfassungs-Box.
+
+**Titelzeilenstruktur:**
+- Höhe: 2.5rem (Desktop), 2rem (Mobile)
+- Layout: Flex mit `justify-between` und `items-center`
+- Abstand unten: 1rem (Desktop), 0.5rem (Mobile)
+
+**Titelzeile linke Seite:**
+- Titel H2 mit Icon links davor
+- Icon: 1.5rem × 1.5rem (Desktop), 1.1rem × 1.1rem (Mobile)
+- Icon-Abstand zum Text: 0.5rem (Desktop), 0.25rem (Mobile)
+- Schriftgröße Titel: 1.25rem (Desktop), 1rem (Mobile)
+- Schriftstärke: 600 (semibold)
+- Einrückung vom linken Rand: 0.5rem (Mobile), 0 (Desktop) durch `pl-2 sm:pl-0`
+
+**Titelzeile rechte Seite (optional):**
+- Actionbuttons mit Abstand 0.5rem (Desktop), 0.4rem (Mobile) zwischen den Buttons
+- Button-Größe: Konsistent mit den Komponenten in der Titelzeile links
+- Suchfelder und Filter:
+  - Höhe: 2rem (Desktop), 1.9rem (Mobile)
+  - Rahmen: border-gray-300 (hellgrau)
+  - Schriftgröße: 0.875rem (Desktop), 0.75rem (Mobile)
+  - Breite: 200px (Desktop), 120px (Mobile)
+
+**Beispiel-Code:**
+```jsx
+<div className="bg-white rounded-lg shadow p-6">
+  <div className="flex items-center justify-between mb-4">
+    <h2 className="text-xl font-semibold flex items-center">
+      <ClockIcon className="h-6 w-6 mr-2" />
+      Zeiterfassung
+    </h2>
+    <div className="flex items-center space-x-2">
+      {/* Optionale Buttons */}
+    </div>
+  </div>
+  
+  {/* Box-Inhalt */}
+  <div className="...">
+    {/* Komponenten-spezifischer Inhalt */}
+  </div>
+</div>
+```
+
+**Responsives Verhalten:**
+- Desktop (>640px): 
+  - Padding: 1.5rem (24px) rundherum
+  - Titel-Icon: 1.5rem (24px)
+  - Titeltext: 1.25rem (20px)
+  - Abstand zwischen Titelzeile und Inhalt: 1rem (16px)
+  
+- Mobile (≤640px):
+  - Padding: 0.75rem (12px) links/rechts, 1.5rem oben, variabel unten
+  - Titel-Icon: 1.1rem (17.6px)
+  - Titeltext: 1rem (16px)
+  - Abstand zwischen Titelzeile und Inhalt: 0.5rem (8px)
+  - Abstand für Icons vom Rand: 0.25rem (4px) links, 0.4rem (6.4px) rechts
+
+#### 2. Box mit Tabelle
+
+Dieser Box-Typ wird für Komponenten mit tabellarischen Daten verwendet, wie Request-Box oder Task-Box.
+
+**Titelzeilenstruktur:**
+- Höhe: 3rem (Desktop), 2.5rem (Mobile)
+- Layout: Flex mit `justify-between` und `items-center`
+- Abstand unten: 1rem (Desktop), 0.5rem (Mobile)
+
+**Titelzeile linke Seite:**
+- Beinhaltet Titel H2 mit Icon und optionalen Aktionsbuttons (z.B. "Neu erstellen")
+- Icon: 1.5rem × 1.5rem (Desktop), 1.1rem × 1.1rem (Mobile)
+- Icon-Abstand zum Text: 0.5rem (Desktop), 0.25rem (Mobile)
+- Schriftgröße Titel: 1.25rem (Desktop), 1rem (Mobile)
+- Schriftstärke: 600 (semibold)
+- "Neu erstellen"-Button: Links vom Titel mit Abstand von 0.5rem (Desktop), 0.25rem (Mobile) zum linken Rand
+
+**Titelzeile rechte Seite:**
+- Suchfeld: 200px (Desktop), 120px (Mobile) Breite
+- Filter-Button und Spalten-Konfigurationsbutton
+- Abstand zwischen Elementen: 0.5rem (Desktop), 0.4rem (Mobile)
+- Abstand zum rechten Rand: 0.5rem (Desktop), 0.4rem (Mobile)
+
+**Tabellenlayout:**
+- Volle Breite innerhalb der Box
+- Tabellenkopf: Hintergrund `bg-gray-50` (hellgrau)
+- Header-Zellen: 0.75rem Schriftgröße, 500 Schriftstärke, dunkelgraue Farbe
+- Hover-Effekt auf Zeilen
+- Abstand in Zellen: 0.75rem oben/unten, 1rem links/rechts (Desktop), reduziert im Mobile-Modus
+
+**Beispiel-Code:**
+```jsx
+<div className="bg-white rounded-lg shadow p-6">
+  <div className="flex items-center justify-between mb-4">
+    <div className="flex items-center">
+      <button className="bg-white text-blue-500 border border-blue-300 rounded-full p-1.5 mr-3">
+        <PlusIcon className="h-5 w-5" />
+      </button>
+      <h2 className="text-xl font-semibold flex items-center">
+        <ClipboardListIcon className="h-6 w-6 mr-2" />
+        Tasks
+      </h2>
+    </div>
+    
+    <div className="flex items-center space-x-2">
+      <input 
+        type="text" 
+        placeholder="Suchen..." 
+        className="border rounded px-2 py-1 text-sm"
+      />
+      <button className="p-2 rounded-md border">
+        <FunnelIcon className="h-5 w-5 text-gray-500" />
+      </button>
+      <button className="p-2 rounded-md border">
+        <Cog6ToothIcon className="h-5 w-5 text-gray-500" />
+      </button>
+    </div>
+  </div>
+  
+  <div className="overflow-x-auto">
+    <table className="min-w-full divide-y divide-gray-200">
+      <thead className="bg-gray-50">
+        <tr>
+          {/* Spaltenüberschriften */}
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-200">
+        {/* Tabellenzeilen */}
+      </tbody>
+    </table>
+  </div>
+</div>
+```
+
+**Responsives Verhalten der Tabellenbox:**
+- Desktop (>640px): 
+  - Box-Padding: 1.5rem (24px) rundherum
+  - Titel-Icon: 1.5rem (24px)
+  - Titeltext: 1.25rem (20px)
+  - Suchfeld-Breite: 200px
+  - Abstand zwischen Elementen in der Titelzeile: 0.5rem (8px)
+  
+- Mobile (≤640px):
+  - Box-Padding: 0.75rem (12px) links/rechts, 1.5rem oben/unten
+  - Titel-Icon: 1.1rem (17.6px)
+  - Titeltext: 1rem (16px)
+  - Suchfeld-Breite: 120px max
+  - Abstand für "Neu erstellen"-Button vom linken Rand: 0.25rem (4px)
+  - Abstand zwischen Elementen rechts: 0.4rem (6.4px)
+  - Abstand zum rechten Rand für den letzten Button: 0.4rem (6.4px)
+  - Tabellenzellen-Padding: links 0.75rem, rechts 0.5rem, vertikal reduziert
+
+### Tabellenzellen in mobiler Ansicht
+
+Im mobilen Modus werden Tabellenzellen speziell optimiert:
+
+- Erste Spalte (Titel): 
+  - Breite: 20% der Tabelle
+  - Text-Umbruch aktiviert (word-wrap: break-word)
+  - Schriftgröße: 0.75rem (12px)
+
+- Status-Spalte:
+  - Feste Breite: 60px
+  - Optimierter Platz für Status-Badges
+
+- Aktionen-Spalte:
+  - Feste Breite: 70px
+  - Vertikale Ausrichtung von Buttons (flex-direction: column)
+  - Abstand zwischen Buttons: 0.5rem (8px)
 
 ### Box-Header Standard
 
@@ -156,7 +330,7 @@ Die folgenden Boxen sind offiziell im System definiert:
 
 ### Beispiel-Implementierung
 
-Die Zeiterfassungs-Box auf der Worktracker-Seite dient als Referenzimplementierung:
+Die Zeiterfassungs-Box auf der Worktracker-Seite dient als Referenzimplementierung für normale Boxen:
 
 ```jsx
 <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 mb-6">
@@ -168,6 +342,56 @@ Die Zeiterfassungs-Box auf der Worktracker-Seite dient als Referenzimplementieru
         {/* Weitere Inhalte */}
     </div>
     {/* Box-Inhalt */}
+</div>
+```
+
+Die Tasks-Box auf der Worktracker-Seite und die Requests-Box auf der Dashboard-Seite dienen als Referenzimplementierungen für Boxen mit Tabellen.
+
+```jsx
+<div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+    <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+            {hasPermission('task', 'write') && (
+                <button 
+                    onClick={openCreateTaskModal}
+                    className="bg-white text-blue-500 border border-blue-300 rounded-full p-1.5 mr-3"
+                >
+                    <PlusIcon className="h-5 w-5" />
+                </button>
+            )}
+            <h2 className="text-xl font-semibold flex items-center">
+                <ClipboardDocumentListIcon className="h-6 w-6 mr-2" />
+                To Do's
+            </h2>
+        </div>
+        <div className="flex space-x-2 items-center">
+            <input
+                type="text"
+                placeholder="Suchen..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="border rounded px-2 py-1 text-sm w-40"
+            />
+            <button 
+                onClick={toggleStatusFilter}
+                className="p-2 rounded-md border"
+            >
+                <FunnelIcon className="h-5 w-5 text-gray-500" />
+            </button>
+            <button 
+                onClick={toggleColumnSettings}
+                className="p-2 rounded-md border"
+            >
+                <Cog6ToothIcon className="h-5 w-5 text-gray-500" />
+            </button>
+        </div>
+    </div>
+    
+    <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            {/* Tabellen-Inhalt */}
+        </table>
+    </div>
 </div>
 ```
 
@@ -392,6 +616,7 @@ input[type="email"],
 input[type="password"],
 input[type="number"],
 input[type="date"],
+input[type="week"],
 textarea,
 select {
   width: 100%;
@@ -401,6 +626,7 @@ select {
   background-color: white;
   font-size: 0.875rem;
   color: #111827;
+  height: 2.5rem;
 }
 
 /* Fokus-Zustand */
@@ -436,6 +662,22 @@ select:focus {
   background-color: #1F2937;
   border-color: #4B5563;
   color: #F9FAFB;
+}
+
+/* Mobile Ansicht */
+@media (max-width: 640px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  input[type="week"],
+  textarea,
+  select {
+    font-size: 0.75rem;
+    height: 1.9rem;
+    padding: 0.25rem 0.5rem;
+  }
 }
 ```
 
@@ -511,6 +753,25 @@ select:focus {
   color: #111827;
 }
 
+/* Actions-Buttons (Neu erstellen, Listen anzeigen, Bearbeiten) */
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.375rem;
+  background-color: white;
+  color: #3B82F6;
+  border: 1px solid #93C5FD;
+  border-radius: 9999px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: background-color 150ms, border-color 150ms;
+}
+
+.btn-action:hover {
+  background-color: #EFF6FF;
+  border-color: #3B82F6;
+}
+
 /* Dark Mode */
 .dark .btn-secondary {
   background-color: #1F2937;
@@ -530,7 +791,36 @@ select:focus {
   background-color: #374151;
   color: #F9FAFB;
 }
+
+.dark .btn-action {
+  background-color: #1F2937;
+  color: #60A5FA;
+  border-color: #2563EB;
+}
+
+.dark .btn-action:hover {
+  background-color: #2D3748;
+  border-color: #60A5FA;
+}
 ```
+
+### Button-Verwendungszwecke
+
+- **Primäre Buttons** (`btn-primary`): Hauptaktionen wie "Speichern", "Bestätigen" oder "Senden"
+- **Sekundäre Buttons** (`btn-secondary`): Weniger wichtige Aktionen wie "Abbrechen" oder "Zurück"
+- **Gefährliche Aktionen** (`btn-danger`): Kritische Operationen wie "Löschen" oder "Zurücksetzen"
+- **Icon-Buttons** (`btn-icon`): Einfache Aktionen ohne Textbeschriftung
+- **Action-Buttons** (`btn-action`): Für folgende Aktionen:
+  - "Neu erstellen" oder "Hinzufügen" Funktionen (mit Plus-Icon)
+  - Listen oder Details anzeigen (mit Listen- oder Augen-Icon)
+  - Bearbeiten (mit Stift-Icon)
+
+Alle Action-Buttons (`btn-action`) haben folgende Eigenschaften:
+- Weißer Hintergrund (im Light Mode)
+- Blaues Icon
+- Blauer Rand
+- Runde Form (border-radius: 9999px)
+- Leichter Schatten für 3D-Effekt
 
 ## Berechtigungsbasierte UI-Anpassung
 
@@ -756,6 +1046,22 @@ Die Anwendung muss auf allen Geräten gut funktionieren. Verwende die folgenden 
 - **xl**: 1280px (Desktop)
 - **2xl**: 1536px (Große Bildschirme)
 
+### Box-Layout im Mobilen Modus (max-width: 640px)
+
+Im mobilen Modus (Smartphones) gelten folgende Designregeln für Boxen:
+
+- Boxen erstrecken sich über die gesamte Bildschirmbreite ohne Rahmen und Abrundungen
+- Optimierte Abstände zu den Bildschirmrändern für bessere Benutzererfahrung:
+  - Außenabstand (Padding) der Boxen: 0.75rem links und rechts
+  - Innenabstand in Titelzeilen mit Buttons: 0.75rem links und rechts
+  - Button-Abstand vom linken Rand: mindestens 0.25rem
+  - Buttons am rechten Rand: mindestens 0.4rem Abstand zum Bildschirmrand
+- Konsistente Größen und Abstände für UI-Elemente:
+  - Abstände zwischen Elementen in Titelzeilen: 0.5rem
+  - Abstände zwischen Buttons in einer Gruppe: 0.4rem
+
+Diese Anpassungen verbessern die Benutzererfahrung auf kleinen Bildschirmen, indem Elemente nicht zu dicht am Rand platziert werden und genügend Platz zum Antippen bieten.
+
 ```css
 /* Beispiel für responsive Anpassungen */
 .responsive-container {
@@ -797,7 +1103,3 @@ Für komplexere Layouts verwende Grid oder Flexbox:
   }
 }
 ```
-
----
-
-Diese Design-Standards müssen in allen Komponenten des Intranet-Projekts eingehalten werden, um ein konsistentes Erscheinungsbild zu gewährleisten. Bei Fragen oder Unklarheiten wende dich an das Entwicklungsteam. 

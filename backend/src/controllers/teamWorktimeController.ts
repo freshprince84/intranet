@@ -137,8 +137,8 @@ export const getUserWorktimesByDay = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
-    if (!userId || !date) {
-      return res.status(400).json({ message: 'Benutzer-ID und Datum sind erforderlich' });
+    if (!date) {
+      return res.status(400).json({ message: 'Datum ist erforderlich' });
     }
 
     // Datum parsen
@@ -166,16 +166,26 @@ export const getUserWorktimesByDay = async (req: Request, res: Response) => {
     const dayStart = new Date(localStartOfDay.getTime() - startOffsetMinutes * 60000);
     const dayEnd = new Date(localEndOfDay.getTime() - endOffsetMinutes * 60000);
 
-    // Hole alle Zeiterfassungen des Benutzers für den angegebenen Tag
+    // Hole alle Zeiterfassungen für den angegebenen Tag
     const worktimes = await prisma.workTime.findMany({
       where: {
-        userId: Number(userId),
+        ...(userId ? { userId: Number(userId) } : {}),
         startTime: {
           gte: dayStart,
           lte: dayEnd
         }
       },
       include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            firstName: true,
+            lastName: true,
+            normalWorkingHours: true,
+            approvedOvertimeHours: true
+          }
+        },
         branch: true
       },
       orderBy: {
@@ -183,44 +193,9 @@ export const getUserWorktimesByDay = async (req: Request, res: Response) => {
       }
     });
 
-    // Hole auch den Benutzer mit seinen Arbeitszeiteinstellungen
-    const user = await prisma.user.findUnique({
-      where: { id: Number(userId) },
-      select: {
-        id: true,
-        username: true,
-        firstName: true,
-        lastName: true,
-        normalWorkingHours: true,
-        approvedOvertimeHours: true
-      }
-    });
-
-    if (!user) {
-      return res.status(404).json({ message: 'Benutzer nicht gefunden' });
-    }
-
-    // Berechne die gesamte Arbeitszeit für den Tag
-    let totalWorkTimeMs = 0;
-    
-    for (const worktime of worktimes) {
-      if (worktime.endTime) {
-        const workTimeMs = worktime.endTime.getTime() - worktime.startTime.getTime();
-        totalWorkTimeMs += workTimeMs;
-      }
-    }
-    
-    // Konvertiere Millisekunden in Stunden
-    const totalWorkTimeHours = totalWorkTimeMs / (1000 * 60 * 60);
-
-    res.json({
-      user,
-      worktimes,
-      totalWorkTimeHours,
-      date: queryDateStr
-    });
+    res.json(worktimes);
   } catch (error) {
-    console.error('Fehler beim Abrufen der Benutzer-Zeiterfassungen:', error);
+    console.error('Fehler beim Abrufen der Zeiterfassungen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };

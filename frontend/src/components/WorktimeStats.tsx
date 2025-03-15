@@ -231,7 +231,7 @@ const WorktimeStats: React.FC = () => {
     return (
         <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center">
+                <div className="flex items-center pl-2 sm:pl-0">
                     <ChartBarIcon className="h-6 w-6 mr-2" />
                     <h2 className="text-xl font-semibold">Arbeitszeitstatistik</h2>
                 </div>
@@ -241,7 +241,7 @@ const WorktimeStats: React.FC = () => {
                         value={selectedWeekInput}
                         onChange={handleWeekChange}
                         max={currentWeekInput}
-                        className="border rounded-md px-3 py-2 h-10"
+                        className="border border-gray-300 dark:border-gray-600 rounded-md text-base sm:text-sm h-8 sm:h-10 px-3"
                     />
                     <button
                         onClick={handleExport}

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
+import { useBranch } from '../contexts/BranchContext.tsx';
 import NotificationBell from './NotificationBell.tsx';
 import { API_URL } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
@@ -8,14 +9,18 @@ import axiosInstance from '../config/axios.ts';
 const Header: React.FC = () => {
     const navigate = useNavigate();
     const { user, logout, switchRole } = useAuth();
+    const { branches, selectedBranch, setSelectedBranch } = useBranch();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isRoleSubMenuOpen, setIsRoleSubMenuOpen] = useState(false);
+    const [isBranchSubMenuOpen, setIsBranchSubMenuOpen] = useState(false);
     const [logoSrc, setLogoSrc] = useState<string>('/settings/logo');
     const [logoLoadFailed, setLogoLoadFailed] = useState<boolean>(false);
     const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
     const roleMenuButtonRef = useRef<HTMLButtonElement>(null);
     const roleSubMenuRef = useRef<HTMLDivElement>(null);
+    const branchMenuButtonRef = useRef<HTMLButtonElement>(null);
+    const branchSubMenuRef = useRef<HTMLDivElement>(null);
 
     // Versuche das Logo zu laden - erst direkt, dann über Base64 wenn nötig
     useEffect(() => {
@@ -55,12 +60,21 @@ const Header: React.FC = () => {
     const handleRoleMenuMouseEnter = () => {
         handleMouseEnter();
         setIsRoleSubMenuOpen(true);
+        setIsBranchSubMenuOpen(false);
+    };
+
+    // Neues Event-Handling für das Hovern über den "Standort wechseln"-Button
+    const handleBranchMenuMouseEnter = () => {
+        handleMouseEnter();
+        setIsBranchSubMenuOpen(true);
+        setIsRoleSubMenuOpen(false);
     };
 
     // Event-Handling für das Hovern über andere Menüpunkte
     const handleOtherMenuItemsMouseEnter = () => {
         handleMouseEnter();
         setIsRoleSubMenuOpen(false);
+        setIsBranchSubMenuOpen(false);
     };
 
     // Öffnet das Profilmenü und schließt das Benachrichtigungsmenü
@@ -83,6 +97,16 @@ const Header: React.FC = () => {
             setIsProfileMenuOpen(false);
         } catch (error) {
             console.error('Fehler beim Rollenwechsel:', error);
+        }
+    };
+
+    const handleBranchSwitch = (branchId: number) => {
+        try {
+            setSelectedBranch(branchId);
+            setIsBranchSubMenuOpen(false);
+            setIsProfileMenuOpen(false);
+        } catch (error) {
+            console.error('Fehler beim Standortwechsel:', error);
         }
     };
 
@@ -259,6 +283,63 @@ const Header: React.FC = () => {
                                         </div>
                                     )}
                                     
+                                    {/* Standortauswahl Untermenü */}
+                                    {branches && branches.length > 0 && (
+                                        <div className="relative">
+                                            <button
+                                                ref={branchMenuButtonRef}
+                                                onClick={() => setIsBranchSubMenuOpen(!isBranchSubMenuOpen)}
+                                                onMouseEnter={handleBranchMenuMouseEnter}
+                                                className="w-full text-left block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center group"
+                                            >
+                                                <svg className="h-4 w-3 mr-1 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l-7 7 7 7" />
+                                                </svg>
+                                                <div className="flex items-center">
+                                                    <svg className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    </svg>
+                                                    <span>Standort wechseln</span>
+                                                </div>
+                                            </button>
+                                            
+                                            {/* Standort-Untermenü */}
+                                            {isBranchSubMenuOpen && (
+                                                <>
+                                                    {/* Unsichtbare "Brücke" zwischen Hauptmenü und Untermenü */}
+                                                    <div 
+                                                        className="absolute right-full top-0 w-2 h-full" 
+                                                        style={{ marginRight: "-2px" }}
+                                                        onMouseEnter={handleMouseEnter}
+                                                    />
+                                                    <div 
+                                                        ref={branchSubMenuRef}
+                                                        className="absolute right-full top-0 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 mr-1"
+                                                        onMouseEnter={handleMouseEnter}
+                                                        onMouseLeave={handleMouseLeave}
+                                                    >
+                                                        {[...branches]
+                                                            .sort((a, b) => a.name.localeCompare(b.name))
+                                                            .map((branch) => (
+                                                                <button
+                                                                    key={branch.id}
+                                                                    onClick={() => handleBranchSwitch(branch.id)}
+                                                                    className={`w-full text-left block px-4 py-2 text-sm ${
+                                                                        selectedBranch === branch.id
+                                                                            ? 'bg-blue-50 dark:bg-blue-900 text-blue-700 dark:text-blue-300 font-medium'
+                                                                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                                                                    }`}
+                                                                >
+                                                                    {branch.name}
+                                                                </button>
+                                                            ))}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+
                                     <button
                                         onClick={handleLogout}
                                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center"

@@ -47,11 +47,6 @@ const fs_1 = __importDefault(require("fs"));
 if (!fs_1.default.existsSync(cerebroUploadsPath)) {
     fs_1.default.mkdirSync(cerebroUploadsPath, { recursive: true });
 }
-// Einfacher Gesundheitscheck-Endpunkt
-app.get('/api/healthcheck', (req, res) => {
-    console.log('Gesundheitscheck-Anfrage erhalten');
-    res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
-});
 // Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 5 Minuten)
 const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 5 Minuten
 setInterval(() => __awaiter(void 0, void 0, void 0, function* () {

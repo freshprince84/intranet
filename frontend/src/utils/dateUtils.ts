@@ -230,4 +230,19 @@ export const formatDateTimeForCerebro = (dateTimeString: string): string => {
         console.error('Fehler beim Formatieren des Datums und der Zeit:', error);
         return '-';
     }
+};
+
+/**
+ * Hilfsfunktionen für die Datumsbehandlung im Frontend
+ */
+
+/**
+ * Erstellt ein Date-Objekt ohne Zeitzonenverschiebung
+ * @param dateString Ein ISO-Zeitstring
+ * @returns Date-Objekt mit korrigiertem Zeitzonenversatz
+ */
+export const createLocalDate = (dateString: string): Date => {
+  const date = new Date(dateString);
+  // Korrigiere den Zeitzonenversatz
+  return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
 }; 

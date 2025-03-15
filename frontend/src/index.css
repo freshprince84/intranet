@@ -131,6 +131,14 @@ code {
     overflow-y: auto !important;
   }
   
+  /* DIREKTER SELEKTOR FÜR DIE ZEITERFASSUNGSBOX */
+  /* Diese Regel zielt direkt auf alle p-6 Zeiterfassungsboxen ab, unabhängig von ihrer Verschachtelung */
+  div.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.p-6,
+  div.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.p-6.sm\:mb-6,
+  div.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.p-6.mb-6 {
+    padding-bottom: 0.4rem !important;
+  }
+  
   /* WorktimeList/WorktimeTracker speziell stylen */
   .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 .bg-white.rounded-lg.border {
     border-bottom: none !important;
@@ -139,6 +147,17 @@ code {
     max-height: 100% !important;
     margin-bottom: 0 !important;
     padding-bottom: 0 !important; /* Kein Padding unten in der Box selbst */
+  }
+
+  /* HOCHSPEZIFISCHER Selektor für die Zeiterfassungsbox mit p-6 Klasse im mobilen Modus */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 > .bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.p-6,
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 > .bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.p-6.sm\:mb-6 {
+    padding-bottom: 0.4rem !important;
+  }
+
+  /* Überschreibe die p-6 Klasse für die Zeiterfassungsbox */
+  .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 .bg-white.rounded-lg.border.p-6 {
+    padding: 0.75rem 0.5rem 0.4rem 0.5rem !important;
   }
 
   /* Entferne den mb-6 Abstand bei der Zeiterfassungs-Box in der mobilen Ansicht */
@@ -162,14 +181,14 @@ code {
     margin-bottom: 0.25rem !important;
   }
 
-  /* Optimierungen für Box-Titel und Such-/Filterbereich - ALLGEMEINE SELEKTOREN */
+  /* VERBESSERTE Abstände für Box-Titel und Such-/Filterbereich */
   div[class*="border"] > div.flex.items-center.mb-4.justify-between,
   div[class*="bg-white"] > div.flex.items-center.mb-4.justify-between,
   div.p-4.border-b,
   div.p-4 > div.flex.items-center.justify-between.mb-4 {
-    gap: 0.25rem !important;
+    gap: 0.5rem !important; /* Erhöht von 0.25rem auf 0.5rem */
     margin-bottom: 0.5rem !important;
-    padding: 0 0.25rem !important;
+    padding: 0 0.75rem !important; /* Erhöht von 0.25rem auf 0.75rem für mehr Abstand zu den Rändern */
   }
   
   /* Kleinere Boxentitel für ALLE Komponenten */
@@ -216,19 +235,19 @@ code {
     width: 0.9rem !important;
   }
 
-  /* Kompaktere Abstände in der rechten Gruppe (Suchfeld, Filter, Spalten) */
+  /* VERBESSERTE Abstände in der rechten Gruppe (Suchfeld, Filter, Spalten) */
   .flex.space-x-2.items-center,
   div[class*="flex"][class*="space-x"] {
-    gap: 0.25rem !important;
+    gap: 0.4rem !important; /* Erhöht von 0.25rem auf 0.4rem */
     margin-left: auto !important;
     --tw-space-x-reverse: 0 !important;
-    margin-right: calc(0.25rem * var(--tw-space-x-reverse)) !important;
-    margin-left: calc(0.25rem * calc(1 - var(--tw-space-x-reverse))) !important;
+    margin-right: calc(0.4rem * var(--tw-space-x-reverse)) !important; /* Erhöht von 0.25rem auf 0.4rem */
+    margin-left: calc(0.4rem * calc(1 - var(--tw-space-x-reverse))) !important; /* Erhöht von 0.25rem auf 0.4rem */
   }
 
-  /* Reduzierter Abstand für den "Neuer Request/Task"-Button */
+  /* VERBESSERTE Abstände für den "Neuer Request/Task"-Button */
   div.flex.items-center:first-child button {
-    margin-left: -0.25rem !important;
+    margin-left: 0.25rem !important; /* Erhöht von -0.25rem auf 0.25rem für mehr Abstand zum linken Rand */
   }
 
   /* Zentrieren des Titels im verfügbaren Platz */
@@ -479,8 +498,8 @@ code {
     margin-left: 0 !important;
     margin-right: 0 !important;
     max-width: 100vw !important;
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
+    padding-left: 0.75rem !important; /* Erhöht von 0.5rem auf 0.75rem für mehr Innenabstand */
+    padding-right: 0.75rem !important; /* Erhöht von 0.5rem auf 0.75rem für mehr Innenabstand */
   }
 
   /* Tabellenbehälter ohne horizontalen Abstand - ausgewogene Randbreite */
@@ -627,6 +646,280 @@ code {
   @apply text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded;
 }
 
+/* Optimierte Tabellenansicht für Desktop-Größen (>640px) */
+@media (min-width: 641px) {
+  /* Tabellen-Layout für Requests, To Do's und Workcenter optimieren */
+  .requests-table,
+  .tasks-table,
+  .mobile-table-container table,
+  .overflow-x-auto table,
+  div.bg-white.rounded-lg div.overflow-x-auto table,
+  div[class*="bg-white"][class*="rounded-lg"] table {
+    table-layout: fixed;
+    width: 100%;
+    overflow-x: visible !important;
+  }
+  
+  /* Verkleinerte Zellabstände für Desktop */
+  .requests-table th, 
+  .requests-table td,
+  .tasks-table th,
+  .tasks-table td,
+  .mobile-table-container table th,
+  .mobile-table-container table td,
+  .overflow-x-auto table th,
+  .overflow-x-auto table td,
+  div.bg-white.rounded-lg div.overflow-x-auto table th,
+  div.bg-white.rounded-lg div.overflow-x-auto table td,
+  div[class*="bg-white"][class*="rounded-lg"] table th,
+  div[class*="bg-white"][class*="rounded-lg"] table td {
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+    line-height: 1.2 !important;
+    padding-top: 0.35rem !important;
+    padding-bottom: 0.35rem !important;
+  }
+  
+  /* Spaltentitel (th) kleiner machen auf großen Bildschirmen */
+  .requests-table th, 
+  .tasks-table th, 
+  .mobile-table-container table th,
+  .overflow-x-auto table th,
+  div.bg-white.rounded-lg div.overflow-x-auto table th,
+  div[class*="bg-white"][class*="rounded-lg"] table th {
+    font-size: 0.7rem !important;
+    text-transform: uppercase !important;
+    font-weight: 600 !important;
+  }
+  
+  /* Normale Zellen mit normaler Schriftgröße */
+  .requests-table td,
+  .tasks-table td,
+  .mobile-table-container table td,
+  .overflow-x-auto table td,
+  div.bg-white.rounded-lg div.overflow-x-auto table td,
+  div[class*="bg-white"][class*="rounded-lg"] table td {
+    font-size: 0.8rem !important;
+  }
+  
+  /* Zell-Inhalte sollen brechen, nicht scrollen */
+  .requests-table td div,
+  .tasks-table td div,
+  .mobile-table-container table td div,
+  .overflow-x-auto table td div,
+  .requests-table td span:not([class*="rounded-full"]),
+  .tasks-table td span:not([class*="rounded-full"]),
+  .mobile-table-container table td span:not([class*="rounded-full"]),
+  .overflow-x-auto table td span:not([class*="rounded-full"]),
+  .requests-table th div,
+  .tasks-table th div,
+  .mobile-table-container table th div,
+  .overflow-x-auto table th div,
+  div.bg-white.rounded-lg div.overflow-x-auto table td div,
+  div.bg-white.rounded-lg div.overflow-x-auto table td span:not([class*="rounded-full"]),
+  div.bg-white.rounded-lg div.overflow-x-auto table th div,
+  div[class*="bg-white"][class*="rounded-lg"] table td div,
+  div[class*="bg-white"][class*="rounded-lg"] table td span:not([class*="rounded-full"]),
+  div[class*="bg-white"][class*="rounded-lg"] table th div {
+    white-space: normal !important;
+    overflow-wrap: break-word !important;
+    word-wrap: break-word !important;
+    width: 100% !important;
+  }
+  
+  /* Besonders kompakter Text in Tabellenzellen */
+  .text-sm, .text-xs {
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+  }
+  
+  /* Optimierte Spaltenbreiten: verantwortlich/angefragt */
+  .requests-table td:nth-child(2),
+  .tasks-table td:nth-child(2) {
+    max-width: 120px;
+  }
+
+  /* Status-Spalte schmaler */
+  .requests-table th:nth-child(3),
+  .requests-table td:nth-child(3),
+  .tasks-table th:nth-child(2),
+  .tasks-table td:nth-child(2) {
+    max-width: 90px;
+  }
+  
+  /* Erste Spalte etwas mehr Platz geben */
+  .requests-table th:first-child,
+  .requests-table td:first-child,
+  .tasks-table th:first-child,
+  .tasks-table td:first-child,
+  .mobile-table-container table th:first-child,
+  .mobile-table-container table td:first-child,
+  .overflow-x-auto table th:first-child,
+  .overflow-x-auto table td:first-child,
+  div.bg-white.rounded-lg div.overflow-x-auto table th:first-child,
+  div.bg-white.rounded-lg div.overflow-x-auto table td:first-child,
+  div[class*="bg-white"][class*="rounded-lg"] table th:first-child,
+  div[class*="bg-white"][class*="rounded-lg"] table td:first-child {
+    padding-left: 0.5rem !important;
+  }
+  
+  /* Letzte Spalte etwas mehr Platz geben */
+  .requests-table th:last-child,
+  .requests-table td:last-child,
+  .tasks-table th:last-child,
+  .tasks-table td:last-child,
+  .mobile-table-container table th:last-child,
+  .mobile-table-container table td:last-child,
+  .overflow-x-auto table th:last-child,
+  .overflow-x-auto table td:last-child,
+  div.bg-white.rounded-lg div.overflow-x-auto table th:last-child,
+  div.bg-white.rounded-lg div.overflow-x-auto table td:last-child,
+  div[class*="bg-white"][class*="rounded-lg"] table th:last-child,
+  div[class*="bg-white"][class*="rounded-lg"] table td:last-child {
+    padding-right: 0.5rem !important;
+  }
+  
+  /* Horizontales Scrollen für Tabellen verhindern */
+  .overflow-x-auto,
+  .overflow-x-hidden,
+  .overflow-x-scroll,
+  .mobile-table-container,
+  div.bg-white.rounded-lg div.overflow-x-auto,
+  div[class*="bg-white"][class*="rounded-lg"] div.overflow-x-auto {
+    overflow-x: visible !important;
+  }
+  
+  /* Container von Overflow befreien */
+  div[class*="overflow-x-auto"],
+  div.mobile-table-container,
+  div.bg-white.rounded-lg div.overflow-x-auto,
+  div[class*="bg-white"][class*="rounded-lg"] div.overflow-x-auto {
+    overflow: visible !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  
+  /* Button-Gruppen in Aktions-Spalten horizontal ausrichten */
+  .action-buttons {
+    display: flex;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+  }
+  
+  /* Status-Buttons kompakter darstellen */
+  .status-buttons {
+    display: flex;
+    flex-direction: row !important;
+    gap: 0.25rem !important;
+    justify-content: flex-start !important;
+    width: 100% !important;
+  }
+  
+  /* Kleinere Buttons in Tabellen */
+  .action-buttons button,
+  .status-buttons button {
+    padding: 0.15rem !important;
+    width: auto !important;
+    height: auto !important;
+  }
+  
+  /* Kleinere Icons in Buttons */
+  .action-buttons button svg,
+  .status-buttons button svg {
+    width: 0.9rem !important;
+    height: 0.9rem !important;
+  }
+  
+  /* Stile für alle Tabellen (allgemein) */
+  table {
+    white-space: normal !important;
+  }
+  
+  table th, 
+  table td {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Tabellenbreite nicht beschränken */
+  div.bg-white.rounded-lg.border table,
+  div.bg-white.rounded-lg.border.border-gray-300 table,
+  div.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700 table,
+  div[class*="bg-white"][class*="rounded-lg"] table {
+    min-width: auto !important;
+    width: 100% !important;
+  }
+  
+  /* Workcenter Tabelle optimieren */
+  div.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700 table,
+  div.bg-white.rounded-lg.border.border-gray-300.p-6 table {
+    width: 100% !important;
+    table-layout: fixed !important;
+  }
+}
+
+/* Mittlere Bildschirmgrößen (768px - 1023px): Optimierung für Tablets */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Spaltentitel noch kleiner auf Tablets */
+  .requests-table th, 
+  .tasks-table th, 
+  .mobile-table-container table th,
+  .overflow-x-auto table th,
+  div.bg-white.rounded-lg div.overflow-x-auto table th,
+  div[class*="bg-white"][class*="rounded-lg"] table th {
+    font-size: 0.65rem !important;
+    padding-top: 0.3rem !important;
+    padding-bottom: 0.3rem !important;
+  }
+  
+  /* Zellinhalt auf Tablets etwas kompakter */
+  .requests-table td,
+  .tasks-table td,
+  .mobile-table-container table td,
+  .overflow-x-auto table td,
+  div.bg-white.rounded-lg div.overflow-x-auto table td,
+  div[class*="bg-white"][class*="rounded-lg"] table td {
+    font-size: 0.75rem !important;
+    padding-top: 0.3rem !important;
+    padding-bottom: 0.3rem !important;
+  }
+}
+
+/* Mobile Bildschirmgrößen (641px - 767px): Optimierung für kleine Tablets/große Phones */
+@media (min-width: 641px) and (max-width: 767px) {
+  /* Spaltentitel extrem kompakt auf kleinen Screens */
+  .requests-table th, 
+  .tasks-table th, 
+  .mobile-table-container table th,
+  .overflow-x-auto table th,
+  div.bg-white.rounded-lg div.overflow-x-auto table th,
+  div[class*="bg-white"][class*="rounded-lg"] table th {
+    font-size: 0.6rem !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+    padding-left: 0.2rem !important;
+    padding-right: 0.2rem !important;
+  }
+  
+  /* Zellinhalt noch kompakter */
+  .requests-table td,
+  .tasks-table td,
+  .mobile-table-container table td,
+  .overflow-x-auto table td,
+  div.bg-white.rounded-lg div.overflow-x-auto table td,
+  div[class*="bg-white"][class*="rounded-lg"] table td {
+    font-size: 0.7rem !important;
+    padding-top: 0.25rem !important;
+    padding-bottom: 0.25rem !important;
+    padding-left: 0.2rem !important;
+    padding-right: 0.2rem !important;
+  }
+}
+
 /* Box-Schatten für Desktop-Ansicht */
 @media (min-width: 641px) {
   /* Alle Boxen mit typischen Klassen einen leichten Schatten geben und Rahmenlinien entfernen */
@@ -709,4 +1002,69 @@ code {
 /* Utility-Klasse für den spezifischen Footer-Abstand */
 .bottom-13 {
   bottom: 3.25rem !important; /* Optimaler Abstand zum Footer-Menü */
+}
+
+/* Status-Badges korrekt darstellen (nur inline um den Text) */
+span.status-col, 
+span[class*="inline-flex"][class*="rounded-full"],
+span[class*="px-2"][class*="rounded-full"],
+span[class*="font-semibold"][class*="rounded-full"] {
+  display: inline-flex !important;
+  width: auto !important;
+  max-width: fit-content !important;
+  white-space: nowrap !important;
+  padding: 0.25rem 0.5rem !important;
+  box-sizing: content-box !important;
+}
+
+/* Status-Zelle nicht mit Farbe füllen */
+td:has(span.status-col),
+td:has(span[class*="inline-flex"][class*="rounded-full"]),
+.requests-table td:nth-child(3),
+.tasks-table td:nth-child(2),
+td[class*="whitespace-nowrap"]:has(span[class*="rounded-full"]) {
+  background-color: transparent !important;
+  width: auto !important;
+  min-width: 100px !important;
+}
+
+/* Direkte Selektoren für Status-Spalten basierend auf ihrer Position */
+.requests-table tr td:nth-child(3),
+.tasks-table tr td:nth-child(2) {
+  background-color: transparent !important;
+  width: auto !important;
+  text-align: left !important;
+}
+
+/* Status-Text selbst mit Inline-Darstellung */
+.requests-table tr td:nth-child(3) span,
+.tasks-table tr td:nth-child(2) span {
+  display: inline-flex !important;
+  width: auto !important;
+  max-width: fit-content !important;
+}
+
+/* Allgemeiner Selektor für alle Tabellen-Status-Badges */
+table td span[class*="bg-"][class*="text-"][class*="rounded-full"],
+table td span.status-col,
+div.overflow-x-auto table td span[class*="rounded-full"] {
+  display: inline-flex !important;
+  width: auto !important;
+  max-width: fit-content !important;
+  padding: 0.2rem 0.5rem !important;
+  border-radius: 9999px !important;
+}
+
+/* Status-Hintergrund auf Zellebene entfernen */
+table td:has(span[class*="bg-"][class*="text-"][class*="rounded-full"]),
+div.overflow-x-auto table td:has(span[class*="rounded-full"]) {
+  background-color: transparent !important;
+}
+
+/* Workcenter Tabelle Status-Anpassungen */
+div.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700 table td span[class*="rounded-full"],
+div.overflow-x-auto table td span[class*="rounded-full"] {
+  display: inline-flex !important;
+  width: auto !important;
+  max-width: fit-content !important;
 }
