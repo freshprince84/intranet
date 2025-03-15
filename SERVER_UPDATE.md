@@ -49,6 +49,10 @@ Das Frontend muss neu gebaut werden, um die Änderungen zu übernehmen:
 ```bash
 cd /var/www/intranet/frontend
 npm run build
+
+cd /var/www/intranet/backend
+npm run build
+
 ```
 
 ## Schritt 6: Server neu starten

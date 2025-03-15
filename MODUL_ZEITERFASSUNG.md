@@ -100,6 +100,47 @@ Die korrekte Behandlung von Zeitzonen ist für die Zeiterfassung von entscheiden
    - Besonders problematisch bei String-Zeitwerten, die OHNE Zeitzoneninfo übergeben werden
    - Beim Bearbeiten von Zeiteinträgen in Formularen NIEMALS `new Date()` für Eingabewerte verwenden
 
+### Robuste Datumsverarbeitung im Backend
+
+Bei der Verarbeitung von Datumseingaben im Backend sind folgende Prinzipien zu beachten:
+
+1. **Flexible Eingabeformate unterstützen**: Backend-Systeme sollten mit verschiedenen Datumsformaten umgehen können, die vom Frontend gesendet werden könnten, besonders bei Bearbeitungsformularen.
+
+2. **Bereinigung und Normalisierung**: Bei ungewöhnlichen oder nicht-standardmäßigen Zeitformaten sollten diese zuerst normalisiert werden:
+
+   ```typescript
+   // Beispiel für Bereinigung von ungewöhnlichen Formaten
+   let cleanDateString = dateString;
+   if (dateString.match(/T\d{2}:\d{2}:\d{2}:\d{2}$/)) {
+     // Format ist YYYY-MM-DDTHH:MM:SS:00 - entferne das letzte :00
+     cleanDateString = dateString.substring(0, dateString.lastIndexOf(':'));
+   }
+   ```
+
+3. **Explizite Datumskomponentenextraktion**: Anstatt `new Date()` direkt zu verwenden, können die Datumskomponenten explizit extrahiert und dann ein Date-Objekt erstellt werden:
+
+   ```typescript
+   // Sichere Methode zur Date-Erzeugung
+   const [datePart, timePart] = cleanDateString.split('T');
+   const [year, month, day] = datePart.split('-').map(Number);
+   const [hours, minutes, seconds] = timePart.split(':').map(Number);
+   
+   // Nutzt UTC, um Zeitzonenverscheibungen zu vermeiden
+   return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+   ```
+
+4. **Validierung und Fehlerbehandlung**: Jede Datumseingabe sollte validiert werden:
+
+   ```typescript
+   if (parsedDate === null || isNaN(parsedDate.getTime())) {
+     return res.status(400).json({ message: 'Ungültiges Datumsformat' });
+   }
+   ```
+
+5. **Nach Code-Änderungen immer neu kompilieren**: Bei TypeScript-Projekten muss nach Änderungen am Backend-Code immer `npm run build` ausgeführt werden, bevor der Server neu gestartet wird.
+
+Diese Prinzipien sind besonders wichtig für das `EditWorktimeModal` und die `updateWorktime`-Endpunkte, bei denen Zeitzonen-bezogene Fehler häufig auftreten können.
+
 ### Implementierung der Zeitzonenbehandlung
 
 #### 1. Korrekte Zeitstempel beim Starten der Zeiterfassung

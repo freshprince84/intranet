@@ -363,3 +363,94 @@ Die korrekte Zeitzonenbehandlung in der Arbeitszeiterfassung beinhaltet:
 5. Für Datumsbereiche werden vollständige Tage berücksichtigt (0:00:00 bis 23:59:59)
 
 Diese Prinzipien gewährleisten eine konsistente und fehlerfreie Arbeitszeiterfassung unabhängig von der Zeitzone des Benutzers. 
+
+---
+
+## Spezifisches Problem: Fehlerhafte Zeitformat-Verarbeitung im EditWorktimeModal
+
+Ein häufiges Problem bei der Zeiterfassung-Bearbeitung wurde identifiziert, bei dem das `updateWorktime` API im Backend mit einem 500 Internal Server Error fehlschlägt.
+
+### Problemursache
+
+1. Im Frontend (`EditWorktimeModal.tsx`) werden Zeitstrings im Format `YYYY-MM-DDTHH:MM:SS:00` erzeugt (mit einem ungewöhnlichen zusätzlichen `:00` am Ende)
+2. Im Backend (`worktimeController.ts`) verursacht die Verwendung von `new Date(startTime)` und `new Date(endTime)` ungültige Datumsobjekte, wenn es mit diesem ungewöhnlichen Format arbeitet
+
+```typescript
+// PROBLEMATISCHER BACKEND-CODE
+if (startTime) {
+  updateData.startTime = new Date(startTime); // Fehler bei "2025-03-15T08:17:00:00"
+}
+
+if (endTime) {
+  updateData.endTime = new Date(endTime); // Fehler bei "2025-03-15T08:26:00:00"
+}
+```
+
+### Fehler in der Konsole
+```
+DEBUG updateWorktime Received: {"id":"159","startTime":"2025-03-15T08:17:00:00","endTime":"2025-03-15T08:26:00:00","userId":"1"}
+Ungültiges Datum: 2025-03-15T08:17:00:00
+```
+
+### Lösung
+
+Die richtige Lösung ist eine robuste Eingabevalidierung und -bereinigung im Backend:
+
+```typescript
+// KORRIGIERTER CODE
+const safeDateParse = (dateString: string | null) => {
+  if (!dateString) return null;
+  
+  try {
+    // Bereinige zuerst das Eingabeformat - entferne ein möglicherweise zusätzliches ":00" am Ende
+    let cleanDateString = dateString;
+    if (dateString.match(/T\d{2}:\d{2}:\d{2}:\d{2}$/)) {
+      // Format ist YYYY-MM-DDTHH:MM:SS:00 - entferne das letzte :00
+      cleanDateString = dateString.substring(0, dateString.lastIndexOf(':'));
+      console.log(`Bereinigter Datumsstring: ${cleanDateString}`);
+    }
+    
+    // Jetzt normale Verarbeitung mit dem bereinigten String
+    // Prüfe, ob es ein ISO-String im Format YYYY-MM-DDTHH:MM:SS ist
+    if (typeof cleanDateString === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(cleanDateString)) {
+      // Manuell Datum erstellen aus den einzelnen Komponenten
+      const [datePart, timePart] = cleanDateString.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hours, minutes, seconds] = timePart.split(':').map(Number);
+      
+      return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+    } else {
+      // Fallback für andere Formate
+      const date = new Date(cleanDateString);
+      if (isNaN(date.getTime())) {
+        console.error(`Ungültiges Datum: ${cleanDateString}`);
+        return null;
+      }
+      return date;
+    }
+  } catch (error) {
+    console.error(`Fehler beim Parsen des Datums ${dateString}:`, error);
+    return null;
+  }
+};
+
+// Anwendung der sicheren Parsing-Funktion
+if (startTime) {
+  const parsedStartTime = safeDateParse(startTime);
+  if (parsedStartTime) {
+    updateData.startTime = parsedStartTime;
+  } else {
+    return res.status(400).json({ message: 'Ungültiges Startzeit-Format' });
+  }
+}
+```
+
+### Wichtige Erkenntnisse
+
+1. **Robust mit verschiedenen Formaten umgehen**: Backend-Systeme sollten verschiedene Datumsformate verarbeiten können, auch wenn sie nicht standardmäßig sind
+2. **Eingaben bereinigen**: Bei Zeitstrings mit ungewöhnlichen Formaten sollten diese normalisiert werden
+3. **Fehlerabfang und explizite Validierung**: Jede Datumsverarbeitung sollte validiert und Fehler explizit behandelt werden
+4. **Logging für Fehlerdiagnose**: Ausführliches Logging hilft bei der Identifikation von Zeitzonenproblemen
+5. **Nach Codeänderungen neu kompilieren**: Bei TypeScript-Projekten immer den Code neu kompilieren (`npm run build`), bevor der Server neu gestartet wird
+
+Diese Lösung stellt sicher, dass das EditWorktimeModal korrekt funktioniert, auch wenn die gesendeten Zeitstrings ein ungewöhnliches Format haben. 

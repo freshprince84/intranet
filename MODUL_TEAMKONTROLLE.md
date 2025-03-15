@@ -248,404 +248,131 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
       }));
       
       setEditedEntries(formattedEntries);
-    } else {
-      // Leeren Eintrag für neues Datum erstellen
-      setEditedEntries([{
-        id: '',
-        userId: entries[0]?.userId || '',
-        date: selectedDate,
-        startTime: '',
-        endTime: '',
-        comment: '',
-        isModified: true,
-        markedForDeletion: false
-      }]);
     }
-  }, [entries, selectedDate]);
+  }, [entries]);
+```
+
+#### Wichtige Aspekte der Zeitzonenbehandlung im EditWorktimeModal
+
+Bei der Implementierung und Wartung des EditWorktimeModal müssen folgende Punkte beachtet werden:
+
+1. **Format der gesendeten Zeitstrings**: 
+   - Das Modal erzeugt Zeitstrings im Format `YYYY-MM-DDTHH:MM:SS:00`
+   - Dieses spezielle Format mit einem zusätzlichen `:00` am Ende kann zu Problemen bei der Backend-Verarbeitung führen
+
+2. **Robuste Backend-Verarbeitung**:
+   - Das Backend muss in der Lage sein, dieses spezielle Format zu verarbeiten
+   - Die `updateWorktime`-Funktion im Backend sollte eine Bereinigung und Normalisierung der Zeitstrings durchführen
+   - Die direkte Verwendung von `new Date(startTime)` sollte vermieden werden, wenn die Zeitstrings ein ungewöhnliches Format haben könnten
+
+3. **Implementierungsdetails für robuste Datumsverarbeitung im Backend**:
+
+```typescript
+// Beispiel für robuste Datumsverarbeitung
+const safeDateParse = (dateString: string | null) => {
+  if (!dateString) return null;
   
-  // Validierung der Einträge
-  const validateEntries = (entries: WorktimeEntryForm[]): ValidationError[] => {
-    const errors: ValidationError[] = [];
-    
-    // Prüfung auf fehlende Pflichtfelder
-    entries.forEach((entry, index) => {
-      if (!entry.markedForDeletion) {
-        if (!entry.startTime) {
-          errors.push({
-            index,
-            message: 'Startzeit ist erforderlich'
-          });
-        }
-        
-        if (entry.startTime && entry.endTime && entry.startTime >= entry.endTime) {
-          errors.push({
-            index,
-            message: 'Startzeit muss vor Endzeit liegen'
-          });
-        }
-      }
-    });
-    
-    // Prüfung auf überlappende Zeiträume
-    // WICHTIG: String-Vergleiche verwenden statt Date-Objekte
-    for (let i = 0; i < entries.length; i++) {
-      const entry = entries[i];
-      if (entry.markedForDeletion || !entry.startTime || !entry.endTime) continue;
-      
-      for (let j = i + 1; j < entries.length; j++) {
-        const otherEntry = entries[j];
-        if (otherEntry.markedForDeletion || !otherEntry.startTime || !otherEntry.endTime) continue;
-        
-        // Überlappungsprüfung
-        if (!(entry.endTime <= otherEntry.startTime || entry.startTime >= otherEntry.endTime)) {
-          errors.push({
-            index: i,
-            message: `Zeitüberschneidung mit Eintrag #${j + 1}`
-          });
-        }
-      }
+  try {
+    // Bereinige zuerst das Eingabeformat - entferne ein möglicherweise zusätzliches ":00" am Ende
+    let cleanDateString = dateString;
+    if (dateString.match(/T\d{2}:\d{2}:\d{2}:\d{2}$/)) {
+      // Format ist YYYY-MM-DDTHH:MM:SS:00 - entferne das letzte :00
+      cleanDateString = dateString.substring(0, dateString.lastIndexOf(':'));
+      console.log(`Bereinigter Datumsstring: ${cleanDateString}`);
     }
     
-    setValidationErrors(errors);
-    return errors;
-  };
-  
-  // Handler für das Speichern der Änderungen
-  const handleSave = () => {
-    const errors = validateEntries(editedEntries);
+    // Verarbeite den bereinigten String
+    // Extrahiere die einzelnen Datumskomponenten
+    const [datePart, timePart] = cleanDateString.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes, seconds] = timePart.split(':').map(Number);
     
-    if (errors.length > 0) {
-      return; // Speichern abbrechen, wenn Validierungsfehler vorliegen
-    }
-    
-    // WICHTIG: Nur geänderte Einträge an das Backend senden
-    const updatedEntries = editedEntries
-      .filter(entry => entry.isModified && !entry.markedForDeletion)
-      .map(entry => ({
-        id: entry.id,
-        userId: entry.userId,
-        // ISO-String direkt aus den Formularwerten konstruieren
-        startTime: `${entry.date}T${entry.startTime}:00.000Z`,
-        endTime: entry.endTime ? `${entry.date}T${entry.endTime}:00.000Z` : null,
-        comment: entry.comment || null
-      }));
-    
-    const deletedEntryIds = editedEntries
-      .filter(entry => entry.markedForDeletion && entry.id)
-      .map(entry => entry.id);
-    
-    onSave(updatedEntries, deletedEntryIds);
-  };
-  
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} size="xl">
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Zeiterfassung bearbeiten: {userName}</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody>
-          {error && (
-            <Alert status="error" mb={4}>
-              <AlertIcon />
-              <AlertTitle>{error}</AlertTitle>
-            </Alert>
-          )}
-          
-          <div className="mb-4">
-            <h3 className="font-medium mb-2">Zeiteinträge für {selectedDate}</h3>
-            
-            {editedEntries.map((entry, index) => (
-              <div 
-                key={index} 
-                className={`p-3 mb-2 border rounded ${
-                  entry.markedForDeletion ? 'bg-red-50 border-red-200' : 'bg-white border-gray-200'
-                } ${
-                  validationErrors.some(error => error.index === index) ? 'border-red-500' : ''
-                }`}
-              >
-                {!entry.markedForDeletion ? (
-                  <div className="grid grid-cols-12 gap-3">
-                    <div className="col-span-4">
-                      <label className="block text-sm mb-1">Startzeit</label>
-                      <input
-                        type="time"
-                        value={entry.startTime}
-                        onChange={(e) => {
-                          const updatedEntries = [...editedEntries];
-                          updatedEntries[index] = {
-                            ...entry,
-                            startTime: e.target.value,
-                            isModified: true
-                          };
-                          setEditedEntries(updatedEntries);
-                        }}
-                        className="w-full p-2 border rounded"
-                      />
-                    </div>
-                    <div className="col-span-4">
-                      <label className="block text-sm mb-1">Endzeit</label>
-                      <input
-                        type="time"
-                        value={entry.endTime}
-                        onChange={(e) => {
-                          const updatedEntries = [...editedEntries];
-                          updatedEntries[index] = {
-                            ...entry, 
-                            endTime: e.target.value,
-                            isModified: true
-                          };
-                          setEditedEntries(updatedEntries);
-                        }}
-                        className="w-full p-2 border rounded"
-                      />
-                    </div>
-                    <div className="col-span-4">
-                      <label className="block text-sm mb-1">Kommentar</label>
-                      <input
-                        type="text"
-                        value={entry.comment}
-                        onChange={(e) => {
-                          const updatedEntries = [...editedEntries];
-                          updatedEntries[index] = {
-                            ...entry,
-                            comment: e.target.value,
-                            isModified: true
-                          };
-                          setEditedEntries(updatedEntries);
-                        }}
-                        className="w-full p-2 border rounded"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-red-500">Dieser Eintrag wird gelöscht.</p>
-                )}
-                
-                {validationErrors.filter(error => error.index === index).map((error, i) => (
-                  <p key={i} className="text-red-500 text-sm mt-1">{error.message}</p>
-                ))}
-                
-                <div className="mt-2 flex justify-end">
-                  {!entry.markedForDeletion ? (
-                    <button
-                      onClick={() => {
-                        const updatedEntries = [...editedEntries];
-                        updatedEntries[index] = { ...entry, markedForDeletion: true };
-                        setEditedEntries(updatedEntries);
-                      }}
-                      className="text-red-500 text-sm hover:text-red-700"
-                    >
-                      Löschen
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        const updatedEntries = [...editedEntries];
-                        updatedEntries[index] = { ...entry, markedForDeletion: false };
-                        setEditedEntries(updatedEntries);
-                      }}
-                      className="text-blue-500 text-sm hover:text-blue-700"
-                    >
-                      Wiederherstellen
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-            
-            <button
-              onClick={() => {
-                setEditedEntries([
-                  ...editedEntries,
-                  {
-                    id: '',
-                    userId: editedEntries[0]?.userId || '',
-                    date: selectedDate,
-                    startTime: '',
-                    endTime: '',
-                    comment: '',
-                    isModified: true,
-                    markedForDeletion: false
-                  }
-                ]);
-              }}
-              className="mt-2 text-blue-500 hover:text-blue-700"
-            >
-              + Neuen Eintrag hinzufügen
-            </button>
-          </div>
-        </ModalBody>
-        <ModalFooter>
-          <Button variant="ghost" onClick={onClose} mr={3}>Abbrechen</Button>
-          <Button 
-            colorScheme="blue" 
-            onClick={handleSave}
-            isLoading={loading}
-          >
-            Speichern
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
-  );
+    // Erstelle ein Date-Objekt mit UTC, um Zeitzonenprobleme zu vermeiden
+    return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+  } catch (error) {
+    console.error(`Fehler beim Parsen des Datums: ${error}`);
+    return null;
+  }
 };
 ```
 
-### Integration des Edit-Buttons im Workcenter
+4. **Typische Fehler und Lösungen**:
+   - **Problem**: 500 Internal Server Error bei `updateWorktime` API-Aufrufen
+   - **Ursache**: JavaScript kann das spezielle Format nicht als gültiges Datum parsen
+   - **Lösung**: 
+     - Bereinigung der Zeitstrings vor der Verarbeitung
+     - Explizite Validierung und Fehlerbehandlung
+     - Logging der empfangenen und verarbeiteten Werte für die Fehlerdiagnose
 
-Im Workcenter werden sowohl der Stop-Button für aktive Zeiterfassungen als auch der Edit-Button für allgemeine Zeitbearbeitungen implementiert. Die korrekte Integration in der `ActiveUsersList`-Komponente sieht wie folgt aus:
+5. **Nach Codeänderungen kompilieren und bereitstellen**:
+   - Nach Änderungen am Backend-Code muss `npm run build` ausgeführt werden
+   - Der Server muss neu gestartet werden, damit die Änderungen wirksam werden
+
+Diese Aspekte sind entscheidend für die korrekte Funktion des EditWorktimeModal und helfen, häufige Probleme bei der Zeitzonenbehandlung zu vermeiden.
+
+### FilterControls
 
 ```typescript
-// In ActiveUsersList.tsx
-const ActiveUsersList: React.FC<ActiveUsersListProps> = ({ 
-  groups, 
-  onStopWorktime, 
-  isLoading,
-  onOpenEditModal 
+// Vereinfachtes Beispiel
+const FilterControls: React.FC<{
+  selectedBranch: Branch | null;
+  onBranchChange: (branch: Branch | null) => void;
+  dateRange: DateRange;
+  onDateRangeChange: (dateRange: DateRange) => void;
+  selectedUser: User | null;
+  onUserChange: (user: User | null) => void;
+}> = ({
+  selectedBranch,
+  onBranchChange,
+  dateRange,
+  onDateRangeChange,
+  selectedUser,
+  onUserChange
 }) => {
-  // State und Handler für die Komponente
-  
+  const branches = useBranches();
+  const users = useUsers();
+
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-        {/* Tabellenkopf */}
-        <thead className="bg-gray-50 dark:bg-gray-800">
-          <tr>
-            {/* ... Andere Spaltenköpfe ... */}
-            <th scope="col" className="relative px-6 py-3">
-              <span className="sr-only">Aktionen</span>
-            </th>
-          </tr>
-        </thead>
-        
-        {/* Tabelleninhalt */}
-        <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-          {groups.map((group) => (
-            <tr key={group.userId} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-              {/* ... Andere Zellen ... */}
-              
-              {/* Aktionsspalte mit Stop- und Edit-Button */}
-              <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <div className="flex flex-row space-x-2 justify-end items-center">
-                  {/* Stop-Button für aktive Zeiterfassungen */}
-                  {group.hasActiveWorktime && (
-                    <button
-                      onClick={() => handleOpenStopModal(group)}
-                      className="p-1 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-                      title="Zeiterfassung stoppen"
-                    >
-                      <StopIcon className="h-5 w-5 text-white fill-white" />
-                    </button>
-                  )}
-                  
-                  {/* Edit-Button nur für Benutzer mit entsprechenden Berechtigungen */}
-                  {hasPermission('team_worktime', 'both', 'page') && (
-                    <button
-                      onClick={() => handleOpenEditModal(group)}
-                      className="p-1 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-                      title="Zeiterfassungen bearbeiten"
-                    >
-                      <PencilIcon className="h-5 w-5 text-white fill-white" />
-                    </button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="flex flex-col md:flex-row gap-4">
+      <div className="md:w-1/3">
+        <label htmlFor="branch" className="block text-sm font-medium text-gray-700">
+          Niederlassung
+        </label>
+        <Select
+          id="branch"
+          value={selectedBranch}
+          onChange={(value) => onBranchChange(value as Branch | null)}
+          options={branches.map((branch) => ({
+            value: branch.id,
+            label: branch.name
+          }))}
+        />
+      </div>
+      <div className="md:w-1/3">
+        <label htmlFor="dateRange" className="block text-sm font-medium text-gray-700">
+          Zeitraum
+        </label>
+        <DateRangePicker
+          value={dateRange}
+          onChange={(value) => onDateRangeChange(value as DateRange)}
+        />
+      </div>
+      <div className="md:w-1/3">
+        <label htmlFor="user" className="block text-sm font-medium text-gray-700">
+          Benutzer
+        </label>
+        <Select
+          id="user"
+          value={selectedUser}
+          onChange={(value) => onUserChange(value as User | null)}
+          options={users.map((user) => ({
+            value: user.id,
+            label: `${user.firstName} ${user.lastName}`
+          }))}
+        />
+      </div>
     </div>
   );
-};
-```
-
-#### Berechtigungsprüfung für den Edit-Button
-
-Für den Edit-Button ist die korrekte Berechtigungsprüfung entscheidend:
-
-1. **Benötigte Berechtigung**: 'team_worktime' mit Zugriffsebene 'both' für Entität 'page'
-2. **Implementierung**: Verwendung des `hasPermission`-Hooks zur Prüfung
-3. **Position**: Der Edit-Button erscheint rechts neben dem Stop-Button (falls vorhanden)
-4. **Anzeige**: Der Button wird nur angezeigt, wenn der Benutzer die erforderlichen Berechtigungen hat
-
-```typescript
-// Korrekte Berechtigungsprüfung
-import { usePermissions } from 'hooks/usePermissions';
-
-const { hasPermission } = usePermissions();
-
-// Im JSX
-{hasPermission('team_worktime', 'both', 'page') && (
-  <button
-    onClick={() => handleOpenEditModal(group)}
-    className="p-1 bg-blue-600 text-white rounded hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-    title="Zeiterfassungen bearbeiten"
-  >
-    <PencilIcon className="h-5 w-5 text-white fill-white" />
-  </button>
-)}
-```
-
-#### Handler zum Öffnen des Edit-Modals
-
-Der `handleOpenEditModal`-Handler bereitet die erforderlichen Daten für das Modal vor und öffnet es:
-
-```typescript
-// Handler zum Öffnen des Edit-Modals
-const handleOpenEditModal = (group: ActiveUserGroup) => {
-  // Datum für die Anzeige formatieren (YYYY-MM-DD)
-  const formattedDate = format(new Date(), 'yyyy-MM-dd');
-  
-  // Aufruf der übergebenen onOpenEditModal-Funktion mit Benutzergruppe und Datum
-  onOpenEditModal(group, formattedDate);
-};
-```
-
-#### Aktualisieren der Zeiteinträge mit dem API
-
-Nach dem Bearbeiten der Zeiteinträge im Modal müssen diese korrekt an das Backend gesendet werden:
-
-```typescript
-// Handler zum Speichern der bearbeiteten Zeiteinträge
-const handleSaveWorktimeEdits = async (
-  updatedEntries: WorktimeEntry[], 
-  deletedEntryIds: string[]
-) => {
-  try {
-    // Aktualisierte Einträge speichern
-    if (updatedEntries.length > 0) {
-      await Promise.all(
-        updatedEntries.map(entry => worktimeApi.updateWorktimeEntry(entry))
-      );
-    }
-    
-    // Zu löschende Einträge entfernen
-    if (deletedEntryIds.length > 0) {
-      await Promise.all(
-        deletedEntryIds.map(id => worktimeApi.deleteWorktimeEntry(id))
-      );
-    }
-    
-    // Erfolgsmeldung anzeigen
-    toast({
-      title: "Zeiterfassung aktualisiert",
-      description: "Die Zeiterfassungen wurden erfolgreich aktualisiert.",
-      status: "success"
-    });
-    
-    // Modal schließen und Daten neu laden
-    handleCloseEditModal();
-    fetchActiveUsers();
-  } catch (error) {
-    console.error('Fehler beim Aktualisieren der Zeiterfassungen:', error);
-    
-    // Fehlermeldung anzeigen
-    toast({
-      title: "Fehler",
-      description: "Beim Aktualisieren der Zeiterfassungen ist ein Fehler aufgetreten.",
-      status: "error"
-    });
-  }
 };
 ```
 

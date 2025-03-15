@@ -101,40 +101,68 @@ async function main() {
     // 3. BERECHTIGUNGEN IN DER DATENBANK ERSTELLEN
     console.log('Erstelle Berechtigungen in der Datenbank...');
     
-    // Admin-Berechtigungen erstellen
-    for (const permission of adminPermissions) {
-      await prisma.permission.create({
-        data: {
-          entity: permission.entity,
-          entityType: permission.entityType,
-          accessLevel: permission.accessLevel,
-          roleId: adminRole.id
+    // Hilfsfunktion zum Erstellen/Aktualisieren von Berechtigungen
+    async function createOrUpdatePermission(roleId: number, entity: string, entityType: string, accessLevel: string) {
+      // Prüfen, ob die Berechtigung bereits existiert
+      const existingPermission = await prisma.permission.findFirst({
+        where: {
+          roleId: roleId,
+          entity: entity,
+          entityType: entityType
         }
       });
+      
+      if (existingPermission) {
+        // Berechtigung aktualisieren, falls nötig
+        if (existingPermission.accessLevel !== accessLevel) {
+          await prisma.permission.update({
+            where: { id: existingPermission.id },
+            data: { accessLevel: accessLevel }
+          });
+          console.log(`Berechtigung aktualisiert: ${entity} ${entityType} für Rolle ${roleId}`);
+        }
+      } else {
+        // Neue Berechtigung erstellen
+        await prisma.permission.create({
+          data: {
+            entity: entity,
+            entityType: entityType,
+            accessLevel: accessLevel,
+            roleId: roleId
+          }
+        });
+        console.log(`Neue Berechtigung erstellt: ${entity} ${entityType} für Rolle ${roleId}`);
+      }
+    }
+    
+    // Admin-Berechtigungen erstellen
+    for (const permission of adminPermissions) {
+      await createOrUpdatePermission(
+        adminRole.id,
+        permission.entity,
+        permission.entityType,
+        permission.accessLevel
+      );
     }
     
     // User-Berechtigungen erstellen
     for (const permission of userPermissions) {
-      await prisma.permission.create({
-        data: {
-          entity: permission.entity,
-          entityType: permission.entityType,
-          accessLevel: permission.accessLevel,
-          roleId: userRole.id
-        }
-      });
+      await createOrUpdatePermission(
+        userRole.id,
+        permission.entity,
+        permission.entityType,
+        permission.accessLevel
+      );
     }
     
     // Hamburger-Berechtigungen erstellen
     for (const permission of hamburgerPermissions) {
-      await prisma.permission.create({
-        data: {
-          entity: permission.entity,
-          entityType: permission.entityType,
-          accessLevel: permission.accessLevel,
-          roleId: hamburgerRole.id
-        }
-      });
+      await createOrUpdatePermission(
+        hamburgerRole.id,
+        permission.entity,
+        permission.entityType,
+        permission.accessLevel
+      );
     }
     
     // 4. BENUTZER ERSTELLEN
@@ -239,18 +267,35 @@ async function main() {
     // Liste der wichtigen Markdown-Dateien
     const IMPORTANT_MD_FILES = [
       { path: 'README.md', title: 'Readme - Überblick', slug: 'readme', position: 1 },
-      { path: 'PROJECT_SETUP.md', title: 'Projekt-Einrichtung', slug: 'project-setup', position: 2 },
-      { path: 'DOKUMENTATIONSSTANDARDS.md', title: 'Dokumentationsstandards', slug: 'dokumentationsstandards', position: 3 },
-      { path: 'DESIGN_STANDARDS.md', title: 'Design-Standards', slug: 'design-standards', position: 4 },
-      { path: 'CODING_STANDARDS.md', title: 'Coding-Standards', slug: 'coding-standards', position: 5 },
-      { path: 'MODUL_ZEITERFASSUNG.md', title: 'Modul: Zeiterfassung', slug: 'modul-zeiterfassung', position: 6 },
-      { path: 'MODUL_CEREBRO.md', title: 'Cerebro Wiki-System', slug: 'cerebro-wiki', position: 7 },
-      { path: 'MODUL_TEAMKONTROLLE.md', title: 'Modul: Teamkontrolle', slug: 'modul-teamkontrolle', position: 8 },
-      { path: 'MODUL_ABRECHNUNG.md', title: 'Modul: Abrechnung', slug: 'modul-abrechnung', position: 9 },
-      { path: 'DB_SCHEMA.md', title: 'Datenbankschema', slug: 'db-schema', position: 10 },
-      { path: 'API_INTEGRATION.md', title: 'API-Integration', slug: 'api-integration', position: 11 },
-      { path: 'ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität', slug: 'role-switch', position: 12 },
-      { path: 'CHANGELOG.md', title: 'Änderungshistorie', slug: 'changelog', position: 13 }
+      { path: 'DOKUMENTATIONSSTANDARDS.md', title: 'Dokumentationsstandards', slug: 'dokumentationsstandards', position: 2 },
+      { path: 'CHANGELOG.md', title: 'Änderungshistorie', slug: 'changelog', position: 3 },
+      
+      // Nutzerorientierte Dokumentation
+      { path: 'BENUTZERHANDBUCH.md', title: 'Benutzerhandbuch', slug: 'benutzerhandbuch', position: 4 },
+      { path: 'ADMINISTRATORHANDBUCH.md', title: 'Administratorhandbuch', slug: 'administratorhandbuch', position: 5 },
+      
+      // Entwicklungsdokumentation
+      { path: 'ENTWICKLUNGSUMGEBUNG.md', title: 'Entwicklungsumgebung', slug: 'entwicklungsumgebung', position: 6 },
+      { path: 'ARCHITEKTUR.md', title: 'Systemarchitektur', slug: 'architektur', position: 7 },
+      { path: 'CODING_STANDARDS.md', title: 'Coding-Standards', slug: 'coding-standards', position: 8 },
+      { path: 'DESIGN_STANDARDS.md', title: 'Design-Standards', slug: 'design-standards', position: 9 },
+      
+      // Technische Spezifikationen
+      { path: 'API_REFERENZ.md', title: 'API-Referenz', slug: 'api-referenz', position: 10 },
+      { path: 'DATENBANKSCHEMA.md', title: 'Datenbankschema', slug: 'datenbankschema', position: 11 },
+      { path: 'BERECHTIGUNGSSYSTEM.md', title: 'Berechtigungssystem', slug: 'berechtigungssystem', position: 12 },
+      { path: 'DEPLOYMENT.md', title: 'Deployment', slug: 'deployment', position: 13 },
+      
+      // Modulspezifische Dokumentation
+      { path: 'MODUL_ZEITERFASSUNG.md', title: 'Modul: Zeiterfassung', slug: 'modul-zeiterfassung', position: 14 },
+      { path: 'MODUL_CEREBRO.md', title: 'Cerebro Wiki-System', slug: 'cerebro-wiki', position: 15 },
+      { path: 'MODUL_TEAMKONTROLLE.md', title: 'Modul: Teamkontrolle', slug: 'modul-teamkontrolle', position: 16 },
+      { path: 'MODUL_ABRECHNUNG.md', title: 'Modul: Abrechnung', slug: 'modul-abrechnung', position: 17 },
+      
+      // Zusätzliche Dateien
+      { path: 'PROJECT_SETUP.md', title: 'Projekt-Einrichtung', slug: 'project-setup', position: 18 },
+      { path: 'API_INTEGRATION.md', title: 'API-Integration', slug: 'api-integration', position: 19 },
+      { path: 'ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität', slug: 'role-switch', position: 20 }
     ];
     
     // Erstelle für jede Markdown-Datei einen Eintrag in der Datenbank

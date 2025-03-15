@@ -4,7 +4,7 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 
 ## Verzeichnisstruktur
 
-- **metadata/** - Normalisierte Informationen über den Codebase, Komponentenabhängigkeiten und Fileklassifikationen
+- **metadata/** - Normalisierte Informationen über den Codebase, Komponentenabhängigkeiten, Fileklassifikationen und Dokumentationsübersicht
 - **code_index/** - Semantische Beziehungen im Code, Funktionsaufrufe, Typbeziehungen
 - **debug_history/** - Protokollierte Debugging-Sessions mit Fehler-Lösungspaaren
 - **patterns/** - Kanonische Implementierungsmuster mit Beispielen
@@ -35,4 +35,16 @@ Diese Ressourcen sollten regelmäßig aktualisiert werden, wenn:
 Im Code werden spezielle Kommentare als "Memory Anchors" verwendet, um auf spezifische Stellen zu verweisen. Diese folgen dem Format:
 ```
 /* CLAUDE-ANCHOR: [UUID] - [BESCHREIBUNG] */
-``` 
+```
+
+## Projekt-Dokumentation
+
+Das Projekt verfügt über eine umfassende Dokumentation, die in verschiedene Kategorien unterteilt ist:
+
+- **Übersichtsdokumente**: README.md, DOKUMENTATIONSSTANDARDS.md, CHANGELOG.md
+- **Benutzerdokumentation**: BENUTZERHANDBUCH.md, ADMINISTRATORHANDBUCH.md
+- **Entwicklungsdokumentation**: ENTWICKLUNGSUMGEBUNG.md, ARCHITEKTUR.md, CODING_STANDARDS.md, DESIGN_STANDARDS.md
+- **Technische Dokumentation**: API_REFERENZ.md, DATENBANKSCHEMA.md, BERECHTIGUNGSSYSTEM.md, DEPLOYMENT.md
+- **Moduldokumentation**: MODUL_ZEITERFASSUNG.md, MODUL_CEREBRO.md, MODUL_TEAMKONTROLLE.md, MODUL_ABRECHNUNG.md
+
+Eine vollständige Übersicht aller Dokumentationsdateien mit Beschreibungen findet sich in `metadata/documentation.json`. 
