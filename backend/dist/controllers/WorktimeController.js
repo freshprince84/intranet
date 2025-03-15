@@ -297,6 +297,7 @@ const updateWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const { id } = req.params;
         const { startTime, endTime, branchId } = req.body;
         const userId = req.userId;
+        console.log('DEBUG updateWorktime Received:', JSON.stringify({ id, startTime, endTime, branchId, userId }));
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
@@ -310,18 +311,76 @@ const updateWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (worktime.userId !== Number(userId)) {
             return res.status(403).json({ message: 'Keine Berechtigung' });
         }
-        // Daten für das Update vorbereiten - direkte Übernahme ohne Zeitzonenberechnungen
+        // Daten für das Update vorbereiten
         const updateData = {};
         if (branchId)
             updateData.branchId = Number(branchId);
+        // Hilfsfunktion zum sicheren Konvertieren von Datumsstrings
+        const safeDateParse = (dateString) => {
+            if (!dateString)
+                return null;
+            try {
+                // Bereinige zuerst das Eingabeformat - entferne ein möglicherweise zusätzliches ":00" am Ende
+                let cleanDateString = dateString;
+                if (dateString.match(/T\d{2}:\d{2}:\d{2}:\d{2}$/)) {
+                    // Format ist YYYY-MM-DDTHH:MM:SS:00 - entferne das letzte :00
+                    cleanDateString = dateString.substring(0, dateString.lastIndexOf(':'));
+                    console.log(`Bereinigter Datumsstring: ${cleanDateString}`);
+                }
+                // Jetzt normale Verarbeitung mit dem bereinigten String
+                // Prüfe, ob es ein ISO-String im Format YYYY-MM-DDTHH:MM:SS ist
+                if (typeof cleanDateString === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(cleanDateString)) {
+                    // Manuell Datum erstellen aus den einzelnen Komponenten
+                    const [datePart, timePart] = cleanDateString.split('T');
+                    const [year, month, day] = datePart.split('-').map(Number);
+                    const [hours, minutes, seconds] = timePart.split(':').map(Number);
+                    return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+                }
+                else {
+                    // Fallback für andere Formate
+                    const date = new Date(cleanDateString);
+                    if (isNaN(date.getTime())) {
+                        console.error(`Ungültiges Datum: ${cleanDateString}`);
+                        return null;
+                    }
+                    return date;
+                }
+            }
+            catch (error) {
+                console.error(`Fehler beim Parsen des Datums ${dateString}:`, error);
+                return null;
+            }
+        };
         // Startzeit aktualisieren (wenn vorhanden)
         if (startTime) {
-            updateData.startTime = new Date(startTime);
+            const parsedStartTime = safeDateParse(startTime);
+            if (parsedStartTime) {
+                updateData.startTime = parsedStartTime;
+                console.log('Startzeit für Update:', parsedStartTime.toISOString());
+            }
+            else {
+                return res.status(400).json({ message: 'Ungültiges Startzeit-Format' });
+            }
         }
         // Endzeit aktualisieren (wenn vorhanden)
-        if (endTime) {
-            updateData.endTime = new Date(endTime);
+        if (endTime !== undefined) {
+            // Wenn endTime null ist, setze es explizit auf null
+            if (endTime === null) {
+                updateData.endTime = null;
+                console.log('Endzeit für Update: null');
+            }
+            else {
+                const parsedEndTime = safeDateParse(endTime);
+                if (parsedEndTime) {
+                    updateData.endTime = parsedEndTime;
+                    console.log('Endzeit für Update:', parsedEndTime.toISOString());
+                }
+                else {
+                    return res.status(400).json({ message: 'Ungültiges Endzeit-Format' });
+                }
+            }
         }
+        console.log('Final updateData:', JSON.stringify(updateData));
         const updatedWorktime = yield prisma.workTime.update({
             where: { id: Number(id) },
             data: updateData,

@@ -87,6 +87,18 @@ Die korrekte Behandlung von Zeitzonen ist für die Zeiterfassung von entscheiden
 3. **Vermeidung von Zeitzonenproblemen**:
    - Bei Date-Objekten Vorsicht walten lassen, da JavaScript automatisch Zeitzonenumrechnungen durchführt
    - Date-Objekte nur dort verwenden, wo unbedingt nötig, ansonsten String-Operationen bevorzugen
+   - **WICHTIG**: In Formularen und beim Bearbeiten von Zeiteinträgen IMMER direkte String-Manipulation verwenden
+
+4. **Best Practices für die String-Manipulation**:
+   - Datum und Zeit direkt aus ISO-Strings extrahieren: `entry.startTime.substring(0, 10)` für Datum und `entry.startTime.substring(11, 16)` für Zeit (HH:MM)
+   - Beim Speichern direkt ISO-Strings konstruieren: `${entry.date}T${entry.startTime}:00.000`
+   - Bei Validierungen String-Vergleiche statt Date-Objekte verwenden: `entry.startTime < entry.endTime`
+   - Bei der Anzeige von Zeiten direktes String-Parsing verwenden
+
+5. **Vermeidung des `new Date()`-Konstruktors**:
+   - Der `new Date()`-Konstruktor kann Zeitzonenverschiebungen verursachen
+   - Besonders problematisch bei String-Zeitwerten, die OHNE Zeitzoneninfo übergeben werden
+   - Beim Bearbeiten von Zeiteinträgen in Formularen NIEMALS `new Date()` für Eingabewerte verwenden
 
 ### Implementierung der Zeitzonenbehandlung
 
@@ -99,84 +111,75 @@ Bei `handleStartTracking` in `WorktimeTracker.tsx`:
 startTime: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
 ```
 
-Diese Formel ist KRITISCH und muss exakt so verwendet werden:
-- `new Date().getTime()` gibt den aktuellen Zeitstempel in Millisekunden seit dem 01.01.1970 00:00:00 UTC zurück
-- `new Date().getTimezoneOffset()` gibt die Differenz in Minuten zwischen lokaler Zeit und UTC zurück
-- `* 60000` konvertiert Minuten in Millisekunden
-- Die Subtraktion korrigiert den Zeitstempel, sodass er nach der automatischen UTC-Umwandlung korrekt ist
+#### 2. Verarbeitung von Zeiteinträgen im EditWorktimeModal
 
-#### 2. Korrekte Zeitstempel beim Beenden der Zeiterfassung
+Bei der Bearbeitung von Zeiteinträgen ist die korrekte Zeitzonenbehandlung besonders wichtig:
 
-Bei `handleStopTracking` und `handleForceStop` in `WorktimeTracker.tsx`:
+```typescript
+// FALSCH: Erzeugt Zeitzonenverschiebungen
+const formattedStartTime = format(new Date(entry.startTime), 'HH:mm');
+const formattedEndTime = entry.endTime ? format(new Date(entry.endTime), 'HH:mm') : '';
 
-```javascript
-// KORREKTE IMPLEMENTIERUNG
-endTime: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
+// RICHTIG: Direkte String-Manipulation verwenden
+const formattedStartTime = entry.startTime.substring(11, 16); // Extrahiert HH:mm aus ISO-String
+const formattedEndTime = entry.endTime ? entry.endTime.substring(11, 16) : '';
 ```
 
-#### 3. Behandlung von ISO-Strings ohne 'Z'
+#### 3. Validierung von Zeiteinträgen
 
-Bei der Verarbeitung von Zeitstempeln aus der API:
+Bei der Validierung von Zeiteinträgen sollten String-Vergleiche statt Date-Objekte verwendet werden:
 
-```javascript
-// KORREKTE IMPLEMENTIERUNG
-const startISOString = data.startTime.endsWith('Z') 
-    ? data.startTime.substring(0, data.startTime.length - 1)
-    : data.startTime;
+```typescript
+// FALSCH: Umwandlung in Date-Objekte verursacht Zeitzonenprobleme
+const startDate = new Date(`${entry.date}T${entry.startTime}`);
+const endDate = new Date(`${entry.date}T${entry.endTime}`);
+if (startDate >= endDate) {
+  errors.push('Die Startzeit muss vor der Endzeit liegen');
+}
 
-const startTimeDate = new Date(startISOString);
+// RICHTIG: String-Vergleiche verwenden
+if (entry.startTime >= entry.endTime) {
+  errors.push('Die Startzeit muss vor der Endzeit liegen');
+}
 ```
 
-Diese Behandlung ist notwendig, um zu verhindern, dass JavaScript den Zeitstempel als UTC interpretiert.
+#### 4. Formatierung beim Speichern
 
-#### 4. Formatierung von Zeitstempeln für die Anzeige
+Beim Speichern von bearbeiteten Zeiteinträgen:
 
-Für die Anzeige von Zeitstempeln in der Benutzeroberfläche:
+```typescript
+// FALSCH: Umwandlung in Date-Objekte
+const startTime = new Date(`${entry.date}T${entry.startTime}`).toISOString();
 
-```javascript
-// KORREKTE IMPLEMENTIERUNG
-const formatStartDate = (dateString) => {
-    // Entferne das 'Z' am Ende des Strings, damit JS den Zeitstempel nicht als UTC interpretiert
-    if (typeof dateString === 'string' && dateString.endsWith('Z')) {
-        dateString = dateString.substring(0, dateString.length - 1);
-    }
-    
-    const date = new Date(dateString);
-    
-    // Tag, Monat und Jahr aus lokaler Zeit extrahieren
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    
-    // Stunden, Minuten und Sekunden aus lokaler Zeit extrahieren
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    const seconds = date.getSeconds().toString().padStart(2, '0');
-    
-    // Im deutschen Format zurückgeben
-    return `${day}.${month}.${year}, ${hours}:${minutes}:${seconds}`;
-};
+// RICHTIG: Direkte String-Konstruktion
+const startTime = `${entry.date}T${entry.startTime}:00.000`;
 ```
 
-### Häufige Fehler bei der Zeitzonenbehandlung
+### Häufige Probleme und Lösungen
 
-#### FALSCH: Direkte Verwendung von `new Date().toISOString()`
+#### Problem: Zeitverschiebung bei `new Date()`
 
-```javascript
-// FALSCH - NICHT VERWENDEN
-startTime: new Date().toISOString()
-```
-
-Dieses Format fügt automatisch ein 'Z' am Ende hinzu, was die Zeit als UTC kennzeichnet und zu Zeitzonenverschiebungen führt.
-
-#### FALSCH: Verwendung von `new Date()` ohne Zeitzonenkorrektur
+JavaScript interpretiert Datumsstrings ohne Zeitzonenangabe als UTC, was zu Verschiebungen führen kann:
 
 ```javascript
-// FALSCH - NICHT VERWENDEN
-startTime: new Date()
+// Beispiel: "2023-05-01T08:00" wird in der lokalen Zeitzone interpretiert
+const date = new Date("2023-05-01T08:00");
+console.log(date.getHours()); // Könnte 6 oder 10 sein, je nach Zeitzone!
 ```
 
-Dies führt zu Problemen, wenn das Datum in JSON umgewandelt wird, da es automatisch in UTC konvertiert wird.
+#### Lösung: Direkte String-Manipulation
+
+```javascript
+// Zeitwerte als Strings handhaben
+const dateStr = "2023-05-01";
+const timeStr = "08:00";
+
+// Zur Anzeige:
+const displayTime = timeStr; // "08:00"
+
+// Zur Speicherung:
+const isoString = `${dateStr}T${timeStr}:00.000`;
+```
 
 ## API-Endpunkte
 

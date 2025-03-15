@@ -214,6 +214,144 @@ const fetchSessions = async (startDate: Date, endDate: Date) => {
 };
 ```
 
+### Probleme und Lösungen im EditWorktimeModal
+
+Bei der Implementierung des `EditWorktimeModal` zur Bearbeitung von Arbeitszeiten müssen besondere Vorsichtsmaßnahmen getroffen werden, um Zeitzonenprobleme zu vermeiden.
+
+#### Häufige Probleme
+
+1. **Problemursache: Verwendung von `new Date()`**
+   
+   Die Verwendung von `new Date()` für eingegebene oder empfangene Datumszeichenketten kann zu Zeitzonenverschiebungen führen:
+
+   ```typescript
+   // FALSCH: Erzeugt Zeitzonenverschiebungen
+   const formattedStartTime = format(new Date(entry.startTime), 'HH:mm');
+   const formattedEndTime = entry.endTime ? format(new Date(entry.endTime), 'HH:mm') : '';
+   ```
+
+2. **Problemursache: Vergleich von Date-Objekten für die Validierung**
+
+   ```typescript
+   // FALSCH: Durch Umwandlung in Date-Objekte können Zeitzonenprobleme entstehen
+   const startTime = new Date(`${entry.date}T${entry.startTime}`);
+   const endTime = new Date(`${entry.date}T${entry.endTime}`);
+   ```
+
+#### Korrekte Implementierung
+
+1. **String-Manipulation statt Date-Objekte**
+
+   ```typescript
+   // RICHTIG: Direktes Arbeiten mit Strings vermeidet Zeitzonenprobleme
+   const formattedStartTime = entry.startTime.substring(11, 16); // Extrahiert HH:mm aus ISO-String
+   const formattedEndTime = entry.endTime ? entry.endTime.substring(11, 16) : '';
+   ```
+
+2. **Validierung von Zeiteinträgen mit String-Vergleichen**
+
+   ```typescript
+   // RICHTIG: Verwendung von String-Vergleichen vermeidet Zeitzonenverschiebungen
+   const validateEntries = (entries: WorktimeEntryForm[]): ValidationError[] => {
+     const errors: ValidationError[] = [];
+     
+     // Zeiten als Strings vergleichen (Format: "HH:mm")
+     for (let i = 0; i < entries.length; i++) {
+       const entry = entries[i];
+       
+       if (!entry.startTime || !entry.endTime) continue;
+       
+       if (entry.startTime >= entry.endTime) {
+         errors.push({
+           index: i,
+           message: 'Die Startzeit muss vor der Endzeit liegen'
+         });
+       }
+       
+       // Überlappungsprüfung mit anderen Einträgen
+       for (let j = 0; j < entries.length; j++) {
+         if (i === j) continue;
+         
+         const otherEntry = entries[j];
+         if (!otherEntry.startTime || !otherEntry.endTime) continue;
+         
+         // Überlappung nur prüfen, wenn beide Einträge am selben Datum sind
+         if (entry.date === otherEntry.date) {
+           if (!(entry.endTime <= otherEntry.startTime || entry.startTime >= otherEntry.endTime)) {
+             errors.push({
+               index: i,
+               message: `Zeitüberlappung mit Eintrag #${j + 1}`
+             });
+           }
+         }
+       }
+     }
+     
+     return errors;
+   };
+   ```
+
+3. **Korrekte Formatierung beim Speichern**
+
+   ```typescript
+   // RICHTIG: ISO-String-Format ohne Date-Objekte erstellen
+   const handleSave = () => {
+     // Nur geänderte Einträge an das Backend senden
+     const updatedEntries = entries
+       .filter(entry => entry.isModified && !entry.markedForDeletion)
+       .map(entry => ({
+         id: entry.id,
+         userId: entry.userId,
+         // ISO-String direkt aus den Formularwerten konstruieren
+         startTime: `${entry.date}T${entry.startTime}:00.000Z`,
+         endTime: entry.endTime ? `${entry.date}T${entry.endTime}:00.000Z` : null,
+         comment: entry.comment || null
+       }));
+     
+     const deletedEntries = entries
+       .filter(entry => entry.markedForDeletion && entry.id)
+       .map(entry => entry.id);
+     
+     // Aktualisierte und gelöschte Einträge an das Backend senden
+     onSave(updatedEntries, deletedEntries);
+   };
+   ```
+
+### Zeitzonenbehandlung im Backend
+
+Im Backend sollten die empfangenen ISO-Strings mit Vorsicht behandelt werden:
+
+```typescript
+// In worktimeController.ts
+export const updateWorktimeEntry = async (req: Request, res: Response) => {
+  try {
+    const { id, startTime, endTime, comment } = req.body;
+    
+    // Direkte Verwendung der ISO-Strings
+    const updatedEntry = await prisma.worktimeEntry.update({
+      where: { id },
+      data: {
+        startTime,  // ISO-String wird direkt verwendet
+        endTime,    // ISO-String wird direkt verwendet
+        comment: comment || null
+      }
+    });
+    
+    res.status(200).json(updatedEntry);
+  } catch (error) {
+    // Fehlerbehandlung
+  }
+};
+```
+
+### Zusammenfassung der Best Practices für EditWorktimeModal
+
+1. **Direkte String-Manipulation verwenden** statt Date-Objekte für Zeitwerte
+2. **Vermeide die Verwendung von `new Date()`** für Zeitstring-Konvertierungen
+3. **Direkte String-Vergleiche für Validierungen** durchführen
+4. **ISO-Strings ohne Date-Objekte erstellen** beim Speichern
+5. **Nur geänderte Einträge an das Backend senden** für effizientere Datenverarbeitung
+
 ### Zusammenfassung
 
 Die korrekte Zeitzonenbehandlung in der Arbeitszeiterfassung beinhaltet:
