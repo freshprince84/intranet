@@ -5,7 +5,7 @@ import { useTheme } from '../contexts/ThemeContext.tsx';
 import { Cog6ToothIcon, BellIcon, UserCircleIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
 import NotificationSettingsComponent from '../components/NotificationSettings.tsx';
 import { API_URL } from '../config/api.ts';
-import { useMessage } from '../hooks/useMessage.ts';
+import useMessage from '../hooks/useMessage.ts';
 
 const Settings: React.FC = () => {
     const { user } = useAuth();

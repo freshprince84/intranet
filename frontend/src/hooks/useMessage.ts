@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import { MessageContext } from '../contexts/MessageContext.tsx';
 
-export const useMessage = () => {
+const useMessage = () => {
   const context = useContext(MessageContext);
   
   if (!context) {
@@ -9,4 +9,6 @@ export const useMessage = () => {
   }
   
   return context;
-}; 
+};
+
+export default useMessage; 

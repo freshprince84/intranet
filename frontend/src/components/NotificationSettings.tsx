@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { NotificationSettings, notificationSettingsApi } from '../api/notificationApi.ts';
 import { API_URL } from '../config/api.ts';
-import { useMessage } from '../hooks/useMessage.ts';
+import useMessage from '../hooks/useMessage.ts';
 
 const defaultSettings = {
   taskCreate: true,

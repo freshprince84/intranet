@@ -14,8 +14,9 @@ Dieses Dokument definiert die verbindlichen Design-Standards für das Intranet-P
 8. [Buttons und Aktionselemente](#buttons-und-aktionselemente)
 9. [Berechtigungsbasierte UI-Anpassung](#berechtigungsbasierte-ui-anpassung)
 10. [Notification-Komponenten](#notification-komponenten)
-11. [Scrollbars-Design](#scrollbars-design)
-12. [Responsive Design](#responsive-design)
+11. [Header-Message-Komponenten](#header-message-komponenten)
+12. [Scrollbars-Design](#scrollbars-design)
+13. [Responsive Design](#responsive-design)
 
 ## Allgemeine Designprinzipien
 
@@ -951,6 +952,156 @@ Alle Benachrichtigungen müssen dem folgenden Design entsprechen:
   color: #9CA3AF;
 }
 ```
+
+### Implementierungsbeispiel
+
+```jsx
+<div className={`notification notification-${type}`}>
+  <div className="notification-icon">
+    {icon}
+  </div>
+  <div className="notification-content">
+    <h3 className="notification-title">{title}</h3>
+    <p className="notification-message">{message}</p>
+  </div>
+  <button className="notification-close" onClick={onClose}>
+    <XIcon />
+  </button>
+</div>
+```
+
+## Header-Message-Komponenten
+
+Header-Messages dienen zur temporären Anzeige von Feedback und System-Meldungen im Header-Bereich. Sie verwenden eine einheitliche Darstellung in Abhängigkeit vom Meldungstyp.
+
+```css
+/* Basis für Header-Meldungen */
+.message-container {
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  margin: 0 1rem;
+  animation: fadeInOut 3s forwards;
+  position: relative;
+  min-width: 200px;
+  max-width: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Animation für Erscheinen und Verschwinden */
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-10px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; }
+}
+
+/* Typ-spezifische Styles */
+.message-success {
+  background-color: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  color: #047857;
+}
+
+.message-error {
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #B91C1C;
+}
+
+.message-warning {
+  background-color: #FFFBEB;
+  border: 1px solid #FEF3C7;
+  color: #B45309;
+}
+
+.message-info {
+  background-color: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1D4ED8;
+}
+
+.message-default {
+  background-color: #F3F4F6;
+  border: 1px solid #E5E7EB;
+  color: #374151;
+}
+
+/* Dark Mode */
+.dark .message-success {
+  background-color: #064E3B;
+  border-color: #047857;
+  color: #A7F3D0;
+}
+
+.dark .message-error {
+  background-color: #7F1D1D;
+  border-color: #B91C1C;
+  color: #FECACA;
+}
+
+.dark .message-warning {
+  background-color: #78350F;
+  border-color: #B45309;
+  color: #FEF3C7;
+}
+
+.dark .message-info {
+  background-color: #1E3A8A;
+  border-color: #1D4ED8;
+  color: #BFDBFE;
+}
+
+.dark .message-default {
+  background-color: #374151;
+  border-color: #4B5563;
+  color: #E5E7EB;
+}
+```
+
+### Implementierungsbeispiel
+
+```jsx
+const HeaderMessage = () => {
+  const { message } = useMessage();
+  
+  if (!message) return null;
+  
+  const getMessageClassName = (type) => {
+    switch (type) {
+      case 'success': return 'bg-green-100 border border-green-400 text-green-700';
+      case 'error': return 'bg-red-100 border border-red-400 text-red-700';
+      case 'warning': return 'bg-yellow-100 border border-yellow-400 text-yellow-700';
+      case 'info': return 'bg-blue-100 border border-blue-400 text-blue-700';
+      default: return 'bg-gray-100 border border-gray-400 text-gray-700';
+    }
+  };
+  
+  return (
+    <div 
+      className={`message-container px-4 py-3 rounded mx-4 flex items-center justify-center ${getMessageClassName(message.type)}`}
+      style={{
+        animation: 'fadeInOut 3s forwards',
+        position: 'relative',
+        animationFillMode: 'forwards'
+      }}
+    >
+      {message.content}
+    </div>
+  );
+};
+```
+
+### Richtlinien für Header-Messages
+
+1. **Platzierung**: Header-Messages müssen im Header zwischen Logo und Benachrichtigungen platziert werden
+2. **Timing**: Die Anzeigedauer beträgt genau 3 Sekunden
+3. **Typen**: Es müssen die Standard-Typen success, error, warning, info und default verwendet werden
+4. **Design**: Die Meldungen folgen dem etablierten Farbschema mit hellem Hintergrund, farbigem Rand und farbigem Text
+5. **Inhalt**: Texte sollten kurz und präzise sein (idealerweise 5-10 Wörter)
+6. **Singular**: Es darf zu jedem Zeitpunkt nur eine Meldung angezeigt werden
+7. **State-Management**: Verwende den zentralen MessageContext/useMessage-Hook für die Verwaltung
 
 ## Scrollbars-Design
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { userApi, roleApi } from '../api/apiClient.ts';
 import { User, Role } from '../types/interfaces.ts';
 import { CheckIcon, PlusIcon, PencilIcon } from '@heroicons/react/24/outline';
+import useMessage from '../hooks/useMessage.ts';
 
 interface UserManagementTabProps {
   onError: (error: string) => void;
@@ -54,9 +55,9 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   const [userFormData, setUserFormData] = useState<Partial<User>>({});
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<number[]>([]);
-  const [userSuccess, setUserSuccess] = useState<string | null>(null);
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [roleWarning, setRoleWarning] = useState<string | null>(null);
+  const { showMessage } = useMessage();
   
   // Neuer State für Rollen
   const [roles, setRoles] = useState<Role[]>([]);
@@ -221,10 +222,10 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   // Speichern der Benutzerdaten
   const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setUserSuccess(null);
 
     if (!selectedUser || !selectedUser.id) {
       onError('Kein Benutzer ausgewählt');
+      showMessage('Kein Benutzer ausgewählt', 'error');
       return;
     }
 
@@ -274,16 +275,19 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
         };
         setSelectedUser(updatedData);
         setUserFormData(updatedData);
-        setUserSuccess('Benutzerprofil erfolgreich aktualisiert');
+        showMessage('Benutzerprofil erfolgreich aktualisiert', 'success');
         setIsEditingUser(false);
         fetchUsers();
       }
     } catch (err) {
       console.error('Fehler beim Speichern der Benutzerdaten:', err);
       if (err.response?.status === 400) {
-        onError(`Validierungsfehler: ${err.response?.data?.message || 'Bitte überprüfe die eingegebenen Daten'}`);
+        const errorMsg = `Validierungsfehler: ${err.response?.data?.message || 'Bitte überprüfe die eingegebenen Daten'}`;
+        onError(errorMsg);
+        showMessage(errorMsg, 'error');
       } else if (err.response?.status === 404) {
         onError('Benutzer wurde nicht gefunden');
+        showMessage('Benutzer wurde nicht gefunden', 'error');
       } else {
         handleError(err);
       }
@@ -318,20 +322,19 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       // Benutzer nach dem Update neu laden
       await fetchUserDetails(selectedUser.id);
       
-      // Erfolgsmeldung anzeigen
-      setUserSuccess(
+      // Erfolgsmeldung anzeigen mit showMessage statt setUserSuccess
+      showMessage(
         isRoleSelected
           ? `Rolle erfolgreich entfernt`
-          : `Rolle erfolgreich zugewiesen`
+          : `Rolle erfolgreich zugewiesen`,
+        'success'
       );
-
-      // Nach kurzer Zeit die Erfolgsmeldung ausblenden
-      setTimeout(() => setUserSuccess(null), 3000);
     } catch (error) {
       // Bei Fehler auf vorherigen Zustand zurücksetzen
       console.error('Fehler beim Aktualisieren der Rollen:', error);
       fetchUserDetails(selectedUser.id);
       handleError(error);
+      showMessage('Fehler beim Aktualisieren der Rollen', 'error');
     }
   };
 
@@ -342,15 +345,16 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   };
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      {userSuccess && (
+    <div className="container mx-auto px-4 pb-6">
+      {/* Die lokale Erfolgsmeldungs-Anzeige wird entfernt, da wir jetzt HeaderMessage verwenden */}
+      {/* {userSuccess && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
           {userSuccess}
         </div>
-      )}
+      )} */}
 
       {/* Benutzer-Dropdown */}
-      <div className="mb-4">
+      <div className="mb-6">
         <label htmlFor="userSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Benutzer auswählen
         </label>
@@ -383,7 +387,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
           </div>
 
           <form onSubmit={handleUserSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Benutzername
@@ -554,7 +558,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
             <div className="mt-4 border-t pt-4">
               <h3 className="text-lg font-semibold mb-4">Lohnabrechnung-Einstellungen</h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Abrechnungsland
@@ -598,7 +602,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                 )}
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Stundensatz ({(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? 'CHF' : 'COP'})

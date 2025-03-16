@@ -13,7 +13,8 @@ Dieses Handbuch bietet eine umfassende Anleitung zur Nutzung des Intranet-System
 7. [Cerebro Wiki](#cerebro-wiki)
 8. [Dark Mode](#dark-mode)
 9. [Benachrichtigungen](#benachrichtigungen)
-10. [Häufige Fragen](#häufige-fragen)
+10. [System-Meldungen](#system-meldungen)
+11. [Häufige Fragen](#häufige-fragen)
 
 ## Erste Schritte
 
@@ -122,10 +123,11 @@ Requests sind Anfragen, die von anderen Benutzern bearbeitet werden müssen.
 
 ### Benachrichtigungseinstellungen
 
-1. Gehen Sie zu "Einstellungen"
-2. Wählen Sie den Reiter "Benachrichtigungen"
-3. Aktivieren oder deaktivieren Sie gewünschte Benachrichtigungen
-4. Speichern Sie die Änderungen
+1. Klicken Sie auf Ihr Profil in der oberen rechten Ecke
+2. Wählen Sie "Einstellungen"
+3. Gehen Sie zum Reiter "Benachrichtigungen"
+4. Aktivieren oder deaktivieren Sie einzelne Benachrichtigungstypen
+5. Speichern Sie Ihre Änderungen
 
 ## Cerebro Wiki
 
@@ -178,6 +180,27 @@ Das System sendet Benachrichtigungen für:
 - Request-Änderungen (Erstellung, Updates, Statusänderungen)
 - Benutzerverwaltung (wenn Sie betroffen sind)
 - Zeiterfassung (Start/Stop)
+
+## System-Meldungen
+
+Das System zeigt wichtige Meldungen in der Kopfzeile an, um Sie über Aktionen und deren Ergebnisse zu informieren.
+
+### Arten von Meldungen
+
+Das System verwendet verschiedene Arten von Meldungen:
+- **Erfolg** (grün): Bestätigung, dass eine Aktion erfolgreich abgeschlossen wurde
+- **Fehler** (rot): Information über ein Problem oder einen Fehler
+- **Warnung** (gelb): Hinweis auf potenzielle Probleme oder erforderliche Aufmerksamkeit
+- **Info** (blau): Allgemeine Informationen und Hinweise
+
+### Verhalten der Meldungen
+
+- Meldungen erscheinen im oberen Bereich zwischen dem Logo und den Bedienungselementen
+- Meldungen verschwinden automatisch nach 3 Sekunden
+- Zu einem Zeitpunkt wird immer nur eine Meldung angezeigt
+- Bei mehreren aufeinanderfolgenden Aktionen wird jeweils die neueste Meldung angezeigt
+
+![Beispiel für eine Erfolgsmeldung](assets/images/success-message.png)
 
 ## Häufige Fragen
 

@@ -240,6 +240,7 @@ Das Frontend verwendet primär React Context API für die Zustandsverwaltung:
 - **TaskContext**: Aufgabenverwaltungsdaten
 - **NotificationContext**: Benachrichtigungszustand
 - **ThemeContext**: UI-Themeneinstellungen (Dark Mode)
+- **MessageContext**: Temporäre System- und Feedback-Meldungen im Header
 
 ### Styling-Konzept
 

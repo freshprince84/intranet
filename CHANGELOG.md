@@ -9,6 +9,17 @@
   - Das neue Feld `entityType` unterscheidet zwischen 'page' und 'table' Berechtigungen
   - Für Tabellen wie "requests" und "tasks" wurden spezifische Tabellenberechtigungen eingeführt
   - Die Frontend-Komponenten prüfen jetzt Berechtigungen mit `hasPermission('entity', 'accessLevel', 'entityType')`
+- Zentrales Header-Message-System:
+  - `MessageContext` und `useMessage`-Hook für die systemweite Verwaltung von Meldungen
+  - Automatische Anzeige und Ausblendung von Feedback-Meldungen im Header
+  - Unterstützung für verschiedene Meldungstypen: success, error, warning, info
+  - Einheitliches Design für alle Systemfeedback-Meldungen
+  - Integration in Settings, Profile und UserManagement
+  - 3-Sekunden-Anzeigedauer für nicht-kritische Meldungen
+- Dokumentation zur Komponenten-Synchronisierung:
+  - Hinweise zur Synchronisierung von `UserManagementTab` und `Profile` in README.md
+  - Klare Anweisungen für Entwickler zur konsistenten Bearbeitung beider Komponenten
+  - Empfehlung für die zukünftige Erstellung einer gemeinsam genutzten Komponente
 - Automatische Zeiterfassungs-Begrenzung:
   - Neue Felder im User-Modell: `normalWorkingHours` (Standard: 7,6h für Kolumbien), `country` und `language`
   - Automatisches Stoppen der Zeiterfassung bei Erreichen der täglichen Arbeitszeit
@@ -89,6 +100,10 @@
   - Logo wird jetzt korrekt angezeigt
   - Tasks können erstellt werden
   - Requests können erstellt werden
+- Profile-Komponente korrigiert:
+  - Design an die System-Standards angepasst (Abstände, Titelgröße)
+  - Felder normalWorkingHours, country und language werden jetzt korrekt geladen und gespeichert
+  - Standardwerte für nicht gesetzte Felder werden korrekt angewendet
 - Problem mit der Sichtbarkeit der kombinierten Spalte "Verantwortlich / Qualitätskontrolle" im Worktracker behoben
 - Inkonsistenz zwischen Frontend-Spaltendefinitionen und Datenbank-Einträgen korrigiert
 - Problem mit Zeitzonenumrechnungen in der Arbeitszeiterfassung behoben:

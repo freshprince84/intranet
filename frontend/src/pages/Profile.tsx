@@ -4,7 +4,7 @@ import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { UserCircleIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { API_URL } from '../config/api.ts';
-import { useMessage } from '../hooks/useMessage.ts';
+import useMessage from '../hooks/useMessage.ts';
 
 interface UserProfile {
   id: number;
@@ -55,9 +55,9 @@ const Profile: React.FC = () => {
         bankDetails: null,
         contract: null,
         salary: null,
-        normalWorkingHours: 0,
-        country: '',
-        language: ''
+        normalWorkingHours: 7.6,
+        country: 'CO',
+        language: 'es'
       };
       setUser(initialUserData);
       setFormData(initialUserData);
@@ -78,7 +78,10 @@ const Profile: React.FC = () => {
       if (response.data) {
         const profileData = {
           ...response.data,
-          birthday: response.data.birthday ? new Date(response.data.birthday).toISOString().split('T')[0] : null
+          birthday: response.data.birthday ? new Date(response.data.birthday).toISOString().split('T')[0] : null,
+          normalWorkingHours: response.data.normalWorkingHours || 7.6,
+          country: response.data.country || 'CO',
+          language: response.data.language || 'es'
         };
         setUser(profileData);
         setFormData(profileData);
@@ -165,13 +168,13 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center">
+    <div className="container mx-auto py-4">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold flex items-center">
             <UserCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Benutzerprofil</h1>
-          </div>
+            Benutzerprofil
+          </h2>
           {!isEditing && (
             <button
               onClick={startEditing}
@@ -183,7 +186,7 @@ const Profile: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                 Benutzername

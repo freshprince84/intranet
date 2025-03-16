@@ -110,6 +110,18 @@ code {
     margin-bottom: 170px !important; /* Erhöht von 150px auf 170px - mehr Platz für die fixierte Zeiterfassung-Box und den Footer */
   }
   
+  /* Ausnahme für Profil und Benutzerverwaltung - Formularfelder behalten Desktop-Design */
+  .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 input,
+  .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 select,
+  .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 textarea,
+  div[class*="ProfileData"] input,
+  div[class*="ProfileData"] select,
+  div[class*="ProfileData"] textarea {
+    font-size: 0.875rem !important;
+    height: 2.25rem !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+  
   /* Zeiterfassungs-Box (WorktimeTracker/WorktimeList) identifizieren und fixieren */
   /* Selektor für die Zeiterfassungs-Box (MB-8 Klasse) */
   .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 {
@@ -155,7 +167,7 @@ code {
     padding-bottom: 0.4rem !important;
   }
 
-  /* Überschreibe die p-6 Klasse für die Zeiterfassungsbox */
+  /* Überschreibe die p-6 Klasse für die Zeiterfassungs-Box */
   .min-h-screen > div > .max-w-7xl.mx-auto.py-0 > div.mb-8 .bg-white.rounded-lg.border.p-6 {
     padding: 0.75rem 0.5rem 0.4rem 0.5rem !important;
   }
@@ -1087,4 +1099,172 @@ div.overflow-x-auto table td span[class*="rounded-full"] {
 /* Sidebar-Tooltips immer im Vordergrund anzeigen */
 .group-hover\:opacity-100.absolute {
   z-index: 50 !important; /* Hoher z-index um über allen Elementen zu schweben */
+}
+
+/* ========= NEUER CODE FÜR PROFILE UND USERMANAGEMENTTAB ========= */
+/* Überschreibe globale Mobile-Styles speziell für Profilformular und UserManagementTab */
+@media (max-width: 640px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  textarea,
+  select {
+    font-size: 0.875rem !important; /* Gleiche Größe wie bei Desktop */
+    height: auto !important; /* Verhindert feste Höhen, die zu klein sein könnten */
+    min-height: 2.25rem !important; /* Mindesthöhe zum Verhindern von zu kleinen Feldern */
+    padding: 0.5rem 0.75rem !important; /* Gleicher Innenabstand wie bei Desktop */
+    box-sizing: border-box !important; /* Verhindert, dass Padding Feldgröße ändert */
+  }
+
+  /* Stelle sicher, dass die Select-Felder richtig angezeigt werden */
+  select {
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3E%3C/svg%3E") !important;
+    background-position: right 0.5rem center !important;
+    background-repeat: no-repeat !important;
+    background-size: 1.5em 1.5em !important;
+    padding-right: 2.5rem !important;
+  }
+
+  /* Stelle sicher, dass der Text in den Feldern richtig lesbar ist */
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af !important;
+    opacity: 1 !important;
+  }
+}
+
+/* Verbesserungen für Formularfelder auf mobilen Geräten */
+@media (max-width: 640px) {
+  /* Verbesserte Eingabefelder für alle Formulare */
+  .container input,
+  .container select,
+  .container textarea {
+    font-size: 0.875rem !important;
+    height: auto !important;
+    min-height: 2.5rem !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  /* Verbesserte Darstellung für Select-Elemente */
+  .container select {
+    background-size: 1.5em 1.5em !important;
+    padding-right: 2.5rem !important;
+  }
+}
+
+/* Verbesserte Darstellung der Formularfelder in Profil und UserManagementTab */
+.bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 input,
+.bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 select,
+.bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 textarea,
+form[onsubmit="handleUserSubmit"] input,
+form[onsubmit="handleUserSubmit"] select,
+form[onsubmit="handleUserSubmit"] textarea,
+form[onsubmit="handleSubmit"] input,
+form[onsubmit="handleSubmit"] select,
+form[onsubmit="handleSubmit"] textarea,
+div.grid.grid-cols-1.sm\:grid-cols-2.gap-4 input,
+div.grid.grid-cols-1.sm\:grid-cols-2.gap-4 select,
+div.grid.grid-cols-1.sm\:grid-cols-2.gap-4 textarea {
+  font-size: 0.875rem !important;
+  height: auto !important;
+  min-height: 2.5rem !important;
+  padding: 0.5rem 0.75rem !important;
+  width: 90% !important;
+  max-width: 90% !important;
+  box-sizing: border-box !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
+/* Spezielle Anpassungen für bestimmte Formularfelder im Desktop-Modus */
+@media (min-width: 641px) {
+  /* Für alle Felder in Profil und Benutzerverwaltung */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea,
+  .grid.grid-cols-1.sm\:grid-cols-2.gap-6 input,
+  .grid.grid-cols-1.sm\:grid-cols-2.gap-6 select,
+  .grid.grid-cols-1.sm\:grid-cols-2.gap-6 textarea,
+  .grid.grid-cols-1.sm\:grid-cols-2.gap-4 input,
+  .grid.grid-cols-1.sm\:grid-cols-2.gap-4 select,
+  .grid.grid-cols-1.sm\:grid-cols-2.gap-4 textarea {
+    width: 90% !important;
+    max-width: 90% !important;
+  }
+}
+
+/* Verbesserte Mobildarstellung */
+@media (max-width: 640px) {
+  /* Einheitliche Formularfeldbreiten für alle Komponenten im Mobile-Modus */
+  .container input,
+  .container select,
+  .container textarea,
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="date"],
+  select,
+  textarea,
+  .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 input,
+  .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 select,
+  .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 textarea,
+  form[onsubmit="handleUserSubmit"] input,
+  form[onsubmit="handleUserSubmit"] select,
+  form[onsubmit="handleUserSubmit"] textarea,
+  form[onsubmit="handleSubmit"] input,
+  form[onsubmit="handleSubmit"] select,
+  form[onsubmit="handleSubmit"] textarea,
+  .grid.grid-cols-1.sm\:grid-cols-2 input,
+  .grid.grid-cols-1.sm\:grid-cols-2 select,
+  .grid.grid-cols-1.sm\:grid-cols-2 textarea,
+  div.grid.grid-cols-1.sm\:grid-cols-2.gap-4 input,
+  div.grid.grid-cols-1.sm\:grid-cols-2.gap-4 select,
+  div.grid.grid-cols-1.sm\:grid-cols-2.gap-4 textarea {
+    font-size: 0.875rem !important;
+    height: auto !important;
+    min-height: 2.5rem !important;
+    padding: 0.5rem 0.75rem !important;
+    width: 90% !important;
+    max-width: 90% !important;
+    box-sizing: border-box !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  /* Reduzierte Abstände zwischen Formularfeldern */
+  .grid.grid-cols-1.gap-6,
+  .grid.grid-cols-1.sm\:grid-cols-2.gap-6 {
+    gap: 0.5rem !important; /* Reduziert von 1.5rem (gap-6) auf 0.5rem */
+  }
+  
+  .grid.grid-cols-1.gap-4,
+  .grid.grid-cols-1.sm\:grid-cols-2.gap-4 {
+    gap: 0.4rem !important; /* Reduziert von 1rem (gap-4) auf 0.4rem */
+  }
+  
+  /* Verbesserte Darstellung für Select-Elemente */
+  select {
+    background-size: 1.5em 1.5em !important;
+    padding-right: 2.5rem !important;
+  }
+  
+  /* Kleinere Abstände um Labels */
+  .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 label,
+  form[onsubmit="handleUserSubmit"] label,
+  form[onsubmit="handleSubmit"] label,
+  label.block.text-sm.font-medium {
+    margin-bottom: 0.2rem !important; /* Reduzierter Abstand unter Labels */
+  }
+  
+  /* Reduzierter Abstand zwischen Label-Gruppen */
+  .grid > div {
+    margin-bottom: 0.25rem !important;
+  }
 }

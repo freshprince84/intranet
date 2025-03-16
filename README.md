@@ -202,6 +202,37 @@ Das System verwendet die zentrale Funktion `createNotificationIfEnabled` für al
 - **Role**: Create, Update, Delete
 - **Worktime**: Start, Stop
 
+### Header-Message-System
+Das System bietet ein zentrales Message-System zur Anzeige von Feedback-Meldungen in der Kopfzeile der Anwendung. 
+
+**Hauptfunktionen:**
+- Einheitliche Darstellung von Erfolgs-, Fehler-, Warn- und Info-Meldungen
+- Zeitgesteuerte Ausblendung nach 3 Sekunden
+- Standardisiertes Design mit farbiger Kodierung
+- Zentrale Verwaltung über den `MessageContext` und den `useMessage`-Hook
+
+**Integration in Komponenten:**
+- Verfügbar für alle Komponenten über den `useMessage`-Hook
+- Implementiert in Settings, Profile und UserManagement
+- Ersetzt lokale Meldungsverwaltung für konsistentes Benutzererlebnis
+
+### Komponenten-Synchronisierung
+
+**UserManagement-Benutzerbearbeitung und Profile-Seite:**
+- Die Komponenten `UserManagementTab` (Benutzer-Tab) und `Profile` teilen Funktionalitäten zur Bearbeitung von Benutzerdaten
+- Bei Änderungen an einer dieser Komponenten müssen diese synchronisiert werden
+- Betroffene Felder:
+  - Grunddaten (Benutzername, E-Mail, Vor-/Nachname)
+  - Arbeitszeiteinstellungen (normalWorkingHours)
+  - Regionaleinstellungen (country, language)
+  - Persönliche Daten (birthday, bankDetails, contract, salary)
+
+**WICHTIG: Bei Änderungen an einer der folgenden Dateien immer beide aktualisieren:**
+- `frontend/src/components/UserManagementTab.tsx` (Benutzer-Tab)
+- `frontend/src/pages/Profile.tsx` (Profilseite)
+
+**Langfristige Lösung:** Für zukünftige Verbesserungen sollte eine gemeinsame Komponente für die Benutzerbearbeitung erstellt werden, die beide Ansichten nutzen können.
+
 ## Beitragen
 
 1. Lies die [CODING_STANDARDS.md](CODING_STANDARDS.md) und [DESIGN_STANDARDS.md](DESIGN_STANDARDS.md)

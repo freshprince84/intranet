@@ -3,7 +3,7 @@ import { usePermissions } from '../hooks/usePermissions.ts';
 import { UserGroupIcon, UserIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import UserManagementTab from '../components/UserManagementTab.tsx';
 import RoleManagementTab from '../components/RoleManagementTab.tsx';
-import { useMessage } from '../hooks/useMessage.ts';
+import useMessage from '../hooks/useMessage.ts';
 
 const UserManagement: React.FC = () => {
   // Tab-Zustand für Navigation zwischen Benutzer- und Rollenverwaltung
