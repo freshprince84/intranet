@@ -1,19 +1,172 @@
 # API-REFERENZ
 
-Diese Dokumentation bietet eine vollständige Referenz aller API-Endpunkte des Intranet-Systems.
+Diese Dokumentation bietet eine vollständige Referenz aller API-Endpunkte des Intranet-Systems sowie Best Practices für die Integration zwischen Frontend und Backend.
 
 ## Inhaltsverzeichnis
 
-1. [Allgemeine Informationen](#allgemeine-informationen)
-2. [Authentifizierung](#authentifizierung)
-3. [Benutzer-API](#benutzer-api)
-4. [Zeiterfassungs-API](#zeiterfassungs-api)
-5. [Task-API](#task-api)
-6. [Request-API](#request-api)
-7. [Benachrichtigungs-API](#benachrichtigungs-api)
-8. [Cerebro-API](#cerebro-api)
-9. [Lohnabrechnung-API](#lohnabrechnung-api)
-10. [Fehlerbehandlung](#fehlerbehandlung)
+1. [API-Konfiguration und Integration](#api-konfiguration-und-integration)
+2. [Best Practices für API-Integration](#best-practices-für-api-integration)
+3. [Allgemeine Informationen](#allgemeine-informationen)
+4. [Authentifizierung](#authentifizierung)
+5. [Benutzer-API](#benutzer-api)
+6. [Zeiterfassungs-API](#zeiterfassungs-api)
+7. [Task-API](#task-api)
+8. [Request-API](#request-api)
+9. [Benachrichtigungs-API](#benachrichtigungs-api)
+10. [Cerebro-API](#cerebro-api)
+11. [Lohnabrechnung-API](#lohnabrechnung-api)
+12. [Fehlerbehandlung](#fehlerbehandlung)
+
+## API-Konfiguration und Integration
+
+### Server-Konfiguration
+- Backend läuft auf Port 5000 (http://localhost:5000)
+- Frontend läuft auf Port 3000 (http://localhost:3000)
+- Prisma Studio läuft auf Port 5555 (http://localhost:5555)
+- Zugriff ist auch über IP-Adresse möglich
+
+### ⚠️ Wichtige Hinweise zur API-Nutzung
+- API-Aufrufe erfolgen über die zentrale Konfiguration in `frontend/src/config/api.ts`
+- Bei Import der API-Konfiguration **muss** die vollständige Dateiendung angegeben werden:
+  ```typescript
+  // KORREKT:
+  import { API_URL } from '../config/api.ts';
+  
+  // FALSCH (führt zu Kompilierungsfehlern):
+  import { API_URL } from '../config/api';
+  ```
+- API-Endpunkte werden OHNE /api aufgerufen, z.B.:
+  ```javascript
+  // Korrekt
+  ${API_URL}/worktime/stats
+  ${API_URL}/requests
+  
+  // NICHT mehr verwendet
+  ${API_URL}/api/worktime/stats
+  ${API_URL}/api/requests
+  ```
+
+## Best Practices für API-Integration
+
+### 1. Typsicherheit zwischen Frontend und Backend
+
+- Zentralisieren Sie globale Interface-Erweiterungen in Typ-Dateien
+- Importieren Sie diese Typen in allen relevanten Dateien
+- Vermeiden Sie Namespace-Konflikte bei globalen Erweiterungen
+
+#### 1.1. Problem: TypeScript-Interface-Konflikte
+
+Ein häufiges Problem ist die Inkonsistenz zwischen Typdefinitionen im Frontend und Backend, insbesondere bei globalen Namespace-Erweiterungen.
+
+**Beispiel für Konflikt:**
+```typescript
+// In auth.ts
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: number;
+        username: string;
+        email: string;
+        roles: string[];
+      };
+    }
+  }
+}
+
+// In permissionMiddleware.ts
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: number;
+      };
+    }
+  }
+}
+```
+
+#### 1.2. Lösung: Zentralisierte Typdefinitionen
+
+**Konsolidieren Sie globale Interface-Erweiterungen** - Definieren Sie alle Erweiterungen eines Interfaces an einem Ort:
+
+```typescript
+// In types/express.d.ts
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: number;
+        username: string;
+        email: string;
+        roles: string[];
+      };
+      userId?: string;
+      roleId?: string;
+      userPermissions?: any[];
+    }
+  }
+}
+```
+
+### 2. Robuste API-Verarbeitung im Frontend
+
+#### 2.1. Problem: Ungeschützte Zugriffe auf API-Antworten
+
+Der häufigste Frontend-Fehler ist der ungeschützte Zugriff auf Eigenschaften von API-Antworten:
+
+```typescript
+// Problematischer Code
+const response = await api.getNotifications();
+setNotifications(response.data);  // Fehler, wenn response.data undefiniert ist
+
+// Noch problematischer
+notifications.length  // Fehler, wenn notifications undefiniert ist
+```
+
+#### 2.2. Lösung: Defensive Programmierung
+
+**API-Ebene absichern**: Immer gültige Fallback-Werte zurückgeben:
+
+```typescript
+// In notificationApi.ts
+getNotifications: async (page = 1, limit = 10) => {
+  try {
+    const response = await apiClient.get(`/notifications?page=${page}&limit=${limit}`);
+    
+    // Robuste Datenverarbeitung
+    return {
+      data: Array.isArray(response.data) ? response.data : 
+            (response.data?.notifications || []),
+      total: response.data?.pagination?.total || 0,
+      page: response.data?.pagination?.page || page,
+      limit: response.data?.pagination?.limit || limit,
+      pages: response.data?.pagination?.pages || 1
+    };
+  } catch (error) {
+    console.error('Fehler beim Abrufen der Benachrichtigungen:', error);
+    // Bei Fehler einen konsistenten Rückgabewert liefern
+    return { data: [], total: 0, page, limit, pages: 1 };
+  }
+}
+```
+
+### 3. Konsistente Feldnamen
+
+- Verwenden Sie die exakten Prisma-Feldnamen im Frontend
+- Etablieren Sie einen klaren Prozess für Schemaänderungen
+
+### 4. Standardisierte API-Antwortformate
+
+- Listen-Antworten: `{ data: items[], meta: { total, page, limit, pages } }`
+- Einzelne Ressourcen: `{ data: item, meta: { ... } }`
+- Fehlermeldungen: `{ error: 'Fehlermeldung', details: { ... } }`
+
+### 5. Fehlerbehandlung
+
+- Implementieren Sie konsistente Fehlerbehandlung im Frontend
+- Bieten Sie benutzerfreundliche Fehlermeldungen
+- Loggen Sie Fehler für Debugging-Zwecke
 
 ## Allgemeine Informationen
 

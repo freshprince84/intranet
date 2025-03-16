@@ -39,59 +39,75 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [MODUL_TEAMKONTROLLE.md](MODUL_TEAMKONTROLLE.md) - Team-Worktime-Control
 - [MODUL_ABRECHNUNG.md](MODUL_ABRECHNUNG.md) - Lohnabrechnungsintegration
 
-## System-Boxen
+## Systemarchitektur
 
-Im System sind folgende Box-Komponenten definiert:
+### Komponenten-Übersicht
 
-### Hauptboxen
-1. **Dashboard/Arbeitszeitstatistik Box** - Zeigt Wochenstatistiken der Arbeitszeit als interaktives Diagramm
-2. **Dashboard/Requests Box** - Anzeige und Verwaltung von Requests
-3. **Worktracker/Zeiterfassung Box** - Start/Stop-Funktionalität für Zeiterfassung
-4. **Worktracker/To Do's Box** - Verwaltung von Aufgaben und Status
-5. **Settings Box** - Einstellungen für den Benutzer
-6. **UserManagement Box** - Verwaltung von Benutzern und Berechtigungen
-7. **Profile Box** - Benutzerprofilinformationen
-8. **NotificationList Box** - Liste der Benachrichtigungen
-9. **Workcenter Box** - Überwacht und verwaltet Arbeitszeiten im Team
-10. **Lohnabrechnung Box** - Verwaltung und Berechnung von Lohnabrechnungen
+Die Anwendung besteht aus folgenden Hauptkomponenten:
 
-### Authentifizierungsboxen (separat gelistet)
-- **Login Box** - Anmeldeformular
-- **Register Box** - Registrierungsformular
+1. **Frontend**: React-basierte Single-Page-Application
+   - Responsive Design für Desktop und Mobile
+   - Modulare Komponentenstruktur
+   - TypeScript für robuste Typsicherheit
 
-### Box-Styling
-Alle Boxen folgen diesem Basis-Styling:
-- Weißer Hintergrund mit abgerundeten Ecken
-- Schatten für Desktop-Ansicht (ab 641px Bildschirmbreite, 0 2px 4px rgba(0, 0, 0, 0.1))
-- Ohne Rahmen im Desktop-Design
-- Keine Rahmen und Schatten in der mobilen Ansicht
+2. **Backend**: Node.js Express-Server
+   - REST-API für Datenkommunikation
+   - JWT-basierte Authentifizierung
+   - Prisma ORM für Datenbankzugriff
 
-### Scrollbars-Styling
-Alle Scrollbars im System folgen einem einheitlichen, modernen Design:
-- Schlanke (10px) Scrollbars mit abgerundeten Ecken
-- Dezente, halbtransparente Farbgebung passend zum Design
-- Automatische Anpassung an den Dark Mode
-- Optimierte Container für vertikale und horizontale Scrollbars:
-  - `.overflow-y-container`: Für vertikales Scrollen mit stabilem Layout
-  - `.table-scroll-container`: Für horizontales Tabellen-Scrollen
+3. **Datenbank**: PostgreSQL
+   - Relationales Schema
+   - Trigger für automatische Aktionen
+   - Effiziente Indizierung für Leistungsoptimierung
 
-### Box-Breitentypen
-- **Breit (Wide)**: Arbeitszeitstatistik, Requests, Zeiterfassung, To Do's, UserManagement, Workcenter, Lohnabrechnung
-- **Normal**: Settings, Profile
-- **Klein (Small)**: NotificationList
+### UI-Komponenten
+
+Im System sind folgende UI-Komponenten implementiert:
+
+#### Funktionale Boxen
+1. **Dashboard/Arbeitszeitstatistik** - Zeigt Wochenstatistiken der Arbeitszeit als interaktives Diagramm
+2. **Dashboard/Requests** - Anzeige und Verwaltung von Requests
+3. **Worktracker/Zeiterfassung** - Start/Stop-Funktionalität für Zeiterfassung
+4. **Worktracker/To Do's** - Verwaltung von Aufgaben und Status
+5. **UserManagement** - Verwaltung von Benutzern und Berechtigungen
+6. **Profile** - Benutzerprofilinformationen
+7. **NotificationList** - Liste der Benachrichtigungen
+8. **Workcenter** - Überwacht und verwaltet Arbeitszeiten im Team
+9. **Lohnabrechnung** - Verwaltung und Berechnung von Lohnabrechnungen
+10. **Settings** - Einstellungen für den Benutzer
+11. **Login/Register** - Anmelde- und Registrierungsformulare
+
+#### UI-Design
+- **Styling-Grundsätze**:
+  - Weißer Hintergrund mit abgerundeten Ecken
+  - Schatten für Desktop-Ansicht (0 2px 4px rgba(0, 0, 0, 0.1))
+  - Responsive Design mit angepasstem Mobile-Layout
+  - Einheitliches Design für Scrollbars (10px, abgerundete Ecken)
+  - Adaptives Dark Mode-Design
+
+- **Box-Größen**:
+  - Breit: Arbeitszeitstatistik, Requests, Zeiterfassung, To Do's, UserManagement, Workcenter, Lohnabrechnung
+  - Normal: Settings, Profile
+  - Klein: NotificationList
 
 ## Hauptfunktionen
 
+### Kernsysteme
 - **Benutzerauthentifizierung**: Login, Registrierung, Tokenverwaltung
 - **Rollenbasiertes Berechtigungssystem**: Granulare Berechtigungskontrolle 
 - **Arbeitszeiterfassung**: Start/Stop, Statistiken, Exports
 - **Request-Management**: Statusverfolgung, automatische Task-Erstellung
 - **Task-Management**: Workflow-System mit Qualitätskontrolle
 - **Notification-System**: Echtzeit-Benachrichtigungen für Systemereignisse
-- **Dark Mode**: System- oder benutzerdefiniert
 - **Cerebro Wiki**: Internes Wissensmanagementsystem
 - **Team-Worktime-Control**: Verwaltung von Teammitglieder-Arbeitszeiten
 - **Lohnabrechnung**: Integration für Schweiz und Kolumbien
+
+### Benutzereinstellungen
+- Profilmanagement
+- Benachrichtigungspräferenzen
+- UI-Einstellungen (inkl. Dark Mode)
+- Spracheinstellungen
 
 ## Schnellstart
 
@@ -176,15 +192,15 @@ import * as controller from '../controllers/myController.ts';
 - In Dateipfaden immer Suffix (.ts oder .tsx) schreiben (siehe Import-Pfade Regeln)
 - **STRIKTE REGEL FÜR KI-ASSISTENTEN**: Führe NUR explizit angeforderte Änderungen durch. Mache NIEMALS ungefragt mehr als verlangt. Bei Unklarheiten FRAGE NACH, anstatt Annahmen zu treffen.
 
-## Notification-System
-Das System verwendet die zentrale Funktion `createNotificationIfEnabled` für alle Benachrichtigungen. Diese Funktion berücksichtigt die Benutzer- und Systemeinstellungen.
+### Notification-System
+Das System verwendet die zentrale Funktion `createNotificationIfEnabled` für alle Benachrichtigungen, die Benutzer- und Systemeinstellungen berücksichtigt.
 
-### Implementierte Notification-Trigger:
-1. **Task-Trigger**: taskCreate, taskUpdate, taskDelete, taskStatusChange
-2. **Request-Trigger**: requestCreate, requestUpdate, requestDelete, requestStatusChange
-3. **User-Trigger**: userCreate, userUpdate, userDelete
-4. **Role-Trigger**: roleCreate, roleUpdate, roleDelete
-5. **Worktime-Trigger**: worktimeStart, worktimeStop
+**Implementierte Trigger:**
+- **Task**: Create, Update, Delete, StatusChange
+- **Request**: Create, Update, Delete, StatusChange
+- **User**: Create, Update, Delete
+- **Role**: Create, Update, Delete
+- **Worktime**: Start, Stop
 
 ## Beitragen
 
