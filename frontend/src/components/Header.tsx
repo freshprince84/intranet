@@ -5,6 +5,7 @@ import { useBranch } from '../contexts/BranchContext.tsx';
 import NotificationBell from './NotificationBell.tsx';
 import { API_URL } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
+import HeaderMessage from './HeaderMessage.tsx';
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
@@ -168,6 +169,9 @@ const Header: React.FC = () => {
                             }}
                         />
                     </div>
+
+                    {/* HeaderMessage eingefügt zwischen Logo und Benachrichtigungen */}
+                    <HeaderMessage />
 
                     {/* Rechte Seite: Benachrichtigungen und Profil */}
                     <div className="flex items-center space-x-4">

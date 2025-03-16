@@ -245,7 +245,7 @@ const Sidebar: React.FC = () => {
                                     <div className="h-6 w-6">{item.icon}</div>
                                     {!isCollapsed && <span>{item.name}</span>}
                                     {isCollapsed && (
-                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
                                             {item.name}
                                         </div>
                                     )}
@@ -268,7 +268,7 @@ const Sidebar: React.FC = () => {
                                     <div className="h-6 w-6">{item.icon}</div>
                                     {!isCollapsed && <span>{item.name}</span>}
                                     {isCollapsed && (
-                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
                                             {item.name}
                                         </div>
                                     )}
@@ -286,7 +286,7 @@ const Sidebar: React.FC = () => {
                                     <div className="h-6 w-6">{settingsItem.icon}</div>
                                     {!isCollapsed && <span>{settingsItem.name}</span>}
                                     {isCollapsed && (
-                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none">
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
                                             {settingsItem.name}
                                         </div>
                                     )}

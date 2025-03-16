@@ -5,11 +5,13 @@ import { useTheme } from '../contexts/ThemeContext.tsx';
 import { Cog6ToothIcon, BellIcon, UserCircleIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
 import NotificationSettingsComponent from '../components/NotificationSettings.tsx';
 import { API_URL } from '../config/api.ts';
+import { useMessage } from '../hooks/useMessage.ts';
 
 const Settings: React.FC = () => {
     const { user } = useAuth();
     const { isAdmin } = usePermissions();
     const { isDarkMode, toggleDarkMode } = useTheme();
+    const { showMessage } = useMessage();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -29,10 +31,12 @@ const Settings: React.FC = () => {
         if (file) {
             if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
                 setError('Bitte nur PNG oder JPEG Dateien hochladen.');
+                showMessage('Bitte nur PNG oder JPEG Dateien hochladen.', 'error');
                 return;
             }
             if (file.size > 5 * 1024 * 1024) { // 5MB
                 setError('Die Datei ist zu groß (maximal 5MB erlaubt).');
+                showMessage('Die Datei ist zu groß (maximal 5MB erlaubt).', 'error');
                 return;
             }
             setSelectedFile(file);
@@ -82,7 +86,7 @@ const Settings: React.FC = () => {
             try {
                 const responseData = JSON.parse(responseText);
                 console.log('Response Data:', responseData);
-                alert('Logo erfolgreich hochgeladen');
+                showMessage('Logo erfolgreich hochgeladen', 'success');
                 
                 // Favicon nach Upload aktualisieren
                 const faviconLink = document.getElementById('favicon') as HTMLLinkElement;
@@ -109,7 +113,9 @@ const Settings: React.FC = () => {
             setPreviewUrl(null);
         } catch (err) {
             console.error('Upload error:', err);
-            setError('Fehler beim Upload: ' + (err instanceof Error ? err.message : 'Unbekannter Fehler'));
+            const errorMessage = 'Fehler beim Upload: ' + (err instanceof Error ? err.message : 'Unbekannter Fehler');
+            setError(errorMessage);
+            showMessage(errorMessage, 'error');
         } finally {
             setIsUploading(false);
         }

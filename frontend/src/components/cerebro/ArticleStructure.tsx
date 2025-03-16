@@ -121,9 +121,9 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
   const [markdownFolder, setMarkdownFolder] = useState<CerebroArticleStructure | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
+  const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 720);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(window.innerWidth >= 720);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [canCreateArticle, setCanCreateArticle] = useState<boolean>(false);
   
@@ -146,9 +146,13 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
   
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-      // Wenn nicht mehr mobil, Sidebar automatisch öffnen
-      if (window.innerWidth >= 768) {
+      const newIsMobile = window.innerWidth < 720;
+      setIsMobile(newIsMobile);
+      
+      // Nur bei Größenänderungen die Sidebar anpassen
+      // Auf Tablet-Größen und größer: automatisch öffnen
+      // Auf mobilen Geräten: geschlossen lassen
+      if (window.innerWidth >= 720) {
         setSidebarOpen(true);
       }
     };
@@ -159,13 +163,6 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
-  // Seitenleiste bei initialer Darstellung auf Desktop-Geräten öffnen
-  useEffect(() => {
-    if (!isMobile) {
-      setSidebarOpen(true);
-    }
-  }, [isMobile]);
   
   // Lade die Artikelstruktur aus der Datenbank
   useEffect(() => {

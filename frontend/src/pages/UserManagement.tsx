@@ -3,6 +3,7 @@ import { usePermissions } from '../hooks/usePermissions.ts';
 import { UserGroupIcon, UserIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import UserManagementTab from '../components/UserManagementTab.tsx';
 import RoleManagementTab from '../components/RoleManagementTab.tsx';
+import { useMessage } from '../hooks/useMessage.ts';
 
 const UserManagement: React.FC = () => {
   // Tab-Zustand für Navigation zwischen Benutzer- und Rollenverwaltung
@@ -11,6 +12,7 @@ const UserManagement: React.FC = () => {
   // Gemeinsame States
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { showMessage } = useMessage();
 
   const { isAdmin } = usePermissions();
 
@@ -29,6 +31,7 @@ const UserManagement: React.FC = () => {
       message = err.message;
     }
     setError(message);
+    showMessage(message, 'error');
   };
 
   if (!isAdmin()) {
@@ -36,8 +39,8 @@ const UserManagement: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen p-4">
-      <div className="container mx-auto">
+    <div className="min-h-screen">
+      <div className="container mx-auto py-6">
         <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           {/* Header mit Icon */}
           <div className="flex items-center mb-6">

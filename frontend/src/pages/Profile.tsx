@@ -4,6 +4,7 @@ import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { UserCircleIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { API_URL } from '../config/api.ts';
+import { useMessage } from '../hooks/useMessage.ts';
 
 interface UserProfile {
   id: number;
@@ -37,11 +38,10 @@ const LANGUAGES = [
 
 const Profile: React.FC = () => {
   const { user: authUser } = useAuth();
+  const { showMessage } = useMessage();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
-  const [error, setError] = useState<string>('');
-  const [success, setSuccess] = useState<string>('');
 
   useEffect(() => {
     if (authUser) {
@@ -85,11 +85,12 @@ const Profile: React.FC = () => {
       }
     } catch (error) {
       console.error('Error fetching profile:', error.response?.data || error);
-      setError('Fehler beim Laden des Profils: ' + (error.response?.data?.message || error.message));
+      const errorMsg = 'Fehler beim Laden des Profils: ' + (error.response?.data?.message || error.message);
+      showMessage(errorMsg, 'error');
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
@@ -99,8 +100,6 @@ const Profile: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-    setSuccess('');
     
     try {
       const token = localStorage.getItem('token');
@@ -141,18 +140,18 @@ const Profile: React.FC = () => {
         };
         setUser(updatedData);
         setFormData(updatedData);
-        setSuccess('Profil erfolgreich aktualisiert');
+        showMessage('Profil erfolgreich aktualisiert', 'success');
         setIsEditing(false);
       }
     } catch (error) {
       console.error('Error updating profile:', error);
+      let errorMsg = 'Ein unbekannter Fehler ist aufgetreten';
       if (error.response?.data?.message) {
-        setError(error.response.data.message);
+        errorMsg = error.response.data.message;
       } else if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError('Ein unbekannter Fehler ist aufgetreten');
+        errorMsg = error.message;
       }
+      showMessage(errorMsg, 'error');
     }
   };
 
@@ -182,18 +181,6 @@ const Profile: React.FC = () => {
             </button>
           )}
         </div>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        {success && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
-            {success}
-          </div>
-        )}
 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -371,8 +358,6 @@ const Profile: React.FC = () => {
                 onClick={() => {
                   setIsEditing(false);
                   setFormData(user);
-                  setError('');
-                  setSuccess('');
                 }}
                 className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
               >

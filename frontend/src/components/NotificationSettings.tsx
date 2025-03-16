@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { NotificationSettings, notificationSettingsApi } from '../api/notificationApi.ts';
 import { API_URL } from '../config/api.ts';
+import { useMessage } from '../hooks/useMessage.ts';
 
 const defaultSettings = {
   taskCreate: true,
@@ -46,11 +47,7 @@ const NotificationSettingsComponent: React.FC = () => {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success' as 'success' | 'error'
-  });
+  const { showMessage } = useMessage();
 
   useEffect(() => {
     fetchSettings();
@@ -74,11 +71,7 @@ const NotificationSettingsComponent: React.FC = () => {
     } catch (error) {
       console.error('Fehler beim Laden der Benachrichtigungseinstellungen:', error);
       setSettings(defaultSettings);
-      setSnackbar({
-        open: true,
-        message: 'Einstellungen konnten nicht geladen werden. Standardeinstellungen werden verwendet.',
-        severity: 'error'
-      });
+      showMessage('Einstellungen konnten nicht geladen werden. Standardeinstellungen werden verwendet.', 'error');
     } finally {
       setLoading(false);
     }
@@ -97,13 +90,10 @@ const NotificationSettingsComponent: React.FC = () => {
     try {
       setSaving(true);
       await notificationSettingsApi.updateUserSettings(updatedSettings);
+      showMessage('Einstellungen wurden erfolgreich gespeichert.', 'success');
     } catch (error) {
       console.error('Fehler beim Speichern der Einstellungen:', error);
-      setSnackbar({
-        open: true,
-        message: 'Einstellungen konnten nicht gespeichert werden',
-        severity: 'error'
-      });
+      showMessage('Einstellungen konnten nicht gespeichert werden', 'error');
       
       setSettings(settings);
     } finally {
@@ -125,13 +115,10 @@ const NotificationSettingsComponent: React.FC = () => {
     try {
       setSaving(true);
       await notificationSettingsApi.updateUserSettings(updatedSettings);
+      showMessage('Einstellungen wurden erfolgreich gespeichert.', 'success');
     } catch (error) {
       console.error('Fehler beim Speichern der Einstellungen:', error);
-      setSnackbar({
-        open: true,
-        message: 'Einstellungen konnten nicht gespeichert werden',
-        severity: 'error'
-      });
+      showMessage('Einstellungen konnten nicht gespeichert werden', 'error');
       setSettings(settings);
     } finally {
       setSaving(false);
@@ -149,22 +136,15 @@ const NotificationSettingsComponent: React.FC = () => {
     try {
       setSaving(true);
       await notificationSettingsApi.updateUserSettings(updatedSettings);
+      showMessage('Einstellungen wurden erfolgreich gespeichert.', 'success');
     } catch (error) {
       console.error('Fehler beim Speichern der Einstellungen:', error);
-      setSnackbar({
-        open: true,
-        message: 'Einstellungen konnten nicht gespeichert werden',
-        severity: 'error'
-      });
+      showMessage('Einstellungen konnten nicht gespeichert werden', 'error');
       
       setSettings(settings);
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
   };
 
   const isAllCheckedInCategory = (category: string): boolean => {
@@ -304,19 +284,6 @@ const NotificationSettingsComponent: React.FC = () => {
         { name: 'worktimeStart', label: 'Zeiterfassung Start', description: 'Benachrichtigung wenn eine Zeiterfassung gestartet wird' },
         { name: 'worktimeStop', label: 'Zeiterfassung Stop', description: 'Benachrichtigung wenn eine Zeiterfassung gestoppt wird' }
       ])}
-      
-      <Snackbar 
-        open={snackbar.open} 
-        autoHideDuration={6000} 
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-      >
-        <Alert 
-          severity={snackbar.severity}
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
     </Box>
   );
 };

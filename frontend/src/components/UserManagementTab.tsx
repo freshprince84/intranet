@@ -207,7 +207,14 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   // Erweitere den handleUserInputChange
   const handleUserInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    const finalValue = type === 'number' ? Number(value) : value;
+    let finalValue: string | number | null = value;
+    
+    // Korrekte Typenkonvertierung für numerische Felder
+    if (type === 'number') {
+      // Wenn das Feld leer ist, setzen wir null statt NaN
+      finalValue = value === '' ? null : Number(value);
+    }
+    
     setUserFormData({ ...userFormData, [name]: finalValue });
   };
 
@@ -228,11 +235,34 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       if (!userFormData.firstName?.trim()) throw new Error('Vorname ist erforderlich');
       if (!userFormData.lastName?.trim()) throw new Error('Nachname ist erforderlich');
 
+      // Bereite die Daten korrekt vor
       const dataToSend = {
         ...userFormData,
-        salary: userFormData.salary ? parseFloat(userFormData.salary.toString()) : null,
+        // Korrekte Behandlung von numerischen Werten
+        salary: userFormData.salary === null || userFormData.salary === undefined || userFormData.salary === '' as any
+          ? null 
+          : typeof userFormData.salary === 'string' 
+            ? parseFloat(userFormData.salary) 
+            : userFormData.salary,
+        normalWorkingHours: userFormData.normalWorkingHours === null || userFormData.normalWorkingHours === undefined || userFormData.normalWorkingHours === '' as any
+          ? 7.6 
+          : typeof userFormData.normalWorkingHours === 'string' 
+            ? parseFloat(userFormData.normalWorkingHours) 
+            : userFormData.normalWorkingHours,
+        hourlyRate: userFormData.hourlyRate === null || userFormData.hourlyRate === undefined || userFormData.hourlyRate === '' as any
+          ? null 
+          : typeof userFormData.hourlyRate === 'string' 
+            ? userFormData.hourlyRate  // Keine Konvertierung für Decimal-Werte, da sie als Strings übergeben werden sollten
+            : userFormData.hourlyRate.toString(),  // Konvertierung zu String für Decimal-Werte
+        monthlySalary: userFormData.monthlySalary === null || userFormData.monthlySalary === undefined || userFormData.monthlySalary === '' as any
+          ? null 
+          : typeof userFormData.monthlySalary === 'string' 
+            ? parseFloat(userFormData.monthlySalary) 
+            : userFormData.monthlySalary,
         birthday: userFormData.birthday || null
       };
+
+      console.log('Sende Daten zum Server:', dataToSend);
 
       // Update Benutzerdaten
       const response = await userApi.update(selectedUser.id, dataToSend);
@@ -249,7 +279,14 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
         fetchUsers();
       }
     } catch (err) {
-      handleError(err);
+      console.error('Fehler beim Speichern der Benutzerdaten:', err);
+      if (err.response?.status === 400) {
+        onError(`Validierungsfehler: ${err.response?.data?.message || 'Bitte überprüfe die eingegebenen Daten'}`);
+      } else if (err.response?.status === 404) {
+        onError('Benutzer wurde nicht gefunden');
+      } else {
+        handleError(err);
+      }
     }
   };
 
@@ -305,7 +342,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-6">
       {userSuccess && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
           {userSuccess}
@@ -313,7 +350,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       )}
 
       {/* Benutzer-Dropdown */}
-      <div className="mb-6">
+      <div className="mb-4">
         <label htmlFor="userSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
           Benutzer auswählen
         </label>
@@ -333,7 +370,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
 
       {selectedUser && (
         <div>
-          <div className="flex justify-between items-center mb-6">
+          <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Profildaten</h3>
             {!isEditingUser && (
               <button
@@ -346,7 +383,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
           </div>
 
           <form onSubmit={handleUserSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Benutzername
@@ -452,7 +489,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                 <input
                   type="number"
                   name="salary"
-                  value={isEditingUser ? userFormData.salary || '' : selectedUser.salary || ''}
+                  value={isEditingUser ? (userFormData.salary === null ? '' : userFormData.salary) : (selectedUser.salary === null ? '' : selectedUser.salary)}
                   onChange={handleUserInputChange}
                   disabled={!isEditingUser}
                   className="w-full px-3 py-2 border rounded-md"
@@ -467,7 +504,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   type="number"
                   step="0.1"
                   name="normalWorkingHours"
-                  value={isEditingUser ? userFormData.normalWorkingHours || 7.6 : selectedUser.normalWorkingHours || 7.6}
+                  value={isEditingUser ? (userFormData.normalWorkingHours === null ? '7.6' : userFormData.normalWorkingHours) : (selectedUser.normalWorkingHours === null ? '7.6' : selectedUser.normalWorkingHours)}
                   onChange={handleUserInputChange}
                   disabled={!isEditingUser}
                   className="w-full px-3 py-2 border rounded-md"
@@ -514,7 +551,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
             </div>
 
             {/* Lohnabrechnung-Einstellungen */}
-            <div className="mt-6 border-t pt-6">
+            <div className="mt-4 border-t pt-4">
               <h3 className="text-lg font-semibold mb-4">Lohnabrechnung-Einstellungen</h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
@@ -524,9 +561,10 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   </label>
                   <select
                     name="payrollCountry"
-                    value={userFormData.payrollCountry || selectedUser.payrollCountry || 'CH'}
+                    value={isEditingUser ? userFormData.payrollCountry || (selectedUser.payrollCountry || 'CH') : (selectedUser.payrollCountry || 'CH')}
                     onChange={handleUserInputChange}
-                    className="border border-gray-300 rounded-md p-2 w-full"
+                    disabled={!isEditingUser}
+                    className="w-full px-3 py-2 border rounded-md"
                   >
                     {PAYROLL_COUNTRIES.map(country => (
                       <option key={country.code} value={country.code}>
@@ -544,9 +582,10 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     </label>
                     <select
                       name="contractType"
-                      value={userFormData.contractType || selectedUser.contractType || ''}
+                      value={isEditingUser ? userFormData.contractType || '' : selectedUser.contractType || ''}
                       onChange={handleUserInputChange}
-                      className="border border-gray-300 rounded-md p-2 w-full"
+                      disabled={!isEditingUser}
+                      className="w-full px-3 py-2 border rounded-md"
                     >
                       <option value="">Bitte auswählen</option>
                       {CONTRACT_TYPES.map(type => (
@@ -569,9 +608,12 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     name="hourlyRate"
                     min="0"
                     step={(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? '0.05' : '1'}
-                    value={userFormData.hourlyRate !== undefined ? userFormData.hourlyRate : selectedUser.hourlyRate || ''}
+                    value={isEditingUser 
+                      ? (userFormData.hourlyRate === null || userFormData.hourlyRate === undefined ? '' : userFormData.hourlyRate) 
+                      : (selectedUser.hourlyRate === null || selectedUser.hourlyRate === undefined ? '' : selectedUser.hourlyRate)}
                     onChange={handleUserInputChange}
-                    className="border border-gray-300 rounded-md p-2 w-full"
+                    disabled={!isEditingUser}
+                    className="w-full px-3 py-2 border rounded-md"
                     placeholder={(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? 'z.B. 45.00' : 'z.B. 50000'}
                   />
                 </div>
@@ -588,9 +630,12 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                       name="monthlySalary"
                       min="0"
                       step="1000"
-                      value={userFormData.monthlySalary !== undefined ? userFormData.monthlySalary : selectedUser.monthlySalary || ''}
+                      value={isEditingUser 
+                        ? (userFormData.monthlySalary === null || userFormData.monthlySalary === undefined ? '' : userFormData.monthlySalary) 
+                        : (selectedUser.monthlySalary === null || selectedUser.monthlySalary === undefined ? '' : selectedUser.monthlySalary)}
                       onChange={handleUserInputChange}
-                      className="border border-gray-300 rounded-md p-2 w-full"
+                      disabled={!isEditingUser}
+                      className="w-full px-3 py-2 border rounded-md"
                       placeholder="z.B. 3500000"
                     />
                   </div>
@@ -599,7 +644,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
             </div>
 
             {isEditingUser && (
-              <div className="col-span-1 md:col-span-2 flex justify-end">
+              <div className="mt-4 flex justify-end">
                 <button
                   type="button"
                   onClick={() => setIsEditingUser(false)}
@@ -619,12 +664,12 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
 
           {/* Rollenzuweisung - nur anzeigen, wenn Rollen geladen wurden */}
           {loadingRoles ? (
-            <div className="mt-8 mb-8">
+            <div className="mt-4 mb-4">
               <h3 className="text-lg font-semibold mb-4">Rollenzuweisung</h3>
               <p>Rollen werden geladen...</p>
             </div>
           ) : roles.length > 0 && (
-            <div className="mt-8 mb-8">
+            <div className="mt-4 mb-4">
               <h3 className="text-lg font-semibold mb-4">Rollenzuweisung</h3>
               
               {/* Überprüfung auf unbekannte Rollen */}
@@ -639,7 +684,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
               )}
               
               {/* Aktuell zugewiesene Rollen */}
-              <div className="mb-6">
+              <div className="mb-4">
                 <h4 className="font-medium text-gray-700 mb-2">Aktuelle Rollen</h4>
                 {selectedRoles.length === 0 ? (
                   <p className="text-gray-500 italic">Keine Rollen zugewiesen</p>

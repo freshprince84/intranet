@@ -11,6 +11,10 @@ export interface User {
   normalWorkingHours: number;
   country: string;
   language: string;
+  payrollCountry: string;
+  hourlyRate: number | null;
+  contractType: string | null;
+  monthlySalary: number | null;
   roles: UserRole[];
 }
 

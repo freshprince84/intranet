@@ -366,7 +366,7 @@ code {
   .requests-table td:first-child .text-sm,
   .tasks-table td:first-child .text-sm,
   .requests-table td:first-child,
-  .tasks-table td:first-child {
+  .tasks-table td:last-child {
     white-space: normal !important;
     word-wrap: break-word !important;
     overflow-wrap: break-word !important;
@@ -670,9 +670,7 @@ code {
   .overflow-x-auto table th,
   .overflow-x-auto table td,
   div.bg-white.rounded-lg div.overflow-x-auto table th,
-  div.bg-white.rounded-lg div.overflow-x-auto table td,
-  div[class*="bg-white"][class*="rounded-lg"] table th,
-  div[class*="bg-white"][class*="rounded-lg"] table td {
+  div.bg-white.rounded-lg div.overflow-x-auto table td {
     padding-left: 0.25rem !important;
     padding-right: 0.25rem !important;
     line-height: 1.2 !important;
@@ -1067,4 +1065,26 @@ div.overflow-x-auto table td span[class*="rounded-full"] {
   display: inline-flex !important;
   width: auto !important;
   max-width: fit-content !important;
+}
+
+/* Vollbreiten-Stil für Mobile-Ansicht im Cerebro-Modul */
+@media (max-width: 767px) {
+  .mobile-full-width > div {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100% !important;
+  }
+  
+  .mobile-full-width > div.bg-white {
+    padding-left: 0.75rem !important; 
+    padding-right: 0.75rem !important;
+  }
+}
+
+/* Sidebar-Tooltips immer im Vordergrund anzeigen */
+.group-hover\:opacity-100.absolute {
+  z-index: 50 !important; /* Hoher z-index um über allen Elementen zu schweben */
 }

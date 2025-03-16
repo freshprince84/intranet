@@ -132,7 +132,11 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (isNaN(userId)) {
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
-        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary } = req.body;
+        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary, 
+        // Zusätzliche Lohnabrechnung-Felder
+        payrollCountry, hourlyRate, contractType, monthlySalary, 
+        // Arbeitszeit-Felder
+        normalWorkingHours } = req.body;
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
             const existingUser = yield prisma.user.findFirst({
@@ -158,7 +162,8 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 message: 'Ungültiges E-Mail-Format'
             });
         }
-        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary && { salary: parseFloat(salary.toString()) }));
+        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary !== undefined && { salary: salary === null ? null : parseFloat(salary.toString()) })), (payrollCountry && { payrollCountry })), (hourlyRate !== undefined && { hourlyRate: hourlyRate === null ? null : hourlyRate })), (contractType !== undefined && { contractType })), (monthlySalary !== undefined && { monthlySalary: monthlySalary === null ? null : parseFloat(monthlySalary.toString()) })), (normalWorkingHours !== undefined && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) }));
+        console.log('Updating user with data:', updateData);
         const updatedUser = yield prisma.user.update({
             where: { id: userId },
             data: updateData,

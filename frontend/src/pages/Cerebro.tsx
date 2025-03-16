@@ -27,7 +27,7 @@ const GITHUB_BRANCH = 'main';
 const CerebroLayout: React.FC = () => {
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
   const [isTabletOrLarger, setIsTabletOrLarger] = useState<boolean>(window.innerWidth >= 768);
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(true);
+  const [sidebarOpen, setSidebarOpen] = useState<boolean>(window.innerWidth >= 768);
   
   useEffect(() => {
     const handleResize = () => {
@@ -35,8 +35,8 @@ const CerebroLayout: React.FC = () => {
       setIsMobile(newIsMobile);
       setIsTabletOrLarger(window.innerWidth >= 768);
       
-      // Auf großen Bildschirmen immer öffnen
-      if (!newIsMobile) {
+      // Auf Tablet-Größen und größer immer öffnen
+      if (window.innerWidth >= 768) {
         setSidebarOpen(true);
       }
     };
@@ -73,9 +73,17 @@ const CerebroLayout: React.FC = () => {
       
       {/* Der Hauptinhalt nimmt den restlichen Platz ein */}
       <main className={`flex-grow ${isMobile ? 'overflow-y-container' : 'overflow-y-auto'} ${
-        isMobile ? 'px-3 pt-2 pb-3' : 'px-4 pt-3 pb-4'
+        isMobile 
+          ? 'px-0 pt-2 pb-16' // Horizontales Padding auf 0, Bottom-Padding erhöht für den Footer
+          : `pl-4 pt-3 pb-4 ${
+              isTabletOrLarger && sidebarOpen 
+                ? 'pr-10 md:pr-16 lg:pr-20' 
+                : 'pr-4'
+            }`
       }`}>
-        <Outlet />
+        <div className={isMobile ? 'mobile-full-width' : ''}>
+          <Outlet />
+        </div>
       </main>
     </div>
   );

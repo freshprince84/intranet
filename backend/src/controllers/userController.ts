@@ -177,7 +177,14 @@ export const updateUserById = async (req: Request, res: Response) => {
             birthday,
             bankDetails,
             contract,
-            salary
+            salary,
+            // Zusätzliche Lohnabrechnung-Felder
+            payrollCountry,
+            hourlyRate,
+            contractType,
+            monthlySalary,
+            // Arbeitszeit-Felder
+            normalWorkingHours
         } = req.body;
 
         // Überprüfe, ob Username oder Email bereits existieren
@@ -216,8 +223,17 @@ export const updateUserById = async (req: Request, res: Response) => {
             ...(birthday && { birthday: new Date(birthday) }),
             ...(bankDetails && { bankDetails }),
             ...(contract && { contract }),
-            ...(salary && { salary: parseFloat(salary.toString()) })
+            ...(salary !== undefined && { salary: salary === null ? null : parseFloat(salary.toString()) }),
+            // Zusätzliche Lohnabrechnung-Felder
+            ...(payrollCountry && { payrollCountry }),
+            ...(hourlyRate !== undefined && { hourlyRate: hourlyRate === null ? null : hourlyRate }),
+            ...(contractType !== undefined && { contractType }),
+            ...(monthlySalary !== undefined && { monthlySalary: monthlySalary === null ? null : parseFloat(monthlySalary.toString()) }),
+            // Arbeitszeit-Felder
+            ...(normalWorkingHours !== undefined && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })
         };
+
+        console.log('Updating user with data:', updateData);
 
         const updatedUser = await prisma.user.update({
             where: { id: userId },
