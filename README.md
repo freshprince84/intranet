@@ -13,7 +13,7 @@ Eine TypeScript-basierte Webapplikation zur Verwaltung von Arbeitszeiten, Tasks 
 Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 
 ### Einstieg und Übersicht
-- [README.md](README.md) - Diese Übersicht
+- [README.md](README) - Diese Übersicht
 - [DOKUMENTATIONSSTANDARDS.md](DOKUMENTATIONSSTANDARDS.md) - Standards für die Dokumentation
 - [CHANGELOG.md](CHANGELOG.md) - Änderungsverlauf des Projekts
 
