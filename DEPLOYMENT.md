@@ -231,19 +231,39 @@ cd /path/to/intranet/backend
 npm install --production
 ```
 
-3. Erstellen Sie die Datenbankschemas mit Prisma:
+3. Stellen Sie sicher, dass ALLE erforderlichen Abhängigkeiten installiert sind, insbesondere:
+
+```bash
+# Erforderliche Abhängigkeiten für verschiedene Module
+npm install express-validator # Für die Dokumentenerkennung
+```
+
+4. Überprüfen Sie die Installation mit einem Test-Start:
+
+```bash
+# Kurzer Test-Start um fehlende Abhängigkeiten zu erkennen
+node dist/index.js
+```
+
+Falls Fehler wie `Cannot find module 'modul-name'` auftreten, installieren Sie die fehlenden Module:
+
+```bash
+npm install [fehlender-modul-name]
+```
+
+5. Erstellen Sie die Datenbankschemas mit Prisma:
 
 ```bash
 npx prisma migrate deploy
 ```
 
-4. Befüllen Sie die Datenbank mit den Seed-Daten:
+6. Befüllen Sie die Datenbank mit den Seed-Daten:
 
 ```bash
 npx prisma db seed
 ```
 
-5. Kompilieren Sie das TypeScript-Backend:
+7. Kompilieren Sie das TypeScript-Backend:
 
 ```bash
 npm run build

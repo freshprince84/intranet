@@ -1,302 +1,170 @@
-# MODUL DOKUMENTENERKENNUNG
+# MODUL DOKUMENT-ERKENNUNG
 
-Dieses Dokument beschreibt die Implementierung und Funktionsweise des Moduls zur KI-basierten Dokumentenerkennung im Intranet-Projekt. Das Modul ermöglicht die automatisierte Extraktion von Informationen aus Ausweisdokumenten mittels OpenAI's GPT-4o Vision-Fähigkeiten.
+Diese Dokumentation beschreibt das Modul zur KI-basierten Erkennung und Verwaltung von Identifikationsdokumenten im Intranet-System.
 
 ## Inhaltsverzeichnis
 
-1. [Überblick](#überblick)
-2. [Komponenten](#komponenten)
-3. [Technische Details](#technische-details)
+1. [Übersicht](#übersicht)
+2. [Technische Implementierung](#technische-implementierung)
+3. [Abhängigkeiten](#abhängigkeiten)
 4. [API-Endpunkte](#api-endpunkte)
-5. [Datenmodell](#datenmodell)
-6. [Benutzeroberfläche](#benutzeroberfläche)
-7. [Typische Fehler und Lösungen](#typische-fehler-und-lösungen)
-8. [Hinweise für Entwickler](#hinweise-für-entwickler)
-9. [Datenschutz](#datenschutz)
+5. [Frontend-Komponenten](#frontend-komponenten)
+6. [Datenmodell](#datenmodell)
+7. [Konfiguration](#konfiguration)
+8. [Bekannte Probleme und Lösungen](#bekannte-probleme-und-lösungen)
 
-## Überblick
+## Übersicht
 
-Das Dokumentenerkennungsmodul ermöglicht es Benutzern, ihre Ausweisdokumente hochzuladen oder direkt per Kamera aufzunehmen und automatisch die Informationen daraus zu extrahieren. Die Erkennung erfolgt mittels OpenAI's GPT-4o und funktioniert für verschiedene Dokumenttypen wie Reisepässe, Personalausweise, Führerscheine und Aufenthaltstitel.
+Das Modul "Dokument-Erkennung" ermöglicht die automatische Erkennung und Extraktion von Informationen aus verschiedenen Identifikationsdokumenten mittels KI-basierter Technologie. Das System nutzt OpenAI GPT-4o zur Bilderkennung und Textextraktion.
 
-### Hauptfunktionen
+### Hauptfunktionen:
 
-- Automatische Erkennung von Dokumenttypen
-- Extraktion von Dokumentnummer, Ausgabeland, Ausstellungsbehörde, Ausstellungs- und Ablaufdatum
-- Unterstützung für Dokumentenuploads und Kameraaufnahmen
-- Integriert in die Benutzerprofilverwaltung
-- Administratorfunktionen zur Verifizierung von Dokumenten
-- Spezielle Unterstützung für kolumbianische Dokumente (Cédula de Extranjería)
+- Upload von Ausweisdokumenten
+- Automatische Extraktion relevanter Informationen
+- Validierung der extrahierten Daten
+- Speicherung und Verwaltung der erkannten Dokumente
+- Verknüpfung mit Benutzerprofilen
 
-## Komponenten
+## Technische Implementierung
 
-Das Modul besteht aus folgenden Hauptkomponenten:
+Das Modul besteht aus mehreren Komponenten:
 
-### Frontend-Komponenten
+1. **Backend-Routes**: Verarbeitung von Dokumentenuploads und KI-Abfragen
+2. **Frontend-Komponenten**: Benutzeroberfläche für Dokumentenupload und -verwaltung
+3. **AI-Service**: Integration mit OpenAI GPT-4o für die Bilderkennung
+4. **Datenmodell**: Speicherung erkannter Dokumente und ihrer Eigenschaften
 
-1. **IdentificationDocumentForm**: Formular zum Hinzufügen und Bearbeiten von Ausweisdokumenten
-   - Dokument-Upload-Funktionalität
-   - Kamera-Integration für mobile Geräte
-   - Button zur automatischen Dokumentenerkennung
-   - Formularfelder für manuelle Eingabe/Korrektur
+## Abhängigkeiten
 
-2. **IdentificationDocumentList**: Listenansicht aller Dokumente eines Benutzers
-   - Anzeige des Dokumenttyps, der Dokumentnummer und des Status
-   - Download-Funktionalität für Dokumente
-   - Verifizierungsfunktionen für Administratoren
+Das Modul hat folgende wichtige Abhängigkeiten:
 
-3. **CameraCapture**: Komponente zum Aufnehmen von Fotos mittels Gerätekamera
-   - Funktioniert besonders auf mobilen Geräten
-   - Zeigt eine Live-Vorschau des Kamerabildes
-   - Speichert Bilder als Base64-kodierte Strings
+### Backend
 
-### Backend-Komponenten
+- **express-validator**: Validierung der API-Anfragen
+  - Wird in `routes/documentRecognition.ts` verwendet
+  - **WICHTIG**: Muss explizit installiert werden: `npm install express-validator`
+- **multer**: Handhabung von Datei-Uploads
+- **OpenAI API**: Für die KI-basierte Dokumentenerkennung
 
-1. **Document Recognition Route**: API-Route für die KI-basierte Dokumentenerkennung
-   - Nimmt Base64-kodierte Bilder entgegen
-   - Kommuniziert mit der OpenAI API
-   - Verarbeitet die KI-Antwort und sendet strukturierte Daten zurück
+### Frontend
 
-2. **Identification Document Routes**: API-Routen für CRUD-Operationen
-   - Erstellen, Abrufen, Aktualisieren und Löschen von Dokumenten
-   - Dokumentenverifizierung durch Administratoren
-   - Sicheres Speichern und Abrufen von Dokumentdateien
-
-### Hilfsfunktionen
-
-- **aiDocumentRecognition.ts**: Frontend-Utility zur Kommunikation mit der Erkennungs-API
-- **documentRecognition.ts**: Legacy-Datei (nicht mehr im Einsatz) für lokale OCR (wurde durch OpenAI-Lösung ersetzt)
-
-## Technische Details
-
-### OpenAI GPT-4o Integration
-
-Das Modul verwendet das OpenAI GPT-4o Modell zur Bildanalyse und Textextraktion aus Dokumenten. Die Anfrage erfolgt über einen Backend-Proxy, um den API-Schlüssel sicher zu verwahren.
-
-```javascript
-const openaiResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
-  model: "gpt-4o",  // Aktuelle Version (ersetzt gpt-4-vision-preview)
-  messages: [
-    {
-      role: "system",
-      content: "Du bist ein Experte für Dokumentenerkennung. Extrahiere alle relevanten Informationen..."
-    },
-    {
-      role: "user",
-      content: [
-        { type: "text", text: `Analysiere dieses Ausweisdokument...` },
-        { type: "image_url", image_url: { url: image } }
-      ]
-    }
-  ],
-  max_tokens: 1000
-});
-```
-
-### Unterstützte Dokumenttypen
-
-Das System kann folgende Dokumenttypen erkennen und verarbeiten:
-
-- **Reisepass** (passport)
-- **Personalausweis** (national_id)
-- **Führerschein** (driving_license)
-- **Aufenthaltserlaubnis** (residence_permit)
-- **Arbeitserlaubnis** (work_permit)
-- **Steuer-ID** (tax_id)
-- **Sozialversicherungsausweis** (social_security)
-
-### Spezialfall: Kolumbianische Dokumente
-
-Das System wurde speziell für die Erkennung der kolumbianischen "Cédula de Extranjería" optimiert, die typischerweise folgende Merkmale aufweist:
-
-- Dokument enthält die Wörter "cédula de extranjería" oder "república de colombia"
-- Dokumentnummer folgt typischerweise dem Muster "No. XXXXXXX"
-- Datumsformate typischerweise im Format YYYY/MM/DD
-- Enthält Begriffe wie "F. EXPEDICIÓN" (Ausstellungsdatum) und "VENCE" (Ablaufdatum)
-
-### Datenverarbeitung
-
-Der Datenfluss im Dokumentenerkennungsprozess:
-
-1. Benutzer lädt ein Dokument hoch oder nimmt ein Foto auf
-2. Die Bilddaten werden als Base64-String an den Server gesendet
-3. Der Server leitet die Anfrage an die OpenAI API weiter
-4. Die KI extrahiert relevante Informationen aus dem Bild
-5. Der Server verarbeitet die KI-Antwort und gibt strukturierte Daten zurück
-6. Das Frontend befüllt automatisch die entsprechenden Formularfelder
-7. Der Benutzer kann die erkannten Daten überprüfen/korrigieren und speichern
+- **React Dropzone**: Für den Datei-Upload
+- **axios**: Für API-Anfragen
 
 ## API-Endpunkte
 
-### Dokumentenerkennung
+Das Modul stellt folgende API-Endpunkte bereit:
 
-```
-POST /api/document-recognition
-```
+### POST /api/document-recognition/upload
 
-**Request-Header:**
-```
-Content-Type: application/json
-Authorization: Bearer <JWT-Token>
-```
+Lädt ein Dokument hoch und sendet es zur Erkennung an die OpenAI API.
 
-**Request-Body:**
-```json
-{
-  "image": "data:image/jpeg;base64,/9j/4AAQ...",
-  "documentType": "national_id"  // Optional
-}
-```
+**Request:**
+- Multipart/form-data mit dem Feld `document` für die Datei
 
 **Response:**
 ```json
 {
-  "documentType": "national_id",
-  "documentNumber": "AB123456",
-  "issueDate": "2020-01-01",
-  "expiryDate": "2030-01-01",
-  "issuingCountry": "Deutschland",
-  "issuingAuthority": "Stadt Berlin"
+  "success": true,
+  "data": {
+    "documentId": "123",
+    "documentType": "ID Card",
+    "extractedData": {
+      "name": "Max Mustermann",
+      "dateOfBirth": "1990-01-01",
+      "idNumber": "AB1234567",
+      "expiryDate": "2030-01-01"
+    }
+  }
 }
 ```
 
-### Dokumente verwalten
+### GET /api/document-recognition/:userId
 
-```
-POST /api/identification-documents
-GET /api/identification-documents
-GET /api/identification-documents/:id
-PUT /api/identification-documents/:id
-DELETE /api/identification-documents/:id
-PUT /api/identification-documents/:id/verify
-GET /api/identification-documents/:id/download
-```
+Ruft alle Dokumente für einen bestimmten Benutzer ab.
+
+### DELETE /api/document-recognition/:documentId
+
+Löscht ein Dokument aus dem System.
+
+## Frontend-Komponenten
+
+Das Modul umfasst folgende Frontend-Komponenten:
+
+- **IdentificationDocumentForm**: Formular zum Hochladen und Erkennen neuer Dokumente
+- **DocumentList**: Anzeige vorhandener Dokumente
+- **DocumentDetail**: Detailansicht eines erkannten Dokuments
 
 ## Datenmodell
 
-Das `IdentificationDocument`-Modell in der Datenbank:
+Das Modul verwendet das folgende Prisma-Datenmodell:
 
 ```prisma
 model IdentificationDocument {
-  id               Int       @id @default(autoincrement())
-  userId           Int
-  documentType     String
-  documentNumber   String
-  issueDate        DateTime?
-  expiryDate       DateTime?
-  issuingCountry   String
-  issuingAuthority String?
-  documentFile     String?   // Pfad zur gespeicherten Datei
-  isVerified       Boolean   @default(false)
-  verificationDate DateTime?
-  verifiedBy       Int?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  
-  user       User  @relation(fields: [userId], references: [id])
-  verifier   User? @relation("DocumentVerifier", fields: [verifiedBy], references: [id])
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  documentType String
+  documentNumber String?
+  issuingCountry String?
+  issuingDate   DateTime?
+  expiryDate    DateTime?
+  documentData  Json?
+  status        String  @default("pending") // pending, verified, rejected
+  uploadPath    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 ```
 
-## Benutzeroberfläche
+## Konfiguration
 
-### Dokument hinzufügen/bearbeiten
+Das Modul verwendet folgende Konfigurationseinstellungen:
 
-Die `IdentificationDocumentForm`-Komponente bietet folgende UI-Elemente:
+### OpenAI API
 
-- Dropdown zur Auswahl des Dokumenttyps
-- Textfelder für Dokumentnummer, Ausstellungsland, Behörde, Datum
-- Datei-Upload-Feld mit Drag & Drop-Unterstützung
-- Kamera-Button für mobile Geräte
-- "Daten automatisch erkennen"-Button zur KI-Analyse
-- Speichern- und Abbrechen-Buttons
-
-### Dokumentenliste
-
-Die `IdentificationDocumentList`-Komponente zeigt:
-
-- Tabelle aller Dokumente des Benutzers
-- Status (verifiziert/nicht verifiziert)
-- Aktionsbuttons (herunterladen, bearbeiten, löschen)
-- Für Administratoren: Verifizieren-Button
-
-## Typische Fehler und Lösungen
-
-### CORS-Probleme
-
-**Problem**: API-Anfragen werden durch CORS-Einschränkungen blockiert
-
-**Lösung**: 
-- Korrekte CORS-Konfiguration im Backend:
-  ```javascript
-  app.use(cors({
-    origin: ['http://localhost:3000', 'http://localhost:5000', 'http://localhost'],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    optionsSuccessStatus: 200
-  }));
-  ```
-- Im Frontend CORS-Modus und Credentials explizit setzen:
-  ```javascript
-  credentials: 'include',
-  mode: 'cors',
-  ```
-
-### OpenAI API-Fehler
-
-**Problem**: Fehler mit dem OpenAI-Modell, z.B. "model_not_found"
-
-**Lösung**:
-- Verwende das aktuelle Modell "gpt-4o" anstelle von "gpt-4-vision-preview"
-- Stelle sicher, dass ein gültiger API-Schlüssel in der .env-Datei konfiguriert ist
-- Achte auf das korrekte Bildformat (Base64-kodiert) und eine angemessene Bildgröße
-
-### Erkennung funktioniert nicht korrekt
-
-**Problem**: Automatische Erkennung extrahiert keine oder falsche Daten
-
-**Lösung**:
-- Verbessere die Bildqualität (gute Beleuchtung, kein Glare, scharfes Bild)
-- Stelle sicher, dass das gesamte Dokument im Bild sichtbar ist
-- Bei speziellen Dokumenttypen: Gib den Dokumenttyp explizit mit (documentType)
-
-## Hinweise für Entwickler
-
-### Modellanpassungen
-
-Bei Änderungen am Prisma-Schema:
-
-1. Führe eine Migration durch: `npx prisma migrate dev --name add_document_feature`
-2. Aktualisiere den Prisma-Client: `npx prisma generate`
-
-### OpenAI API-Key
-
-Die Anwendung benötigt einen gültigen OpenAI API-Schlüssel in der Umgebungsvariable `OPENAI_API_KEY`.
+Die Konfiguration für die OpenAI API wird in einer `.env`-Datei gespeichert:
 
 ```
-# In .env im Backend-Verzeichnis
-OPENAI_API_KEY=sk-...
+OPENAI_API_KEY=your_api_key_here
+OPENAI_MODEL=gpt-4o
 ```
 
-### Neustarts
+### Upload-Einstellungen
 
-Nach Änderungen am Backend-Code muss der Server kompiliert und neu gestartet werden:
+Die Upload-Einstellungen sind in der Backend-Konfiguration definiert:
 
-```bash
-npm run build
-npm run start
+```javascript
+const storage = multer.diskStorage({
+  destination: './uploads/documents',
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  }
+});
 ```
 
-Bitte beachte: Den Server **nicht ohne Absprache** neu starten, da dies laufende Prozesse unterbrechen kann.
+## Bekannte Probleme und Lösungen
 
-## Datenschutz
+### Problem: Fehler "Cannot find module 'express-validator'"
 
-Die Implementierung ist datenschutzoptimiert:
+**Symptom:** Der Server startet nicht und gibt einen Fehler aus:
+```
+Error: Cannot find module 'express-validator'
+```
 
-- Alle Bilddaten werden verschlüsselt über HTTPS übertragen
-- Die Kommunikation mit der OpenAI API erfolgt ausschließlich über das Backend
-- Dokumente werden sicher im Dateisystem gespeichert, mit Zugriffsbeschränkungen
-- Nur autorisierte Benutzer können ihre eigenen Dokumente einsehen
-- Administratoren können Dokumente verifizieren, jedoch nur im Rahmen ihrer Aufgaben
+**Lösung:**
+1. Installieren Sie das fehlende Modul:
+   ```bash
+   cd backend
+   npm install express-validator
+   ```
+2. Starten Sie den Server neu
 
-Das System entspricht den grundlegenden Anforderungen der DSGVO in Bezug auf die Verarbeitung personenbezogener Daten. Dokumentenspeicherung und -aufbewahrung sollten den lokalen gesetzlichen Vorgaben entsprechen.
+### Problem: Fehler bei der Bilderkennung
+
+**Symptom:** Die KI kann keine Informationen aus dem Dokument extrahieren.
+
+**Lösungen:**
+1. Stellen Sie sicher, dass das Bild eine gute Qualität hat (mindestens 300 DPI)
+2. Achten Sie auf gute Beleuchtung und Ausrichtung des Dokuments
+3. Überprüfen Sie, ob der OpenAI API-Schlüssel korrekt ist und über ausreichendes Guthaben verfügt

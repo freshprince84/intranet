@@ -32,12 +32,14 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [DATENBANKSCHEMA.md](DATENBANKSCHEMA.md) - Datenbankschema und -struktur
 - [BERECHTIGUNGSSYSTEM.md](BERECHTIGUNGSSYSTEM.md) - Rollen und Berechtigungskonzept
 - [DEPLOYMENT.md](DEPLOYMENT.md) - Server-Setup und Deployment-Prozess
+- [FEHLERBEHEBUNG.md](FEHLERBEHEBUNG.md) - Häufige Fehler und deren Lösungen
 
 ### Modulspezifische Dokumentation
 - [MODUL_ZEITERFASSUNG.md](MODUL_ZEITERFASSUNG.md) - Zeiterfassungssystem
 - [MODUL_CEREBRO.md](MODUL_CEREBRO.md) - Cerebro Wiki-System
 - [MODUL_TEAMKONTROLLE.md](MODUL_TEAMKONTROLLE.md) - Team-Worktime-Control
 - [MODUL_ABRECHNUNG.md](MODUL_ABRECHNUNG.md) - Lohnabrechnungsintegration
+- [MODUL_DOKUMENT_ERKENNUNG.md](MODUL_DOKUMENT_ERKENNUNG.md) - KI-basierte Dokumentenerkennungsfunktion
 
 ## Systemarchitektur
 
@@ -125,6 +127,12 @@ Im System sind folgende UI-Komponenten implementiert:
    npm run install-all
    ```
 
+   **Wichtig**: Stelle sicher, dass alle erforderlichen Abhängigkeiten installiert sind. Bei Fehlern wie `MODULE_NOT_FOUND` installiere die fehlenden Pakete manuell:
+   ```bash
+   cd backend
+   npm install express-validator # Erforderlich für die Dokumentenerkennung
+   ```
+
 4. Starte die Entwicklungsumgebung:
    ```bash
    npm run dev
@@ -191,6 +199,7 @@ import * as controller from '../controllers/myController.ts';
 - Zeitzonenbehandlung ist kritisch für die Zeiterfassung (siehe [MODUL_ZEITERFASSUNG.md](MODUL_ZEITERFASSUNG.md))
 - Bei Änderungen an Servercode oder Schema muss der Benutzer um Neustart gebeten werden
 - In Dateipfaden immer Suffix (.ts oder .tsx) schreiben (siehe Import-Pfade Regeln)
+- **Abhängigkeiten bei Fehlern prüfen** - achte auf `MODULE_NOT_FOUND`-Fehler in den Logs und installiere fehlende Pakete
 - **STRIKTE REGEL FÜR KI-ASSISTENTEN**: Führe NUR explizit angeforderte Änderungen durch. Mache NIEMALS ungefragt mehr als verlangt. Bei Unklarheiten FRAGE NACH, anstatt Annahmen zu treffen.
 
 ### Notification-System
