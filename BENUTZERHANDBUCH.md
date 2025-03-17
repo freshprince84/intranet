@@ -15,6 +15,7 @@ Dieses Handbuch bietet eine umfassende Anleitung zur Nutzung des Intranet-System
 9. [Benachrichtigungen](#benachrichtigungen)
 10. [System-Meldungen](#system-meldungen)
 11. [Häufige Fragen](#häufige-fragen)
+12. [Profil verwalten](#profil-verwalten)
 
 ## Erste Schritte
 
@@ -225,4 +226,61 @@ Der Zugriff auf bestimmte Funktionen hängt von Ihren Berechtigungen ab:
 2. Lohnabrechnung ist nur für die Finanzabteilung und Administratoren zugänglich
 3. Manche Cerebro-Kategorien können eingeschränkten Zugriff haben
 
-Wenden Sie sich an Ihren Administrator, wenn Sie Zugriff auf bestimmte Bereiche benötigen. 
+Wenden Sie sich an Ihren Administrator, wenn Sie Zugriff auf bestimmte Bereiche benötigen.
+
+## Profil verwalten
+
+### Ausweisdokumente verwalten
+
+In Ihrem Benutzerprofil können Sie Ausweisdokumente hinzufügen, bearbeiten und verwalten.
+
+#### Dokument hinzufügen
+
+1. Navigieren Sie zu **Profil** → Tab **Dokumente**
+2. Klicken Sie auf **Neues Dokument hinzufügen**
+3. Füllen Sie das Formular mit den Dokumentinformationen aus:
+   - Dokumenttyp (Reisepass, Personalausweis, etc.)
+   - Dokumentnummer
+   - Ausstellungsland
+   - Ausstellungsbehörde (optional)
+   - Ausstellungsdatum (optional)
+   - Ablaufdatum (optional)
+4. Laden Sie eine Kopie des Dokuments hoch durch:
+   - **Datei hochladen**: Wählen Sie eine PDF- oder Bilddatei von Ihrem Gerät
+   - **Foto aufnehmen** (auf mobilen Geräten): Nehmen Sie ein Foto mit der Gerätekamera auf
+
+#### Automatische Dokumentenerkennung
+
+Das System bietet eine KI-basierte Erkennung, die Informationen automatisch aus Dokumentbildern extrahieren kann:
+
+1. Laden Sie zuerst ein Bild hoch oder nehmen Sie ein Foto auf
+2. Klicken Sie auf den Button **Daten automatisch erkennen**
+3. Die KI analysiert das Dokument und befüllt die Formularfelder
+4. Überprüfen Sie die erkannten Daten und korrigieren Sie sie bei Bedarf
+5. Speichern Sie das Dokument mit **Speichern**
+
+#### Dokumente verwalten
+
+Auf der Dokumentenliste können Sie:
+
+- Alle Ihre Dokumente einsehen
+- Den Verifizierungsstatus prüfen (verifiziert/nicht verifiziert)
+- Dokumente bearbeiten
+- Dokumente löschen
+- Dokumentenkopien herunterladen
+
+#### Hinweise zur Dokumentverifizierung
+
+- Neu hinzugefügte Dokumente haben den Status "Nicht verifiziert"
+- Ein Administrator muss die Dokumente überprüfen und verifizieren
+- Verifizierte Dokumente werden mit einem grünen Häkchen gekennzeichnet
+- Bei Fragen zur Verifizierung wenden Sie sich bitte an Ihren Administrator
+
+#### Tipps für bessere Erkennung
+
+Für eine optimale automatische Erkennung:
+
+- Sorgen Sie für gute Beleuchtung
+- Vermeiden Sie Blendeffekte und Schatten
+- Erfassen Sie das gesamte Dokument im Bild
+- Stellen Sie sicher, dass alle wichtigen Informationen lesbar sind 

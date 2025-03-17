@@ -25,6 +25,7 @@ Diese Dokumentation beschreibt das vollständige Datenbankschema des Intranet-Sy
    - [CerebroExternalLink](#cerebroexternallink)
    - [CerebroMedia](#cerebromedia)
    - [UserTableSettings](#usertablesettings)
+   - [IdentificationDocument](#identificationdocument)
 5. [Enums](#enums)
 6. [Beziehungen](#beziehungen)
 7. [Indices und Constraints](#indices-und-constraints)
@@ -335,6 +336,26 @@ model CerebroMedia {
   updatedAt   DateTime @updatedAt
 }
 
+model IdentificationDocument {
+  id               Int       @id @default(autoincrement())
+  userId           Int
+  documentType     String
+  documentNumber   String
+  issueDate        DateTime?
+  expiryDate       DateTime?
+  issuingCountry   String
+  issuingAuthority String?
+  documentFile     String?
+  isVerified       Boolean   @default(false)
+  verificationDate DateTime?
+  verifiedBy       Int?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  
+  user       User  @relation(fields: [userId], references: [id])
+  verifier   User? @relation("DocumentVerifier", fields: [verifiedBy], references: [id])
+}
+
 enum TaskStatus {
   open
   in_progress
@@ -642,6 +663,27 @@ Die `UserTableSettings`-Tabelle speichert benutzerspezifische Tabelleneinstellun
 | createdAt | DateTime | Erstellungszeitpunkt | @default(now()) |
 | updatedAt | DateTime | Aktualisierungszeitpunkt | @updatedAt |
 
+### IdentificationDocument
+
+Speichert Informationen über Ausweisdokumente der Benutzer.
+
+| Feld | Typ | Beschreibung | Constraints |
+|------|-----|--------------|-------------|
+| id | Integer | Eindeutige ID | @id @default(autoincrement()) |
+| userId | Integer | ID des Benutzers | @relation(fields: [userId], references: [id]) |
+| documentType | String | Typ des Dokuments (z.B. "passport") | |
+| documentNumber | String | Dokumentnummer | |
+| issueDate | DateTime? | Ausstellungsdatum | Nullable |
+| expiryDate | DateTime? | Ablaufdatum | Nullable |
+| issuingCountry | String | Ausstellungsland | |
+| issuingAuthority | String? | Ausstellungsbehörde | Nullable |
+| documentFile | String? | Pfad zur gespeicherten Datei | Nullable |
+| isVerified | Boolean | Verifizierungsstatus | @default(false) |
+| verificationDate | DateTime? | Datum der Verifizierung | Nullable |
+| verifiedBy | Integer? | ID des verifizierenden Administrators | Nullable, @relation("DocumentVerifier") |
+| createdAt | DateTime | Erstellungszeitpunkt | @default(now()) |
+| updatedAt | DateTime | Letzter Aktualisierungszeitpunkt | @updatedAt |
+
 ## Enums
 
 ### TaskStatus
@@ -667,13 +709,16 @@ Die `UserTableSettings`-Tabelle speichert benutzerspezifische Tabelleneinstellun
 
 ## Beziehungen
 
-Das Schema enthält folgende wichtige Beziehungen:
+### Hauptbeziehungen
 
 1. **Benutzer-Rollen**: N:M-Beziehung über die `UserRole`-Tabelle
 2. **Benutzer-Niederlassungen**: N:M-Beziehung über die `UsersBranches`-Tabelle
 3. **Aufgaben-Verantwortlichkeiten**: Zwei 1:N-Beziehungen zwischen `User` und `Task` (responsible und qualityControl)
 4. **Anfragen-Verantwortlichkeiten**: Zwei 1:N-Beziehungen zwischen `User` und `Request` (requester und responsible)
 5. **Hierarchische Artikel**: Selbst-referenzierende 1:N-Beziehung in `CerebroCarticle` (parent-children)
+
+- **User ←→ IdentificationDocument**: Ein Benutzer kann mehrere Ausweisdokumente haben (1:n)
+- **User ←→ IdentificationDocument (Verifier)**: Ein Administrator kann viele Dokumente verifizieren (1:n, über verifiedBy)
 
 ## Indices und Constraints
 

@@ -35,7 +35,42 @@ const app = (0, express_1.default)();
 // Middleware
 app.use(express_1.default.json({ limit: '50mb' })); // Größere JSON-Payload für Bilder erlauben
 app.use((0, cors_1.default)({
-    origin: ['http://localhost:3000', 'http://localhost:5000', 'http://localhost'],
+    origin: function (origin, callback) {
+        // Erlaube Anfragen ohne Origin-Header (z.B. von Postman oder direkten Zugriffen)
+        if (!origin)
+            return callback(null, true);
+        // Liste erlaubter Ursprünge
+        const allowedOrigins = [
+            // Lokale Entwicklung
+            'http://localhost:3000',
+            'http://localhost:5000',
+            'http://localhost',
+            // Hetzner Server - erlaube alle Domains und IPs
+            /^https?:\/\/.+$/ // Erlaube alle HTTP/HTTPS Ursprünge
+        ];
+        // Generische Prüfung für alle erlaubten Ursprünge
+        let isAllowed = false;
+        for (const allowedOrigin of allowedOrigins) {
+            // Wenn es ein RegExp ist, teste es
+            if (allowedOrigin instanceof RegExp) {
+                if (allowedOrigin.test(origin)) {
+                    isAllowed = true;
+                    break;
+                }
+            }
+            // Sonst prüfe auf exakte Übereinstimmung
+            else if (origin === allowedOrigin) {
+                isAllowed = true;
+                break;
+            }
+        }
+        if (isAllowed) {
+            callback(null, true);
+        }
+        else {
+            callback(new Error(`Ursprung ${origin} nicht erlaubt durch CORS`), false);
+        }
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

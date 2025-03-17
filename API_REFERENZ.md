@@ -16,6 +16,7 @@ Diese Dokumentation bietet eine vollständige Referenz aller API-Endpunkte des I
 10. [Cerebro-API](#cerebro-api)
 11. [Lohnabrechnung-API](#lohnabrechnung-api)
 12. [Fehlerbehandlung](#fehlerbehandlung)
+13. [Dokumentenerkennung und Identifikationsdokumente](#dokumentenerkennung-und-identifikationsdokumente)
 
 ## API-Konfiguration und Integration
 
@@ -1412,6 +1413,233 @@ Die API verwendet folgende Fehler-Codes:
   }
 }
 ```
+
+## Dokumentenerkennung und Identifikationsdokumente
+
+### Dokumentenerkennung
+
+#### `POST /api/document-recognition`
+
+Analysiert ein Ausweisdokument mittels KI und extrahiert relevante Informationen.
+
+**Authentifizierung erforderlich**: Ja
+
+**Request-Header:**
+```
+Content-Type: application/json
+Authorization: Bearer <JWT-Token>
+```
+
+**Request-Body:**
+```json
+{
+  "image": "data:image/jpeg;base64,/9j/4AAQ...",  // Base64-kodiertes Bild
+  "documentType": "national_id"  // Optional: Vorgegebener Dokumenttyp
+}
+```
+
+**Erfolgsantwort (200 OK):**
+```json
+{
+  "documentType": "national_id",
+  "documentNumber": "AB123456",
+  "issueDate": "2020-01-01",
+  "expiryDate": "2030-01-01",
+  "issuingCountry": "Deutschland",
+  "issuingAuthority": "Stadt Berlin"
+}
+```
+
+**Fehlerantworten:**
+- `400 Bad Request`: Ungültiger Request (z.B. fehlendes Bild)
+- `401 Unauthorized`: Fehlende oder ungültige Authentifizierung
+- `500 Internal Server Error`: Serverfehler oder Fehler bei der KI-Verarbeitung
+
+### Identifikationsdokumente verwalten
+
+#### `POST /api/identification-documents`
+
+Fügt ein neues Identifikationsdokument für einen Benutzer hinzu.
+
+**Authentifizierung erforderlich**: Ja
+
+**Request mit FormData:**
+```
+FormData:
+  - userId: 123
+  - documentType: "passport"
+  - documentNumber: "P1234567"
+  - issueDate: "2020-01-01"
+  - expiryDate: "2030-01-01"
+  - issuingCountry: "Deutschland"
+  - issuingAuthority: "Bundespolizei"
+  - documentFile: [Binärdatei]
+```
+
+**Erfolgsantwort (201 Created):**
+```json
+{
+  "id": 1,
+  "userId": 123,
+  "documentType": "passport",
+  "documentNumber": "P1234567",
+  "issueDate": "2020-01-01T00:00:00.000Z",
+  "expiryDate": "2030-01-01T00:00:00.000Z",
+  "issuingCountry": "Deutschland",
+  "issuingAuthority": "Bundespolizei",
+  "documentFile": "uploads/documents/user_123/doc_1.pdf",
+  "isVerified": false,
+  "createdAt": "2023-01-01T12:00:00.000Z",
+  "updatedAt": "2023-01-01T12:00:00.000Z"
+}
+```
+
+#### `GET /api/identification-documents`
+
+Ruft alle Identifikationsdokumente für den aktuellen Benutzer ab.
+
+**Authentifizierung erforderlich**: Ja
+
+**Erfolgsantwort (200 OK):**
+```json
+[
+  {
+    "id": 1,
+    "userId": 123,
+    "documentType": "passport",
+    "documentNumber": "P1234567",
+    "issueDate": "2020-01-01T00:00:00.000Z",
+    "expiryDate": "2030-01-01T00:00:00.000Z",
+    "issuingCountry": "Deutschland",
+    "issuingAuthority": "Bundespolizei",
+    "documentFile": "uploads/documents/user_123/doc_1.pdf",
+    "isVerified": false,
+    "createdAt": "2023-01-01T12:00:00.000Z",
+    "updatedAt": "2023-01-01T12:00:00.000Z"
+  }
+]
+```
+
+#### `GET /api/identification-documents/:id`
+
+Ruft ein bestimmtes Identifikationsdokument ab.
+
+**Authentifizierung erforderlich**: Ja
+
+**Erfolgsantwort (200 OK):**
+```json
+{
+  "id": 1,
+  "userId": 123,
+  "documentType": "passport",
+  "documentNumber": "P1234567",
+  "issueDate": "2020-01-01T00:00:00.000Z",
+  "expiryDate": "2030-01-01T00:00:00.000Z",
+  "issuingCountry": "Deutschland",
+  "issuingAuthority": "Bundespolizei",
+  "documentFile": "uploads/documents/user_123/doc_1.pdf",
+  "isVerified": false,
+  "createdAt": "2023-01-01T12:00:00.000Z",
+  "updatedAt": "2023-01-01T12:00:00.000Z"
+}
+```
+
+#### `PUT /api/identification-documents/:id`
+
+Aktualisiert ein bestehendes Identifikationsdokument.
+
+**Authentifizierung erforderlich**: Ja
+
+**Request mit FormData:**
+```
+FormData:
+  - documentNumber: "P7654321"
+  - issueDate: "2021-01-01"
+  - expiryDate: "2031-01-01"
+  - issuingCountry: "Deutschland"
+  - issuingAuthority: "Bundespolizei Berlin"
+  - documentFile: [Binärdatei] (optional)
+```
+
+**Erfolgsantwort (200 OK):**
+```json
+{
+  "id": 1,
+  "userId": 123,
+  "documentType": "passport",
+  "documentNumber": "P7654321",
+  "issueDate": "2021-01-01T00:00:00.000Z",
+  "expiryDate": "2031-01-01T00:00:00.000Z",
+  "issuingCountry": "Deutschland",
+  "issuingAuthority": "Bundespolizei Berlin",
+  "documentFile": "uploads/documents/user_123/doc_1_updated.pdf",
+  "isVerified": false,
+  "createdAt": "2023-01-01T12:00:00.000Z",
+  "updatedAt": "2023-01-02T10:30:00.000Z"
+}
+```
+
+#### `DELETE /api/identification-documents/:id`
+
+Löscht ein Identifikationsdokument.
+
+**Authentifizierung erforderlich**: Ja
+
+**Erfolgsantwort (200 OK):**
+```json
+{
+  "message": "Dokument erfolgreich gelöscht"
+}
+```
+
+#### `PUT /api/identification-documents/:id/verify`
+
+Verifiziert ein Identifikationsdokument (nur für Administratoren).
+
+**Authentifizierung erforderlich**: Ja (Administrator)
+
+**Request-Body:**
+```json
+{
+  "isVerified": true
+}
+```
+
+**Erfolgsantwort (200 OK):**
+```json
+{
+  "id": 1,
+  "userId": 123,
+  "documentType": "passport",
+  "documentNumber": "P7654321",
+  "issueDate": "2021-01-01T00:00:00.000Z",
+  "expiryDate": "2031-01-01T00:00:00.000Z",
+  "issuingCountry": "Deutschland",
+  "issuingAuthority": "Bundespolizei Berlin",
+  "documentFile": "uploads/documents/user_123/doc_1.pdf",
+  "isVerified": true,
+  "verificationDate": "2023-01-03T14:25:00.000Z",
+  "verifiedBy": 456,
+  "createdAt": "2023-01-01T12:00:00.000Z",
+  "updatedAt": "2023-01-03T14:25:00.000Z"
+}
+```
+
+#### `GET /api/identification-documents/:id/download`
+
+Lädt die Datei eines Identifikationsdokuments herunter.
+
+**Authentifizierung erforderlich**: Ja
+
+**Erfolgsantwort (200 OK):**
+- Die Dokumentdatei wird als Download zurückgegeben.
+
+**Fehlerantworten für alle Endpunkte:**
+- `400 Bad Request`: Ungültiger Request
+- `401 Unauthorized`: Fehlende oder ungültige Authentifizierung
+- `403 Forbidden`: Keine Berechtigung für diese Operation
+- `404 Not Found`: Dokument nicht gefunden
+- `500 Internal Server Error`: Serverfehler
 
 ---
 

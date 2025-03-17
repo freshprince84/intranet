@@ -6,6 +6,12 @@ Diese Anleitung beschreibt die Schritte, die zur Aktualisierung des Servers nach
 
 Zuerst müssen die neuesten Änderungen von GitHub gezogen werden:
 
+ssh -i ~/.ssh/intranet_rsa root@65.109.228.106
+
+sudo apt update -y && sudo apt upgrade -y && sudo apt autoremove -y && sudo apt autoclean -y
+sudo apt-get update -y && sudo apt-get upgrade -y && sudo apt-get autoremove -y && sudo apt-get autoclean -y
+
+
 ```bash
 cd /var/www/intranet
 git stash  # Falls lokale Änderungen vorhanden sind

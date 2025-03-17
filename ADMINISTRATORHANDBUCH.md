@@ -80,6 +80,62 @@ Das Admin-Dashboard bietet:
 4. Klicken Sie auf "Zurücksetzen"
 5. Teilen Sie dem Benutzer das neue Passwort mit
 
+### Ausweisdokumente verwalten und verifizieren
+
+Als Administrator sind Sie für die Überprüfung und Verifizierung von Benutzerausweisdokumenten verantwortlich.
+
+#### Zugriff auf Ausweisdokumente
+
+1. Navigieren Sie zu **Benutzerverwaltung**
+2. Wählen Sie einen Benutzer aus
+3. Öffnen Sie den Tab **Dokumente**
+
+#### Dokumente überprüfen und verifizieren
+
+1. Sehen Sie sich das Dokument an, indem Sie auf **Herunterladen** klicken
+2. Prüfen Sie die Dokumentdetails auf Richtigkeit:
+   - Dokumenttyp
+   - Dokumentnummer
+   - Ausstellungsland
+   - Ausstellungsdatum und Ablaufdatum
+   - Ausstellungsbehörde
+3. Wenn alle Informationen korrekt sind, klicken Sie auf **Verifizieren**
+4. Das Dokument erhält den Status "Verifiziert" mit Ihrem Benutzernamen und dem Verifizierungsdatum
+
+#### Nicht korrekte Dokumente
+
+Wenn ein Dokument nicht korrekt oder verdächtig erscheint:
+
+1. Lassen Sie es im Status "Nicht verifiziert"
+2. Kontaktieren Sie den Benutzer über das System oder direkt
+3. Bitten Sie um Korrektur der Informationen oder ein besseres Dokumentbild
+4. Dokumentieren Sie Ihre Bedenken in einer internen Notiz
+
+#### Bulk-Aktionen für Dokumente
+
+Für die effiziente Verwaltung mehrerer Dokumente:
+
+1. Navigieren Sie zu **Benutzerverwaltung** → **Dokumente**
+2. Verwenden Sie die Filter, um nicht verifizierte Dokumente anzuzeigen
+3. Überprüfen Sie die Dokumente einzeln
+4. Verwenden Sie die Checkbox-Auswahl für Massenverwaltung
+
+#### Sicherheitshinweise
+
+- Überprüfen Sie immer, ob die Dokumentdaten mit dem tatsächlichen Bild übereinstimmen
+- Achten Sie auf Ablaufdaten und die Gültigkeit der Dokumente
+- Bei verdächtigen Dokumenten konsultieren Sie die entsprechenden Behörden
+- Stellen Sie sicher, dass Sie die gesetzlichen Anforderungen für die Identitätsverifizierung kennen
+
+#### Datenschutz
+
+Als Administrator haben Sie Zugriff auf sensible personenbezogene Daten:
+
+- Behandeln Sie alle Dokumentinformationen streng vertraulich
+- Laden Sie Dokumente nur herunter, wenn es für die Verifizierung notwendig ist
+- Löschen Sie heruntergeladene Kopien nach der Verifizierung
+- Dokumentieren Sie alle Verifizierungsaktionen für Audit-Zwecke
+
 ## Rollenverwaltung
 
 ### Standardrollen

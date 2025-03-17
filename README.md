@@ -102,6 +102,7 @@ Im System sind folgende UI-Komponenten implementiert:
 - **Cerebro Wiki**: Internes Wissensmanagementsystem
 - **Team-Worktime-Control**: Verwaltung von Teammitglieder-Arbeitszeiten
 - **Lohnabrechnung**: Integration für Schweiz und Kolumbien
+- **Dokumentenerkennung**: KI-basierte Erkennung und Verwaltung von Identifikationsdokumenten
 
 ### Benutzereinstellungen
 - Profilmanagement

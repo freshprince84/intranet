@@ -287,6 +287,54 @@ Die Architektur unterstützt Skalierung durch:
 - **Datenbankindexierung**: Optimierte Datenbankabfragen
 - **Caching-Möglichkeiten**: Für häufig abgerufene Daten
 
+## Komponentenübersicht
+
+### Benutzerprofilkomponenten
+
+- **Profile**: Verwaltung von Benutzerinformationen
+- **PasswordChange**: Änderung des Benutzerpassworts
+- **UserSettings**: Benutzereinstellungen (UI, Sprache, etc.)
+- **NotificationSettings**: Benachrichtigungspräferenzen
+- **IdentificationDocumentForm**: Formular zum Hinzufügen/Bearbeiten von Ausweisdokumenten
+- **IdentificationDocumentList**: Liste aller Ausweisdokumente eines Benutzers
+- **CameraCapture**: Kameraintegration für mobile Geräte
+
+### KI-basierte Komponenten
+
+- **Dokumentenerkennung**: Automatische Extraktion von Informationen aus Ausweisdokumenten mittels OpenAI GPT-4o
+  - **aiDocumentRecognition**: Frontend-Utility zur Kommunikation mit dem Backend
+  - **document-recognition**: Backend-Route für die Kommunikation mit der OpenAI API
+
+## Datenflüsse
+
+### Dokumentenerkennungsfluss
+
+1. **Dokumentenerfassung**:
+   - Benutzer lädt ein Dokument hoch oder nimmt ein Foto auf
+   - Das Frontend konvertiert die Datei in ein Base64-Format
+   - `IdentificationDocumentForm` stellt den "Daten automatisch erkennen"-Button bereit
+
+2. **KI-Analyse**:
+   - Das Base64-Bild wird über `aiDocumentRecognition.ts` an den Server gesendet
+   - Die Backend-Route `/api/document-recognition` empfängt das Bild
+   - Der Server validiert die Anfrage und überprüft die Authentifizierung
+   - Der Server leitet das Bild an die OpenAI API (GPT-4o) weiter
+
+3. **Ergebnisverarbeitung**:
+   - OpenAI extrahiert die Dokumentinformationen und sendet sie als JSON zurück
+   - Der Server verarbeitet und validiert das JSON
+   - Die extrahierten Daten werden an das Frontend zurückgesendet
+   - Das Frontend befüllt automatisch die Formularfelder mit den erkannten Daten
+
+4. **Speicherung**:
+   - Benutzer überprüft und korrigiert die Daten bei Bedarf
+   - Nach Bestätigung werden die Daten zusammen mit dem Dokumentbild gespeichert
+   - Die Dokumentdaten werden in der Datenbank gespeichert, die Datei im Dateisystem
+
+5. **Verifizierung**:
+   - Ein Administrator kann das Dokument später einsehen, überprüfen und verifizieren
+   - Die Verifizierung aktualisiert den Status des Dokuments in der Datenbank
+
 ---
 
 Diese Architektur bietet eine solide Grundlage für die aktuelle Funktionalität des Intranet-Projekts und ermöglicht gleichzeitig zukünftige Erweiterungen und Verbesserungen. 
