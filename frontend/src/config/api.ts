@@ -104,6 +104,14 @@ export const API_ENDPOINTS = {
             BY_ID: (id: number) => `/cerebro/external-links/${id}`,
             PREVIEW: (url: string) => `/cerebro/external-links/preview?url=${encodeURIComponent(url)}`
         }
+    },
+    // Identifikationsdokumente
+    IDENTIFICATION_DOCUMENTS: {
+        BASE: '/identification-documents',
+        BY_USER: (userId: number) => `/identification-documents/user/${userId}`,
+        BY_ID: (docId: number) => `/identification-documents/${docId}`,
+        VERIFY: (docId: number) => `/identification-documents/${docId}/verify`,
+        DOWNLOAD: (docId: number) => `/identification-documents/${docId}/download`
     }
 };
 

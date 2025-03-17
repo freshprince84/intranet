@@ -28,6 +28,9 @@ model User {
   hourlyRate               Decimal?
   contractType             String?
   monthlySalary            Float?
+  identificationNumber     String?                   // Persönliche ID-Nummer
+  taxIdentificationNumber  String?                   // Steuer-ID
+  employeeNumber           String?                   // Mitarbeiternummer/Personalnummer
   carticlesCreated         CerebroCarticle[]         @relation("CarticleCreator")
   carticlesUpdated         CerebroCarticle[]         @relation("CarticleUpdater")
   externalLinks            CerebroExternalLink[]
@@ -44,6 +47,7 @@ model User {
   tableSettings            UserTableSettings[]
   branches                 UsersBranches[]
   workTimes                WorkTime[]
+  identificationDocuments  IdentificationDocument[]  // Neue Beziehung
 }
 
 model Role {
@@ -389,4 +393,24 @@ enum NotificationType {
   system
   cerebro
   worktime_manager_stop
+}
+
+model IdentificationDocument {
+  id                 Int       @id @default(autoincrement())
+  userId             Int
+  user               User      @relation(fields: [userId], references: [id])
+  documentType       String    // z.B. passport, national_id, etc.
+  documentNumber     String
+  issueDate          DateTime?
+  expiryDate         DateTime?
+  issuingCountry     String
+  issuingAuthority   String?
+  documentFile       String?
+  isVerified         Boolean   @default(false)
+  verificationDate   DateTime?
+  verifiedBy         Int?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([userId, documentType])
 }

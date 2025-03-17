@@ -28,15 +28,18 @@ const tableSettings_1 = __importDefault(require("./routes/tableSettings"));
 const cerebro_1 = __importDefault(require("./routes/cerebro"));
 const teamWorktimeRoutes_1 = __importDefault(require("./routes/teamWorktimeRoutes"));
 const payroll_1 = __importDefault(require("./routes/payroll"));
+const identificationDocuments_1 = __importDefault(require("./routes/identificationDocuments"));
+const documentRecognition_1 = __importDefault(require("./routes/documentRecognition"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const app = (0, express_1.default)();
 // Middleware
-app.use(express_1.default.json());
+app.use(express_1.default.json({ limit: '50mb' })); // Größere JSON-Payload für Bilder erlauben
 app.use((0, cors_1.default)({
-    origin: true, // Erlaubt alle Origins
+    origin: ['http://localhost:3000', 'http://localhost:5000', 'http://localhost'],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200
 }));
 // Uploads-Verzeichnis
 const uploadsPath = path_1.default.join(__dirname, '../uploads');
@@ -53,6 +56,14 @@ setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Starte automatische Überprüfung der Arbeitszeiten...');
     yield (0, worktimeController_1.checkAndStopExceededWorktimes)();
 }), CHECK_INTERVAL_MS);
+// Eine direkte Test-Route für die Diagnose
+app.get('/api/test-route', (req, res) => {
+    res.json({
+        message: 'Test-Route ist erreichbar',
+        timestamp: new Date().toISOString(),
+        env: process.env.NODE_ENV
+    });
+});
 // Routen
 app.use('/api/auth', auth_1.default);
 app.use('/api/users', users_1.default);
@@ -67,6 +78,8 @@ app.use('/api/table-settings', tableSettings_1.default);
 app.use('/api/cerebro', cerebro_1.default);
 app.use('/api/team-worktime', teamWorktimeRoutes_1.default);
 app.use('/api/payroll', payroll_1.default);
+app.use('/api/identification-documents', identificationDocuments_1.default);
+app.use('/api/document-recognition', documentRecognition_1.default);
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

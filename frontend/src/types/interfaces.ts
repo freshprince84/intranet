@@ -15,7 +15,11 @@ export interface User {
   hourlyRate: number | null;
   contractType: string | null;
   monthlySalary: number | null;
+  identificationNumber?: string | null;
+  taxIdentificationNumber?: string | null;
+  employeeNumber?: string | null;
   roles: UserRole[];
+  identificationDocuments?: IdentificationDocument[];
 }
 
 export interface UserRole {
@@ -39,4 +43,21 @@ export interface Permission {
   accessLevel: AccessLevel;
 }
 
-export type AccessLevel = 'none' | 'read' | 'write' | 'both'; 
+export type AccessLevel = 'none' | 'read' | 'write' | 'both';
+
+export interface IdentificationDocument {
+  id: number;
+  userId: number;
+  documentType: string;
+  documentNumber: string;
+  issueDate: string | null;
+  expiryDate: string | null;
+  issuingCountry: string;
+  issuingAuthority: string | null;
+  documentFile: string | null;
+  isVerified: boolean;
+  verificationDate: string | null;
+  verifiedBy: number | null;
+  createdAt: string;
+  updatedAt: string;
+} 

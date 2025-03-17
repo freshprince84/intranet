@@ -14,17 +14,20 @@ import tableSettingsRoutes from './routes/tableSettings';
 import cerebroRoutes from './routes/cerebro';
 import teamWorktimeRoutes from './routes/teamWorktimeRoutes';
 import payrollRoutes from './routes/payroll';
+import identificationDocumentRoutes from './routes/identificationDocuments';
+import documentRecognitionRoutes from './routes/documentRecognition';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 
 const app = express();
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Größere JSON-Payload für Bilder erlauben
 app.use(cors({
-  origin: true, // Erlaubt alle Origins
+  origin: ['http://localhost:3000', 'http://localhost:5000', 'http://localhost'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200
 }));
 
 // Uploads-Verzeichnis
@@ -45,6 +48,15 @@ setInterval(async () => {
   await checkAndStopExceededWorktimes();
 }, CHECK_INTERVAL_MS);
 
+// Eine direkte Test-Route für die Diagnose
+app.get('/api/test-route', (req: Request, res: Response) => {
+  res.json({ 
+    message: 'Test-Route ist erreichbar', 
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV
+  });
+});
+
 // Routen
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -59,6 +71,8 @@ app.use('/api/table-settings', tableSettingsRoutes);
 app.use('/api/cerebro', cerebroRoutes);
 app.use('/api/team-worktime', teamWorktimeRoutes);
 app.use('/api/payroll', payrollRoutes);
+app.use('/api/identification-documents', identificationDocumentRoutes);
+app.use('/api/document-recognition', documentRecognitionRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {
