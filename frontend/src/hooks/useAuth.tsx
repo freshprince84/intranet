@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
 import { API_BASE_URL, API_URL, API_ENDPOINTS } from '../config/api.ts';
+import { User } from '../types/interfaces.ts';
 
 // API-Endpunkte aus der zentralen Konfiguration verwenden
 const AUTH_ENDPOINTS = API_ENDPOINTS.AUTH;
@@ -20,20 +21,6 @@ interface Role {
 interface UserRole {
     role: Role;
     lastUsed: boolean;
-}
-
-interface User {
-    id: number;
-    username: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    roles: UserRole[];
-    settings?: {
-        id: number;
-        darkMode: boolean;
-        sidebarCollapsed: boolean;
-    };
 }
 
 interface AuthContextType {

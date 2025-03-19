@@ -22,6 +22,7 @@ interface UpdateProfileRequest {
     bankDetails?: string;
     contract?: string;
     salary?: string;
+    normalWorkingHours?: number;
 }
 
 // Interface für die Aktualisierung der Benutzereinstellungen
@@ -121,6 +122,7 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                 bankDetails: true,
                 contract: true,
                 salary: true,
+                normalWorkingHours: true,
                 settings: true,
                 roles: {
                     include: {
@@ -279,7 +281,8 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             birthday,
             bankDetails,
             contract,
-            salary
+            salary,
+            normalWorkingHours
         } = req.body;
 
         const userId = parseInt(req.userId, 10);
@@ -323,7 +326,8 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             ...(birthday && { birthday: new Date(birthday) }),
             ...(bankDetails && { bankDetails }),
             ...(contract && { contract }),
-            ...(salary && { salary: parseFloat(salary) })
+            ...(salary && { salary: parseFloat(salary) }),
+            ...(normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })
         };
 
         const updatedUser = await prisma.user.update({
@@ -339,6 +343,7 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                 bankDetails: true,
                 contract: true,
                 salary: true,
+                normalWorkingHours: true,
                 roles: {
                     include: {
                         role: {

@@ -85,6 +85,7 @@ async function main() {
       { entity: 'dashboard', entityType: 'page', accessLevel: 'read' },
       { entity: 'worktracker', entityType: 'page', accessLevel: 'both' },
       { entity: 'settings', entityType: 'page', accessLevel: 'read' },
+      { entity: 'team_worktime_control', entityType: 'page', accessLevel: 'read' },
       { entity: 'requests', entityType: 'table', accessLevel: 'both' },
       { entity: 'tasks', entityType: 'table', accessLevel: 'both' },
     ];

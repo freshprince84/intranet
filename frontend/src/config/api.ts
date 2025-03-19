@@ -31,7 +31,12 @@ export const API_ENDPOINTS = {
     TASKS: {
         BASE: '/tasks',
         BY_ID: (id: number) => `/tasks/${id}`,
-        BY_USER: (userId: number) => `/tasks/user/${userId}`
+        BY_USER: (userId: number) => `/tasks/user/${userId}`,
+        CARTICLES: (id: number) => `/tasks/${id}/carticles`,
+        LINK_CARTICLE: (taskId: number, carticleId: number) => `/tasks/${taskId}/carticles/${carticleId}`,
+        UNLINK_CARTICLE: (taskId: number, carticleId: number) => `/tasks/${taskId}/carticles/${carticleId}`,
+        ATTACHMENTS: (taskId: number) => `/tasks/${taskId}/attachments`,
+        ATTACHMENT: (taskId: number, attachmentId: number) => `/tasks/${taskId}/attachments/${attachmentId}`
     },
     // Anträge
     REQUESTS: {

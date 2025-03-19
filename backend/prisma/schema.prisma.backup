@@ -1,0 +1,419 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                       Int                       @id @default(autoincrement())
+  username                 String                    @unique
+  password                 String
+  firstName                String
+  lastName                 String
+  birthday                 DateTime?
+  bankDetails              String?
+  contract                 String?
+  salary                   Float?
+  normalWorkingHours       Float                     @default(7.6)
+  approvedOvertimeHours    Float                     @default(0)
+  country                  String                    @default("CO")
+  language                 String                    @default("es")
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  email                    String                    @unique
+  payrollCountry           String                    @default("CH")
+  hourlyRate               Decimal?
+  contractType             String?
+  monthlySalary            Float?
+  identificationNumber     String?                   // Persönliche ID-Nummer
+  taxIdentificationNumber  String?                   // Steuer-ID
+  employeeNumber           String?                   // Mitarbeiternummer/Personalnummer
+  carticlesCreated         CerebroCarticle[]         @relation("CarticleCreator")
+  carticlesUpdated         CerebroCarticle[]         @relation("CarticleUpdater")
+  externalLinks            CerebroExternalLink[]
+  cerebroMedia             CerebroMedia[]
+  payrolls                 EmployeePayroll[]
+  notifications            Notification[]
+  requestsRequester        Request[]                 @relation("requester")
+  requestsResponsible      Request[]                 @relation("responsible")
+  settings                 Settings?
+  tasksQualityControl      Task[]                    @relation("quality_control")
+  tasksResponsible         Task[]                    @relation("responsible")
+  userNotificationSettings UserNotificationSettings?
+  roles                    UserRole[]
+  tableSettings            UserTableSettings[]
+  branches                 UsersBranches[]
+  workTimes                WorkTime[]
+  identificationDocuments  IdentificationDocument[]  // Neue Beziehung
+}
+
+model Role {
+  id          Int          @id @default(autoincrement())
+  name        String       @unique
+  description String?
+  permissions Permission[]
+  users       UserRole[]
+  tasks       Task[]
+}
+
+model UserRole {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  roleId    Int
+  lastUsed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      Role     @relation(fields: [roleId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, roleId])
+}
+
+model Permission {
+  id          Int      @id @default(autoincrement())
+  roleId      Int
+  entity      String
+  entityType  String   @default("page")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  accessLevel String
+  role        Role     @relation(fields: [roleId], references: [id])
+}
+
+model Branch {
+  id        Int             @id @default(autoincrement())
+  name      String          @unique
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  requests  Request[]
+  tasks     Task[]
+  users     UsersBranches[]
+  workTimes WorkTime[]
+}
+
+model UsersBranches {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  branchId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, branchId])
+}
+
+model WorkTime {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  branchId  Int
+  startTime DateTime
+  endTime   DateTime?
+  timezone  String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  branch    Branch    @relation(fields: [branchId], references: [id])
+  user      User      @relation(fields: [userId], references: [id])
+}
+
+model Task {
+  id               Int                   @id @default(autoincrement())
+  title            String
+  description      String?
+  status           TaskStatus            @default(open)
+  responsibleId    Int?
+  roleId           Int?
+  qualityControlId Int
+  branchId         Int
+  dueDate          DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  branch           Branch                @relation(fields: [branchId], references: [id])
+  qualityControl   User                  @relation("quality_control", fields: [qualityControlId], references: [id])
+  responsible      User?                 @relation("responsible", fields: [responsibleId], references: [id])
+  role             Role?                 @relation(fields: [roleId], references: [id])
+  carticles        TaskCerebroCarticle[]
+}
+
+model Request {
+  id            Int                      @id @default(autoincrement())
+  title         String
+  description   String?
+  status        RequestStatus            @default(approval)
+  requesterId   Int
+  responsibleId Int
+  branchId      Int
+  dueDate       DateTime?
+  createTodo    Boolean                  @default(false)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  branch        Branch                   @relation(fields: [branchId], references: [id])
+  requester     User                     @relation("requester", fields: [requesterId], references: [id])
+  responsible   User                     @relation("responsible", fields: [responsibleId], references: [id])
+  carticles     RequestCerebroCarticle[]
+}
+
+model Settings {
+  id               Int      @id @default(autoincrement())
+  userId           Int      @unique
+  companyLogo      String?
+  darkMode         Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  sidebarCollapsed Boolean  @default(false)
+  user             User     @relation(fields: [userId], references: [id])
+}
+
+model UserTableSettings {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  tableId       String
+  columnOrder   String
+  hiddenColumns String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, tableId])
+}
+
+model Notification {
+  id                Int              @id @default(autoincrement())
+  userId            Int
+  title             String
+  message           String
+  type              NotificationType
+  read              Boolean          @default(false)
+  relatedEntityId   Int?
+  relatedEntityType String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  carticleId        Int?
+  carticle          CerebroCarticle? @relation(fields: [carticleId], references: [id])
+  user              User             @relation(fields: [userId], references: [id])
+}
+
+model NotificationSettings {
+  id                  Int      @id @default(autoincrement())
+  taskCreate          Boolean  @default(true)
+  taskUpdate          Boolean  @default(true)
+  taskDelete          Boolean  @default(true)
+  taskStatusChange    Boolean  @default(true)
+  requestCreate       Boolean  @default(true)
+  requestUpdate       Boolean  @default(true)
+  requestDelete       Boolean  @default(true)
+  requestStatusChange Boolean  @default(true)
+  userCreate          Boolean  @default(true)
+  userUpdate          Boolean  @default(true)
+  userDelete          Boolean  @default(true)
+  roleCreate          Boolean  @default(true)
+  roleUpdate          Boolean  @default(true)
+  roleDelete          Boolean  @default(true)
+  worktimeStart       Boolean  @default(true)
+  worktimeStop        Boolean  @default(true)
+  worktimeAutoStop    Boolean  @default(true)
+  worktimeManagerStop Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  carticleCreate      Boolean  @default(true)
+  carticleDelete      Boolean  @default(true)
+  carticleLink        Boolean  @default(true)
+  carticleMention     Boolean  @default(true)
+  carticleUpdate      Boolean  @default(true)
+}
+
+model UserNotificationSettings {
+  id                  Int      @id @default(autoincrement())
+  userId              Int      @unique
+  taskCreate          Boolean?
+  taskUpdate          Boolean?
+  taskDelete          Boolean?
+  taskStatusChange    Boolean?
+  requestCreate       Boolean?
+  requestUpdate       Boolean?
+  requestDelete       Boolean?
+  requestStatusChange Boolean?
+  userCreate          Boolean?
+  userUpdate          Boolean?
+  userDelete          Boolean?
+  roleCreate          Boolean?
+  roleUpdate          Boolean?
+  roleDelete          Boolean?
+  worktimeStart       Boolean?
+  worktimeStop        Boolean?
+  worktimeAutoStop    Boolean? @default(true)
+  worktimeManagerStop Boolean?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  carticleCreate      Boolean?
+  carticleDelete      Boolean?
+  carticleLink        Boolean?
+  carticleMention     Boolean?
+  carticleUpdate      Boolean?
+  user                User     @relation(fields: [userId], references: [id])
+}
+
+model EmployeePayroll {
+  id                             Int      @id @default(autoincrement())
+  userId                         Int
+  periodStart                    DateTime
+  periodEnd                      DateTime
+  regularHours                   Float
+  overtimeHours                  Float
+  nightHours                     Float
+  holidayHours                   Float
+  sundayHolidayHours             Float    @default(0)
+  overtimeNightHours             Float    @default(0)
+  overtimeSundayHolidayHours     Float    @default(0)
+  overtimeNightSundayHolidayHours Float   @default(0)
+  hourlyRate                     Decimal
+  grossPay                       Decimal
+  socialSecurity                 Decimal
+  taxes                          Decimal
+  netPay                         Decimal
+  deductions                     Decimal  @default(0)
+  currency                       String   @default("CHF")
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
+  user                           User     @relation(fields: [userId], references: [id])
+}
+
+model CerebroCarticle {
+  id            Int                      @id @default(autoincrement())
+  title         String
+  content       String?
+  slug          String                   @unique
+  parentId      Int?
+  createdById   Int
+  updatedById   Int?
+  isPublished   Boolean                  @default(false)
+  position      Int?                     @default(999)
+  githubPath    String?                  // Pfad zur GitHub Markdown-Datei, falls vorhanden
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  createdBy     User                     @relation("CarticleCreator", fields: [createdById], references: [id])
+  parent        CerebroCarticle?         @relation("Hierarchy", fields: [parentId], references: [id])
+  children      CerebroCarticle[]        @relation("Hierarchy")
+  updatedBy     User?                    @relation("CarticleUpdater", fields: [updatedById], references: [id])
+  externalLinks CerebroExternalLink[]
+  media         CerebroMedia[]
+  notifications Notification[]
+  requests      RequestCerebroCarticle[]
+  tasks         TaskCerebroCarticle[]
+  tags          CerebroTag[]             @relation("CerebroCarticleToCerebroTag")
+}
+
+model TaskCerebroCarticle {
+  id         Int             @id @default(autoincrement())
+  taskId     Int
+  carticleId Int
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  carticle   CerebroCarticle @relation(fields: [carticleId], references: [id])
+  task       Task            @relation(fields: [taskId], references: [id])
+
+  @@unique([taskId, carticleId])
+}
+
+model RequestCerebroCarticle {
+  id         Int             @id @default(autoincrement())
+  requestId  Int
+  carticleId Int
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  carticle   CerebroCarticle @relation(fields: [carticleId], references: [id])
+  request    Request         @relation(fields: [requestId], references: [id])
+
+  @@unique([requestId, carticleId])
+}
+
+model CerebroMedia {
+  id          Int             @id @default(autoincrement())
+  path        String
+  filename    String
+  mimetype    String
+  size        Int
+  carticleId  Int
+  createdById Int
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  carticle    CerebroCarticle @relation(fields: [carticleId], references: [id])
+  createdBy   User            @relation(fields: [createdById], references: [id])
+}
+
+model CerebroExternalLink {
+  id          Int             @id @default(autoincrement())
+  url         String
+  title       String?
+  type        String
+  carticleId  Int
+  createdById Int
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  carticle    CerebroCarticle @relation(fields: [carticleId], references: [id])
+  createdBy   User            @relation(fields: [createdById], references: [id])
+}
+
+model CerebroTag {
+  id        Int               @id @default(autoincrement())
+  name      String            @unique
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+  carticles CerebroCarticle[] @relation("CerebroCarticleToCerebroTag")
+}
+
+enum TaskStatus {
+  open
+  in_progress
+  improval
+  quality_control
+  done
+}
+
+enum RequestStatus {
+  approval
+  approved
+  to_improve
+  denied
+}
+
+enum AccessLevel {
+  read
+  write
+  both
+  none
+}
+
+enum NotificationType {
+  task
+  request
+  user
+  role
+  worktime
+  system
+  cerebro
+  worktime_manager_stop
+}
+
+model IdentificationDocument {
+  id                 Int       @id @default(autoincrement())
+  userId             Int
+  user               User      @relation(fields: [userId], references: [id])
+  documentType       String    // z.B. passport, national_id, etc.
+  documentNumber     String
+  issueDate          DateTime?
+  expiryDate         DateTime?
+  issuingCountry     String
+  issuingAuthority   String?
+  documentFile       String?
+  isVerified         Boolean   @default(false)
+  verificationDate   DateTime?
+  verifiedBy         Int?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([userId, documentType])
+}

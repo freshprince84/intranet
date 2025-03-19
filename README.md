@@ -40,6 +40,7 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [MODUL_TEAMKONTROLLE.md](MODUL_TEAMKONTROLLE.md) - Team-Worktime-Control
 - [MODUL_ABRECHNUNG.md](MODUL_ABRECHNUNG.md) - Lohnabrechnungsintegration
 - [MODUL_DOKUMENT_ERKENNUNG.md](MODUL_DOKUMENT_ERKENNUNG.md) - KI-basierte Dokumentenerkennungsfunktion
+- [WORKFLOW_AUTOMATISIERUNG.md](WORKFLOW_AUTOMATISIERUNG.md) - Workflow-Automatisierung für Task-Bearbeitung
 
 ## Systemarchitektur
 

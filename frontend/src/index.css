@@ -463,13 +463,29 @@ code {
     margin-left: 0 !important;
   }
   
+  /* Copy-Button ausrichten - allgemeine Regel */
+  .copy-button {
+    align-self: flex-start !important;
+    margin-left: 0 !important;
+  }
+
   /* Spezielle Ausrichtung für Edit-Button nur in Tasks-Tabelle */
   .tasks-table .edit-button {
     margin-left: 18px !important; /* Zentriert in Bezug auf Status-Buttons */
   }
-  
+
+  /* Spezielle Ausrichtung für Copy-Button in Tasks-Tabelle */
+  .tasks-table .copy-button {
+    margin-left: 18px !important; /* Gleiche Ausrichtung wie Edit-Button */
+  }
+
   /* Spezielle Ausrichtung für Edit-Button in Requests-Tabelle */
   .requests-table .edit-button {
+    margin-left: 0 !important; /* Links ausgerichtet */
+  }
+
+  /* Spezielle Ausrichtung für Copy-Button in Requests-Tabelle */
+  .requests-table .copy-button {
     margin-left: 0 !important; /* Links ausgerichtet */
   }
   
@@ -532,7 +548,8 @@ code {
   /* Alle Button-Container und Icons ausrichten */
   .action-buttons,
   .status-buttons,
-  .edit-button {
+  .edit-button,
+  .copy-button {
     padding-left: 0 !important;
     margin-left: 0 !important;
   }

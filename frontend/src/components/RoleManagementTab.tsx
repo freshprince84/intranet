@@ -8,6 +8,8 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
 import TableColumnConfig from '../components/TableColumnConfig.tsx';
+import { useError } from '../contexts/ErrorContext.tsx';
+import { ErrorCategory } from '../services/ErrorHandler.ts';
 import { 
   CheckIcon, 
 } from '@heroicons/react/24/outline';
@@ -19,13 +21,16 @@ interface RoleManagementTabProps {
 }
 
 // Definiere Seiten, die immer sichtbar sein sollen (ohne Berechtigungsprüfung)
-const alwaysVisiblePages = ['dashboard', 'settings', 'profile'];
+const alwaysVisiblePages = ['dashboard', 'worktracker', 'cerebro', 'settings', 'profile'];
 
 // Pages, für die Berechtigungen benötigt werden
 const defaultPages = [
   'dashboard',
   'worktracker',
+  'team_worktime_control',
+  'payroll',  // Usermanagement-Seite statt users
   'usermanagement',  // Usermanagement-Seite statt users
+  'cerebro',
   'settings',
   'profile'
 ];
@@ -42,51 +47,7 @@ const tableToPageMapping = {
   'tasks': 'worktracker'
 };
 
-// Mock-Rollen für die Anzeige
-const mockRoles: Role[] = [
-  {
-    id: 1,
-    name: 'Administrator',
-    description: 'Hat volle Berechtigung auf alle Seiten',
-    permissions: defaultPages.map(page => ({
-      id: 1,
-      entity: page,
-      entityType: 'page',
-      accessLevel: 'both',
-      roleId: 1,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }))
-  },
-  {
-    id: 2,
-    name: 'Benutzer',
-    description: 'Standard-Benutzer mit eingeschränkten Rechten',
-    permissions: defaultPages.map(page => ({
-      id: 2,
-      entity: page,
-      entityType: 'page',
-      accessLevel: page === 'dashboard' || page === 'requests' ? 'both' : 'read',
-      roleId: 2,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }))
-  },
-  {
-    id: 3,
-    name: 'Gast',
-    description: 'Kann nur Inhalte sehen',
-    permissions: defaultPages.map(page => ({
-      id: 3,
-      entity: page,
-      entityType: 'page',
-      accessLevel: 'read',
-      roleId: 3,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }))
-  }
-];
+
 
 interface RoleFormData {
   name: string;
@@ -225,6 +186,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   // Responsiveness Hook
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
   
+  // Neue Fehlerbehandlung hinzufügen
+  const { handleError, handleValidationError } = useError();
+  
   // Überwache Bildschirmgröße
   useEffect(() => {
     const handleResize = () => {
@@ -235,25 +199,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Fehlerbehandlung
-  const handleError = useCallback((err: any) => {
-    let message = 'Ein Fehler ist aufgetreten';
-    if (err.response?.data?.message) {
-      message = err.response.data.message;
-    } else if (err instanceof Error) {
-      message = err.message;
-    }
-    
-    // Fehler "Ungültige Rollen-ID" unterdrücken, wenn er beim Laden der Seite auftritt
-    if (message.includes('Ungültige Rollen-ID')) {
-      console.warn('Fehler "Ungültige Rollen-ID" unterdrückt:', message);
-      return;
-    }
-    
-    onError(message);
-  }, [onError]);
-
-  // Zurück zur ursprünglichen fetchRoles-Funktion
+  // Aktualisiere die fetchRoles-Funktion, um den neuen ErrorHandler zu nutzen
   const fetchRoles = useCallback(async () => {
     setLoading(true);
     console.log('DEBUGAUSGABE: Hole Rollen vom Server...');
@@ -265,11 +211,19 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       setError(null);
     } catch (error) {
       console.error('DEBUGAUSGABE: Fehler beim Abrufen der Rollen:', error);
-      handleError(error.response?.data?.message || 'Fehler beim Laden der Rollen');
+      // Nutze den neuen ErrorHandler
+      handleError(error, { 
+        component: 'RoleManagementTab', 
+        action: 'fetchRoles' 
+      });
+      // Rufe auch den übergebenen onError auf, falls vorhanden
+      if (onError) {
+        onError('Fehler beim Laden der Rollen');
+      }
     } finally {
       setLoading(false);
     }
-  }, [handleError]);
+  }, [handleError, onError]);
 
   // Direkt Rollen laden
   useEffect(() => {
@@ -279,158 +233,191 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   // Speichern einer Rolle
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      console.log('DEBUGAUSGABE: Formular wird gesendet mit Daten:', formData);
-      
-      // Validierung der Formulardaten
-      if (!formData.name.trim()) {
-        console.log('DEBUGAUSGABE: Validierungsfehler - Name ist leer');
-        handleError('Der Name der Rolle darf nicht leer sein');
-        return;
-      }
-      
-      // Prüfen, ob mindestens eine Berechtigung nicht 'none' ist
-      const hasValidPermissions = formData.permissions.some(p => p.accessLevel !== 'none');
-      if (!hasValidPermissions) {
-        console.log('DEBUGAUSGABE: Validierungsfehler - Keine Berechtigungen gewährt');
-        handleError('Mindestens eine Berechtigung muss gewährt werden');
-        return;
-      }
-      
-      // Berechtigung filtern - nur diejenigen mit accessLevel != none senden
-      const filteredPermissions = formData.permissions.filter(p => p.accessLevel !== 'none');
-      
-      console.log('DEBUGAUSGABE: Gefilterte Berechtigungen vor dem Senden:', filteredPermissions);
-      console.log('DEBUGAUSGABE: Anzahl der gefilterten Berechtigungen:', filteredPermissions.length);
-      filteredPermissions.forEach((p, i) => {
-        console.log(`DEBUGAUSGABE: Permission ${i+1}:`, p);
-        console.log(`DEBUGAUSGABE:   - entity: ${p.entity}, entityType: ${p.entityType}, accessLevel: ${p.accessLevel}`);
+    setError(null);
+    
+    if (!formData.name) {
+      handleValidationError('Rollenname darf nicht leer sein', { name: 'Rollenname ist erforderlich' });
+      return;
+    }
+    
+    if (editingRole) {
+      // Stelle sicher, dass die immer sichtbaren Seiten auch tatsächlich auf 'both' gesetzt sind
+      const updatedPermissions = formData.permissions.map(permission => {
+        if (permission.entityType === 'page' && alwaysVisiblePages.includes(permission.entity)) {
+          return { ...permission, accessLevel: 'both' };
+        }
+        return permission;
       });
       
-      if (editingRole) {
-        // Bearbeitung einer bestehenden Rolle
-        if (!editingRole.id || isNaN(editingRole.id)) {
-          console.warn('DEBUGAUSGABE: Ungültige Rollen-ID erkannt, Bearbeitung abgebrochen');
-          handleError('Ungültige Rollen-ID, Bearbeitung abgebrochen');
-          return;
-        }
-        
-        // Überprüfen, ob es sich um eine geschützte Rolle handelt
-        if (editingRole.id === 1 || editingRole.id === 2 || editingRole.id === 999) {
-          console.warn(`DEBUGAUSGABE: Versuch, geschützte Rolle mit ID ${editingRole.id} zu bearbeiten`);
-          handleError('Geschützte Systemrollen können nicht bearbeitet werden');
-          setIsModalOpen(false);
-          return;
-        }
-        
-        // Überprüfen, ob die Rolle noch in der aktuellen Liste existiert
-        const roleExists = roles.some(r => r.id === editingRole.id);
-        if (!roleExists) {
-          console.error(`DEBUGAUSGABE: Rolle mit ID ${editingRole.id} existiert nicht in der aktuellen Liste`);
-          handleError(`Rolle mit ID ${editingRole.id} existiert nicht mehr. Bitte aktualisieren Sie die Seite.`);
-          setIsModalOpen(false);
-          // Rollen neu laden, um die Anzeige zu aktualisieren
-          await fetchRoles();
-          return;
-        }
-        
-        console.log(`DEBUGAUSGABE: Bearbeite Rolle mit ID ${editingRole.id}`);
-        
-        try {
-          console.log('DEBUGAUSGABE: Sende Aktualisierung an API:', {
-            name: formData.name,
-            description: formData.description,
-            permissions: filteredPermissions
-          });
-          
-          const dataToSend = {
-            name: formData.name,
-            description: formData.description,
-            permissions: filteredPermissions
-          };
-          
-          console.log('DEBUGAUSGABE: Vor dem API-Aufruf roleApi.update');
-          const response = await roleApi.update(editingRole.id, dataToSend);
-          console.log('DEBUGAUSGABE: Nach dem API-Aufruf roleApi.update');
-          console.log('DEBUGAUSGABE: API-Antwort bei Rollenaktualisierung:', response);
-          await fetchRoles();
-        } catch (updateError) {
-          console.error('DEBUGAUSGABE: Fehler bei Rollenaktualisierung:', updateError);
-          if (updateError.response) {
-            // Spezifischere Fehlerbehandlung
-            if (updateError.response.data.meta && updateError.response.data.meta.cause === "Record to update not found.") {
-              handleError('Diese Rolle existiert nicht mehr in der Datenbank. Die Anzeige wird aktualisiert.');
-              setIsModalOpen(false);
-              // Rollenliste aktualisieren, um Frontend zu synchronisieren
-              await fetchRoles();
-            } else {
-              handleError(updateError.response.data.message || 'Fehler beim Aktualisieren der Rolle');
-            }
-          } else {
-            handleError('Fehler beim Aktualisieren der Rolle');
-          }
-          return;
-        }
-      } else {
-        // Erstellen einer neuen Rolle
-        try {
-          console.log('DEBUGAUSGABE: Sende Daten an API für neue Rolle:', {
-            name: formData.name,
-            description: formData.description,
-            permissions: filteredPermissions
-          });
-          
-          const dataToSend = {
-            name: formData.name,
-            description: formData.description,
-            permissions: filteredPermissions
-          };
-          
-          console.log('DEBUGAUSGABE: Vor dem API-Aufruf roleApi.create');
-          const response = await roleApi.create(dataToSend);
-          console.log('DEBUGAUSGABE: Nach dem API-Aufruf roleApi.create');
-          console.log('DEBUGAUSGABE: API-Antwort beim Erstellen der Rolle:', response);
-          await fetchRoles();
-        } catch (createError) {
-          console.error('DEBUGAUSGABE: Fehler bei API-Anfrage zum Erstellen der Rolle:', createError);
-          if (createError.response) {
-            handleError(createError.response.data.message || 'Fehler beim Erstellen der Rolle');
-          } else {
-            handleError('Fehler beim Erstellen der Rolle');
-          }
-          return;
-        }
+      // Filtere nur die relevanten Berechtigungen (nicht 'none')
+      const filteredPermissions = updatedPermissions
+        .filter(permission => permission.accessLevel !== 'none')
+        .map(permission => ({
+          entity: permission.entity,
+          entityType: permission.entityType,
+          accessLevel: permission.accessLevel
+        }));
+      
+      if (!editingRole.id || isNaN(editingRole.id)) {
+        console.warn('DEBUGAUSGABE: Ungültige Rollen-ID erkannt, Bearbeitung abgebrochen');
+        handleError('Ungültige Rollen-ID, Bearbeitung abgebrochen', { 
+          component: 'RoleManagementTab',
+          roleId: editingRole.id
+        });
+        return;
       }
       
-      if (onRolesChange) onRolesChange();
+      // Überprüfen, ob es sich um eine geschützte Rolle handelt
+      if (editingRole.id === 1 || editingRole.id === 2 || editingRole.id === 999) {
+        console.warn(`DEBUGAUSGABE: Versuch, geschützte Rolle mit ID ${editingRole.id} zu bearbeiten`);
+        handleError({
+          message: 'Geschützte Systemrollen können nicht bearbeitet werden',
+          name: 'PermissionError'
+        }, {
+          component: 'RoleManagementTab',
+          roleId: editingRole.id,
+          category: ErrorCategory.PERMISSION
+        });
+        setIsModalOpen(false);
+        return;
+      }
       
-      setIsModalOpen(false);
-      resetForm();
-    } catch (err) {
-      console.error('DEBUGAUSGABE: Unbehandelter Fehler:', err);
-      handleError(err);
-      
-      // Bei einem unbehandelten Fehler trotzdem versuchen, die Rollenliste zu aktualisieren
-      try {
+      // Überprüfen, ob die Rolle noch in der aktuellen Liste existiert
+      const roleExists = roles.some(r => r.id === editingRole.id);
+      if (!roleExists) {
+        console.error(`DEBUGAUSGABE: Rolle mit ID ${editingRole.id} existiert nicht in der aktuellen Liste`);
+        handleError(`Rolle mit ID ${editingRole.id} existiert nicht mehr. Bitte aktualisieren Sie die Seite.`, {
+          component: 'RoleManagementTab',
+          roleId: editingRole.id
+        });
+        setIsModalOpen(false);
+        // Rollen neu laden, um die Anzeige zu aktualisieren
         await fetchRoles();
-      } catch (refreshError) {
-        console.error('DEBUGAUSGABE: Fehler beim Aktualisieren der Rollenliste nach fehlgeschlagenem Vorgang:', refreshError);
+        return;
+      }
+      
+      console.log(`DEBUGAUSGABE: Bearbeite Rolle mit ID ${editingRole.id}`);
+      
+      try {
+        console.log('DEBUGAUSGABE: Sende Aktualisierung an API:', {
+          name: formData.name,
+          description: formData.description,
+          permissions: filteredPermissions
+        });
+        
+        const dataToSend = {
+          name: formData.name,
+          description: formData.description,
+          permissions: filteredPermissions
+        };
+        
+        console.log('DEBUGAUSGABE: Vor dem API-Aufruf roleApi.update');
+        const response = await roleApi.update(editingRole.id, dataToSend);
+        console.log('DEBUGAUSGABE: Nach dem API-Aufruf roleApi.update');
+        console.log('DEBUGAUSGABE: API-Antwort bei Rollenaktualisierung:', response);
+        await fetchRoles();
+      } catch (updateError) {
+        console.error('DEBUGAUSGABE: Fehler bei Rollenaktualisierung:', updateError);
+        if (updateError.response) {
+          // Spezifischere Fehlerbehandlung
+          if (updateError.response.data.meta && updateError.response.data.meta.cause === "Record to update not found.") {
+            handleError('Diese Rolle existiert nicht mehr in der Datenbank. Die Anzeige wird aktualisiert.', {
+              component: 'RoleManagementTab',
+              roleId: editingRole.id
+            });
+            setIsModalOpen(false);
+            // Rollenliste aktualisieren, um Frontend zu synchronisieren
+            await fetchRoles();
+          } else {
+            handleError(updateError.response.data.message || 'Fehler beim Aktualisieren der Rolle', {
+              component: 'RoleManagementTab',
+              roleId: editingRole.id
+            });
+          }
+        } else {
+          handleError('Fehler beim Aktualisieren der Rolle', {
+            component: 'RoleManagementTab',
+            roleId: editingRole.id
+          });
+        }
+        return;
+      }
+    } else {
+      // Erstellen einer neuen Rolle
+      try {
+        // Stelle sicher, dass die immer sichtbaren Seiten auch tatsächlich auf 'both' gesetzt sind
+        const updatedPermissions = formData.permissions.map(permission => {
+          if (permission.entityType === 'page' && alwaysVisiblePages.includes(permission.entity)) {
+            return { ...permission, accessLevel: 'both' };
+          }
+          return permission;
+        });
+        
+        // Filtere nur die relevanten Berechtigungen (nicht 'none')
+        const filteredPermissions = updatedPermissions
+          .filter(permission => permission.accessLevel !== 'none')
+          .map(permission => ({
+            entity: permission.entity,
+            entityType: permission.entityType,
+            accessLevel: permission.accessLevel
+          }));
+        
+        console.log('DEBUGAUSGABE: Sende Daten an API für neue Rolle:', {
+          name: formData.name,
+          description: formData.description,
+          permissions: filteredPermissions
+        });
+        
+        const dataToSend = {
+          name: formData.name,
+          description: formData.description,
+          permissions: filteredPermissions
+        };
+        
+        console.log('DEBUGAUSGABE: Vor dem API-Aufruf roleApi.create');
+        const response = await roleApi.create(dataToSend);
+        console.log('DEBUGAUSGABE: Nach dem API-Aufruf roleApi.create');
+        console.log('DEBUGAUSGABE: API-Antwort beim Erstellen der Rolle:', response);
+        await fetchRoles();
+      } catch (createError) {
+        console.error('DEBUGAUSGABE: Fehler bei API-Anfrage zum Erstellen der Rolle:', createError);
+        if (createError.response) {
+          handleError(createError.response.data.message || 'Fehler beim Erstellen der Rolle', {
+            component: 'RoleManagementTab'
+          });
+        } else {
+          handleError('Fehler beim Erstellen der Rolle', {
+            component: 'RoleManagementTab'
+          });
+        }
+        return;
       }
     }
+    
+    if (onRolesChange) onRolesChange();
+    
+    setIsModalOpen(false);
+    resetForm();
   };
 
   // Löschen einer Rolle
   const handleDelete = async (roleId: number) => {
     if (!roleId || isNaN(roleId)) {
       console.warn('Ungültige Rollen-ID erkannt, Löschvorgang abgebrochen');
-      handleError('Ungültige Rollen-ID, Löschvorgang abgebrochen');
+      handleError('Ungültige Rollen-ID, Löschvorgang abgebrochen', {
+        component: 'RoleManagementTab',
+        roleId: roleId
+      });
       return;
     }
     
     // Überprüfen, ob es sich um eine geschützte Rolle handelt
     if (roleId === 1 || roleId === 2 || roleId === 999) {
       console.warn(`Versuch, geschützte Rolle mit ID ${roleId} zu löschen`);
-      handleError('Geschützte Systemrollen können nicht gelöscht werden');
+      handleError('Geschützte Systemrollen können nicht gelöscht werden', {
+        component: 'RoleManagementTab',
+        roleId: roleId
+      });
       return;
     }
     
@@ -443,7 +430,10 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       const roleExists = roles.some(r => r.id === roleId);
       if (!roleExists) {
         console.error(`Rolle mit ID ${roleId} existiert nicht in der aktuellen Liste`);
-        handleError(`Rolle mit ID ${roleId} existiert nicht mehr. Bitte aktualisieren Sie die Seite.`);
+        handleError(`Rolle mit ID ${roleId} existiert nicht mehr. Bitte aktualisieren Sie die Seite.`, {
+          component: 'RoleManagementTab',
+          roleId: roleId
+        });
         // Rollen neu laden, um die Anzeige zu aktualisieren
         await fetchRoles();
         return;
@@ -472,14 +462,23 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
             
             // Spezifischere Fehlerbehandlung
             if (deleteError.response.data.meta && deleteError.response.data.meta.cause === "Record to delete does not exist.") {
-              handleError('Diese Rolle existiert nicht mehr in der Datenbank. Die Anzeige wird aktualisiert.');
+              handleError('Diese Rolle existiert nicht mehr in der Datenbank. Die Anzeige wird aktualisiert.', {
+                component: 'RoleManagementTab',
+                roleId: roleId
+              });
               // Rollenliste aktualisieren, um Frontend zu synchronisieren
               await fetchRoles();
             } else {
-              handleError(deleteError.response.data.message || 'Fehler beim Löschen der Rolle');
+              handleError(deleteError.response.data.message || 'Fehler beim Löschen der Rolle', {
+                component: 'RoleManagementTab',
+                roleId: roleId
+              });
             }
           } else {
-            handleError('Netzwerkfehler beim Löschen der Rolle');
+            handleError('Netzwerkfehler beim Löschen der Rolle', {
+              component: 'RoleManagementTab',
+              roleId: roleId
+            });
           }
           return;
         }
@@ -504,7 +503,10 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   const prepareRoleForEditing = (role: Role) => {
     // Verhindere das Bearbeiten von geschützten Rollen
     if (role.id === 1 || role.id === 2 || role.id === 999) {
-      handleError('Geschützte Systemrollen können nicht bearbeitet werden');
+      handleError('Geschützte Systemrollen können nicht bearbeitet werden', {
+        component: 'RoleManagementTab',
+        roleId: role.id
+      });
       return;
     }
     
@@ -513,7 +515,8 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       ...defaultPages.map(page => ({
         entity: page,
         entityType: 'page',
-        accessLevel: 'none' as AccessLevel
+        // Für die immer sichtbaren Seiten 'both' als Standard setzen
+        accessLevel: alwaysVisiblePages.includes(page) ? 'both' as AccessLevel : 'none' as AccessLevel
       })),
       ...defaultTables.map(table => ({
         entity: table,
@@ -529,7 +532,12 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       );
       
       if (existingPermIndex !== -1) {
-        allPermissions[existingPermIndex].accessLevel = permission.accessLevel;
+        // Stelle sicher, dass alwaysVisiblePages immer 'both' als AccessLevel haben
+        if (permission.entityType === 'page' && alwaysVisiblePages.includes(permission.entity)) {
+          allPermissions[existingPermIndex].accessLevel = 'both';
+        } else {
+          allPermissions[existingPermIndex].accessLevel = permission.accessLevel;
+        }
       }
     });
 
@@ -554,7 +562,8 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         ...defaultPages.map(page => ({
           entity: page,
           entityType: 'page',
-          accessLevel: 'none' as AccessLevel
+          // Für die immer sichtbaren Seiten 'both' als Standard setzen
+          accessLevel: alwaysVisiblePages.includes(page) ? 'both' as AccessLevel : 'none' as AccessLevel
         })),
         // Tabellen-Berechtigungen
         ...defaultTables.map(table => ({
@@ -871,7 +880,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
             {/* Filter-Button */}
             <button
               className={`p-2 rounded-md border ${getActiveFilterCount() > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
-              onClick={() => setIsFilterModalOpen(true)}
+              onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
               title="Filter"
             >
               <div className="relative">
@@ -902,6 +911,50 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           renderRoles()
         )}
       </div>
+
+      {/* Filter-Pane */}
+      {isFilterModalOpen && (
+        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-4 mt-2 transition-all duration-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border rounded-md"
+                value={filterState.name}
+                onChange={(e) => setFilterState({...filterState, name: e.target.value})}
+                placeholder="Nach Name filtern..."
+              />
+            </div>
+          
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border rounded-md"
+                value={filterState.description}
+                onChange={(e) => setFilterState({...filterState, description: e.target.value})}
+                placeholder="Nach Beschreibung filtern..."
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3 mt-4">
+            <button
+              onClick={resetFilters}
+              className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
+            >
+              Filter zurücksetzen
+            </button>
+            <button
+              onClick={applyFilters}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+            >
+              Filter anwenden
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal für Rollenerstellung/Bearbeitung */}
       {isModalOpen && (
@@ -959,12 +1012,13 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                       .filter(permission => permission.entityType === 'page')
                       .map((permission, index) => {
                         const permIndex = formData.permissions.indexOf(permission);
+                        // Ist-Zustand des Toggles bestimmen
                         const isActive = permission.accessLevel === 'both';
                         return (
                           <div key={`permission-page-${permission.entity}-${index}`}>
                             <div className="flex items-center justify-between">
                               <span className="text-sm">{permission.entity}</span>
-                              <label className="inline-flex items-center cursor-pointer">
+                              <label className={`inline-flex items-center ${alwaysVisiblePages.includes(permission.entity) ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}>
                                 <input
                                   type="checkbox"
                                   className="sr-only peer"
@@ -979,7 +1033,12 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                     setFormData({ ...formData, permissions: newPermissions });
                                   }}
                                 />
-                                <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+                                <div className={`relative w-11 h-6 ${alwaysVisiblePages.includes(permission.entity) ? 'bg-blue-600' : 'bg-gray-200'} peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600`}>
+                                  {alwaysVisiblePages.includes(permission.entity) && (
+                                    <span className="absolute inset-0 flex items-center justify-center text-xs text-white font-medium">
+                                      Fix
+                                    </span>
+                                  )}
                                 </div>
                               </label>
                             </div>
@@ -1041,68 +1100,6 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* Filter Modal */}
-      {isFilterModalOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-            <div className="px-6 py-4 border-b flex justify-between items-center">
-              <h3 className="text-lg font-medium">Erweiterte Filter</h3>
-              <button 
-                onClick={() => setIsFilterModalOpen(false)}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border rounded-md"
-                  value={filterState.name}
-                  onChange={(e) => setFilterState({...filterState, name: e.target.value})}
-                  placeholder="Nach Name filtern..."
-                />
-              </div>
-            
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border rounded-md"
-                  value={filterState.description}
-                  onChange={(e) => setFilterState({...filterState, description: e.target.value})}
-                  placeholder="Nach Beschreibung filtern..."
-                />
-              </div>
-            </div>
-            <div className="px-6 py-4 bg-gray-50 flex justify-between rounded-b-lg">
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
-              >
-                Filter zurücksetzen
-              </button>
-              <div className="space-x-2">
-                <button
-                  onClick={() => setIsFilterModalOpen(false)}
-                  className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  onClick={applyFilters}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
-                >
-                  Filter anwenden
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}

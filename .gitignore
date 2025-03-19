@@ -37,3 +37,6 @@ prisma/.env
 
 # Cursor
 .cursor/
+
+# Uploads
+/uploads

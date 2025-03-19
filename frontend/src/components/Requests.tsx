@@ -7,7 +7,7 @@ import { useTableSettings } from '../hooks/useTableSettings.ts';
 import CreateRequestModal from './CreateRequestModal.tsx';
 import EditRequestModal from './EditRequestModal.tsx';
 import TableColumnConfig from './TableColumnConfig.tsx';
-import { API_URL } from '../config/api.ts';
+import { API_URL, API_ENDPOINTS } from '../config/api.ts';
 import { 
   PlusIcon,
   CheckIcon, 
@@ -17,7 +17,8 @@ import {
   PencilIcon,
   ArrowsUpDownIcon,
   FunnelIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  DocumentDuplicateIcon
 } from '@heroicons/react/24/outline';
 
 interface Request {
@@ -353,6 +354,47 @@ const Requests: React.FC = () => {
       });
   }, [requests, searchTerm, activeFilters, sortConfig]);
 
+  // Funktion zum Kopieren eines Requests
+  const handleCopyRequest = async (request) => {
+    try {
+      if (!user) {
+        setError('Benutzer nicht authentifiziert');
+        return;
+      }
+      
+      // Kopie des Requests erstellen mit angepasstem Titel
+      const copiedRequestData = {
+        title: `${request.title}-Kopie`,
+        responsible_id: request.responsible.id,
+        branch_id: request.branch.id,
+        due_date: request.dueDate ? request.dueDate.split('T')[0] : '',
+        create_todo: request.createTodo,
+        requested_by_id: user.id
+      };
+
+      // Request erstellen
+      const response = await axiosInstance.post(
+        API_ENDPOINTS.REQUESTS.BASE,
+        copiedRequestData
+      );
+
+      // Erfolgreich kopiert, Requests neu laden
+      fetchRequests();
+      
+      // Bearbeitungsmodal für den kopierten Request öffnen
+      setSelectedRequest(response.data);
+      setIsEditModalOpen(true);
+      
+    } catch (err) {
+      console.error('Fehler beim Kopieren des Requests:', err);
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || err.message);
+      } else {
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+      }
+    }
+  };
+
   if (loading) return <div className="p-4">Lädt...</div>;
   if (error) return <div className="p-4 text-red-600">{error}</div>;
 
@@ -378,20 +420,72 @@ const Requests: React.FC = () => {
         />
       )}
 
-      {/* Filter Modal */}
-      {isFilterModalOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-            <div className="px-6 py-4 border-b flex justify-between items-center">
-              <h3 className="text-lg font-medium">Erweiterte Filter</h3>
-              <button 
-                onClick={() => setIsFilterModalOpen(false)}
-                className="text-gray-400 hover:text-gray-500"
+      <div className="border-0 rounded-lg">
+        {/* Neu angeordnete UI-Elemente in einer Zeile */}
+        <div className="flex items-center mb-4 justify-between">
+          {/* Linke Seite: "Neuer Request"-Button */}
+          <div className="flex items-center">
+            {hasPermission('requests', 'write', 'table') && (
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
+                style={{ width: '30.19px', height: '30.19px' }}
+                title="Neuen Request erstellen"
+                aria-label="Neuen Request erstellen"
               >
-                <XMarkIcon className="h-5 w-5" />
+                <PlusIcon className="h-4 w-4" />
               </button>
-            </div>
-            <div className="p-6 space-y-4">
+            )}
+          </div>
+          
+          {/* Mitte: Titel mit Icon */}
+          <div className="flex items-center">
+            <DocumentTextIcon className="h-6 w-6 mr-2" />
+            <h2 className="text-xl font-semibold">Requests</h2>
+          </div>
+          
+          {/* Rechte Seite: Suchfeld, Filter und Spalten */}
+          <div className="flex space-x-2 items-center">
+            <input
+              type="text"
+              placeholder="Suchen..."
+              className="px-3 py-2 border border-gray-300 rounded-md h-10 w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            
+            {/* Filter-Button */}
+            <button
+              className={`p-2 rounded-md border ${getActiveFilterCount() > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
+              onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
+              title="Filter"
+            >
+              <div className="relative">
+                <FunnelIcon className="w-5 h-5" />
+                {getActiveFilterCount() > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {getActiveFilterCount()}
+                  </span>
+                )}
+              </div>
+            </button>
+            
+            {/* Spalten-Konfiguration */}
+            <TableColumnConfig
+              columns={availableColumns}
+              visibleColumns={visibleColumnIds}
+              columnOrder={settings.columnOrder}
+              onToggleColumnVisibility={toggleColumnVisibility}
+              onMoveColumn={handleMoveColumn}
+              onClose={() => {}}
+            />
+          </div>
+        </div>
+
+        {/* Filter-Pane */}
+        {isFilterModalOpen && (
+          <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-4 mt-2 transition-all duration-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
                 <input
@@ -451,18 +545,15 @@ const Requests: React.FC = () => {
                 />
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fälligkeit von</label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Fälligkeit (von - bis)</label>
+                <div className="grid grid-cols-2 gap-2">
                   <input
                     type="date"
                     className="w-full px-3 py-2 border rounded-md"
                     value={filterState.dueDateFrom}
                     onChange={(e) => setFilterState({...filterState, dueDateFrom: e.target.value})}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Fälligkeit bis</label>
                   <input
                     type="date"
                     className="w-full px-3 py-2 border rounded-md"
@@ -472,93 +563,22 @@ const Requests: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 bg-gray-50 flex justify-between rounded-b-lg">
+            <div className="flex justify-end gap-3 mt-4">
               <button
                 onClick={resetFilters}
                 className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
               >
                 Filter zurücksetzen
               </button>
-              <div className="space-x-2">
-                <button
-                  onClick={() => setIsFilterModalOpen(false)}
-                  className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  onClick={applyFilters}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
-                >
-                  Filter anwenden
-                </button>
-              </div>
+              <button
+                onClick={applyFilters}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+              >
+                Filter anwenden
+              </button>
             </div>
           </div>
-        </div>
-      )}
-
-      <div className="border-0 rounded-lg">
-        {/* Neu angeordnete UI-Elemente in einer Zeile */}
-        <div className="flex items-center mb-4 justify-between">
-          {/* Linke Seite: "Neuer Request"-Button */}
-          <div className="flex items-center">
-            {hasPermission('requests', 'write', 'table') && (
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
-                style={{ width: '30.19px', height: '30.19px' }}
-                title="Neuen Request erstellen"
-                aria-label="Neuen Request erstellen"
-              >
-                <PlusIcon className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          
-          {/* Mitte: Titel mit Icon */}
-          <div className="flex items-center">
-            <DocumentTextIcon className="h-6 w-6 mr-2" />
-            <h2 className="text-xl font-semibold">Requests</h2>
-          </div>
-          
-          {/* Rechte Seite: Suchfeld, Filter und Spalten */}
-          <div className="flex space-x-2 items-center">
-            <input
-              type="text"
-              placeholder="Suchen..."
-              className="px-3 py-2 border border-gray-300 rounded-md h-10 w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            
-            {/* Filter-Button */}
-            <button
-              className={`p-2 rounded-md border ${getActiveFilterCount() > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
-              onClick={() => setIsFilterModalOpen(true)}
-              title="Filter"
-            >
-              <div className="relative">
-                <FunnelIcon className="w-5 h-5" />
-                {getActiveFilterCount() > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                    {getActiveFilterCount()}
-                  </span>
-                )}
-              </div>
-            </button>
-            
-            {/* Spalten-Konfiguration */}
-            <TableColumnConfig
-              columns={availableColumns}
-              visibleColumns={visibleColumnIds}
-              columnOrder={settings.columnOrder}
-              onToggleColumnVisibility={toggleColumnVisibility}
-              onMoveColumn={handleMoveColumn}
-              onClose={() => {}}
-            />
-          </div>
-        </div>
+        )}
 
         <div className="overflow-x-auto overflow-y-hidden mobile-table-container">
           <table className="min-w-full divide-y divide-gray-200 requests-table">
@@ -757,6 +777,15 @@ const Requests: React.FC = () => {
                                     className="text-blue-600 hover:text-blue-900 edit-button ml-0.5"
                                   >
                                     <PencilIcon className="h-5 w-5" />
+                                  </button>
+                                )}
+                                {hasPermission('requests', 'both', 'table') && (
+                                  <button
+                                    onClick={() => handleCopyRequest(request)}
+                                    className="text-green-600 hover:text-green-900 copy-button ml-0.5"
+                                    title="Request kopieren"
+                                  >
+                                    <DocumentDuplicateIcon className="h-5 w-5" />
                                   </button>
                                 )}
                               </div>

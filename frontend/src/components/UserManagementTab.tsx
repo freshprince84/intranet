@@ -39,6 +39,9 @@ const LANGUAGES = [
   { code: 'en', name: 'Englisch' }
 ];
 
+// Definiere Rollen, die immer vorhanden sein sollten (z.B. Admin-Rolle)
+const fixedRoles = [1, 2, 999]; // Admin (1), User (2) und Hamburger (999) sind fixe Rollen
+
 // Gemeinsame Debug-Komponente hinzufügen
 const RoleDebugInfo = ({ title, data }: { title: string, data: any }) => (
   <div className="mb-2 p-2 border border-gray-300 rounded bg-gray-50">
@@ -301,6 +304,12 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   // Toggle Rolle für einen Benutzer (hinzufügen/entfernen)
   const toggleRole = async (roleId: number) => {
     if (!roleId || !selectedUser) return;
+    
+    // Prüfe, ob es sich um eine fixe Rolle handelt - Nur für Admin-Benutzer (ID: 1) sind Admin-Rollen (ID: 1) nicht entfernbar
+    if (roleId === 1 && selectedUser.id === 1 && selectedRoles.includes(roleId)) {
+      showMessage('Die Admin-Rolle kann vom Admin-Benutzer nicht entfernt werden', 'warning');
+      return;
+    }
     
     try {
       console.log('Toggle Rolle:', roleId, 'für Benutzer:', selectedUser.id);
@@ -757,26 +766,37 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                         {/* Bekannte zugewiesene Rollen */}
                         {roles
                           .filter(role => selectedRoles.includes(role.id))
-                          .map(role => (
-                            <div 
-                              key={role.id} 
-                              className="border border-blue-500 bg-blue-50 rounded-lg p-4 cursor-pointer"
-                              onClick={() => toggleRole(role.id)}
-                            >
-                              <div className="flex justify-between items-center">
-                                <div>
-                                  <h4 className="font-medium">{role.name}</h4>
-                                  <p className="text-sm text-gray-600">{role.description}</p>
-                                </div>
-                                <div className="flex items-center text-blue-600">
-                                  <span className="mr-2 text-sm">Entfernen</span>
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                                  </svg>
+                          .map(role => {
+                            // Eine Rolle ist nur dann nicht entfernbar, wenn es sich um die Admin-Rolle (ID: 1) für den Admin-Benutzer (ID: 1) handelt
+                            const isFixedRole = role.id === 1 && selectedUser && selectedUser.id === 1;
+                            return (
+                              <div 
+                                key={role.id} 
+                                className={`border rounded-lg p-4 ${isFixedRole ? 'border-green-500 bg-green-50 cursor-not-allowed' : 'border-blue-500 bg-blue-50 cursor-pointer'}`}
+                                onClick={() => !isFixedRole && toggleRole(role.id)}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div>
+                                    <h4 className="font-medium flex items-center">
+                                      {role.name}
+                                      {isFixedRole && (
+                                        <span className="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">
+                                          Fix
+                                        </span>
+                                      )}
+                                    </h4>
+                                    <p className="text-sm text-gray-600">{role.description}</p>
+                                  </div>
+                                  <div className={`flex items-center ${isFixedRole ? 'text-gray-400' : 'text-blue-600'}`}>
+                                    <span className="mr-2 text-sm">{isFixedRole ? 'Fest zugewiesen' : 'Entfernen'}</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                                    </svg>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         
                         {/* Unbekannte zugewiesene Rollen */}
                         {selectedRoles

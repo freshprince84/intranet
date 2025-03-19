@@ -94,6 +94,7 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 bankDetails: true,
                 contract: true,
                 salary: true,
+                normalWorkingHours: true,
                 settings: true,
                 roles: {
                     include: {
@@ -201,7 +202,7 @@ exports.updateUserById = updateUserById;
 // Benutzerprofil aktualisieren
 const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary } = req.body;
+        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary, normalWorkingHours } = req.body;
         const userId = parseInt(req.userId, 10);
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
@@ -231,7 +232,7 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 message: 'Ungültiges E-Mail-Format'
             });
         }
-        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary && { salary: parseFloat(salary) }));
+        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary && { salary: parseFloat(salary) })), (normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) }));
         const updatedUser = yield prisma.user.update({
             where: { id: userId },
             data: updateData,
@@ -245,6 +246,7 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 bankDetails: true,
                 contract: true,
                 salary: true,
+                normalWorkingHours: true,
                 roles: {
                     include: {
                         role: {

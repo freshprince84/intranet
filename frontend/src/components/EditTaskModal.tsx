@@ -1,12 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
+import { usePermissions } from '../hooks/usePermissions.ts';
+import CerebroArticleSelector from './CerebroArticleSelector.tsx';
+import { Dialog } from '@headlessui/react';
+import { XMarkIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '../hooks/useAuth.tsx';
 
 interface User {
     id: number;
     firstName: string;
     lastName: string;
+}
+
+interface Role {
+    id: number;
+    name: string;
 }
 
 interface Branch {
@@ -19,16 +29,32 @@ interface Task {
     title: string;
     description: string | null;
     status: 'open' | 'in_progress' | 'improval' | 'quality_control' | 'done';
-    responsible: {
-        id: number;
-    };
-    qualityControl: {
-        id: number;
-    } | null;
-    branch: {
-        id: number;
-    };
+    responsibleId?: number | null;
+    roleId?: number | null;
+    responsible?: User | null;
+    role?: Role | null;
+    qualityControl?: User | null;
+    qualityControlId?: number | null;
+    branch?: Branch | null;
+    branchId?: number | null;
     dueDate: string | null;
+    attachments?: TaskAttachment[];
+}
+
+interface TaskAttachment {
+    id: number;
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    filePath: string;
+    uploadedAt: string;
+}
+
+interface CerebroArticle {
+    id: number;
+    title: string;
+    slug: string;
+    content?: string;
 }
 
 interface EditTaskModalProps {
@@ -39,84 +65,172 @@ interface EditTaskModalProps {
 }
 
 const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUpdated, task }) => {
-    const [title, setTitle] = useState(task.title);
-    const [description, setDescription] = useState(task.description || '');
-    const [responsibleId, setResponsibleId] = useState(task.responsible.id);
-    const [qualityControlId, setQualityControlId] = useState(task.qualityControl?.id || '');
-    const [branchId, setBranchId] = useState(task.branch.id);
-    const [dueDate, setDueDate] = useState(task.dueDate || '');
-    const [status, setStatus] = useState(task.status);
+    const { hasPermission } = usePermissions();
+    const { user } = useAuth();
     
+    const [title, setTitle] = useState(task.title || '');
+    const [description, setDescription] = useState(task.description || '');
+    const [status, setStatus] = useState(task.status || 'open');
+    const [assigneeType, setAssigneeType] = useState<'user' | 'role'>((task as any).roleId ? 'role' : 'user');
+    const [responsibleId, setResponsibleId] = useState<number | null>(task.responsible?.id || null);
+    const [roleId, setRoleId] = useState<number | null>((task as any).role?.id || null);
+    const [qualityControlId, setQualityControlId] = useState<number | null>(task.qualityControl?.id || null);
+    const [branchId, setBranchId] = useState<number>(task.branch?.id || 0);
+    const [attachments, setAttachments] = useState<TaskAttachment[]>(task.attachments || []);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Formatiere das Datum im Format YYYY-MM-DD für das HTML-Datumseingabefeld
+    const formatDate = (dateString: string | null): string | null => {
+        if (!dateString) return null;
+        
+        // Versuche das Datum zu parsen
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return null; // Ungültiges Datum
+        
+        // Formatiere als YYYY-MM-DD
+        return date.toISOString().split('T')[0];
+    };
+
+    const [dueDate, setDueDate] = useState<string | null>(formatDate(task.dueDate));
     const [users, setUsers] = useState<User[]>([]);
+    const [roles, setRoles] = useState<Role[]>([]);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+    const [confirmDelete, setConfirmDelete] = useState(false);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+    const [linkedArticles, setLinkedArticles] = useState<CerebroArticle[]>([]);
+    const [activeTab, setActiveTab] = useState<'data' | 'cerebro'>('data');
+
+    const canDeleteTask = hasPermission('tasks', 'both', 'table');
+
+    // Responsive Design: Überwache Fensterbreite
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 640);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setError(null);
-                const token = localStorage.getItem('token');
-                if (!token) {
-                    setError('Nicht authentifiziert');
-                    return;
-                }
-
-                const [usersResponse, branchesResponse] = await Promise.all([
-                    axiosInstance.get(API_ENDPOINTS.USERS.BASE),
-                    axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE)
-                ]);
-
-                setUsers(usersResponse.data || []);
-                setBranches(branchesResponse.data || []);
-            } catch (err) {
-                console.error('Unerwarteter Fehler:', err);
-                
-                if (axios.isAxiosError(err)) {
-                    if (err.code === 'ERR_NETWORK') {
-                        setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-                    } else {
-                        setError(`Fehler beim Laden der Daten: ${err.response?.data?.message || err.message}`);
-                    }
-                } else {
-                    setError('Ein unerwarteter Fehler ist aufgetreten');
-                }
-            }
-        };
-
         if (isOpen) {
-            fetchData();
+            fetchUsers();
+            fetchRoles();
+            fetchBranches();
+            fetchLinkedArticles();
+            fetchAttachments();
         }
-    }, [isOpen]);
+    }, [isOpen, task.id]);
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        
+    const fetchUsers = async () => {
         try {
+            setError(null);
             const token = localStorage.getItem('token');
             if (!token) {
                 setError('Nicht authentifiziert');
                 return;
             }
-
-            const updatedTask = {
-                title,
-                description: description || null,
-                status,
-                responsibleId: Number(responsibleId),
-                qualityControlId: qualityControlId ? Number(qualityControlId) : null,
-                branchId: Number(branchId),
-                dueDate: dueDate || null
-            };
-
-            await axiosInstance.put(
-                API_ENDPOINTS.TASKS.BY_ID(task.id),
-                updatedTask
-            );
-
-            onTaskUpdated();
-            onClose();
+            
+            const response = await axiosInstance.get(API_ENDPOINTS.USERS.BASE);
+            setUsers(response.data || []);
         } catch (err) {
-            console.error('Update Error:', err);
+            console.error('Fehler beim Laden der Benutzer:', err);
+            
+            if (axios.isAxiosError(err)) {
+                if (err.code === 'ERR_NETWORK') {
+                    setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+                } else {
+                    setError(`Fehler beim Laden der Benutzer: ${err.response?.data?.message || err.message}`);
+                }
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        }
+    };
+
+    const fetchRoles = async () => {
+        try {
+            setError(null);
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setError('Nicht authentifiziert');
+                return;
+            }
+            
+            const response = await axiosInstance.get(API_ENDPOINTS.ROLES.BASE);
+            setRoles(response.data || []);
+        } catch (err) {
+            console.error('Fehler beim Laden der Rollen:', err);
+            
+            if (axios.isAxiosError(err)) {
+                if (err.code === 'ERR_NETWORK') {
+                    setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+                } else {
+                    setError(`Fehler beim Laden der Rollen: ${err.response?.data?.message || err.message}`);
+                }
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        }
+    };
+
+    const fetchBranches = async () => {
+        try {
+            setError(null);
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setError('Nicht authentifiziert');
+                return;
+            }
+            
+            const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
+            setBranches(response.data || []);
+        } catch (err) {
+            console.error('Fehler beim Laden der Niederlassungen:', err);
+            
+            if (axios.isAxiosError(err)) {
+                if (err.code === 'ERR_NETWORK') {
+                    setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+                } else {
+                    setError(`Fehler beim Laden der Niederlassungen: ${err.response?.data?.message || err.message}`);
+                }
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        }
+    };
+
+    const fetchLinkedArticles = async () => {
+        if (!isOpen) return;
+        
+        try {
+            setLoading(true);
+            setError(null);
+            
+            const response = await axiosInstance.get(
+                API_ENDPOINTS.TASKS.CARTICLES(task.id)
+            );
+            
+            setLinkedArticles(response.data || []);
+        } catch (err) {
+            console.error('Fehler beim Laden der verknüpften Artikel:', err);
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || err.message);
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchAttachments = async () => {
+        try {
+            setError(null);
+            const response = await axiosInstance.get(API_ENDPOINTS.TASKS.ATTACHMENTS(task.id));
+            setAttachments(response.data || []);
+        } catch (err) {
+            console.error('Fehler beim Laden der Anhänge:', err);
             if (axios.isAxiosError(err)) {
                 setError(err.response?.data?.message || err.message);
             } else {
@@ -125,153 +239,624 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
         }
     };
 
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
+
+        try {
+            // Validierung
+            if (!title || (!responsibleId && !roleId) || !status || !branchId) {
+                setError('Bitte füllen Sie alle erforderlichen Felder aus');
+                setLoading(false);
+                return;
+            }
+
+            if (responsibleId && roleId) {
+                setError('Bitte wählen Sie entweder einen verantwortlichen Benutzer ODER eine Rolle aus, nicht beides');
+                setLoading(false);
+                return;
+            }
+
+            // Basis-Daten für die Anfrage
+            const taskData: any = {
+                title,
+                description,
+                status,
+                qualityControlId,
+                branchId,
+                dueDate
+            };
+
+            // Entweder responsibleId oder roleId hinzufügen, nicht beides
+            if (assigneeType === 'user' && responsibleId) {
+                taskData.responsibleId = responsibleId;
+            } else if (assigneeType === 'role' && roleId) {
+                taskData.roleId = roleId;
+            }
+
+            const response = await axiosInstance.put(`${API_ENDPOINTS.TASKS.BASE}/${task.id}`, taskData);
+
+            console.log('Task aktualisiert:', response.data);
+            onTaskUpdated();
+            onClose();
+        } catch (err) {
+            console.error('Fehler beim Aktualisieren des Tasks:', err);
+            
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.error || err.message);
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleDelete = async () => {
+        if (!confirmDelete) {
+            setConfirmDelete(true);
+            return;
+        }
+        
+        try {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setError('Nicht authentifiziert');
+                return;
+            }
+
+            await axiosInstance.delete(API_ENDPOINTS.TASKS.BY_ID(task.id));
+
+            onTaskUpdated();
+            onClose();
+        } catch (err) {
+            console.error('Delete Error:', err);
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || err.message);
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        }
+    };
+
+    const handleAddArticle = async (article: CerebroArticle) => {
+        try {
+            setError(null);
+            
+            await axiosInstance.post(
+                API_ENDPOINTS.TASKS.LINK_CARTICLE(task.id, article.id)
+            );
+            
+            setLinkedArticles(prev => [...prev, article]);
+        } catch (err) {
+            console.error('Fehler beim Verknüpfen des Artikels:', err);
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || err.message);
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        }
+    };
+    
+    const handleRemoveArticle = async (articleId: number) => {
+        try {
+            setError(null);
+            
+            await axiosInstance.delete(
+                API_ENDPOINTS.TASKS.UNLINK_CARTICLE(task.id, articleId)
+            );
+            
+            setLinkedArticles(prev => prev.filter(a => a.id !== articleId));
+        } catch (err) {
+            console.error('Fehler beim Entfernen der Artikelverknüpfung:', err);
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || err.message);
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        }
+    };
+
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        setUploading(true);
+        setError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', files[0]);
+
+            const response = await axiosInstance.post(
+                API_ENDPOINTS.TASKS.ATTACHMENTS(task.id),
+                formData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                }
+            );
+
+            setAttachments([...attachments, response.data]);
+        } catch (err) {
+            console.error('Fehler beim Hochladen der Datei:', err);
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || err.message);
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        } finally {
+            setUploading(false);
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
+    };
+
+    const handleDeleteAttachment = async (attachmentId: number) => {
+        try {
+            setError(null);
+            await axiosInstance.delete(API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachmentId));
+            setAttachments(attachments.filter(a => a.id !== attachmentId));
+        } catch (err) {
+            console.error('Fehler beim Löschen des Anhangs:', err);
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || err.message);
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        }
+    };
+
+    const handleDownloadAttachment = async (attachment: TaskAttachment) => {
+        try {
+            setError(null);
+            const response = await axiosInstance.get(
+                API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachment.id),
+                { responseType: 'blob' }
+            );
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', attachment.fileName);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (err) {
+            console.error('Fehler beim Herunterladen der Datei:', err);
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || err.message);
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        }
+    };
+
+    const renderForm = () => (
+        <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Tabs Navigation */}
+            <div className="border-b border-gray-200">
+                <nav className="-mb-px flex space-x-4" aria-label="Tabs">
+                    <button
+                        type="button"
+                        className={`${
+                            activeTab === 'data'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
+                        onClick={() => setActiveTab('data')}
+                    >
+                        Daten
+                    </button>
+                    <button
+                        type="button"
+                        className={`${
+                            activeTab === 'cerebro'
+                                ? 'border-blue-500 text-blue-600'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                        } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
+                        onClick={() => setActiveTab('cerebro')}
+                    >
+                        Cerebro Artikel
+                    </button>
+                </nav>
+            </div>
+
+            {/* Data Tab Content */}
+            {activeTab === 'data' && (
+                <>
+                    <div>
+                        <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                            Titel
+                        </label>
+                        <input
+                            type="text"
+                            id="title"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            required
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                            Beschreibung
+                        </label>
+                        <textarea
+                            id="description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            rows={4}
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
+
+                    <div>
+                        <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+                            Status
+                        </label>
+                        <select
+                            id="status"
+                            value={status}
+                            onChange={(e) => setStatus(e.target.value as Task['status'])}
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="open">Offen</option>
+                            <option value="in_progress">In Bearbeitung</option>
+                            <option value="improval">Nachbesserung</option>
+                            <option value="quality_control">Qualitätskontrolle</option>
+                            <option value="done">Erledigt</option>
+                        </select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700">
+                            Verantwortlich für *
+                        </label>
+                        <div className="flex space-x-4">
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="radio"
+                                    className="form-radio text-blue-600"
+                                    name="assigneeType"
+                                    value="user"
+                                    checked={assigneeType === 'user'}
+                                    onChange={() => {
+                                        setAssigneeType('user');
+                                        setRoleId(null);
+                                    }}
+                                />
+                                <span className="ml-2">Benutzer</span>
+                            </label>
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="radio"
+                                    className="form-radio text-blue-600"
+                                    name="assigneeType"
+                                    value="role"
+                                    checked={assigneeType === 'role'}
+                                    onChange={() => {
+                                        setAssigneeType('role');
+                                        setResponsibleId(null);
+                                    }}
+                                />
+                                <span className="ml-2">Rolle</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    {assigneeType === 'user' ? (
+                        <div>
+                            <label htmlFor="responsible" className="block text-sm font-medium text-gray-700">
+                                Verantwortlicher Benutzer *
+                            </label>
+                            <select
+                                id="responsible"
+                                value={responsibleId || ''}
+                                onChange={(e) => setResponsibleId(e.target.value ? Number(e.target.value) : null)}
+                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                required={assigneeType === 'user'}
+                            >
+                                <option value="">Bitte wählen</option>
+                                {users.map(user => (
+                                    <option key={user.id} value={user.id}>
+                                        {user.firstName} {user.lastName}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    ) : (
+                        <div>
+                            <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+                                Verantwortliche Rolle *
+                            </label>
+                            <select
+                                id="role"
+                                value={roleId || ''}
+                                onChange={(e) => setRoleId(e.target.value ? Number(e.target.value) : null)}
+                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                required={assigneeType === 'role'}
+                            >
+                                <option value="">Bitte wählen</option>
+                                {Array.isArray(roles) && roles.map(role => (
+                                    <option key={role.id} value={role.id}>
+                                        {role.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
+
+                    <div>
+                        <label htmlFor="qualityControl" className="block text-sm font-medium text-gray-700">
+                            Qualitätskontrolle
+                        </label>
+                        <select
+                            id="qualityControl"
+                            value={qualityControlId || ''}
+                            onChange={(e) => setQualityControlId(e.target.value ? Number(e.target.value) : null)}
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        >
+                            <option value="">Keine Qualitätskontrolle</option>
+                            {users.map(user => (
+                                <option key={user.id} value={user.id}>
+                                    {user.firstName} {user.lastName}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label htmlFor="branch" className="block text-sm font-medium text-gray-700">
+                            Niederlassung
+                        </label>
+                        <select
+                            id="branch"
+                            value={branchId}
+                            onChange={(e) => setBranchId(Number(e.target.value))}
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            required
+                        >
+                            <option value="">Bitte wählen</option>
+                            {branches.map(branch => (
+                                <option key={branch.id} value={branch.id}>
+                                    {branch.name}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div>
+                        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">
+                            Fälligkeitsdatum
+                        </label>
+                        <input
+                            type="date"
+                            id="dueDate"
+                            value={dueDate || ''}
+                            onChange={(e) => {
+                                // Wenn das Feld leer ist, setze auf null
+                                if (!e.target.value) {
+                                    setDueDate(null);
+                                } else {
+                                    // Ansonsten behalte das Format YYYY-MM-DD bei
+                                    setDueDate(e.target.value);
+                                }
+                            }}
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                    </div>
+                </>
+            )}
+
+            {/* Cerebro Articles Tab Content */}
+            {activeTab === 'cerebro' && (
+                <div>
+                    {linkedArticles.length > 0 && (
+                        <div className="mb-4">
+                            <h3 className="text-sm font-medium text-gray-700 mb-2">Verknüpfte Cerebro-Artikel</h3>
+                            <ul className="space-y-2">
+                                {linkedArticles.map(article => (
+                                    <li key={article.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                        <a 
+                                            href={`/cerebro/articles/${article.slug}`} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:underline"
+                                        >
+                                            {article.title}
+                                        </a>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleRemoveArticle(article.id)}
+                                            className="text-red-600 hover:text-red-800"
+                                        >
+                                            Entfernen
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    <CerebroArticleSelector 
+                        onArticleSelected={handleAddArticle}
+                        excludeArticleIds={linkedArticles.map(a => a.id)}
+                        selectedArticles={linkedArticles}
+                        onArticleRemove={handleRemoveArticle}
+                    />
+                </div>
+            )}
+                
+            {renderAttachments()}
+
+            <div className="flex justify-between pt-4">
+                {canDeleteTask && (
+                    <button
+                        type="button"
+                        onClick={handleDelete}
+                        className={`px-4 py-2 rounded-md ${
+                            confirmDelete
+                                ? 'bg-red-600 text-white'
+                                : 'bg-white text-red-600 border border-red-300'
+                        }`}
+                    >
+                        {confirmDelete ? 'Bestätigen' : 'Löschen'}
+                    </button>
+                )}
+                <div className="flex space-x-2">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                    >
+                        Abbrechen
+                    </button>
+                    <button
+                        type="submit"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                        {loading ? 'Wird gespeichert...' : 'Speichern'}
+                    </button>
+                </div>
+            </div>
+        </form>
+    );
+
+    const renderAttachments = () => (
+        <div className="mt-4">
+            <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-medium text-gray-900">Anhänge</h3>
+                <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                >
+                    {uploading ? 'Wird hochgeladen...' : 'Datei hinzufügen'}
+                </button>
+                <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                />
+            </div>
+            {attachments.length === 0 ? (
+                <p className="text-sm text-gray-500">Keine Anhänge vorhanden</p>
+            ) : (
+                <ul className="divide-y divide-gray-200">
+                    {attachments.map((attachment) => (
+                        <li key={attachment.id} className="py-3 flex items-center justify-between">
+                            <div className="flex items-center">
+                                <span className="text-sm font-medium text-gray-900">
+                                    {attachment.fileName}
+                                </span>
+                                <span className="ml-2 text-sm text-gray-500">
+                                    ({Math.round(attachment.fileSize / 1024)} KB)
+                                </span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleDownloadAttachment(attachment)}
+                                    className="text-indigo-600 hover:text-indigo-900"
+                                >
+                                    Herunterladen
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => handleDeleteAttachment(attachment.id)}
+                                    className="text-red-600 hover:text-red-900"
+                                >
+                                    Löschen
+                                </button>
+                            </div>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </div>
+    );
+
     if (!isOpen) return null;
 
-    return (
-        <div className="fixed inset-0 z-10 overflow-y-auto">
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="fixed inset-0 bg-black opacity-30" onClick={onClose}></div>
+    // Für Mobile (unter 640px) - klassisches Modal
+    if (isMobile) {
+        return (
+            <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+                <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
                 
-                <div className="relative bg-white rounded-lg w-full max-w-md mx-4 p-6">
-                    <h2 className="text-lg font-medium mb-4">
-                        Aufgabe bearbeiten
-                    </h2>
+                <div className="fixed inset-0 flex items-center justify-center p-4">
+                    <Dialog.Panel className="mx-auto max-w-xl w-full bg-white rounded-lg shadow-xl">
+                        <div className="flex items-center justify-between p-4 border-b">
+                            <Dialog.Title className="text-lg font-semibold">
+                                Aufgabe bearbeiten
+                            </Dialog.Title>
+                            <button
+                                onClick={onClose}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <XMarkIcon className="h-6 w-6" />
+                            </button>
+                        </div>
 
+                        <div className="p-4">
+                            {error && (
+                                <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+                                    {error}
+                                </div>
+                            )}
+
+                            {renderForm()}
+                        </div>
+                    </Dialog.Panel>
+                </div>
+            </Dialog>
+        );
+    }
+
+    // Für Desktop (ab 640px) - Sidepane
+    return (
+        <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+            {/* Semi-transparenter Hintergrund für den Rest der Seite */}
+            <div 
+                className="fixed inset-0 bg-black/10 transition-opacity" 
+                aria-hidden="true" 
+                onClick={onClose}
+            />
+            
+            {/* Sidepane von rechts einfahren */}
+            <div 
+                className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+            >
+                <div className="flex items-center justify-between p-4 border-b">
+                    <Dialog.Title className="text-lg font-semibold">
+                        Aufgabe bearbeiten
+                    </Dialog.Title>
+                    <button
+                        onClick={onClose}
+                        className="text-gray-500 hover:text-gray-700"
+                    >
+                        <XMarkIcon className="h-6 w-6" />
+                    </button>
+                </div>
+
+                <div className="p-4 overflow-y-auto h-full">
                     {error && (
                         <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
                             {error}
                         </div>
                     )}
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Titel
-                            </label>
-                            <input
-                                type="text"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Beschreibung
-                            </label>
-                            <textarea
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                rows={3}
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Status
-                            </label>
-                            <select
-                                value={status}
-                                onChange={(e) => setStatus(e.target.value as Task['status'])}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                required
-                            >
-                                <option value="open">Offen</option>
-                                <option value="in_progress">In Bearbeitung</option>
-                                <option value="improval">Zu verbessern</option>
-                                <option value="quality_control">Qualitätskontrolle</option>
-                                <option value="done">Erledigt</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Verantwortlich
-                            </label>
-                            <select
-                                value={responsibleId}
-                                onChange={(e) => setResponsibleId(Number(e.target.value))}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                required
-                            >
-                                {users.map(user => (
-                                    <option key={user.id} value={user.id}>
-                                        {user.firstName} {user.lastName}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Qualitätskontrolle
-                            </label>
-                            <select
-                                value={qualityControlId}
-                                onChange={(e) => setQualityControlId(e.target.value)}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            >
-                                <option value="">Keine Qualitätskontrolle</option>
-                                {users.map(user => (
-                                    <option key={user.id} value={user.id}>
-                                        {user.firstName} {user.lastName}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Niederlassung
-                            </label>
-                            <select
-                                value={branchId}
-                                onChange={(e) => setBranchId(Number(e.target.value))}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                required
-                            >
-                                {branches.map(branch => (
-                                    <option key={branch.id} value={branch.id}>
-                                        {branch.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                                Fälligkeitsdatum
-                            </label>
-                            <input
-                                type="date"
-                                value={dueDate}
-                                onChange={(e) => setDueDate(e.target.value)}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                            />
-                        </div>
-
-                        <div className="flex justify-end space-x-3 mt-6">
-                            <button
-                                type="button"
-                                onClick={onClose}
-                                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                            >
-                                Abbrechen
-                            </button>
-                            <button
-                                type="submit"
-                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            >
-                                Speichern
-                            </button>
-                        </div>
-                    </form>
+                    {renderForm()}
                 </div>
             </div>
-        </div>
+        </Dialog>
     );
 };
 

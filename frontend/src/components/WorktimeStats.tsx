@@ -8,6 +8,7 @@ import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
 import { WorktimeModal } from './WorktimeModal.tsx';
 import { convertWeekToDate, getWeekDays } from '../utils/dateUtils.ts';
+import { useAuth } from '../hooks/useAuth.tsx';
 
 // Neue Schnittstelle für das WorktimeModal mit selectedDate
 interface WorktimeModalProps {
@@ -28,6 +29,7 @@ interface WorktimeStats {
 }
 
 const WorktimeStats: React.FC = () => {
+    const { user } = useAuth();
     const [stats, setStats] = useState<WorktimeStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -35,19 +37,15 @@ const WorktimeStats: React.FC = () => {
     
     // Aktuelle Woche im Format YYYY-Www für das Input-Element
     const today = new Date();
-    console.log(`Initialisierung - heute: ${today.toISOString()}`);
     
     const currentWeekInput = `${getYear(today)}-W${String(getWeek(today, { locale: de })).padStart(2, '0')}`;
-    console.log(`Initialisierung - currentWeekInput: ${currentWeekInput}`);
     
     const [selectedWeekInput, setSelectedWeekInput] = useState<string>(currentWeekInput);
     
     // Berechne das Datum des Montags der aktuellen Woche
     const currentMonday = startOfWeek(today, { weekStartsOn: 1 });
-    console.log(`Initialisierung - currentMonday: ${currentMonday} (${format(currentMonday, 'yyyy-MM-dd')})`);
     
     const [selectedWeekDate, setSelectedWeekDate] = useState<string>(format(currentMonday, 'yyyy-MM-dd'));
-    console.log(`Initialisierung - selectedWeekDate: ${selectedWeekDate}`);
     
     // State für das WorktimeModal
     const [showWorkTimeModal, setShowWorkTimeModal] = useState(false);
@@ -56,19 +54,15 @@ const WorktimeStats: React.FC = () => {
     // useEffect-Hook für das Laden der Statistikdaten
     useEffect(() => {
         fetchStats();
-    }, [selectedWeekDate]);
+    }, [selectedWeekDate, user]);
 
     const fetchStats = async () => {
         try {
             const token = localStorage.getItem('token');
             
-            console.log(`FETCH STATS für selectedWeekDate: ${selectedWeekDate}`);
-            
             // WICHTIGES FIX: Wenn wir selectedWeekDate verwenden, müssen wir NICHTS mehr berechnen,
             // da es bereits der Montag der Woche ist (berechnet von convertWeekToDate)
             const dateToSend = selectedWeekDate;
-            
-            console.log(`SENDE AN API: week=${dateToSend}`);
             
             // Verwende axiosInstance statt fetch
             const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.STATS}?week=${dateToSend}`);
@@ -79,8 +73,6 @@ const WorktimeStats: React.FC = () => {
             // Wichtig: Stelle sicher, dass die weeklyData das richtige date-Format haben
             if (data && data.weeklyData) {
                 // Benutze direkt das selectedWeekDate als Start der Woche (Montag)
-                console.log(`Woche beginnt direkt mit selectedWeekDate: ${selectedWeekDate}`);
-                
                 // Behalte das originale Mapping (1-basiert)
                 const weekdayMapping = {
                     "Montag": 1,
@@ -105,8 +97,6 @@ const WorktimeStats: React.FC = () => {
                     incrementDateString(selectedWeekDate, 6)  // Sonntag (Index 6)
                 ];
                 
-                console.log("Berechnete Wochentage:", weekDates);
-                
                 // Konvertiere die Wochentage in Daten im YYYY-MM-DD Format
                 const enrichedData = {
                     ...data,
@@ -121,7 +111,6 @@ const WorktimeStats: React.FC = () => {
                         // Benutze direkt das berechnete Datum aus dem Array
                         // Da unser weekdayMapping bei 1 beginnt, müssen wir 1 subtrahieren
                         const formattedDate = weekDates[dayIndex - 1];
-                        console.log(`Verwende Datum für ${item.day} (Index ${dayIndex}): ${formattedDate}`);
                         return {
                             ...item,
                             date: formattedDate
@@ -185,7 +174,7 @@ const WorktimeStats: React.FC = () => {
         }
         
         // Klare Debug-Ausgabe ohne unnötige Komplexität
-        console.log(`Modal wird geöffnet mit Datum: ${date}`);
+        // console.log(`Modal wird geöffnet mit Datum: ${date}`);
         
         // Einfache Sicherheitsüberprüfung: Stelle sicher, dass ein gültiges Datumsformat verwendet wird
         if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -225,8 +214,8 @@ const WorktimeStats: React.FC = () => {
     // Der scaleMax-Wert wird aus dem State-maxHours berechnet
     const scaleMax = Math.max(8, Math.ceil(maxHours * 1.1));
     
-    // Konstante für die Sollarbeitszeit (7,6 Stunden)
-    const targetWorkHours = 7.6;
+    // Konstante für die Sollarbeitszeit aus dem Benutzerprofil
+    const targetWorkHours = user?.normalWorkingHours ?? 7.6;
 
     return (
         <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
@@ -335,8 +324,6 @@ const WorktimeStats: React.FC = () => {
                                 
                                 // Verwende das bereits berechnete Datum aus weeklyData - keine weitere Berechnung notwendig!
                                 const formattedDate = dayData.date;
-                                
-                                console.log(`Balken ${index} - Tag: ${dayData.day}, Datum aus weeklyData: ${formattedDate}`);
                                 
                                 return (
                                     <div key={index} className="flex flex-col items-center" style={{ width: '13%' }}>

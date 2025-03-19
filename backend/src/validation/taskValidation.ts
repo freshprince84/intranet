@@ -4,7 +4,8 @@ export interface TaskData {
     title: string;
     description?: string;
     status?: TaskStatus;
-    responsibleId: number;
+    responsibleId?: number;
+    roleId?: number;
     qualityControlId?: number;
     branchId: number;
     dueDate?: string;
@@ -23,8 +24,24 @@ export const validateTask = (taskData: Partial<TaskData>): string | null => {
         return 'Ungültiger Status';
     }
 
-    if (!taskData.responsibleId || typeof taskData.responsibleId !== 'number') {
-        return 'Verantwortlicher Benutzer ist erforderlich';
+    if ((taskData.responsibleId === undefined || taskData.responsibleId === null) && 
+        (taskData.roleId === undefined || taskData.roleId === null)) {
+        return 'Entweder ein verantwortlicher Benutzer oder eine Rolle muss angegeben werden';
+    }
+
+    if (taskData.responsibleId !== undefined && taskData.responsibleId !== null && 
+        taskData.roleId !== undefined && taskData.roleId !== null) {
+        return 'Es kann nur entweder ein verantwortlicher Benutzer oder eine Rolle angegeben werden, nicht beides';
+    }
+
+    if (taskData.responsibleId !== undefined && taskData.responsibleId !== null && 
+        typeof taskData.responsibleId !== 'number') {
+        return 'Ungültige ID für verantwortlichen Benutzer';
+    }
+
+    if (taskData.roleId !== undefined && taskData.roleId !== null && 
+        typeof taskData.roleId !== 'number') {
+        return 'Ungültige ID für Rolle';
     }
 
     if (taskData.qualityControlId && typeof taskData.qualityControlId !== 'number') {

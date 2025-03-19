@@ -17,6 +17,7 @@ Dieses Dokument definiert die verbindlichen Design-Standards für das Intranet-P
 11. [Header-Message-Komponenten](#header-message-komponenten)
 12. [Scrollbars-Design](#scrollbars-design)
 13. [Responsive Design](#responsive-design)
+14. [Modals und Sidepanes](#modals-und-sidepanes)
 
 ## Allgemeine Designprinzipien
 
@@ -1254,3 +1255,214 @@ Für komplexere Layouts verwende Grid oder Flexbox:
   }
 }
 ```
+
+## Modals und Sidepanes
+
+Die Anwendung verwendet zwei Haupttypen von temporären UI-Komponenten für interaktive Eingaben:
+
+### 1. Modals (Dialog-Fenster)
+
+Modals werden für wichtige Interaktionen verwendet, bei denen der Benutzer seine Aufmerksamkeit auf eine bestimmte Aufgabe konzentrieren soll:
+
+```css
+/* Overlay für Modals */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+/* Modal-Container */
+.modal-container {
+  background-color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 32rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Modal-Header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Modal-Body */
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+/* Modal-Footer */
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #E5E7EB;
+}
+
+/* Dark Mode */
+.dark .modal-container {
+  background-color: #1F2937;
+}
+
+.dark .modal-header,
+.dark .modal-footer {
+  border-color: #4B5563;
+}
+
+.dark .modal-title {
+  color: #F9FAFB;
+}
+```
+
+### 2. Sidepanes (Seitenleisten)
+
+Sidepanes werden für interaktive Eingaben verwendet, die den Benutzer nicht vollständig unterbrechen sollen. Sie schieben sich von der rechten Seite ein und lassen den Rest der Seite sichtbar:
+
+```css
+/* Sidepane-Overlay (halbtransparent) */
+.sidepane-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  transition: opacity 300ms ease-in-out;
+}
+
+/* Sidepane-Container */
+.sidepane-container {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 24rem;
+  background-color: white;
+  box-shadow: -4px 0 15px -3px rgba(0, 0, 0, 0.1);
+  transform: translateX(100%);
+  transition: transform 300ms ease-in-out;
+  z-index: 51;
+  overflow-y: auto;
+}
+
+.sidepane-container.open {
+  transform: translateX(0);
+}
+
+/* Sidepane-Header */
+.sidepane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.sidepane-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Sidepane-Body */
+.sidepane-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+  max-height: calc(100% - 70px);
+}
+
+/* Dark Mode */
+.dark .sidepane-container {
+  background-color: #1F2937;
+}
+
+.dark .sidepane-header {
+  border-color: #4B5563;
+}
+
+.dark .sidepane-title {
+  color: #F9FAFB;
+}
+```
+
+### Verwendungsrichtlinien
+
+1. **Modals vs. Sidepanes**:
+   - **Modals** werden für kritische Aufgaben verwendet, die die volle Aufmerksamkeit des Benutzers erfordern, wie z.B. Bestätigungsdialoge, Löschvorgänge oder komplexe Formulare mit wenigen Feldern.
+   - **Sidepanes** werden für Aufgabenkontexte verwendet, bei denen der Benutzer weiterhin den Kontext der Hauptansicht benötigt, wie z.B. Formulare zum Erstellen oder Bearbeiten von Einträgen, Suchfilter oder detaillierte Informationsansichten.
+
+2. **Filter in Tabellen**:
+   - Filter für Tabelleninhalte müssen als Pane direkt unter dem Filter-Button erscheinen, NICHT als separates Modal.
+   - Das Filter-Pane soll sich ohne die Seite zu blockieren öffnen und den Context der Seite erhalten.
+   - Die Requests-Komponente in Dashboard dient als Referenzimplementierung für dieses Verhalten.
+   - Alle Tabellenfilter im System müssen diesem Standard folgen.
+
+3. **Responsive Verhalten**:
+   - Auf kleinen Bildschirmen (<640px) werden alle Komponenten standardmäßig als Modals dargestellt.
+   - Ab einer Bildschirmbreite von 640px werden berechtigte Komponenten als Sidepanes dargestellt.
+
+4. **Referenzimplementierung**:
+   Die `CreateTaskModal`-Komponente im Task-Management dient als Referenzimplementierung für responsives Verhalten:
+   ```jsx
+   const CreateTaskModal = ({ isOpen, onClose }) => {
+     const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+     
+     useEffect(() => {
+       const checkScreenSize = () => setIsMobile(window.innerWidth < 640);
+       window.addEventListener('resize', checkScreenSize);
+       return () => window.removeEventListener('resize', checkScreenSize);
+     }, []);
+     
+     // Mobile - Modal-Ansicht
+     if (isMobile) {
+       return (
+         <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+           <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+           <div className="fixed inset-0 flex items-center justify-center p-4">
+             <Dialog.Panel className="bg-white rounded-lg shadow-xl w-full max-w-xl">
+               {/* Modal-Inhalt */}
+             </Dialog.Panel>
+           </div>
+         </Dialog>
+       );
+     }
+     
+     // Desktop - Sidepane-Ansicht
+     return (
+       <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+         <div className="fixed inset-0 bg-black/10 transition-opacity" aria-hidden="true" onClick={onClose} />
+         <div className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+           {/* Sidepane-Inhalt */}
+         </div>
+       </Dialog>
+     );
+   };
+   ```
+
+5. **Animation**:
+   - Sidepanes gleiten von rechts herein mit einer Übergangszeit von 300ms.
+   - Der Hintergrund wird leicht abgedunkelt (10% Deckkraft).
+   - Die Animation verwendet eine Ease-in-out-Zeitfunktion für natürlicheres Verhalten.
+
+Diese neuen Richtlinien für Sidepanes gelten für folgende Komponenten im System:
+1. Task-Erstellung ("Neue Aufgabe erstellen")
+2. Erweiterte Filter-Ansichten für Tabellendaten
+3. Informationsansichten für Datensätze
+4. Bearbeitungsformulare für Einträge in Listen und Tabellen

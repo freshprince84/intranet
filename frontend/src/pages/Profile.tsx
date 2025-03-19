@@ -150,6 +150,7 @@ const Profile: React.FC = () => {
       const dataToSend = {
         ...formData,
         salary: formData.salary ? parseFloat(formData.salary.toString()) : null,
+        normalWorkingHours: formData.normalWorkingHours ? parseFloat(formData.normalWorkingHours.toString()) : 7.6,
         birthday: formData.birthday || null,
         identificationExpiryDate: formData.identificationExpiryDate || null
       };

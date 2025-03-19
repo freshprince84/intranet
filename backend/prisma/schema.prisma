@@ -56,6 +56,7 @@ model Role {
   description String?
   permissions Permission[]
   users       UserRole[]
+  tasks       Task[]
 }
 
 model UserRole {
@@ -123,7 +124,8 @@ model Task {
   title            String
   description      String?
   status           TaskStatus            @default(open)
-  responsibleId    Int
+  responsibleId    Int?
+  roleId           Int?
   qualityControlId Int
   branchId         Int
   dueDate          DateTime?
@@ -131,8 +133,10 @@ model Task {
   updatedAt        DateTime              @updatedAt
   branch           Branch                @relation(fields: [branchId], references: [id])
   qualityControl   User                  @relation("quality_control", fields: [qualityControlId], references: [id])
-  responsible      User                  @relation("responsible", fields: [responsibleId], references: [id])
+  responsible      User?                 @relation("responsible", fields: [responsibleId], references: [id])
+  role             Role?                 @relation(fields: [roleId], references: [id])
   carticles        TaskCerebroCarticle[]
+  attachments      TaskAttachment[]
 }
 
 model Request {
@@ -360,6 +364,17 @@ model CerebroTag {
   createdAt DateTime          @default(now())
   updatedAt DateTime          @updatedAt
   carticles CerebroCarticle[] @relation("CerebroCarticleToCerebroTag")
+}
+
+model TaskAttachment {
+  id          Int      @id @default(autoincrement())
+  taskId      Int
+  fileName    String
+  fileType    String
+  fileSize    Int
+  filePath    String
+  uploadedAt  DateTime @default(now())
+  task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
 }
 
 enum TaskStatus {
