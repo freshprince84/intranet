@@ -7,6 +7,9 @@ import { useTableSettings } from '../hooks/useTableSettings.ts';
 import CreateRequestModal from './CreateRequestModal.tsx';
 import EditRequestModal from './EditRequestModal.tsx';
 import TableColumnConfig from './TableColumnConfig.tsx';
+import FilterPane from './FilterPane.tsx';
+import SavedFilterTags from './SavedFilterTags.tsx';
+import { FilterCondition } from './FilterRow.tsx';
 import { API_URL, API_ENDPOINTS } from '../config/api.ts';
 import { 
   PlusIcon,
@@ -73,6 +76,9 @@ const availableColumns = [
 // Standardreihenfolge der Spalten
 const defaultColumnOrder = ['title', 'requestedByResponsible', 'status', 'dueDate', 'branch', 'actions'];
 
+// TableID für gespeicherte Filter
+const REQUESTS_TABLE_ID = 'requests-table';
+
 const Requests: React.FC = () => {
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +102,11 @@ const Requests: React.FC = () => {
     dueDateFrom: '',
     dueDateTo: ''
   });
+  
+  // Neue State-Variablen für erweiterte Filterbedingungen
+  const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
+  const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+  
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -144,6 +155,88 @@ const Requests: React.FC = () => {
 
   useEffect(() => {
     fetchRequests();
+  }, []);
+
+  // Standard-Filter erstellen und speichern
+  useEffect(() => {
+    const createStandardFilters = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          console.error('Nicht authentifiziert');
+          return;
+        }
+
+        // Prüfen, ob die Standard-Filter bereits existieren
+        const existingFiltersResponse = await axios.get(
+          `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(REQUESTS_TABLE_ID)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        const existingFilters = existingFiltersResponse.data || [];
+        const archivFilterExists = existingFilters.some(filter => filter.name === 'Archiv');
+        const aktuellFilterExists = existingFilters.some(filter => filter.name === 'Aktuell');
+
+        // Erstelle "Archiv"-Filter, wenn er noch nicht existiert
+        if (!archivFilterExists) {
+          const archivFilter = {
+            tableId: REQUESTS_TABLE_ID,
+            name: 'Archiv',
+            conditions: [
+              { column: 'status', operator: 'equals', value: 'approved' },
+              { column: 'status', operator: 'equals', value: 'denied' }
+            ],
+            operators: ['OR']
+          };
+
+          await axios.post(
+            `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+            archivFilter,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          console.log('Archiv-Filter für Requests erstellt');
+        }
+
+        // Erstelle "Aktuell"-Filter, wenn er noch nicht existiert
+        if (!aktuellFilterExists) {
+          const aktuellFilter = {
+            tableId: REQUESTS_TABLE_ID,
+            name: 'Aktuell',
+            conditions: [
+              { column: 'status', operator: 'equals', value: 'approval' },
+              { column: 'status', operator: 'equals', value: 'to_improve' }
+            ],
+            operators: ['OR']
+          };
+
+          await axios.post(
+            `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+            aktuellFilter,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          console.log('Aktuell-Filter für Requests erstellt');
+        }
+      } catch (error) {
+        console.error('Fehler beim Erstellen der Standard-Filter:', error);
+      }
+    };
+
+    createStandardFilters();
   }, []);
 
   const getStatusColor = (status: Request['status']) => {
@@ -255,6 +348,53 @@ const Requests: React.FC = () => {
     });
   };
 
+  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    // Speichere die Bedingungen und Operatoren
+    setFilterConditions(conditions);
+    setFilterLogicalOperators(operators);
+    
+    // Aktualisiere auch die alten FilterState für Kompatibilität
+    const newFilterState: FilterState = {
+      title: '',
+      status: 'all',
+      requestedBy: '',
+      responsible: '',
+      branch: '',
+      dueDateFrom: '',
+      dueDateTo: ''
+    };
+    
+    // Versuche, die alten Filter aus den neuen Bedingungen abzuleiten
+    conditions.forEach(condition => {
+      if (condition.column === 'title' && condition.operator === 'contains') {
+        newFilterState.title = condition.value as string || '';
+      } else if (condition.column === 'status' && condition.operator === 'equals') {
+        newFilterState.status = (condition.value as Request['status']) || 'all';
+      } else if (condition.column === 'requestedBy' && condition.operator === 'contains') {
+        newFilterState.requestedBy = condition.value as string || '';
+      } else if (condition.column === 'responsible' && condition.operator === 'contains') {
+        newFilterState.responsible = condition.value as string || '';
+      } else if (condition.column === 'branch' && condition.operator === 'contains') {
+        newFilterState.branch = condition.value as string || '';
+      } else if (condition.column === 'dueDate') {
+        if (condition.operator === 'after' || condition.operator === 'equals') {
+          newFilterState.dueDateFrom = condition.value as string || '';
+        } else if (condition.operator === 'before') {
+          newFilterState.dueDateTo = condition.value as string || '';
+        }
+      }
+    });
+    
+    setActiveFilters(newFilterState);
+    setFilterState(newFilterState);
+  };
+  
+  const resetFilterConditions = () => {
+    setFilterConditions([]);
+    setFilterLogicalOperators([]);
+    resetFilters(); // Alte Filter zurücksetzen
+  };
+
   const applyFilters = () => {
     setActiveFilters(filterState);
     setIsFilterModalOpen(false);
@@ -287,46 +427,131 @@ const Requests: React.FC = () => {
           if (!matchesSearch) return false;
         }
         
-        // Erweiterte Filterkriterien
-        if (activeFilters.title && !request.title.toLowerCase().includes(activeFilters.title.toLowerCase())) {
-          return false;
-        }
-        
-        if (activeFilters.status !== 'all' && request.status !== activeFilters.status) {
-          return false;
-        }
-        
-        if (activeFilters.requestedBy) {
-          const requestedByName = `${request.requestedBy.firstName} ${request.requestedBy.lastName}`.toLowerCase();
-          if (!requestedByName.includes(activeFilters.requestedBy.toLowerCase())) {
+        // Wenn erweiterte Filterbedingungen definiert sind, wende diese an
+        if (filterConditions.length > 0) {
+          // Implementiere die logische Verknüpfung der Bedingungen (UND/ODER)
+          let result = filterConditions.length > 0;
+          
+          for (let i = 0; i < filterConditions.length; i++) {
+            const condition = filterConditions[i];
+            let conditionMet = false;
+            
+            switch (condition.column) {
+              case 'title':
+                if (condition.operator === 'equals') {
+                  conditionMet = request.title === condition.value;
+                } else if (condition.operator === 'contains') {
+                  conditionMet = request.title.toLowerCase().includes((condition.value as string || '').toLowerCase());
+                } else if (condition.operator === 'startsWith') {
+                  conditionMet = request.title.toLowerCase().startsWith((condition.value as string || '').toLowerCase());
+                } else if (condition.operator === 'endsWith') {
+                  conditionMet = request.title.toLowerCase().endsWith((condition.value as string || '').toLowerCase());
+                }
+                break;
+              
+              case 'status':
+                if (condition.operator === 'equals') {
+                  conditionMet = request.status === condition.value;
+                } else if (condition.operator === 'notEquals') {
+                  conditionMet = request.status !== condition.value;
+                }
+                break;
+              
+              case 'requestedBy':
+                const requestedByName = `${request.requestedBy.firstName} ${request.requestedBy.lastName}`.toLowerCase();
+                if (condition.operator === 'contains') {
+                  conditionMet = requestedByName.includes((condition.value as string || '').toLowerCase());
+                } else if (condition.operator === 'equals') {
+                  conditionMet = requestedByName === (condition.value as string || '').toLowerCase();
+                }
+                break;
+              
+              case 'responsible':
+                const responsibleName = `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase();
+                if (condition.operator === 'contains') {
+                  conditionMet = responsibleName.includes((condition.value as string || '').toLowerCase());
+                } else if (condition.operator === 'equals') {
+                  conditionMet = responsibleName === (condition.value as string || '').toLowerCase();
+                }
+                break;
+              
+              case 'branch':
+                if (condition.operator === 'contains') {
+                  conditionMet = request.branch.name.toLowerCase().includes((condition.value as string || '').toLowerCase());
+                } else if (condition.operator === 'equals') {
+                  conditionMet = request.branch.name.toLowerCase() === (condition.value as string || '').toLowerCase();
+                }
+                break;
+              
+              case 'dueDate':
+                const requestDate = new Date(request.dueDate);
+                if (condition.operator === 'equals') {
+                  const valueDate = new Date(condition.value as string);
+                  conditionMet = requestDate.toDateString() === valueDate.toDateString();
+                } else if (condition.operator === 'before') {
+                  const valueDate = new Date(condition.value as string);
+                  conditionMet = requestDate < valueDate;
+                } else if (condition.operator === 'after') {
+                  const valueDate = new Date(condition.value as string);
+                  conditionMet = requestDate > valueDate;
+                }
+                break;
+            }
+            
+            // Verknüpfe das Ergebnis dieser Bedingung mit dem Gesamtergebnis
+            if (i === 0) {
+              result = conditionMet;
+            } else {
+              const operator = filterLogicalOperators[i - 1];
+              result = operator === 'AND' ? (result && conditionMet) : (result || conditionMet);
+            }
+          }
+          
+          if (!result) return false;
+          
+        // Wenn keine erweiterten Filterbedingungen, verwende die alten Filterkriterien
+        } else {        
+          // Alte Filterkriterien
+          if (activeFilters.title && !request.title.toLowerCase().includes(activeFilters.title.toLowerCase())) {
             return false;
           }
-        }
-        
-        if (activeFilters.responsible) {
-          const responsibleName = `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase();
-          if (!responsibleName.includes(activeFilters.responsible.toLowerCase())) {
+          
+          if (activeFilters.status !== 'all' && request.status !== activeFilters.status) {
             return false;
           }
-        }
-        
-        if (activeFilters.branch && !request.branch.name.toLowerCase().includes(activeFilters.branch.toLowerCase())) {
-          return false;
-        }
-        
-        if (activeFilters.dueDateFrom) {
-          const dueDateFrom = new Date(activeFilters.dueDateFrom);
-          const requestDate = new Date(request.dueDate);
-          if (requestDate < dueDateFrom) {
+          
+          if (activeFilters.requestedBy) {
+            const requestedByName = `${request.requestedBy.firstName} ${request.requestedBy.lastName}`.toLowerCase();
+            if (!requestedByName.includes(activeFilters.requestedBy.toLowerCase())) {
+              return false;
+            }
+          }
+          
+          if (activeFilters.responsible) {
+            const responsibleName = `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase();
+            if (!responsibleName.includes(activeFilters.responsible.toLowerCase())) {
+              return false;
+            }
+          }
+          
+          if (activeFilters.branch && !request.branch.name.toLowerCase().includes(activeFilters.branch.toLowerCase())) {
             return false;
           }
-        }
-        
-        if (activeFilters.dueDateTo) {
-          const dueDateTo = new Date(activeFilters.dueDateTo);
-          const requestDate = new Date(request.dueDate);
-          if (requestDate > dueDateTo) {
-            return false;
+          
+          if (activeFilters.dueDateFrom) {
+            const dueDateFrom = new Date(activeFilters.dueDateFrom);
+            const requestDate = new Date(request.dueDate);
+            if (requestDate < dueDateFrom) {
+              return false;
+            }
+          }
+          
+          if (activeFilters.dueDateTo) {
+            const dueDateTo = new Date(activeFilters.dueDateTo);
+            const requestDate = new Date(request.dueDate);
+            if (requestDate > dueDateTo) {
+              return false;
+            }
           }
         }
         
@@ -352,7 +577,7 @@ const Requests: React.FC = () => {
         if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [requests, searchTerm, activeFilters, sortConfig]);
+  }, [requests, searchTerm, activeFilters, sortConfig, filterConditions, filterLogicalOperators]);
 
   // Funktion zum Kopieren eines Requests
   const handleCopyRequest = async (request) => {
@@ -449,7 +674,7 @@ const Requests: React.FC = () => {
             <input
               type="text"
               placeholder="Suchen..."
-              className="px-3 py-2 border border-gray-300 rounded-md h-10 w-full sm:w-auto focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -484,101 +709,30 @@ const Requests: React.FC = () => {
 
         {/* Filter-Pane */}
         {isFilterModalOpen && (
-          <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-4 mt-2 transition-all duration-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border rounded-md"
-                  value={filterState.title}
-                  onChange={(e) => setFilterState({...filterState, title: e.target.value})}
-                  placeholder="Nach Titel filtern..."
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                <select
-                  className="w-full px-3 py-2 border rounded-md bg-white"
-                  value={filterState.status}
-                  onChange={(e) => setFilterState({...filterState, status: e.target.value as Request['status'] | 'all'})}
-                >
-                  <option value="all">Alle Status</option>
-                  <option value="approval">Zur Genehmigung</option>
-                  <option value="approved">Genehmigt</option>
-                  <option value="to_improve">Zu verbessern</option>
-                  <option value="denied">Abgelehnt</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Angefragt von</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border rounded-md"
-                  value={filterState.requestedBy}
-                  onChange={(e) => setFilterState({...filterState, requestedBy: e.target.value})}
-                  placeholder="Nach Name filtern..."
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Verantwortlich</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border rounded-md"
-                  value={filterState.responsible}
-                  onChange={(e) => setFilterState({...filterState, responsible: e.target.value})}
-                  placeholder="Nach Name filtern..."
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Niederlassung</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border rounded-md"
-                  value={filterState.branch}
-                  onChange={(e) => setFilterState({...filterState, branch: e.target.value})}
-                  placeholder="Nach Niederlassung filtern..."
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fälligkeit (von - bis)</label>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={filterState.dueDateFrom}
-                    onChange={(e) => setFilterState({...filterState, dueDateFrom: e.target.value})}
-                  />
-                  <input
-                    type="date"
-                    className="w-full px-3 py-2 border rounded-md"
-                    value={filterState.dueDateTo}
-                    onChange={(e) => setFilterState({...filterState, dueDateTo: e.target.value})}
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 mt-4">
-              <button
-                onClick={resetFilters}
-                className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
-              >
-                Filter zurücksetzen
-              </button>
-              <button
-                onClick={applyFilters}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
-              >
-                Filter anwenden
-              </button>
-            </div>
-          </div>
+          <FilterPane
+            columns={[
+              { id: 'title', label: 'Titel' },
+              { id: 'status', label: 'Status' },
+              { id: 'requestedBy', label: 'Angefragt von' },
+              { id: 'responsible', label: 'Verantwortlich' },
+              { id: 'branch', label: 'Niederlassung' },
+              { id: 'dueDate', label: 'Fälligkeit' }
+            ]}
+            onApply={applyFilterConditions}
+            onReset={resetFilterConditions}
+            savedConditions={filterConditions}
+            savedOperators={filterLogicalOperators}
+            tableId={REQUESTS_TABLE_ID}
+          />
         )}
+        
+        {/* Gespeicherte Filter als Tags anzeigen */}
+        <SavedFilterTags
+          tableId={REQUESTS_TABLE_ID}
+          onSelectFilter={applyFilterConditions}
+          onReset={resetFilterConditions}
+          defaultFilterName="Aktuell"
+        />
 
         <div className="overflow-x-auto overflow-y-hidden mobile-table-container">
           <table className="min-w-full divide-y divide-gray-200 requests-table">

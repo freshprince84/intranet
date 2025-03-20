@@ -16,6 +16,7 @@ import teamWorktimeRoutes from './routes/teamWorktimeRoutes';
 import payrollRoutes from './routes/payroll';
 import identificationDocumentRoutes from './routes/identificationDocuments';
 import documentRecognitionRoutes from './routes/documentRecognition';
+import savedFiltersRoutes from './routes/savedFilters';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 
 const app = express();
@@ -71,11 +72,22 @@ app.use(cors({
 const uploadsPath = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsPath));
 
-// Sicherstellen, dass das Cerebro-Uploads-Verzeichnis existiert
-const cerebroUploadsPath = path.join(uploadsPath, 'cerebro');
+// Sicherstellen, dass die Uploads-Verzeichnisse existieren
 import fs from 'fs';
+const cerebroUploadsPath = path.join(uploadsPath, 'cerebro');
+const taskAttachmentsPath = path.join(uploadsPath, 'task-attachments');
+const requestAttachmentsPath = path.join(uploadsPath, 'request-attachments');
+
 if (!fs.existsSync(cerebroUploadsPath)) {
   fs.mkdirSync(cerebroUploadsPath, { recursive: true });
+}
+
+if (!fs.existsSync(taskAttachmentsPath)) {
+  fs.mkdirSync(taskAttachmentsPath, { recursive: true });
+}
+
+if (!fs.existsSync(requestAttachmentsPath)) {
+  fs.mkdirSync(requestAttachmentsPath, { recursive: true });
 }
 
 // Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 5 Minuten)
@@ -110,6 +122,7 @@ app.use('/api/team-worktime', teamWorktimeRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/identification-documents', identificationDocumentRoutes);
 app.use('/api/document-recognition', documentRecognitionRoutes);
+app.use('/api/saved-filters', savedFiltersRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

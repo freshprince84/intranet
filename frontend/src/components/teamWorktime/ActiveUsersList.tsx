@@ -5,10 +5,15 @@ import { StopIcon, ArrowPathIcon, MagnifyingGlassIcon, FunnelIcon, Bars3Icon, Ch
 import StopWorktimeModal from './StopWorktimeModal.tsx';
 import EditWorktimeModal from './EditWorktimeModal.tsx';
 import TableColumnConfig from '../TableColumnConfig.tsx';
+import FilterPane from '../FilterPane.tsx';
+import SavedFilterTags from '../SavedFilterTags.tsx';
+import { FilterCondition } from '../FilterRow.tsx';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { createLocalDate } from '../../utils/dateUtils.ts';
 import * as worktimeApi from '../../api/worktimeApi.ts';
+import { API_URL, API_ENDPOINTS } from '../../config/api.ts';
+import axios from 'axios';
 
 interface ActiveUsersListProps {
   activeUsers: any[];
@@ -64,6 +69,9 @@ interface WorktimeGroup {
   hasActiveWorktime: boolean;
 }
 
+// TableID für gespeicherte Filter
+const WORKCENTER_TABLE_ID = 'workcenter-table';
+
 const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   activeUsers,
   allWorktimes,
@@ -85,6 +93,11 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [isColumnConfigOpen, setIsColumnConfigOpen] = useState(false);
+  
+  // Neue State-Variablen für erweiterte Filterbedingungen
+  const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
+  const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+  
   const { hasPermission } = usePermissions();
 
   // Spalten-Konfiguration mit Hook
@@ -247,24 +260,99 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     // Konvertiere gruppierte Daten zurück in Array
     let grouped = Object.values(userGroups) as WorktimeGroup[];
 
-    // Filtern nach Suchbegriff
+    // Globale Suchfunktion
     let filtered = grouped.filter((group: WorktimeGroup) => {
       const fullName = `${group.user.firstName} ${group.user.lastName}`.toLowerCase();
       const username = group.user.username.toLowerCase();
       const branch = group.branch.name.toLowerCase();
       const searchTermLower = searchTerm.toLowerCase();
       
-      const matchesSearch = fullName.includes(searchTermLower) || 
-                           username.includes(searchTermLower) || 
-                           branch.includes(searchTermLower);
+      // Prüfe, ob der Suchbegriff in irgendeinem relevanten Feld vorhanden ist
+      if (searchTerm && !(
+        fullName.includes(searchTermLower) || 
+        username.includes(searchTermLower) || 
+        branch.includes(searchTermLower)
+      )) {
+        return false;
+      }
       
-      const matchesNameFilter = !filterState.name || 
-                               fullName.includes(filterState.name.toLowerCase());
+      // Wenn erweiterte Filterbedingungen definiert sind, wende diese an
+      if (filterConditions.length > 0) {
+        // Implementiere die logische Verknüpfung der Bedingungen (UND/ODER)
+        let result = filterConditions.length > 0;
+        
+        for (let i = 0; i < filterConditions.length; i++) {
+          const condition = filterConditions[i];
+          let conditionMet = false;
+          
+          switch (condition.column) {
+            case 'name':
+              if (condition.operator === 'equals') {
+                conditionMet = fullName === (condition.value as string || '').toLowerCase();
+              } else if (condition.operator === 'contains') {
+                conditionMet = fullName.includes((condition.value as string || '').toLowerCase());
+              } else if (condition.operator === 'startsWith') {
+                conditionMet = fullName.startsWith((condition.value as string || '').toLowerCase());
+              }
+              break;
+            
+            case 'branch':
+              if (condition.operator === 'equals') {
+                conditionMet = branch === (condition.value as string || '').toLowerCase();
+              } else if (condition.operator === 'contains') {
+                conditionMet = branch.includes((condition.value as string || '').toLowerCase());
+              } else if (condition.operator === 'startsWith') {
+                conditionMet = branch.startsWith((condition.value as string || '').toLowerCase());
+              }
+              break;
+            
+            case 'hasActiveWorktime':
+              if (condition.operator === 'equals') {
+                const isActive = (condition.value === 'true');
+                conditionMet = group.hasActiveWorktime === isActive;
+              }
+              break;
+              
+            case 'duration':
+              if (condition.operator === 'greaterThan') {
+                const minDuration = parseInt(condition.value as string || '0') * 60 * 60 * 1000; // Stunden in Millisekunden
+                conditionMet = group.totalDuration > minDuration;
+              } else if (condition.operator === 'lessThan') {
+                const maxDuration = parseInt(condition.value as string || '0') * 60 * 60 * 1000; // Stunden in Millisekunden
+                conditionMet = group.totalDuration < maxDuration;
+              } else if (condition.operator === 'equals') {
+                const targetDuration = parseInt(condition.value as string || '0') * 60 * 60 * 1000; // Stunden in Millisekunden
+                const tolerance = 30 * 60 * 1000; // 30 Minuten Toleranz
+                conditionMet = Math.abs(group.totalDuration - targetDuration) <= tolerance;
+              }
+              break;
+          }
+          
+          // Verknüpfe das Ergebnis dieser Bedingung mit dem Gesamtergebnis
+          if (i === 0) {
+            result = conditionMet;
+          } else {
+            const operator = filterLogicalOperators[i - 1];
+            result = operator === 'AND' ? (result && conditionMet) : (result || conditionMet);
+          }
+        }
+        
+        if (!result) return false;
+        
+      // Wenn keine erweiterten Filterbedingungen, verwende die alten Filterkriterien
+      } else {
+        const matchesNameFilter = !filterState.name || 
+                                fullName.includes(filterState.name.toLowerCase());
+        
+        const matchesBranchFilter = !filterState.branch || 
+                                  branch.includes(filterState.branch.toLowerCase());
+        
+        if (!matchesNameFilter || !matchesBranchFilter) {
+          return false;
+        }
+      }
       
-      const matchesBranchFilter = !filterState.branch || 
-                                 branch.includes(filterState.branch.toLowerCase());
-      
-      return matchesSearch && matchesNameFilter && matchesBranchFilter;
+      return true;
     });
 
     // Sortieren nach Konfiguration
@@ -300,7 +388,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     }
     
     return filtered;
-  }, [allWorktimes, activeUsers, searchTerm, sortConfig, filterState, selectedDate]);
+  }, [allWorktimes, activeUsers, searchTerm, sortConfig, filterState, selectedDate, filterConditions, filterLogicalOperators]);
 
   // Render-Methode für Spaltenheader
   const renderSortableHeader = (columnId: string, label: string) => {
@@ -388,6 +476,117 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     }
   };
 
+  // Standard-Filter erstellen und speichern
+  React.useEffect(() => {
+    const createStandardFilters = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          console.error('Nicht authentifiziert');
+          return;
+        }
+
+        // Prüfen, ob die Standard-Filter bereits existieren
+        const existingFiltersResponse = await axios.get(
+          `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(WORKCENTER_TABLE_ID)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        const existingFilters = existingFiltersResponse.data || [];
+        const aktiveFilterExists = existingFilters.some(filter => filter.name === 'Aktive');
+        const alleFilterExists = existingFilters.some(filter => filter.name === 'Alle');
+
+        // Erstelle "Aktive"-Filter, wenn er noch nicht existiert
+        if (!aktiveFilterExists) {
+          const aktiveFilter = {
+            tableId: WORKCENTER_TABLE_ID,
+            name: 'Aktive',
+            conditions: [
+              { column: 'hasActiveWorktime', operator: 'equals', value: 'true' }
+            ],
+            operators: []
+          };
+
+          await axios.post(
+            `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+            aktiveFilter,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          console.log('Aktive-Filter für Workcenter erstellt');
+        }
+
+        // Erstelle "Alle"-Filter, wenn er noch nicht existiert
+        if (!alleFilterExists) {
+          const alleFilter = {
+            tableId: WORKCENTER_TABLE_ID,
+            name: 'Alle',
+            conditions: [],
+            operators: []
+          };
+
+          await axios.post(
+            `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+            alleFilter,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          console.log('Alle-Filter für Workcenter erstellt');
+        }
+      } catch (error) {
+        console.error('Fehler beim Erstellen der Standard-Filter:', error);
+      }
+    };
+
+    createStandardFilters();
+  }, []);
+
+  // Funktion zum Anwenden von Filterbedingungen
+  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    setFilterConditions(conditions);
+    setFilterLogicalOperators(operators);
+    
+    // Aktualisiere auch die alten FilterState für Kompatibilität
+    const newFilterState: FilterState = {
+      name: '',
+      branch: ''
+    };
+    
+    // Versuche, die alten Filter aus den neuen Bedingungen abzuleiten
+    conditions.forEach(condition => {
+      if (condition.column === 'name' && condition.operator === 'contains') {
+        newFilterState.name = condition.value as string || '';
+      } else if (condition.column === 'branch' && condition.operator === 'contains') {
+        newFilterState.branch = condition.value as string || '';
+      }
+    });
+    
+    setFilterState(newFilterState);
+  };
+  
+  // Funktion zum Zurücksetzen der Filter
+  const resetFilterConditions = () => {
+    setFilterConditions([]);
+    setFilterLogicalOperators([]);
+    setFilterState({
+      name: '',
+      branch: ''
+    });
+  };
+
   return (
     <div>
       {/* Header mit Datumsauswahl, Suche und Buttons */}
@@ -438,40 +637,28 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       
       {/* Filter-Panel */}
       {isFilterOpen && (
-        <div className="bg-gray-50 p-4 rounded-md mb-4 border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="name-filter" className="block text-sm font-medium text-gray-700">Name</label>
-              <input
-                id="name-filter"
-                type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={filterState.name}
-                onChange={(e) => setFilterState({...filterState, name: e.target.value})}
-              />
-            </div>
-            <div>
-              <label htmlFor="branch-filter" className="block text-sm font-medium text-gray-700">Niederlassung</label>
-              <input
-                id="branch-filter"
-                type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={filterState.branch}
-                onChange={(e) => setFilterState({...filterState, branch: e.target.value})}
-              />
-            </div>
-          </div>
-          <div className="mt-4 flex justify-end space-x-2">
-            <button
-              type="button"
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              onClick={() => setFilterState({ name: '', branch: '' })}
-            >
-              Zurücksetzen
-            </button>
-          </div>
-        </div>
+        <FilterPane
+          columns={[
+            { id: 'name', label: 'Name' },
+            { id: 'branch', label: 'Niederlassung' },
+            { id: 'hasActiveWorktime', label: 'Aktive Zeiterfassung' },
+            { id: 'duration', label: 'Arbeitszeit (Stunden)' }
+          ]}
+          onApply={applyFilterConditions}
+          onReset={resetFilterConditions}
+          savedConditions={filterConditions}
+          savedOperators={filterLogicalOperators}
+          tableId={WORKCENTER_TABLE_ID}
+        />
       )}
+      
+      {/* Gespeicherte Filter als Tags anzeigen */}
+      <SavedFilterTags
+        tableId={WORKCENTER_TABLE_ID}
+        onSelectFilter={applyFilterConditions}
+        onReset={resetFilterConditions}
+        defaultFilterName="Aktive"
+      />
       
       {/* Tabelle mit aktiven Benutzern */}
       <div className="border-0 rounded-lg overflow-hidden shadow-sm">

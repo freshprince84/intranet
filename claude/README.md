@@ -30,6 +30,29 @@ Diese Ressourcen sollten regelmäßig aktualisiert werden, wenn:
 - Häufige Fehler oder Probleme identifiziert werden
 - Neue Muster oder Best Practices eingeführt werden
 
+## Systemfunktionen
+
+Folgende wichtige Systemfunktionen sind implementiert:
+
+- **Benutzerauthentifizierung und Berechtigungssystem**
+- **Arbeitszeiterfassung und -verwaltung**
+- **Request- und Task-Management**
+- **Notification-System**
+- **Cerebro Wiki**
+- **Team-Worktime-Control**
+- **Lohnabrechnung**
+- **Dokumentenerkennung**
+- **Erweitertes Filtersystem**: Speicherbare und wiederverwendbare Filter für Tabellen:
+  - **Requests-Tabelle**: Mit Standardfiltern "Aktuell" und "Archiv"
+  - **Workcenter-Tabelle**: Mit Standardfiltern "Aktive" und "Alle"
+  - **Rollen-Tabelle**: Mit Standardfilter "Alle"
+  - Alle Standardfilter sind nicht löschbar
+- **Einheitliches Suchfeld-Design**: Standardisierte Suchfelder in allen Komponenten:
+  - Konsistente Größe (200px Breite) und einheitliches Erscheinungsbild
+  - Dark-Mode-Unterstützung
+  - Implementiert in Requests, Workcenter, To Do's, Rollen und Cerebro
+  - Responsive Anpassung für mobile Geräte
+
 ## Memory Anchors
 
 Im Code werden spezielle Kommentare als "Memory Anchors" verwendet, um auf spezifische Stellen zu verweisen. Diese folgen dem Format:

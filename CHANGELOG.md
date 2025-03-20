@@ -16,6 +16,32 @@
   - Einheitliches Design für alle Systemfeedback-Meldungen
   - Integration in Settings, Profile und UserManagement
   - 3-Sekunden-Anzeigedauer für nicht-kritische Meldungen
+- Einheitliches Suchfeld-Design:
+  - Standardisierte Designspezifikation für alle Suchfelder im System
+  - Konsistente Größe (200px Breite) und einheitliches Erscheinungsbild
+  - Dark-Mode-Unterstützung für alle Suchfelder
+  - Detaillierte Dokumentation in DESIGN_STANDARDS.md
+  - Implementierung in Requests, Workcenter, To Do's, Rollen-Management und Cerebro-Komponenten
+  - Responsives Verhalten für mobile Endgeräte
+- Filter-Speicher- und Verwaltungsfunktion im Worktracker:
+  - Speichern komplexer Filtereinstellungen zur Wiederverwendung
+  - Automatisches Laden und Anwenden gespeicherter Filter mit einem Klick
+  - Löschen nicht mehr benötigter Filter direkt aus der Filter-Tags-Leiste
+  - Backend-API mit vollständigen CRUD-Operationen für gespeicherte Filter
+  - Datenbank-Schema mit SavedFilter-Modell für persistente Speicherung
+  - Frontend-Komponenten für Filter-Tags, Filter-Speicherformular und Filter-Verwaltung
+  - Vollständige Integration in die Worktracker-To-Dos Ansicht
+- Erweitertes Filtersystem für mehrere Tabellen:
+  - Implementierung für Requests-Tabelle, Workcenter-Tabelle und Rollen-Tabelle
+  - Speichern und Wiederverwenden komplexer Filterbedingungen
+  - Erweiterbare logische Operatoren (UND/ODER) zwischen Filterbedingungen
+  - Standardfilter für jede Tabelle:
+    - Requests: "Aktuell" und "Archiv"
+    - Workcenter: "Aktive" und "Alle"
+    - Rollen: "Alle"
+  - Nicht löschbare Standardfilter für alle Benutzer
+  - Einheitliche Filteroberfläche über alle Tabellen
+  - Filter werden pro Benutzer und Tabelle gespeichert
 - Dokumentation zur Komponenten-Synchronisierung:
   - Hinweise zur Synchronisierung von `UserManagementTab` und `Profile` in README.md
   - Klare Anweisungen für Entwickler zur konsistenten Bearbeitung beider Komponenten

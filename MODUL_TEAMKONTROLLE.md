@@ -310,71 +310,270 @@ const safeDateParse = (dateString: string | null) => {
 
 Diese Aspekte sind entscheidend für die korrekte Funktion des EditWorktimeModal und helfen, häufige Probleme bei der Zeitzonenbehandlung zu vermeiden.
 
-### FilterControls
+### Erweitertes Filtersystem
+
+Die Workcenter-Tabelle nutzt das erweiterte Filtersystem, um Benutzern das schnelle Filtern und Speichern komplexer Filterbedingungen zu ermöglichen. Die Implementierung besteht aus mehreren Komponenten:
+
+#### 1. Komponenten
+
+- **FilterPane**: Ermöglicht das Erstellen und Bearbeiten von Filterbedingungen
+- **FilterRow**: Repräsentiert eine einzelne Filterbedingung
+- **SavedFilterTags**: Zeigt gespeicherte Filter als Tags an und ermöglicht die schnelle Auswahl
+
+#### 2. Integration in ActiveUsersList
+
+Die FilterPane und SavedFilterTags wurden in die ActiveUsersList-Komponente integriert:
 
 ```typescript
-// Vereinfachtes Beispiel
-const FilterControls: React.FC<{
-  selectedBranch: Branch | null;
-  onBranchChange: (branch: Branch | null) => void;
-  dateRange: DateRange;
-  onDateRangeChange: (dateRange: DateRange) => void;
-  selectedUser: User | null;
-  onUserChange: (user: User | null) => void;
-}> = ({
+// Schlüsselkomponenten für das Filtersystem in der ActiveUsersList
+const WORKCENTER_TABLE_ID = 'workcenter-table'; // Eindeutige ID für die Tabelle
+
+// State für Filter-Bedingungen
+const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
+const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+
+// Render der Komponenten
+return (
+  <>
+    {/* Filterpanel wird angezeigt, wenn isFilterOpen true ist */}
+    {isFilterOpen && (
+      <FilterPane
+        columns={[
+          { id: 'name', label: 'Name' },
+          { id: 'branch', label: 'Niederlassung' },
+          { id: 'hasActiveWorktime', label: 'Aktive Zeiterfassung' },
+          { id: 'duration', label: 'Arbeitszeit (Stunden)' }
+        ]}
+        onApply={applyFilterConditions}
+        onReset={resetFilterConditions}
+        savedConditions={filterConditions}
+        savedOperators={filterLogicalOperators}
+        tableId={WORKCENTER_TABLE_ID}
+      />
+    )}
+    
+    {/* Gespeicherte Filter als Tags anzeigen */}
+    <SavedFilterTags
+      tableId={WORKCENTER_TABLE_ID}
+      onSelectFilter={applyFilterConditions}
+      onReset={resetFilterConditions}
+      defaultFilterName="Aktive"
+    />
+  </>
+);
+```
+
+#### 3. Standardfilter
+
+Für die Workcenter-Tabelle wurden zwei Standardfilter implementiert, die nicht gelöscht werden können:
+
+- **"Aktive"**: Zeigt nur Benutzer mit aktiver Zeiterfassung
+- **"Alle"**: Zeigt alle Benutzer ohne Filter
+
+Diese werden automatisch beim ersten Laden erstellt, falls sie noch nicht existieren:
+
+```typescript
+// Standardfilter erstellen
+useEffect(() => {
+  const createStandardFilters = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        console.error('Nicht authentifiziert');
+        return;
+      }
+
+      // Prüfen, ob die Standard-Filter bereits existieren
+      const existingFiltersResponse = await axios.get(
+        `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(WORKCENTER_TABLE_ID)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const existingFilters = existingFiltersResponse.data || [];
+      const aktiveFilterExists = existingFilters.some(filter => filter.name === 'Aktive');
+      const alleFilterExists = existingFilters.some(filter => filter.name === 'Alle');
+
+      // Erstelle "Aktive"-Filter, wenn er noch nicht existiert
+      if (!aktiveFilterExists) {
+        const aktiveFilter = {
+          tableId: WORKCENTER_TABLE_ID,
+          name: 'Aktive',
+          conditions: [
+            { column: 'hasActiveWorktime', operator: 'equals', value: 'true' }
+          ],
+          operators: []
+        };
+
+        await axios.post(
+          `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+          aktiveFilter,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      }
+
+      // Erstelle "Alle"-Filter, wenn er noch nicht existiert
+      if (!alleFilterExists) {
+        const alleFilter = {
+          tableId: WORKCENTER_TABLE_ID,
+          name: 'Alle',
+          conditions: [],
+          operators: []
+        };
+
+        await axios.post(
+          `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+          alleFilter,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      }
+    } catch (error) {
+      console.error('Fehler beim Erstellen der Standard-Filter:', error);
+    }
+  };
+
+  createStandardFilters();
+}, []);
+```
+
+#### 4. Filter-Logik
+
+Die `filteredAndSortedUsers`-Funktion wurde erweitert, um sowohl die einfache Suche als auch die komplexen Filterbedingungen zu unterstützen:
+
+```typescript
+// Filtern basierend auf Filterbedingungen
+if (filterConditions.length > 0) {
+  // Implementiere die logische Verknüpfung der Bedingungen (UND/ODER)
+  let result = filterConditions.length > 0;
+  
+  for (let i = 0; i < filterConditions.length; i++) {
+    const condition = filterConditions[i];
+    let conditionMet = false;
+    
+    switch (condition.column) {
+      case 'name':
+        // Name-Filter-Logik
+        break;
+      
+      case 'branch':
+        // Branch-Filter-Logik
+        break;
+      
+      case 'hasActiveWorktime':
+        // Active-Worktime-Filter-Logik
+        break;
+        
+      case 'duration':
+        // Duration-Filter-Logik
+        break;
+    }
+    
+    // Verknüpfe das Ergebnis dieser Bedingung mit dem Gesamtergebnis
+    if (i === 0) {
+      result = conditionMet;
+    } else {
+      const operator = filterLogicalOperators[i - 1];
+      result = operator === 'AND' ? (result && conditionMet) : (result || conditionMet);
+    }
+  }
+  
+  if (!result) return false;
+}
+```
+
+Das erweiterte Filtersystem macht die Workcenter-Ansicht deutlich leistungsfähiger und erlaubt den Benutzern, komplexe Filterszenarien zu speichern und wiederzuverwenden.
+
+### FilterControls
+
+Diese Komponente bietet die Filtersteuerung für die ActiveUsersList:
+
+```typescript
+export const FilterControls: React.FC<FilterControlsProps> = ({
+  branches,
+  selectedDate,
+  onDateChange,
   selectedBranch,
   onBranchChange,
-  dateRange,
-  onDateRangeChange,
-  selectedUser,
-  onUserChange
+  onFilterClear
 }) => {
-  const branches = useBranches();
-  const users = useUsers();
-
-  return (
-    <div className="flex flex-col md:flex-row gap-4">
-      <div className="md:w-1/3">
-        <label htmlFor="branch" className="block text-sm font-medium text-gray-700">
-          Niederlassung
-        </label>
-        <Select
-          id="branch"
-          value={selectedBranch}
-          onChange={(value) => onBranchChange(value as Branch | null)}
-          options={branches.map((branch) => ({
-            value: branch.id,
-            label: branch.name
-          }))}
-        />
-      </div>
-      <div className="md:w-1/3">
-        <label htmlFor="dateRange" className="block text-sm font-medium text-gray-700">
-          Zeitraum
-        </label>
-        <DateRangePicker
-          value={dateRange}
-          onChange={(value) => onDateRangeChange(value as DateRange)}
-        />
-      </div>
-      <div className="md:w-1/3">
-        <label htmlFor="user" className="block text-sm font-medium text-gray-700">
-          Benutzer
-        </label>
-        <Select
-          id="user"
-          value={selectedUser}
-          onChange={(value) => onUserChange(value as User | null)}
-          options={users.map((user) => ({
-            value: user.id,
-            label: `${user.firstName} ${user.lastName}`
-          }))}
-        />
-      </div>
-    </div>
-  );
-};
+  // ...
+}
 ```
+
+- Ermöglicht das Filtern nach Niederlassung und Datum
+- Stellt eine Schnittstelle zum Zurücksetzen der Filter bereit
+- Kommuniziert mit der übergeordneten ActiveUsersList-Komponente
+
+### Suchfeld und erweitertes Filtersystem
+
+Das Workcenter verfügt über ein standardisiertes Suchfeld und erweitertes Filtersystem, das optimal in die Komponente integriert ist:
+
+```typescript
+<input
+  type="text"
+  className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+  placeholder="Suchen..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+/>
+```
+
+#### Funktionsweise des Suchfelds
+
+Das Suchfeld im Workcenter:
+- Sucht gleichzeitig in Benutzernamn, Vor- und Nachnamen und Niederlassungsnamen
+- Aktualisiert Ergebnisse in Echtzeit bei jeder Eingabe
+- Verwendet ein einheitliches Design gemäß der DESIGN_STANDARDS.md
+- Bietet Dark-Mode-Unterstützung für optimale Lesbarkeit in allen Umgebungen
+- Hat eine feste Breite von 200px für konsistentes Layout
+- Skaliert sich auf mobilen Geräten
+
+#### Integration mit dem erweiterten Filtersystem
+
+Die Suchfunktion arbeitet nahtlos mit dem erweiterten Filtersystem zusammen:
+- Das Suchfeld führt eine globale Suche durch, während das erweiterte Filtersystem präzisere Bedingungen ermöglicht
+- Beide Filtermethoden können kombiniert werden
+- Die Standardfilter "Aktive" und "Alle" werden als Tags über der Tabelle angezeigt
+- Benutzerdefinierte Filter können neben den Standardfiltern erstellt und gespeichert werden
+
+#### Filterlogik
+
+```typescript
+// Globale Suchfunktion
+let filtered = grouped.filter((group: WorktimeGroup) => {
+  const fullName = `${group.user.firstName} ${group.user.lastName}`.toLowerCase();
+  const username = group.user.username.toLowerCase();
+  const branch = group.branch.name.toLowerCase();
+  const searchTermLower = searchTerm.toLowerCase();
+  
+  // Prüfe, ob der Suchbegriff in irgendeinem relevanten Feld vorhanden ist
+  if (searchTerm && !(
+    fullName.includes(searchTermLower) || 
+    username.includes(searchTermLower) || 
+    branch.includes(searchTermLower)
+  )) {
+    return false;
+  }
+  
+  // Weitere Filterlogik...
+});
+```
+
+### EditWorktimeModal
 
 ### WorktimeStatistics
 

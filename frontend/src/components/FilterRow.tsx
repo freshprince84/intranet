@@ -96,7 +96,7 @@ const renderValueInput = (
   return (
     <input
       type="text"
-      className="px-3 py-2 border rounded-md w-full"
+      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
       value={value as string || ''}
       onChange={(e) => onChange(e.target.value)}
       placeholder="Filterwert eingeben..."
@@ -125,7 +125,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
       {/* Spalten-Auswahl */}
       <div className="w-1/3">
         <select
-          className="px-3 py-2 border rounded-md w-full"
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
           value={condition.column}
           onChange={(e) => onChange({ ...condition, column: e.target.value, operator: operators[0]?.value || 'equals' })}
         >
@@ -141,7 +141,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
       {/* Operator-Auswahl */}
       <div className="w-1/4">
         <select
-          className="px-3 py-2 border rounded-md w-full"
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
           value={condition.operator}
           onChange={(e) => onChange({ ...condition, operator: e.target.value })}
         >

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios'; // Für type checking
 import axiosInstance from '../config/axios.ts'; // Importiere die konfigurierte axios-Instanz
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -18,13 +18,23 @@ interface Branch {
   name: string;
 }
 
+interface RequestAttachment {
+  id?: number;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  filePath?: string;
+  uploadedAt?: string;
+  file?: File; // Für temporäre Anhänge vor dem Hochladen
+}
+
 interface CreateRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
   onRequestCreated: () => void;
 }
 
-const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose, onRequestCreated }) => {
+const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequestModalProps) => {
   const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -39,6 +49,10 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const [temporaryAttachments, setTemporaryAttachments] = useState<RequestAttachment[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Lade Benutzer und Niederlassungen beim Öffnen des Modals
   useEffect(() => {
@@ -143,6 +157,153 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
     return `${firstName} (${username})`;
   };
 
+  const handlePaste = async (event: React.ClipboardEvent) => {
+    const items = event.clipboardData.items;
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      // Prüfen, ob das eingefügte Element ein Bild ist
+      if (item.type.indexOf('image') === 0) {
+        event.preventDefault(); // Standardeingabe verhindern
+        
+        const file = item.getAsFile();
+        if (file) {
+          await handleTemporaryAttachment(file);
+        }
+        return;
+      }
+    }
+  };
+
+  const handleDrop = async (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      const file = event.dataTransfer.files[0];
+      await handleTemporaryAttachment(file);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const handleTemporaryAttachment = async (file: File) => {
+    setUploading(true);
+    setError(null);
+
+    try {
+      // Erstelle einen temporären Anhang
+      const newAttachment: RequestAttachment = {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        file: file // Speichern der Datei für späteren Upload
+      };
+      
+      setTemporaryAttachments(prev => [...prev, newAttachment]);
+
+      // Füge einen Link/Vorschau in die Beschreibung ein
+      let insertText = '';
+      if (file.type.startsWith('image/')) {
+        // Für Bilder einen temporären Platzhalter einfügen
+        insertText = `\n![${file.name}](wird nach dem Erstellen hochgeladen)\n`;
+      } else {
+        // Für andere Dateien einen temporären Platzhalter
+        insertText = `\n[${file.name}](wird nach dem Erstellen hochgeladen)\n`;
+      }
+      
+      // Füge den Link an der aktuellen Cursorposition ein
+      if (textareaRef.current) {
+        const cursorPos = textareaRef.current.selectionStart;
+        const textBefore = formData.description.substring(0, cursorPos);
+        const textAfter = formData.description.substring(cursorPos);
+        
+        setFormData({
+          ...formData,
+          description: textBefore + insertText + textAfter
+        });
+        
+        // Setze den Cursor hinter den eingefügten Link
+        setTimeout(() => {
+          if (textareaRef.current) {
+            const newPos = cursorPos + insertText.length;
+            textareaRef.current.selectionStart = newPos;
+            textareaRef.current.selectionEnd = newPos;
+            textareaRef.current.focus();
+          }
+        }, 0);
+      } else {
+        setFormData({
+          ...formData,
+          description: formData.description + insertText
+        });
+      }
+    } catch (err) {
+      console.error('Fehler beim Verarbeiten der Datei:', err);
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || err.message);
+      } else {
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    await handleTemporaryAttachment(file);
+    
+    // Zurücksetzen des Datei-Inputs
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveTemporaryAttachment = (index: number) => {
+    setTemporaryAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadTemporaryAttachments = async (requestId: number) => {
+    if (temporaryAttachments.length === 0) return;
+    
+    try {
+      setLoading(true);
+      
+      // Upload jeder temporären Datei
+      for (const attachment of temporaryAttachments) {
+        if (!attachment.file) continue;
+        
+        const formData = new FormData();
+        formData.append('file', attachment.file);
+        
+        await axiosInstance.post(
+          API_ENDPOINTS.REQUESTS.ATTACHMENTS(requestId),
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+      }
+      
+      console.log(`${temporaryAttachments.length} Anhänge erfolgreich hochgeladen.`);
+    } catch (err) {
+      console.error('Fehler beim Hochladen der Anhänge:', err);
+      // Wir zeigen hier keinen Fehler, da der Request bereits erstellt wurde
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -178,6 +339,9 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
         throw new Error('Fehler beim Erstellen des Requests');
       }
 
+      // Lade temporäre Anhänge hoch, falls vorhanden
+      await uploadTemporaryAttachments(response.data.id);
+
       onRequestCreated();
       onClose();
       setFormData({
@@ -188,12 +352,59 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
         due_date: '',
         create_todo: false
       });
+      setTemporaryAttachments([]);
     } catch (err) {
       console.error('Create Request Error:', err);
       setError(err instanceof Error ? err.message : 'Fehler beim Erstellen des Requests');
     } finally {
       setLoading(false);
     }
+  };
+
+  const renderTemporaryAttachments = () => {
+    if (temporaryAttachments.length === 0) return null;
+    
+    return (
+      <div className="mt-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-medium text-gray-700">Temporäre Anhänge</h3>
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Datei hinzufügen
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+        </div>
+        <ul className="divide-y divide-gray-200">
+          {temporaryAttachments.map((attachment, index) => (
+            <li key={index} className="py-3 flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="text-sm font-medium text-gray-900">
+                  {attachment.fileName}
+                </span>
+                <span className="ml-2 text-sm text-gray-500">
+                  ({Math.round(attachment.fileSize / 1024)} KB)
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleRemoveTemporaryAttachment(index)}
+                className="text-red-600 hover:text-red-900"
+              >
+                Entfernen
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
   };
 
   if (!isOpen) return null;
@@ -239,12 +450,27 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Beschreibung</label>
-                  <textarea
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                    rows={3}
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  />
+                  <div className="relative">
+                    <textarea
+                      ref={textareaRef}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                      rows={3}
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      onPaste={handlePaste}
+                      onDrop={handleDrop}
+                      onDragOver={handleDragOver}
+                      placeholder="Text, Bilder oder Dateien hier einfügen..."
+                    />
+                    {uploading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
+                        <span className="text-sm text-gray-600">Wird verarbeitet...</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Tipp: Bilder können direkt per Copy & Paste oder Drag & Drop eingefügt werden!
+                  </p>
                 </div>
 
                 <div>
@@ -303,6 +529,8 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
                     Todo automatisch erstellen
                   </label>
                 </div>
+
+                {renderTemporaryAttachments()}
 
                 <div className="flex justify-end pt-4">
                   <button
@@ -375,12 +603,27 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
 
             <div>
               <label className="block text-sm font-medium text-gray-700">Beschreibung</label>
-              <textarea
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                rows={3}
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onPaste={handlePaste}
+                  onDrop={handleDrop}
+                  onDragOver={handleDragOver}
+                  placeholder="Text, Bilder oder Dateien hier einfügen..."
+                />
+                {uploading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
+                    <span className="text-sm text-gray-600">Wird verarbeitet...</span>
+                  </div>
+                )}
+              </div>
+              <p className="mt-1 text-sm text-gray-500">
+                Tipp: Bilder können direkt per Copy & Paste oder Drag & Drop eingefügt werden!
+              </p>
             </div>
 
             <div>
@@ -439,6 +682,8 @@ const CreateRequestModal: React.FC<CreateRequestModalProps> = ({ isOpen, onClose
                 Todo automatisch erstellen
               </label>
             </div>
+
+            {renderTemporaryAttachments()}
 
             <div className="flex justify-end pt-4">
               <button

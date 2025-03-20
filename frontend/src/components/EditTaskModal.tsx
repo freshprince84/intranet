@@ -79,6 +79,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
     const [attachments, setAttachments] = useState<TaskAttachment[]>(task.attachments || []);
     const [uploading, setUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Formatiere das Datum im Format YYYY-MM-DD für das HTML-Datumseingabefeld
     const formatDate = (dateString: string | null): string | null => {
@@ -239,6 +240,116 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
         }
     };
 
+    const handlePaste = async (event: React.ClipboardEvent) => {
+        const items = event.clipboardData.items;
+        
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            
+            // Prüfen, ob das eingefügte Element ein Bild ist
+            if (item.type.indexOf('image') === 0) {
+                event.preventDefault(); // Standardeingabe verhindern
+                
+                const file = item.getAsFile();
+                if (file) {
+                    await uploadFileAndInsertLink(file);
+                }
+                return;
+            }
+        }
+    };
+
+    const handleDrop = async (event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+            const file = event.dataTransfer.files[0];
+            await uploadFileAndInsertLink(file);
+        }
+    };
+
+    const handleDragOver = (event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
+    const uploadFileAndInsertLink = async (file: File) => {
+        setUploading(true);
+        setError(null);
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const response = await axiosInstance.post(
+                API_ENDPOINTS.TASKS.ATTACHMENTS(task.id),
+                formData,
+                {
+                    headers: {
+                        'Content-Type': 'multipart/form-data',
+                    },
+                }
+            );
+
+            const newAttachment = response.data;
+            setAttachments([...attachments, newAttachment]);
+
+            // Füge einen Link/Vorschau in die Beschreibung ein
+            let insertText = '';
+            if (newAttachment.fileType.startsWith('image/')) {
+                // Für Bilder einen Markdown-Image-Link einfügen
+                insertText = `\n![${newAttachment.fileName}](${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, newAttachment.id)})\n`;
+            } else {
+                // Für andere Dateien einen normalen Link
+                insertText = `\n[${newAttachment.fileName}](${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, newAttachment.id)})\n`;
+            }
+            
+            // Füge den Link an der aktuellen Cursorposition ein
+            if (textareaRef.current) {
+                const cursorPos = textareaRef.current.selectionStart;
+                const textBefore = description.substring(0, cursorPos);
+                const textAfter = description.substring(cursorPos);
+                
+                setDescription(textBefore + insertText + textAfter);
+                
+                // Setze den Cursor hinter den eingefügten Link
+                setTimeout(() => {
+                    if (textareaRef.current) {
+                        const newPos = cursorPos + insertText.length;
+                        textareaRef.current.selectionStart = newPos;
+                        textareaRef.current.selectionEnd = newPos;
+                        textareaRef.current.focus();
+                    }
+                }, 0);
+            } else {
+                setDescription(description + insertText);
+            }
+        } catch (err) {
+            console.error('Fehler beim Hochladen der Datei:', err);
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || err.message);
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        const file = files[0];
+        await uploadFileAndInsertLink(file);
+        
+        // Zurücksetzen des Datei-Inputs
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -358,43 +469,6 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
         }
     };
 
-    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const files = event.target.files;
-        if (!files || files.length === 0) return;
-
-        setUploading(true);
-        setError(null);
-
-        try {
-            const formData = new FormData();
-            formData.append('file', files[0]);
-
-            const response = await axiosInstance.post(
-                API_ENDPOINTS.TASKS.ATTACHMENTS(task.id),
-                formData,
-                {
-                    headers: {
-                        'Content-Type': 'multipart/form-data',
-                    },
-                }
-            );
-
-            setAttachments([...attachments, response.data]);
-        } catch (err) {
-            console.error('Fehler beim Hochladen der Datei:', err);
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
-        } finally {
-            setUploading(false);
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-        }
-    };
-
     const handleDeleteAttachment = async (attachmentId: number) => {
         try {
             setError(null);
@@ -486,13 +560,25 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                         <label htmlFor="description" className="block text-sm font-medium text-gray-700">
                             Beschreibung
                         </label>
-                        <textarea
-                            id="description"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            rows={4}
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
+                        <div className="relative">
+                            <textarea
+                                ref={textareaRef}
+                                id="description"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                onPaste={handlePaste}
+                                onDrop={handleDrop}
+                                onDragOver={handleDragOver}
+                                rows={4}
+                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="Text, Bilder oder Dateien hier einfügen..."
+                            />
+                            {uploading && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
+                                    <span className="text-sm text-gray-600">Wird hochgeladen...</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div>

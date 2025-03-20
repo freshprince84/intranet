@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../config/axios.ts';
 import axios from 'axios';
 import { Dialog } from '@headlessui/react';
@@ -30,13 +30,23 @@ interface CerebroArticle {
     content?: string;
 }
 
+interface TaskAttachment {
+    id?: number;
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    filePath?: string;
+    uploadedAt?: string;
+    file?: File; // Für temporäre Anhänge vor dem Hochladen
+}
+
 interface CreateTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
     onTaskCreated: () => void;
 }
 
-const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTaskCreated }) => {
+const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProps) => {
     const { user } = useAuth();
     
     const [title, setTitle] = useState('');
@@ -55,6 +65,10 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
     const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
     const [selectedArticles, setSelectedArticles] = useState<CerebroArticle[]>([]);
     const [activeTab, setActiveTab] = useState<'data' | 'cerebro'>('data');
+    const [temporaryAttachments, setTemporaryAttachments] = useState<TaskAttachment[]>([]);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const getDefaultDueDate = () => {
         const date = new Date();
@@ -190,6 +204,147 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
         }
     };
 
+    const handlePaste = async (event: React.ClipboardEvent) => {
+        const items = event.clipboardData.items;
+        
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            
+            // Prüfen, ob das eingefügte Element ein Bild ist
+            if (item.type.indexOf('image') === 0) {
+                event.preventDefault(); // Standardeingabe verhindern
+                
+                const file = item.getAsFile();
+                if (file) {
+                    await handleTemporaryAttachment(file);
+                }
+                return;
+            }
+        }
+    };
+
+    const handleDrop = async (event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+            const file = event.dataTransfer.files[0];
+            await handleTemporaryAttachment(file);
+        }
+    };
+
+    const handleDragOver = (event: React.DragEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
+    const handleTemporaryAttachment = async (file: File) => {
+        setUploading(true);
+        setError(null);
+
+        try {
+            // Erstelle einen temporären Anhang
+            const newAttachment: TaskAttachment = {
+                fileName: file.name,
+                fileType: file.type,
+                fileSize: file.size,
+                file: file // Speichern der Datei für späteren Upload
+            };
+            
+            setTemporaryAttachments(prev => [...prev, newAttachment]);
+
+            // Füge einen Link/Vorschau in die Beschreibung ein
+            let insertText = '';
+            if (file.type.startsWith('image/')) {
+                // Für Bilder einen temporären Platzhalter einfügen
+                insertText = `\n![${file.name}](wird nach dem Erstellen hochgeladen)\n`;
+            } else {
+                // Für andere Dateien einen temporären Platzhalter
+                insertText = `\n[${file.name}](wird nach dem Erstellen hochgeladen)\n`;
+            }
+            
+            // Füge den Link an der aktuellen Cursorposition ein
+            if (textareaRef.current) {
+                const cursorPos = textareaRef.current.selectionStart;
+                const textBefore = description.substring(0, cursorPos);
+                const textAfter = description.substring(cursorPos);
+                
+                setDescription(textBefore + insertText + textAfter);
+                
+                // Setze den Cursor hinter den eingefügten Link
+                setTimeout(() => {
+                    if (textareaRef.current) {
+                        const newPos = cursorPos + insertText.length;
+                        textareaRef.current.selectionStart = newPos;
+                        textareaRef.current.selectionEnd = newPos;
+                        textareaRef.current.focus();
+                    }
+                }, 0);
+            } else {
+                setDescription(description + insertText);
+            }
+        } catch (err) {
+            console.error('Fehler beim Verarbeiten der Datei:', err);
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || err.message);
+            } else {
+                setError('Ein unerwarteter Fehler ist aufgetreten');
+            }
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const files = event.target.files;
+        if (!files || files.length === 0) return;
+
+        const file = files[0];
+        await handleTemporaryAttachment(file);
+        
+        // Zurücksetzen des Datei-Inputs
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    };
+
+    const handleRemoveTemporaryAttachment = (index: number) => {
+        setTemporaryAttachments(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const uploadTemporaryAttachments = async (taskId: number) => {
+        if (temporaryAttachments.length === 0) return;
+        
+        try {
+            setLoading(true);
+            
+            // Upload jeder temporären Datei
+            for (const attachment of temporaryAttachments) {
+                if (!attachment.file) continue;
+                
+                const formData = new FormData();
+                formData.append('file', attachment.file);
+                
+                await axiosInstance.post(
+                    API_ENDPOINTS.TASKS.ATTACHMENTS(taskId),
+                    formData,
+                    {
+                        headers: {
+                            'Content-Type': 'multipart/form-data',
+                        },
+                    }
+                );
+            }
+            
+            console.log(`${temporaryAttachments.length} Anhänge erfolgreich hochgeladen.`);
+        } catch (err) {
+            console.error('Fehler beim Hochladen der Anhänge:', err);
+            // Wir zeigen hier keinen Fehler, da der Task bereits erstellt wurde
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -261,6 +416,9 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
                 );
             }
             
+            // Lade temporäre Anhänge hoch, falls vorhanden
+            await uploadTemporaryAttachments(newTaskId);
+            
             console.log('Task erfolgreich erstellt:', response.data);
             onTaskCreated();
             handleClose();
@@ -288,6 +446,7 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
         setDueDate('');
         setError(null);
         setSelectedArticles([]);
+        setTemporaryAttachments([]);
         onClose();
     };
 
@@ -346,6 +505,15 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
                             selectedArticles={selectedArticles}
                             onArticleSelect={handleAddArticle}
                             onArticleRemove={handleRemoveArticle}
+                            uploading={uploading}
+                            temporaryAttachments={temporaryAttachments}
+                            onFileUpload={handleFileUpload}
+                            onRemoveAttachment={handleRemoveTemporaryAttachment}
+                            textareaRef={textareaRef}
+                            fileInputRef={fileInputRef}
+                            handlePaste={handlePaste}
+                            handleDrop={handleDrop}
+                            handleDragOver={handleDragOver}
                         />
                     </Dialog.Panel>
                 </div>
@@ -379,34 +547,45 @@ const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClose, onTa
                     </button>
                 </div>
 
-                <TaskForm 
-                    error={error}
-                    title={title}
-                    setTitle={setTitle}
-                    description={description}
-                    setDescription={setDescription}
-                    assigneeType={assigneeType}
-                    setAssigneeType={setAssigneeType}
-                    responsibleId={responsibleId}
-                    setResponsibleId={setResponsibleId}
-                    roleId={roleId}
-                    setRoleId={setRoleId}
-                    qualityControlId={qualityControlId}
-                    setQualityControlId={setQualityControlId}
-                    branchId={branchId}
-                    setBranchId={setBranchId}
-                    dueDate={dueDate}
-                    setDueDate={setDueDate}
-                    users={users}
-                    roles={roles}
-                    branches={branches}
-                    loading={loading}
-                    handleSubmit={handleSubmit}
-                    handleClose={handleClose}
-                    selectedArticles={selectedArticles}
-                    onArticleSelect={handleAddArticle}
-                    onArticleRemove={handleRemoveArticle}
-                />
+                <div className="p-4 overflow-y-auto h-full">
+                    <TaskForm 
+                        error={error}
+                        title={title}
+                        setTitle={setTitle}
+                        description={description}
+                        setDescription={setDescription}
+                        assigneeType={assigneeType}
+                        setAssigneeType={setAssigneeType}
+                        responsibleId={responsibleId}
+                        setResponsibleId={setResponsibleId}
+                        roleId={roleId}
+                        setRoleId={setRoleId}
+                        qualityControlId={qualityControlId}
+                        setQualityControlId={setQualityControlId}
+                        branchId={branchId}
+                        setBranchId={setBranchId}
+                        dueDate={dueDate}
+                        setDueDate={setDueDate}
+                        users={users}
+                        roles={roles}
+                        branches={branches}
+                        loading={loading}
+                        handleSubmit={handleSubmit}
+                        handleClose={handleClose}
+                        selectedArticles={selectedArticles}
+                        onArticleSelect={handleAddArticle}
+                        onArticleRemove={handleRemoveArticle}
+                        uploading={uploading}
+                        temporaryAttachments={temporaryAttachments}
+                        onFileUpload={handleFileUpload}
+                        onRemoveAttachment={handleRemoveTemporaryAttachment}
+                        textareaRef={textareaRef}
+                        fileInputRef={fileInputRef}
+                        handlePaste={handlePaste}
+                        handleDrop={handleDrop}
+                        handleDragOver={handleDragOver}
+                    />
+                </div>
             </div>
         </Dialog>
     );
@@ -440,6 +619,15 @@ interface TaskFormProps {
     selectedArticles: CerebroArticle[];
     onArticleSelect: (article: CerebroArticle) => void;
     onArticleRemove: (articleId: number) => void;
+    uploading?: boolean;
+    temporaryAttachments?: TaskAttachment[];
+    onFileUpload?: (event: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+    onRemoveAttachment?: (index: number) => void;
+    textareaRef?: React.RefObject<HTMLTextAreaElement>;
+    fileInputRef?: React.RefObject<HTMLInputElement>;
+    handlePaste?: (event: React.ClipboardEvent) => Promise<void>;
+    handleDrop?: (event: React.DragEvent) => Promise<void>;
+    handleDragOver?: (event: React.DragEvent) => void;
 }
 
 const TaskForm: React.FC<TaskFormProps> = ({
@@ -468,14 +656,23 @@ const TaskForm: React.FC<TaskFormProps> = ({
     handleClose,
     selectedArticles,
     onArticleSelect,
-    onArticleRemove
+    onArticleRemove,
+    uploading = false,
+    temporaryAttachments = [],
+    onFileUpload,
+    onRemoveAttachment,
+    textareaRef,
+    fileInputRef,
+    handlePaste,
+    handleDrop,
+    handleDragOver,
 }) => {
     const [activeTab, setActiveTab] = useState<'data' | 'cerebro'>('data');
     
     return (
-        <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto max-h-[calc(100vh-150px)]" noValidate>
+        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {error && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4">
+                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
                     <p>{error}</p>
                 </div>
             )}
@@ -529,13 +726,25 @@ const TaskForm: React.FC<TaskFormProps> = ({
                         <label htmlFor="description" className="block text-sm font-medium text-gray-700">
                             Beschreibung
                         </label>
-                        <textarea
-                            id="description"
-                            value={description}
-                            onChange={(e) => setDescription(e.target.value)}
-                            rows={4}
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
+                        <div className="relative">
+                            <textarea
+                                ref={textareaRef}
+                                id="description"
+                                value={description}
+                                onChange={(e) => setDescription(e.target.value)}
+                                onPaste={handlePaste}
+                                onDrop={handleDrop}
+                                onDragOver={handleDragOver}
+                                rows={4}
+                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                placeholder="Text, Bilder oder Dateien hier einfügen..."
+                            />
+                            {uploading && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
+                                    <span className="text-sm text-gray-600">Wird verarbeitet...</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="space-y-2">
@@ -702,6 +911,49 @@ const TaskForm: React.FC<TaskFormProps> = ({
                         selectedArticles={selectedArticles}
                         onArticleRemove={onArticleRemove}
                     />
+                </div>
+            )}
+
+            {/* Anhänge anzeigen, falls vorhanden */}
+            {temporaryAttachments && temporaryAttachments.length > 0 && (
+                <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-medium text-gray-700">Temporäre Anhänge</h3>
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef?.current?.click()}
+                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                            Datei hinzufügen
+                        </button>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            onChange={onFileUpload}
+                            className="hidden"
+                        />
+                    </div>
+                    <ul className="divide-y divide-gray-200">
+                        {temporaryAttachments.map((attachment, index) => (
+                            <li key={index} className="py-3 flex items-center justify-between">
+                                <div className="flex items-center">
+                                    <span className="text-sm font-medium text-gray-900">
+                                        {attachment.fileName}
+                                    </span>
+                                    <span className="ml-2 text-sm text-gray-500">
+                                        ({Math.round(attachment.fileSize / 1024)} KB)
+                                    </span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => onRemoveAttachment?.(index)}
+                                    className="text-red-600 hover:text-red-900"
+                                >
+                                    Entfernen
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             )}
 

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import FilterRow, { FilterCondition } from './FilterRow.tsx';
 import FilterLogicalOperator from './FilterLogicalOperator.tsx';
+import axios from 'axios';
+import { API_URL, API_ENDPOINTS } from '../config/api.ts';
+import { toast } from 'react-toastify';
 
 interface TableColumn {
   id: string;
@@ -13,6 +16,7 @@ interface FilterPaneProps {
   onReset: () => void;
   savedConditions?: FilterCondition[];
   savedOperators?: ('AND' | 'OR')[];
+  tableId: string; // Tabellen-ID für die gespeicherten Filter
 }
 
 const FilterPane: React.FC<FilterPaneProps> = ({ 
@@ -20,7 +24,8 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   onApply,
   onReset,
   savedConditions,
-  savedOperators
+  savedOperators,
+  tableId
 }) => {
   // Initialisiere mit einem leeren Filter, wenn keine gespeicherten Filter vorhanden sind
   const [conditions, setConditions] = useState<FilterCondition[]>(
@@ -35,6 +40,40 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       ? savedOperators
       : []
   );
+
+  // Zustand für das Speichern von Filtern
+  const [showSaveInput, setShowSaveInput] = useState(false);
+  const [filterName, setFilterName] = useState('');
+  
+  // Lade bestehende Filter, um Konflikte mit Standardfiltern zu vermeiden
+  const [existingFilters, setExistingFilters] = useState<{ id: number, name: string }[]>([]);
+  
+  useEffect(() => {
+    const fetchExistingFilters = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          return;
+        }
+        
+        const response = await axios.get(
+          `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        
+        setExistingFilters(response.data.map((filter: any) => ({ id: filter.id, name: filter.name })));
+      } catch (err) {
+        console.error('Fehler beim Laden der existierenden Filter:', err);
+      }
+    };
+    
+    fetchExistingFilters();
+  }, [tableId]);
   
   // Initialisiere Bedingungen und Operatoren, wenn gespeicherte Werte vorhanden sind
   useEffect(() => {
@@ -93,6 +132,70 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     setLogicalOperators([]);
     onReset();
   };
+
+  // Funktion zum Speichern des aktuellen Filters
+  const handleSaveFilter = async () => {
+    if (!filterName.trim()) {
+      toast.error('Bitte geben Sie einen Namen für den Filter ein');
+      return;
+    }
+
+    // Prüfe, ob der Name ein reservierter Standardfilter-Name ist
+    if (filterName === 'Archiv' || filterName === 'Aktuell') {
+      toast.error('Die Namen "Archiv" und "Aktuell" sind für Standardfilter reserviert');
+      return;
+    }
+
+    // Prüfe, ob ein Standardfilter mit diesem Namen bereits existiert
+    const standardFilterExists = existingFilters.some(filter => 
+      (filter.name === 'Archiv' || filter.name === 'Aktuell') && filter.name === filterName
+    );
+    
+    if (standardFilterExists) {
+      toast.error('Standardfilter können nicht überschrieben werden');
+      return;
+    }
+
+    // Nur gültige Bedingungen senden
+    const validConditions = conditions.filter(c => c.column !== '');
+    
+    if (validConditions.length === 0) {
+      toast.error('Filter enthält keine gültigen Bedingungen');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('token');
+      
+      if (!token) {
+        toast.error('Nicht authentifiziert');
+        return;
+      }
+      
+      const response = await axios.post(
+        `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+        {
+          tableId,
+          name: filterName,
+          conditions: validConditions,
+          operators: logicalOperators
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      toast.success('Filter erfolgreich gespeichert');
+      setShowSaveInput(false);
+      setFilterName('');
+    } catch (err) {
+      console.error('Fehler beim Speichern des Filters:', err);
+      toast.error('Fehler beim Speichern des Filters');
+    }
+  };
   
   return (
     <div className="mt-4 p-4 bg-gray-50 rounded-lg">
@@ -122,20 +225,51 @@ const FilterPane: React.FC<FilterPaneProps> = ({
         ))}
       </div>
       
-      <div className="flex justify-end gap-3 mt-4">
-        <button
-          onClick={handleResetFilters}
-          className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
-        >
-          Filter zurücksetzen
-        </button>
-        <button
-          onClick={handleApplyFilters}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
-        >
-          Filter anwenden
-        </button>
-      </div>
+      {/* Speicher-Interface */}
+      {showSaveInput ? (
+        <div className="mt-4 flex gap-2 items-center">
+          <input
+            type="text"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white flex-grow"
+            placeholder="Filter-Name"
+            value={filterName}
+            onChange={(e) => setFilterName(e.target.value)}
+          />
+          <button
+            onClick={handleSaveFilter}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none"
+          >
+            Speichern
+          </button>
+          <button
+            onClick={() => setShowSaveInput(false)}
+            className="px-4 py-2 text-gray-700 hover:text-gray-900"
+          >
+            Abbrechen
+          </button>
+        </div>
+      ) : (
+        <div className="flex justify-end gap-3 mt-4">
+          <button
+            onClick={handleResetFilters}
+            className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
+          >
+            Filter zurücksetzen
+          </button>
+          <button
+            onClick={() => setShowSaveInput(true)}
+            className="px-4 py-2 text-sm text-green-700 hover:text-green-900"
+          >
+            Filter speichern
+          </button>
+          <button
+            onClick={handleApplyFilters}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+          >
+            Filter anwenden
+          </button>
+        </div>
+      )}
     </div>
   );
 };

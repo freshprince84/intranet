@@ -15,8 +15,9 @@ Diese Dokumentation bietet eine vollständige Referenz aller API-Endpunkte des I
 9. [Benachrichtigungs-API](#benachrichtigungs-api)
 10. [Cerebro-API](#cerebro-api)
 11. [Lohnabrechnung-API](#lohnabrechnung-api)
-12. [Fehlerbehandlung](#fehlerbehandlung)
-13. [Dokumentenerkennung und Identifikationsdokumente](#dokumentenerkennung-und-identifikationsdokumente)
+12. [Filter-API](#filter-api)
+13. [Fehlerbehandlung](#fehlerbehandlung)
+14. [Dokumentenerkennung und Identifikationsdokumente](#dokumentenerkennung-und-identifikationsdokumente)
 
 ## API-Konfiguration und Integration
 
@@ -878,6 +879,80 @@ Authorization: Bearer {token}
 }
 ```
 
+### Task-Anhänge
+
+#### Anhänge eines Tasks abrufen
+
+**Endpunkt**: `GET /api/tasks/:taskId/attachments`
+
+**Beschreibung**: Ruft alle Anhänge eines bestimmten Tasks ab.
+
+**Response**:
+```json
+[
+  {
+    "id": 1,
+    "taskId": 790,
+    "fileName": "dokument.pdf",
+    "fileType": "application/pdf",
+    "fileSize": 2048576,
+    "filePath": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.pdf",
+    "uploadedAt": "2023-05-16T10:20:00.000Z"
+  },
+  {
+    "id": 2,
+    "taskId": 790,
+    "fileName": "screenshot.png",
+    "fileType": "image/png",
+    "fileSize": 1024000,
+    "filePath": "6ec0bd7f-11c0-43da-975e-2a8ad9ebae0b.png",
+    "uploadedAt": "2023-05-16T10:25:00.000Z"
+  }
+]
+```
+
+#### Anhang zu einem Task hinzufügen
+
+**Endpunkt**: `POST /api/tasks/:taskId/attachments`
+
+**Beschreibung**: Fügt einen Anhang zu einem Task hinzu.
+
+**Request**: Multipart/form-data mit Feld 'file' für die Datei
+
+**Response**:
+```json
+{
+  "id": 3,
+  "taskId": 790,
+  "fileName": "neues_dokument.docx",
+  "fileType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "fileSize": 1536000,
+  "filePath": "1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed.docx",
+  "uploadedAt": "2023-05-16T11:30:00.000Z"
+}
+```
+
+#### Anhang herunterladen
+
+**Endpunkt**: `GET /api/tasks/:taskId/attachments/:attachmentId`
+
+**Beschreibung**: Lädt einen bestimmten Anhang herunter.
+
+**Response**: Die Datei wird als Download zurückgegeben.
+
+#### Anhang löschen
+
+**Endpunkt**: `DELETE /api/tasks/:taskId/attachments/:attachmentId`
+
+**Beschreibung**: Löscht einen bestimmten Anhang eines Tasks.
+
+**Response**:
+```json
+{
+  "message": "Anhang erfolgreich gelöscht"
+}
+```
+
 ## Request-API
 
 ### Requests abrufen
@@ -1016,6 +1091,80 @@ Authorization: Bearer {token}
       "updatedAt": "2023-05-16T14:45:00.000Z"
     }
   }
+}
+```
+
+### Request-Anhänge
+
+#### Anhänge eines Requests abrufen
+
+**Endpunkt**: `GET /api/requests/:requestId/attachments`
+
+**Beschreibung**: Ruft alle Anhänge eines bestimmten Requests ab.
+
+**Response**:
+```json
+[
+  {
+    "id": 1,
+    "requestId": 123,
+    "fileName": "anfrage.pdf",
+    "fileType": "application/pdf",
+    "fileSize": 1048576,
+    "filePath": "7b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.pdf",
+    "uploadedAt": "2023-05-20T09:15:00.000Z"
+  },
+  {
+    "id": 2,
+    "requestId": 123,
+    "fileName": "bild.jpg",
+    "fileType": "image/jpeg",
+    "fileSize": 512000,
+    "filePath": "5ec0bd7f-11c0-43da-975e-2a8ad9ebae0b.jpg",
+    "uploadedAt": "2023-05-20T09:20:00.000Z"
+  }
+]
+```
+
+#### Anhang zu einem Request hinzufügen
+
+**Endpunkt**: `POST /api/requests/:requestId/attachments`
+
+**Beschreibung**: Fügt einen Anhang zu einem Request hinzu.
+
+**Request**: Multipart/form-data mit Feld 'file' für die Datei
+
+**Response**:
+```json
+{
+  "id": 3,
+  "requestId": 123,
+  "fileName": "zusatzinfo.docx",
+  "fileType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "fileSize": 768000,
+  "filePath": "2b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed.docx",
+  "uploadedAt": "2023-05-20T10:45:00.000Z"
+}
+```
+
+#### Anhang herunterladen
+
+**Endpunkt**: `GET /api/requests/:requestId/attachments/:attachmentId`
+
+**Beschreibung**: Lädt einen bestimmten Anhang herunter.
+
+**Response**: Die Datei wird als Download zurückgegeben.
+
+#### Anhang löschen
+
+**Endpunkt**: `DELETE /api/requests/:requestId/attachments/:attachmentId`
+
+**Beschreibung**: Löscht einen bestimmten Anhang eines Requests.
+
+**Response**:
+```json
+{
+  "message": "Anhang erfolgreich gelöscht"
 }
 ```
 
@@ -1347,6 +1496,146 @@ Authorization: Bearer {token}
   "data": {
     "reportUrl": "/api/payroll/download/report_123_2023_05.pdf",
     "reportId": "report_123_2023_05"
+  }
+}
+```
+
+## Filter-API
+
+Die Filter-API ermöglicht es Benutzern, komplexe Filterkonfigurationen zu speichern, zu laden und zu verwalten. Diese können für verschiedene Tabellen im System verwendet werden.
+
+### Gespeicherte Filter abrufen
+
+**Endpunkt**: `GET /api/saved-filters/:tableId`
+
+**Beschreibung**: Ruft alle gespeicherten Filter für eine bestimmte Tabelle ab.
+
+**Pfadparameter**:
+- `tableId`: ID der Tabelle, für die Filter abgerufen werden sollen (z.B. `worktracker_todos`)
+
+**Headers**:
+```
+Authorization: Bearer {token}
+```
+
+**Erfolgsantwort**:
+```json
+[
+  {
+    "id": 1,
+    "name": "Offene Aufgaben",
+    "tableId": "worktracker_todos",
+    "conditions": [
+      {
+        "field": "status",
+        "operator": "equals",
+        "value": "open"
+      }
+    ],
+    "operators": []
+  },
+  {
+    "id": 2,
+    "name": "Hohe Priorität",
+    "tableId": "worktracker_todos",
+    "conditions": [
+      {
+        "field": "priority",
+        "operator": "equals",
+        "value": "high"
+      }
+    ],
+    "operators": []
+  }
+]
+```
+
+### Filter speichern
+
+**Endpunkt**: `POST /api/saved-filters`
+
+**Beschreibung**: Speichert einen neuen Filter oder aktualisiert einen bestehenden Filter.
+
+**Headers**:
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Request-Body**:
+```json
+{
+  "tableId": "worktracker_todos",
+  "name": "Offene Aufgaben",
+  "conditions": [
+    {
+      "field": "status",
+      "operator": "equals",
+      "value": "open"
+    }
+  ],
+  "operators": []
+}
+```
+
+**Erfolgsantwort**:
+```json
+{
+  "id": 1,
+  "name": "Offene Aufgaben",
+  "tableId": "worktracker_todos",
+  "conditions": [
+    {
+      "field": "status",
+      "operator": "equals",
+      "value": "open"
+    }
+  ],
+  "operators": [],
+  "userId": 5,
+  "createdAt": "2023-06-14T12:34:56.789Z",
+  "updatedAt": "2023-06-14T12:34:56.789Z"
+}
+```
+
+**Fehlerantwort**:
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Filter mit diesem Namen existiert bereits für diese Tabelle"
+  }
+}
+```
+
+### Filter löschen
+
+**Endpunkt**: `DELETE /api/saved-filters/:id`
+
+**Beschreibung**: Löscht einen gespeicherten Filter.
+
+**Pfadparameter**:
+- `id`: ID des zu löschenden Filters
+
+**Headers**:
+```
+Authorization: Bearer {token}
+```
+
+**Erfolgsantwort**:
+```json
+{
+  "success": true,
+  "message": "Filter erfolgreich gelöscht"
+}
+```
+
+**Fehlerantwort**:
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Filter nicht gefunden"
   }
 }
 ```

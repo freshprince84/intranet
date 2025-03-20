@@ -150,14 +150,14 @@ const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSe
         <div className="flex">
           <input
             type="text"
-            className="flex-grow border border-gray-300 rounded-l px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full md:w-[300px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             placeholder="Artikel suchen..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
           />
           <button
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r flex items-center"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-md flex items-center"
             onClick={handleSearch}
           >
             <FaSearch />

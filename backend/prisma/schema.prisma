@@ -48,6 +48,7 @@ model User {
   branches                 UsersBranches[]
   workTimes                WorkTime[]
   identificationDocuments  IdentificationDocument[]  // Neue Beziehung
+  savedFilters             SavedFilter[]
 }
 
 model Role {
@@ -142,19 +143,20 @@ model Task {
 model Request {
   id            Int                      @id @default(autoincrement())
   title         String
-  description   String?
+  description   String?                  @db.Text
   status        RequestStatus            @default(approval)
   requesterId   Int
   responsibleId Int
   branchId      Int
-  dueDate       DateTime?
   createTodo    Boolean                  @default(false)
+  dueDate       DateTime?
   createdAt     DateTime                 @default(now())
   updatedAt     DateTime                 @updatedAt
   branch        Branch                   @relation(fields: [branchId], references: [id])
   requester     User                     @relation("requester", fields: [requesterId], references: [id])
   responsible   User                     @relation("responsible", fields: [responsibleId], references: [id])
   carticles     RequestCerebroCarticle[]
+  attachments   RequestAttachment[]
 }
 
 model Settings {
@@ -179,6 +181,20 @@ model UserTableSettings {
   user          User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, tableId])
+}
+
+model SavedFilter {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  tableId   String
+  name      String
+  conditions String
+  operators String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, tableId, name])
 }
 
 model Notification {
@@ -375,6 +391,17 @@ model TaskAttachment {
   filePath    String
   uploadedAt  DateTime @default(now())
   task        Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model RequestAttachment {
+  id          Int      @id @default(autoincrement())
+  requestId   Int
+  fileName    String
+  fileType    String
+  fileSize    Int
+  filePath    String
+  uploadedAt  DateTime @default(now())
+  request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }
 
 enum TaskStatus {

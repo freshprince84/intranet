@@ -44,7 +44,9 @@ export const API_ENDPOINTS = {
         BY_ID: (id: number) => `/requests/${id}`,
         BY_USER: (userId: number) => `/requests/user/${userId}`,
         APPROVE: (id: number) => `/requests/${id}/approve`,
-        REJECT: (id: number) => `/requests/${id}/reject`
+        REJECT: (id: number) => `/requests/${id}/reject`,
+        ATTACHMENTS: (requestId: number) => `/requests/${requestId}/attachments`,
+        ATTACHMENT: (requestId: number, attachmentId: number) => `/requests/${requestId}/attachments/${attachmentId}`
     },
     // Rollen
     ROLES: {
@@ -117,6 +119,12 @@ export const API_ENDPOINTS = {
         BY_ID: (docId: number) => `/identification-documents/${docId}`,
         VERIFY: (docId: number) => `/identification-documents/${docId}/verify`,
         DOWNLOAD: (docId: number) => `/identification-documents/${docId}/download`
+    },
+    // Gespeicherte Filter
+    SAVED_FILTERS: {
+        BASE: '/saved-filters',
+        BY_TABLE: (tableId: string) => `/saved-filters/${tableId}`,
+        BY_ID: (id: number) => `/saved-filters/${id}`
     }
 };
 

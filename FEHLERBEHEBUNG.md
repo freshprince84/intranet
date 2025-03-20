@@ -17,6 +17,7 @@ Diese Dokumentation enthält Informationen zu häufigen Fehlern und deren Lösun
 4. [Spezifische Moduleprobleme](#spezifische-moduleprobleme)
    - [Dokumentenerkennung](#dokumentenerkennung)
    - [Zeiterfassung](#zeiterfassung)
+   - [Dateianhänge](#dateianhänge)
 
 ## Backend-Fehler
 
@@ -93,6 +94,73 @@ Error: P1001: Can't reach database server at `localhost`:`5432`
    ```bash
    sudo ufw status
    ```
+
+### Dateianhänge
+
+#### Fehler: "Tabelle RequestAttachment existiert nicht"
+
+**Symptom:**
+In Prisma Studio erscheint die Fehlermeldung:
+```
+The table `(not available)` does not exist in the current database.
+```
+
+**Ursache:**
+Das Prisma-Schema wurde aktualisiert, aber die Migration wurde nicht durchgeführt oder der Prisma Client wurde nicht neu generiert.
+
+**Lösung:**
+1. Führen Sie Prisma Generate aus, um den Client zu aktualisieren:
+   ```bash
+   cd backend
+   npx prisma generate
+   ```
+2. Falls die Tabelle wirklich fehlt, erstellen Sie eine Migration:
+   ```bash
+   npx prisma migrate dev --name add_request_attachments
+   ```
+3. Oder nutzen Sie den direkten Push-Befehl (vorsichtig verwenden, wenn eine Migrations-Historie bereits existiert):
+   ```bash
+   npx prisma db push
+   ```
+4. Starten Sie den Server neu.
+
+#### Fehler: "Fehler beim Hochladen der Datei"
+
+**Symptom:**
+Beim Versuch, eine Datei hochzuladen, erscheint die Meldung "Fehler beim Hochladen der Datei" oder der Upload scheint zu funktionieren, aber die Datei ist nicht verfügbar.
+
+**Mögliche Ursachen und Lösungen:**
+
+1. **Fehlende Upload-Verzeichnisse:**
+   ```bash
+   # Erstellen Sie die erforderlichen Verzeichnisse
+   mkdir -p backend/uploads/task-attachments
+   mkdir -p backend/uploads/request-attachments
+   ```
+
+2. **Berechtigungsprobleme:**
+   ```bash
+   # Berechtigungen für die Upload-Verzeichnisse setzen
+   chmod 755 backend/uploads/task-attachments
+   chmod 755 backend/uploads/request-attachments
+   ```
+
+3. **Datei zu groß:**
+   - Standardmäßig gibt es ein Limit von 10MB pro Datei
+   - Überprüfen Sie die Größenbeschränkung in der Multer-Konfiguration in `backend/src/routes/requests.ts`
+
+#### Fehler: "Anhänge werden in Requests angezeigt, aber nicht im daraus erstellten Task"
+
+**Symptom:**
+Nach der Genehmigung eines Requests mit Anhängen fehlen die Anhänge im automatisch erstellten Task.
+
+**Ursache:**
+Die Anhangskopier-Funktion könnte fehlschlagen, möglicherweise aufgrund von Berechtigungsproblemen oder nicht existierenden Verzeichnissen.
+
+**Lösung:**
+1. Überprüfen Sie die Server-Logs auf Fehler bei `copyRequestAttachmentsToTask`
+2. Stellen Sie sicher, dass beide Uploads-Verzeichnisse existieren und Schreibrechte besitzen
+3. Überprüfen Sie, ob der Prisma Client korrekt generiert wurde mit den neuesten Schema-Änderungen
 
 ## Frontend-Fehler
 

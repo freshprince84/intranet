@@ -16,6 +16,9 @@ Dieses Handbuch bietet eine umfassende Anleitung zur Nutzung des Intranet-System
 10. [System-Meldungen](#system-meldungen)
 11. [Häufige Fragen](#häufige-fragen)
 12. [Profil verwalten](#profil-verwalten)
+13. [Dateianhänge](#dateianhänge)
+14. [Erweitertes Filtersystem](#erweitertes-filtersystem)
+15. [Suchfelder](#suchfelder)
 
 ## Erste Schritte
 
@@ -112,6 +115,90 @@ Requests sind Anfragen, die von anderen Benutzern bearbeitet werden müssen.
 - Offene Requests werden in der "Requests"-Box angezeigt
 - Statusänderungen werden Ihnen per Benachrichtigung mitgeteilt
 - Details sehen Sie durch Klick auf den Request-Titel
+
+## Erweitertes Filtersystem
+
+Das System bietet ein leistungsstarkes Filtersystem für verschiedene Tabellen, mit dem Sie komplexe Suchabfragen erstellen, speichern und wiederverwenden können.
+
+### Verfügbare Filter-Tabellen
+
+Das erweiterte Filtersystem ist für folgende Tabellen verfügbar:
+- Requests-Tabelle (Dashboard)
+- Workcenter-Tabelle (Team-Worktime-Control)
+- Rollen-Tabelle (UserManagement)
+
+### Filter erstellen und anwenden
+
+1. Klicken Sie in der entsprechenden Tabelle auf den Filter-Button (Trichter-Symbol)
+2. Im erscheinenden Filter-Panel können Sie mehrere Filterbedingungen definieren:
+   - Wählen Sie die Spalte aus, nach der gefiltert werden soll
+   - Wählen Sie einen Operator (z.B. "enthält", "ist gleich", "beginnt mit")
+   - Geben Sie den Filterwert ein
+3. Fügen Sie weitere Bedingungen hinzu, indem Sie auf das "+" Symbol klicken
+4. Wählen Sie für mehrere Bedingungen die logische Verknüpfung "UND" oder "ODER"
+5. Klicken Sie auf "Filter anwenden", um die Tabelle zu filtern
+
+### Filter speichern
+
+1. Nachdem Sie Ihre Filterbedingungen definiert haben, geben Sie dem Filter einen Namen
+2. Klicken Sie auf "Filter speichern"
+3. Der gespeicherte Filter erscheint nun als Tag über der Tabelle
+
+### Gespeicherte Filter verwenden
+
+- Klicken Sie auf einen Filter-Tag, um diesen Filter sofort anzuwenden
+- Die aktiven Filter-Tags werden farblich hervorgehoben
+- Sie können zwischen verschiedenen gespeicherten Filtern wechseln
+- Klicken Sie auf "Filter zurücksetzen", um alle Filter zu entfernen
+
+### Standardfilter
+
+Jede Tabelle verfügt über nicht löschbare Standardfilter:
+
+- **Requests-Tabelle**:
+  - "Aktuell": Zeigt alle nicht archivierten Requests
+  - "Archiv": Zeigt archivierte Requests
+
+- **Workcenter-Tabelle**:
+  - "Aktive": Zeigt nur Benutzer mit aktiver Zeiterfassung
+  - "Alle": Zeigt alle Benutzer
+
+- **Rollen-Tabelle**:
+  - "Alle": Zeigt alle Rollen
+
+### Filter löschen
+
+1. Fahren Sie mit der Maus über einen selbst erstellten Filter-Tag
+2. Klicken Sie auf das "X"-Symbol, um den Filter zu löschen
+3. Beachten Sie, dass Standardfilter nicht gelöscht werden können
+
+## Suchfelder
+
+Das System verfügt über einheitliche Suchfelder, die in allen Bereichen konsistent gestaltet sind und so die Benutzerfreundlichkeit erhöhen.
+
+### Funktionen der Suchfelder
+
+- **Sofortsuche**: Die Suche wird bei jeder Eingabe automatisch aktualisiert
+- **Globale Suche**: Durchsucht mehrere relevante Felder gleichzeitig (z.B. Titel, Beschreibung, Name)
+- **Einheitliches Design**: Alle Suchfelder haben dasselbe Erscheinungsbild im gesamten System
+- **Dark-Mode-Unterstützung**: Optimale Lesbarkeit auch im Dunkelmodus
+
+### Verwendung der Suchfelder
+
+1. Klicken Sie in das Suchfeld der jeweiligen Komponente (Requests, To Do's, Workcenter, usw.)
+2. Geben Sie Ihren Suchbegriff ein
+3. Die Ergebnisse werden sofort gefiltert und angezeigt
+4. Löschen Sie den Suchtext, um zur vollständigen Ansicht zurückzukehren
+
+### Tipps zur Suche
+
+- Sie können nach Teilen von Wörtern suchen (z.B. "mark" findet "Marketing")
+- Bei einigen Komponenten werden mehrere Felder gleichzeitig durchsucht:
+  - **In Requests**: Titel, Beschreibung, Verantwortlicher, Ersteller
+  - **In To Do's**: Titel, Beschreibung, Verantwortlicher, Qualitätskontrolle
+  - **In Workcenter**: Name, Benutzername, Niederlassung
+  - **In Rollen**: Name, Beschreibung, Berechtigungen
+  - **In Cerebro**: Titel, Inhalt, Tags
 
 ## Benutzereinstellungen
 
@@ -283,4 +370,41 @@ Für eine optimale automatische Erkennung:
 - Sorgen Sie für gute Beleuchtung
 - Vermeiden Sie Blendeffekte und Schatten
 - Erfassen Sie das gesamte Dokument im Bild
-- Stellen Sie sicher, dass alle wichtigen Informationen lesbar sind 
+- Stellen Sie sicher, dass alle wichtigen Informationen lesbar sind
+
+## Dateianhänge
+
+Das Intranet-System ermöglicht das Anhängen von Dateien an Tasks und Requests, was die Dokumentation und Zusammenarbeit erheblich verbessert.
+
+### Dateien an Tasks oder Requests anhängen
+
+Es gibt drei Möglichkeiten, Dateien anzuhängen:
+
+1. **Drag & Drop**:
+   - Öffnen Sie das Bearbeitungsfenster für einen Task oder Request
+   - Ziehen Sie eine Datei direkt in das Beschreibungsfeld
+   - Die Datei wird hochgeladen und als Link in der Beschreibung eingefügt
+
+2. **Copy & Paste**:
+   - Kopieren Sie ein Bild in die Zwischenablage (z.B. mit Screenshot-Tool)
+   - Klicken Sie in das Beschreibungsfeld des Tasks oder Requests
+   - Fügen Sie das Bild mit Strg+V (Windows) oder Cmd+V (Mac) ein
+   - Das Bild wird automatisch hochgeladen und als Vorschau eingefügt
+
+3. **Manueller Upload**:
+   - Klicken Sie auf "Datei hinzufügen" unterhalb des Beschreibungsfelds
+   - Wählen Sie eine Datei aus dem Datei-Dialog
+   - Die Datei wird hochgeladen und in der Anhangsliste angezeigt
+
+### Anhänge verwalten
+
+- Alle hochgeladenen Anhänge erscheinen in der Liste unter dem Beschreibungsfeld
+- Klicken Sie auf "Herunterladen", um einen Anhang herunterzuladen
+- Klicken Sie auf "Entfernen", um einen Anhang zu löschen (nur verfügbar, wenn Sie die Berechtigung haben)
+
+### Hinweise
+
+- Bilder werden automatisch als Vorschau in der Beschreibung angezeigt
+- Andere Dateitypen werden als Links eingefügt
+- Bei der Erstellung eines Tasks aus einem genehmigten Request werden alle Anhänge automatisch übernommen
+- Es gibt keine Beschränkung für die Anzahl der Anhänge, aber beachten Sie die Dateigröße für eine optimale Leistung 

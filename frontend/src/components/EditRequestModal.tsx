@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -23,6 +23,7 @@ interface EditRequestModalProps {
     };
     dueDate: string | null;
     createTodo: boolean;
+    attachments?: RequestAttachment[];
   };
 }
 
@@ -37,12 +38,21 @@ interface Branch {
   name: string;
 }
 
-const EditRequestModal: React.FC<EditRequestModalProps> = ({
+interface RequestAttachment {
+  id: number;
+  fileName: string;
+  fileType: string;
+  fileSize: number;
+  filePath: string;
+  uploadedAt: string;
+}
+
+const EditRequestModal = ({
   isOpen,
   onClose,
   onRequestUpdated,
   request
-}) => {
+}: EditRequestModalProps) => {
   const { user } = useAuth();
   const [title, setTitle] = useState(request.title);
   const [description, setDescription] = useState(request.description || '');
@@ -56,6 +66,11 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const [attachments, setAttachments] = useState<RequestAttachment[]>(request.attachments || []);
+  const [uploading, setUploading] = useState(false);
+  
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { hasPermission } = usePermissions();
   const canDeleteRequest = hasPermission('requests', 'both', 'table');
@@ -81,6 +96,7 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       fetchData();
+      fetchAttachments();
     }
   }, [isOpen]);
 
@@ -109,6 +125,178 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
         } else {
           setError(`Fehler beim Laden der Daten: ${err.response?.data?.message || err.message}`);
         }
+      } else {
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+      }
+    }
+  };
+
+  const fetchAttachments = async () => {
+    try {
+      setError(null);
+      const response = await axiosInstance.get(API_ENDPOINTS.REQUESTS.ATTACHMENTS(request.id));
+      setAttachments(response.data || []);
+    } catch (err) {
+      console.error('Fehler beim Laden der Anhänge:', err);
+      // Setze eine leere Anhangliste im Fehlerfall, damit die Komponente nicht abstürzt
+      setAttachments([]);
+      
+      // Zeige einen benutzerfreundlichen Fehler an, aber lass die Komponente weiterlaufen
+      if (axios.isAxiosError(err)) {
+        const errorMessage = err.response?.data?.message || err.message;
+        console.warn(`Anhänge konnten nicht geladen werden: ${errorMessage}`);
+        // Setze keinen Fehler in state, damit der Dialog trotzdem nutzbar bleibt
+        // Nur Warnung in der Konsole
+      } else {
+        console.warn('Ein unerwarteter Fehler ist beim Laden der Anhänge aufgetreten');
+      }
+    }
+  };
+
+  const handlePaste = async (event: React.ClipboardEvent) => {
+    const items = event.clipboardData.items;
+    
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      
+      // Prüfen, ob das eingefügte Element ein Bild ist
+      if (item.type.indexOf('image') === 0) {
+        event.preventDefault(); // Standardeingabe verhindern
+        
+        const file = item.getAsFile();
+        if (file) {
+          await uploadFileAndInsertLink(file);
+        }
+        return;
+      }
+    }
+  };
+
+  const handleDrop = async (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
+      const file = event.dataTransfer.files[0];
+      await uploadFileAndInsertLink(file);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  const uploadFileAndInsertLink = async (file: File) => {
+    setUploading(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axiosInstance.post(
+        API_ENDPOINTS.REQUESTS.ATTACHMENTS(request.id),
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
+
+      const newAttachment = response.data;
+      setAttachments([...attachments, newAttachment]);
+
+      // Füge einen Link/Vorschau in die Beschreibung ein
+      let insertText = '';
+      if (newAttachment.fileType.startsWith('image/')) {
+        // Für Bilder einen Markdown-Image-Link einfügen
+        insertText = `\n![${newAttachment.fileName}](${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
+      } else {
+        // Für andere Dateien einen normalen Link
+        insertText = `\n[${newAttachment.fileName}](${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
+      }
+      
+      // Füge den Link an der aktuellen Cursorposition ein
+      if (textareaRef.current) {
+        const cursorPos = textareaRef.current.selectionStart;
+        const textBefore = description.substring(0, cursorPos);
+        const textAfter = description.substring(cursorPos);
+        
+        setDescription(textBefore + insertText + textAfter);
+        
+        // Setze den Cursor hinter den eingefügten Link
+        setTimeout(() => {
+          if (textareaRef.current) {
+            const newPos = cursorPos + insertText.length;
+            textareaRef.current.selectionStart = newPos;
+            textareaRef.current.selectionEnd = newPos;
+            textareaRef.current.focus();
+          }
+        }, 0);
+      } else {
+        setDescription(description + insertText);
+      }
+    } catch (err) {
+      console.error('Fehler beim Hochladen der Datei:', err);
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || err.message);
+      } else {
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    await uploadFileAndInsertLink(file);
+    
+    // Zurücksetzen des Datei-Inputs
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId: number) => {
+    try {
+      setError(null);
+      await axiosInstance.delete(API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, attachmentId));
+      setAttachments(attachments.filter(attachment => attachment.id !== attachmentId));
+    } catch (err) {
+      console.error('Fehler beim Löschen des Anhangs:', err);
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || err.message);
+      } else {
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+      }
+    }
+  };
+
+  const handleDownloadAttachment = async (attachment: RequestAttachment) => {
+    try {
+      const response = await axiosInstance.get(
+        API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, attachment.id),
+        { responseType: 'blob' }
+      );
+      
+      // Blob-URL erstellen und Download auslösen
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', attachment.fileName);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (err) {
+      console.error('Fehler beim Herunterladen des Anhangs:', err);
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || err.message);
       } else {
         setError('Ein unerwarteter Fehler ist aufgetreten');
       }
@@ -182,6 +370,61 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
     }
   };
 
+  const renderAttachments = () => (
+    <div className="mt-4">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-gray-700">Anhänge</h3>
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Datei hinzufügen
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+      </div>
+      {attachments.length > 0 ? (
+        <ul className="divide-y divide-gray-200">
+          {attachments.map((attachment) => (
+            <li key={attachment.id} className="py-3 flex items-center justify-between">
+              <div className="flex items-center">
+                <span className="text-sm font-medium text-gray-900">
+                  {attachment.fileName}
+                </span>
+                <span className="ml-2 text-sm text-gray-500">
+                  ({Math.round(attachment.fileSize / 1024)} KB)
+                </span>
+              </div>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => handleDownloadAttachment(attachment)}
+                  className="text-blue-600 hover:text-blue-900 mr-3"
+                >
+                  Herunterladen
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDeleteAttachment(attachment.id)}
+                  className="text-red-600 hover:text-red-900"
+                >
+                  Entfernen
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-gray-500">Keine Anhänge vorhanden.</p>
+      )}
+    </div>
+  );
+
   if (!isOpen) return null;
 
   const renderForm = () => (
@@ -199,13 +442,31 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
 
       <div>
         <label className="block text-sm font-medium text-gray-700">Beschreibung</label>
-        <textarea
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          rows={3}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
+        <div className="relative">
+          <textarea
+            ref={textareaRef}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            rows={3}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onPaste={handlePaste}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            placeholder="Text, Bilder oder Dateien hier einfügen..."
+          />
+          {uploading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
+              <span className="text-sm text-gray-600">Wird hochgeladen...</span>
+            </div>
+          )}
+        </div>
+        <p className="mt-1 text-sm text-gray-500">
+          Tipp: Bilder können direkt per Copy & Paste oder Drag & Drop eingefügt werden!
+        </p>
       </div>
+
+      {/* Attachments-Bereich */}
+      {renderAttachments()}
 
       <div>
         <label className="block text-sm font-medium text-gray-700">Verantwortlicher</label>
@@ -315,13 +576,12 @@ const EditRequestModal: React.FC<EditRequestModalProps> = ({
               </button>
             </div>
 
-            <div className="p-4">
+            <div className="p-4 overflow-y-auto max-h-[calc(100vh-150px)]">
               {error && (
                 <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
                   {error}
                 </div>
               )}
-
               {renderForm()}
             </div>
           </Dialog.Panel>

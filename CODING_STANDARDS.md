@@ -13,6 +13,7 @@ Dieses Dokument definiert die verbindlichen Coding-Standards für das Intranet-P
 7. [Kommentare und Dokumentation](#kommentare-und-dokumentation)
 8. [Testing](#testing)
 9. [Performance](#performance)
+10. [DRY-Implementierung für UI-Komponenten](#dry-implementierung-für-ui-komponenten)
 
 ## Allgemeine Richtlinien
 
@@ -501,6 +502,247 @@ const MyComponent = () => (
   </React.Suspense>
 );
 ```
+
+## DRY-Implementierung für UI-Komponenten
+
+### Zentrale Hilfsfunktionen für Tabellen-Komponenten
+
+#### Status-Farben und -Texte
+
+Um das DRY-Prinzip ("Don't Repeat Yourself") einzuhalten, müssen Status-Farben und -Texte in einer zentralen Utility-Datei definiert werden:
+
+```typescript
+// src/utils/statusUtils.ts
+
+/**
+ * Gibt die CSS-Klasse für einen Status zurück
+ */
+export const getStatusColor = (status: string): string => {
+    switch(status) {
+        // Task Status-Farben
+        case 'open':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'in_progress':
+            return 'bg-blue-100 text-blue-800';
+        case 'improval':
+            return 'bg-red-100 text-red-800';
+        case 'quality_control':
+            return 'bg-purple-100 text-purple-800';
+        case 'done':
+            return 'bg-green-100 text-green-800';
+            
+        // Request Status-Farben
+        case 'approval':
+            return 'bg-orange-100 text-orange-800';
+        case 'approved':
+            return 'bg-green-100 text-green-800';
+        case 'to_improve':
+            return 'bg-red-100 text-red-800';
+        case 'denied':
+            return 'bg-gray-100 text-gray-800';
+            
+        // Fallback
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
+};
+
+/**
+ * Gibt den übersetzten Status-Text zurück
+ */
+export const getStatusText = (status: string, processType?: 'task' | 'request' | 'default'): string => {
+    // Tasks
+    if (processType === 'task') {
+        switch(status) {
+            case 'open': return 'Offen';
+            case 'in_progress': return 'In Bearbeitung';
+            case 'improval': return 'Zu verbessern';
+            case 'quality_control': return 'Qualitätskontrolle';
+            case 'done': return 'Erledigt';
+            default: return status;
+        }
+    }
+    
+    // Requests
+    if (processType === 'request') {
+        switch(status) {
+            case 'approval': return 'Zur Genehmigung';
+            case 'approved': return 'Genehmigt';
+            case 'to_improve': return 'Zu verbessern';
+            case 'denied': return 'Abgelehnt';
+            default: return status;
+        }
+    }
+    
+    // Default: Return capitalized status
+    return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
+};
+
+/**
+ * Rendert ein Status-Badge
+ */
+export const StatusBadge = ({ status, processType }: { status: string, processType?: 'task' | 'request' | 'default' }) => (
+    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(status)} status-col`}>
+        {getStatusText(status, processType)}
+    </span>
+);
+```
+
+#### Aktions-Buttons in Tabellen
+
+Für Aktions-Buttons (Bearbeiten, Löschen, Anzeigen) sollte ebenfalls eine wiederverwendbare Komponente erstellt werden:
+
+```typescript
+// src/components/common/ActionButton.tsx
+import React from 'react';
+import { ComponentType, SVGProps } from 'react';
+
+interface ActionButtonProps {
+    icon: ComponentType<SVGProps<SVGSVGElement>>;
+    label: string;
+    onClick: () => void;
+    color: 'blue' | 'red' | 'green' | 'gray';
+    disabled?: boolean;
+}
+
+/**
+ * Wiederverwendbare Komponente für Aktions-Buttons in Tabellen
+ */
+export const ActionButton: React.FC<ActionButtonProps> = ({ 
+    icon: Icon, 
+    label, 
+    onClick, 
+    color,
+    disabled = false
+}) => {
+    // Farb-Mapping
+    const colorClasses = {
+        blue: 'hover:text-blue-600 hover:bg-blue-50',
+        red: 'hover:text-red-600 hover:bg-red-50',
+        green: 'hover:text-green-600 hover:bg-green-50',
+        gray: 'hover:text-gray-700 hover:bg-gray-100'
+    };
+    
+    return (
+        <button
+            onClick={onClick}
+            className={`text-gray-500 p-1 rounded-full ${colorClasses[color]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+            aria-label={label}
+            title={label}
+            disabled={disabled}
+        >
+            <Icon className="h-4 w-4" />
+        </button>
+    );
+};
+
+/**
+ * Sammlung von Standard-Aktionsbuttons für Tabellen
+ */
+export const TableActions = ({ 
+    item, 
+    onEdit, 
+    onDelete, 
+    onView,
+    canEdit = false,
+    canDelete = false,
+    canView = false,
+    editIcon,
+    deleteIcon,
+    viewIcon
+}) => {
+    return (
+        <div className="flex items-center space-x-2">
+            {canEdit && (
+                <ActionButton
+                    icon={editIcon}
+                    label="Bearbeiten"
+                    onClick={() => onEdit(item)}
+                    color="blue"
+                />
+            )}
+            {canDelete && (
+                <ActionButton
+                    icon={deleteIcon}
+                    label="Löschen"
+                    onClick={() => onDelete(item)}
+                    color="red"
+                />
+            )}
+            {canView && (
+                <ActionButton
+                    icon={viewIcon}
+                    label="Anzeigen"
+                    onClick={() => onView(item)}
+                    color="green"
+                />
+            )}
+        </div>
+    );
+};
+
+### Verwendung der zentralen Komponenten
+
+Beispiel für die Verwendung der Status- und Aktionskomponenten in einer Tabelle:
+
+```tsx
+import { StatusBadge } from '@/utils/statusUtils';
+import { TableActions } from '@/components/common/ActionButton';
+import { PencilIcon, TrashIcon, EyeIcon } from '@heroicons/react/24/outline';
+
+const TaskTable = ({ tasks }) => {
+    // Berechtigungsprüfungen
+    const { hasPermission } = usePermissions();
+    const canEdit = hasPermission('task', 'write');
+    const canDelete = hasPermission('task', 'delete');
+    const canView = hasPermission('task', 'read');
+    
+    // Handler-Funktionen
+    const handleEdit = (task) => { /* ... */ };
+    const handleDelete = (task) => { /* ... */ };
+    const handleView = (task) => { /* ... */ };
+    
+    return (
+        <table className="min-w-full divide-y divide-gray-200">
+            <thead>
+                {/* Tabellenkopf */}
+            </thead>
+            <tbody>
+                {tasks.map(task => (
+                    <tr key={task.id}>
+                        <td>{task.title}</td>
+                        <td>
+                            <StatusBadge status={task.status} processType="task" />
+                        </td>
+                        <td>
+                            <TableActions
+                                item={task}
+                                onEdit={handleEdit}
+                                onDelete={handleDelete}
+                                onView={handleView}
+                                canEdit={canEdit}
+                                canDelete={canDelete}
+                                canView={canView}
+                                editIcon={PencilIcon}
+                                deleteIcon={TrashIcon}
+                                viewIcon={EyeIcon}
+                            />
+                        </td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+};
+```
+
+Diese DRY-Implementierung bietet folgende Vorteile:
+
+1. **Konsistenz**: Alle Status-Badges und Aktions-Buttons haben ein einheitliches Erscheinungsbild
+2. **Wartbarkeit**: Änderungen müssen nur an einer Stelle vorgenommen werden
+3. **Erweiterbarkeit**: Neue Status oder Aktionen können zentral hinzugefügt werden
+4. **Typsicherheit**: TypeScript-Unterstützung für bessere Entwicklererfahrung
+5. **Wiederverwendbarkeit**: Die Komponenten können in allen Tabellen verwendet werden
 
 ---
 

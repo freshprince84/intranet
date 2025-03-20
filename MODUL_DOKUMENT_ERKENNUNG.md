@@ -168,3 +168,27 @@ Error: Cannot find module 'express-validator'
 1. Stellen Sie sicher, dass das Bild eine gute Qualität hat (mindestens 300 DPI)
 2. Achten Sie auf gute Beleuchtung und Ausrichtung des Dokuments
 3. Überprüfen Sie, ob der OpenAI API-Schlüssel korrekt ist und über ausreichendes Guthaben verfügt
+
+## Dateianhänge
+
+Das System unterstützt Dateianhänge für verschiedene Entitäten:
+
+### Unterstützte Entitäten
+- **Tasks**: Vollständige Unterstützung für Anhänge mit Vorschau für Bilder
+- **Requests**: Vollständige Unterstützung für Anhänge mit Vorschau für Bilder
+
+### Funktionen
+- **Drag & Drop**: Dateien können direkt in das Beschreibungsfeld gezogen werden
+- **Copy & Paste**: Bilder können aus der Zwischenablage eingefügt werden
+- **Manueller Upload**: Über den "Datei hinzufügen"-Button
+- **Automatische Konvertierung**: Bei Genehmigung eines Requests mit Anhängen werden diese automatisch zum erstellten Task kopiert
+
+### Implementierung
+- **Frontend**: `EditTaskModal.tsx`, `CreateTaskModal.tsx`, `EditRequestModal.tsx`, `CreateRequestModal.tsx`
+- **Backend**: `taskAttachmentController.ts`, `requestAttachmentController.ts`
+- **Datenbank**: `TaskAttachment` und `RequestAttachment` Modelle in Prisma Schema
+
+### Technische Details
+- Dateien werden im Ordner `uploads/task-attachments` bzw. `uploads/request-attachments` gespeichert
+- Die Dateinamen werden mit UUID generiert, um Kollisionen zu vermeiden
+- Bei Task-Erstellung aus einem Request werden die Anhänge physisch kopiert

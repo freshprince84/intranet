@@ -26,6 +26,9 @@ Diese Dokumentation beschreibt das vollständige Datenbankschema des Intranet-Sy
    - [CerebroMedia](#cerebromedia)
    - [UserTableSettings](#usertablesettings)
    - [IdentificationDocument](#identificationdocument)
+   - [SavedFilter](#savedfilter)
+   - [TaskAttachment](#taskattachment)
+   - [RequestAttachment](#requestattachment)
 5. [Enums](#enums)
 6. [Beziehungen](#beziehungen)
 7. [Indices und Constraints](#indices-und-constraints)
@@ -59,6 +62,7 @@ User (1) --- (*) Request (responsible)
 User (1) --- (*) Notification
 User (1) --- (*) CerebroCarticle
 User (1) --- (*) UserRole
+User (1) --- (*) SavedFilter
 Role (1) --- (*) UserRole
 Role (1) --- (*) Permission
 Branch (1) --- (*) WorkTime
@@ -354,6 +358,37 @@ model IdentificationDocument {
   
   user       User  @relation(fields: [userId], references: [id])
   verifier   User? @relation("DocumentVerifier", fields: [verifiedBy], references: [id])
+}
+
+model SavedFilter {
+  id          Int       @id @default(autoincrement())
+  userId      Int
+  tableId     String
+  name        String
+  conditions  String
+  operators   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model TaskAttachment {
+  id        Int       @id @default(autoincrement())
+  taskId    Int
+  fileName  String
+  fileType  String
+  fileSize  Int
+  filePath  String
+  uploadedAt DateTime @default(now())
+}
+
+model RequestAttachment {
+  id        Int       @id @default(autoincrement())
+  requestId Int
+  fileName  String
+  fileType  String
+  fileSize  Int
+  filePath  String
+  uploadedAt DateTime @default(now())
 }
 
 enum TaskStatus {
@@ -683,6 +718,55 @@ Speichert Informationen über Ausweisdokumente der Benutzer.
 | verifiedBy | Integer? | ID des verifizierenden Administrators | Nullable, @relation("DocumentVerifier") |
 | createdAt | DateTime | Erstellungszeitpunkt | @default(now()) |
 | updatedAt | DateTime | Letzter Aktualisierungszeitpunkt | @updatedAt |
+
+### SavedFilter
+
+Die `SavedFilter`-Tabelle speichert gespeicherte Filtereinstellungen für verschiedene Tabellen im System.
+
+| Spalte | Typ | Beschreibung | Constraints |
+|--------|-----|--------------|------------|
+| id | Int | Eindeutige ID | @id @default(autoincrement()) |
+| userId | Int | ID des Benutzers, dem der Filter gehört | Foreign Key zu User |
+| tableId | String | Identifier der Tabelle, zu der der Filter gehört | |
+| name | String | Name des gespeicherten Filters | |
+| conditions | String | JSON-String mit den Filterbedingungen | |
+| operators | String | JSON-String mit den Filteroperatoren (AND/OR) | |
+| createdAt | DateTime | Erstellungsdatum | @default(now()) |
+| updatedAt | DateTime | Datum der letzten Aktualisierung | @updatedAt |
+
+Die Tabelle ermöglicht Benutzern das Speichern und Wiederverwenden komplexer Filtereinstellungen in verschiedenen Tabellendarstellungen des Systems. Die Filterbedingungen und Operatoren werden als JSON-Strings gespeichert und beim Laden deserialisiert.
+
+### TaskAttachment
+
+Die `TaskAttachment`-Tabelle speichert Dateianhänge für Tasks.
+
+| Spalte | Typ | Beschreibung | Constraints |
+|--------|-----|--------------|------------|
+| id | Int | Eindeutige ID | @id @default(autoincrement()) |
+| taskId | Int | Task-ID | @foreign key |
+| fileName | String | Originaler Dateiname | |
+| fileType | String | MIME-Typ der Datei | |
+| fileSize | Int | Dateigröße in Bytes | |
+| filePath | String | Pfad zur gespeicherten Datei | |
+| uploadedAt | DateTime | Zeitpunkt des Uploads | @default(now()) |
+
+Die Tabelle hat eine Beziehung zu `Task` mit einer Cascade-Delete-Funktionalität, d.h. wenn ein Task gelöscht wird, werden auch alle zugehörigen Anhänge entfernt.
+
+### RequestAttachment
+
+Die `RequestAttachment`-Tabelle speichert Dateianhänge für Requests.
+
+| Spalte | Typ | Beschreibung | Constraints |
+|--------|-----|--------------|------------|
+| id | Int | Eindeutige ID | @id @default(autoincrement()) |
+| requestId | Int | Request-ID | @foreign key |
+| fileName | String | Originaler Dateiname | |
+| fileType | String | MIME-Typ der Datei | |
+| fileSize | Int | Dateigröße in Bytes | |
+| filePath | String | Pfad zur gespeicherten Datei | |
+| uploadedAt | DateTime | Zeitpunkt des Uploads | @default(now()) |
+
+Die Tabelle hat eine Beziehung zu `Request` mit einer Cascade-Delete-Funktionalität, d.h. wenn ein Request gelöscht wird, werden auch alle zugehörigen Anhänge entfernt.
 
 ## Enums
 

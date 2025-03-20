@@ -210,7 +210,7 @@ const Settings: React.FC = () => {
                 )}
 
                 {activeTab === 'system' && (
-                    <div className="space-y-4">
+                    <div className="space-y-8">
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-medium mb-2 dark:text-white">Logo hochladen</h3>
@@ -261,6 +261,53 @@ const Settings: React.FC = () => {
                                 />
                             </div>
                         )}
+
+                        <div className="border-t pt-6">
+                            <h3 className="text-lg font-medium mb-4 dark:text-white">Upload-Verzeichnisse</h3>
+                            
+                            <div className="space-y-4">
+                                <div>
+                                    <label htmlFor="taskAttachmentsPath" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Verzeichnis für Task-Anhänge
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="taskAttachmentsPath"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                        defaultValue="uploads/task-attachments"
+                                        placeholder="z.B. uploads/task-attachments"
+                                    />
+                                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                        Relativer Pfad zum Speichern von Task-Anhängen
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label htmlFor="requestAttachmentsPath" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                        Verzeichnis für Request-Anhänge
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id="requestAttachmentsPath"
+                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                        defaultValue="uploads/request-attachments"
+                                        placeholder="z.B. uploads/request-attachments"
+                                    />
+                                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                        Relativer Pfad zum Speichern von Request-Anhängen
+                                    </p>
+                                </div>
+
+                                <div className="mt-4">
+                                    <button
+                                        type="button"
+                                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
+                                    >
+                                        Speichern
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
             </div>

@@ -11,10 +11,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteRequest = exports.updateRequest = exports.createRequest = exports.getRequestById = exports.getAllRequests = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
+const path_1 = __importDefault(require("path"));
+const fs_1 = __importDefault(require("fs"));
+const uuid_1 = require("uuid");
 const prisma = new client_1.PrismaClient();
 const userSelect = {
     id: true,
@@ -40,30 +46,39 @@ const getAllRequests = (_req, res) => __awaiter(void 0, void 0, void 0, function
                 branch: {
                     select: branchSelect
                 }
+            },
+            orderBy: {
+                createdAt: 'desc'
             }
         });
-        // Formatiere die Antwort für das Frontend
-        const formattedRequests = requests.map(request => (Object.assign(Object.assign({}, request), { requestedBy: request.requester, requester: undefined })));
+        // Formatiere die Daten für die Frontend-Nutzung
+        const formattedRequests = requests.map(request => ({
+            id: request.id,
+            title: request.title,
+            description: request.description,
+            status: request.status,
+            dueDate: request.dueDate,
+            createdAt: request.createdAt,
+            updatedAt: request.updatedAt,
+            requestedBy: request.requester,
+            responsible: request.responsible,
+            branch: request.branch,
+            createTodo: request.createTodo
+        }));
         res.json(formattedRequests);
     }
     catch (error) {
-        console.error('Error in getAllRequests:', error);
-        res.status(500).json({
-            message: 'Fehler beim Abrufen der Requests',
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-        });
+        console.error('Error fetching requests:', error);
+        res.status(500).json({ message: 'Fehler beim Abrufen der Requests' });
     }
 });
 exports.getAllRequests = getAllRequests;
-// Einen spezifischen Request abrufen
+// Einen Request nach ID abrufen
 const getRequestById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const requestId = parseInt(req.params.id, 10);
-        if (isNaN(requestId)) {
-            return res.status(400).json({ message: 'Ungültige Request-ID' });
-        }
+        const { id } = req.params;
         const request = yield prisma.request.findUnique({
-            where: { id: requestId },
+            where: { id: parseInt(id) },
             include: {
                 requester: {
                     select: userSelect
@@ -79,49 +94,48 @@ const getRequestById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!request) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
         }
-        // Formatiere die Antwort für das Frontend
-        const formattedRequest = Object.assign(Object.assign({}, request), { requestedBy: request.requester, requester: undefined });
+        // Formatiere die Daten für die Frontend-Nutzung
+        const formattedRequest = {
+            id: request.id,
+            title: request.title,
+            description: request.description,
+            status: request.status,
+            dueDate: request.dueDate,
+            createdAt: request.createdAt,
+            updatedAt: request.updatedAt,
+            requestedBy: request.requester,
+            responsible: request.responsible,
+            branch: request.branch,
+            createTodo: request.createTodo
+        };
         res.json(formattedRequest);
     }
     catch (error) {
-        console.error('Error in getRequestById:', error);
-        res.status(500).json({
-            message: 'Fehler beim Abrufen des Requests',
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-        });
+        console.error('Error fetching request:', error);
+        res.status(500).json({ message: 'Fehler beim Abrufen des Requests' });
     }
 });
 exports.getRequestById = getRequestById;
 // Neuen Request erstellen
 const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Validiere erforderliche Felder
-        const requiredFields = ['title', 'requested_by_id', 'responsible_id', 'branch_id'];
-        const missingFields = requiredFields.filter(field => !req.body[field]);
-        if (missingFields.length > 0) {
-            return res.status(400).json({
-                message: `Folgende Pflichtfelder fehlen: ${missingFields.join(', ')}`
-            });
+        const { title, description, requested_by_id, responsible_id, branch_id, status = 'approval', due_date, create_todo = false } = req.body;
+        if (!title || !requested_by_id || !responsible_id || !branch_id) {
+            return res.status(400).json({ message: 'Fehlende erforderliche Felder' });
         }
-        // Parse und validiere IDs
-        const requesterId = parseInt(req.body.requested_by_id, 10);
-        const responsibleId = parseInt(req.body.responsible_id, 10);
-        const branchId = parseInt(req.body.branch_id, 10);
-        if (isNaN(requesterId) || isNaN(responsibleId) || isNaN(branchId)) {
-            return res.status(400).json({
-                message: 'Ungültige ID-Werte'
-            });
-        }
+        const requesterId = parseInt(requested_by_id, 10);
+        const responsibleId = parseInt(responsible_id, 10);
+        const branchId = parseInt(branch_id, 10);
         const request = yield prisma.request.create({
             data: {
-                title: req.body.title,
-                description: req.body.description || '',
-                status: req.body.status || 'approval',
+                title,
+                description: description || '',
+                status: status,
                 requesterId,
                 responsibleId,
                 branchId,
-                dueDate: req.body.due_date ? new Date(req.body.due_date) : null,
-                createTodo: req.body.create_todo || false
+                dueDate: due_date ? new Date(due_date) : null,
+                createTodo: create_todo
             },
             include: {
                 requester: {
@@ -135,71 +149,83 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             }
         });
-        // Benachrichtigung für den Verantwortlichen erstellen
-        yield (0, notificationController_1.createNotificationIfEnabled)({
-            userId: responsibleId,
-            title: 'Neuer Request zur Genehmigung',
-            message: `Ein neuer Request "${req.body.title}" wurde erstellt und wartet auf deine Genehmigung.`,
-            type: client_1.NotificationType.request,
-            relatedEntityId: request.id,
-            relatedEntityType: 'create'
-        });
-        // Formatiere die Antwort für das Frontend
-        const formattedRequest = Object.assign(Object.assign({}, request), { requestedBy: request.requester, requester: undefined });
+        // Formatiere die Daten für die Frontend-Nutzung
+        const formattedRequest = {
+            id: request.id,
+            title: request.title,
+            description: request.description,
+            status: request.status,
+            dueDate: request.dueDate,
+            createdAt: request.createdAt,
+            updatedAt: request.updatedAt,
+            requestedBy: request.requester,
+            responsible: request.responsible,
+            branch: request.branch,
+            createTodo: request.createTodo
+        };
+        // Benachrichtigungen erstellen
+        // 1. Für den Verantwortlichen
+        if (requesterId !== responsibleId) {
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: request.requesterId,
+                targetId: request.id,
+                targetType: 'request',
+                type: client_1.NotificationType.request,
+                title: `Neuer Request: ${request.title}`,
+                message: `Du hast einen neuen Request erstellt: ${request.title}`
+            });
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: request.responsibleId,
+                targetId: request.id,
+                targetType: 'request',
+                type: client_1.NotificationType.request,
+                title: `Neuer Request: ${request.title}`,
+                message: `Dir wurde ein neuer Request zugewiesen: ${request.title}`
+            });
+        }
         res.status(201).json(formattedRequest);
     }
     catch (error) {
-        console.error('Error in createRequest:', error);
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
-            res.status(400).json({
-                message: 'Fehler beim Erstellen des Requests',
-                error: error.message,
-                details: error.meta
-            });
-        }
-        else {
-            res.status(400).json({
-                message: 'Fehler beim Erstellen des Requests',
-                error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-            });
-        }
+        console.error('Error creating request:', error);
+        res.status(500).json({ message: 'Fehler beim Erstellen des Requests' });
     }
 });
 exports.createRequest = createRequest;
 // Request aktualisieren
 const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const requestId = parseInt(req.params.id, 10);
-        if (isNaN(requestId)) {
-            return res.status(400).json({ message: 'Ungültige Request-ID' });
-        }
-        // Hole den aktuellen Request, um createTodo-Status zu prüfen
-        const currentRequest = yield prisma.request.findUnique({
-            where: { id: requestId },
+        const { id } = req.params;
+        const { title, description, requested_by_id, responsible_id, branch_id, status, due_date, create_todo } = req.body;
+        // Prüfe, ob der Request existiert
+        const existingRequest = yield prisma.request.findUnique({
+            where: { id: parseInt(id) },
             include: {
                 requester: {
                     select: userSelect
                 },
                 responsible: {
                     select: userSelect
+                },
+                branch: {
+                    select: branchSelect
                 }
             }
         });
-        if (!currentRequest) {
+        if (!existingRequest) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
         }
-        // Aktualisiere den Request
-        const request = yield prisma.request.update({
-            where: { id: requestId },
+        // Update den Request
+        const updatedRequest = yield prisma.request.update({
+            where: { id: parseInt(id) },
             data: {
-                title: req.body.title || currentRequest.title,
-                description: req.body.description || currentRequest.description,
-                status: req.body.status || currentRequest.status,
+                title: title,
+                description: description,
                 requesterId: req.body.requested_by_id ? parseInt(req.body.requested_by_id, 10) : undefined,
                 responsibleId: req.body.responsible_id ? parseInt(req.body.responsible_id, 10) : undefined,
                 branchId: req.body.branch_id ? parseInt(req.body.branch_id, 10) : undefined,
-                dueDate: req.body.due_date ? new Date(req.body.due_date) : undefined,
-                createTodo: req.body.create_todo !== undefined ? req.body.create_todo : currentRequest.createTodo
+                status: status,
+                dueDate: due_date ? new Date(due_date) : undefined,
+                createTodo: create_todo
             },
             include: {
                 requester: {
@@ -213,137 +239,142 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             }
         });
-        // Benachrichtigungen für Statusänderungen
-        if (req.body.status && req.body.status !== currentRequest.status) {
+        // Benachrichtigungen bei Statusänderungen
+        if (status && status !== existingRequest.status) {
             // Benachrichtigung für den Ersteller
             yield (0, notificationController_1.createNotificationIfEnabled)({
-                userId: request.requesterId,
-                title: 'Request-Status geändert',
-                message: `Der Status deines Requests "${request.title}" wurde von "${currentRequest.status}" zu "${req.body.status}" geändert.`,
+                userId: updatedRequest.requesterId,
+                targetId: updatedRequest.id,
+                targetType: 'request',
                 type: client_1.NotificationType.request,
-                relatedEntityId: request.id,
-                relatedEntityType: 'status'
+                title: `Statusänderung: ${updatedRequest.title}`,
+                message: `Der Status deines Requests "${updatedRequest.title}" wurde zu "${status}" geändert.`
             });
-            // Spezifische Benachrichtigungen je nach neuem Status
-            if (req.body.status === 'approved') {
-                yield (0, notificationController_1.createNotificationIfEnabled)({
-                    userId: request.requesterId,
-                    title: 'Request genehmigt',
-                    message: `Dein Request "${request.title}" wurde genehmigt.`,
-                    type: client_1.NotificationType.request,
-                    relatedEntityId: request.id,
-                    relatedEntityType: 'status'
-                });
-            }
-            else if (req.body.status === 'denied') {
-                yield (0, notificationController_1.createNotificationIfEnabled)({
-                    userId: request.requesterId,
-                    title: 'Request abgelehnt',
-                    message: `Dein Request "${request.title}" wurde abgelehnt.`,
-                    type: client_1.NotificationType.request,
-                    relatedEntityId: request.id,
-                    relatedEntityType: 'status'
-                });
-            }
-            else if (req.body.status === 'to_improve') {
-                yield (0, notificationController_1.createNotificationIfEnabled)({
-                    userId: request.requesterId,
-                    title: 'Request muss überarbeitet werden',
-                    message: `Dein Request "${request.title}" muss überarbeitet werden.`,
-                    type: client_1.NotificationType.request,
-                    relatedEntityId: request.id,
-                    relatedEntityType: 'status'
-                });
-            }
         }
-        // Benachrichtigung bei Änderung des Verantwortlichen
-        else if (req.body.responsible_id && parseInt(req.body.responsible_id, 10) !== currentRequest.responsibleId) {
-            const newResponsibleId = parseInt(req.body.responsible_id, 10);
+        // Benachrichtigung bei Verantwortlichkeitsänderung
+        if (responsible_id && parseInt(responsible_id) !== existingRequest.responsibleId) {
+            // Benachrichtigung für den alten Verantwortlichen
             yield (0, notificationController_1.createNotificationIfEnabled)({
-                userId: newResponsibleId,
-                title: 'Request zur Genehmigung zugewiesen',
-                message: `Dir wurde der Request "${request.title}" zur Genehmigung zugewiesen.`,
+                userId: existingRequest.responsibleId,
+                targetId: updatedRequest.id,
+                targetType: 'request',
                 type: client_1.NotificationType.request,
-                relatedEntityId: request.id,
-                relatedEntityType: 'update'
+                title: `Verantwortlichkeit geändert: ${updatedRequest.title}`,
+                message: `Die Verantwortlichkeit für den Request "${updatedRequest.title}" wurde geändert.`
             });
-        }
-        // Allgemeine Aktualisierungsbenachrichtigung
-        else if (Object.keys(req.body).length > 0) {
-            // Benachrichtigung für den Verantwortlichen
+            // Benachrichtigung für den neuen Verantwortlichen
             yield (0, notificationController_1.createNotificationIfEnabled)({
-                userId: request.responsibleId,
-                title: 'Request aktualisiert',
-                message: `Der Request "${request.title}" wurde aktualisiert.`,
+                userId: parseInt(responsible_id),
+                targetId: updatedRequest.id,
+                targetType: 'request',
                 type: client_1.NotificationType.request,
-                relatedEntityId: request.id,
-                relatedEntityType: 'update'
+                title: `Neuer Request: ${updatedRequest.title}`,
+                message: `Dir wurde ein Request zugewiesen: ${updatedRequest.title}`
             });
-            // Benachrichtigung für den Ersteller, falls nicht identisch mit Verantwortlichem
-            if (request.requesterId !== request.responsibleId) {
+        }
+        // Wenn der Request genehmigt wird und createTodo aktiv ist, erstelle einen Task
+        if (status === 'approved' && updatedRequest.createTodo) {
+            const task = yield prisma.task.create({
+                data: {
+                    title: `[Request] ${updatedRequest.title}`,
+                    description: updatedRequest.description || '',
+                    status: 'open',
+                    responsibleId: updatedRequest.responsibleId,
+                    qualityControlId: updatedRequest.requesterId,
+                    branchId: updatedRequest.branchId,
+                    dueDate: updatedRequest.dueDate
+                }
+            });
+            // Kopiere Anhänge vom Request zum Task
+            yield copyRequestAttachmentsToTask(updatedRequest.id, task.id);
+            // Benachrichtigungen für den Task
+            if (updatedRequest.requesterId !== updatedRequest.responsibleId) {
+                // Benachrichtigung für den Verantwortlichen
                 yield (0, notificationController_1.createNotificationIfEnabled)({
-                    userId: request.requesterId,
-                    title: 'Request aktualisiert',
-                    message: `Dein Request "${request.title}" wurde aktualisiert.`,
-                    type: client_1.NotificationType.request,
-                    relatedEntityId: request.id,
-                    relatedEntityType: 'update'
+                    userId: updatedRequest.responsibleId,
+                    targetId: task.id,
+                    targetType: 'task',
+                    type: client_1.NotificationType.task,
+                    title: `Neuer Task: ${task.title}`,
+                    message: `Dir wurde ein neuer Task zugewiesen: ${task.title}`
                 });
             }
         }
-        // Formatiere die Antwort für das Frontend
-        const formattedRequest = Object.assign(Object.assign({}, request), { requestedBy: request.requester, requester: undefined });
-        // Wenn der Status auf "approved" geändert wurde und createTodo true ist
-        if (req.body.status === 'approved' && request.createTodo) {
-            try {
-                // Erstelle einen neuen Task
-                const task = yield prisma.task.create({
-                    data: {
-                        title: `Task aus Request: ${formattedRequest.title}`,
-                        description: formattedRequest.description || '',
-                        status: 'open',
-                        responsibleId: formattedRequest.responsibleId,
-                        qualityControlId: formattedRequest.requesterId,
-                        branchId: formattedRequest.branchId,
-                        dueDate: formattedRequest.dueDate
-                    }
-                });
-                console.log('Task erfolgreich erstellt:', task);
-            }
-            catch (taskError) {
-                console.error('Fehler bei der Task-Erstellung:', taskError);
-            }
-        }
+        // Formatiere die Daten für die Frontend-Nutzung
+        const formattedRequest = {
+            id: updatedRequest.id,
+            title: updatedRequest.title,
+            description: updatedRequest.description,
+            status: updatedRequest.status,
+            dueDate: updatedRequest.dueDate,
+            createdAt: updatedRequest.createdAt,
+            updatedAt: updatedRequest.updatedAt,
+            requestedBy: updatedRequest.requester,
+            responsible: updatedRequest.responsible,
+            branch: updatedRequest.branch,
+            createTodo: updatedRequest.createTodo
+        };
         res.json(formattedRequest);
     }
     catch (error) {
-        console.error('Error in updateRequest:', error);
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
-            res.status(400).json({
-                message: 'Fehler beim Aktualisieren des Requests',
-                error: error.message,
-                details: error.meta
-            });
-        }
-        else {
-            res.status(400).json({
-                message: 'Fehler beim Aktualisieren des Requests',
-                error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-            });
-        }
+        console.error('Error updating request:', error);
+        res.status(500).json({ message: 'Fehler beim Aktualisieren des Requests' });
     }
 });
 exports.updateRequest = updateRequest;
+// Hilfsfunktion zum Kopieren von Anhängen vom Request zum Task
+const copyRequestAttachmentsToTask = (requestId, taskId) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Hole alle Anhänge des Requests
+        const requestAttachments = yield prisma.requestAttachment.findMany({
+            where: {
+                requestId: requestId
+            }
+        });
+        if (requestAttachments.length === 0) {
+            return; // Keine Anhänge zum Kopieren
+        }
+        const REQUEST_UPLOAD_DIR = path_1.default.join(__dirname, '../../uploads/request-attachments');
+        const TASK_UPLOAD_DIR = path_1.default.join(__dirname, '../../uploads/task-attachments');
+        // Stelle sicher, dass das Zielverzeichnis existiert
+        if (!fs_1.default.existsSync(TASK_UPLOAD_DIR)) {
+            fs_1.default.mkdirSync(TASK_UPLOAD_DIR, { recursive: true });
+        }
+        // Kopiere jeden Anhang
+        for (const attachment of requestAttachments) {
+            // Generiere einen eindeutigen Dateinamen für den Task-Anhang
+            const uniqueFileName = `${(0, uuid_1.v4)()}${path_1.default.extname(attachment.fileName)}`;
+            // Quell- und Zieldateipfade
+            const sourcePath = path_1.default.join(REQUEST_UPLOAD_DIR, attachment.filePath);
+            const destPath = path_1.default.join(TASK_UPLOAD_DIR, uniqueFileName);
+            // Kopiere die physische Datei
+            if (fs_1.default.existsSync(sourcePath)) {
+                fs_1.default.copyFileSync(sourcePath, destPath);
+                // Erstelle einen neuen TaskAttachment-Eintrag
+                yield prisma.taskAttachment.create({
+                    data: {
+                        taskId: taskId,
+                        fileName: attachment.fileName,
+                        fileType: attachment.fileType,
+                        fileSize: attachment.fileSize,
+                        filePath: uniqueFileName
+                    }
+                });
+            }
+        }
+        console.log(`${requestAttachments.length} Anhänge erfolgreich kopiert von Request ${requestId} zu Task ${taskId}`);
+    }
+    catch (error) {
+        console.error('Fehler beim Kopieren der Anhänge:', error);
+    }
+});
 // Request löschen
 const deleteRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const requestId = parseInt(req.params.id, 10);
-        if (isNaN(requestId)) {
-            return res.status(400).json({ message: 'Ungültige Request-ID' });
-        }
-        // Request vor dem Löschen abrufen, um Benachrichtigungen zu senden
+        const { id } = req.params;
+        // Prüfe, ob der Request existiert
         const request = yield prisma.request.findUnique({
-            where: { id: requestId },
+            where: { id: parseInt(id) },
             include: {
                 requester: {
                     select: userSelect
@@ -356,46 +387,24 @@ const deleteRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (!request) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
         }
-        yield prisma.request.delete({
-            where: { id: requestId }
-        });
         // Benachrichtigung für den Ersteller
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: request.requesterId,
-            title: 'Request gelöscht',
-            message: `Dein Request "${request.title}" wurde gelöscht.`,
+            targetId: request.id,
+            targetType: 'request',
             type: client_1.NotificationType.request,
-            relatedEntityId: requestId,
-            relatedEntityType: 'delete'
+            title: `Request gelöscht: ${request.title}`,
+            message: `Dein Request "${request.title}" wurde gelöscht.`
         });
-        // Benachrichtigung für den Verantwortlichen, falls nicht identisch mit Ersteller
-        if (request.requesterId !== request.responsibleId) {
-            yield (0, notificationController_1.createNotificationIfEnabled)({
-                userId: request.responsibleId,
-                title: 'Request gelöscht',
-                message: `Der Request "${request.title}" wurde gelöscht.`,
-                type: client_1.NotificationType.request,
-                relatedEntityId: requestId,
-                relatedEntityType: 'delete'
-            });
-        }
-        res.status(204).send();
+        // Lösche den Request
+        yield prisma.request.delete({
+            where: { id: parseInt(id) }
+        });
+        res.json({ message: 'Request erfolgreich gelöscht' });
     }
     catch (error) {
-        console.error('Error in deleteRequest:', error);
-        if (error instanceof client_1.Prisma.PrismaClientKnownRequestError) {
-            res.status(400).json({
-                message: 'Fehler beim Löschen des Requests',
-                error: error.message,
-                details: error.meta
-            });
-        }
-        else {
-            res.status(400).json({
-                message: 'Fehler beim Löschen des Requests',
-                error: error instanceof Error ? error.message : 'Unbekannter Fehler'
-            });
-        }
+        console.error('Error deleting request:', error);
+        res.status(500).json({ message: 'Fehler beim Löschen des Requests' });
     }
 });
 exports.deleteRequest = deleteRequest;

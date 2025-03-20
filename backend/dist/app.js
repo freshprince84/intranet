@@ -30,6 +30,7 @@ const teamWorktimeRoutes_1 = __importDefault(require("./routes/teamWorktimeRoute
 const payroll_1 = __importDefault(require("./routes/payroll"));
 const identificationDocuments_1 = __importDefault(require("./routes/identificationDocuments"));
 const documentRecognition_1 = __importDefault(require("./routes/documentRecognition"));
+const savedFilters_1 = __importDefault(require("./routes/savedFilters"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const app = (0, express_1.default)();
 // Middleware
@@ -79,11 +80,19 @@ app.use((0, cors_1.default)({
 // Uploads-Verzeichnis
 const uploadsPath = path_1.default.join(__dirname, '../uploads');
 app.use('/uploads', express_1.default.static(uploadsPath));
-// Sicherstellen, dass das Cerebro-Uploads-Verzeichnis existiert
-const cerebroUploadsPath = path_1.default.join(uploadsPath, 'cerebro');
+// Sicherstellen, dass die Uploads-Verzeichnisse existieren
 const fs_1 = __importDefault(require("fs"));
+const cerebroUploadsPath = path_1.default.join(uploadsPath, 'cerebro');
+const taskAttachmentsPath = path_1.default.join(uploadsPath, 'task-attachments');
+const requestAttachmentsPath = path_1.default.join(uploadsPath, 'request-attachments');
 if (!fs_1.default.existsSync(cerebroUploadsPath)) {
     fs_1.default.mkdirSync(cerebroUploadsPath, { recursive: true });
+}
+if (!fs_1.default.existsSync(taskAttachmentsPath)) {
+    fs_1.default.mkdirSync(taskAttachmentsPath, { recursive: true });
+}
+if (!fs_1.default.existsSync(requestAttachmentsPath)) {
+    fs_1.default.mkdirSync(requestAttachmentsPath, { recursive: true });
 }
 // Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 5 Minuten)
 const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 5 Minuten
@@ -115,6 +124,7 @@ app.use('/api/team-worktime', teamWorktimeRoutes_1.default);
 app.use('/api/payroll', payroll_1.default);
 app.use('/api/identification-documents', identificationDocuments_1.default);
 app.use('/api/document-recognition', documentRecognition_1.default);
+app.use('/api/saved-filters', savedFilters_1.default);
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

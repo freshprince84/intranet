@@ -9,10 +9,12 @@ import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import WorktimeTracker from '../components/WorktimeTracker.tsx';
 import WorktimeList from '../components/WorktimeList.tsx';
-import { API_ENDPOINTS } from '../config/api.ts';
+import { API_ENDPOINTS, API_URL } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import FilterPane from '../components/FilterPane.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
+import SavedFilterTags from '../components/SavedFilterTags.tsx';
+import { toast } from 'react-toastify';
 
 interface Task {
     id: number;
@@ -71,6 +73,9 @@ const availableColumns = [
 // Standard-Spaltenreihenfolge
 const defaultColumnOrder = availableColumns.map(column => column.id);
 
+// Definiere eine tableId für die To-Dos Tabelle
+const TODOS_TABLE_ID = 'worktracker-todos';
+
 const Worktracker: React.FC = () => {
     const { user } = useAuth();
     const { hasPermission } = usePermissions();
@@ -79,6 +84,7 @@ const Worktracker: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<Task['status'] | 'all'>('all');
+    const [currentTask, setCurrentTask] = useState<Task | null>(null);
     
     // Neuer State für erweiterte Filterbedingungen
     const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
@@ -126,38 +132,104 @@ const Worktracker: React.FC = () => {
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
-    const fetchTasks = async () => {
+    // Funktion zum Neu Laden der Tasks
+    const loadTasks = async () => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setError('Nicht authentifiziert');
-                setLoading(false);
-                return;
-            }
-
-            const response = await axios.get(API_ENDPOINTS.TASKS.BASE, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
+            setLoading(true);
+            const response = await axiosInstance.get(API_ENDPOINTS.TASKS.BASE);
             setTasks(response.data);
             setError(null);
-        } catch (err) {
-            console.error('Task Error:', err);
-            if (axios.isAxiosError(err)) {
-                setError(`Fehler beim Laden der Tasks: ${err.response?.data?.message || err.message}`);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+        } catch (error) {
+            console.error('Fehler beim Laden der Tasks:', error);
+            setError('Fehler beim Laden der Tasks');
         } finally {
             setLoading(false);
         }
     };
 
+    // Lade Tasks beim ersten Render
     useEffect(() => {
-        fetchTasks();
+        loadTasks();
+    }, []);
+
+    // Standard-Filter erstellen und speichern
+    useEffect(() => {
+        const createStandardFilters = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                
+                if (!token) {
+                    console.error('Nicht authentifiziert');
+                    return;
+                }
+
+                // Prüfen, ob die Standard-Filter bereits existieren
+                const existingFiltersResponse = await axios.get(
+                    `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(TODOS_TABLE_ID)}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }
+                );
+
+                const existingFilters = existingFiltersResponse.data || [];
+                const archivFilterExists = existingFilters.some(filter => filter.name === 'Archiv');
+                const aktuellFilterExists = existingFilters.some(filter => filter.name === 'Aktuell');
+
+                // Erstelle "Archiv"-Filter, wenn er noch nicht existiert
+                if (!archivFilterExists) {
+                    const archivFilter = {
+                        tableId: TODOS_TABLE_ID,
+                        name: 'Archiv',
+                        conditions: [
+                            { column: 'status', operator: 'equals', value: 'done' }
+                        ],
+                        operators: []
+                    };
+
+                    await axios.post(
+                        `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+                        archivFilter,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        }
+                    );
+                    console.log('Archiv-Filter erstellt');
+                }
+
+                // Erstelle "Aktuell"-Filter, wenn er noch nicht existiert
+                if (!aktuellFilterExists) {
+                    const aktuellFilter = {
+                        tableId: TODOS_TABLE_ID,
+                        name: 'Aktuell',
+                        conditions: [
+                            { column: 'status', operator: 'notEquals', value: 'done' }
+                        ],
+                        operators: []
+                    };
+
+                    await axios.post(
+                        `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+                        aktuellFilter,
+                        {
+                            headers: {
+                                Authorization: `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            }
+                        }
+                    );
+                    console.log('Aktuell-Filter erstellt');
+                }
+            } catch (error) {
+                console.error('Fehler beim Erstellen der Standard-Filter:', error);
+            }
+        };
+
+        createStandardFilters();
     }, []);
 
     const getStatusColor = (status: Task['status']) => {
@@ -179,35 +251,17 @@ const Worktracker: React.FC = () => {
 
     const handleStatusChange = async (taskId: number, newStatus: Task['status']) => {
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setError('Nicht authentifiziert');
-                return;
-            }
-
-            await axios.put(API_ENDPOINTS.TASKS.BY_ID(taskId), 
-                { status: newStatus },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-
-            await fetchTasks();
-        } catch (err) {
-            console.error('Status Update Error:', err);
-            if (axios.isAxiosError(err)) {
-                setError(`Fehler beim Aktualisieren des Status: ${err.response?.data?.message || err.message}`);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            await axiosInstance.patch(API_ENDPOINTS.TASKS.BY_ID(taskId), { status: newStatus });
+            // Aktualisiere die Aufgabenliste
+            loadTasks();
+        } catch (error) {
+            console.error('Fehler beim Aktualisieren des Status:', error);
+            toast.error('Fehler beim Aktualisieren des Status');
         }
     };
 
     const handleEditClick = (task: Task) => {
-        setSelectedTask(task);
+        setCurrentTask(task);
         setIsEditModalOpen(true);
     };
 
@@ -713,10 +767,10 @@ const Worktracker: React.FC = () => {
             );
 
             // Erfolgreich kopiert, Tasks neu laden
-            fetchTasks();
+            loadTasks();
             
             // Bearbeitungsmodal für den kopierten Task öffnen
-            setSelectedTask(response.data);
+            setCurrentTask(response.data);
             setIsEditModalOpen(true);
             
         } catch (err) {
@@ -726,6 +780,34 @@ const Worktracker: React.FC = () => {
             } else {
                 setError('Ein unerwarteter Fehler ist aufgetreten');
             }
+        }
+    };
+
+    const handleDeleteTask = async (taskId: number) => {
+        if (window.confirm('Sind Sie sicher, dass Sie diese Aufgabe löschen möchten?')) {
+            try {
+                await axiosInstance.delete(API_ENDPOINTS.TASKS.BY_ID(taskId));
+                toast.success('Aufgabe erfolgreich gelöscht');
+                // Aktualisiere die Aufgabenliste
+                loadTasks();
+            } catch (error) {
+                console.error('Fehler beim Löschen der Aufgabe:', error);
+                toast.error('Fehler beim Löschen der Aufgabe');
+            }
+        }
+    };
+
+    const handleSaveTask = async (task: Task) => {
+        try {
+            await axiosInstance.put(API_ENDPOINTS.TASKS.BY_ID(task.id), task);
+            // Aktualisiere die Aufgabenliste
+            loadTasks();
+            setIsEditModalOpen(false);
+            setCurrentTask(null);
+            toast.success('Aufgabe erfolgreich aktualisiert');
+        } catch (error) {
+            console.error('Fehler beim Speichern der Aufgabe:', error);
+            toast.error('Fehler beim Speichern der Aufgabe');
         }
     };
 
@@ -763,7 +845,7 @@ const Worktracker: React.FC = () => {
                                 <input
                                     type="text"
                                     placeholder="Suchen..."
-                                    className="px-3 py-2 border rounded-md h-10 w-full sm:w-auto"
+                                    className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -802,8 +884,17 @@ const Worktracker: React.FC = () => {
                                 onReset={resetFilterConditions}
                                 savedConditions={filterConditions}
                                 savedOperators={filterLogicalOperators}
+                                tableId={TODOS_TABLE_ID}
                             />
                         )}
+                        
+                        {/* Gespeicherte Filter als Tags anzeigen */}
+                        <SavedFilterTags
+                            tableId={TODOS_TABLE_ID}
+                            onSelectFilter={applyFilterConditions}
+                            onReset={resetFilterConditions}
+                            defaultFilterName="Aktuell"
+                        />
                         
                         {/* Tabelle */}
                         <div className="mt-4 overflow-x-auto">
@@ -1025,7 +1116,7 @@ const Worktracker: React.FC = () => {
                                 <input
                                     type="text"
                                     placeholder="Suchen..."
-                                    className="px-3 py-2 border rounded-md h-10 w-full sm:w-auto"
+                                    className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -1064,8 +1155,17 @@ const Worktracker: React.FC = () => {
                                 onReset={resetFilterConditions}
                                 savedConditions={filterConditions}
                                 savedOperators={filterLogicalOperators}
+                                tableId={TODOS_TABLE_ID}
                             />
                         )}
+
+                        {/* Gespeicherte Filter als Tags anzeigen */}
+                        <SavedFilterTags
+                            tableId={TODOS_TABLE_ID}
+                            onSelectFilter={applyFilterConditions}
+                            onReset={resetFilterConditions}
+                            defaultFilterName="Aktuell"
+                        />
 
                         {/* Tabelle */}
                         <div className="mt-4 overflow-x-auto">
@@ -1251,18 +1351,18 @@ const Worktracker: React.FC = () => {
             <CreateTaskModal 
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
-                onTaskCreated={fetchTasks}
+                onTaskCreated={loadTasks}
             />
             
-            {selectedTask && (
+            {currentTask && (
                 <EditTaskModal
                     isOpen={isEditModalOpen}
                     onClose={() => {
                         setIsEditModalOpen(false);
-                        setSelectedTask(null);
+                        setCurrentTask(null);
                     }}
-                    onTaskUpdated={fetchTasks}
-                    task={selectedTask}
+                    onTaskUpdated={loadTasks}
+                    task={currentTask}
                 />
             )}
         </div>

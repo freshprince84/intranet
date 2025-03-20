@@ -222,45 +222,54 @@ Dieser Box-Typ wird für Komponenten mit tabellarischen Daten verwendet, wie Req
 
 **Beispiel-Code:**
 ```jsx
-<div className="bg-white rounded-lg shadow p-6">
-  <div className="flex items-center justify-between mb-4">
-    <div className="flex items-center">
-      <button className="bg-white text-blue-500 border border-blue-300 rounded-full p-1.5 mr-3">
-        <PlusIcon className="h-5 w-5" />
-      </button>
-      <h2 className="text-xl font-semibold flex items-center">
-        <ClipboardListIcon className="h-6 w-6 mr-2" />
-        Tasks
-      </h2>
+<div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+    <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+            {canCreateTask && (
+                <button
+                    type="button"
+                    onClick={handleCreateTask}
+                    className="h-8 px-3 py-1.5 bg-primary-600 text-white text-sm font-medium rounded-md border border-transparent shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex items-center justify-center"
+                    title="Neues To Do erstellen"
+                    aria-label="Neues To Do erstellen"
+                >
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    Neu
+                </button>
+            )}
+            <h2 className="text-xl font-semibold flex items-center">
+                <ClipboardDocumentListIcon className="h-6 w-6 mr-2" />
+                To Do's
+            </h2>
+        </div>
+        <div className="flex space-x-2 items-center">
+            <input
+                type="text"
+                placeholder="Suchen..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="border rounded px-2 py-1 text-sm w-40"
+            />
+            <button 
+                onClick={toggleStatusFilter}
+                className="p-2 rounded-md border"
+            >
+                <FunnelIcon className="h-5 w-5 text-gray-500" />
+            </button>
+            <button 
+                onClick={toggleColumnSettings}
+                className="p-2 rounded-md border"
+            >
+                <Cog6ToothIcon className="h-5 w-5 text-gray-500" />
+            </button>
+        </div>
     </div>
     
-    <div className="flex items-center space-x-2">
-      <input 
-        type="text" 
-        placeholder="Suchen..." 
-        className="border rounded px-2 py-1 text-sm"
-      />
-      <button className="p-2 rounded-md border">
-        <FunnelIcon className="h-5 w-5 text-gray-500" />
-      </button>
-      <button className="p-2 rounded-md border">
-        <Cog6ToothIcon className="h-5 w-5 text-gray-500" />
-      </button>
+    <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            {/* Tabellen-Inhalt */}
+        </table>
     </div>
-  </div>
-  
-  <div className="overflow-x-auto">
-    <table className="min-w-full divide-y divide-gray-200">
-      <thead className="bg-gray-50">
-        <tr>
-          {/* Spaltenüberschriften */}
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-gray-200">
-        {/* Tabellenzeilen */}
-      </tbody>
-    </table>
-  </div>
 </div>
 ```
 
@@ -353,12 +362,16 @@ Die Tasks-Box auf der Worktracker-Seite und die Requests-Box auf der Dashboard-S
 <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
     <div className="flex items-center justify-between mb-4">
         <div className="flex items-center">
-            {hasPermission('task', 'write') && (
-                <button 
-                    onClick={openCreateTaskModal}
-                    className="bg-white text-blue-500 border border-blue-300 rounded-full p-1.5 mr-3"
+            {canCreateTask && (
+                <button
+                    type="button"
+                    onClick={handleCreateTask}
+                    className="h-8 px-3 py-1.5 bg-primary-600 text-white text-sm font-medium rounded-md border border-transparent shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 flex items-center justify-center"
+                    title="Neues To Do erstellen"
+                    aria-label="Neues To Do erstellen"
                 >
-                    <PlusIcon className="h-5 w-5" />
+                    <PlusIcon className="h-4 w-4 mr-1" />
+                    Neu
                 </button>
             )}
             <h2 className="text-xl font-semibold flex items-center">
@@ -396,6 +409,313 @@ Die Tasks-Box auf der Worktracker-Seite und die Requests-Box auf der Dashboard-S
     </div>
 </div>
 ```
+
+### Status-Badges in Tabellen
+
+```css
+/* Status-Indikator */
+.status-badge {
+  display: inline-flex;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Status-Farben */
+.status-open { background-color: #FEF3C7; color: #92400E; }
+.status-in-progress { background-color: #DBEAFE; color: #1E40AF; }
+.status-done { background-color: #D1FAE5; color: #065F46; }
+.status-to-check { background-color: #FEE2E2; color: #991B1B; }
+
+/* Dark Mode */
+.dark .status-open { background-color: #78350F; color: #FEF3C7; }
+.dark .status-in-progress { background-color: #1E3A8A; color: #DBEAFE; }
+.dark .status-done { background-color: #064E3B; color: #D1FAE5; }
+.dark .status-to-check { background-color: #7F1D1D; color: #FEE2E2; }
+```
+
+### Status-Badges in Tabellen
+
+Alle Status-Badges in Tabellen müssen folgendem Muster entsprechen:
+
+```jsx
+<span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(status)} status-col`}>
+    {getStatusText(status, processType)}
+</span>
+```
+
+Die Statusfarben werden über eine zentrale Funktion bestimmt:
+
+```javascript
+// Funktion zum Bestimmen der Status-Farbe
+const getStatusColor = (status: string) => {
+    switch(status) {
+        // Task Status-Farben
+        case 'open':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'in_progress':
+            return 'bg-blue-100 text-blue-800';
+        case 'improval':
+            return 'bg-red-100 text-red-800';
+        case 'quality_control':
+            return 'bg-purple-100 text-purple-800';
+        case 'done':
+            return 'bg-green-100 text-green-800';
+            
+        // Request Status-Farben
+        case 'approval':
+            return 'bg-orange-100 text-orange-800';
+        case 'approved':
+            return 'bg-green-100 text-green-800';
+        case 'to_improve':
+            return 'bg-red-100 text-red-800';
+        case 'denied':
+            return 'bg-gray-100 text-gray-800';
+            
+        // Fallback
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
+};
+
+// Funktion zum Bestimmen des Status-Textes
+const getStatusText = (status: string, processType?: 'task' | 'request' | 'default') => {
+    // Tasks
+    if (processType === 'task') {
+        switch(status) {
+            case 'open': return 'Offen';
+            case 'in_progress': return 'In Bearbeitung';
+            case 'improval': return 'Zu verbessern';
+            case 'quality_control': return 'Qualitätskontrolle';
+            case 'done': return 'Erledigt';
+            default: return status;
+        }
+    }
+    
+    // Requests
+    if (processType === 'request') {
+        switch(status) {
+            case 'approval': return 'Zur Genehmigung';
+            case 'approved': return 'Genehmigt';
+            case 'to_improve': return 'Zu verbessern';
+            case 'denied': return 'Abgelehnt';
+            default: return status;
+        }
+    }
+    
+    // Default: Return capitalized status
+    return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
+};
+```
+
+### Erweiterte Tabellenfunktionen
+
+#### Tabellen-Filter-System
+
+Alle Tabellen mit Filterfunktionalität müssen dem folgenden Standard entsprechen:
+
+##### 1. Filter-Button und konditionales Panel
+
+```jsx
+{/* Filter-Button mit aktivem Indikator */}
+<button
+    className={`p-2 rounded-md border ${activeFilters > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
+    onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+    title="Filter"
+>
+    <FunnelIcon className="h-5 w-5" />
+    {activeFilters > 0 && (
+        <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+            {activeFilters}
+        </span>
+    )}
+</button>
+
+{/* Konditionales Filter-Panel */}
+{isFilterPanelOpen && (
+    <FilterPane
+        columns={availableColumns}
+        onApply={applyFilterConditions}
+        onReset={resetFilterConditions}
+        savedConditions={currentConditions}
+        savedOperators={currentOperators}
+        tableId={TABLE_ID}
+    />
+)}
+
+{/* Gespeicherte Filter */}
+<SavedFilterTags
+    tableId={TABLE_ID}
+    onSelectFilter={applyFilterConditions}
+    onReset={resetFilterConditions}
+/>
+```
+
+##### 2. Filter-Komponenten
+
+Das Filtersystem besteht aus drei Hauptkomponenten:
+
+1. **FilterPane.tsx**: Container für Filterbedingungen
+   - Verwaltet Filterbedingungen und logische Operatoren
+   - Ermöglicht das Speichern von Filtern
+   - Stellt Schnittstellen zum Anwenden und Zurücksetzen bereit
+
+2. **FilterRow.tsx**: Einzelne Filterbedingung 
+   - Rendert Spaltenauswahl, Operator und Wert-Eingabe
+   - Passt Eingabefelder dynamisch an Datentypen an
+   - Bietet Hinzufügen/Entfernen-Funktionalität
+
+3. **SavedFilterTags.tsx**: Gespeicherte Filter anzeigen
+   - Zeigt gespeicherte Filter als interaktive Tags
+   - Ermöglicht das Löschen von Filtern
+   - Visuelles Feedback für aktiv ausgewählte Filter
+
+##### 3. Filterdaten-Struktur
+
+```typescript
+// Filterbedingung
+interface FilterCondition {
+  column: string;
+  operator: string;
+  value: string | number | Date | null;
+}
+
+// Logische Operatoren zwischen Bedingungen
+type LogicalOperator = 'AND' | 'OR';
+
+// Gespeicherter Filter
+interface SavedFilter {
+  id: number;
+  name: string;
+  tableId: string;
+  conditions: FilterCondition[];
+  operators: LogicalOperator[];
+}
+```
+
+##### 4. Typsicherheit und Konsistenz
+
+- Alle Filterbedingungen werden typisiert gespeichert
+- Filter werden tabellenspezifisch durch tableId zugeordnet 
+- Operatoren sind auf 'AND' | 'OR' beschränkt
+- Eingabefelder passen sich dem Datentyp der Spalte an
+
+#### Drag & Drop für Tabellenspalten
+
+Alle Tabellen mit anpassbarer Spaltenanordnung müssen das folgende Drag & Drop-System implementieren:
+
+##### 1. Spalten-Header mit Drag & Drop-Funktionalität
+
+```jsx
+<th 
+    key={columnId}
+    scope="col"
+    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100' : ''}`}
+    draggable={true}
+    onDragStart={() => handleDragStart(columnId)}
+    onDragOver={(e) => handleDragOver(e, columnId)}
+    onDrop={(e) => handleDrop(e, columnId)}
+    onDragEnd={handleDragEnd}
+>
+    <div className="flex items-center">
+        {column.label}
+        {/* Optional: Sortier-Icon */}
+        {columnId !== 'actions' && (
+            <button 
+                onClick={() => handleSort(columnId)}
+                className="ml-1 focus:outline-none"
+            >
+                <ArrowsUpDownIcon className="h-4 w-4 text-gray-400" />
+            </button>
+        )}
+    </div>
+</th>
+```
+
+##### 2. Event-Handler für Drag & Drop
+
+```typescript
+// Spaltenordnung verwalten
+const [columnOrder, setColumnOrder] = useState<string[]>(defaultColumnOrder);
+const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+
+// Event-Handler für Drag & Drop
+const handleDragStart = (columnId: string) => {
+    setDraggedColumn(columnId);
+};
+
+const handleDragOver = (e: React.DragEvent, columnId: string) => {
+    e.preventDefault();
+    setDragOverColumn(columnId);
+};
+
+const handleDrop = (e: React.DragEvent, targetColumnId: string) => {
+    e.preventDefault();
+    
+    if (!draggedColumn || draggedColumn === targetColumnId) return;
+    
+    const newColumnOrder = [...columnOrder];
+    const draggedIndex = newColumnOrder.indexOf(draggedColumn);
+    const targetIndex = newColumnOrder.indexOf(targetColumnId);
+    
+    if (draggedIndex !== -1 && targetIndex !== -1) {
+        // Entferne die verschobene Spalte
+        newColumnOrder.splice(draggedIndex, 1);
+        // Füge sie an der neuen Position ein
+        newColumnOrder.splice(targetIndex, 0, draggedColumn);
+        
+        setColumnOrder(newColumnOrder);
+        
+        // Optional: Speichere die neue Spaltenreihenfolge
+        saveColumnOrder(newColumnOrder);
+    }
+    
+    setDragOverColumn(null);
+};
+
+const handleDragEnd = () => {
+    setDraggedColumn(null);
+    setDragOverColumn(null);
+};
+```
+
+##### 3. Persistenz der Spaltenanordnung
+
+Die benutzerdefinierte Spaltenanordnung muss gespeichert werden, entweder:
+
+- In der Benutzersitzung (localStorage)
+- In der Datenbank (UserTableSettings)
+
+```typescript
+// Speichern der Einstellungen
+const saveColumnOrder = async (columnOrder: string[]) => {
+    try {
+        // API-Aufruf zum Speichern der Benutzereinstellungen
+        await axios.post(`${API_URL}/api/user-table-settings`, {
+            tableId: TABLE_ID,
+            columnOrder: JSON.stringify(columnOrder)
+        });
+    } catch (err) {
+        console.error('Fehler beim Speichern der Spaltenanordnung:', err);
+        // Alternativ: In localStorage speichern
+        localStorage.setItem(`${TABLE_ID}_columnOrder`, JSON.stringify(columnOrder));
+    }
+};
+```
+
+##### 4. Visuelles Feedback
+
+- Drag-Over-Zustand muss visuell hervorgehoben werden (z.B. mit bg-blue-100)
+- Der Cursor sollte sich beim Drag & Drop entsprechend ändern
+- Zugänglichkeitsinformationen sollten für Screenreader-Nutzer bereitgestellt werden
+
+##### 5. Responsives Verhalten
+
+- Auf mobilen Geräten sollten ggf. kürzere Labels verwendet werden
+- Die Drag & Drop-Funktionalität sollte auf Touch-Geräten getestet werden
+- Auf sehr kleinen Bildschirmen kann die Funktionalität optional deaktiviert werden
 
 ## Tabellen-Design
 
@@ -473,59 +793,76 @@ tbody tr:hover {
 
 ### Status-Badges in Tabellen
 
-```css
-/* Status-Indikator */
-.status-badge {
-  display: inline-flex;
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-}
-
-/* Status-Farben */
-.status-open { background-color: #FEF3C7; color: #92400E; }
-.status-in-progress { background-color: #DBEAFE; color: #1E40AF; }
-.status-done { background-color: #D1FAE5; color: #065F46; }
-.status-to-check { background-color: #FEE2E2; color: #991B1B; }
-
-/* Dark Mode */
-.dark .status-open { background-color: #78350F; color: #FEF3C7; }
-.dark .status-in-progress { background-color: #1E3A8A; color: #DBEAFE; }
-.dark .status-done { background-color: #064E3B; color: #D1FAE5; }
-.dark .status-to-check { background-color: #7F1D1D; color: #FEE2E2; }
-```
-
-### Beispiel-Implementierung
-
-Die Tasks-Tabelle auf der Worktracker-Seite und die Requests-Tabelle auf der Dashboard-Seite dienen als Referenzimplementierungen.
+Alle Status-Badges in Tabellen müssen folgendem Muster entsprechen:
 
 ```jsx
-<div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-    <div className="flex items-center justify-between mb-4">
-        <h2 className="text-xl font-semibold flex items-center">
-            <ClipboardDocumentListIcon className="h-6 w-6 mr-2" />
-            To Do's
-        </h2>
-        {/* Filter und Suchoptionen */}
-    </div>
+<span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(status)} status-col`}>
+    {getStatusText(status, processType)}
+</span>
+```
+
+Die Statusfarben werden über eine zentrale Funktion bestimmt:
+
+```javascript
+// Funktion zum Bestimmen der Status-Farbe
+const getStatusColor = (status: string) => {
+    switch(status) {
+        // Task Status-Farben
+        case 'open':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'in_progress':
+            return 'bg-blue-100 text-blue-800';
+        case 'improval':
+            return 'bg-red-100 text-red-800';
+        case 'quality_control':
+            return 'bg-purple-100 text-purple-800';
+        case 'done':
+            return 'bg-green-100 text-green-800';
+            
+        // Request Status-Farben
+        case 'approval':
+            return 'bg-orange-100 text-orange-800';
+        case 'approved':
+            return 'bg-green-100 text-green-800';
+        case 'to_improve':
+            return 'bg-red-100 text-red-800';
+        case 'denied':
+            return 'bg-gray-100 text-gray-800';
+            
+        // Fallback
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
+};
+
+// Funktion zum Bestimmen des Status-Textes
+const getStatusText = (status: string, processType?: 'task' | 'request' | 'default') => {
+    // Tasks
+    if (processType === 'task') {
+        switch(status) {
+            case 'open': return 'Offen';
+            case 'in_progress': return 'In Bearbeitung';
+            case 'improval': return 'Zu verbessern';
+            case 'quality_control': return 'Qualitätskontrolle';
+            case 'done': return 'Erledigt';
+            default: return status;
+        }
+    }
     
-    <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-800">
-                <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Titel
-                    </th>
-                    {/* Weitere Spaltenüberschriften */}
-                </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                {/* Tabellenzeilen */}
-            </tbody>
-        </table>
-    </div>
-</div>
+    // Requests
+    if (processType === 'request') {
+        switch(status) {
+            case 'approval': return 'Zur Genehmigung';
+            case 'approved': return 'Genehmigt';
+            case 'to_improve': return 'Zu verbessern';
+            case 'denied': return 'Abgelehnt';
+            default: return status;
+        }
+    }
+    
+    // Default: Return capitalized status
+    return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
+};
 ```
 
 ## Page-Design
@@ -602,6 +939,114 @@ Die Worktracker-Seite dient als Referenzimplementierung für das Page-Design, in
 
 ## Formulare und Eingabefelder
 
+### Standardeingabefelder
+
+Alle Eingabefelder müssen dem folgenden Design entsprechen:
+
+```css
+.input-field {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  outline: none;
+}
+
+.input-field:focus {
+  border-color: #3B82F6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Dark Mode */
+.dark .input-field {
+  background-color: #374151;
+  border-color: #4B5563;
+  color: #F9FAFB;
+}
+```
+
+### Eingabefeldgrößen
+
+- **XS**: Höhe 24px, Padding 0.25rem, Schriftgröße 0.75rem
+- **SM**: Höhe 32px, Padding 0.375rem, Schriftgröße 0.875rem (Standard)
+- **MD**: Höhe 40px, Padding 0.5rem, Schriftgröße 1rem
+- **LG**: Höhe 48px, Padding 0.75rem, Schriftgröße 1.125rem
+
+### Suchfeld-Design
+
+Alle Suchfelder in der Anwendung müssen ein konsistentes Design aufweisen, um die Benutzerfreundlichkeit zu verbessern und ein einheitliches Erscheinungsbild zu gewährleisten.
+
+#### Standard-Suchfeld-Design
+
+Suchfelder sollten folgendes Design haben:
+
+```css
+.search-field {
+  width: 200px;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #D1D5DB;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  background-color: white;
+  color: #111827;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.search-field:focus {
+  outline: none;
+  ring-width: 2px;
+  ring-color: #3B82F6;
+  border-color: #3B82F6;
+}
+
+/* Dark Mode */
+.dark .search-field {
+  background-color: #1F2937;
+  border-color: #4B5563;
+  color: #F9FAFB;
+}
+```
+
+#### Tailwind CSS Klassen für Suchfelder
+
+Für ein Standard-Suchfeld sollten folgende Tailwind-Klassen verwendet werden:
+
+```css
+w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white
+```
+
+#### Responsive Anpassung
+
+- **Desktop**: Feste Breite 200px
+- **Mobile**: Skaliert auf 100% Breite oder minimale Breite von 120px
+
+#### Platzierung in Komponenten
+
+Suchfelder sollten konsistent platziert werden:
+
+- **In Tabellen-Boxen**: Rechtsbündig in der Titelzeile, neben Filter- und Einstellungs-Buttons
+- **In anderen Komponenten**: Je nach Kontext, aber mit konsistentem Abstand zu anderen Elementen (8px)
+
+#### Beispiel-Implementierung
+
+Die Suchleiste in der Workcenter-Box dient als Referenzimplementierung:
+
+```jsx
+<input
+  type="text"
+  className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+  placeholder="Suchen..."
+  value={searchTerm}
+  onChange={(e) => setSearchTerm(e.target.value)}
+/>
+```
+
+### Labels
+
+Alle Beschriftungen müssen dem folgenden Design entsprechen:
+
 ```css
 /* Label */
 label {
@@ -612,74 +1057,9 @@ label {
   margin-bottom: 0.5rem;
 }
 
-/* Eingabefeld */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="number"],
-input[type="date"],
-input[type="week"],
-textarea,
-select {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #D1D5DB;
-  border-radius: 0.375rem;
-  background-color: white;
-  font-size: 0.875rem;
-  color: #111827;
-  height: 2.5rem;
-}
-
-/* Fokus-Zustand */
-input:focus,
-textarea:focus,
-select:focus {
-  outline: none;
-  ring: 2px;
-  ring-offset: 2px;
-  ring-color: #3B82F6;
-  border-color: #3B82F6;
-}
-
-/* Fehler-Zustand */
-.input-error {
-  border-color: #EF4444;
-}
-
-.error-message {
-  color: #EF4444;
-  font-size: 0.75rem;
-  margin-top: 0.25rem;
-}
-
 /* Dark Mode */
 .dark label {
   color: #D1D5DB;
-}
-
-.dark input,
-.dark textarea,
-.dark select {
-  background-color: #1F2937;
-  border-color: #4B5563;
-  color: #F9FAFB;
-}
-
-/* Mobile Ansicht */
-@media (max-width: 640px) {
-  input[type="text"],
-  input[type="email"],
-  input[type="password"],
-  input[type="number"],
-  input[type="date"],
-  input[type="week"],
-  textarea,
-  select {
-    font-size: 0.75rem;
-    height: 1.9rem;
-    padding: 0.25rem 0.5rem;
-  }
 }
 ```
 
@@ -1400,6 +1780,10 @@ Sidepanes werden für interaktive Eingaben verwendet, die den Benutzer nicht vol
 .dark .sidepane-title {
   color: #F9FAFB;
 }
+
+.dark .sidepane-overlay {
+  background-color: rgba(0, 0, 0, 0.6);
+}
 ```
 
 ### Verwendungsrichtlinien
@@ -1466,3 +1850,109 @@ Diese neuen Richtlinien für Sidepanes gelten für folgende Komponenten im Syste
 2. Erweiterte Filter-Ansichten für Tabellendaten
 3. Informationsansichten für Datensätze
 4. Bearbeitungsformulare für Einträge in Listen und Tabellen
+
+## Dateianhang-Komponenten
+
+Die Dateianhang-Komponenten bieten eine konsistente Benutzeroberfläche für das Hochladen, Anzeigen und Verwalten von Dateianhängen in der gesamten Anwendung.
+
+### Gestalterische Grundsätze
+
+```css
+/* Anhang-Container */
+.attachments-container {
+  margin-top: 1rem;
+  border-top: 1px solid #E5E7EB;
+  padding-top: 1rem;
+}
+
+/* Anhang-Liste */
+.attachments-list {
+  margin-top: 0.5rem;
+  border: 1px solid #E5E7EB;
+  border-radius: 0.375rem;
+  overflow: hidden;
+}
+
+/* Anhang-Eintrag */
+.attachment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #E5E7EB;
+}
+
+.attachment-item:last-child {
+  border-bottom: none;
+}
+
+/* Anhang-Info */
+.attachment-info {
+  display: flex;
+  align-items: center;
+}
+
+.attachment-icon {
+  color: #6B7280;
+  margin-right: 0.5rem;
+}
+
+.attachment-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #111827;
+}
+
+.attachment-size {
+  font-size: 0.75rem;
+  color: #6B7280;
+  margin-left: 0.5rem;
+}
+
+/* Anhang-Aktionen */
+.attachment-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.attachment-action-button {
+  background: none;
+  border: none;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.attachment-action-button.download {
+  color: #2563EB;
+}
+
+.attachment-action-button.delete {
+  color: #DC2626;
+}
+
+/* Hinweistext */
+.attachment-tip {
+  font-size: 0.75rem;
+  color: #6B7280;
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+```
+
+### Standardplatzierung
+
+- **Position**: Unterhalb des Beschreibungsfelds
+- **Benutzerhilfe**: Hinweistext "Tipp: Bilder können direkt per Copy & Paste oder Drag & Drop eingefügt werden!"
+- **Vorschau**: Bilder werden als inline-Markdown im Beschreibungsfeld dargestellt
+- **Aktionen**: "Herunterladen" und "Entfernen" für jeden Anhang
+- **Mobile-Ansicht**: Vollständig responsiv, passt sich an kleinere Bildschirme an
+
+### Verwendungsrichtlinien
+
+1. **Formular-Integration**: Dateianhang-Komponenten sollten in Formularen unter dem Haupttextbereich platziert werden
+2. **Hilfetexte**: Bieten Sie Benutzern Hinweise zur Verwendung der Drag & Drop und Copy & Paste Funktionen
+3. **Rückmeldung**: Zeigen Sie visuelle Rückmeldung während des Uploads
+4. **Vorschau**: Bieten Sie eine Vorschau für Bildanhänge direkt im Textfeld
+5. **Fehlerbehandlung**: Zeigen Sie Fehlermeldungen bei fehlgeschlagenen Uploads klar an

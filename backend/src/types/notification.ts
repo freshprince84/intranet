@@ -7,6 +7,8 @@ export interface NotificationCreateInput {
   type: NotificationType;
   relatedEntityId?: number;
   relatedEntityType?: string;
+  targetId?: number;
+  targetType?: string;
 }
 
 export interface NotificationUpdateInput {

@@ -106,6 +106,8 @@ Im System sind folgende UI-Komponenten implementiert:
 - **Team-Worktime-Control**: Verwaltung von Teammitglieder-Arbeitszeiten
 - **Lohnabrechnung**: Integration für Schweiz und Kolumbien
 - **Dokumentenerkennung**: KI-basierte Erkennung und Verwaltung von Identifikationsdokumenten
+- **Anhang-Management**: Integrierte Dateianhangsverwaltung für Tasks und Requests mit Drag & Drop, Copy & Paste und automatischer Synchronisierung
+- **Erweitertes Filtersystem**: Speicherbare und wiederverwendbare Filter für Requests, Workcenter und Rollen mit Standard-Filtern
 
 ### Benutzereinstellungen
 - Profilmanagement

@@ -2,12 +2,15 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { roleApi } from '../api/apiClient.ts';
 import { Role, AccessLevel } from '../types/interfaces.ts';
 import { PencilIcon, TrashIcon, PlusIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { API_URL } from '../config/api.ts';
+import { API_URL, API_ENDPOINTS } from '../config/api.ts';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
 import TableColumnConfig from '../components/TableColumnConfig.tsx';
+import FilterPane from '../components/FilterPane.tsx';
+import SavedFilterTags from '../components/SavedFilterTags.tsx';
+import { FilterCondition } from '../components/FilterRow.tsx';
 import { useError } from '../contexts/ErrorContext.tsx';
 import { ErrorCategory } from '../services/ErrorHandler.ts';
 import { 
@@ -47,7 +50,8 @@ const tableToPageMapping = {
   'tasks': 'worktracker'
 };
 
-
+// TableID für gespeicherte Filter
+const ROLES_TABLE_ID = 'roles-table';
 
 interface RoleFormData {
   name: string;
@@ -182,6 +186,10 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     description: ''
   });
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  
+  // Neue State-Variablen für erweiterte Filterbedingungen
+  const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
+  const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
   
   // Responsiveness Hook
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
@@ -439,8 +447,8 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         return;
       }
       
-      // Bei Mock-Daten lokales Löschen
-      if (mockRoles.some(r => r.id === roleId)) {
+      // Bei Mock-Daten lokales Löschen (wird nicht verwendet)
+      if (false) {
         console.log('Lösche Mock-Rolle');
         const updatedRoles = roles.filter(role => role.id !== roleId);
         setRoles(updatedRoles);
@@ -678,14 +686,76 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           if (!matchesSearch) return false;
         }
         
-        // Erweiterte Filterkriterien
-        if (activeFilters.name && !role.name.toLowerCase().includes(activeFilters.name.toLowerCase())) {
-          return false;
+        // Prüfe erweiterte Filterbedingungen, wenn vorhanden
+        if (filterConditions.length > 0) {
+          // Implementiere die logische Verknüpfung der Bedingungen (UND/ODER)
+          let result = filterConditions.length > 0;
+          
+          for (let i = 0; i < filterConditions.length; i++) {
+            const condition = filterConditions[i];
+            let conditionMet = false;
+            
+            switch (condition.column) {
+              case 'name':
+                if (condition.operator === 'equals') {
+                  conditionMet = role.name.toLowerCase() === (condition.value as string || '').toLowerCase();
+                } else if (condition.operator === 'contains') {
+                  conditionMet = role.name.toLowerCase().includes((condition.value as string || '').toLowerCase());
+                } else if (condition.operator === 'startsWith') {
+                  conditionMet = role.name.toLowerCase().startsWith((condition.value as string || '').toLowerCase());
+                }
+                break;
+              
+              case 'description':
+                if (!role.description) {
+                  conditionMet = false;
+                  break;
+                }
+                
+                if (condition.operator === 'equals') {
+                  conditionMet = role.description.toLowerCase() === (condition.value as string || '').toLowerCase();
+                } else if (condition.operator === 'contains') {
+                  conditionMet = role.description.toLowerCase().includes((condition.value as string || '').toLowerCase());
+                } else if (condition.operator === 'startsWith') {
+                  conditionMet = role.description.toLowerCase().startsWith((condition.value as string || '').toLowerCase());
+                }
+                break;
+              
+              case 'permissions':
+                // Vereinfachter Filter für Berechtigungen - zähle die Anzahl der Berechtigungen mit dem angegebenen Level
+                const accessLevel = condition.value as AccessLevel;
+                const count = role.permissions.filter(p => p.accessLevel === accessLevel).length;
+                
+                if (condition.operator === 'greaterThan') {
+                  conditionMet = count > 0;
+                } else if (condition.operator === 'equals') {
+                  conditionMet = count > 0;
+                }
+                break;
+            }
+            
+            // Verknüpfe das Ergebnis dieser Bedingung mit dem Gesamtergebnis
+            if (i === 0) {
+              result = conditionMet;
+            } else {
+              const operator = filterLogicalOperators[i - 1];
+              result = operator === 'AND' ? (result && conditionMet) : (result || conditionMet);
+            }
+          }
+          
+          if (!result) return false;
         }
-        
-        if (activeFilters.description && role.description && 
-          !role.description.toLowerCase().includes(activeFilters.description.toLowerCase())) {
-          return false;
+        // Wenn keine erweiterten Filterbedingungen, verwende die alten Filterkriterien
+        else if (activeFilters.name || activeFilters.description) {
+          // Erweiterte Filterkriterien
+          if (activeFilters.name && !role.name.toLowerCase().includes(activeFilters.name.toLowerCase())) {
+            return false;
+          }
+          
+          if (activeFilters.description && role.description && 
+            !role.description.toLowerCase().includes(activeFilters.description.toLowerCase())) {
+            return false;
+          }
         }
         
         return true;
@@ -693,7 +763,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       .sort((a, b) => {
         return a.name.localeCompare(b.name);
       });
-  }, [roles, searchTerm, activeFilters]);
+  }, [roles, searchTerm, activeFilters, filterConditions, filterLogicalOperators]);
 
   // Mobile Ansicht renderRoles-Funktion
   const renderRoles = () => {
@@ -845,6 +915,92 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     }
   };
 
+  // Standard-Filter erstellen und speichern
+  useEffect(() => {
+    const createStandardFilters = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          console.error('Nicht authentifiziert');
+          return;
+        }
+
+        // Prüfen, ob die Standard-Filter bereits existieren
+        const existingFiltersResponse = await axios.get(
+          `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(ROLES_TABLE_ID)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+        const existingFilters = existingFiltersResponse.data || [];
+        const alleFilterExists = existingFilters.some(filter => filter.name === 'Alle');
+
+        // Erstelle "Alle"-Filter, wenn er noch nicht existiert
+        if (!alleFilterExists) {
+          const alleFilter = {
+            tableId: ROLES_TABLE_ID,
+            name: 'Alle',
+            conditions: [],
+            operators: []
+          };
+
+          await axios.post(
+            `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+            alleFilter,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          console.log('Alle-Filter für Rollen erstellt');
+        }
+      } catch (error) {
+        console.error('Fehler beim Erstellen der Standard-Filter:', error);
+      }
+    };
+
+    createStandardFilters();
+  }, []);
+
+  // Funktion zum Anwenden von Filterbedingungen
+  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    setFilterConditions(conditions);
+    setFilterLogicalOperators(operators);
+    
+    // Aktualisiere auch die alten FilterState für Kompatibilität
+    const newFilterState: FilterState = {
+      name: '',
+      description: ''
+    };
+    
+    // Versuche, die alten Filter aus den neuen Bedingungen abzuleiten
+    conditions.forEach(condition => {
+      if (condition.column === 'name' && condition.operator === 'contains') {
+        newFilterState.name = condition.value as string || '';
+      } else if (condition.column === 'description' && condition.operator === 'contains') {
+        newFilterState.description = condition.value as string || '';
+      }
+    });
+    
+    setActiveFilters(newFilterState);
+  };
+  
+  // Funktion zum Zurücksetzen der Filter
+  const resetFilterConditions = () => {
+    setFilterConditions([]);
+    setFilterLogicalOperators([]);
+    setActiveFilters({
+      name: '',
+      description: ''
+    });
+  };
+
   return (
     <div>
       {/* Spaltenanzeige und Suche */}
@@ -873,7 +1029,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
             <input
               type="text"
               placeholder="Suchen..."
-              className="px-3 py-2 border rounded-md w-full sm:w-60"
+              className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -903,6 +1059,30 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           </div>
         </div>
 
+        {/* Filter-Modal */}
+        {isFilterModalOpen && (
+          <FilterPane
+            columns={[
+              { id: 'name', label: 'Name' },
+              { id: 'description', label: 'Beschreibung' },
+              { id: 'permissions', label: 'Berechtigungen' }
+            ]}
+            onApply={applyFilterConditions}
+            onReset={resetFilterConditions}
+            savedConditions={filterConditions}
+            savedOperators={filterLogicalOperators}
+            tableId={ROLES_TABLE_ID}
+          />
+        )}
+        
+        {/* Gespeicherte Filter als Tags anzeigen */}
+        <SavedFilterTags
+          tableId={ROLES_TABLE_ID}
+          onSelectFilter={applyFilterConditions}
+          onReset={resetFilterConditions}
+          defaultFilterName="Alle"
+        />
+
         {loading ? (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -911,50 +1091,6 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           renderRoles()
         )}
       </div>
-
-      {/* Filter-Pane */}
-      {isFilterModalOpen && (
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-6 mb-4 mt-2 transition-all duration-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border rounded-md"
-                value={filterState.name}
-                onChange={(e) => setFilterState({...filterState, name: e.target.value})}
-                placeholder="Nach Name filtern..."
-              />
-            </div>
-          
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Beschreibung</label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border rounded-md"
-                value={filterState.description}
-                onChange={(e) => setFilterState({...filterState, description: e.target.value})}
-                placeholder="Nach Beschreibung filtern..."
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 mt-4">
-            <button
-              onClick={resetFilters}
-              className="px-4 py-2 text-sm text-gray-700 hover:text-gray-900"
-            >
-              Filter zurücksetzen
-            </button>
-            <button
-              onClick={applyFilters}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
-            >
-              Filter anwenden
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Modal für Rollenerstellung/Bearbeitung */}
       {isModalOpen && (
