@@ -97,7 +97,7 @@ const CerebroHome: React.FC = () => {
       <GitHubMarkdownViewer 
         owner={GITHUB_OWNER}
         repo={GITHUB_REPO}
-        path="README.md"
+        path="docs/core/README.md"
         branch={GITHUB_BRANCH}
       />
     </div>
@@ -148,19 +148,19 @@ const GitHubFileView: React.FC = () => {
         // Fallback für den Fall, dass der Artikel nicht in der DB ist oder keinen githubPath hat
         // Lookup-Map für bekannte Markdown-Dateien und ihre richtigen Pfade
         const knownMdFiles: Record<string, {path: string, title: string}> = {
-          'readme': { path: 'README.md', title: 'Readme - Überblick' },
-          'project-setup': { path: 'PROJECT_SETUP.md', title: 'Projekt-Einrichtung' },
-          'dokumentationsstandards': { path: 'DOKUMENTATIONSSTANDARDS.md', title: 'Dokumentationsstandards' },
-          'design-standards': { path: 'DESIGN_STANDARDS.md', title: 'Design-Standards' },
-          'coding-standards': { path: 'CODING_STANDARDS.md', title: 'Coding-Standards' },
-          'modul-zeiterfassung': { path: 'MODUL_ZEITERFASSUNG.md', title: 'Modul: Zeiterfassung' },
-          'cerebro-wiki': { path: 'MODUL_CEREBRO.md', title: 'Cerebro Wiki-System' },
-          'modul-teamkontrolle': { path: 'MODUL_TEAMKONTROLLE.md', title: 'Modul: Teamkontrolle' },
-          'modul-abrechnung': { path: 'MODUL_ABRECHNUNG.md', title: 'Modul: Abrechnung' },
-          'db-schema': { path: 'DB_SCHEMA.md', title: 'Datenbankschema' },
-          'api-integration': { path: 'API_INTEGRATION.md', title: 'API-Integration' },
-          'role-switch': { path: 'ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität' },
-          'changelog': { path: 'CHANGELOG.md', title: 'Änderungshistorie' }
+          'readme': { path: 'docs/core/README.md', title: 'Readme - Überblick' },
+          'project-setup': { path: 'docs/core/ENTWICKLUNGSUMGEBUNG.md', title: 'Projekt-Einrichtung' },
+          'dokumentationsstandards': { path: 'docs/core/DOKUMENTATIONSSTANDARDS.md', title: 'Dokumentationsstandards' },
+          'design-standards': { path: 'docs/core/DESIGN_STANDARDS.md', title: 'Design-Standards' },
+          'coding-standards': { path: 'docs/core/CODING_STANDARDS.md', title: 'Coding-Standards' },
+          'modul-zeiterfassung': { path: 'docs/modules/MODUL_ZEITERFASSUNG.md', title: 'Modul: Zeiterfassung' },
+          'cerebro-wiki': { path: 'docs/modules/MODUL_CEREBRO.md', title: 'Cerebro Wiki-System' },
+          'modul-teamkontrolle': { path: 'docs/modules/MODUL_TEAMKONTROLLE.md', title: 'Modul: Teamkontrolle' },
+          'modul-abrechnung': { path: 'docs/modules/MODUL_ABRECHNUNG.md', title: 'Modul: Abrechnung' },
+          'db-schema': { path: 'docs/technical/DATENBANKSCHEMA.md', title: 'Datenbankschema' },
+          'api-integration': { path: 'docs/technical/API_REFERENZ.md', title: 'API-Referenz' },
+          'role-switch': { path: 'docs/modules/ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität' },
+          'changelog': { path: 'docs/core/CHANGELOG.md', title: 'Änderungshistorie' }
         };
         
         // HINWEIS: Diese Map dient nur als Fallback und sollte nach einem kompletten Datenbank-Update

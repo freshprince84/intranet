@@ -372,11 +372,11 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
           Zeiterfassungen ({filteredAndSortedWorktimes.length})
         </h3>
         
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center">
           {/* Filterschaltfläche */}
           <button
             type="button"
-            className="inline-flex items-center justify-center p-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             title="Filter anzeigen"
           >
@@ -384,7 +384,7 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
           </button>
           
           {/* Spaltenkonfiguration */}
-          <div className="relative inline-block">
+          <div className="ml-1">
             <TableColumnConfig
               columns={availableColumns}
               visibleColumns={columnOrder.filter(id => !hiddenColumns.includes(id))}

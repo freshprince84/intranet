@@ -85,7 +85,7 @@ const TeamWorktimeControl: React.FC = () => {
   }, [selectedDate, fetchAllWorktimes]);
   
   return (
-    <div className="min-h-screen">
+    <div className="h-auto">
       <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
         <div className="py-1">
           <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">

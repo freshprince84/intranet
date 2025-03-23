@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
 import TableColumnConfig from '../components/TableColumnConfig.tsx';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import WorktimeTracker from '../components/WorktimeTracker.tsx';
@@ -15,6 +15,7 @@ import FilterPane from '../components/FilterPane.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
 import SavedFilterTags from '../components/SavedFilterTags.tsx';
 import { toast } from 'react-toastify';
+import MarkdownPreview from '../components/MarkdownPreview.tsx';
 
 interface Task {
     id: number;
@@ -68,6 +69,12 @@ const availableColumns = [
     { id: 'branch', label: 'Niederlassung', shortLabel: 'Niedr.' },
     { id: 'dueDate', label: 'Fälligkeitsdatum', shortLabel: 'Fällig' },
     { id: 'actions', label: 'Aktionen', shortLabel: 'Akt.' },
+];
+
+// Definiere zusätzliche Spalten, die nur für den Filter verfügbar sind, nicht für die Tabellenanzeige
+const filterOnlyColumns = [
+    { id: 'responsible', label: 'Verantwortlicher', shortLabel: 'Ver.' },
+    { id: 'qualityControl', label: 'Qualitätskontrolle', shortLabel: 'QK' },
 ];
 
 // Standard-Spaltenreihenfolge
@@ -131,6 +138,7 @@ const Worktracker: React.FC = () => {
 
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+    const [displayLimit, setDisplayLimit] = useState<number>(10);
 
     // Funktion zum Neu Laden der Tasks
     const loadTasks = async () => {
@@ -505,30 +513,107 @@ const Worktracker: React.FC = () => {
                                 }
                                 break;
                             
-                            // Weitere Bedingungen für andere Spalten...
                             case 'responsible':
-                                const responsibleName = task.responsible
-                                    ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase()
-                                    : task.role
-                                        ? task.role.name.toLowerCase()
-                                        : '';
+                                const responsibleValue = condition.value as string || '';
                                 
-                                if (condition.operator === 'equals') {
-                                    conditionMet = responsibleName === (condition.value as string || '').toLowerCase();
+                                if (responsibleValue.startsWith('user-')) {
+                                    // Vergleiche mit Benutzer-ID
+                                    const userId = parseInt(responsibleValue.replace('user-', ''));
+                                    conditionMet = !!task.responsible && task.responsible.id === userId;
+                                } else if (responsibleValue.startsWith('role-')) {
+                                    // Vergleiche mit Rollen-ID
+                                    const roleId = parseInt(responsibleValue.replace('role-', ''));
+                                    conditionMet = !!task.role && task.role.id === roleId;
+                                } else if (responsibleValue === '') {
+                                    // Leerer Wert entspricht allen
+                                    conditionMet = true;
+                                } else if (condition.operator === 'equals') {
+                                    // Fallback für Texteingabe (alte Implementierung)
+                                    const responsibleName = task.responsible
+                                        ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase()
+                                        : task.role
+                                            ? task.role.name.toLowerCase()
+                                            : '';
+                                    conditionMet = responsibleName === responsibleValue.toLowerCase();
                                 } else if (condition.operator === 'contains') {
-                                    conditionMet = responsibleName.includes((condition.value as string || '').toLowerCase());
+                                    // Fallback für Texteingabe (alte Implementierung)
+                                    const responsibleName = task.responsible
+                                        ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase()
+                                        : task.role
+                                            ? task.role.name.toLowerCase()
+                                            : '';
+                                    conditionMet = responsibleName.includes(responsibleValue.toLowerCase());
                                 }
                                 break;
                             
                             case 'qualityControl':
-                                const qualityControlName = task.qualityControl
-                                    ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase()
-                                    : '';
+                                const qualityControlValue = condition.value as string || '';
                                 
-                                if (condition.operator === 'equals') {
-                                    conditionMet = qualityControlName === (condition.value as string || '').toLowerCase();
+                                if (qualityControlValue.startsWith('user-')) {
+                                    // Vergleiche mit Benutzer-ID
+                                    const userId = parseInt(qualityControlValue.replace('user-', ''));
+                                    conditionMet = !!task.qualityControl && task.qualityControl.id === userId;
+                                } else if (qualityControlValue === '') {
+                                    // Leerer Wert entspricht allen
+                                    conditionMet = true;
+                                } else if (condition.operator === 'equals') {
+                                    // Fallback für Texteingabe (alte Implementierung)
+                                    const qualityControlName = task.qualityControl
+                                        ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase()
+                                        : '';
+                                    conditionMet = qualityControlName === qualityControlValue.toLowerCase();
                                 } else if (condition.operator === 'contains') {
-                                    conditionMet = qualityControlName.includes((condition.value as string || '').toLowerCase());
+                                    // Fallback für Texteingabe (alte Implementierung)
+                                    const qualityControlName = task.qualityControl
+                                        ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase()
+                                        : '';
+                                    conditionMet = qualityControlName.includes(qualityControlValue.toLowerCase());
+                                }
+                                break;
+                            
+                            // Für den kombinierten Filter responsibleAndQualityControl
+                            case 'responsibleAndQualityControl':
+                                const combinedValue = condition.value as string || '';
+                                
+                                if (combinedValue.startsWith('user-')) {
+                                    // Vergleiche mit Benutzer-ID für beide Felder
+                                    const userId = parseInt(combinedValue.replace('user-', ''));
+                                    conditionMet = 
+                                        (!!task.responsible && task.responsible.id === userId) || 
+                                        (!!task.qualityControl && task.qualityControl.id === userId);
+                                } else if (combinedValue.startsWith('role-')) {
+                                    // Bei Rollen nur mit Verantwortlichem vergleichen
+                                    const roleId = parseInt(combinedValue.replace('role-', ''));
+                                    conditionMet = !!task.role && task.role.id === roleId;
+                                } else if (combinedValue === '') {
+                                    // Leerer Wert entspricht allen
+                                    conditionMet = true;
+                                } else if (condition.operator === 'equals') {
+                                    // Fallback für Texteingabe (alte Implementierung)
+                                    const responsibleName = task.responsible
+                                        ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase()
+                                        : task.role
+                                            ? task.role.name.toLowerCase()
+                                            : '';
+                                    const qualityControlName = task.qualityControl
+                                        ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase()
+                                        : '';
+                                    conditionMet = 
+                                        responsibleName === combinedValue.toLowerCase() || 
+                                        qualityControlName === combinedValue.toLowerCase();
+                                } else if (condition.operator === 'contains') {
+                                    // Fallback für Texteingabe (alte Implementierung)
+                                    const responsibleName = task.responsible
+                                        ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase()
+                                        : task.role
+                                            ? task.role.name.toLowerCase()
+                                            : '';
+                                    const qualityControlName = task.qualityControl
+                                        ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase()
+                                        : '';
+                                    conditionMet = 
+                                        responsibleName.includes(combinedValue.toLowerCase()) || 
+                                        qualityControlName.includes(combinedValue.toLowerCase());
                                 }
                                 break;
                             
@@ -841,7 +926,7 @@ const Worktracker: React.FC = () => {
                             </div>
                             
                             {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
-                            <div className="flex space-x-2 items-center">
+                            <div className="flex items-center gap-1.5">
                                 <input
                                     type="text"
                                     placeholder="Suchen..."
@@ -852,7 +937,7 @@ const Worktracker: React.FC = () => {
                                 
                                 {/* Filter-Button */}
                                 <button
-                                    className={`p-2 rounded-md border ${getActiveFilterCount() > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
+                                    className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
                                     onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
                                     title="Filter"
                                 >
@@ -865,21 +950,23 @@ const Worktracker: React.FC = () => {
                                 </button>
                                 
                                 {/* Spalten-Konfiguration */}
-                                <TableColumnConfig 
-                                    columns={availableColumns}
-                                    visibleColumns={visibleColumnIds}
-                                    columnOrder={settings.columnOrder}
-                                    onToggleColumnVisibility={toggleColumnVisibility}
-                                    onMoveColumn={handleMoveColumn}
-                                    onClose={() => {}}
-                                />
+                                <div className="ml-1">
+                                    <TableColumnConfig 
+                                        columns={availableColumns}
+                                        visibleColumns={visibleColumnIds}
+                                        columnOrder={settings.columnOrder}
+                                        onToggleColumnVisibility={toggleColumnVisibility}
+                                        onMoveColumn={handleMoveColumn}
+                                        onClose={() => {}}
+                                    />
+                                </div>
                             </div>
                         </div>
 
                         {/* Filter-Pane */}
                         {isFilterModalOpen && (
                             <FilterPane
-                                columns={availableColumns}
+                                columns={[...availableColumns, ...filterOnlyColumns]}
                                 onApply={applyFilterConditions}
                                 onReset={resetFilterConditions}
                                 savedConditions={filterConditions}
@@ -950,11 +1037,15 @@ const Worktracker: React.FC = () => {
                                     ) : filteredAndSortedTasks.length === 0 ? (
                                         <tr>
                                             <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500">
-                                                Keine Tasks gefunden.
+                                                <div className="flex flex-col items-center justify-center gap-4">
+                                                    <ClipboardDocumentListIcon className="h-10 w-10 text-gray-400" />
+                                                    <div className="text-sm">Keine To Do's gefunden</div>
+                                                </div>
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredAndSortedTasks.map((task) => (
+                                        <>
+                                        {filteredAndSortedTasks.slice(0, displayLimit).map((task) => (
                                             <tr key={task.id}>
                                                 {visibleColumnIds.map((columnId) => {
                                                     if (columnId === 'title') {
@@ -1033,11 +1124,17 @@ const Worktracker: React.FC = () => {
                                                                             </button>
                                                                             <div className="fixed opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50
                                                                                 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                                                                                <div className="bg-white border border-gray-200 rounded-md shadow-lg p-4 max-w-md
+                                                                                <div className="bg-white border border-gray-200 rounded-md shadow-lg p-4 
                                                                                     w-[80vw] max-w-[500px]">
-                                                                                    <div className="text-sm">
-                                                                                        {task.description || 'Keine Beschreibung vorhanden'}
-                                                                                    </div>
+                                                                                    {task.description ? (
+                                                                                        <MarkdownPreview 
+                                                                                            content={task.description}
+                                                                                            maxHeight="300px"
+                                                                                            showImagePreview={true}
+                                                                                        />
+                                                                                    ) : (
+                                                                                        <div className="text-sm">Keine Beschreibung vorhanden</div>
+                                                                                    )}
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -1067,11 +1164,24 @@ const Worktracker: React.FC = () => {
                                                     return null;
                                                 })}
                                             </tr>
-                                        ))
+                                        ))}
+                                        </>
                                     )}
                                 </tbody>
                             </table>
                         </div>
+                        
+                        {/* "Mehr anzeigen" Button - Mobil */}
+                        {filteredAndSortedTasks.length > displayLimit && (
+                            <div className="mt-4 flex justify-center">
+                                <button
+                                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50"
+                                    onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+                                >
+                                    Mehr anzeigen ({filteredAndSortedTasks.length - displayLimit} verbleibend)
+                                </button>
+                            </div>
+                        )}
                     </div>
                     
                     {/* Zeiterfassung - auf Mobilgeräten fixiert über dem Footermenü */}
@@ -1112,7 +1222,7 @@ const Worktracker: React.FC = () => {
                             </div>
                             
                             {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
-                            <div className="flex space-x-2 items-center">
+                            <div className="flex items-center gap-1.5">
                                 <input
                                     type="text"
                                     placeholder="Suchen..."
@@ -1123,7 +1233,7 @@ const Worktracker: React.FC = () => {
                                 
                                 {/* Filter-Button */}
                                 <button
-                                    className={`p-2 rounded-md border ${getActiveFilterCount() > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
+                                    className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
                                     onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
                                     title="Filter"
                                 >
@@ -1136,21 +1246,23 @@ const Worktracker: React.FC = () => {
                                 </button>
                                 
                                 {/* Spalten-Konfiguration */}
-                                <TableColumnConfig
-                                    columns={availableColumns}
-                                    visibleColumns={visibleColumnIds}
-                                    columnOrder={settings.columnOrder}
-                                    onToggleColumnVisibility={toggleColumnVisibility}
-                                    onMoveColumn={handleMoveColumn}
-                                    onClose={() => {}}
-                                />
+                                <div className="ml-1">
+                                    <TableColumnConfig
+                                        columns={availableColumns}
+                                        visibleColumns={visibleColumnIds}
+                                        columnOrder={settings.columnOrder}
+                                        onToggleColumnVisibility={toggleColumnVisibility}
+                                        onMoveColumn={handleMoveColumn}
+                                        onClose={() => {}}
+                                    />
+                                </div>
                             </div>
                         </div>
 
                         {/* Filter-Pane */}
                         {isFilterModalOpen && (
                             <FilterPane
-                                columns={availableColumns}
+                                columns={[...availableColumns, ...filterOnlyColumns]}
                                 onApply={applyFilterConditions}
                                 onReset={resetFilterConditions}
                                 savedConditions={filterConditions}
@@ -1221,11 +1333,15 @@ const Worktracker: React.FC = () => {
                                     ) : filteredAndSortedTasks.length === 0 ? (
                                         <tr>
                                             <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500">
-                                                Keine Tasks gefunden.
+                                                <div className="flex flex-col items-center justify-center gap-4">
+                                                    <ClipboardDocumentListIcon className="h-10 w-10 text-gray-400" />
+                                                    <div className="text-sm">Keine To Do's gefunden</div>
+                                                </div>
                                             </td>
                                         </tr>
                                     ) : (
-                                        filteredAndSortedTasks.map((task) => (
+                                        <>
+                                        {filteredAndSortedTasks.slice(0, displayLimit).map((task) => (
                                             <tr key={task.id}>
                                                 {visibleColumnIds.map((columnId) => {
                                                     if (columnId === 'title') {
@@ -1304,11 +1420,17 @@ const Worktracker: React.FC = () => {
                                                                             </button>
                                                                             <div className="fixed opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50
                                                                                 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                                                                                <div className="bg-white border border-gray-200 rounded-md shadow-lg p-4 max-w-md
+                                                                                <div className="bg-white border border-gray-200 rounded-md shadow-lg p-4 
                                                                                     w-[80vw] max-w-[500px]">
-                                                                                    <div className="text-sm">
-                                                                                        {task.description || 'Keine Beschreibung vorhanden'}
-                                                                                    </div>
+                                                                                    {task.description ? (
+                                                                                        <MarkdownPreview 
+                                                                                            content={task.description}
+                                                                                            maxHeight="300px"
+                                                                                            showImagePreview={true}
+                                                                                        />
+                                                                                    ) : (
+                                                                                        <div className="text-sm">Keine Beschreibung vorhanden</div>
+                                                                                    )}
                                                                                 </div>
                                                                             </div>
                                                                         </div>
@@ -1338,11 +1460,25 @@ const Worktracker: React.FC = () => {
                                                     return null;
                                                 })}
                                             </tr>
-                                        ))
+                                        ))}
+                                        </>
                                     )}
                                 </tbody>
                             </table>
                         </div>
+                        
+                        {/* "Mehr anzeigen" Button - Desktop */}
+                        {filteredAndSortedTasks.length > displayLimit && (
+                            <div className="mt-4 flex justify-center">
+                                <button
+                                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50"
+                                    onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+                                >
+                                    Mehr anzeigen ({filteredAndSortedTasks.length - displayLimit} verbleibend)
+                                </button>
+                            </div>
+                        )}
+                        
                     </div>
                 </div>
             </div>

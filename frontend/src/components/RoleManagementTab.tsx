@@ -197,6 +197,11 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   // Neue Fehlerbehandlung hinzufügen
   const { handleError, handleValidationError } = useError();
   
+  // Neue State-Variablen für die Berechtigungen
+  const [isAddPermissionModalOpen, setIsAddPermissionModalOpen] = useState(false);
+  const [selectedPermission, setSelectedPermission] = useState<string | null>(null);
+  const [displayLimit, setDisplayLimit] = useState<number>(10);
+  
   // Überwache Bildschirmgröße
   useEffect(() => {
     const handleResize = () => {
@@ -776,141 +781,166 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     }
     
     if (isMobile) {
-      // Card-Ansicht für mobile Geräte
+      // Mobile Ansicht mit Karten
       return (
-        <div className="mt-4">
-          {filteredAndSortedRoles.map(role => (
-            <RoleCard 
-              key={role.id}
-              role={role}
-              onEdit={prepareRoleForEditing}
-              onDelete={handleDelete}
-              canEdit={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
-              canDelete={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
-            />
-          ))}
-        </div>
+        <>
+          <div className="space-y-4">
+            {filteredAndSortedRoles.slice(0, displayLimit).map((role) => (
+              <RoleCard 
+                key={role.id} 
+                role={role} 
+                onEdit={prepareRoleForEditing}
+                onDelete={handleDelete}
+                canEdit={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
+                canDelete={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
+              />
+            ))}
+          </div>
+          
+          {/* "Mehr anzeigen" Button - Mobil */}
+          {filteredAndSortedRoles.length > displayLimit && (
+            <div className="mt-4 flex justify-center">
+              <button
+                className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700 dark:hover:bg-gray-700"
+                onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+              >
+                Mehr anzeigen ({filteredAndSortedRoles.length - displayLimit} verbleibend)
+              </button>
+            </div>
+          )}
+        </>
       );
     } else {
       // Tabellen-Ansicht für größere Bildschirme
       return (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                {visibleColumnIds.map(columnId => {
-                  const column = availableColumns.find(col => col.id === columnId);
-                  if (!column) return null;
-                  
-                  return (
-                    <th 
-                      key={columnId}
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative ${columnId !== 'actions' ? 'cursor-move' : ''}`}
-                      draggable={columnId !== 'actions'}
-                      onDragStart={columnId !== 'actions' ? (e) => handleDragStart(e, columnId) : undefined}
-                      onDragOver={columnId !== 'actions' ? (e) => handleDragOver(e, columnId) : undefined}
-                      onDrop={columnId !== 'actions' ? (e) => handleDrop(e, columnId) : undefined}
-                      onDragEnd={columnId !== 'actions' ? handleDragEnd : undefined}
-                    >
-                      <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
-                        {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />}
-                        {column.label}
-                      </div>
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-              {filteredAndSortedRoles.map(role => (
-                <tr 
-                  key={role.id} 
-                  className="hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
+        <>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
                   {visibleColumnIds.map(columnId => {
-                    if (columnId === 'name') {
-                      return (
-                        <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{role.name}</div>
-                        </td>
-                      );
-                    }
+                    const column = availableColumns.find(col => col.id === columnId);
+                    if (!column) return null;
                     
-                    if (columnId === 'description') {
-                      return (
-                        <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-500 dark:text-gray-400">{role.description || '-'}</div>
-                        </td>
-                      );
-                    }
-                    
-                    if (columnId === 'permissions') {
-                      // Zähle die Berechtigungen nach Typ
-                      const permissionCount = {
-                        read: role.permissions.filter(p => p.accessLevel === 'read').length,
-                        write: role.permissions.filter(p => p.accessLevel === 'write').length,
-                        both: role.permissions.filter(p => p.accessLevel === 'both').length,
-                        none: role.permissions.filter(p => p.accessLevel === 'none').length
-                      };
-                      
-                      return (
-                        <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex space-x-2">
-                            {permissionCount.read > 0 && (
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                {permissionCount.read} Lesen
-                              </span>
-                            )}
-                            {permissionCount.write > 0 && (
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                {permissionCount.write} Schreiben
-                              </span>
-                            )}
-                            {permissionCount.both > 0 && (
-                              <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
-                                {permissionCount.both} Beide
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                      );
-                    }
-                    
-                    if (columnId === 'actions') {
-                      return (
-                        <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end space-x-2">
-                            {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
-                              <button 
-                                onClick={() => prepareRoleForEditing(role)}
-                                className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                                title="Rolle bearbeiten"
-                              >
-                                <PencilIcon className="h-5 w-5" />
-                              </button>
-                            )}
-                            
-                            {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
-                              <button 
-                                onClick={() => handleDelete(role.id)}
-                                className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                title="Rolle löschen"
-                              >
-                                <TrashIcon className="h-5 w-5" />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      );
-                    }
-                    
-                    return null;
+                    return (
+                      <th 
+                        key={columnId}
+                        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative ${columnId !== 'actions' ? 'cursor-move' : ''}`}
+                        draggable={columnId !== 'actions'}
+                        onDragStart={columnId !== 'actions' ? (e) => handleDragStart(e, columnId) : undefined}
+                        onDragOver={columnId !== 'actions' ? (e) => handleDragOver(e, columnId) : undefined}
+                        onDrop={columnId !== 'actions' ? (e) => handleDrop(e, columnId) : undefined}
+                        onDragEnd={columnId !== 'actions' ? handleDragEnd : undefined}
+                      >
+                        <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
+                          {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />}
+                          {column.label}
+                        </div>
+                      </th>
+                    );
                   })}
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
+                {filteredAndSortedRoles.slice(0, displayLimit).map((role) => (
+                  <tr key={role.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    {visibleColumnIds.map((columnId) => {
+                      if (columnId === 'name') {
+                        return (
+                          <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{role.name}</div>
+                          </td>
+                        );
+                      }
+                      
+                      if (columnId === 'description') {
+                        return (
+                          <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500 dark:text-gray-400">{role.description || '-'}</div>
+                          </td>
+                        );
+                      }
+                      
+                      if (columnId === 'permissions') {
+                        // Zähle die Berechtigungen nach Typ
+                        const permissionCount = {
+                          read: role.permissions.filter(p => p.accessLevel === 'read').length,
+                          write: role.permissions.filter(p => p.accessLevel === 'write').length,
+                          both: role.permissions.filter(p => p.accessLevel === 'both').length,
+                          none: role.permissions.filter(p => p.accessLevel === 'none').length
+                        };
+                        
+                        return (
+                          <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex space-x-2">
+                              {permissionCount.read > 0 && (
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                  {permissionCount.read} Lesen
+                                </span>
+                              )}
+                              {permissionCount.write > 0 && (
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                  {permissionCount.write} Schreiben
+                                </span>
+                              )}
+                              {permissionCount.both > 0 && (
+                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                  {permissionCount.both} Beide
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      }
+                      
+                      if (columnId === 'actions') {
+                        return (
+                          <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <div className="flex justify-end space-x-2">
+                              {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
+                                <button 
+                                  onClick={() => prepareRoleForEditing(role)}
+                                  className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                                  title="Rolle bearbeiten"
+                                >
+                                  <PencilIcon className="h-5 w-5" />
+                                </button>
+                              )}
+                              
+                              {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
+                                <button 
+                                  onClick={() => handleDelete(role.id)}
+                                  className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                                  title="Rolle löschen"
+                                >
+                                  <TrashIcon className="h-5 w-5" />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        );
+                      }
+                      
+                      return null;
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          
+          {/* "Mehr anzeigen" Button - Desktop */}
+          {filteredAndSortedRoles.length > displayLimit && (
+            <div className="mt-4 flex justify-center">
+              <button
+                className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700 dark:hover:bg-gray-700"
+                onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+              >
+                Mehr anzeigen ({filteredAndSortedRoles.length - displayLimit} verbleibend)
+              </button>
+            </div>
+          )}
+        </>
       );
     }
   };
@@ -1025,7 +1055,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           <div></div>
           
           {/* Rechte Seite: Suchfeld, Filter-Button, Spalten-Konfiguration */}
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center gap-1.5">
             <input
               type="text"
               placeholder="Suchen..."
@@ -1033,9 +1063,8 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            {/* Filter-Button */}
             <button
-              className={`p-2 rounded-md border ${getActiveFilterCount() > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
+              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
               onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
               title="Filter"
             >
@@ -1048,14 +1077,16 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                 )}
               </div>
             </button>
-            <TableColumnConfig
-              columns={availableColumns}
-              visibleColumns={visibleColumnIds}
-              columnOrder={settings.columnOrder}
-              onToggleColumnVisibility={toggleColumnVisibility}
-              onMoveColumn={handleMoveColumn}
-              onClose={() => {}}
-            />
+            <div className="ml-1">
+              <TableColumnConfig
+                columns={availableColumns}
+                visibleColumns={visibleColumnIds}
+                columnOrder={settings.columnOrder}
+                onToggleColumnVisibility={toggleColumnVisibility}
+                onMoveColumn={handleMoveColumn}
+                onClose={() => {}}
+              />
+            </div>
           </div>
         </div>
 

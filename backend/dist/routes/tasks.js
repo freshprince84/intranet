@@ -17,26 +17,24 @@ const upload = (0, multer_1.default)({
         fileSize: 10 * 1024 * 1024, // 10MB Limit
     },
 });
-// Alle Routen mit Authentifizierung schützen
+// Öffentliche Routen für Datei-/Bildabrufe ohne Authentifizierung
+router.get('/:taskId/attachments/:attachmentId', taskAttachmentController_1.getAttachment);
+// Alle anderen Routen mit Authentifizierung schützen
 router.use(auth_1.authMiddleware);
-// GET /api/tasks - Alle Tasks abrufen
+// Task-Routen
 router.get('/', taskController_1.getAllTasks);
-// GET /api/tasks/:id - Einzelnen Task abrufen
 router.get('/:id', taskController_1.getTaskById);
-// POST /api/tasks - Neuen Task erstellen
 router.post('/', taskController_1.createTask);
-// PUT /api/tasks/:id - Task aktualisieren
 router.put('/:id', taskController_1.updateTask);
-// DELETE /api/tasks/:id - Task löschen
+router.patch('/:id', taskController_1.updateTask);
 router.delete('/:id', taskController_1.deleteTask);
-// Cerebro-Artikel Routen
+// Verbindung zu Wiki-Artikeln
 router.get('/:id/carticles', taskController_1.getTaskCarticles);
 router.post('/:taskId/carticles/:carticleId', taskController_1.linkTaskToCarticle);
 router.delete('/:taskId/carticles/:carticleId', taskController_1.unlinkTaskFromCarticle);
-// Attachment Routen
+// Attachment Routen (mit Authentifizierung)
 router.post('/:taskId/attachments', upload.single('file'), taskAttachmentController_1.addAttachment);
 router.get('/:taskId/attachments', taskAttachmentController_1.getTaskAttachments);
-router.get('/:taskId/attachments/:attachmentId', taskAttachmentController_1.getAttachment);
 router.delete('/:taskId/attachments/:attachmentId', taskAttachmentController_1.deleteAttachment);
 exports.default = router;
 //# sourceMappingURL=tasks.js.map

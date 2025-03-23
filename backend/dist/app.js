@@ -31,6 +31,7 @@ const payroll_1 = __importDefault(require("./routes/payroll"));
 const identificationDocuments_1 = __importDefault(require("./routes/identificationDocuments"));
 const documentRecognition_1 = __importDefault(require("./routes/documentRecognition"));
 const savedFilters_1 = __importDefault(require("./routes/savedFilters"));
+const urlMetadata_1 = __importDefault(require("./routes/urlMetadata"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const app = (0, express_1.default)();
 // Middleware
@@ -73,7 +74,7 @@ app.use((0, cors_1.default)({
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     optionsSuccessStatus: 200
 }));
@@ -125,6 +126,7 @@ app.use('/api/payroll', payroll_1.default);
 app.use('/api/identification-documents', identificationDocuments_1.default);
 app.use('/api/document-recognition', documentRecognition_1.default);
 app.use('/api/saved-filters', savedFilters_1.default);
+app.use('/api/url-metadata', urlMetadata_1.default);
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

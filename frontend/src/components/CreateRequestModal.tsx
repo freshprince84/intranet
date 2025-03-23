@@ -2,9 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios'; // Für type checking
 import axiosInstance from '../config/axios.ts'; // Importiere die konfigurierte axios-Instanz
 import { useAuth } from '../hooks/useAuth.tsx';
-import { API_ENDPOINTS } from '../config/api.ts';
+import { API_ENDPOINTS, API_URL } from '../config/api.ts';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import MarkdownPreview from './MarkdownPreview.tsx';
 
 interface User {
   id: number;
@@ -209,7 +210,8 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
       // Füge einen Link/Vorschau in die Beschreibung ein
       let insertText = '';
       if (file.type.startsWith('image/')) {
-        // Für Bilder einen temporären Platzhalter einfügen
+        // Hinweis: Wir verwenden hier den Platzhalter, da die Datei erst nach dem Erstellen hochgeladen wird
+        // Die tatsächliche URL wird nach dem erfolgreichen Upload im Backend gesetzt
         insertText = `\n![${file.name}](wird nach dem Erstellen hochgeladen)\n`;
       } else {
         // Für andere Dateien einen temporären Platzhalter
@@ -268,7 +270,32 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
   };
 
   const handleRemoveTemporaryAttachment = (index: number) => {
-    setTemporaryAttachments(prev => prev.filter((_, i) => i !== index));
+    // Hole den zu entfernenden Anhang
+    const attachmentToRemove = temporaryAttachments[index];
+    
+    if (attachmentToRemove) {
+      // Entferne den Anhang aus der Liste
+      setTemporaryAttachments(prev => prev.filter((_, i) => i !== index));
+      
+      // Entferne auch den Anhang aus der Beschreibung
+      if (attachmentToRemove.fileName) {
+        // Je nach Dateityp können verschiedene Markdown-Formate in der Beschreibung sein
+        const imagePattern = new RegExp(`!\\[${attachmentToRemove.fileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
+        const linkPattern = new RegExp(`\\[${attachmentToRemove.fileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
+        
+        // Ersetze alle Vorkommen durch leeren Text
+        const newDescription = formData.description
+          .replace(imagePattern, '')
+          .replace(linkPattern, '')
+          // Entferne überschüssige Leerzeilen, die durch das Entfernen entstehen könnten
+          .replace(/\n{3,}/g, '\n\n');
+        
+        setFormData({
+          ...formData,
+          description: newDescription
+        });
+      }
+    }
   };
 
   const uploadTemporaryAttachments = async (requestId: number) => {
@@ -365,41 +392,35 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
     if (temporaryAttachments.length === 0) return null;
     
     return (
-      <div className="mt-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium text-gray-700">Temporäre Anhänge</h3>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          >
-            Datei hinzufügen
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            onChange={handleFileUpload}
-            className="hidden"
-          />
-        </div>
-        <ul className="divide-y divide-gray-200">
+      <div className="mt-2">
+        <ul className="flex flex-wrap gap-2">
           {temporaryAttachments.map((attachment, index) => (
-            <li key={index} className="py-3 flex items-center justify-between">
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-900">
-                  {attachment.fileName}
-                </span>
-                <span className="ml-2 text-sm text-gray-500">
-                  ({Math.round(attachment.fileSize / 1024)} KB)
-                </span>
+            <li key={index} className="inline-flex items-center bg-gray-100 rounded-md px-2 py-1 relative group">
+              <span className="text-sm font-medium text-gray-800">
+                {attachment.fileName}
+              </span>
+              <div className="flex ml-2">
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTemporaryAttachment(index)}
+                  className="text-red-600 hover:text-red-900 ml-1"
+                  title="Entfernen"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => handleRemoveTemporaryAttachment(index)}
-                className="text-red-600 hover:text-red-900"
-              >
-                Entfernen
-              </button>
+              {/* Tooltip für Bildvorschau bei Bild-Dateien */}
+              {attachment.fileType.startsWith('image/') && attachment.file && (
+                <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
+                  <img 
+                    src={URL.createObjectURL(attachment.file)}
+                    alt={attachment.fileName}
+                    className="max-w-[200px] max-h-[150px] object-contain"
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -449,12 +470,15 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Beschreibung</label>
+                  <label htmlFor="description_request_create" className="block text-sm font-medium text-gray-700">
+                    Beschreibung
+                  </label>
                   <div className="relative">
                     <textarea
                       ref={textareaRef}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                      rows={3}
+                      id="description_request_create"
+                      rows={6}
+                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       onPaste={handlePaste}
@@ -462,15 +486,38 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                       onDragOver={handleDragOver}
                       placeholder="Text, Bilder oder Dateien hier einfügen..."
                     />
+                    {/* Heftklammer-Icon zum Hinzufügen von Dateien */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                      title="Datei hinzufügen"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                      </svg>
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
                     {uploading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
-                        <span className="text-sm text-gray-600">Wird verarbeitet...</span>
+                        <span className="text-sm text-gray-600">Wird hochgeladen...</span>
                       </div>
                     )}
                   </div>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Tipp: Bilder können direkt per Copy & Paste oder Drag & Drop eingefügt werden!
-                  </p>
+                  {renderTemporaryAttachments()}
+                  {formData.description && (
+                    <div className="mt-3">
+                      <MarkdownPreview 
+                        content={formData.description} 
+                        temporaryAttachments={temporaryAttachments}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -529,8 +576,6 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                     Todo automatisch erstellen
                   </label>
                 </div>
-
-                {renderTemporaryAttachments()}
 
                 <div className="flex justify-end pt-4">
                   <button
@@ -602,12 +647,15 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Beschreibung</label>
+              <label htmlFor="description_request_create" className="block text-sm font-medium text-gray-700">
+                Beschreibung
+              </label>
               <div className="relative">
                 <textarea
                   ref={textareaRef}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
-                  rows={3}
+                  id="description_request_create"
+                  rows={6}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   onPaste={handlePaste}
@@ -615,15 +663,38 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                   onDragOver={handleDragOver}
                   placeholder="Text, Bilder oder Dateien hier einfügen..."
                 />
+                {/* Heftklammer-Icon zum Hinzufügen von Dateien */}
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  title="Datei hinzufügen"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                  </svg>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
                 {uploading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
-                    <span className="text-sm text-gray-600">Wird verarbeitet...</span>
+                    <span className="text-sm text-gray-600">Wird hochgeladen...</span>
                   </div>
                 )}
               </div>
-              <p className="mt-1 text-sm text-gray-500">
-                Tipp: Bilder können direkt per Copy & Paste oder Drag & Drop eingefügt werden!
-              </p>
+              {renderTemporaryAttachments()}
+              {formData.description && (
+                <div className="mt-3">
+                  <MarkdownPreview 
+                    content={formData.description} 
+                    temporaryAttachments={temporaryAttachments}
+                  />
+                </div>
+              )}
             </div>
 
             <div>
@@ -682,8 +753,6 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 Todo automatisch erstellen
               </label>
             </div>
-
-            {renderTemporaryAttachments()}
 
             <div className="flex justify-end pt-4">
               <button

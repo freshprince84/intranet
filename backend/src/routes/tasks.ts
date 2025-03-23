@@ -1,7 +1,21 @@
 import { Router } from 'express';
 import multer from 'multer';
-import { getAllTasks, getTaskById, createTask, updateTask, deleteTask, getTaskCarticles, linkTaskToCarticle, unlinkTaskFromCarticle } from '../controllers/taskController';
-import { addAttachment, getTaskAttachments, getAttachment, deleteAttachment } from '../controllers/taskAttachmentController';
+import { 
+  getAllTasks, 
+  getTaskById, 
+  createTask, 
+  updateTask, 
+  deleteTask, 
+  getTaskCarticles,
+  linkTaskToCarticle,
+  unlinkTaskFromCarticle
+} from '../controllers/taskController';
+import { 
+  addAttachment, 
+  getTaskAttachments, 
+  getAttachment, 
+  deleteAttachment 
+} from '../controllers/taskAttachmentController';
 import { authMiddleware } from '../middleware/auth';
 
 const router = Router();
@@ -15,33 +29,28 @@ const upload = multer({
   },
 });
 
-// Alle Routen mit Authentifizierung schützen
+// Öffentliche Routen für Datei-/Bildabrufe ohne Authentifizierung
+router.get('/:taskId/attachments/:attachmentId', getAttachment);
+
+// Alle anderen Routen mit Authentifizierung schützen
 router.use(authMiddleware);
 
-// GET /api/tasks - Alle Tasks abrufen
+// Task-Routen
 router.get('/', getAllTasks);
-
-// GET /api/tasks/:id - Einzelnen Task abrufen
 router.get('/:id', getTaskById);
-
-// POST /api/tasks - Neuen Task erstellen
 router.post('/', createTask);
-
-// PUT /api/tasks/:id - Task aktualisieren
 router.put('/:id', updateTask);
-
-// DELETE /api/tasks/:id - Task löschen
+router.patch('/:id', updateTask);
 router.delete('/:id', deleteTask);
 
-// Cerebro-Artikel Routen
+// Verbindung zu Wiki-Artikeln
 router.get('/:id/carticles', getTaskCarticles);
 router.post('/:taskId/carticles/:carticleId', linkTaskToCarticle);
 router.delete('/:taskId/carticles/:carticleId', unlinkTaskFromCarticle);
 
-// Attachment Routen
+// Attachment Routen (mit Authentifizierung)
 router.post('/:taskId/attachments', upload.single('file'), addAttachment);
 router.get('/:taskId/attachments', getTaskAttachments);
-router.get('/:taskId/attachments/:attachmentId', getAttachment);
 router.delete('/:taskId/attachments/:attachmentId', deleteAttachment);
 
 export default router; 

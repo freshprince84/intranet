@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
-import { API_ENDPOINTS } from '../config/api.ts';
+import { API_ENDPOINTS, API_URL } from '../config/api.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import MarkdownPreview from './MarkdownPreview.tsx';
 
 interface EditRequestModalProps {
   isOpen: boolean;
@@ -39,12 +40,13 @@ interface Branch {
 }
 
 interface RequestAttachment {
-  id: number;
+  id?: number;
   fileName: string;
   fileType: string;
   fileSize: number;
-  filePath: string;
-  uploadedAt: string;
+  filePath?: string;
+  uploadedAt?: string;
+  file?: File; // Für temporäre Anhänge vor dem Hochladen
 }
 
 const EditRequestModal = ({
@@ -68,6 +70,7 @@ const EditRequestModal = ({
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   const [attachments, setAttachments] = useState<RequestAttachment[]>(request.attachments || []);
   const [uploading, setUploading] = useState(false);
+  const [temporaryAttachments, setTemporaryAttachments] = useState<RequestAttachment[]>([]);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -178,7 +181,7 @@ const EditRequestModal = ({
     
     if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
       const file = event.dataTransfer.files[0];
-      await uploadFileAndInsertLink(file);
+      await handleTemporaryAttachment(file);
     }
   };
 
@@ -211,11 +214,11 @@ const EditRequestModal = ({
       // Füge einen Link/Vorschau in die Beschreibung ein
       let insertText = '';
       if (newAttachment.fileType.startsWith('image/')) {
-        // Für Bilder einen Markdown-Image-Link einfügen
-        insertText = `\n![${newAttachment.fileName}](${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
+        // Für Bilder einen Markdown-Image-Link einfügen mit vollständiger URL
+        insertText = `\n![${newAttachment.fileName}](${API_URL}${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
       } else {
-        // Für andere Dateien einen normalen Link
-        insertText = `\n[${newAttachment.fileName}](${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
+        // Für andere Dateien einen normalen Link mit vollständiger URL
+        insertText = `\n[${newAttachment.fileName}](${API_URL}${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
       }
       
       // Füge den Link an der aktuellen Cursorposition ein
@@ -255,7 +258,7 @@ const EditRequestModal = ({
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    await uploadFileAndInsertLink(file);
+    await handleTemporaryAttachment(file);
     
     // Zurücksetzen des Datei-Inputs
     if (fileInputRef.current) {
@@ -266,8 +269,35 @@ const EditRequestModal = ({
   const handleDeleteAttachment = async (attachmentId: number) => {
     try {
       setError(null);
-      await axiosInstance.delete(API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, attachmentId));
-      setAttachments(attachments.filter(attachment => attachment.id !== attachmentId));
+      
+      // Finde den zu entfernenden Anhang
+      const attachmentToRemove = attachments.find(a => a.id === attachmentId);
+      
+      if (attachmentToRemove) {
+        await axiosInstance.delete(API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, attachmentId));
+        
+        // Entferne den Anhang aus der Liste
+        setAttachments(attachments.filter(attachment => attachment.id !== attachmentId));
+        
+        // Entferne auch die Verweise im Beschreibungstext
+        if (attachmentToRemove.fileName) {
+          // Erzeuge URL-Muster für diesen Anhang
+          const escapedFileName = attachmentToRemove.fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          
+          // Suche nach Bild- und Link-Markdown
+          const imagePattern = new RegExp(`!\\[(.*?)\\]\\(${escapedFileName}\\)`, 'g');
+          const linkPattern = new RegExp(`\\[(.*?)\\]\\(${escapedFileName}\\)`, 'g');
+          
+          // Bereinige die Beschreibung
+          const newDescription = description
+            .replace(imagePattern, '')
+            .replace(linkPattern, '')
+            // Entferne überschüssige Leerzeilen, die durch das Entfernen entstehen könnten
+            .replace(/\n{3,}/g, '\n\n');
+          
+          setDescription(newDescription);
+        }
+      }
     } catch (err) {
       console.error('Fehler beim Löschen des Anhangs:', err);
       if (axios.isAxiosError(err)) {
@@ -280,6 +310,9 @@ const EditRequestModal = ({
 
   const handleDownloadAttachment = async (attachment: RequestAttachment) => {
     try {
+      if (attachment.id === undefined) {
+        throw new Error('Anhang-ID fehlt');
+      }
       const response = await axiosInstance.get(
         API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, attachment.id),
         { responseType: 'blob' }
@@ -305,36 +338,36 @@ const EditRequestModal = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setError(null);
+    setLoading(true);
+
     try {
-      setLoading(true);
-      setError(null);
+      const token = localStorage.getItem('token');
+      if (!token) throw new Error('Nicht authentifiziert');
       
-      // Validiere die IDs
-      const requestId = request.id;
-      const validResponsibleId = Number(responsibleId);
-      const validBranchId = Number(branchId);
+      // Keine Validierung notwendig, da bereits Zahlen vorliegen
+      // Direkte Verwendung der Zustände
 
-      if (isNaN(validResponsibleId) || isNaN(validBranchId)) {
-        throw new Error('Ungültige ID-Werte für Verantwortlichen oder Niederlassung');
-      }
+      await axiosInstance.put(API_ENDPOINTS.REQUESTS.BY_ID(request.id), {
+        title: title,
+        description: description || '',
+        responsible_id: responsibleId,
+        branch_id: branchId,
+        due_date: dueDate || null,
+        create_todo: createTodo,
+      });
 
-      await axiosInstance.put(
-        API_ENDPOINTS.REQUESTS.BY_ID(requestId),
-        {
-          title,
-          description,
-          responsible_id: validResponsibleId,
-          branch_id: validBranchId,
-          due_date: dueDate || null,
-          create_todo: createTodo
-        }
-      );
+      // Hochladen der temporären Anhänge
+      await uploadTemporaryAttachments();
 
-      onRequestUpdated();
+      // Erfolgreiches Update - Schließe das Modal
+      // Hier könnte auch eine "Request aktualisiert"-Nachricht angezeigt werden
       onClose();
+      if (onRequestUpdated) {
+        onRequestUpdated();
+      }
     } catch (err) {
-      console.error('Update Error:', err);
+      console.error('Fehler beim Aktualisieren des Requests:', err);
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.message || err.message);
       } else {
@@ -370,60 +403,215 @@ const EditRequestModal = ({
     }
   };
 
-  const renderAttachments = () => (
-    <div className="mt-4">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-gray-700">Anhänge</h3>
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          Datei hinzufügen
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-      </div>
-      {attachments.length > 0 ? (
-        <ul className="divide-y divide-gray-200">
+  const handleRemoveTemporaryAttachment = (index: number) => {
+    // Finde den zu entfernenden Anhang
+    const attachmentToRemove = temporaryAttachments[index];
+    
+    if (attachmentToRemove) {
+      // Entferne den Anhang aus dem temporaryAttachments-Array
+      setTemporaryAttachments(temporaryAttachments.filter((_, i) => i !== index));
+      
+      // Entferne auch den Verweis im Beschreibungstext
+      if (attachmentToRemove.fileName) {
+        // Suche nach Bild- und Link-Markdown mit dem Dateinamen
+        const escapedFileName = attachmentToRemove.fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const imagePattern = new RegExp(`!\\[${escapedFileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
+        const linkPattern = new RegExp(`\\[${escapedFileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
+        
+        // Bereinige die Beschreibung
+        const newDescription = description
+          .replace(imagePattern, '')
+          .replace(linkPattern, '')
+          // Entferne überschüssige Leerzeilen, die durch das Entfernen entstehen könnten
+          .replace(/\n{3,}/g, '\n\n');
+        
+        setDescription(newDescription);
+      }
+    }
+  };
+
+  const handleTemporaryAttachment = async (file: File) => {
+    setUploading(true);
+    setError(null);
+
+    try {
+      // Erstelle einen temporären Anhang
+      const newAttachment: RequestAttachment = {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        file: file // Speichern der Datei für späteren Upload
+      };
+      
+      setTemporaryAttachments(prev => [...prev, newAttachment]);
+
+      // Füge einen Link/Vorschau in die Beschreibung ein
+      let insertText = '';
+      if (file.type.startsWith('image/')) {
+        // Für Bilder ein Markdown-Bild einfügen
+        insertText = `\n![${file.name}](wird nach dem Erstellen hochgeladen)\n`;
+      } else {
+        // Für andere Dateien einen Link einfügen
+        insertText = `\n[${file.name}](wird nach dem Erstellen hochgeladen)\n`;
+      }
+      
+      // Füge den Link an der aktuellen Cursorposition ein
+      if (textareaRef.current) {
+        const cursorPos = textareaRef.current.selectionStart;
+        const textBefore = description.substring(0, cursorPos);
+        const textAfter = description.substring(cursorPos);
+        
+        setDescription(textBefore + insertText + textAfter);
+        
+        // Setze den Cursor hinter den eingefügten Link
+        setTimeout(() => {
+          if (textareaRef.current) {
+            const newPos = cursorPos + insertText.length;
+            textareaRef.current.selectionStart = newPos;
+            textareaRef.current.selectionEnd = newPos;
+            textareaRef.current.focus();
+          }
+        }, 0);
+      } else {
+        setDescription(description + insertText);
+      }
+    } catch (err) {
+      console.error('Fehler beim Verarbeiten der Datei:', err);
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.message || err.message);
+      } else {
+        setError('Ein unerwarteter Fehler ist aufgetreten');
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const uploadTemporaryAttachments = async () => {
+    if (temporaryAttachments.length === 0) return;
+    
+    try {
+      setLoading(true);
+      
+      // Upload jeder temporären Datei
+      for (const attachment of temporaryAttachments) {
+        if (!attachment.file) continue;
+        
+        const formData = new FormData();
+        formData.append('file', attachment.file);
+        
+        await axiosInstance.post(
+          API_ENDPOINTS.REQUESTS.ATTACHMENTS(request.id),
+          formData,
+          {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+            },
+          }
+        );
+      }
+      
+      console.log(`${temporaryAttachments.length} Anhänge erfolgreich hochgeladen.`);
+      // Nach erfolgreichem Upload leeren wir die temporären Anhänge
+      setTemporaryAttachments([]);
+    } catch (err) {
+      console.error('Fehler beim Hochladen der Anhänge:', err);
+      // Wir zeigen hier keinen Fehler, da der Request bereits aktualisiert wurde
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderAttachments = () => {
+    if (attachments.length === 0) return null;
+    
+    return (
+      <div className="mt-2">
+        <ul className="flex flex-wrap gap-2">
           {attachments.map((attachment) => (
-            <li key={attachment.id} className="py-3 flex items-center justify-between">
-              <div className="flex items-center">
-                <span className="text-sm font-medium text-gray-900">
-                  {attachment.fileName}
-                </span>
-                <span className="ml-2 text-sm text-gray-500">
-                  ({Math.round(attachment.fileSize / 1024)} KB)
-                </span>
-              </div>
-              <div>
+            <li key={attachment.id || `temp-${attachment.fileName}`} className="inline-flex items-center bg-gray-100 rounded-md px-2 py-1 relative group">
+              <span className="text-sm font-medium text-gray-800">
+                {attachment.fileName}
+              </span>
+              <div className="flex ml-2">
                 <button
                   type="button"
                   onClick={() => handleDownloadAttachment(attachment)}
-                  className="text-blue-600 hover:text-blue-900 mr-3"
+                  className="text-blue-600 hover:text-blue-900 mr-1"
+                  title="Herunterladen"
                 >
-                  Herunterladen
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleDeleteAttachment(attachment.id)}
-                  className="text-red-600 hover:text-red-900"
+                  onClick={() => attachment.id !== undefined && handleDeleteAttachment(attachment.id)}
+                  className="text-red-600 hover:text-red-900 ml-1"
+                  title="Entfernen"
+                  disabled={attachment.id === undefined}
                 >
-                  Entfernen
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
+              {/* Tooltip für Bildvorschau bei Bild-Dateien */}
+              {attachment.fileType.startsWith('image/') && attachment.id && (
+                <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
+                  <img 
+                    src={`${API_URL}${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, attachment.id)}`}
+                    alt={attachment.fileName}
+                    className="max-w-[200px] max-h-[150px] object-contain"
+                  />
+                </div>
+              )}
             </li>
           ))}
         </ul>
-      ) : (
-        <p className="text-sm text-gray-500">Keine Anhänge vorhanden.</p>
-      )}
-    </div>
-  );
+      </div>
+    );
+  };
+
+  const renderTemporaryAttachments = () => {
+    if (temporaryAttachments.length === 0) return null;
+    
+    return (
+      <div className="mt-2">
+        <ul className="flex flex-wrap gap-2">
+          {temporaryAttachments.map((attachment, index) => (
+            <li key={`temp-${index}`} className="inline-flex items-center bg-gray-100 rounded-md px-2 py-1 relative group">
+              <span className="text-sm font-medium text-gray-800">
+                {attachment.fileName}
+              </span>
+              <div className="flex ml-2">
+                <button
+                  type="button"
+                  onClick={() => handleRemoveTemporaryAttachment(index)}
+                  className="text-red-600 hover:text-red-900 ml-1"
+                  title="Entfernen"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              {/* Tooltip für Bildvorschau bei Bild-Dateien */}
+              {attachment.fileType.startsWith('image/') && attachment.file && (
+                <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
+                  <img 
+                    src={URL.createObjectURL(attachment.file)}
+                    alt={attachment.fileName}
+                    className="max-w-[200px] max-h-[150px] object-contain"
+                  />
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  };
 
   if (!isOpen) return null;
 
@@ -441,18 +629,36 @@ const EditRequestModal = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Beschreibung</label>
+        <label htmlFor="description_request_edit" className="block text-sm font-medium text-gray-700">
+          Beschreibung
+        </label>
         <div className="relative">
           <textarea
             ref={textareaRef}
+            rows={isMobile ? 5 : 10}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            rows={3}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             onPaste={handlePaste}
             onDrop={handleDrop}
             onDragOver={handleDragOver}
-            placeholder="Text, Bilder oder Dateien hier einfügen..."
+          />
+          {/* Heftklammer-Icon zum Hinzufügen von Dateien */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+            title="Datei hinzufügen"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+            </svg>
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileUpload}
+            className="hidden"
           />
           {uploading && (
             <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
@@ -460,13 +666,17 @@ const EditRequestModal = ({
             </div>
           )}
         </div>
-        <p className="mt-1 text-sm text-gray-500">
-          Tipp: Bilder können direkt per Copy & Paste oder Drag & Drop eingefügt werden!
-        </p>
+        {renderAttachments()}
+        {renderTemporaryAttachments()}
+        {description && (
+          <div className="mt-3">
+            <MarkdownPreview 
+              content={description}
+              temporaryAttachments={temporaryAttachments}
+            />
+          </div>
+        )}
       </div>
-
-      {/* Attachments-Bereich */}
-      {renderAttachments()}
 
       <div>
         <label className="block text-sm font-medium text-gray-700">Verantwortlicher</label>

@@ -3,9 +3,10 @@ import axiosInstance from '../config/axios.ts';
 import axios from 'axios';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { API_ENDPOINTS } from '../config/api.ts';
+import { API_ENDPOINTS, API_URL } from '../config/api.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import CerebroArticleSelector from './CerebroArticleSelector.tsx';
+import MarkdownPreview from './MarkdownPreview.tsx';
 
 interface User {
     id: number;
@@ -256,7 +257,8 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             // Füge einen Link/Vorschau in die Beschreibung ein
             let insertText = '';
             if (file.type.startsWith('image/')) {
-                // Für Bilder einen temporären Platzhalter einfügen
+                // Hinweis: Wir verwenden hier den Platzhalter, da die Datei erst nach dem Erstellen hochgeladen wird
+                // Die tatsächliche URL wird nach dem erfolgreichen Upload im Backend gesetzt
                 insertText = `\n![${file.name}](wird nach dem Erstellen hochgeladen)\n`;
             } else {
                 // Für andere Dateien einen temporären Platzhalter
@@ -309,7 +311,30 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
     };
 
     const handleRemoveTemporaryAttachment = (index: number) => {
-        setTemporaryAttachments(prev => prev.filter((_, i) => i !== index));
+        // Finde den zu entfernenden Anhang
+        const attachmentToRemove = temporaryAttachments[index];
+        
+        if (attachmentToRemove) {
+            // Entferne den Anhang aus dem temporaryAttachments-Array
+            setTemporaryAttachments(temporaryAttachments.filter((_, i) => i !== index));
+            
+            // Entferne auch den Verweis im Beschreibungstext
+            if (attachmentToRemove.fileName) {
+                // Suche nach Bild- und Link-Markdown mit dem Dateinamen
+                const escapedFileName = attachmentToRemove.fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const imagePattern = new RegExp(`!\\[${escapedFileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
+                const linkPattern = new RegExp(`\\[${escapedFileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
+                
+                // Bereinige die Beschreibung
+                const newDescription = description
+                    .replace(imagePattern, '')
+                    .replace(linkPattern, '')
+                    // Entferne überschüssige Leerzeilen, die durch das Entfernen entstehen könnten
+                    .replace(/\n{3,}/g, '\n\n');
+                
+                setDescription(newDescription);
+            }
+        }
     };
 
     const uploadTemporaryAttachments = async (taskId: number) => {
@@ -722,26 +747,89 @@ const TaskForm: React.FC<TaskFormProps> = ({
                         />
                     </div>
 
-                    <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-                            Beschreibung
-                        </label>
-                        <div className="relative">
-                            <textarea
-                                ref={textareaRef}
-                                id="description"
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                onPaste={handlePaste}
-                                onDrop={handleDrop}
-                                onDragOver={handleDragOver}
-                                rows={4}
-                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                placeholder="Text, Bilder oder Dateien hier einfügen..."
-                            />
-                            {uploading && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
-                                    <span className="text-sm text-gray-600">Wird verarbeitet...</span>
+                    <div className="space-y-4">
+                        <div>
+                            <label htmlFor="description_sidepane" className="block text-sm font-medium text-gray-700">
+                                Beschreibung
+                            </label>
+                            <div className="relative">
+                                <textarea
+                                    ref={textareaRef}
+                                    id="description_task_create"
+                                    rows={6}
+                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                    value={description}
+                                    onChange={(e) => setDescription(e.target.value)}
+                                    onPaste={handlePaste}
+                                    onDrop={handleDrop}
+                                    onDragOver={handleDragOver}
+                                    placeholder="Text, Bilder oder Dateien hier einfügen..."
+                                />
+                                {/* Heftklammer-Icon zum Hinzufügen von Dateien */}
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef?.current?.click()}
+                                    className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                    title="Datei hinzufügen"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                    </svg>
+                                </button>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    onChange={onFileUpload}
+                                    className="hidden"
+                                />
+                                {uploading && (
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
+                                        <span className="text-sm text-gray-500">Wird hochgeladen...</span>
+                                    </div>
+                                )}
+                            </div>
+                            {/* Anzeige der temporären Anhänge direkt unter dem Textfeld */}
+                            {temporaryAttachments && temporaryAttachments.length > 0 && (
+                                <div className="mt-2">
+                                    <ul className="flex flex-wrap gap-2">
+                                        {temporaryAttachments.map((attachment, index) => (
+                                            <li key={index} className="inline-flex items-center bg-gray-100 rounded-md px-2 py-1 relative group">
+                                                <span className="text-sm font-medium text-gray-800">
+                                                    {attachment.fileName}
+                                                </span>
+                                                <div className="flex ml-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => onRemoveAttachment?.(index)}
+                                                        className="text-red-600 hover:text-red-900 ml-1"
+                                                        title="Entfernen"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                                {/* Tooltip für Bildvorschau bei Bild-Dateien */}
+                                                {attachment.fileType.startsWith('image/') && attachment.file && (
+                                                    <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
+                                                        <img 
+                                                            src={URL.createObjectURL(attachment.file)}
+                                                            alt={attachment.fileName}
+                                                            className="max-w-[200px] max-h-[150px] object-contain"
+                                                        />
+                                                    </div>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                            {description && (
+                                <div className="mt-3">
+                                    <MarkdownPreview 
+                                        content={description} 
+                                        temporaryAttachments={temporaryAttachments}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -911,49 +999,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
                         selectedArticles={selectedArticles}
                         onArticleRemove={onArticleRemove}
                     />
-                </div>
-            )}
-
-            {/* Anhänge anzeigen, falls vorhanden */}
-            {temporaryAttachments && temporaryAttachments.length > 0 && (
-                <div className="mt-4">
-                    <div className="flex items-center justify-between mb-2">
-                        <h3 className="text-sm font-medium text-gray-700">Temporäre Anhänge</h3>
-                        <button
-                            type="button"
-                            onClick={() => fileInputRef?.current?.click()}
-                            className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        >
-                            Datei hinzufügen
-                        </button>
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            onChange={onFileUpload}
-                            className="hidden"
-                        />
-                    </div>
-                    <ul className="divide-y divide-gray-200">
-                        {temporaryAttachments.map((attachment, index) => (
-                            <li key={index} className="py-3 flex items-center justify-between">
-                                <div className="flex items-center">
-                                    <span className="text-sm font-medium text-gray-900">
-                                        {attachment.fileName}
-                                    </span>
-                                    <span className="ml-2 text-sm text-gray-500">
-                                        ({Math.round(attachment.fileSize / 1024)} KB)
-                                    </span>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => onRemoveAttachment?.(index)}
-                                    className="text-red-600 hover:text-red-900"
-                                >
-                                    Entfernen
-                                </button>
-                            </li>
-                        ))}
-                    </ul>
                 </div>
             )}
 

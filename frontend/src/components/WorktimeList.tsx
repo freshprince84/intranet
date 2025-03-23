@@ -115,12 +115,14 @@ const WorktimeList: React.FC = () => {
             <div className="p-4 border-b">
                 <div className="flex items-center justify-between mb-4">
                     <h2 className="text-xl font-semibold">Zeiteinträge</h2>
-                    <input
-                        type="date"
-                        value={dateFilter}
-                        onChange={(e) => setDateFilter(e.target.value)}
-                        className="border rounded-md px-3 py-2"
-                    />
+                    <div className="relative">
+                        <input
+                            type="date"
+                            value={dateFilter}
+                            onChange={(e) => setDateFilter(e.target.value)}
+                            className="border rounded-md px-3 py-2"
+                        />
+                    </div>
                 </div>
             </div>
 

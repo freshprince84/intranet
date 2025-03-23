@@ -125,7 +125,7 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
   return (
     <div className="relative">
       <button
-        className="p-2 rounded-md border border-gray-300 hover:bg-gray-100"
+        className="p-2 rounded-md hover:bg-gray-100"
         onClick={() => setIsOpen(!isOpen)}
         title="Spalten konfigurieren"
       >

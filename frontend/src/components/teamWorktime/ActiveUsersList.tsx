@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { StopIcon, ArrowPathIcon, MagnifyingGlassIcon, FunnelIcon, Bars3Icon, ChevronUpIcon, ChevronDownIcon, ArrowsUpDownIcon, CalendarIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { StopIcon, ArrowPathIcon, MagnifyingGlassIcon, Bars3Icon, ChevronUpIcon, ChevronDownIcon, ArrowsUpDownIcon, CalendarIcon, PencilIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import StopWorktimeModal from './StopWorktimeModal.tsx';
 import EditWorktimeModal from './EditWorktimeModal.tsx';
-import TableColumnConfig from '../TableColumnConfig.tsx';
 import FilterPane from '../FilterPane.tsx';
 import SavedFilterTags from '../SavedFilterTags.tsx';
 import { FilterCondition } from '../FilterRow.tsx';
@@ -14,6 +13,7 @@ import { createLocalDate } from '../../utils/dateUtils.ts';
 import * as worktimeApi from '../../api/worktimeApi.ts';
 import { API_URL, API_ENDPOINTS } from '../../config/api.ts';
 import axios from 'axios';
+import TableColumnConfig from '../TableColumnConfig.tsx';
 
 interface ActiveUsersListProps {
   activeUsers: any[];
@@ -93,6 +93,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [isColumnConfigOpen, setIsColumnConfigOpen] = useState(false);
+  const [displayLimit, setDisplayLimit] = useState<number>(10);
   
   // Neue State-Variablen für erweiterte Filterbedingungen
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
@@ -593,20 +594,19 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       <div className="flex items-center justify-between mb-4">
         {/* Datumsauswahl - linksbündig */}
         <div>
-          <div className="relative">
+          <div className="relative w-[180px]">
             <input
               type="date"
               id="date-select"
-              className="block max-w-[180px] pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white [&::-webkit-calendar-picker-indicator]:opacity-0"
+              className="block w-full pl-3 pr-8 py-2 text-base border border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               value={selectedDate}
               onChange={(e) => onDateChange(e.target.value)}
             />
-            <CalendarIcon className="h-5 w-5 text-gray-400 absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
 
         {/* Suche und Buttons - rechtsbündig */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center">
           <input
             type="text"
             className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
@@ -617,21 +617,23 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
           
           <button
             type="button"
-            className="inline-flex items-center justify-center p-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ml-1"
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             title="Filter anzeigen"
           >
             <FunnelIcon className="h-5 w-5" />
           </button>
           
-          <TableColumnConfig
-            columns={availableColumns}
-            visibleColumns={columnOrder.filter(id => !hiddenColumns.includes(id))}
-            columnOrder={columnOrder}
-            onToggleColumnVisibility={handleToggleColumnVisibility}
-            onMoveColumn={handleMoveColumn}
-            onClose={() => {}}
-          />
+          <div className="ml-1">
+            <TableColumnConfig
+              columns={availableColumns}
+              visibleColumns={columnOrder.filter(id => !hiddenColumns.includes(id))}
+              columnOrder={columnOrder}
+              onToggleColumnVisibility={handleToggleColumnVisibility}
+              onMoveColumn={handleMoveColumn}
+              onClose={() => {}}
+            />
+          </div>
         </div>
       </div>
       
@@ -701,7 +703,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                 </td>
               </tr>
             ) : (
-              filteredAndSortedUsers.map((group) => {
+              filteredAndSortedUsers.slice(0, displayLimit).map((group) => {
                 const totalPauseTime = group.endTime 
                   ? (group.endTime.getTime() - group.startTime.getTime()) - group.totalDuration
                   : 0;
@@ -805,6 +807,18 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
           </tbody>
         </table>
       </div>
+
+      {/* "Mehr anzeigen" Button */}
+      {filteredAndSortedUsers.length > displayLimit && (
+        <div className="mt-4 flex justify-center">
+          <button
+            className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50"
+            onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+          >
+            Mehr anzeigen ({filteredAndSortedUsers.length - displayLimit} verbleibend)
+          </button>
+        </div>
+      )}
 
       {/* Modal zum Stoppen der Zeiterfassung */}
       {showStopModal && selectedUser && (

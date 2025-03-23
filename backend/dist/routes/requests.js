@@ -17,22 +17,19 @@ const upload = (0, multer_1.default)({
         fileSize: 10 * 1024 * 1024, // 10MB Limit
     },
 });
-// Alle Routen mit Authentifizierung schützen
+// Öffentliche Routen für Datei-/Bildabrufe ohne Authentifizierung
+router.get('/:requestId/attachments/:attachmentId', requestAttachmentController_1.getAttachment);
+// Alle anderen Routen mit Authentifizierung schützen
 router.use(auth_1.authMiddleware);
-// Alle Requests abrufen
+// Request-Routen
 router.get('/', requestController_1.getAllRequests);
-// Einen spezifischen Request abrufen
 router.get('/:id', requestController_1.getRequestById);
-// Neuen Request erstellen
 router.post('/', requestController_1.createRequest);
-// Request aktualisieren
 router.put('/:id', requestController_1.updateRequest);
-// Request löschen
 router.delete('/:id', requestController_1.deleteRequest);
-// Anhang-Routen
+// Anhang-Routen (mit Authentifizierung)
 router.post('/:requestId/attachments', upload.single('file'), requestAttachmentController_1.addAttachment);
 router.get('/:requestId/attachments', requestAttachmentController_1.getRequestAttachments);
-router.get('/:requestId/attachments/:attachmentId', requestAttachmentController_1.getAttachment);
 router.delete('/:requestId/attachments/:attachmentId', requestAttachmentController_1.deleteAttachment);
 exports.default = router;
 //# sourceMappingURL=requests.js.map

@@ -17,6 +17,7 @@ import payrollRoutes from './routes/payroll';
 import identificationDocumentRoutes from './routes/identificationDocuments';
 import documentRecognitionRoutes from './routes/documentRecognition';
 import savedFiltersRoutes from './routes/savedFilters';
+import urlMetadataRoutes from './routes/urlMetadata';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 
 const app = express();
@@ -63,7 +64,7 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   optionsSuccessStatus: 200
 }));
@@ -123,6 +124,7 @@ app.use('/api/payroll', payrollRoutes);
 app.use('/api/identification-documents', identificationDocumentRoutes);
 app.use('/api/document-recognition', documentRecognitionRoutes);
 app.use('/api/saved-filters', savedFiltersRoutes);
+app.use('/api/url-metadata', urlMetadataRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

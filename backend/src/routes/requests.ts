@@ -15,28 +15,22 @@ const upload = multer({
   },
 });
 
-// Alle Routen mit Authentifizierung schützen
+// Öffentliche Routen für Datei-/Bildabrufe ohne Authentifizierung
+router.get('/:requestId/attachments/:attachmentId', getAttachment);
+
+// Alle anderen Routen mit Authentifizierung schützen
 router.use(authMiddleware);
 
-// Alle Requests abrufen
+// Request-Routen
 router.get('/', getAllRequests);
-
-// Einen spezifischen Request abrufen
 router.get('/:id', getRequestById);
-
-// Neuen Request erstellen
 router.post('/', createRequest);
-
-// Request aktualisieren
 router.put('/:id', updateRequest);
-
-// Request löschen
 router.delete('/:id', deleteRequest);
 
-// Anhang-Routen
+// Anhang-Routen (mit Authentifizierung)
 router.post('/:requestId/attachments', upload.single('file'), addAttachment);
 router.get('/:requestId/attachments', getRequestAttachments);
-router.get('/:requestId/attachments/:attachmentId', getAttachment);
 router.delete('/:requestId/attachments/:attachmentId', deleteAttachment);
 
 export default router; 

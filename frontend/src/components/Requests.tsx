@@ -131,6 +131,9 @@ const Requests: React.FC = () => {
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
+  // State für Paginierung
+  const [displayLimit, setDisplayLimit] = useState<number>(10);
+
   const fetchRequests = async () => {
     try {
       setLoading(true);
@@ -670,7 +673,7 @@ const Requests: React.FC = () => {
           </div>
           
           {/* Rechte Seite: Suchfeld, Filter und Spalten */}
-          <div className="flex space-x-2 items-center">
+          <div className="flex items-center gap-1.5">
             <input
               type="text"
               placeholder="Suchen..."
@@ -681,7 +684,7 @@ const Requests: React.FC = () => {
             
             {/* Filter-Button */}
             <button
-              className={`p-2 rounded-md border ${getActiveFilterCount() > 0 ? 'border-blue-300 bg-blue-50 text-blue-600' : 'border-gray-300 hover:bg-gray-100'}`}
+              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
               onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
               title="Filter"
             >
@@ -696,14 +699,16 @@ const Requests: React.FC = () => {
             </button>
             
             {/* Spalten-Konfiguration */}
-            <TableColumnConfig
-              columns={availableColumns}
-              visibleColumns={visibleColumnIds}
-              columnOrder={settings.columnOrder}
-              onToggleColumnVisibility={toggleColumnVisibility}
-              onMoveColumn={handleMoveColumn}
-              onClose={() => {}}
-            />
+            <div className="ml-1">
+              <TableColumnConfig
+                columns={availableColumns}
+                visibleColumns={visibleColumnIds}
+                columnOrder={settings.columnOrder}
+                onToggleColumnVisibility={toggleColumnVisibility}
+                onMoveColumn={handleMoveColumn}
+                onClose={() => {}}
+              />
+            </div>
           </div>
         </div>
 
@@ -798,104 +803,112 @@ const Requests: React.FC = () => {
                 <tr>
                   <td colSpan={visibleColumnIds.length} className="px-3 py-4 text-center text-gray-500">
                     <div className="flex flex-col items-center justify-center gap-4">
-                      <p>Keine Requests vorhanden</p>
-                      {hasPermission('requests', 'write', 'table') && (
-                        <button
-                          onClick={() => setIsCreateModalOpen(true)}
-                          className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
-                          style={{ width: '30.19px', height: '30.19px', marginTop: '1px', marginBottom: '1px' }}
-                          title="Neuen Request erstellen"
-                          aria-label="Neuen Request erstellen"
-                        >
-                          <PlusIcon className="h-4 w-4" />
-                        </button>
-                      )}
+                      <DocumentTextIcon className="h-10 w-10 text-gray-400" />
+                      <div className="text-sm">Keine Requests gefunden</div>
                     </div>
                   </td>
                 </tr>
               ) : (
-                filteredAndSortedRequests.map(request => (
-                  <tr key={request.id}>
-                    {/* Dynamisch generierte Zellen basierend auf den sichtbaren Spalten */}
-                    {visibleColumnIds.map(columnId => {
-                      switch (columnId) {
-                        case 'title':
-                          return (
-                            <td key={columnId} className="px-6 py-4">
-                              <div className="text-sm text-gray-900 break-words">{request.title}</div>
-                            </td>
-                          );
-                        case 'status':
-                          return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)} status-col`}>
-                                {request.status}
-                              </span>
-                            </td>
-                          );
-                        case 'requestedByResponsible':
-                          return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex flex-col">
+                <>
+                  {filteredAndSortedRequests.slice(0, displayLimit).map(request => (
+                    <tr key={request.id}>
+                      {/* Dynamisch generierte Zellen basierend auf den sichtbaren Spalten */}
+                      {visibleColumnIds.map(columnId => {
+                        switch (columnId) {
+                          case 'title':
+                            return (
+                              <td key={columnId} className="px-6 py-4">
+                                <div className="text-sm text-gray-900 break-words">{request.title}</div>
+                              </td>
+                            );
+                          case 'status':
+                            return (
+                              <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)} status-col`}>
+                                  {request.status}
+                                </span>
+                              </td>
+                            );
+                          case 'requestedByResponsible':
+                            return (
+                              <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex flex-col">
+                                  <div className="text-sm text-gray-900">
+                                    <span className="text-xs text-gray-500 hidden sm:inline">Angefragt von:</span>
+                                    <span className="text-xs text-gray-500 inline sm:hidden">Angefr. v.:</span><br />
+                                    {`${request.requestedBy.firstName} ${request.requestedBy.lastName}`}
+                                  </div>
+                                  <div className="text-sm text-gray-900 mt-1">
+                                    <span className="text-xs text-gray-500 hidden sm:inline">Verantwortlich:</span>
+                                    <span className="text-xs text-gray-500 inline sm:hidden">Ver.:</span><br />
+                                    {`${request.responsible.firstName} ${request.responsible.lastName}`}
+                                  </div>
+                                </div>
+                              </td>
+                            );
+                          case 'branch':
+                            return (
+                              <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">{request.branch.name}</div>
+                              </td>
+                            );
+                          case 'dueDate':
+                            return (
+                              <td key={columnId} className="px-6 py-4 whitespace-nowrap">
                                 <div className="text-sm text-gray-900">
-                                  <span className="text-xs text-gray-500 hidden sm:inline">Angefragt von:</span>
-                                  <span className="text-xs text-gray-500 inline sm:hidden">Angefr. v.:</span><br />
-                                  {`${request.requestedBy.firstName} ${request.requestedBy.lastName}`}
+                                  {new Date(request.dueDate).toLocaleDateString()}
                                 </div>
-                                <div className="text-sm text-gray-900 mt-1">
-                                  <span className="text-xs text-gray-500 hidden sm:inline">Verantwortlich:</span>
-                                  <span className="text-xs text-gray-500 inline sm:hidden">Ver.:</span><br />
-                                  {`${request.responsible.firstName} ${request.responsible.lastName}`}
-                                </div>
-                              </div>
-                            </td>
-                          );
-                        case 'branch':
-                          return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{request.branch.name}</div>
-                            </td>
-                          );
-                        case 'dueDate':
-                          return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {new Date(request.dueDate).toLocaleDateString()}
-                              </div>
-                            </td>
-                          );
-                        case 'actions':
-                          return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex space-x-2 action-buttons">
-                                <div className="status-buttons">
-                                {request.status === 'approval' && hasPermission('requests', 'write', 'table') && (
-                                  <>
-                                    <button
-                                      onClick={() => handleStatusChange(request.id, 'approved')}
-                                      className="p-1 bg-green-600 text-white rounded hover:bg-green-700"
-                                      title="Genehmigen"
-                                    >
-                                      <CheckIcon className="h-5 w-5" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleStatusChange(request.id, 'to_improve')}
-                                      className="p-1 bg-orange-600 text-white rounded hover:bg-orange-700"
-                                      title="Verbessern"
-                                    >
-                                      <ExclamationTriangleIcon className="h-5 w-5" />
-                                    </button>
-                                    <button
-                                      onClick={() => handleStatusChange(request.id, 'denied')}
-                                      className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
-                                      title="Ablehnen"
-                                    >
-                                      <XMarkIcon className="h-5 w-5" />
-                                    </button>
-                                  </>
-                                )}
-                                {request.status === 'to_improve' && hasPermission('requests', 'write', 'table') && (
-                                  <>
+                              </td>
+                            );
+                          case 'actions':
+                            return (
+                              <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex space-x-2 action-buttons">
+                                  <div className="status-buttons">
+                                  {request.status === 'approval' && hasPermission('requests', 'write', 'table') && (
+                                    <>
+                                      <button
+                                        onClick={() => handleStatusChange(request.id, 'approved')}
+                                        className="p-1 bg-green-600 text-white rounded hover:bg-green-700"
+                                        title="Genehmigen"
+                                      >
+                                        <CheckIcon className="h-5 w-5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleStatusChange(request.id, 'to_improve')}
+                                        className="p-1 bg-orange-600 text-white rounded hover:bg-orange-700"
+                                        title="Verbessern"
+                                      >
+                                        <ExclamationTriangleIcon className="h-5 w-5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleStatusChange(request.id, 'denied')}
+                                        className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                                        title="Ablehnen"
+                                      >
+                                        <XMarkIcon className="h-5 w-5" />
+                                      </button>
+                                    </>
+                                  )}
+                                  {request.status === 'to_improve' && hasPermission('requests', 'write', 'table') && (
+                                    <>
+                                      <button
+                                        onClick={() => handleStatusChange(request.id, 'approval')}
+                                        className="p-1 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                                        title="Erneut prüfen"
+                                      >
+                                        <ArrowPathIcon className="h-5 w-5" />
+                                      </button>
+                                      <button
+                                        onClick={() => handleStatusChange(request.id, 'denied')}
+                                        className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                                        title="Ablehnen"
+                                      >
+                                        <XMarkIcon className="h-5 w-5" />
+                                      </button>
+                                    </>
+                                  )}
+                                  {(request.status === 'approved' || request.status === 'denied') && hasPermission('requests', 'write', 'table') && (
                                     <button
                                       onClick={() => handleStatusChange(request.id, 'approval')}
                                       className="p-1 bg-yellow-600 text-white rounded hover:bg-yellow-700"
@@ -903,58 +916,54 @@ const Requests: React.FC = () => {
                                     >
                                       <ArrowPathIcon className="h-5 w-5" />
                                     </button>
+                                  )}
+                                  </div>
+                                  {hasPermission('requests', 'write', 'table') && (
                                     <button
-                                      onClick={() => handleStatusChange(request.id, 'denied')}
-                                      className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
-                                      title="Ablehnen"
+                                      onClick={() => {
+                                        setSelectedRequest(request);
+                                        setIsEditModalOpen(true);
+                                      }}
+                                      className="text-blue-600 hover:text-blue-900 edit-button ml-0.5"
                                     >
-                                      <XMarkIcon className="h-5 w-5" />
+                                      <PencilIcon className="h-5 w-5" />
                                     </button>
-                                  </>
-                                )}
-                                {(request.status === 'approved' || request.status === 'denied') && hasPermission('requests', 'write', 'table') && (
-                                  <button
-                                    onClick={() => handleStatusChange(request.id, 'approval')}
-                                    className="p-1 bg-yellow-600 text-white rounded hover:bg-yellow-700"
-                                    title="Erneut prüfen"
-                                  >
-                                    <ArrowPathIcon className="h-5 w-5" />
-                                  </button>
-                                )}
+                                  )}
+                                  {hasPermission('requests', 'both', 'table') && (
+                                    <button
+                                      onClick={() => handleCopyRequest(request)}
+                                      className="text-green-600 hover:text-green-900 copy-button ml-0.5"
+                                      title="Request kopieren"
+                                    >
+                                      <DocumentDuplicateIcon className="h-5 w-5" />
+                                    </button>
+                                  )}
                                 </div>
-                                {hasPermission('requests', 'write', 'table') && (
-                                  <button
-                                    onClick={() => {
-                                      setSelectedRequest(request);
-                                      setIsEditModalOpen(true);
-                                    }}
-                                    className="text-blue-600 hover:text-blue-900 edit-button ml-0.5"
-                                  >
-                                    <PencilIcon className="h-5 w-5" />
-                                  </button>
-                                )}
-                                {hasPermission('requests', 'both', 'table') && (
-                                  <button
-                                    onClick={() => handleCopyRequest(request)}
-                                    className="text-green-600 hover:text-green-900 copy-button ml-0.5"
-                                    title="Request kopieren"
-                                  >
-                                    <DocumentDuplicateIcon className="h-5 w-5" />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          );
-                        default:
-                          return null;
-                      }
-                    })}
-                  </tr>
-                ))
+                              </td>
+                            );
+                          default:
+                            return null;
+                        }
+                      })}
+                    </tr>
+                  ))}
+                </>
               )}
             </tbody>
           </table>
         </div>
+        
+        {/* "Mehr anzeigen" Button */}
+        {filteredAndSortedRequests.length > displayLimit && (
+          <div className="mt-4 flex justify-center">
+            <button
+              className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50"
+              onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+            >
+              Mehr anzeigen ({filteredAndSortedRequests.length - displayLimit} verbleibend)
+            </button>
+          </div>
+        )}
       </div>
     </>
   );

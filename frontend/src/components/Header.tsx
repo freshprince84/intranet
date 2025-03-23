@@ -174,7 +174,7 @@ const Header: React.FC = () => {
                     <HeaderMessage />
 
                     {/* Rechte Seite: Benachrichtigungen und Profil */}
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center gap-1.5">
                         {/* Benachrichtigungen */}
                         <div className="relative"
                             onMouseEnter={handleMouseEnter}

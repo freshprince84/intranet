@@ -78,6 +78,8 @@ exports.getTaskAttachments = getTaskAttachments;
 // Einzelnes Attachment abrufen
 const getAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // Für Anhänge verzichten wir auf Authentifizierung, damit Bilder auch in der Vorschau angezeigt werden können
+        // Diese Route sollte öffentlich sein, da die Anhang-ID und Task-ID als ausreichender Schutz dienen
         const { taskId, attachmentId } = req.params;
         const attachment = yield prisma.taskAttachment.findFirst({
             where: {
@@ -92,7 +94,18 @@ const getAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (!fs_1.default.existsSync(filePath)) {
             return res.status(404).json({ message: 'Datei nicht gefunden' });
         }
-        res.download(filePath, attachment.fileName);
+        // Entscheide basierend auf dem MIME-Typ, wie die Datei bereitgestellt wird
+        if (attachment.fileType.startsWith('image/')) {
+            // Bilder direkt anzeigen mit Cache-Kontrolle
+            res.setHeader('Content-Type', attachment.fileType);
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.fileName)}"`);
+            res.setHeader('Cache-Control', 'max-age=31536000'); // 1 Jahr cachen
+            fs_1.default.createReadStream(filePath).pipe(res);
+        }
+        else {
+            // Andere Dateien als Download anbieten
+            res.download(filePath, attachment.fileName);
+        }
     }
     catch (error) {
         console.error('Fehler beim Abrufen des Attachments:', error);
