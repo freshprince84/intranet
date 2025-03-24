@@ -50,4 +50,5 @@ Folgende Hauptsysteme sind im Intranet-Projekt implementiert:
 - **Lohnabrechnung**
 - **Dokumentenerkennung**
 - **Erweitertes Filtersystem**
-- **Einheitliches Suchfeld-Design** 
+- **Einheitliches Suchfeld-Design**
+- **Mobile App (React Native)** - Mobile Version des Intranet-Systems 

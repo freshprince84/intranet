@@ -13,14 +13,17 @@ Dieses Dokument beschreibt die Systemarchitektur und den Technologie-Stack des I
 7. [API-Design](#api-design)
 8. [Datenmodell](#datenmodell)
 9. [Frontend-Architektur](#frontend-architektur)
-10. [Fehlerbehandlung](#fehlerbehandlung)
-11. [Skalierung](#skalierung)
+10. [Mobile App-Architektur](#mobile-app-architektur)
+11. [Fehlerbehandlung](#fehlerbehandlung)
+12. [Skalierung](#skalierung)
 
 ## Überblick
 
 Das Intranet-Projekt ist eine modern aufgebaute Webapplikation, die eine React-basierte Frontend-Anwendung mit einem Node.js-Backend und einer PostgreSQL-Datenbank verbindet. Die Anwendung folgt einer klassischen dreischichtigen Architektur:
 
-1. **Präsentationsschicht**: React-basiertes Frontend
+1. **Präsentationsschicht**: 
+   - React-basiertes Web-Frontend
+   - React Native mobile App
 2. **Anwendungsschicht**: Node.js/Express.js-Backend mit Business-Logik
 3. **Datenschicht**: PostgreSQL-Datenbank mit Prisma ORM
 
@@ -258,6 +261,48 @@ Die Benutzeroberfläche verwendet ein Box-Konzept für konsistente Darstellung:
 - **Hauptboxen**: Dashboard/Arbeitszeitstatistik, Requests, Zeiterfassung, etc.
 - **Box-Styling**: Weißer Hintergrund, abgerundete Ecken, Schatten im Desktop-Modus
 - **Box-Breitentypen**: Wide, Normal, Small
+
+## Mobile App-Architektur
+
+Die mobile App erweitert das Intranet-System um eine native mobile Schnittstelle und nutzt dabei dasselbe Backend wie das Web-Frontend.
+
+### Technologien
+
+- **React Native**: Framework für die Entwicklung nativer mobiler Apps mit React
+- **TypeScript**: Typisierte Sprache für bessere Entwicklererfahrung und Codequalität
+- **React Navigation**: Navigationsframework für die App
+- **React Native Paper**: UI-Komponentenbibliothek mit Material Design
+- **Axios**: HTTP-Client für API-Anfragen
+- **AsyncStorage**: Persistenter Speicher für Offline-Funktionalität
+
+### Architekturmerkmale
+
+1. **Code-Sharing**: Wiederverwendung von Typdefinitionen und API-Clients aus dem Web-Frontend
+2. **Offline-First-Ansatz**: Die App kann auch ohne aktive Internetverbindung verwendet werden
+3. **Context API**: State-Management über React Context (analog zum Web-Frontend)
+4. **Modulare Struktur**: Aufbau in Komponenten, Screens und Services
+
+### Integrationsansatz
+
+Die mobile App ist als eigenständige Anwendung konzipiert, die das bestehende Backend nutzt. Dies ermöglicht:
+
+- Maximale Wiederverwendung der bestehenden API-Endpunkte
+- Gemeinsame Geschäftslogik für Web und Mobile
+- Einheitliche Datenmodelle und Validierung
+
+### Besondere Features
+
+- **Offline-Synchronisation**: Änderungen werden zwischengespeichert und bei Wiederverbindung synchronisiert
+- **Push-Benachrichtigungen**: Echtzeit-Updates von Aufgaben und Anfragen
+- **Biometrische Authentifizierung**: Zusätzliche Sicherheitsebene für mobile Benutzer
+- **Native Kamera-Integration**: Für die Dokumentenerfassung und OCR-Funktionalität
+
+### Dateispeicherung
+
+Die App nutzt verschiedene Speichermechanismen:
+- **AsyncStorage**: Für Benutzereinstellungen und Offline-Daten
+- **Secure Storage**: Für sensible Daten wie Zugangsdaten
+- **File System**: Für temporäre Mediendateien
 
 ## Fehlerbehandlung
 

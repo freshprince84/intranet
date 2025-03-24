@@ -1,0 +1,65 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    ext {
+        buildToolsVersion = "30.0.3"
+        minSdkVersion = 24
+        compileSdkVersion = 33
+        targetSdkVersion = 33
+        ndkVersion = "25.1.8937393"
+        
+        // React Native-Konfiguration für libraries
+        react = [
+            enableHermes: false
+        ]
+    }
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:7.3.1")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0")
+    }
+}
+
+allprojects {
+    repositories {
+        maven {
+            // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
+            url("$rootDir/../node_modules/react-native/android")
+        }
+        maven {
+            // Android JSC is installed from npm
+            url("$rootDir/../node_modules/jsc-android/dist")
+        }
+        
+        // Füge dieses Maven-Repository für React Native hinzu
+        maven {
+            url("https://registry.npmjs.org/")
+        }
+        
+        google()
+        mavenCentral()
+        maven { url 'https://www.jitpack.io' }
+    }
+}
+
+// Füge diese Zeile hinzu, um hermesEnabled zu definieren falls es noch nicht existiert
+ext {
+    if (!project.hasProperty('hermesEnabled')) {
+        hermesEnabled = false
+    }
+}
+
+// Diese Konfiguration wird von allen Projekten geteilt, inklusive react-native-reanimated
+subprojects { subproject ->
+    afterEvaluate {
+        if (!subproject.ext.has('react')) {
+            subproject.ext.react = [:]
+        }
+        if (!subproject.ext.react.containsKey('enableHermes')) {
+            subproject.ext.react.enableHermes = false
+        }
+    }
+}

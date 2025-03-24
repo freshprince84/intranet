@@ -29,44 +29,30 @@ app.use(cors({
     // Erlaube Anfragen ohne Origin-Header (z.B. von Postman oder direkten Zugriffen)
     if (!origin) return callback(null, true);
     
-    // Liste erlaubter Ursprünge
+    // Liste erlaubter Origins
     const allowedOrigins = [
-      // Lokale Entwicklung
-      'http://localhost:3000', 
-      'http://localhost:5000', 
-      'http://localhost',
-      // Hetzner Server - erlaube alle Domains und IPs
-      /^https?:\/\/.+$/ // Erlaube alle HTTP/HTTPS Ursprünge
+      'http://localhost:3000',      // Web-Frontend in Entwicklung
+      'exp://',                     // Expo-Client während der Entwicklung
+      'https://api.produktion-domain.com',  // Produktionsumgebung
+      'app://'                      // React Native App (production)
     ];
     
-    // Generische Prüfung für alle erlaubten Ursprünge
-    let isAllowed = false;
-    
-    for (const allowedOrigin of allowedOrigins) {
-      // Wenn es ein RegExp ist, teste es
-      if (allowedOrigin instanceof RegExp) {
-        if (allowedOrigin.test(origin)) {
-          isAllowed = true;
-          break;
-        }
-      } 
-      // Sonst prüfe auf exakte Übereinstimmung
-      else if (origin === allowedOrigin) {
-        isAllowed = true;
-        break;
-      }
+    // IP-basierte Entwicklungsumgebungen für Mobile
+    // Erlaubt alle lokalen IP-Adressen für Emulator/Gerätetests
+    if (origin.match(/^http:\/\/192\.168\.\d+\.\d+:\d+$/) || 
+        origin.match(/^http:\/\/10\.\d+\.\d+\.\d+:\d+$/) ||
+        origin.match(/^http:\/\/172\.(1[6-9]|2\d|3[0-1])\.\d+\.\d+:\d+$/)) {
+      return callback(null, true);
     }
     
-    if (isAllowed) {
+    if (allowedOrigins.indexOf(origin) !== -1 || process.env.NODE_ENV === 'development') {
       callback(null, true);
     } else {
-      callback(new Error(`Ursprung ${origin} nicht erlaubt durch CORS`), false);
+      console.warn(`Origin ${origin} ist nicht erlaubt durch CORS`);
+      callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200
+  credentials: true
 }));
 
 // Uploads-Verzeichnis
