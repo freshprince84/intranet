@@ -5,6 +5,7 @@ import Login from './pages/Login.tsx';
 import Register from './pages/Register.tsx';
 import Dashboard from './pages/Dashboard.tsx';
 import Settings from './pages/Settings.tsx';
+import MobileAppLanding from './pages/MobileAppLanding.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import PublicRoute from './components/PublicRoute.tsx';
 import UserManagement from './pages/UserManagement.tsx';
@@ -48,6 +49,9 @@ const App: React.FC = () => {
                                                         <Register />
                                                     </PublicRoute>
                                                 } />
+                                                
+                                                {/* Mobile App Landing Page - öffentlich zugänglich */}
+                                                <Route path="/mobile-app" element={<MobileAppLanding />} />
                                                 
                                                 {/* Geschützte Routen */}
                                                 <Route path="/" element={

@@ -7,6 +7,11 @@ import React, { createContext, useState, useContext, useEffect, ReactNode } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../api/apiClient';
 
+// Konstanten für AsyncStorage-Schlüssel
+const TOKEN_STORAGE_KEY = '@IntranetApp:token';
+const USER_STORAGE_KEY = '@IntranetApp:user';
+const REFRESH_TOKEN_KEY = '@IntranetApp:refreshToken';
+
 // Typen für den Auth-Context
 interface User {
   id: number;
@@ -32,10 +37,6 @@ interface AuthProviderProps {
 
 // Auth-Context erstellen
 const AuthContext = createContext<AuthContextData>({} as AuthContextData);
-
-// Storage Keys
-const USER_STORAGE_KEY = '@IntranetApp:user';
-const TOKEN_STORAGE_KEY = '@IntranetApp:token';
 
 /**
  * Auth-Provider-Komponente
@@ -73,11 +74,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signIn = async (credentials: { username: string; password: string }) => {
     try {
       setLoading(true);
-      const response = await authApi.login(credentials.username, credentials.password);
-      const { token, user } = response.data;
+      // Die login-Methode erwartet ein LoginCredentials-Objekt
+      const response = await authApi.login({
+        username: credentials.username,
+        password: credentials.password
+      });
+      
+      // Backend gibt direkt token, refreshToken und user zurück
+      const { token, refreshToken, user } = response;
 
       // Daten im AsyncStorage speichern
       await AsyncStorage.setItem(TOKEN_STORAGE_KEY, token);
+      if (refreshToken) {
+        await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+      }
       await AsyncStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
 
       setUser(user);
@@ -102,6 +112,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // Lokale Daten immer löschen, auch wenn API-Fehler
       await AsyncStorage.removeItem(USER_STORAGE_KEY);
       await AsyncStorage.removeItem(TOKEN_STORAGE_KEY);
+      await AsyncStorage.removeItem(REFRESH_TOKEN_KEY);
+      await AsyncStorage.removeItem('@IntranetApp:currentTimer');
+      await AsyncStorage.removeItem('@IntranetApp:offlineWorktime');
+      
       setUser(null);
       setLoading(false);
     }

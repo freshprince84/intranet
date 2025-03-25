@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Requests from '../components/Requests.tsx';
 import WorktimeStats from '../components/WorktimeStats.tsx';
+import AppDownload from '../components/AppDownload.tsx';
 import { DocumentTextIcon } from '@heroicons/react/24/outline';
 
 interface User {
@@ -53,11 +54,17 @@ const Dashboard: React.FC = () => {
           <WorktimeStats />
         </div>
 
-        <div className="mt-2 sm:mt-4 md:mt-6">
+        <div className="mt-2 sm:mt-4 md:mt-6 grid grid-cols-1 gap-4">
+          {/* Anfragen-Bereich */}
           <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full">
             <div>
               <Requests />
             </div>
+          </div>
+          
+          {/* App-Download-Bereich */}
+          <div className="mt-4">
+            <AppDownload />
           </div>
         </div>
       </div>

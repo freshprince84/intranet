@@ -3,84 +3,162 @@
  * Ermöglicht die Zeiterfassung und -verwaltung
  */
 
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, FlatList, Alert } from 'react-native';
-import { Text, Button, Card, Divider, Chip, ActivityIndicator, FAB } from 'react-native-paper';
-import { useAuth } from '../contexts/AuthContext';
-import { worktimeApi } from '../api/apiClient';
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, RefreshControl, ScrollView } from 'react-native';
+import { Button, Card, FAB, Dialog, TextInput, Portal, Modal, Menu, Divider, Chip } from 'react-native-paper';
+import { format, differenceInSeconds, intervalToDuration, formatDuration } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../contexts/AuthContext';
+import { worktimeApi, branchApi } from '../api/apiClient';
+import { Branch, WorkTime } from '../types';
+import NoDataPlaceholder from '../components/NoDataPlaceholder';
+import LoadingOverlay from '../components/LoadingOverlay';
+import { 
+  formatDateTime, 
+  calculateDuration, 
+  utcToLocalDate, 
+  localToUTCString
+} from '../utils/dateUtils';
 
 // Offline-Daten-Key
 const OFFLINE_WORKTIME_KEY = '@IntranetApp:offlineWorktime';
 
-// Typen für die Arbeitszeitdaten
-interface WorkTime {
-  id?: number;
-  startTime: Date;
-  endTime?: Date | null;
-  userId?: number;
-  branchId: number;
-  offline?: boolean;
-}
-
-interface Branch {
-  id: number;
-  name: string;
-}
-
 const WorktimeScreen = () => {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [currentWorkTime, setCurrentWorkTime] = useState<WorkTime | null>(null);
   const [workTimes, setWorkTimes] = useState<WorkTime[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
   const [isOffline, setIsOffline] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState<string>('');
+  const [startLoading, setStartLoading] = useState(false);
+  const [stopLoading, setStopLoading] = useState(false);
   
-  // Demo-Branches (sollten später vom API geladen werden)
+  // Daten laden, wenn Komponente gemountet wird
   useEffect(() => {
-    // Mock-Daten für Demo
-    setBranches([
-      { id: 1, name: 'Hauptsitz' },
-      { id: 2, name: 'Filiale A' },
-      { id: 3, name: 'Filiale B' },
-    ]);
-    
-    setSelectedBranch({ id: 1, name: 'Hauptsitz' });
-    
-    // Daten laden
-    loadWorkTimes();
-    
-    // Prüfen, ob ein Timer läuft
-    checkRunningTimer();
+    setupScreen();
   }, []);
+  
+  // Hauptinitialisierungsfunktion
+  const setupScreen = async () => {
+    setIsLoading(true);
+    setLoadingMessage('Daten werden geladen...');
+    
+    try {
+      // Branches laden
+      await loadBranches();
+      
+      // Arbeitszeitdaten laden
+      await loadWorkTimes();
+      
+      // Prüfen, ob ein Timer läuft
+      await checkRunningTimer();
+      
+      setIsOffline(false);
+    } catch (error) {
+      console.error('Fehler beim Laden der Daten:', error);
+      setIsOffline(true);
+    } finally {
+      setIsLoading(false);
+      setLoadingMessage('');
+    }
+  };
+  
+  // Pull-to-Refresh Funktion
+  const onRefresh = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      await setupScreen();
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+  
+  /**
+   * Lädt die verfügbaren Niederlassungen
+   */
+  const loadBranches = async () => {
+    try {
+      const response = await branchApi.getAll();
+      const branchData = response.data;
+      console.log('Geladene Niederlassungen:', branchData);
+      
+      setBranches(branchData);
+      
+      // Standard-Niederlassung auswählen, falls noch keine ausgewählt ist
+      if (branchData.length > 0 && !selectedBranch) {
+        setSelectedBranch(branchData[0]);
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der Niederlassungen:', error);
+      
+      // Fallback auf Mock-Daten
+      const mockBranches = [
+        { id: 1, name: 'Hauptsitz' },
+        { id: 2, name: 'Filiale A' },
+        { id: 3, name: 'Filiale B' },
+      ];
+      
+      setBranches(mockBranches);
+      
+      if (!selectedBranch) {
+        setSelectedBranch(mockBranches[0]);
+      }
+      
+      throw error; // Weitergeben für übergeordnete Fehlerbehandlung
+    }
+  };
   
   /**
    * Lädt Arbeitszeitdaten vom Backend
    */
   const loadWorkTimes = async () => {
-    setIsLoading(true);
+    setLoadingMessage('Arbeitszeiten werden geladen...');
     try {
       // Vom Backend laden
-      const response = await worktimeApi.getAll();
-      setWorkTimes(response.data);
+      const today = new Date();
+      const formattedDate = today.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      const response = await worktimeApi.getByDate(formattedDate);
+      console.log('Arbeitszeiten vom Server:', response);
+      
+      // Zeiten in lokales Format konvertieren
+      const processedTimes = response.map((worktime: WorkTime) => ({
+        ...worktime,
+        // Zeitzonenkonversion durchführen (nur wenn es ein String ist)
+        startTime: typeof worktime.startTime === 'string' 
+          ? utcToLocalDate(worktime.startTime)
+          : worktime.startTime,
+        endTime: worktime.endTime && typeof worktime.endTime === 'string'
+          ? utcToLocalDate(worktime.endTime)
+          : worktime.endTime
+      }));
+      
+      setWorkTimes(processedTimes);
       
       // Offline-Daten laden und zusammenführen
       const offlineData = await loadOfflineWorkTimes();
       if (offlineData && offlineData.length > 0) {
+        console.log('Offline-Arbeitszeiten:', offlineData);
         setWorkTimes(prevTimes => [...prevTimes, ...offlineData]);
       }
     } catch (error) {
       console.error('Fehler beim Laden der Arbeitszeiten:', error);
+      
       // Bei Netzwerkfehler nur Offline-Daten laden
       const offlineData = await loadOfflineWorkTimes();
       if (offlineData) {
         setWorkTimes(offlineData);
         setIsOffline(true);
       }
-    } finally {
-      setIsLoading(false);
+      
+      throw error; // Weitergeben für übergeordnete Fehlerbehandlung
     }
   };
   
@@ -88,20 +166,54 @@ const WorktimeScreen = () => {
    * Prüft, ob aktuell ein Timer läuft
    */
   const checkRunningTimer = async () => {
+    setLoadingMessage('Aktiver Timer wird geprüft...');
     try {
       // Zuerst lokalen Speicher prüfen
       const storedTimer = await AsyncStorage.getItem('@IntranetApp:currentTimer');
       if (storedTimer) {
         const timer = JSON.parse(storedTimer);
+        
+        // Wenn der Timer aus dem Speicher kommt, in Date umwandeln
+        if (typeof timer.startTime === 'string') {
+          timer.startTime = new Date(timer.startTime);
+        }
+        if (timer.endTime && typeof timer.endTime === 'string') {
+          timer.endTime = new Date(timer.endTime);
+        }
+        
         setCurrentWorkTime(timer);
         setIsTimerRunning(true);
         return;
       }
       
       // Dann Backend prüfen
-      // Hier würde API-Logik implementiert
+      if (!isOffline) {
+        try {
+          const response = await worktimeApi.getActive();
+          console.log('Aktiver Timer vom Server:', response);
+          
+          // Wenn ein aktiver Timer gefunden wurde und 'active' ist true
+          if (response && response.active) {
+            // Zeitzone korrigieren
+            const activeWorktime = {
+              ...response,
+              // Nach lokal konvertieren
+              startTime: utcToLocalDate(response.startTime)
+            };
+            
+            setCurrentWorkTime(activeWorktime);
+            setIsTimerRunning(true);
+            
+            // Speichere auch lokal für Offline-Zugriff
+            await AsyncStorage.setItem('@IntranetApp:currentTimer', JSON.stringify(activeWorktime));
+          }
+        } catch (error) {
+          console.error('Fehler beim Prüfen des aktiven Timers:', error);
+        }
+      }
     } catch (error) {
       console.error('Fehler beim Prüfen des laufenden Timers:', error);
+      throw error; // Weitergeben für übergeordnete Fehlerbehandlung
     }
   };
   
@@ -111,7 +223,16 @@ const WorktimeScreen = () => {
   const loadOfflineWorkTimes = async (): Promise<WorkTime[]> => {
     try {
       const offlineData = await AsyncStorage.getItem(OFFLINE_WORKTIME_KEY);
-      return offlineData ? JSON.parse(offlineData) : [];
+      if (!offlineData) return [];
+      
+      const parsedData = JSON.parse(offlineData);
+      
+      // Date-Strings in Date-Objekte umwandeln
+      return parsedData.map((item: WorkTime) => ({
+        ...item,
+        startTime: new Date(item.startTime),
+        endTime: item.endTime ? new Date(item.endTime) : null
+      }));
     } catch (error) {
       console.error('Fehler beim Laden der Offline-Daten:', error);
       return [];
@@ -126,6 +247,7 @@ const WorktimeScreen = () => {
       await AsyncStorage.setItem(OFFLINE_WORKTIME_KEY, JSON.stringify(data));
     } catch (error) {
       console.error('Fehler beim Speichern der Offline-Daten:', error);
+      Alert.alert('Fehler', 'Die Offline-Daten konnten nicht gespeichert werden.');
     }
   };
   
@@ -138,138 +260,190 @@ const WorktimeScreen = () => {
       return;
     }
     
-    setIsLoading(true);
+    setStartLoading(true);
     try {
-      // Neuen Zeiteintrag erstellen
-      const newWorkTime: WorkTime = {
-        startTime: new Date(),
-        branchId: selectedBranch.id,
-        userId: user?.id,
-      };
-      
-      // Online/Offline-Handling
-      if (isOffline) {
-        // Offline-Speicherung
-        newWorkTime.offline = true;
-        setCurrentWorkTime(newWorkTime);
-        
-        // In AsyncStorage speichern
-        await AsyncStorage.setItem('@IntranetApp:currentTimer', JSON.stringify(newWorkTime));
-        
-        // Statusaktualisierung
-        setIsTimerRunning(true);
-      } else {
-        // Online an API senden
+      // Online-Modus: starte Timer auf dem Server
+      if (!isOffline) {
         try {
           const response = await worktimeApi.start(selectedBranch.id);
-          const serverWorkTime = response.data;
-          setCurrentWorkTime(serverWorkTime);
+          console.log('Timer gestartet:', response);
           
-          // Zusätzlich lokal speichern für Offline-Fallback
-          await AsyncStorage.setItem('@IntranetApp:currentTimer', JSON.stringify(serverWorkTime));
+          // Speichere auch lokal für Offline-Zugriff
+          const activeWorktime = {
+            ...response,
+            startTime: utcToLocalDate(response.startTime)
+          };
           
-          // Statusaktualisierung
+          await AsyncStorage.setItem('@IntranetApp:currentTimer', JSON.stringify(activeWorktime));
+          setCurrentWorkTime(activeWorktime);
           setIsTimerRunning(true);
         } catch (error) {
-          // Bei API-Fehler: Fallback auf Offline-Modus
-          console.error('API-Fehler beim Starten des Timers:', error);
-          newWorkTime.offline = true;
-          setCurrentWorkTime(newWorkTime);
-          
-          await AsyncStorage.setItem('@IntranetApp:currentTimer', JSON.stringify(newWorkTime));
-          setIsTimerRunning(true);
+          console.error('Fehler beim Starten des Timers:', error);
+          Alert.alert('Fehler', 'Der Timer konnte nicht gestartet werden. Versuche es im Offline-Modus.');
           setIsOffline(true);
+          // Im Fehlerfall Offline-Timer erstellen
+          await createOfflineTimer();
         }
+      } else {
+        // Offline-Modus: lokalen Timer erstellen
+        await createOfflineTimer();
       }
     } catch (error) {
       console.error('Fehler beim Starten des Timers:', error);
       Alert.alert('Fehler', 'Der Timer konnte nicht gestartet werden.');
     } finally {
-      setIsLoading(false);
+      setStartLoading(false);
     }
   };
   
   /**
-   * Stoppt laufenden Timer
+   * Erstellt einen Offline-Timer
    */
-  const stopTimer = async () => {
-    if (!currentWorkTime) {
-      Alert.alert('Fehler', 'Kein laufender Timer gefunden.');
-      return;
-    }
+  const createOfflineTimer = async () => {
+    // Neuen Zeiteintrag erstellen mit aktueller lokaler Zeit
+    const newWorkTime: WorkTime = {
+      startTime: new Date(),
+      branchId: selectedBranch?.id || 1,
+      userId: user?.id,
+      offline: true
+    };
     
-    setIsLoading(true);
+    // In lokalen Speicher schreiben
+    setCurrentWorkTime(newWorkTime);
+    await AsyncStorage.setItem('@IntranetApp:currentTimer', JSON.stringify(newWorkTime));
+    
+    // UI aktualisieren
+    setIsTimerRunning(true);
+    setIsOffline(true);
+    
+    // Erfolgsmeldung
+    Alert.alert('Hinweis', 'Zeiterfassung im Offline-Modus gestartet. Die Daten werden synchronisiert, sobald eine Verbindung verfügbar ist.');
+  };
+  
+  /**
+   * Stoppt Timer für Zeiterfassung
+   */
+  const stopTimer = async (notes: string = '') => {
+    if (!currentWorkTime) return;
+    
+    setStopLoading(true);
     try {
-      // Timer mit Endzeit aktualisieren
-      const endedWorkTime = {
-        ...currentWorkTime,
-        endTime: new Date(),
-      };
+      // Aktuelle Zeit als Endzeit
+      const endTime = new Date();
       
-      if (isOffline || currentWorkTime.offline) {
-        // Offline-Modus: Lokal speichern für spätere Synchronisierung
-        const offlineWorkTimes = await loadOfflineWorkTimes();
-        offlineWorkTimes.push(endedWorkTime);
-        await saveOfflineWorkTimes(offlineWorkTimes);
-        
-        // UI aktualisieren
-        setWorkTimes(prevTimes => [...prevTimes, endedWorkTime]);
-      } else {
-        // Online an API senden
+      // Online-Modus und Timer hat eine ID: stoppt auf dem Server
+      if (!isOffline && currentWorkTime.id) {
         try {
-          if (currentWorkTime.id) {
-            await worktimeApi.stop(currentWorkTime.id);
-            // Zeitliste neu laden
-            await loadWorkTimes();
-          }
+          const response = await worktimeApi.stop(currentWorkTime.id, notes);
+          console.log('Timer gestoppt:', response);
+          
+          // Entferne den lokalen Timer
+          await AsyncStorage.removeItem('@IntranetApp:currentTimer');
+          
+          // Aktualisiere Anzeige
+          setCurrentWorkTime(null);
+          setIsTimerRunning(false);
+          
+          // Lade Arbeitszeiten neu
+          await loadWorkTimes();
         } catch (error) {
-          // Bei API-Fehler: Fallback auf Offline-Modus
-          console.error('API-Fehler beim Stoppen des Timers:', error);
+          console.error('Fehler beim Stoppen des Timers:', error);
+          Alert.alert('Fehler', 'Der Timer konnte nicht gestoppt werden. Wird offline gespeichert.');
           
-          const offlineWorkTimes = await loadOfflineWorkTimes();
-          offlineWorkTimes.push(endedWorkTime);
-          await saveOfflineWorkTimes(offlineWorkTimes);
+          // Im Fehlerfall als beendet markieren und offline speichern
+          const endedWorkTime = {
+            ...currentWorkTime,
+            endTime,
+            notes,
+            synced: false
+          };
           
-          setWorkTimes(prevTimes => [...prevTimes, endedWorkTime]);
-          setIsOffline(true);
+          await handleOfflineStop(endedWorkTime);
         }
+      } else {
+        // Offline-Modus oder lokaler Timer ohne ID
+        const endedWorkTime = {
+          ...currentWorkTime,
+          endTime,
+          notes,
+          synced: false
+        };
+        
+        await handleOfflineStop(endedWorkTime);
       }
-      
-      // Timer-Status zurücksetzen
-      await AsyncStorage.removeItem('@IntranetApp:currentTimer');
-      setCurrentWorkTime(null);
-      setIsTimerRunning(false);
     } catch (error) {
       console.error('Fehler beim Stoppen des Timers:', error);
       Alert.alert('Fehler', 'Der Timer konnte nicht gestoppt werden.');
     } finally {
-      setIsLoading(false);
+      setStopLoading(false);
     }
   };
   
   /**
-   * Formatiert Datum für die Anzeige
+   * Behandelt das Stoppen eines Timers im Offline-Modus
    */
-  const formatDate = (date: Date | string) => {
-    if (!date) return '';
-    const d = new Date(date);
-    return `${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+  const handleOfflineStop = async (endedWorkTime: WorkTime) => {
+    // Offline-Daten laden
+    const offlineWorkTimes = await loadOfflineWorkTimes();
+    
+    // Beendeten Timer hinzufügen
+    offlineWorkTimes.push(endedWorkTime);
+    
+    // Offline-Daten speichern
+    await saveOfflineWorkTimes(offlineWorkTimes);
+    
+    // UI aktualisieren
+    setWorkTimes(prevTimes => [...prevTimes, endedWorkTime]);
+    setIsOffline(true);
+    
+    // Hinweis anzeigen
+    Alert.alert('Hinweis', 'Zeiterfassung im Offline-Modus gestoppt. Die Daten werden synchronisiert, sobald eine Verbindung verfügbar ist.');
   };
   
   /**
-   * Berechnet Dauer zwischen Start- und Endzeit
+   * Synchronisiert Offline-Daten mit dem Server
    */
-  const calculateDuration = (start: Date | string, end: Date | string | null | undefined) => {
-    if (!end) return '';
+  const syncOfflineData = async () => {
+    // Offline-Daten laden
+    const offlineData = await loadOfflineWorkTimes();
     
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    const diff = endDate.getTime() - startDate.getTime();
+    if (offlineData.length === 0) {
+      Alert.alert('Info', 'Keine Offline-Daten zum Synchronisieren vorhanden.');
+      return;
+    }
     
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    setIsLoading(true);
+    setLoadingMessage('Offline-Daten werden synchronisiert...');
     
-    return `${hours}h ${minutes}min`;
+    try {
+      // Offline-Daten für API vorbereiten
+      const apiEntries = offlineData.map(entry => ({
+        ...entry,
+        // Lokale Zeit zu UTC ISO-String umwandeln
+        startTime: localToUTCString(new Date(entry.startTime)),
+        endTime: entry.endTime ? localToUTCString(new Date(entry.endTime)) : null
+      }));
+      
+      // Sende alle Offline-Einträge zur Synchronisierung
+      await worktimeApi.syncOfflineEntries(apiEntries);
+      
+      // Lösche die synchronisierten Daten aus dem Offline-Speicher
+      await AsyncStorage.setItem(OFFLINE_WORKTIME_KEY, JSON.stringify([]));
+      
+      // Lade die aktuellen Daten neu
+      await loadWorkTimes();
+      
+      // Setze Offline-Status zurück
+      setIsOffline(false);
+      
+      Alert.alert('Erfolg', 'Offline-Daten wurden erfolgreich synchronisiert.');
+    } catch (error) {
+      console.error('Fehler bei der Synchronisierung:', error);
+      Alert.alert('Fehler', 'Die Synchronisierung ist fehlgeschlagen. Bitte versuche es später erneut.');
+    } finally {
+      setIsLoading(false);
+      setLoadingMessage('');
+    }
   };
   
   /**
@@ -279,7 +453,7 @@ const WorktimeScreen = () => {
     <Card style={styles.card} mode="outlined">
       <Card.Content>
         <View style={styles.cardHeader}>
-          <Text style={styles.dateText}>{formatDate(item.startTime)}</Text>
+          <Text style={styles.dateText}>{formatDateTime(item.startTime)}</Text>
           {item.offline && <Chip icon="cloud-off-outline">Offline</Chip>}
         </View>
         
@@ -288,12 +462,12 @@ const WorktimeScreen = () => {
         <View style={styles.workTimeDetails}>
           <View>
             <Text variant="labelSmall">Start</Text>
-            <Text>{formatDate(item.startTime)}</Text>
+            <Text>{formatDateTime(item.startTime)}</Text>
           </View>
           
           <View>
             <Text variant="labelSmall">Ende</Text>
-            <Text>{item.endTime ? formatDate(item.endTime) : '-'}</Text>
+            <Text>{item.endTime ? formatDateTime(item.endTime) : '-'}</Text>
           </View>
           
           <View>
@@ -301,6 +475,12 @@ const WorktimeScreen = () => {
             <Text>{calculateDuration(item.startTime, item.endTime)}</Text>
           </View>
         </View>
+        
+        {item.branch && (
+          <Text variant="bodySmall" style={styles.branchText}>
+            Niederlassung: {item.branch.name}
+          </Text>
+        )}
       </Card.Content>
     </Card>
   );
@@ -324,7 +504,7 @@ const WorktimeScreen = () => {
             {isTimerRunning ? (
               <>
                 <Text variant="labelSmall">Laufende Zeit seit:</Text>
-                <Text variant="titleMedium">{formatDate(currentWorkTime?.startTime || new Date())}</Text>
+                <Text variant="titleMedium">{formatDateTime(currentWorkTime?.startTime || new Date())}</Text>
                 <Text variant="bodyMedium">
                   Niederlassung: {branches.find(b => b.id === currentWorkTime?.branchId)?.name || 'Unbekannt'}
                 </Text>
@@ -336,13 +516,13 @@ const WorktimeScreen = () => {
           
           <Button 
             mode={isTimerRunning ? "outlined" : "contained"}
-            onPress={isTimerRunning ? stopTimer : startTimer}
-            loading={isLoading}
-            disabled={isLoading}
+            onPress={isTimerRunning ? () => stopTimer() : startTimer}
+            loading={startLoading || stopLoading}
+            disabled={startLoading || stopLoading}
             icon={isTimerRunning ? "stop-circle" : "play-circle"}
             style={styles.actionButton}
           >
-            {isTimerRunning ? "Zeiterfassung stoppen" : "Zeiterfassung starten"}
+            {isTimerRunning ? 'Timer stoppen' : 'Timer starten'}
           </Button>
         </Card.Content>
       </Card>
@@ -354,17 +534,32 @@ const WorktimeScreen = () => {
           {isLoading && <ActivityIndicator size="small" />}
         </View>
         
-        <FlatList
-          data={workTimes}
-          renderItem={renderWorkTimeItem}
-          keyExtractor={(item, index) => `worktime-${item.id || index}`}
-          contentContainerStyle={styles.listContent}
-          ListEmptyComponent={
-            <View style={styles.emptyList}>
-              <Text>Keine Einträge gefunden</Text>
-            </View>
-          }
-        />
+        {/* Lade-Status */}
+        {loadingMessage ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#3B82F6" />
+            <Text style={styles.loadingText}>{loadingMessage}</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={workTimes}
+            renderItem={renderWorkTimeItem}
+            keyExtractor={(item, index) => `worktime-${item.id || index}`}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefreshing}
+                onRefresh={onRefresh}
+                colors={['#3B82F6']}
+              />
+            }
+            ListEmptyComponent={
+              <View style={styles.emptyList}>
+                <Text>Keine Einträge gefunden</Text>
+              </View>
+            }
+          />
+        )}
       </View>
       
       {/* FAB für Synchronisierung im Offline-Modus */}
@@ -372,7 +567,7 @@ const WorktimeScreen = () => {
         <FAB
           icon="sync"
           style={styles.fab}
-          onPress={() => loadWorkTimes()}
+          onPress={syncOfflineData}
           label="Synchronisieren"
         />
       )}
@@ -425,6 +620,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  branchText: {
+    marginTop: 8,
+    color: '#666',
+  },
   emptyList: {
     padding: 16,
     alignItems: 'center',
@@ -437,6 +636,15 @@ const styles = StyleSheet.create({
   offlineChip: {
     marginTop: 8,
     alignSelf: 'flex-start',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    color: '#3B82F6',
   },
 });
 

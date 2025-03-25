@@ -59,6 +59,10 @@ app.use(cors({
 const uploadsPath = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsPath));
 
+// Downloads-Verzeichnis für Mobile App
+const downloadsPath = path.join(__dirname, '../public/downloads');
+app.use('/downloads', express.static(downloadsPath));
+
 // Sicherstellen, dass die Uploads-Verzeichnisse existieren
 import fs from 'fs';
 const cerebroUploadsPath = path.join(uploadsPath, 'cerebro');
@@ -77,6 +81,11 @@ if (!fs.existsSync(requestAttachmentsPath)) {
   fs.mkdirSync(requestAttachmentsPath, { recursive: true });
 }
 
+// Sicherstellen, dass das Downloads-Verzeichnis existiert
+if (!fs.existsSync(downloadsPath)) {
+  fs.mkdirSync(downloadsPath, { recursive: true });
+}
+
 // Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 5 Minuten)
 const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 5 Minuten
 setInterval(async () => {
@@ -90,6 +99,22 @@ app.get('/api/test-route', (req: Request, res: Response) => {
     message: 'Test-Route ist erreichbar', 
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV
+  });
+});
+
+// Mobile App Download-Links-Route
+app.get('/api/mobile-app/info', (req: Request, res: Response) => {
+  res.json({
+    android: {
+      version: '1.0.0',
+      downloadUrl: 'https://65.109.228.106.nip.io/downloads/intranet-app.apk',
+      playStoreUrl: 'https://play.google.com/store/apps/details?id=com.yourcompany.intranetapp'
+    },
+    ios: {
+      version: '1.0.0',
+      appStoreUrl: 'https://apps.apple.com/app/intranet-app/id1234567890'
+    },
+    lastUpdate: '24.03.2023'
   });
 });
 

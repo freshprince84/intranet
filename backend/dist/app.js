@@ -68,6 +68,9 @@ app.use((0, cors_1.default)({
 // Uploads-Verzeichnis
 const uploadsPath = path_1.default.join(__dirname, '../uploads');
 app.use('/uploads', express_1.default.static(uploadsPath));
+// Downloads-Verzeichnis für Mobile App
+const downloadsPath = path_1.default.join(__dirname, '../public/downloads');
+app.use('/downloads', express_1.default.static(downloadsPath));
 // Sicherstellen, dass die Uploads-Verzeichnisse existieren
 const fs_1 = __importDefault(require("fs"));
 const cerebroUploadsPath = path_1.default.join(uploadsPath, 'cerebro');
@@ -82,6 +85,10 @@ if (!fs_1.default.existsSync(taskAttachmentsPath)) {
 if (!fs_1.default.existsSync(requestAttachmentsPath)) {
     fs_1.default.mkdirSync(requestAttachmentsPath, { recursive: true });
 }
+// Sicherstellen, dass das Downloads-Verzeichnis existiert
+if (!fs_1.default.existsSync(downloadsPath)) {
+    fs_1.default.mkdirSync(downloadsPath, { recursive: true });
+}
 // Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 5 Minuten)
 const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 5 Minuten
 setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
@@ -94,6 +101,21 @@ app.get('/api/test-route', (req, res) => {
         message: 'Test-Route ist erreichbar',
         timestamp: new Date().toISOString(),
         env: process.env.NODE_ENV
+    });
+});
+// Mobile App Download-Links-Route
+app.get('/api/mobile-app/info', (req, res) => {
+    res.json({
+        android: {
+            version: '1.0.0',
+            downloadUrl: 'https://65.109.228.106.nip.io/downloads/intranet-app.apk',
+            playStoreUrl: 'https://play.google.com/store/apps/details?id=com.yourcompany.intranetapp'
+        },
+        ios: {
+            version: '1.0.0',
+            appStoreUrl: 'https://apps.apple.com/app/intranet-app/id1234567890'
+        },
+        lastUpdate: '24.03.2023'
     });
 });
 // Routen

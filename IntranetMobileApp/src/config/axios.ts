@@ -1,72 +1,110 @@
 /**
- * Axios-Konfiguration für die mobile App
- * Adaptiert von der Web-Frontend-Version mit AsyncStorage anstelle von localStorage
+ * Axios-Konfiguration für die API-Kommunikation
  */
 
-import axios, { AxiosRequestConfig, AxiosResponse, AxiosError } from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
+import { API_CONFIG } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_URL, API_TIMEOUT, MOBILE_HEADERS } from './api';
+import { Platform } from 'react-native';
 
-// Axios-Instance mit Basis-Konfiguration
-const axiosInstance = axios.create({
-  baseURL: API_URL,
-  timeout: API_TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
-    ...MOBILE_HEADERS,
-  },
-});
+// Basis-Konfiguration für Axios
+const axiosConfig: AxiosRequestConfig = {
+  baseURL: API_CONFIG.API_HOST,
+  timeout: API_CONFIG.TIMEOUT,
+  headers: API_CONFIG.HEADERS
+};
 
-// Request Interceptor für Token-Handling
+// Axios-Instanz erstellen
+const axiosInstance = axios.create(axiosConfig);
+
+// Request-Interceptor: Fügt Auth-Token zu Anfragen hinzu
 axiosInstance.interceptors.request.use(
   async (config) => {
     try {
-      // Token aus AsyncStorage laden (anstelle von localStorage im Web)
-      const token = await AsyncStorage.getItem('token');
+      // Token aus dem Speicher laden
+      const token = await AsyncStorage.getItem('@IntranetApp:token');
       
-      // Wenn Token vorhanden, zu Authorization-Header hinzufügen
+      // Wenn Token vorhanden, als Authorization-Header hinzufügen
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
       
-      // Netzwerkstatus überprüfen und ggf. Offline-Modus aktivieren
-      // Diese Implementierung muss später ergänzt werden
+      // Emulator-Debugging-Info hinzufügen
+      if (__DEV__ && Platform.OS === 'android') {
+        console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
+        
+        if (config.data) {
+          console.log('Request Payload:', config.data);
+        }
+      }
       
-      // Geänderte Konfiguration zurückgeben
       return config;
     } catch (error) {
-      console.error('Request Interceptor Fehler:', error);
-      return Promise.reject(error);
+      console.error('Error in Axios request interceptor:', error);
+      return config;
     }
   },
   (error) => {
+    console.error('Error in Axios request:', error);
     return Promise.reject(error);
   }
 );
 
-// Response Interceptor für Fehlerhandling und Token-Refresh
+// Response-Interceptor: Behandelt globale Antworten und Fehler
 axiosInstance.interceptors.response.use(
-  (response: AxiosResponse) => {
-    return response;
-  },
-  async (error: AxiosError) => {
-    // Token-Ablauf (401) abfangen und ggf. Token erneuern
-    if (error.response?.status === 401) {
-      try {
-        // Versuchen, Token zu erneuern
-        // Implementation folgt später
-      } catch (refreshError) {
-        // Bei Refresh-Fehler: Benutzer ausloggen
-        await AsyncStorage.removeItem('token');
-        await AsyncStorage.removeItem('user');
-        // Navigation zum Login-Screen erfolgt über AuthContext
-      }
+  (response) => {
+    // Erfolgreiche Antwort
+    if (__DEV__ && Platform.OS === 'android') {
+      console.log(`[API Response] ${response.status} ${response.config.url}`);
+      console.log('Response Data:', response.data);
     }
     
-    // Netzwerkfehler behandeln
-    if (!error.response) {
-      // Offline-Handling hier implementieren
-      // Daten zwischenspeichern, später synchronisieren
+    return response;
+  },
+  async (error) => {
+    // Fehlerbehandlung
+    if (__DEV__) {
+      console.error('API Error:', error.response?.status, error.response?.data || error.message);
+    }
+    
+    const originalRequest = error.config;
+    
+    // Wenn 401 Unauthorized und kein Retry, Token aktualisieren
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Hier Token-Aktualisierungslogik implementieren
+        const refreshToken = await AsyncStorage.getItem('@IntranetApp:refreshToken');
+        
+        if (refreshToken) {
+          // Token aktualisieren
+          const response = await axios.post(
+            `${API_CONFIG.API_HOST}/api/auth/refresh`,
+            { refreshToken },
+            { headers: API_CONFIG.HEADERS }
+          );
+          
+          const { token } = response.data;
+          
+          // Neuen Token speichern
+          if (token) {
+            await AsyncStorage.setItem('@IntranetApp:token', token);
+            
+            // Anfrage mit neuem Token wiederholen
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return axiosInstance(originalRequest);
+          }
+        }
+      } catch (refreshError) {
+        console.error('Error refreshing token:', refreshError);
+        
+        // Bei Token-Aktualisierungsfehler: Token löschen und zur Login-Seite weiterleiten
+        await AsyncStorage.removeItem('@IntranetApp:token');
+        await AsyncStorage.removeItem('@IntranetApp:refreshToken');
+        
+        // Hier könnte ein globaler Event emittiert werden, um den User zur Login-Seite zu leiten
+      }
     }
     
     return Promise.reject(error);

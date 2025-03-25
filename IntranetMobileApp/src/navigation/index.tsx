@@ -9,40 +9,69 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { useAuth } from '../contexts/AuthContext';
 import { ActivityIndicator, View } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // Screens importieren
 import LoginScreen from '../screens/LoginScreen';
 import WorktimeScreen from '../screens/WorktimeScreen';
+import DashboardScreen from '../screens/DashboardScreen';
+import ProfileScreen from '../screens/ProfileScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 
-// Platzhalter-Screens für noch nicht implementierte Seiten
-const DashboardScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <ActivityIndicator size="large" color="#0000ff" />
-  </View>
-);
-
-const ProfileScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <ActivityIndicator size="large" color="#0000ff" />
-  </View>
-);
-
-const SettingsScreen = () => (
-  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-    <ActivityIndicator size="large" color="#0000ff" />
-  </View>
-);
+// Neue Screens importieren
+import NotificationsScreen from '../screens/NotificationsScreen';
 
 // Stack-Navigatoren definieren
 const AppStack = createStackNavigator();
 const AuthStack = createStackNavigator();
 const Tab = createBottomTabNavigator();
 
+// Stack für Profil und Einstellungen
+const ProfileStack = createStackNavigator();
+const ProfileStackNavigator = () => (
+  <ProfileStack.Navigator>
+    <ProfileStack.Screen
+      name="ProfileMain"
+      component={ProfileScreen}
+      options={{ title: 'Profil' }}
+    />
+    <ProfileStack.Screen
+      name="Settings"
+      component={SettingsScreen}
+      options={{ title: 'Einstellungen' }}
+    />
+    <ProfileStack.Screen
+      name="Notifications"
+      component={NotificationsScreen}
+      options={{ title: 'Benachrichtigungen' }}
+    />
+  </ProfileStack.Navigator>
+);
+
 /**
  * Tab-Navigation für authentifizierte Benutzer
  */
 const TabNavigator = () => (
-  <Tab.Navigator>
+  <Tab.Navigator
+    screenOptions={({ route }) => ({
+      tabBarIcon: ({ color, size }) => {
+        let iconName = 'help-circle'; // Fallback-Icon
+
+        if (route.name === 'Dashboard') {
+          iconName = 'view-dashboard';
+        } else if (route.name === 'Worktime') {
+          iconName = 'clock-outline';
+        } else if (route.name === 'Profile') {
+          iconName = 'account';
+        }
+
+        return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
+      },
+      tabBarActiveTintColor: '#3B82F6',
+      tabBarInactiveTintColor: 'gray',
+      headerShown: false, // Header in den Stack-Navigatoren zeigen, nicht in Tabs
+    })}
+  >
     <Tab.Screen 
       name="Dashboard" 
       component={DashboardScreen} 
@@ -59,16 +88,9 @@ const TabNavigator = () => (
     />
     <Tab.Screen 
       name="Profile" 
-      component={ProfileScreen} 
+      component={ProfileStackNavigator} 
       options={{
         title: 'Profil',
-      }}
-    />
-    <Tab.Screen 
-      name="Settings" 
-      component={SettingsScreen}
-      options={{
-        title: 'Einstellungen',
       }}
     />
   </Tab.Navigator>
