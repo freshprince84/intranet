@@ -4,7 +4,6 @@ import FilterLogicalOperator from './FilterLogicalOperator.tsx';
 import axios from 'axios';
 import { API_URL, API_ENDPOINTS } from '../config/api.ts';
 import { toast } from 'react-toastify';
-import apiClient from '../api/apiClient.ts';
 
 interface TableColumn {
   id: string;
@@ -58,8 +57,8 @@ const FilterPane: React.FC<FilterPaneProps> = ({
           return;
         }
         
-        const response = await apiClient.get(
-          API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId),
+        const response = await axios.get(
+          `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)}`,
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -173,8 +172,8 @@ const FilterPane: React.FC<FilterPaneProps> = ({
         return;
       }
       
-      const response = await apiClient.post(
-        API_ENDPOINTS.SAVED_FILTERS.BASE,
+      const response = await axios.post(
+        `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
         {
           tableId,
           name: filterName,

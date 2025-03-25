@@ -125,14 +125,6 @@ export const API_ENDPOINTS = {
         BASE: '/saved-filters',
         BY_TABLE: (tableId: string) => `/saved-filters/${tableId}`,
         BY_ID: (id: number) => `/saved-filters/${id}`
-    },
-    // Lohnabrechnung
-    PAYROLL: {
-        BASE: '/payroll',
-        BY_ID: (id: number) => `/payroll/${id}`,
-        HOURS: '/payroll/hours',
-        CALCULATE: '/payroll/calculate',
-        PDF: (id: number) => `/payroll/pdf/${id}`
     }
 };
 

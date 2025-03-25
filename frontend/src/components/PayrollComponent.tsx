@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config/api.ts';
-import apiClient from '../api/apiClient.ts';
-import { API_ENDPOINTS } from '../config/api.ts';
 
 interface Hours {
   regular: number;
@@ -64,7 +62,7 @@ const PayrollComponent: React.FC = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await apiClient.get(API_ENDPOINTS.USERS.BASE);
+        const response = await axios.get(`${API_BASE_URL}/api/users`);
         setUsers(response.data);
       } catch (error) {
         console.error('Fehler beim Laden der Benutzer:', error);
@@ -87,7 +85,7 @@ const PayrollComponent: React.FC = () => {
     
     setLoading(true);
     try {
-      const response = await apiClient.get(`${API_ENDPOINTS.PAYROLL.BASE}?userId=${selectedUser}`);
+      const response = await axios.get(`${API_BASE_URL}/api/payroll?userId=${selectedUser}`);
       setPayrolls(response.data);
       setLoading(false);
     } catch (error) {
@@ -117,13 +115,13 @@ const PayrollComponent: React.FC = () => {
     setError(null);
     
     try {
-      const response = await apiClient.post(`${API_ENDPOINTS.PAYROLL.HOURS}`, {
+      const response = await axios.post(`${API_BASE_URL}/api/payroll/hours`, {
         userId: selectedUser,
         hours
       });
       
       // Automatisch berechnen
-      const calculatedPayroll = await apiClient.get(`${API_ENDPOINTS.PAYROLL.CALCULATE}?payrollId=${response.data.id}`);
+      const calculatedPayroll = await axios.get(`${API_BASE_URL}/api/payroll/calculate?payrollId=${response.data.id}`);
       setPayroll(calculatedPayroll.data);
       
       // Liste aktualisieren
@@ -142,7 +140,7 @@ const PayrollComponent: React.FC = () => {
     setError(null);
     
     try {
-      const response = await apiClient.get(`${API_ENDPOINTS.PAYROLL.CALCULATE}?payrollId=${payrollId}`);
+      const response = await axios.get(`${API_BASE_URL}/api/payroll/calculate?payrollId=${payrollId}`);
       setPayroll(response.data);
       setLoading(false);
     } catch (error) {
@@ -154,7 +152,7 @@ const PayrollComponent: React.FC = () => {
 
   const generatePDF = async (payrollId: number) => {
     try {
-      window.open(`${API_ENDPOINTS.PAYROLL.PDF(payrollId)}`, '_blank');
+      window.open(`${API_BASE_URL}/api/payroll/pdf/${payrollId}`, '_blank');
     } catch (error) {
       console.error('Fehler beim Generieren des PDFs:', error);
       setError('PDF konnte nicht generiert werden');

@@ -194,7 +194,7 @@ Module not found: Error: Can't resolve 'react-quill' in '/var/www/intranet/front
 
 
 root@ubuntu-4gb-hel1-2:/var/www/intranet/frontend# cd /var/www/intranet/backend
-npm run build^C
+npm run build
 root@ubuntu-4gb-hel1-2:/var/www/intranet/frontend# npm install react-quill
 
 added 12 packages, and audited 1579 packages in 7s
@@ -237,8 +237,14 @@ Failed to compile.Module not found: Error: Can't resolve 'react-icons/fa' in '/v
 
 
 
+
+
+
 cd /var/www/intranet/backend
 npm run build
+
+
+
 
 ## Nginx-Konfiguration
 
