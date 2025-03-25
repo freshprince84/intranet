@@ -82,11 +82,58 @@ app.use(cors({
 }));
 ```
 
-## Deployment
+## APK-Erstellung
 
-Die App wird für beide Hauptplattformen bereitgestellt:
-- **Android**: Google Play Store
-- **iOS**: Apple App Store
+### Voraussetzungen
+
+- Android Studio installiert
+- Android SDK installiert
+- Node.js und npm installiert
+- React Native CLI installiert
+
+### Build-Konfiguration
+
+Die App verwendet folgende Konfiguration:
+- App-Name: "Intranet"
+- Version: 1.0.0
+- Package Name: com.intranet.app
+- Keystore: Wiederverwendung des bestehenden Keystores für Token-Storage
+
+### Build-Schritte
+
+1. Wechseln Sie in das App-Verzeichnis:
+```bash
+cd IntranetMobileApp
+```
+
+2. Installieren Sie die Abhängigkeiten:
+```bash
+npm install
+```
+
+3. Erstellen Sie die Android-Konfiguration:
+```bash
+npx react-native config
+```
+
+4. Erstellen Sie die Release-APK:
+```bash
+cd android
+./gradlew assembleRelease
+```
+
+Die fertige APK finden Sie unter:
+`android/app/build/outputs/apk/release/app-release.apk`
+
+### Deployment
+
+Die APK wird auf dem Hetzner-Server unter https://65.109.228.106.nip.io/ bereitgestellt.
+
+### Wichtige Hinweise
+
+- Die App verwendet die Produktions-API-URL: https://65.109.228.106.nip.io/
+- ProGuard ist deaktiviert, da die App-Größe nicht kritisch ist
+- Der bestehende Keystore wird für die APK-Signierung verwendet
 
 ## Verwandte Dokumentation
 

@@ -33,7 +33,7 @@ app.use(cors({
     const allowedOrigins = [
       'http://localhost:3000',      // Web-Frontend in Entwicklung
       'exp://',                     // Expo-Client während der Entwicklung
-      'https://api.produktion-domain.com',  // Produktionsumgebung
+      'https://65.109.228.106.nip.io',  // Produktionsumgebung
       'app://'                      // React Native App (production)
     ];
     
