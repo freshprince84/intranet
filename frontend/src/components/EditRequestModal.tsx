@@ -126,7 +126,7 @@ const EditRequestModal = ({
       if (axiosError.code === 'ERR_NETWORK') {
         setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
       } else {
-        setError(`Fehler beim Laden der Daten: ${axiosError.response?.data?.message || axiosError.message || 'Unbekannter Fehler'}`);
+        setError(`Fehler beim Laden der Daten: ${axiosError.response?.data?.message || axiosError.message}`);
       }
     }
   };
@@ -144,7 +144,7 @@ const EditRequestModal = ({
       // Zeige einen benutzerfreundlichen Fehler an, aber lass die Komponente weiterlaufen
       // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
-      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Unbekannter Fehler';
+      const errorMessage = axiosError.response?.data?.message || axiosError.message;
       console.warn(`Anhänge konnten nicht geladen werden: ${errorMessage}`);
       // Setze keinen Fehler in state, damit der Dialog trotzdem nutzbar bleibt
       // Nur Warnung in der Konsole
@@ -236,8 +236,24 @@ const EditRequestModal = ({
       } else {
         setDescription(description + insertText);
       }
+
+      // Erstelle ein Element für das Vorschaubild und füge es dem Dokument hinzu
+      const img = document.createElement('img');
+      img.src = `${window.location.origin}/api${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)}`;
+      img.alt = newAttachment.fileName;
+      img.classList.add('hidden'); // Verstecken
+
+      document.body.appendChild(img);
+
+      // Warte bis das Bild geladen ist und bestimme dann seine Dimensionen
+      img.onload = () => {
+        document.body.removeChild(img);
+
+        // Je nach Größe entscheide, ob ein großes oder kleines Bild eingefügt wird
+      }
     } catch (err) {
       console.error('Fehler beim Hochladen der Datei:', err);
+      // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
       setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     } finally {
@@ -292,6 +308,7 @@ const EditRequestModal = ({
       }
     } catch (err) {
       console.error('Fehler beim Löschen des Anhangs:', err);
+      // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
       setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     }
@@ -317,6 +334,7 @@ const EditRequestModal = ({
       link.remove();
     } catch (err) {
       console.error('Fehler beim Herunterladen des Anhangs:', err);
+      // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
       setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     }
@@ -354,6 +372,7 @@ const EditRequestModal = ({
       }
     } catch (err) {
       console.error('Fehler beim Aktualisieren des Requests:', err);
+      // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
       setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     } finally {
@@ -376,6 +395,7 @@ const EditRequestModal = ({
       onClose();
     } catch (err) {
       console.error('Delete Error:', err);
+      // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
       setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     } finally {
@@ -457,6 +477,7 @@ const EditRequestModal = ({
       }
     } catch (err) {
       console.error('Fehler beim Verarbeiten der Datei:', err);
+      // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
       setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     } finally {

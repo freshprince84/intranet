@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import axios from 'axios';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
@@ -9,7 +8,7 @@ import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import WorktimeTracker from '../components/WorktimeTracker.tsx';
 import WorktimeList from '../components/WorktimeList.tsx';
-import { API_ENDPOINTS, API_URL } from '../config/api.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import FilterPane from '../components/FilterPane.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
@@ -172,8 +171,8 @@ const Worktracker: React.FC = () => {
                 }
 
                 // Prüfen, ob die Standard-Filter bereits existieren
-                const existingFiltersResponse = await axios.get(
-                    `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(TODOS_TABLE_ID)}`,
+                const existingFiltersResponse = await axiosInstance.get(
+                    `${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(TODOS_TABLE_ID)}`,
                     {
                         headers: {
                             Authorization: `Bearer ${token}`
@@ -196,17 +195,15 @@ const Worktracker: React.FC = () => {
                         operators: []
                     };
 
-                    await axios.post(
-                        `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+                    await axiosInstance.post(
+                        `${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
                         archivFilter,
                         {
                             headers: {
-                                Authorization: `Bearer ${token}`,
-                                'Content-Type': 'application/json'
+                                Authorization: `Bearer ${token}`
                             }
                         }
                     );
-                    console.log('Archiv-Filter erstellt');
                 }
 
                 // Erstelle "Aktuell"-Filter, wenn er noch nicht existiert
@@ -220,17 +217,15 @@ const Worktracker: React.FC = () => {
                         operators: []
                     };
 
-                    await axios.post(
-                        `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+                    await axiosInstance.post(
+                        `${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
                         aktuellFilter,
                         {
                             headers: {
-                                Authorization: `Bearer ${token}`,
-                                'Content-Type': 'application/json'
+                                Authorization: `Bearer ${token}`
                             }
                         }
                     );
-                    console.log('Aktuell-Filter erstellt');
                 }
             } catch (error) {
                 console.error('Fehler beim Erstellen der Standard-Filter:', error);
@@ -860,11 +855,9 @@ const Worktracker: React.FC = () => {
             
         } catch (err) {
             console.error('Fehler beim Kopieren des Tasks:', err);
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            // Einfachere Fehlerbehandlung ohne axios-Import
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
         }
     };
 

@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axiosInstance from '../config/axios.ts';
-import axios from 'axios';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
-import { API_ENDPOINTS, API_URL } from '../config/api.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import CerebroArticleSelector from './CerebroArticleSelector.tsx';
 import MarkdownPreview from './MarkdownPreview.tsx';
@@ -137,14 +136,12 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
         } catch (err) {
             console.error('Fehler beim Laden der Benutzer:', err);
             
-            if (axios.isAxiosError(err)) {
-                if (err.code === 'ERR_NETWORK') {
-                    setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-                } else {
-                    setError(`Fehler beim Laden der Benutzer: ${err.response?.data?.message || err.message}`);
-                }
+            // Einfachere Fehlerbehandlung ohne axios-Import
+            const axiosError = err as any;
+            if (axiosError.code === 'ERR_NETWORK') {
+                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
             } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
+                setError(`Fehler beim Laden der Benutzer: ${axiosError.response?.data?.message || axiosError.message}`);
             }
         }
     };
@@ -163,14 +160,12 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
         } catch (err) {
             console.error('Fehler beim Laden der Rollen:', err);
             
-            if (axios.isAxiosError(err)) {
-                if (err.code === 'ERR_NETWORK') {
-                    setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-                } else {
-                    setError(`Fehler beim Laden der Rollen: ${err.response?.data?.message || err.message}`);
-                }
+            // Einfachere Fehlerbehandlung ohne axios-Import
+            const axiosError = err as any;
+            if (axiosError.code === 'ERR_NETWORK') {
+                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
             } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
+                setError(`Fehler beim Laden der Rollen: ${axiosError.response?.data?.message || axiosError.message}`);
             }
         }
     };
@@ -193,14 +188,12 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
         } catch (err) {
             console.error('Fehler beim Laden der Niederlassungen:', err);
             
-            if (axios.isAxiosError(err)) {
-                if (err.code === 'ERR_NETWORK') {
-                    setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-                } else {
-                    setError(`Fehler beim Laden der Niederlassungen: ${err.response?.data?.message || err.message}`);
-                }
+            // Einfachere Fehlerbehandlung ohne axios-Import
+            const axiosError = err as any;
+            if (axiosError.code === 'ERR_NETWORK') {
+                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
             } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
+                setError(`Fehler beim Laden der Niederlassungen: ${axiosError.response?.data?.message || axiosError.message}`);
             }
         }
     };
@@ -287,11 +280,9 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             }
         } catch (err) {
             console.error('Fehler beim Verarbeiten der Datei:', err);
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            // Einfachere Fehlerbehandlung ohne axios-Import
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
         } finally {
             setUploading(false);
         }
@@ -450,11 +441,9 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
         } catch (err) {
             console.error('Fehler beim Erstellen des Tasks:', err);
             
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.error || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            // Einfachere Fehlerbehandlung ohne axios-Import
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.error || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
         } finally {
             setLoading(false);
         }

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios'; // Für type checking
 import axiosInstance from '../config/axios.ts'; // Importiere die konfigurierte axios-Instanz
 import { useAuth } from '../hooks/useAuth.tsx';
-import { API_ENDPOINTS, API_URL } from '../config/api.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import MarkdownPreview from './MarkdownPreview.tsx';
@@ -112,14 +111,12 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
         } catch (err) {
           console.error('Fehler beim Laden der Daten:', err);
           
-          if (axios.isAxiosError(err)) {
-            if (err.code === 'ERR_NETWORK') {
-              setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-            } else {
-              setError(`Fehler beim Laden der Daten: ${err.response?.data?.message || err.message}`);
-            }
+          // Einfachere Fehlerbehandlung ohne axios-Import
+          const axiosError = err as any;
+          if (axiosError.code === 'ERR_NETWORK') {
+            setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
           } else {
-            setError('Ein unerwarteter Fehler ist aufgetreten');
+            setError(`Fehler beim Laden der Daten: ${axiosError.response?.data?.message || axiosError.message}`);
           }
         }
       } catch (err) {
@@ -246,11 +243,9 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
       }
     } catch (err) {
       console.error('Fehler beim Verarbeiten der Datei:', err);
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || err.message);
-      } else {
-        setError('Ein unerwarteter Fehler ist aufgetreten');
-      }
+      // Einfachere Fehlerbehandlung ohne axios-Import
+      const axiosError = err as any;
+      setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     } finally {
       setUploading(false);
     }
@@ -382,7 +377,9 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
       setTemporaryAttachments([]);
     } catch (err) {
       console.error('Create Request Error:', err);
-      setError(err instanceof Error ? err.message : 'Fehler beim Erstellen des Requests');
+      // Einfachere Fehlerbehandlung ohne axios-Import
+      const axiosError = err as any;
+      setError(axiosError.response?.data?.message || axiosError.message || 'Fehler beim Erstellen des Requests');
     } finally {
       setLoading(false);
     }

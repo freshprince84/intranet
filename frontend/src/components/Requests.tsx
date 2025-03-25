@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
-import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
@@ -10,7 +9,7 @@ import TableColumnConfig from './TableColumnConfig.tsx';
 import FilterPane from './FilterPane.tsx';
 import SavedFilterTags from './SavedFilterTags.tsx';
 import { FilterCondition } from './FilterRow.tsx';
-import { API_URL, API_ENDPOINTS } from '../config/api.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import { 
   PlusIcon,
   CheckIcon, 
@@ -142,14 +141,12 @@ const Requests: React.FC = () => {
       setError(null);
     } catch (err) {
       console.error('Request Error:', err);
-      if (axios.isAxiosError(err)) {
-        if (err.code === 'ERR_NETWORK') {
-          setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-        } else {
-          setError(`Fehler beim Laden der Requests: ${err.response?.data?.message || err.message}`);
-        }
+      // Einfachere Fehlerbehandlung ohne axios-Import
+      const axiosError = err as any;
+      if (axiosError.code === 'ERR_NETWORK') {
+        setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
       } else {
-        setError('Ein unerwarteter Fehler ist aufgetreten');
+        setError(`Fehler beim Laden der Requests: ${axiosError.response?.data?.message || axiosError.message}`);
       }
     } finally {
       setLoading(false);
@@ -172,8 +169,8 @@ const Requests: React.FC = () => {
         }
 
         // Prüfen, ob die Standard-Filter bereits existieren
-        const existingFiltersResponse = await axios.get(
-          `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(REQUESTS_TABLE_ID)}`,
+        const existingFiltersResponse = await axiosInstance.get(
+          `${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(REQUESTS_TABLE_ID)}`,
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -197,8 +194,8 @@ const Requests: React.FC = () => {
             operators: ['OR']
           };
 
-          await axios.post(
-            `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+          await axiosInstance.post(
+            `${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
             archivFilter,
             {
               headers: {
@@ -222,8 +219,8 @@ const Requests: React.FC = () => {
             operators: ['OR']
           };
 
-          await axios.post(
-            `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+          await axiosInstance.post(
+            `${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
             aktuellFilter,
             {
               headers: {
@@ -282,11 +279,9 @@ const Requests: React.FC = () => {
       fetchRequests();
     } catch (err) {
       console.error('Status Update Error:', err);
-      if (axios.isAxiosError(err)) {
-        setError(`Fehler beim Aktualisieren des Status: ${err.response?.data?.message || err.message}`);
-      } else {
-        setError('Ein unerwarteter Fehler ist aufgetreten');
-      }
+      // Einfachere Fehlerbehandlung ohne axios-Import
+      const axiosError = err as any;
+      setError(`Fehler beim Aktualisieren des Status: ${axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten'}`);
     }
   };
 
@@ -615,11 +610,9 @@ const Requests: React.FC = () => {
       
     } catch (err) {
       console.error('Fehler beim Kopieren des Requests:', err);
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || err.message);
-      } else {
-        setError('Ein unerwarteter Fehler ist aufgetreten');
-      }
+      // Einfachere Fehlerbehandlung ohne axios-Import
+      const axiosError = err as any;
+      setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     }
   };
 

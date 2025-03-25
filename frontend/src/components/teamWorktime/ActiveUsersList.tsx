@@ -11,8 +11,8 @@ import { useTableSettings } from '../../hooks/useTableSettings.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { createLocalDate } from '../../utils/dateUtils.ts';
 import * as worktimeApi from '../../api/worktimeApi.ts';
-import { API_URL, API_ENDPOINTS } from '../../config/api.ts';
-import axios from 'axios';
+import { API_ENDPOINTS } from '../../config/api.ts';
+import axiosInstance from '../../config/axios.ts';
 import TableColumnConfig from '../TableColumnConfig.tsx';
 
 interface ActiveUsersListProps {
@@ -489,8 +489,8 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         }
 
         // Prüfen, ob die Standard-Filter bereits existieren
-        const existingFiltersResponse = await axios.get(
-          `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(WORKCENTER_TABLE_ID)}`,
+        const existingFiltersResponse = await axiosInstance.get(
+          `${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(WORKCENTER_TABLE_ID)}`,
           {
             headers: {
               Authorization: `Bearer ${token}`
@@ -513,8 +513,8 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
             operators: []
           };
 
-          await axios.post(
-            `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+          await axiosInstance.post(
+            `${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
             aktiveFilter,
             {
               headers: {
@@ -535,8 +535,8 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
             operators: []
           };
 
-          await axios.post(
-            `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+          await axiosInstance.post(
+            `${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
             alleFilter,
             {
               headers: {

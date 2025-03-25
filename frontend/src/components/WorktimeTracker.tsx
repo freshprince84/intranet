@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { ClockIcon, ListBulletIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
-import axios from 'axios';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { useWorktime } from '../contexts/WorktimeContext.tsx';
 import { useBranch } from '../contexts/BranchContext.tsx';
@@ -121,14 +120,12 @@ const WorktimeTracker: React.FC = () => {
             } catch (error) {
                 console.error('Fehler beim Abrufen der aktiven Zeiterfassung:', error);
                 
-                if (axios.isAxiosError(error)) {
-                    if (error.code === 'ERR_NETWORK') {
-                        setStatusError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-                    } else {
-                        setStatusError(`Fehler beim Abrufen der aktiven Zeiterfassung: ${error.response?.data?.message || error.message}`);
-                    }
+                // Einfachere Fehlerbehandlung ohne axios-Import
+                const axiosError = error as any;
+                if (axiosError.code === 'ERR_NETWORK') {
+                    setStatusError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
                 } else {
-                    setStatusError('Ein unerwarteter Fehler ist aufgetreten');
+                    setStatusError(`Fehler beim Abrufen der aktiven Zeiterfassung: ${axiosError.response?.data?.message || axiosError.message}`);
                 }
             }
         } finally {
