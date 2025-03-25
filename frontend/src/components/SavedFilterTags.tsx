@@ -4,6 +4,7 @@ import { FilterCondition } from './FilterRow.tsx';
 import axios from 'axios';
 import { API_URL, API_ENDPOINTS } from '../config/api.ts';
 import { toast } from 'react-toastify';
+import apiClient from '../api/apiClient.ts';
 
 interface SavedFilter {
   id: number;
@@ -44,7 +45,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           return;
         }
         
-        const response = await axios.get(`${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)}`, {
+        const response = await apiClient.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId), {
           headers: {
             Authorization: `Bearer ${token}`
           }
@@ -97,7 +98,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         return;
       }
       
-      await axios.delete(`${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_ID(filterId)}`, {
+      await apiClient.delete(API_ENDPOINTS.SAVED_FILTERS.BY_ID(filterId), {
         headers: {
           Authorization: `Bearer ${token}`
         }

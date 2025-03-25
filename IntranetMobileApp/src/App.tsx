@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './contexts/AuthContext';
 import AppNavigator from './navigation';
 import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
+import DynamicAppIcon from './components/DynamicAppIcon';
 
 // Thema definieren basierend auf den Design-Standards
 const theme = {
@@ -28,6 +29,7 @@ export default function App() {
     <SafeAreaProvider>
       <PaperProvider theme={theme}>
         <AuthProvider>
+          <DynamicAppIcon />
           <AppNavigator />
         </AuthProvider>
       </PaperProvider>

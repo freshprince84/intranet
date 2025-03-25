@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -10,6 +19,7 @@ const fs_1 = __importDefault(require("fs"));
 const auth_1 = require("../middleware/auth");
 const roleCheck_1 = require("../middleware/roleCheck");
 const settingsController_1 = require("../controllers/settingsController");
+const sharp_1 = __importDefault(require("sharp"));
 const router = (0, express_1.Router)();
 // Debug-Middleware für alle Settings-Routen
 router.use((req, res, next) => {
@@ -193,6 +203,77 @@ router.get('/logo/base64', (req, res) => {
         });
     }
 });
+// GET /logo/mobile - Mobile App Icons
+router.get('/logo/mobile', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const uploadDir = path_1.default.join(process.cwd(), 'uploads', 'logos');
+        if (!fs_1.default.existsSync(uploadDir)) {
+            return res.status(404).json({ message: 'Kein Logo gefunden' });
+        }
+        const files = fs_1.default.readdirSync(uploadDir);
+        const logoFile = files.find(file => file === 'logo.png' ||
+            file === 'logo.jpg' ||
+            file === 'logo.jpeg');
+        if (!logoFile) {
+            return res.status(404).json({ message: 'Kein Logo gefunden' });
+        }
+        const logoPath = path_1.default.join(uploadDir, logoFile);
+        const logoBuffer = fs_1.default.readFileSync(logoPath);
+        // iOS Icon Größen
+        const iosSizes = [
+            { size: 20, scale: 2 },
+            { size: 20, scale: 3 },
+            { size: 29, scale: 2 },
+            { size: 29, scale: 3 },
+            { size: 40, scale: 2 },
+            { size: 40, scale: 3 },
+            { size: 60, scale: 2 },
+            { size: 60, scale: 3 },
+            { size: 1024, scale: 1 }
+        ];
+        // Android Icon Größen
+        const androidSizes = [48, 72, 96, 144, 192];
+        const iosIcons = yield Promise.all(iosSizes.map((_a) => __awaiter(void 0, [_a], void 0, function* ({ size, scale }) {
+            const actualSize = size * scale;
+            const icon = yield (0, sharp_1.default)(logoBuffer)
+                .resize(actualSize, actualSize, {
+                fit: 'contain',
+                background: { r: 255, g: 255, b: 255, alpha: 0 }
+            })
+                .png()
+                .toBuffer();
+            return {
+                size: `${size}x${size}`,
+                scale: `${scale}x`,
+                data: icon.toString('base64')
+            };
+        })));
+        const androidIcons = yield Promise.all(androidSizes.map((size) => __awaiter(void 0, void 0, void 0, function* () {
+            const icon = yield (0, sharp_1.default)(logoBuffer)
+                .resize(size, size, {
+                fit: 'contain',
+                background: { r: 255, g: 255, b: 255, alpha: 0 }
+            })
+                .png()
+                .toBuffer();
+            return {
+                size: `${size}x${size}`,
+                data: icon.toString('base64')
+            };
+        })));
+        res.json({
+            ios: iosIcons,
+            android: androidIcons
+        });
+    }
+    catch (error) {
+        console.error('Fehler beim Generieren der Mobile Icons:', error);
+        res.status(500).json({
+            message: 'Interner Server-Fehler beim Generieren der Mobile Icons',
+            error: error instanceof Error ? error.message : String(error)
+        });
+    }
+}));
 // AUTHENTIFIZIERUNGS-MIDDLEWARE für alle folgenden Routen
 router.use(auth_1.authenticateToken);
 // GESCHÜTZTE ROUTEN (mit Authentifizierung)

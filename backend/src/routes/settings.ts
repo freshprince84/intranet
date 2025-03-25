@@ -11,6 +11,7 @@ import {
     getUserNotificationSettings,
     updateUserNotificationSettings
 } from '../controllers/settingsController';
+import sharp from 'sharp';
 
 // Erweitere den Request-Typ
 declare module 'express-serve-static-core' {
@@ -227,6 +228,91 @@ router.get('/logo/base64', (req, res) => {
         console.error('Fehler beim Abrufen des Logos als Base64:', error);
         res.status(500).json({ 
             message: 'Interner Server-Fehler beim Abrufen des Logos',
+            error: error instanceof Error ? error.message : String(error)
+        });
+    }
+});
+
+// GET /logo/mobile - Mobile App Icons
+router.get('/logo/mobile', async (req, res) => {
+    try {
+        const uploadDir = path.join(process.cwd(), 'uploads', 'logos');
+        if (!fs.existsSync(uploadDir)) {
+            return res.status(404).json({ message: 'Kein Logo gefunden' });
+        }
+
+        const files = fs.readdirSync(uploadDir);
+        const logoFile = files.find(file => 
+            file === 'logo.png' || 
+            file === 'logo.jpg' || 
+            file === 'logo.jpeg'
+        );
+
+        if (!logoFile) {
+            return res.status(404).json({ message: 'Kein Logo gefunden' });
+        }
+
+        const logoPath = path.join(uploadDir, logoFile);
+        const logoBuffer = fs.readFileSync(logoPath);
+
+        // iOS Icon Größen
+        const iosSizes = [
+            { size: 20, scale: 2 },
+            { size: 20, scale: 3 },
+            { size: 29, scale: 2 },
+            { size: 29, scale: 3 },
+            { size: 40, scale: 2 },
+            { size: 40, scale: 3 },
+            { size: 60, scale: 2 },
+            { size: 60, scale: 3 },
+            { size: 1024, scale: 1 }
+        ];
+
+        // Android Icon Größen
+        const androidSizes = [48, 72, 96, 144, 192];
+
+        const iosIcons = await Promise.all(
+            iosSizes.map(async ({ size, scale }) => {
+                const actualSize = size * scale;
+                const icon = await sharp(logoBuffer)
+                    .resize(actualSize, actualSize, {
+                        fit: 'contain',
+                        background: { r: 255, g: 255, b: 255, alpha: 0 }
+                    })
+                    .png()
+                    .toBuffer();
+                return {
+                    size: `${size}x${size}`,
+                    scale: `${scale}x`,
+                    data: icon.toString('base64')
+                };
+            })
+        );
+
+        const androidIcons = await Promise.all(
+            androidSizes.map(async (size) => {
+                const icon = await sharp(logoBuffer)
+                    .resize(size, size, {
+                        fit: 'contain',
+                        background: { r: 255, g: 255, b: 255, alpha: 0 }
+                    })
+                    .png()
+                    .toBuffer();
+                return {
+                    size: `${size}x${size}`,
+                    data: icon.toString('base64')
+                };
+            })
+        );
+
+        res.json({
+            ios: iosIcons,
+            android: androidIcons
+        });
+    } catch (error) {
+        console.error('Fehler beim Generieren der Mobile Icons:', error);
+        res.status(500).json({ 
+            message: 'Interner Server-Fehler beim Generieren der Mobile Icons',
             error: error instanceof Error ? error.message : String(error)
         });
     }

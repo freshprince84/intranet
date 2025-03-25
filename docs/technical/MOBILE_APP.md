@@ -127,7 +127,26 @@ Die fertige APK finden Sie unter:
 
 ### Deployment
 
-Die APK wird auf dem Hetzner-Server unter https://65.109.228.106.nip.io/ bereitgestellt.
+Die APK wird auf dem Hetzner-Server unter https://65.109.228.106.nip.io/downloads/ bereitgestellt.
+
+### Installation auf Android-Geräten
+
+1. **Voraussetzungen auf dem Android-Gerät:**
+   - Android 6.0 oder höher
+   - Installation von Apps aus unbekannten Quellen erlauben:
+     - Einstellungen → Apps → Spezielle Berechtigungen → Apps aus unbekannten Quellen installieren
+     - Browser (z.B. Chrome) aktivieren
+
+2. **Download und Installation:**
+   - Öffnen Sie https://65.109.228.106.nip.io/downloads/intranet-app.apk im Browser
+   - Tippen Sie auf "Herunterladen" oder "Installieren"
+   - Bestätigen Sie die Installation
+   - Warten Sie, bis die Installation abgeschlossen ist
+
+3. **Erststart:**
+   - Öffnen Sie die App
+   - Melden Sie sich mit Ihren Intranet-Zugangsdaten an
+   - Erlauben Sie die erforderlichen Berechtigungen
 
 ### Wichtige Hinweise
 
@@ -135,7 +154,134 @@ Die APK wird auf dem Hetzner-Server unter https://65.109.228.106.nip.io/ bereitg
 - ProGuard ist deaktiviert, da die App-Größe nicht kritisch ist
 - Der bestehende Keystore wird für die APK-Signierung verwendet
 
+## Implementierungsdetails
+
+### Auth-Flow
+
+Die Authentifizierung verwendet AsyncStorage zum Speichern des JWT-Tokens:
+
+```typescript
+// Auth-Token speichern
+await AsyncStorage.setItem('token', responseToken);
+
+// Token für Requests verwenden
+axiosInstance.interceptors.request.use(async (config) => {
+  const token = await AsyncStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+```
+
+### Offline-Modus
+
+Für zukünftige Implementierung: Lokales Speichern von Zeiterfassungseinträgen und spätere Synchronisierung:
+
+```typescript
+// Zeiteintrag lokal speichern, wenn offline
+const saveOfflineTimeEntry = async (entry) => {
+  const offlineEntries = await AsyncStorage.getItem('offlineTimeEntries');
+  const entries = offlineEntries ? JSON.parse(offlineEntries) : [];
+  entries.push({...entry, offlineId: Date.now()});
+  await AsyncStorage.setItem('offlineTimeEntries', JSON.stringify(entries));
+};
+
+// Bei Wiederverbindung synchronisieren
+const syncOfflineEntries = async () => {
+  const offlineEntries = await AsyncStorage.getItem('offlineTimeEntries');
+  if (offlineEntries) {
+    const entries = JSON.parse(offlineEntries);
+    for (const entry of entries) {
+      try {
+        await worktimeApi.create(entry);
+      } catch (error) {
+        console.error('Sync error:', error);
+      }
+    }
+    await AsyncStorage.removeItem('offlineTimeEntries');
+  }
+};
+```
+
+## Roadmap
+
+1. **Aktuelle Phase:** Basis-Funktionalität mit Login und Zeiterfassung
+2. **Nächste Schritte:**
+   - Dashboard-Screen implementieren
+   - Profilmanagement hinzufügen
+   - Offline-Modus vervollständigen
+3. **Spätere Phasen:**
+   - Push-Benachrichtigungen
+   - Kamera-Integration
+   - Biometrische Authentifizierung
+
 ## Verwandte Dokumentation
 
 - [API-Referenz](API_REFERENZ.md) - Backend-API-Dokumentation
-- [Authentifizierungssystem](BERECHTIGUNGSSYSTEM.md) - Details zum Auth-System 
+- [Authentifizierungssystem](BERECHTIGUNGSSYSTEM.md) - Details zum Auth-System
+
+## Dynamische App Icons
+
+Die mobile App unterstützt dynamische App Icons, die automatisch aus dem hochgeladenen Logo in den Settings generiert werden. Dies ermöglicht eine konsistente Markenidentität über alle Plattformen hinweg.
+
+### Unterstützte Icon-Größen
+
+#### iOS
+- 20x20 (2x, 3x)
+- 29x29 (2x, 3x)
+- 40x40 (2x, 3x)
+- 60x60 (2x, 3x)
+- 1024x1024 (1x)
+
+#### Android
+- 48x48 (mdpi)
+- 72x72 (hdpi)
+- 96x96 (xhdpi)
+- 144x144 (xxhdpi)
+- 192x192 (xxxhdpi)
+
+### API-Endpunkte
+
+#### GET /settings/logo/mobile
+Liefert alle Icon-Größen für iOS und Android.
+
+**Response:**
+```json
+{
+  "ios": [
+    {
+      "size": "20x20",
+      "scale": "2x",
+      "data": "base64_encoded_image_data"
+    },
+    // ... weitere iOS Icons
+  ],
+  "android": [
+    {
+      "size": "48x48",
+      "data": "base64_encoded_image_data"
+    },
+    // ... weitere Android Icons
+  ]
+}
+```
+
+### Implementierung
+
+Die dynamischen Icons werden durch die `DynamicAppIcon`-Komponente verwaltet, die:
+1. Beim App-Start automatisch die aktuellen Icons vom Backend lädt
+2. Die Icons in einem plattformspezifischen Verzeichnis speichert
+3. Bei Fehlern auf Standard-Icons zurückfällt
+
+### Cache-Management
+
+- Icons werden im lokalen Speicher der App gespeichert
+- Bei jedem App-Start wird geprüft, ob neue Icons verfügbar sind
+- Bei Netzwerkproblemen werden die zuletzt gespeicherten Icons verwendet
+
+### Fehlerbehandlung
+
+- Bei Fehlern beim Laden der Icons werden Standard-Icons verwendet
+- Fehler werden in der App-Konsole protokolliert
+- Der Benutzer wird nicht durch Icon-bezogene Fehler beeinträchtigt 

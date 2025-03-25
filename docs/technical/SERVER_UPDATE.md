@@ -240,6 +240,93 @@ Failed to compile.Module not found: Error: Can't resolve 'react-icons/fa' in '/v
 cd /var/www/intranet/backend
 npm run build
 
+## Nginx-Konfiguration
+
+Die Nginx-Konfiguration für das Intranet-Projekt befindet sich in `/etc/nginx/sites-enabled/intranet`:
+
+```nginx
+server {
+    listen 80;
+    listen 443 ssl;
+    server_name 65.109.228.106.nip.io;
+
+    ssl_certificate /etc/letsencrypt/live/65.109.228.106.nip.io/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/65.109.228.106.nip.io/privkey.pem;
+
+    # SSL-Konfiguration
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+
+    # HTTP auf HTTPS umleiten
+    if ($scheme != "https") {
+        return 301 https://$host$request_uri;
+    }
+
+    # Frontend
+    location / {
+        root /var/www/intranet/frontend/build;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_http_version 1.1;    
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;  
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Downloads-Bereich (APK, etc.)
+    location /downloads {
+        alias /var/www/intranet/backend/public/downloads;
+        types {
+            application/vnd.android.package-archive apk;
+            text/plain md;
+        }
+        add_header Content-Disposition "attachment" always;
+    }
+}
+```
+
+### Wichtige Konfigurationsdetails
+
+1. **SSL/HTTPS:**
+   - Let's Encrypt Zertifikate
+   - Automatische HTTP zu HTTPS Umleitung
+   - Sichere SSL-Protokolle und Cipher
+
+2. **Frontend:**
+   - Served aus dem Build-Verzeichnis
+   - HTML5 History Mode Support
+   - Fallback auf index.html
+
+3. **Backend API:**
+   - Proxy zu Node.js Backend
+   - WebSocket Support
+   - Korrekte Header-Weiterleitung
+
+4. **Downloads:**
+   - Spezieller MIME-Type für APK-Dateien
+   - Erzwingt Download statt Anzeige
+   - Unterstützt auch Markdown-Dateien
+
+### Konfiguration aktualisieren
+
+Nach Änderungen an der Nginx-Konfiguration:
+
+1. Konfiguration testen:
+```bash
+nginx -t
+```
+
+2. Wenn der Test erfolgreich war, Nginx neu laden:
+```bash
+systemctl reload nginx
 ```
 
 ## Schritt 6: Server neu starten

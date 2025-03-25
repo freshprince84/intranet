@@ -905,4 +905,43 @@ Bei anhaltenden Problemen:
 
 ---
 
-Diese Dokumentation bietet eine umfassende Anleitung zur Bereitstellung des Intranet-Systems in verschiedenen Umgebungen. Passen Sie die Anweisungen bei Bedarf an Ihre spezifische Infrastruktur und Anforderungen an. 
+Diese Dokumentation bietet eine umfassende Anleitung zur Bereitstellung des Intranet-Systems in verschiedenen Umgebungen. Passen Sie die Anweisungen bei Bedarf an Ihre spezifische Infrastruktur und Anforderungen an.
+
+## Deployment-Struktur
+```
+/var/www/intranet/
+├── frontend/          # Frontend Build
+├── backend/           # Backend Anwendung
+│   └── public/       # Öffentliche Dateien
+│       └── downloads/ # Download-Bereich (APK, etc.)
+└── database/         # Datenbank-Dateien
+```
+
+### Downloads-Bereich
+Der `/backend/public/downloads` Ordner enthält öffentlich zugängliche Dateien:
+- `intranet-app.apk`: Die mobile Android-App
+- `README.md`: Dokumentation für den Download-Bereich
+
+#### Berechtigungen
+```bash
+# Verzeichnis-Berechtigungen
+chown -R www-data:www-data /var/www/intranet/backend/public/downloads
+chmod -R 755 /var/www/intranet/backend/public/downloads
+
+# Datei-Berechtigungen
+chmod 644 /var/www/intranet/backend/public/downloads/*.apk
+chmod 644 /var/www/intranet/backend/public/downloads/*.md
+```
+
+#### Nginx-Konfiguration
+Der Downloads-Bereich ist über den `/downloads` Pfad erreichbar:
+```nginx
+location /downloads {
+    alias /var/www/intranet/backend/public/downloads;
+    types {
+        application/vnd.android.package-archive apk;
+        text/plain md;
+    }
+    add_header Content-Disposition "attachment" always;
+}
+``` 

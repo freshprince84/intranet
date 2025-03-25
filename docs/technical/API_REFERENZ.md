@@ -48,6 +48,12 @@ Diese Dokumentation bietet eine vollständige Referenz aller API-Endpunkte des I
   ${API_URL}/api/requests
   ```
 
+### ⚠️ NEUE RICHTLINIEN: Vereinheitlichte API-Aufrufe
+- Für detaillierte Anweisungen zur korrekten API-Nutzung im Frontend, siehe [API_BEST_PRACTICES.md](API_BEST_PRACTICES.md)
+- Verwendung des zentralen `apiClient` aus `frontend/src/api/apiClient.ts` für alle API-Aufrufe
+- Direkte axios-Aufrufe sind veraltet und sollten vermieden werden
+- API-Pfade nur über `API_ENDPOINTS` in `frontend/src/config/api.ts` verwenden
+
 ### Unterstützte HTTP-Methoden
 Das Backend unterstützt folgende HTTP-Methoden für API-Anfragen:
 - `GET`: Zum Abrufen von Daten
@@ -1850,102 +1856,3 @@ Ruft ein bestimmtes Identifikationsdokument ab.
 ```
 
 #### `PUT /api/identification-documents/:id`
-
-Aktualisiert ein bestehendes Identifikationsdokument.
-
-**Authentifizierung erforderlich**: Ja
-
-**Request mit FormData:**
-```
-FormData:
-  - documentNumber: "P7654321"
-  - issueDate: "2021-01-01"
-  - expiryDate: "2031-01-01"
-  - issuingCountry: "Deutschland"
-  - issuingAuthority: "Bundespolizei Berlin"
-  - documentFile: [Binärdatei] (optional)
-```
-
-**Erfolgsantwort (200 OK):**
-```json
-{
-  "id": 1,
-  "userId": 123,
-  "documentType": "passport",
-  "documentNumber": "P7654321",
-  "issueDate": "2021-01-01T00:00:00.000Z",
-  "expiryDate": "2031-01-01T00:00:00.000Z",
-  "issuingCountry": "Deutschland",
-  "issuingAuthority": "Bundespolizei Berlin",
-  "documentFile": "uploads/documents/user_123/doc_1_updated.pdf",
-  "isVerified": false,
-  "createdAt": "2023-01-01T12:00:00.000Z",
-  "updatedAt": "2023-01-02T10:30:00.000Z"
-}
-```
-
-#### `DELETE /api/identification-documents/:id`
-
-Löscht ein Identifikationsdokument.
-
-**Authentifizierung erforderlich**: Ja
-
-**Erfolgsantwort (200 OK):**
-```json
-{
-  "message": "Dokument erfolgreich gelöscht"
-}
-```
-
-#### `PUT /api/identification-documents/:id/verify`
-
-Verifiziert ein Identifikationsdokument (nur für Administratoren).
-
-**Authentifizierung erforderlich**: Ja (Administrator)
-
-**Request-Body:**
-```json
-{
-  "isVerified": true
-}
-```
-
-**Erfolgsantwort (200 OK):**
-```json
-{
-  "id": 1,
-  "userId": 123,
-  "documentType": "passport",
-  "documentNumber": "P7654321",
-  "issueDate": "2021-01-01T00:00:00.000Z",
-  "expiryDate": "2031-01-01T00:00:00.000Z",
-  "issuingCountry": "Deutschland",
-  "issuingAuthority": "Bundespolizei Berlin",
-  "documentFile": "uploads/documents/user_123/doc_1.pdf",
-  "isVerified": true,
-  "verificationDate": "2023-01-03T14:25:00.000Z",
-  "verifiedBy": 456,
-  "createdAt": "2023-01-01T12:00:00.000Z",
-  "updatedAt": "2023-01-03T14:25:00.000Z"
-}
-```
-
-#### `GET /api/identification-documents/:id/download`
-
-Lädt die Datei eines Identifikationsdokuments herunter.
-
-**Authentifizierung erforderlich**: Ja
-
-**Erfolgsantwort (200 OK):**
-- Die Dokumentdatei wird als Download zurückgegeben.
-
-**Fehlerantworten für alle Endpunkte:**
-- `400 Bad Request`: Ungültiger Request
-- `401 Unauthorized`: Fehlende oder ungültige Authentifizierung
-- `403 Forbidden`: Keine Berechtigung für diese Operation
-- `404 Not Found`: Dokument nicht gefunden
-- `500 Internal Server Error`: Serverfehler
-
----
-
-Diese API-Referenz bietet einen umfassenden Überblick über alle verfügbaren Endpunkte des Intranet-Systems. Bei Fragen oder Problemen wenden Sie sich an das Entwicklungsteam. 

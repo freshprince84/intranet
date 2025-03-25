@@ -234,7 +234,7 @@ const externalLinksApi = {
     title?: string;
     type?: string;
   }): Promise<CerebroExternalLink> => {
-    const response = await api.post('/api/cerebro/links', data);
+    const response = await api.post('/cerebro/links', data);
     return response.data;
   },
   
@@ -247,13 +247,13 @@ const externalLinksApi = {
       type?: string;
     }
   ): Promise<CerebroExternalLink> => {
-    const response = await api.put(`/api/cerebro/links/${id}`, data);
+    const response = await api.put(`/cerebro/links/${id}`, data);
     return response.data;
   },
   
   // Link löschen
   deleteExternalLink: async (id: string): Promise<void> => {
-    await api.delete(`/api/cerebro/links/${id}`);
+    await api.delete(`/cerebro/links/${id}`);
   },
 };
 
