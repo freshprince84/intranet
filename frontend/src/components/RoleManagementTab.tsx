@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { roleApi } from '../api/apiClient.ts';
 import { Role, AccessLevel } from '../types/interfaces.ts';
 import { PencilIcon, TrashIcon, PlusIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { API_URL, API_ENDPOINTS } from '../config/api.ts';
-import axios from 'axios';
+import { API_ENDPOINTS } from '../config/api.ts';
+import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
@@ -957,13 +957,8 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         }
 
         // Prüfen, ob die Standard-Filter bereits existieren
-        const existingFiltersResponse = await axios.get(
-          `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(ROLES_TABLE_ID)}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
+        const existingFiltersResponse = await axiosInstance.get(
+          API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(ROLES_TABLE_ID)
         );
 
         const existingFilters = existingFiltersResponse.data || [];
@@ -978,15 +973,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
             operators: []
           };
 
-          await axios.post(
-            `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
-            alleFilter,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': 'application/json'
-              }
-            }
+          await axiosInstance.post(
+            API_ENDPOINTS.SAVED_FILTERS.BASE,
+            alleFilter
           );
           console.log('Alle-Filter für Rollen erstellt');
         }

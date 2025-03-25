@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { UsersIcon } from '@heroicons/react/24/outline';
-import axios from 'axios';
+import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { format } from 'date-fns';
 import ActiveUsersList from '../components/teamWorktime/ActiveUsersList.tsx';
@@ -21,7 +21,7 @@ const TeamWorktimeControl: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get(API_ENDPOINTS.TEAM_WORKTIME.ACTIVE);
+      const response = await axiosInstance.get(API_ENDPOINTS.TEAM_WORKTIME.ACTIVE);
       setActiveUsers(response.data);
     } catch (error) {
       console.error('Fehler beim Laden der aktiven Benutzer:', error);
@@ -37,7 +37,7 @@ const TeamWorktimeControl: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const response = await axios.get(`${API_ENDPOINTS.TEAM_WORKTIME.USER_DAY}?date=${selectedDate}`);
+      const response = await axiosInstance.get(`${API_ENDPOINTS.TEAM_WORKTIME.USER_DAY}?date=${selectedDate}`);
       setAllWorktimes(response.data);
     } catch (error) {
       console.error('Fehler beim Laden der Zeiterfassungen:', error);
@@ -53,7 +53,7 @@ const TeamWorktimeControl: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      await axios.post(API_ENDPOINTS.TEAM_WORKTIME.STOP_USER, {
+      await axiosInstance.post(API_ENDPOINTS.TEAM_WORKTIME.STOP_USER, {
         userId,
         endTime: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
       });
@@ -74,7 +74,7 @@ const TeamWorktimeControl: React.FC = () => {
     fetchAllWorktimes();
     
     // Aktualisiere die aktiven Benutzer alle 30 Sekunden
-    const intervalId = setInterval(fetchActiveUsers, 30000);
+    const intervalId = setInterval(fetchActiveUsers, 30000) as unknown as number;
     
     return () => clearInterval(intervalId);
   }, [fetchActiveUsers, fetchAllWorktimes]);

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import FilterRow, { FilterCondition } from './FilterRow.tsx';
 import FilterLogicalOperator from './FilterLogicalOperator.tsx';
-import axios from 'axios';
-import { API_URL, API_ENDPOINTS } from '../config/api.ts';
+import axiosInstance from '../config/axios.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import { toast } from 'react-toastify';
 
 interface TableColumn {
@@ -57,13 +57,8 @@ const FilterPane: React.FC<FilterPaneProps> = ({
           return;
         }
         
-        const response = await axios.get(
-          `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`
-            }
-          }
+        const response = await axiosInstance.get(
+          API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)
         );
         
         setExistingFilters(response.data.map((filter: any) => ({ id: filter.id, name: filter.name })));
@@ -172,19 +167,13 @@ const FilterPane: React.FC<FilterPaneProps> = ({
         return;
       }
       
-      const response = await axios.post(
-        `${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BASE}`,
+      const response = await axiosInstance.post(
+        API_ENDPOINTS.SAVED_FILTERS.BASE,
         {
           tableId,
           name: filterName,
           conditions: validConditions,
           operators: logicalOperators
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
         }
       );
       

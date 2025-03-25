@@ -1,5 +1,4 @@
-import api from '../config/axios.ts';
-import { API_BASE_URL } from '../config/api.ts';
+import axiosInstance from '../config/axios.ts';
 
 /**
  * API-Funktionen für die Zeiterfassung
@@ -30,7 +29,7 @@ export const startWorktime = async (
   comment?: string
 ) => {
   try {
-    const response = await api.post('/worktime', {
+    const response = await axiosInstance.post('/worktime', {
       userId,
       startTime,
       comment
@@ -53,7 +52,7 @@ export const stopWorktime = async (
   endTime: string
 ) => {
   try {
-    const response = await api.put(`/worktime/stop/${userId}`, {
+    const response = await axiosInstance.put(`/worktime/stop/${userId}`, {
       endTime
     });
     return response.data;
@@ -74,7 +73,7 @@ export const getWorktimesByUserAndDate = async (
   date: string
 ) => {
   try {
-    const response = await api.get(`/worktime/user/${userId}/date/${date}`);
+    const response = await axiosInstance.get(`/worktime/user/${userId}/date/${date}`);
     return response.data;
   } catch (error) {
     console.error('Fehler beim Abrufen der Zeiterfassungen:', error);
@@ -94,7 +93,7 @@ export const updateWorktimeEntry = async (
 ) => {
   try {
     // Sende die Daten unverändert, ohne weitere Zeitzonenkonvertierung
-    const response = await api.put(`/worktime/${entryId}`, data);
+    const response = await axiosInstance.put(`/worktime/${entryId}`, data);
     return response.data;
   } catch (error) {
     console.error('Fehler beim Aktualisieren der Zeiterfassung:', error);
@@ -109,7 +108,7 @@ export const updateWorktimeEntry = async (
  */
 export const deleteWorktimeEntry = async (entryId: number) => {
   try {
-    const response = await api.delete(`/worktime/${entryId}`);
+    const response = await axiosInstance.delete(`/worktime/${entryId}`);
     return response.data;
   } catch (error) {
     console.error('Fehler beim Löschen der Zeiterfassung:', error);
@@ -131,7 +130,7 @@ export const updateWorktimeEntries = async (entries: WorktimeEntry[]) => {
     // Sequentiell jeden Eintrag aktualisieren
     // Dabei nur die wirklich notwendigen Felder extrahieren
     const updatePromises = entriesToUpdate.map(entry => 
-      api.put(`/worktime/${entry.id}`, {
+      axiosInstance.put(`/worktime/${entry.id}`, {
         startTime: entry.startTime,  // ISO-String ohne Zeitzone
         endTime: entry.endTime       // ISO-String ohne Zeitzone oder null
       })
@@ -139,7 +138,7 @@ export const updateWorktimeEntries = async (entries: WorktimeEntry[]) => {
     
     // Sequentiell jeden zu löschenden Eintrag löschen
     const deletePromises = entriesToDelete.map(id => 
-      api.delete(`/worktime/${id}`)
+      axiosInstance.delete(`/worktime/${id}`)
     );
     
     // Alle Promises ausführen

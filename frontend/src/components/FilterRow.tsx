@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
-import axios from 'axios';
-import { API_URL, API_ENDPOINTS } from '../config/api.ts';
+import axiosInstance from '../config/axios.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 
 export interface FilterCondition {
   column: string;
@@ -102,14 +102,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
         // Benutzer laden
         setLoadingUsers(true);
         try {
-          const response = await axios.get(
-            `${API_URL}${API_ENDPOINTS.USERS.BASE}`,
-            {
-              headers: {
-                Authorization: `Bearer ${token}`
-              }
-            }
-          );
+          const response = await axiosInstance.get('/users');
           setUsers(response.data);
         } catch (error) {
           console.error('Fehler beim Laden der Benutzer:', error);
@@ -121,14 +114,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
         if (condition.column === 'responsible' || condition.column === 'responsibleAndQualityControl') {
           setLoadingRoles(true);
           try {
-            const response = await axios.get(
-              `${API_URL}${API_ENDPOINTS.ROLES.BASE}`,
-              {
-                headers: {
-                  Authorization: `Bearer ${token}`
-                }
-              }
-            );
+            const response = await axiosInstance.get('/roles');
             setRoles(response.data);
           } catch (error) {
             console.error('Fehler beim Laden der Rollen:', error);

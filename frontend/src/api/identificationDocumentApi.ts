@@ -1,11 +1,11 @@
-import apiClient from './apiClient.ts';
-import { API_URL, API_ENDPOINTS } from '../config/api.ts';
+import axiosInstance from '../config/axios.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import { IdentificationDocument } from '../types/interfaces.ts';
 
 // Alle Dokumente eines Benutzers abrufen
 export const getUserDocuments = async (userId: number): Promise<IdentificationDocument[]> => {
   try {
-    const response = await apiClient.get(API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.BY_USER(userId));
+    const response = await axiosInstance.get(API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.BY_USER(userId));
     return response.data;
   } catch (error) {
     console.error('Fehler beim Abrufen der Identifikationsdokumente:', error);
@@ -19,7 +19,7 @@ export const addDocumentWithFile = async (
   formData: FormData
 ): Promise<IdentificationDocument> => {
   try {
-    const response = await apiClient.post(
+    const response = await axiosInstance.post(
       API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.BY_USER(userId),
       formData,
       {
@@ -49,7 +49,7 @@ export const addDocumentWithCameraImage = async (
   }
 ): Promise<IdentificationDocument> => {
   try {
-    const response = await apiClient.post(
+    const response = await axiosInstance.post(
       API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.BY_USER(userId),
       {
         ...documentData,
@@ -69,7 +69,7 @@ export const updateDocumentWithFile = async (
   formData: FormData
 ): Promise<IdentificationDocument> => {
   try {
-    const response = await apiClient.put(
+    const response = await axiosInstance.put(
       API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.BY_ID(docId),
       formData,
       {
@@ -98,7 +98,7 @@ export const updateDocumentWithCameraImage = async (
   }
 ): Promise<IdentificationDocument> => {
   try {
-    const response = await apiClient.put(
+    const response = await axiosInstance.put(
       API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.BY_ID(docId),
       {
         ...documentData,
@@ -115,7 +115,7 @@ export const updateDocumentWithCameraImage = async (
 // Dokument löschen
 export const deleteDocument = async (docId: number): Promise<void> => {
   try {
-    await apiClient.delete(API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.BY_ID(docId));
+    await axiosInstance.delete(API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.BY_ID(docId));
   } catch (error) {
     console.error('Fehler beim Löschen des Dokuments:', error);
     throw error;
@@ -125,7 +125,7 @@ export const deleteDocument = async (docId: number): Promise<void> => {
 // Dokument verifizieren
 export const verifyDocument = async (docId: number, adminId: number): Promise<void> => {
   try {
-    await apiClient.post(
+    await axiosInstance.post(
       API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.VERIFY(docId),
       { adminId }
     );
@@ -137,5 +137,5 @@ export const verifyDocument = async (docId: number, adminId: number): Promise<vo
 
 // URL für das Herunterladen des Dokuments generieren
 export const getDocumentDownloadUrl = (docId: number): string => {
-  return `${API_URL}${API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.DOWNLOAD(docId)}`;
+  return `${window.location.origin}/api${API_ENDPOINTS.IDENTIFICATION_DOCUMENTS.DOWNLOAD(docId)}`;
 }; 

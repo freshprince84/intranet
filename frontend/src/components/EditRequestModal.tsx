@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
-import { API_ENDPOINTS, API_URL } from '../config/api.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { Dialog } from '@headlessui/react';
@@ -122,14 +121,12 @@ const EditRequestModal = ({
     } catch (err) {
       console.error('Unerwarteter Fehler:', err);
       
-      if (axios.isAxiosError(err)) {
-        if (err.code === 'ERR_NETWORK') {
-          setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-        } else {
-          setError(`Fehler beim Laden der Daten: ${err.response?.data?.message || err.message}`);
-        }
+      // Einfachere Fehlerbehandlung ohne axios-Import
+      const axiosError = err as any;
+      if (axiosError.code === 'ERR_NETWORK') {
+        setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
       } else {
-        setError('Ein unerwarteter Fehler ist aufgetreten');
+        setError(`Fehler beim Laden der Daten: ${axiosError.response?.data?.message || axiosError.message || 'Unbekannter Fehler'}`);
       }
     }
   };
@@ -145,14 +142,12 @@ const EditRequestModal = ({
       setAttachments([]);
       
       // Zeige einen benutzerfreundlichen Fehler an, aber lass die Komponente weiterlaufen
-      if (axios.isAxiosError(err)) {
-        const errorMessage = err.response?.data?.message || err.message;
-        console.warn(`Anhänge konnten nicht geladen werden: ${errorMessage}`);
-        // Setze keinen Fehler in state, damit der Dialog trotzdem nutzbar bleibt
-        // Nur Warnung in der Konsole
-      } else {
-        console.warn('Ein unerwarteter Fehler ist beim Laden der Anhänge aufgetreten');
-      }
+      // Einfachere Fehlerbehandlung ohne axios-Import
+      const axiosError = err as any;
+      const errorMessage = axiosError.response?.data?.message || axiosError.message || 'Unbekannter Fehler';
+      console.warn(`Anhänge konnten nicht geladen werden: ${errorMessage}`);
+      // Setze keinen Fehler in state, damit der Dialog trotzdem nutzbar bleibt
+      // Nur Warnung in der Konsole
     }
   };
 
@@ -215,10 +210,10 @@ const EditRequestModal = ({
       let insertText = '';
       if (newAttachment.fileType.startsWith('image/')) {
         // Für Bilder einen Markdown-Image-Link einfügen mit vollständiger URL
-        insertText = `\n![${newAttachment.fileName}](${API_URL}${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
+        insertText = `\n![${newAttachment.fileName}](${window.location.origin}/api${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
       } else {
         // Für andere Dateien einen normalen Link mit vollständiger URL
-        insertText = `\n[${newAttachment.fileName}](${API_URL}${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
+        insertText = `\n[${newAttachment.fileName}](${window.location.origin}/api${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
       }
       
       // Füge den Link an der aktuellen Cursorposition ein
@@ -243,11 +238,8 @@ const EditRequestModal = ({
       }
     } catch (err) {
       console.error('Fehler beim Hochladen der Datei:', err);
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || err.message);
-      } else {
-        setError('Ein unerwarteter Fehler ist aufgetreten');
-      }
+      const axiosError = err as any;
+      setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     } finally {
       setUploading(false);
     }
@@ -300,11 +292,8 @@ const EditRequestModal = ({
       }
     } catch (err) {
       console.error('Fehler beim Löschen des Anhangs:', err);
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || err.message);
-      } else {
-        setError('Ein unerwarteter Fehler ist aufgetreten');
-      }
+      const axiosError = err as any;
+      setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     }
   };
 
@@ -328,11 +317,8 @@ const EditRequestModal = ({
       link.remove();
     } catch (err) {
       console.error('Fehler beim Herunterladen des Anhangs:', err);
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || err.message);
-      } else {
-        setError('Ein unerwarteter Fehler ist aufgetreten');
-      }
+      const axiosError = err as any;
+      setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     }
   };
 
@@ -368,11 +354,8 @@ const EditRequestModal = ({
       }
     } catch (err) {
       console.error('Fehler beim Aktualisieren des Requests:', err);
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || err.message);
-      } else {
-        setError('Ein unerwarteter Fehler ist aufgetreten');
-      }
+      const axiosError = err as any;
+      setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     } finally {
       setLoading(false);
     }
@@ -393,11 +376,8 @@ const EditRequestModal = ({
       onClose();
     } catch (err) {
       console.error('Delete Error:', err);
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || err.message);
-      } else {
-        setError('Ein unerwarteter Fehler ist aufgetreten');
-      }
+      const axiosError = err as any;
+      setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     } finally {
       setLoading(false);
     }
@@ -477,11 +457,8 @@ const EditRequestModal = ({
       }
     } catch (err) {
       console.error('Fehler beim Verarbeiten der Datei:', err);
-      if (axios.isAxiosError(err)) {
-        setError(err.response?.data?.message || err.message);
-      } else {
-        setError('Ein unerwarteter Fehler ist aufgetreten');
-      }
+      const axiosError = err as any;
+      setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
     } finally {
       setUploading(false);
     }
@@ -560,7 +537,7 @@ const EditRequestModal = ({
               {attachment.fileType.startsWith('image/') && attachment.id && (
                 <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
                   <img 
-                    src={`${API_URL}${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, attachment.id)}`}
+                    src={`${window.location.origin}/api${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, attachment.id)}`}
                     alt={attachment.fileName}
                     className="max-w-[200px] max-h-[150px] object-contain"
                   />

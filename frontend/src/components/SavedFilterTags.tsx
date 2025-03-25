@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { FilterCondition } from './FilterRow.tsx';
-import axios from 'axios';
-import { API_URL, API_ENDPOINTS } from '../config/api.ts';
+import axiosInstance from '../config/axios.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import { toast } from 'react-toastify';
 
 interface SavedFilter {
@@ -44,11 +44,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           return;
         }
         
-        const response = await axios.get(`${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
+        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId));
         
         setSavedFilters(response.data);
 
@@ -97,11 +93,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         return;
       }
       
-      await axios.delete(`${API_URL}${API_ENDPOINTS.SAVED_FILTERS.BY_ID(filterId)}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
+      await axiosInstance.delete(API_ENDPOINTS.SAVED_FILTERS.BY_ID(filterId));
       
       // Entferne den gelöschten Filter aus dem State
       setSavedFilters(savedFilters.filter(filter => filter.id !== filterId));

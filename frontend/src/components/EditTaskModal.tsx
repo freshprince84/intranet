@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
-import { API_ENDPOINTS, API_URL } from '../config/api.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import CerebroArticleSelector from './CerebroArticleSelector.tsx';
 import { Dialog } from '@headlessui/react';
@@ -140,14 +139,11 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
         } catch (err) {
             console.error('Fehler beim Laden der Benutzer:', err);
             
-            if (axios.isAxiosError(err)) {
-                if (err.code === 'ERR_NETWORK') {
-                    setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-                } else {
-                    setError(`Fehler beim Laden der Benutzer: ${err.response?.data?.message || err.message}`);
-                }
+            const axiosError = err as any;
+            if (axiosError.code === 'ERR_NETWORK') {
+                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
             } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
+                setError(`Fehler beim Laden der Benutzer: ${axiosError.response?.data?.message || axiosError.message || 'Unbekannter Fehler'}`);
             }
         }
     };
@@ -166,14 +162,11 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
         } catch (err) {
             console.error('Fehler beim Laden der Rollen:', err);
             
-            if (axios.isAxiosError(err)) {
-                if (err.code === 'ERR_NETWORK') {
-                    setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-                } else {
-                    setError(`Fehler beim Laden der Rollen: ${err.response?.data?.message || err.message}`);
-                }
+            const axiosError = err as any;
+            if (axiosError.code === 'ERR_NETWORK') {
+                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
             } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
+                setError(`Fehler beim Laden der Rollen: ${axiosError.response?.data?.message || axiosError.message || 'Unbekannter Fehler'}`);
             }
         }
     };
@@ -192,39 +185,25 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
         } catch (err) {
             console.error('Fehler beim Laden der Niederlassungen:', err);
             
-            if (axios.isAxiosError(err)) {
-                if (err.code === 'ERR_NETWORK') {
-                    setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-                } else {
-                    setError(`Fehler beim Laden der Niederlassungen: ${err.response?.data?.message || err.message}`);
-                }
+            const axiosError = err as any;
+            if (axiosError.code === 'ERR_NETWORK') {
+                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
             } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
+                setError(`Fehler beim Laden der Niederlassungen: ${axiosError.response?.data?.message || axiosError.message || 'Unbekannter Fehler'}`);
             }
         }
     };
 
     const fetchLinkedArticles = async () => {
-        if (!isOpen) return;
-        
         try {
-            setLoading(true);
             setError(null);
-            
-            const response = await axiosInstance.get(
-                API_ENDPOINTS.TASKS.CARTICLES(task.id)
-            );
-            
+            const response = await axiosInstance.get(API_ENDPOINTS.TASKS.CARTICLES(task.id));
             setLinkedArticles(response.data || []);
         } catch (err) {
             console.error('Fehler beim Laden der verknüpften Artikel:', err);
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
-        } finally {
-            setLoading(false);
+            
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
         }
     };
 
@@ -235,11 +214,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             setAttachments(response.data || []);
         } catch (err) {
             console.error('Fehler beim Laden der Anhänge:', err);
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
         }
     };
 
@@ -302,10 +278,10 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             let insertText = '';
             if (newAttachment.fileType.startsWith('image/')) {
                 // Für Bilder einen Markdown-Image-Link einfügen mit vollständiger URL
-                insertText = `\n![${newAttachment.fileName}](${API_URL}${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, newAttachment.id)})\n`;
+                insertText = `\n![${newAttachment.fileName}](${window.location.origin}/api${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, newAttachment.id)})\n`;
             } else {
                 // Für andere Dateien einen normalen Link mit vollständiger URL
-                insertText = `\n[${newAttachment.fileName}](${API_URL}${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, newAttachment.id)})\n`;
+                insertText = `\n[${newAttachment.fileName}](${window.location.origin}/api${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, newAttachment.id)})\n`;
             }
             
             // Füge den Link an der aktuellen Cursorposition ein
@@ -330,11 +306,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             }
         } catch (err) {
             console.error('Fehler beim Hochladen der Datei:', err);
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
         } finally {
             setUploading(false);
         }
@@ -359,49 +332,26 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
         setLoading(true);
 
         try {
-            // Validierung
-            if (!title || (!responsibleId && !roleId) || !status || !branchId) {
-                setError('Bitte füllen Sie alle erforderlichen Felder aus');
-                setLoading(false);
-                return;
-            }
-
-            if (responsibleId && roleId) {
-                setError('Bitte wählen Sie entweder einen verantwortlichen Benutzer ODER eine Rolle aus, nicht beides');
-                setLoading(false);
-                return;
-            }
-
-            // Basis-Daten für die Anfrage
-            const taskData: any = {
+            await axiosInstance.put(API_ENDPOINTS.TASKS.BY_ID(task.id), {
                 title,
                 description,
                 status,
-                qualityControlId,
-                branchId,
-                dueDate
-            };
+                responsible_id: assigneeType === 'user' ? responsibleId : null,
+                role_id: assigneeType === 'role' ? roleId : null,
+                quality_control_id: qualityControlId,
+                branch_id: branchId || null,
+                due_date: dueDate
+            });
 
-            // Entweder responsibleId oder roleId hinzufügen, nicht beides
-            if (assigneeType === 'user' && responsibleId) {
-                taskData.responsibleId = responsibleId;
-            } else if (assigneeType === 'role' && roleId) {
-                taskData.roleId = roleId;
-            }
-
-            const response = await axiosInstance.put(`${API_ENDPOINTS.TASKS.BASE}/${task.id}`, taskData);
-
-            console.log('Task aktualisiert:', response.data);
-            onTaskUpdated();
+            // Erfolgreiches Update - Schließe das Modal
             onClose();
+            if (onTaskUpdated) {
+                onTaskUpdated();
+            }
         } catch (err) {
             console.error('Fehler beim Aktualisieren des Tasks:', err);
-            
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.error || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
         } finally {
             setLoading(false);
         }
@@ -414,92 +364,69 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
         }
         
         try {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setError('Nicht authentifiziert');
-                return;
-            }
-
+            setLoading(true);
             await axiosInstance.delete(API_ENDPOINTS.TASKS.BY_ID(task.id));
 
             onTaskUpdated();
             onClose();
         } catch (err) {
             console.error('Delete Error:', err);
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleAddArticle = async (article: CerebroArticle) => {
         try {
-            setError(null);
-            
-            await axiosInstance.post(
-                API_ENDPOINTS.TASKS.LINK_CARTICLE(task.id, article.id)
-            );
-            
-            setLinkedArticles(prev => [...prev, article]);
+            await axiosInstance.post(API_ENDPOINTS.TASKS.LINK_CARTICLE(task.id, article.id));
+            // Artikel zur lokalen Liste hinzufügen
+            setLinkedArticles([...linkedArticles, article]);
         } catch (err) {
             console.error('Fehler beim Verknüpfen des Artikels:', err);
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
         }
     };
-    
+
     const handleRemoveArticle = async (articleId: number) => {
         try {
-            setError(null);
-            
-            await axiosInstance.delete(
-                API_ENDPOINTS.TASKS.UNLINK_CARTICLE(task.id, articleId)
-            );
-            
-            setLinkedArticles(prev => prev.filter(a => a.id !== articleId));
+            await axiosInstance.delete(API_ENDPOINTS.TASKS.UNLINK_CARTICLE(task.id, articleId));
+            // Artikel aus der lokalen Liste entfernen
+            setLinkedArticles(linkedArticles.filter(article => article.id !== articleId));
         } catch (err) {
             console.error('Fehler beim Entfernen der Artikelverknüpfung:', err);
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
         }
     };
 
     const handleDeleteAttachment = async (attachmentId: number) => {
         try {
-            setError(null);
-            
             // Finde den zu entfernenden Anhang
             const attachmentToRemove = attachments.find(a => a.id === attachmentId);
             
             if (attachmentToRemove) {
+                // Erstelle eine URL für Markdown-Referenzen
+                const attachmentUrl = `${window.location.origin}/api${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachmentId)}`;
+                
                 await axiosInstance.delete(API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachmentId));
                 
                 // Entferne den Anhang aus der Liste
                 setAttachments(attachments.filter(attachment => attachment.id !== attachmentId));
                 
-                // Entferne auch die Verweise im Beschreibungstext
+                // Bereinige die Beschreibung
                 if (attachmentToRemove.fileName) {
-                    // Erzeuge URL-Muster für diesen Anhang
-                    const attachmentUrl = `${API_URL}${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachmentId)}`;
-                    const escapedAttachmentUrl = attachmentUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                    
                     // Suche nach Bild- und Link-Markdown
-                    const imagePattern = new RegExp(`!\\[(.*?)\\]\\(${escapedAttachmentUrl}\\)`, 'g');
-                    const linkPattern = new RegExp(`\\[(.*?)\\]\\(${escapedAttachmentUrl}\\)`, 'g');
+                    const imagePattern = new RegExp(`!\\[(.*?)\\]\\(${attachmentUrl}\\)`, 'g');
+                    const linkPattern = new RegExp(`\\[(.*?)\\]\\(${attachmentUrl}\\)`, 'g');
                     
                     // Bereinige die Beschreibung
                     const newDescription = description
                         .replace(imagePattern, '')
                         .replace(linkPattern, '')
-                        // Entferne überschüssige Leerzeilen, die durch das Entfernen entstehen könnten
+                        // Entferne überschüssige Leerzeilen
                         .replace(/\n{3,}/g, '\n\n');
                     
                     setDescription(newDescription);
@@ -507,16 +434,16 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             }
         } catch (err) {
             console.error('Fehler beim Löschen des Anhangs:', err);
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
         }
     };
 
     const handleDownloadAttachment = async (attachment: TaskAttachment) => {
         try {
+            if (attachment.id === undefined) {
+                throw new Error('Anhang-ID fehlt');
+            }
             const response = await axiosInstance.get(
                 API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachment.id),
                 { responseType: 'blob' }
@@ -532,11 +459,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             link.remove();
         } catch (err) {
             console.error('Fehler beim Herunterladen des Anhangs:', err);
-            if (axios.isAxiosError(err)) {
-                setError(err.response?.data?.message || err.message);
-            } else {
-                setError('Ein unerwarteter Fehler ist aufgetreten');
-            }
+            const axiosError = err as any;
+            setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
         }
     };
 
@@ -932,7 +856,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                             {attachment.fileType.startsWith('image/') && (
                                 <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
                                     <img 
-                                        src={`${API_URL}${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachment.id)}`}
+                                        src={`${window.location.origin}/api${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachment.id)}`}
                                         alt={attachment.fileName}
                                         className="max-w-[200px] max-h-[150px] object-contain"
                                     />

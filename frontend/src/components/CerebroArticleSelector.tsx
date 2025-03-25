@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
@@ -49,11 +48,9 @@ const CerebroArticleSelector: React.FC<CerebroArticleSelectorProps> = ({
         setArticles(filteredArticles);
       } catch (err) {
         console.error('Fehler beim Abrufen der Artikel:', err);
-        if (axios.isAxiosError(err)) {
-          setError(err.response?.data?.message || err.message);
-        } else {
-          setError('Ein unerwarteter Fehler ist aufgetreten');
-        }
+        // Einfachere Fehlerbehandlung ohne axios-Import
+        const axiosError = err as any;
+        setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
       } finally {
         setLoading(false);
       }
