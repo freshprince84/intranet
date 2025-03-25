@@ -3,86 +3,10 @@
  * Stellt Funktionen für die Kommunikation mit dem Backend bereit
  */
 
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiResponse, LoginCredentials, AuthResponse, Task, Request, User, Branch, Role, Document, PaginatedResponse, FilterOptions, Notification, NotificationType, WorkTime, WorkTimeStatistics } from '../types';
-
-// Basis-URL für alle API-Anfragen
-const BASE_URL = 'http://192.168.1.120:5000/api';
-
-// Timeouts
-const TIMEOUT = 30000; // 30 Sekunden
-
-// Erstelle eine axios-Instanz mit Standardkonfiguration
-const axiosInstance: AxiosInstance = axios.create({
-  baseURL: BASE_URL,
-  timeout: TIMEOUT,
-  headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  },
-});
-
-// Auth-Token zu jeder Anfrage hinzufügen
-axiosInstance.interceptors.request.use(
-  async (config) => {
-    const token = await AsyncStorage.getItem('@IntranetApp:token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
-
-// Fehlerbehandlung und automatische Token-Erneuerung
-axiosInstance.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  async (error) => {
-    const originalRequest = error.config;
-
-    // Wenn Anfrage fehlgeschlagen ist wegen ungültigem Token und wir haben noch nicht versucht, das Token zu erneuern
-    if (error.response && error.response.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        // Hole Refresh-Token
-        const refreshToken = await AsyncStorage.getItem('@IntranetApp:refreshToken');
-        
-        if (refreshToken) {
-          // Versuche, ein neues Token zu erhalten
-          const response = await axios.post(
-            `${BASE_URL}/auth/refresh-token`,
-            { refreshToken },
-            { headers: { 'Content-Type': 'application/json' } }
-          );
-          
-          const { token, refreshToken: newRefreshToken } = response.data;
-          
-          // Speichere neue Tokens
-          await AsyncStorage.setItem('@IntranetApp:token', token);
-          await AsyncStorage.setItem('@IntranetApp:refreshToken', newRefreshToken);
-          
-          // Wiederhole die ursprüngliche Anfrage mit neuem Token
-          originalRequest.headers.Authorization = `Bearer ${token}`;
-          return axiosInstance(originalRequest);
-        }
-      } catch (refreshError) {
-        // Token-Erneuerung fehlgeschlagen, Benutzer muss sich neu anmelden
-        await AsyncStorage.removeItem('@IntranetApp:token');
-        await AsyncStorage.removeItem('@IntranetApp:refreshToken');
-        
-        // Hier könnte ein Event ausgelöst werden, um die App zur Login-Seite umzuleiten
-      }
-    }
-    
-    return Promise.reject(error);
-  }
-);
+import axiosInstance from '../config/axios.ts';
 
 // Basis-API-Klasse
 class BaseApiService<T> {

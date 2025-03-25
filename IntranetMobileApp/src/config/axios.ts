@@ -78,11 +78,14 @@ axiosInstance.interceptors.response.use(
         const refreshToken = await AsyncStorage.getItem('@IntranetApp:refreshToken');
         
         if (refreshToken) {
-          // Token aktualisieren
+          // Token aktualisieren mit korrektem Pfad
           const response = await axios.post(
-            `${API_CONFIG.API_HOST}/api/auth/refresh`,
+            `/auth/refresh`,
             { refreshToken },
-            { headers: API_CONFIG.HEADERS }
+            { 
+              baseURL: API_CONFIG.API_HOST, 
+              headers: API_CONFIG.HEADERS 
+            }
           );
           
           const { token } = response.data;
