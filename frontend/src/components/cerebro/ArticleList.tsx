@@ -131,10 +131,25 @@ const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSe
     });
   };
   
+  // Hilfsfunktion für den Anzeigenamen des Erstellers
+  const getCreatorName = (article: CerebroArticle) => {
+    if (article.creatorFirstName && article.creatorLastName) {
+      return `${article.creatorFirstName} ${article.creatorLastName}`;
+    }
+    return 'Unbekannt';
+  };
+
+  // Hilfsfunktion für den übergeordneten Artikel
+  const getParentTitle = (article: CerebroArticle) => {
+    // Die parentId ist vorhanden, aber nicht der Titel des übergeordneten Artikels
+    // in der Standard-Artikelliste
+    return article.parentId ? 'Vorhanden' : 'Keine';
+  };
+  
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Cerebro</h1>
+        <h1 className="text-2xl font-bold dark:text-white">Cerebro</h1>
         {canCreateArticle && (
           <button
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded flex items-center"
@@ -167,7 +182,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSe
       
       {/* Fehlermeldung */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
@@ -175,22 +190,22 @@ const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSe
       {/* Ladeindikator */}
       {loading ? (
         <div className="flex justify-center items-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 dark:border-blue-400"></div>
         </div>
       ) : (
         <>
           {/* Artikeltabelle */}
           {articles.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="text-center py-8 text-gray-500 dark:text-gray-400">
               {searchQuery ? 'Keine Artikel gefunden, die Ihren Suchkriterien entsprechen.' : 'Noch keine Artikel vorhanden.'}
             </div>
           ) : (
-            <div className="overflow-x-auto bg-white rounded-lg shadow">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <div className="overflow-x-auto bg-white dark:bg-gray-800 rounded-lg shadow">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
                   <tr>
                     <th
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                       onClick={() => toggleSort('title')}
                     >
                       <div className="flex items-center">
@@ -200,11 +215,11 @@ const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSe
                         )}
                       </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Erstellt von
                     </th>
                     <th
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                       onClick={() => toggleSort('updatedAt')}
                     >
                       <div className="flex items-center">
@@ -214,30 +229,30 @@ const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSe
                         )}
                       </div>
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                       Übergeordnet
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                   {sortedArticles.map((article) => (
                     <tr
                       key={article.id}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                       onClick={() => navigateToArticle(article.slug)}
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">{article.title}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{article.title}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{article.creatorName || 'Unbekannt'}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{getCreatorName(article)}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{formatDate(article.updatedAt)}</div>
+                        <div className="text-sm text-gray-500 dark:text-gray-400">{formatDate(article.updatedAt)}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">
-                          {article.parentTitle ? article.parentTitle : 'Keine'}
+                        <div className="text-sm text-gray-500 dark:text-gray-400">
+                          {getParentTitle(article)}
                         </div>
                       </td>
                     </tr>

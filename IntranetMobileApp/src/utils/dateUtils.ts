@@ -3,79 +3,101 @@
  * Bietet Funktionen für konsistentes Handling von Zeitzonen und Formatierungen
  */
 
+import { format, parseISO, differenceInMinutes } from 'date-fns';
+
 /**
- * Formatiert ein Datum in ein lesbares Format (DD.MM.YYYY HH:MM:SS)
+ * Formatiert ein Datum in ein lesbares Format (DD.MM.YYYY HH:MM)
  * @param date Das zu formatierende Datum
  * @returns Formatierte Zeichenkette
  */
 export const formatDateTime = (date: Date | string | null | undefined): string => {
   if (!date) return '-';
   
+  // Stelle sicher, dass wir mit einem Date-Objekt arbeiten
   const d = typeof date === 'string' ? new Date(date) : date;
   
   return `${formatDate(d)} ${formatTime(d)}`;
 };
 
 /**
- * Formatiert ein Datum in ein lesbares Datumsformat (DD.MM.YYYY)
- * @param date Das zu formatierende Datum
- * @returns Formatierte Zeichenkette
+ * Formatiert ein Datum für die Anzeige im deutschen Format.
+ * @param dateString Das zu formatierende Datum im Format YYYY-MM-DD
+ * @returns Formatiertes Datum im Format DD.MM.YYYY oder '-' bei Fehler
  */
-export const formatDate = (date: Date | string | null | undefined): string => {
-  if (!date) return '-';
-  
-  const d = typeof date === 'string' ? new Date(date) : date;
-  
-  // Verwende lokale Zeit für Anzeige
-  const day = String(d.getDate()).padStart(2, '0');
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const year = d.getFullYear();
-  
-  return `${day}.${month}.${year}`;
+export const formatDate = (dateString: string | Date): string => {
+    if (!dateString) return '-';
+    
+    try {
+        const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+        
+        return date.toLocaleDateString('de-DE', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    } catch (error) {
+        console.error('Fehler beim Formatieren des Datums:', error);
+        return '-';
+    }
 };
 
 /**
- * Formatiert ein Datum in ein lesbares Zeitformat (HH:MM:SS)
- * @param date Das zu formatierende Datum
- * @returns Formatierte Zeichenkette
+ * Formatiert eine Zeit für die Anzeige basierend auf lokaler Zeit.
+ * @param dateString Das zu formatierende Datum im ISO-Format
+ * @returns Formatierte Zeit im Format HH:MM oder '-' bei Fehler
  */
-export const formatTime = (date: Date | string | null | undefined): string => {
-  if (!date) return '-';
-  
-  const d = typeof date === 'string' ? new Date(date) : date;
-  
-  // Verwende lokale Zeit für Anzeige
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  const seconds = String(d.getSeconds()).padStart(2, '0');
-  
-  return `${hours}:${minutes}:${seconds}`;
+export const formatTime = (dateString: string | Date): string => {
+    if (!dateString) return '-';
+    
+    try {
+        const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+        
+        // Verwende lokale Stunden und Minuten, um die Zeit korrekt anzuzeigen
+        const hours = date.getHours().toString().padStart(2, '0');
+        const minutes = date.getMinutes().toString().padStart(2, '0');
+        
+        return `${hours}:${minutes}`;
+    } catch (error) {
+        console.error(`Fehler beim Formatieren der Zeit für ${dateString}:`, error);
+        return '-';
+    }
 };
 
 /**
- * Berechnet die Dauer zwischen zwei Datumsangaben
- * @param start Startdatum
- * @param end Enddatum
- * @returns Formatierte Dauer im Format "XXh YYmin"
+ * Berechnet die Dauer zwischen zwei Zeitpunkten und formatiert sie als "Nh Nm".
+ * @param startTime Startzeit im ISO-Format
+ * @param endTime Endzeit im ISO-Format
+ * @returns Formatierte Dauer als "Nh Nm" oder '-' bei Fehler
  */
-export const calculateDuration = (
-  start: Date | string | null | undefined, 
-  end: Date | string | null | undefined
-): string => {
-  if (!start || !end) return '-';
-  
-  const startDate = typeof start === 'string' ? new Date(start) : start;
-  const endDate = typeof end === 'string' ? new Date(end) : end;
-  
-  // Differenz in Millisekunden
-  const diff = endDate.getTime() - startDate.getTime();
-  
-  if (diff < 0) return '0h 0min'; // Negative Zeiten verhindern
-  
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  
-  return `${hours}h ${minutes}min`;
+export const calculateDuration = (startTime: string | Date, endTime: string | Date | null): string => {
+    if (!startTime || !endTime) return '-';
+    
+    try {
+        const start = typeof startTime === 'string' ? new Date(startTime) : startTime;
+        const end = typeof endTime === 'string' ? new Date(endTime) : endTime;
+        
+        const durationMs = end.getTime() - start.getTime();
+        const durationMinutes = Math.floor(durationMs / (1000 * 60));
+        
+        const hours = Math.floor(durationMinutes / 60);
+        const minutes = durationMinutes % 60;
+        
+        return `${hours}h ${minutes}m`;
+    } catch (error) {
+        console.error('Fehler bei der Dauerberechnung:', error);
+        return '-';
+    }
+};
+
+/**
+ * Erstellt ein Date-Objekt ohne Zeitzonenverschiebung
+ * @param dateString Ein ISO-Zeitstring
+ * @returns Date-Objekt mit korrigiertem Zeitzonenversatz
+ */
+export const createLocalDate = (dateString: string): Date => {
+    const date = new Date(dateString);
+    // Korrigiere den Zeitzonenversatz
+    return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
 };
 
 /**

@@ -393,12 +393,14 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
 
   // Render-Methode für Spaltenheader
   const renderSortableHeader = (columnId: string, label: string) => {
-    const isSorted = sortConfig.key === columnId;
+    // Überprüfen, ob diese Spalte gerade sortiert wird
+    const isSorted = sortConfig?.key === columnId;
     
     return (
       <th
+        key={columnId}
         scope="col"
-        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer group relative"
+        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer group relative"
         onClick={() => handleSort(columnId)}
         draggable
         onDragStart={() => handleDragStart(columnId)}
@@ -407,7 +409,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         onDragEnd={handleDragEnd}
       >
         <div className={`flex items-center ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
-          <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />
+          <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400 dark:text-gray-500" />
           {label} {isSorted && (
             sortConfig.direction === 'asc' ? '↑' : '↓'
           )}
@@ -617,7 +619,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
           
           <button
             type="button"
-            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ml-1"
+            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 ml-1"
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             title="Filter anzeigen"
           >
@@ -664,8 +666,8 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       
       {/* Tabelle mit aktiven Benutzern */}
       <div className="border-0 rounded-lg overflow-hidden shadow-sm">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
               {columnOrder
                 .filter(columnId => !hiddenColumns.includes(columnId))
@@ -678,7 +680,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                       <th
                         key={columnId}
                         scope="col"
-                        className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                         draggable
                         onDragStart={() => handleDragStart(columnId)}
                         onDragOver={handleDragOver}
@@ -695,10 +697,10 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
               }
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAndSortedUsers.length === 0 ? (
               <tr>
-                <td colSpan={columnOrder.filter(id => !hiddenColumns.includes(id)).length} className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan={columnOrder.filter(id => !hiddenColumns.includes(id)).length} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                   Keine Zeiterfassungen gefunden
                 </td>
               </tr>
@@ -718,10 +720,10 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                             <td key={columnId} className="px-6 py-4 whitespace-nowrap">
                               <div className="flex items-center">
                                 <div>
-                                  <div className="text-sm font-medium text-gray-900">
+                                  <div className="text-sm font-medium text-gray-900 dark:text-white">
                                     {group.user.firstName} {group.user.lastName}
                                   </div>
-                                  <div className="text-sm text-gray-500">{group.user.username}</div>
+                                  <div className="text-sm text-gray-500 dark:text-gray-400">{group.user.username}</div>
                                 </div>
                               </div>
                             </td>
@@ -731,10 +733,10 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                         if (columnId === 'startTime') {
                           return (
                             <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
+                              <div className="text-sm text-gray-900 dark:text-white">
                                 {format(group.startTime, 'dd.MM.yyyy')}
                               </div>
-                              <div className="text-sm text-gray-500">
+                              <div className="text-sm text-gray-500 dark:text-gray-400">
                                 {format(group.startTime, 'HH:mm:ss')}
                               </div>
                             </td>
@@ -744,7 +746,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                         if (columnId === 'duration') {
                           return (
                             <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
+                              <div className="text-sm text-gray-900 dark:text-white">
                                 {formatDistanceToNow(new Date(Date.now() - group.totalDuration), { locale: de, addSuffix: false })}
                               </div>
                             </td>
@@ -754,7 +756,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                         if (columnId === 'pauseTime') {
                           return (
                             <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
+                              <div className="text-sm text-gray-900 dark:text-white">
                                 {totalPauseTime > 0 
                                   ? formatDistanceToNow(new Date(Date.now() - totalPauseTime), { locale: de, addSuffix: false })
                                   : '-'}
@@ -765,7 +767,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                         
                         if (columnId === 'branch') {
                           return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <td key={columnId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {group.branch.name}
                             </td>
                           );
@@ -787,7 +789,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                                 {hasPermission('team_worktime_control', 'both', 'page') && hasPermission('team_worktime', 'both', 'table') && (
                                   <button
                                     onClick={() => handleOpenEditModal(group)}
-                                    className="text-blue-600 hover:text-blue-900 edit-button"
+                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 edit-button"
                                     title="Zeiterfassungen bearbeiten"
                                   >
                                     <PencilIcon className="h-5 w-5" />
@@ -812,7 +814,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       {filteredAndSortedUsers.length > displayLimit && (
         <div className="mt-4 flex justify-center">
           <button
-            className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50"
+            className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-blue-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
             onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
           >
             Mehr anzeigen ({filteredAndSortedUsers.length - displayLimit} verbleibend)

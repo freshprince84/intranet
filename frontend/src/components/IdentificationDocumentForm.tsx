@@ -249,17 +249,16 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
   
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="documentType">
-          Dokumenttyp *
+      <div>
+        <label htmlFor="documentType" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Dokumenttyp <span className="text-red-600 dark:text-red-400">*</span>
         </label>
         <select
           id="documentType"
           value={documentType}
           onChange={(e) => setDocumentType(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white"
           required
-          disabled={document !== undefined}  // Typ kann bei bestehenden Dokumenten nicht geändert werden
         >
           <option value="">Bitte auswählen</option>
           {documentTypes.map((type) => (
@@ -268,36 +267,36 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
         </select>
       </div>
       
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="documentNumber">
-          Dokumentnummer *
+      <div>
+        <label htmlFor="documentNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Dokumentnummer <span className="text-red-600 dark:text-red-400">*</span>
         </label>
         <input
           type="text"
           id="documentNumber"
           value={documentNumber}
           onChange={(e) => setDocumentNumber(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white"
           required
         />
       </div>
       
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="issuingCountry">
-          Ausstellendes Land *
+      <div>
+        <label htmlFor="issuingCountry" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Ausstellungsland <span className="text-red-600 dark:text-red-400">*</span>
         </label>
         <input
           type="text"
           id="issuingCountry"
           value={issuingCountry}
           onChange={(e) => setIssuingCountry(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white"
           required
         />
       </div>
       
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="issuingAuthority">
+      <div>
+        <label htmlFor="issuingAuthority" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Ausstellende Behörde
         </label>
         <input
@@ -305,119 +304,111 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
           id="issuingAuthority"
           value={issuingAuthority}
           onChange={(e) => setIssuingAuthority(e.target.value)}
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white"
         />
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="issueDate">
-            Ausstellungsdatum
-          </label>
-          <input
-            type="date"
-            id="issueDate"
-            value={issueDate}
-            onChange={(e) => setIssueDate(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-        </div>
-        
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300" htmlFor="expiryDate">
-            Ablaufdatum
-          </label>
-          <input
-            type="date"
-            id="expiryDate"
-            value={expiryDate}
-            onChange={(e) => setExpiryDate(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-          />
-        </div>
+      <div>
+        <label htmlFor="issueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Ausstellungsdatum
+        </label>
+        <input
+          type="date"
+          id="issueDate"
+          value={issueDate}
+          onChange={(e) => setIssueDate(e.target.value)}
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white"
+        />
       </div>
       
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Dokument
+      <div>
+        <label htmlFor="expiryDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Ablaufdatum
         </label>
-        
+        <input
+          type="date"
+          id="expiryDate"
+          value={expiryDate}
+          onChange={(e) => setExpiryDate(e.target.value)}
+          className="mt-1 block w-full py-2 px-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:text-white"
+        />
+      </div>
+      
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Dokumentbild
+        </label>
         <div className="mt-1 flex items-center space-x-2">
-          <input
-            type="file"
-            id="documentFile"
-            onChange={handleFileChange}
-            className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm"
-            accept="image/*,application/pdf"
-          />
+          <label className="flex items-center justify-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer">
+            <DocumentTextIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
+            Datei hochladen
+            <input type="file" className="sr-only" onChange={handleFileChange} accept="image/*" />
+          </label>
+          
           {isMobile() && (
             <button
               type="button"
               onClick={() => setShowCamera(true)}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
             >
-              <CameraIcon className="h-4 w-4 mr-1" />
-              Foto
+              <CameraIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
+              Foto aufnehmen
             </button>
           )}
           
-          {(file || imageData) && (
-            <button
-              type="button"
-              onClick={handleAutoRecognize}
-              disabled={isRecognizing}
-              className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400"
-            >
-              {isRecognizing ? (
-                <>
-                  <SpinnerIcon className="animate-spin h-4 w-4 mr-1" />
-                  Erkennung läuft...
-                </>
-              ) : (
-                <>
-                  <DocumentTextIcon className="h-4 w-4 mr-1" />
-                  Daten automatisch erkennen
-                </>
-              )}
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={handleAutoRecognize}
+            disabled={isRecognizing || (!file && !imageData)}
+            className={`inline-flex items-center px-4 py-2 border rounded-md shadow-sm text-sm font-medium ${
+              isRecognizing || (!file && !imageData)
+                ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-gray-300 dark:border-gray-700 cursor-not-allowed'
+                : 'border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+            }`}
+          >
+            {isRecognizing ? (
+              <>
+                <SpinnerIcon className="h-5 w-5 mr-2 animate-spin" />
+                Erkennung läuft...
+              </>
+            ) : (
+              'Automatisch erkennen'
+            )}
+          </button>
         </div>
         
-        {recognitionError && (
-          <p className="mt-1 text-sm text-red-600">
-            {recognitionError}
+        {file && (
+          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            Ausgewählte Datei: {file.name}
           </p>
         )}
         
         {imageData && (
           <div className="mt-2">
-            <p className="text-sm text-gray-600 dark:text-gray-400">Bild aufgenommen</p>
-            <img 
-              src={imageData} 
-              alt="Vorschau" 
-              className="mt-1 h-32 object-contain border border-gray-300 rounded"
-            />
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Aufgenommenes Bild:</p>
+            <img src={imageData} alt="Aufgenommenes Dokument" className="max-h-40 border dark:border-gray-700 rounded" />
           </div>
         )}
         
-        {document?.documentFile && !file && !imageData && (
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Aktuelles Dokument vorhanden. Neues Dokument hochladen oder Foto aufnehmen, um es zu ersetzen.
+        {recognitionError && (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+            Fehler bei der Erkennung: {recognitionError}
           </p>
         )}
       </div>
       
-      <div className="flex justify-end space-x-3">
+      <div className="flex justify-end space-x-3 pt-4">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+          className="py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
         >
           Abbrechen
         </button>
+        
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+          className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
           disabled={isLoading}
         >
           {isLoading ? 'Wird gespeichert...' : document ? 'Aktualisieren' : 'Speichern'}

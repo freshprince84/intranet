@@ -370,30 +370,30 @@ const WorktimeTracker: React.FC = () => {
 
     if (isLoading) {
         return (
-            <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 mb-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 mb-6">
                 <div className="flex justify-center items-center h-32">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-300"></div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 sm:mb-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 sm:mb-6">
             <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold flex items-center">
+                <h2 className="text-xl font-semibold flex items-center dark:text-white">
                     <ClockIcon className="h-6 w-6 mr-2" />
                     Zeiterfassung
                 </h2>
             </div>
             
             {statusError && (
-                <div className="mb-4 p-2 bg-red-50 text-red-600 border border-red-200 rounded-md flex justify-between items-center">
+                <div className="mb-4 p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-700 rounded-md flex justify-between items-center">
                     <span>{statusError}</span>
                     {statusError !== 'Keine aktive Zeiterfassung gefunden' && (
                         <button 
                             onClick={handleForceStop}
-                            className="text-sm bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded-md"
+                            className="text-sm bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-800 dark:hover:bg-red-700 dark:text-red-300 px-2 py-1 rounded-md"
                         >
                             Zeiterfassung forciert stoppen
                         </button>
@@ -414,22 +414,22 @@ const WorktimeTracker: React.FC = () => {
                         />
                         <div className={`w-20 h-10 rounded-full 
                             ${isTracking 
-                                ? 'bg-green-500 shadow-lg shadow-green-200' 
-                                : 'bg-gray-300'
+                                ? 'bg-green-500 shadow-lg shadow-green-200 dark:shadow-green-900/20' 
+                                : 'bg-gray-300 dark:bg-gray-600'
                             }
                             before:content-[''] before:absolute before:top-0 before:left-0 before:bottom-0 before:right-0 
-                            peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 
+                            peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-700
                             peer-checked:after:translate-x-10
                             after:content-[''] after:absolute after:top-1 after:left-1
-                            after:bg-white after:border-gray-300 after:border after:rounded-full
+                            after:bg-white dark:after:bg-gray-200 after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full
                             after:h-8 after:w-8 after:transition-all after:duration-300 ease-in-out
                             transition-colors duration-300`}>
                         </div>
                     </label>
                     <span className="mt-2 text-sm font-medium">
                         {isTracking 
-                            ? <span className="text-green-600 font-bold">Läuft</span> 
-                            : <span className="text-gray-600">Start</span>
+                            ? <span className="text-green-600 dark:text-green-400 font-bold">Läuft</span> 
+                            : <span className="text-gray-600 dark:text-gray-400">Start</span>
                         }
                     </span>
                 </div>
@@ -437,7 +437,7 @@ const WorktimeTracker: React.FC = () => {
                 {/* Icon-Button zum Öffnen des Modals */}
                 <button 
                     onClick={openWorkTimeModal}
-                    className="bg-white text-blue-600 p-2 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center ml-8 mt-1"
+                    className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-2 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-blue-700 shadow-sm flex items-center justify-center ml-8 mt-1"
                     title="Zeiten anzeigen"
                 >
                     <ListBulletIcon className="h-6 w-6" />
@@ -445,7 +445,7 @@ const WorktimeTracker: React.FC = () => {
             </div>
 
             {/* Informationen zur aktiven Zeiterfassung oder Platzhalter */}
-            <div className={`p-2 my-2 rounded-md text-sm ${isTracking && activeWorktime ? 'bg-green-50' : 'bg-gray-50'}`}>
+            <div className={`p-2 my-2 rounded-md text-sm ${isTracking && activeWorktime ? 'bg-green-50 dark:bg-green-900/20 dark:text-green-200' : 'bg-gray-50 dark:bg-gray-700 dark:text-gray-300'}`}>
                 {isTracking && activeWorktime ? (
                     <>
                         <p><strong>Aktive Zeiterfassung:</strong> {elapsedTime}</p>

@@ -219,13 +219,13 @@ const Sidebar: React.FC = () => {
 
     // Für Desktop-Geräte bleibt die Seitenleiste, aber mit Trennstrichen
     return (
-        <aside className={`hidden md:block border-gray-200 ${position === 'left' ? 'border-r' : 'border-l'} relative transition-all duration-300`}>
+        <aside className={`hidden md:block border-gray-200 dark:border-gray-700 ${position === 'left' ? 'border-r' : 'border-l'} relative transition-all duration-300`}>
             <nav className={`${isCollapsed ? 'w-12' : 'w-56'} transition-all duration-300 h-full flex flex-col`}>
                 <div className={`${isCollapsed ? 'px-2' : 'px-3 pr-2'} py-4 flex-1 flex flex-col`}>
                     <div className="flex justify-end mb-8">
                         <button
                             onClick={toggleCollapsed}
-                            className="text-gray-600 hover:text-gray-900"
+                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
                             title={isCollapsed ? "Erweitern" : "Einklappen"}
                         >
                             {isCollapsed ? 
@@ -240,7 +240,7 @@ const Sidebar: React.FC = () => {
                             <li key={item.path}>
                                 <Link 
                                     to={item.path} 
-                                    className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative ${isActive(item.path) ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                                    className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative ${isActive(item.path) ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300'}`}
                                 >
                                     <div className="h-6 w-6">{item.icon}</div>
                                     {!isCollapsed && <span>{item.name}</span>}
@@ -263,7 +263,7 @@ const Sidebar: React.FC = () => {
                             <li key={item.path}>
                                 <Link 
                                     to={item.path} 
-                                    className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative ${isActive(item.path) ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                                    className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative ${isActive(item.path) ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300'}`}
                                 >
                                     <div className="h-6 w-6">{item.icon}</div>
                                     {!isCollapsed && <span>{item.name}</span>}
@@ -281,7 +281,7 @@ const Sidebar: React.FC = () => {
                             <li className="mt-auto pt-6 border-t border-gray-200 dark:border-gray-700">
                                 <Link 
                                     to="/settings" 
-                                    className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative ${isActive('/settings') ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900'}`}
+                                    className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative ${isActive('/settings') ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300'}`}
                                 >
                                     <div className="h-6 w-6">{settingsItem.icon}</div>
                                     {!isCollapsed && <span>{settingsItem.name}</span>}

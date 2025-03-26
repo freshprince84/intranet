@@ -81,7 +81,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           return (
             <div key={index} className="group relative">
               {/* Tag */}
-              <div className="bg-gray-100 rounded px-2 py-1 text-sm flex items-center">
+              <div className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 text-sm flex items-center dark:text-gray-200">
                 <span className="mr-1">
                   {attachment.type === 'image' ? 
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -97,25 +97,25 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
               
               {/* Vorschau beim Hover - nur anzeigen wenn URL verfügbar */}
               {url && url !== "wird nach dem Erstellen hochgeladen" && (
-                <div className="hidden group-hover:block absolute z-10 bg-white border shadow-lg p-2 rounded-md -bottom-2 left-1/2 transform -translate-x-1/2 translate-y-full max-w-xs">
+                <div className="hidden group-hover:block absolute z-10 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg p-2 rounded-md -bottom-2 left-1/2 transform -translate-x-1/2 translate-y-full max-w-xs">
                   {attachment.type === 'image' ? (
                     <img 
                       src={url} 
                       alt={attachment.alt} 
-                      className="max-w-full border rounded" 
+                      className="max-w-full border rounded dark:border-gray-700" 
                       style={{ maxHeight: '200px', objectFit: 'contain' }}
                     />
                   ) : url.match(/^(https?:\/\/|blob:)/) ? (
                     // Für Links mit http/https einen Preview anzeigen
                     <div className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                       </svg>
                       <a 
                         href={url} 
                         target="_blank" 
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline"
+                        className="text-blue-600 dark:text-blue-400 hover:underline"
                       >
                         {attachment.alt}
                       </a>
@@ -123,10 +123,10 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                   ) : (
                     // Für andere Dateitypen (PDF, DOC, etc.)
                     <div className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
-                      {attachment.alt}
+                      <span className="dark:text-gray-200">{attachment.alt}</span>
                     </div>
                   )}
                 </div>
@@ -141,7 +141,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   // Für Worktracker-Tooltips den gesamten Inhalt rendern
   if (showImagePreview) {
     return (
-      <div className={`markdown-preview ${className}`} style={{ maxHeight, overflowY: 'auto' }}>
+      <div className={`markdown-preview ${className} dark:text-gray-200`} style={{ maxHeight: maxHeight !== "150px" ? maxHeight : "100%", overflowY: 'auto' }}>
         <div dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br/>') }} />
       </div>
     );

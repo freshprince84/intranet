@@ -35,27 +35,27 @@ const UserManagement: React.FC = () => {
   };
 
   if (!isAdmin()) {
-    return <div className="p-4 text-red-600">Nur Administratoren haben Zugriff auf diese Seite.</div>;
+    return <div className="p-4 text-red-600 dark:text-red-400">Nur Administratoren haben Zugriff auf diese Seite.</div>;
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen dark:bg-gray-900">
       <div className="container mx-auto py-6">
-        <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           {/* Header mit Icon */}
           <div className="flex items-center mb-6">
-            <UserGroupIcon className="h-6 w-6 mr-2" />
-            <h2 className="text-xl font-semibold">Benutzerverwaltung</h2>
+            <UserGroupIcon className="h-6 w-6 mr-2 dark:text-white" />
+            <h2 className="text-xl font-semibold dark:text-white">Benutzerverwaltung</h2>
           </div>
 
           {/* Tabs für Navigation */}
-          <div className="border-b border-gray-200 mb-6">
+          <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
             <nav className="-mb-px flex space-x-8">
               <button
                 className={`${
                   activeTab === 'users'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
                 onClick={() => handleTabChange('users')}
               >
@@ -65,8 +65,8 @@ const UserManagement: React.FC = () => {
               <button
                 className={`${
                   activeTab === 'roles'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
                 onClick={() => handleTabChange('roles')}
               >
@@ -77,13 +77,13 @@ const UserManagement: React.FC = () => {
           </div>
 
           {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
               <p className="font-bold">Fehler:</p>
               <p>{error}</p>
             </div>
           )}
 
-          {loading && <div className="p-4">Lädt...</div>}
+          {loading && <div className="p-4 dark:text-gray-300">Lädt...</div>}
 
           {/* Tab Inhalte */}
           <div className="mt-6">

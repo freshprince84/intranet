@@ -1712,6 +1712,66 @@ Modals werden für wichtige Interaktionen verwendet, bei denen der Benutzer sein
 }
 ```
 
+#### Dark Mode für Modals mit Tailwind CSS
+
+Für eine korrekte Dark Mode Implementierung sollten folgende Tailwind-Klassen verwendet werden:
+
+```jsx
+// Modal Container (Dialog.Panel)
+<Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+  {/* Kopfbereich des Modals */}
+  <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+    <Dialog.Title className="text-lg font-semibold dark:text-white">
+      Modaltitel
+    </Dialog.Title>
+    <button
+      onClick={onClose}
+      className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+    >
+      <XMarkIcon className="h-6 w-6" />
+    </button>
+  </div>
+  
+  {/* Inhalt des Modals */}
+  <div className="p-4">
+    {/* Fehlermeldung (falls vorhanden) */}
+    {error && (
+      <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
+        {error}
+      </div>
+    )}
+    
+    {/* Formularelemente */}
+    <div>
+      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        Eingabefeld
+      </label>
+      <input
+        type="text"
+        className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+      />
+    </div>
+    
+    {/* Buttons */}
+    <div className="flex justify-end mt-4 gap-2">
+      <button
+        type="button"
+        onClick={onClose}
+        className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+      >
+        Abbrechen
+      </button>
+      <button
+        type="submit"
+        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800"
+      >
+        Bestätigen
+      </button>
+    </div>
+  </div>
+</Dialog.Panel>
+```
+
 ### 2. Sidepanes (Seitenleisten)
 
 Sidepanes werden für interaktive Eingaben verwendet, die den Benutzer nicht vollständig unterbrechen sollen. Sie schieben sich von der rechten Seite ein und lassen den Rest der Seite sichtbar:
@@ -1786,6 +1846,43 @@ Sidepanes werden für interaktive Eingaben verwendet, die den Benutzer nicht vol
 }
 ```
 
+#### Dark Mode für Sidepanes mit Tailwind CSS
+
+Für eine korrekte Dark Mode Implementierung der Sidepanes sollten folgende Tailwind-Klassen verwendet werden:
+
+```jsx
+// Dialog-Container
+<Dialog open={isOpen} onClose={onClose} className="relative z-50">
+  {/* Semi-transparenter Hintergrund */}
+  <div 
+    className="fixed inset-0 bg-black/10 transition-opacity" 
+    aria-hidden="true" 
+    onClick={onClose}
+  />
+  
+  {/* Sidepane von rechts einfahren */}
+  <div 
+    className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+  >
+    <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+      <Dialog.Title className="text-lg font-semibold dark:text-white">
+        Sidepane-Titel
+      </Dialog.Title>
+      <button
+        onClick={onClose}
+        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+      >
+        <XMarkIcon className="h-6 w-6" />
+      </button>
+    </div>
+
+    <div className="p-4 overflow-y-auto h-full">
+      {/* Formularelemente wie beim Modal */}
+    </div>
+  </div>
+</Dialog>
+```
+
 ### Verwendungsrichtlinien
 
 1. **Modals vs. Sidepanes**:
@@ -1803,156 +1900,37 @@ Sidepanes werden für interaktive Eingaben verwendet, die den Benutzer nicht vol
    - Ab einer Bildschirmbreite von 640px werden berechtigte Komponenten als Sidepanes dargestellt.
 
 4. **Referenzimplementierung**:
-   Die `CreateTaskModal`-Komponente im Task-Management dient als Referenzimplementierung für responsives Verhalten:
+   Die folgenden Komponenten dienen als Referenzimplementierungen:
+   
+   - **CreateTaskModal & EditTaskModal**: Vollständige Dark Mode Unterstützung für Modals und Sidepanes
+   - **CreateRequestModal & EditRequestModal**: Umfassende Implementierung für alle Formularelemente im Dark Mode
+   
+   Folge ihrer Implementierung für neue Modals und Sidepanes.
+
+5. **Mobile-Layout-Beachtung**:
+   - Beachte, dass in der Worktracker-Komponente die To Do's-Box und Zeiterfassung im mobilen Modus die Plätze tauschen.
+   - Die To Do's-Box wird oben angezeigt und die Zeiterfassung-Box am unteren Bildschirmrand.
+   - Bei Layout-Änderungen ist besondere Vorsicht geboten, um diese Funktionalität nicht zu beeinträchtigen.
+   - Für korrekte Anzeige im Mobile-Layout sollte diese Container-Struktur verwendet werden:
+   
    ```jsx
-   const CreateTaskModal = ({ isOpen, onClose }) => {
-     const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
-     
-     useEffect(() => {
-       const checkScreenSize = () => setIsMobile(window.innerWidth < 640);
-       window.addEventListener('resize', checkScreenSize);
-       return () => window.removeEventListener('resize', checkScreenSize);
-     }, []);
-     
-     // Mobile - Modal-Ansicht
-     if (isMobile) {
-       return (
-         <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-           <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-           <div className="fixed inset-0 flex items-center justify-center p-4">
-             <Dialog.Panel className="bg-white rounded-lg shadow-xl w-full max-w-xl">
-               {/* Modal-Inhalt */}
-             </Dialog.Panel>
+   <div className="w-full mb-4">
+       {/* Auf mobilen Geräten wird diese Reihenfolge angezeigt */}
+       <div className="block sm:hidden w-full">
+           {/* To Do's - oben */}
+           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
+               {/* Inhalt */}
            </div>
-         </Dialog>
-       );
-     }
-     
-     // Desktop - Sidepane-Ansicht
-     return (
-       <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-         <div className="fixed inset-0 bg-black/10 transition-opacity" aria-hidden="true" onClick={onClose} />
-         <div className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-           {/* Sidepane-Inhalt */}
-         </div>
-       </Dialog>
-     );
-   };
+           
+           {/* Zeiterfassung - unten fixiert */}
+           <div className="fixed bottom-13 left-0 right-0 w-full bg-white dark:bg-gray-800 z-9 shadow-lg border-t-0 dark:border-t dark:border-gray-700">
+               <WorktimeTracker />
+           </div>
+       </div>
+
+       {/* Auf größeren Geräten bleibt die ursprüngliche Reihenfolge */}
+       <div className="hidden sm:block">
+           {/* Normale Anordnung */}
+       </div>
+   </div>
    ```
-
-5. **Animation**:
-   - Sidepanes gleiten von rechts herein mit einer Übergangszeit von 300ms.
-   - Der Hintergrund wird leicht abgedunkelt (10% Deckkraft).
-   - Die Animation verwendet eine Ease-in-out-Zeitfunktion für natürlicheres Verhalten.
-
-Diese neuen Richtlinien für Sidepanes gelten für folgende Komponenten im System:
-1. Task-Erstellung ("Neue Aufgabe erstellen")
-2. Erweiterte Filter-Ansichten für Tabellendaten
-3. Informationsansichten für Datensätze
-4. Bearbeitungsformulare für Einträge in Listen und Tabellen
-
-## Dateianhang-Komponenten
-
-Die Dateianhang-Komponenten bieten eine konsistente Benutzeroberfläche für das Hochladen, Anzeigen und Verwalten von Dateianhängen in der gesamten Anwendung.
-
-### Gestalterische Grundsätze
-
-```css
-/* Anhang-Container */
-.attachments-container {
-  margin-top: 1rem;
-  border-top: 1px solid #E5E7EB;
-  padding-top: 1rem;
-}
-
-/* Anhang-Liste */
-.attachments-list {
-  margin-top: 0.5rem;
-  border: 1px solid #E5E7EB;
-  border-radius: 0.375rem;
-  overflow: hidden;
-}
-
-/* Anhang-Eintrag */
-.attachment-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #E5E7EB;
-}
-
-.attachment-item:last-child {
-  border-bottom: none;
-}
-
-/* Anhang-Info */
-.attachment-info {
-  display: flex;
-  align-items: center;
-}
-
-.attachment-icon {
-  color: #6B7280;
-  margin-right: 0.5rem;
-}
-
-.attachment-name {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #111827;
-}
-
-.attachment-size {
-  font-size: 0.75rem;
-  color: #6B7280;
-  margin-left: 0.5rem;
-}
-
-/* Anhang-Aktionen */
-.attachment-actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.attachment-action-button {
-  background: none;
-  border: none;
-  font-size: 0.875rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  cursor: pointer;
-}
-
-.attachment-action-button.download {
-  color: #2563EB;
-}
-
-.attachment-action-button.delete {
-  color: #DC2626;
-}
-
-/* Hinweistext */
-.attachment-tip {
-  font-size: 0.75rem;
-  color: #6B7280;
-  margin-top: 0.25rem;
-  font-style: italic;
-}
-```
-
-### Standardplatzierung
-
-- **Position**: Unterhalb des Beschreibungsfelds
-- **Benutzerhilfe**: Automatische Vorschau für Bilder und Links ohne zusätzliche Hinweistexte
-- **Vorschau**: Bilder werden als inline-Markdown im Beschreibungsfeld dargestellt
-- **Aktionen**: "Herunterladen" und "Entfernen" für jeden Anhang
-- **Mobile-Ansicht**: Vollständig responsiv, passt sich an kleinere Bildschirme an
-
-### Verwendungsrichtlinien
-
-1. **Formular-Integration**: Dateianhang-Komponenten sollten in Formularen unter dem Haupttextbereich platziert werden
-2. **Hilfetexte**: Bieten Sie Benutzern Hinweise zur Verwendung der Drag & Drop und Copy & Paste Funktionen
-3. **Rückmeldung**: Zeigen Sie visuelle Rückmeldung während des Uploads
-4. **Vorschau**: Bieten Sie eine Vorschau für Bildanhänge direkt im Textfeld
-5. **Fehlerbehandlung**: Zeigen Sie Fehlermeldungen bei fehlgeschlagenen Uploads klar an

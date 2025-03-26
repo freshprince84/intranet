@@ -88,7 +88,7 @@ const TeamWorktimeControl: React.FC = () => {
     <div className="h-auto">
       <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
         <div className="py-1">
-          <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
             {/* Header mit Icon */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center pl-2 sm:pl-0">
@@ -99,7 +99,7 @@ const TeamWorktimeControl: React.FC = () => {
             
             {/* Fehlermeldung */}
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+              <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-4">
                 {error}
               </div>
             )}

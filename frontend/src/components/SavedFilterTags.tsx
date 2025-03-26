@@ -136,8 +136,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           onClick={() => handleSelectFilter(filter)}
           className={`flex items-center px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors ${
             selectedFilterId === filter.id
-              ? 'bg-blue-100 text-blue-800 border border-blue-300'
-              : 'bg-gray-100 text-gray-800 border border-gray-300 hover:bg-gray-200'
+              ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
           } ${isStandardFilter(filter.name) ? 'font-bold' : ''}`}
         >
           <span>{filter.name}</span>
@@ -145,7 +145,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           {!isStandardFilter(filter.name) && (
             <button
               onClick={(e) => handleDeleteFilter(e, filter.id)}
-              className="ml-2 text-gray-500 hover:text-gray-700 focus:outline-none"
+              className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
               title="Filter löschen"
             >
               <XMarkIcon className="h-4 w-4" />

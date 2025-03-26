@@ -88,16 +88,16 @@ const RoleCard: React.FC<{
   canDelete: boolean;
 }> = ({ role, onEdit, onDelete, canEdit, canDelete }) => {
   return (
-    <div className="role-card">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 mb-4">
       {/* Header mit Rollenname und Aktionen */}
-      <div className="role-card-header">
-        <h3 className="role-card-title">{role.name}</h3>
+      <div className="flex justify-between items-start mb-2">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-white">{role.name}</h3>
         
         <div className="flex space-x-2">
           {canEdit && (
             <button
               onClick={() => onEdit(role)}
-              className="text-blue-600 hover:text-blue-800 p-1"
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
               title="Rolle bearbeiten"
             >
               <PencilIcon className="h-5 w-5" />
@@ -107,7 +107,7 @@ const RoleCard: React.FC<{
           {canDelete && (
             <button
               onClick={() => onDelete(role.id)}
-              className="text-red-600 hover:text-red-800 p-1"
+              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1"
               title="Rolle löschen"
             >
               <TrashIcon className="h-5 w-5" />
@@ -117,25 +117,25 @@ const RoleCard: React.FC<{
       </div>
       
       {/* Beschreibung */}
-      <p className="role-card-description">{role.description || 'Keine Beschreibung'}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{role.description || 'Keine Beschreibung'}</p>
       
       {/* Berechtigungen - kompakt */}
-      <div className="role-card-permissions">
-        <h4 className="role-card-permissions-title">Berechtigungen:</h4>
-        <div className="role-card-permissions-list">
+      <div className="mt-2">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Berechtigungen:</h4>
+        <div className="flex flex-wrap gap-1">
           {role.permissions
             .filter(perm => perm.accessLevel !== 'none') // Nur relevante Berechtigungen anzeigen
             .slice(0, 8) // Begrenze die Anzahl der angezeigten Berechtigungen
             .map(permission => (
               <span 
                 key={`${permission.entity}-${permission.entityType}`}
-                className="role-card-permission-tag"
+                className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 px-2 py-1 rounded"
               >
                 {permission.entity}: {permission.accessLevel}
               </span>
             ))}
           {role.permissions.filter(perm => perm.accessLevel !== 'none').length > 8 && (
-            <span className="role-card-permission-tag bg-gray-200">
+            <span className="text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300 px-2 py-1 rounded">
               +{role.permissions.filter(perm => perm.accessLevel !== 'none').length - 8} mehr
             </span>
           )}
@@ -1030,7 +1030,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
             {!readOnly && hasPermission('roles', 'write', 'table') && (
               <button
                 onClick={() => setIsModalOpen(true)}
-                className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
+                className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
                 style={{ width: '30.19px', height: '30.19px' }}
                 title="Neue Rolle erstellen"
                 aria-label="Neue Rolle erstellen"
@@ -1114,39 +1114,39 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
 
       {/* Modal für Rollenerstellung/Bearbeitung */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-            <div className="px-6 py-4 border-b">
-              <h3 className="text-lg font-medium">{editingRole ? 'Rolle bearbeiten' : 'Neue Rolle erstellen'}</h3>
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-60 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg">
+            <div className="px-6 py-4 border-b dark:border-gray-700">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">{editingRole ? 'Rolle bearbeiten' : 'Neue Rolle erstellen'}</h3>
             </div>
             <form onSubmit={handleSubmit}>
               <div className="p-6 space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Name</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Beschreibung</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Beschreibung</label>
                   <input
                     type="text"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
                   />
                 </div>
                 <div className="mt-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-4">Seiten-Berechtigungen</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Seiten-Berechtigungen</label>
                   
                   {/* Option für alle Seiten außer immer sichtbare */}
-                  <div className="mb-4 pb-3 border-b border-gray-200">
+                  <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold">Alle Seiten</span>
+                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Alle Seiten</span>
                       <select
                         value=""
                         onChange={(e) => {
@@ -1154,7 +1154,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                             setAllPagePermissions(e.target.value as AccessLevel);
                           }
                         }}
-                        className="block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                        className="block w-32 rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
                       >
                         <option value="">Auswählen...</option>
                         <option value="none">Keine</option>
@@ -1173,7 +1173,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                         return (
                           <div key={`permission-page-${permission.entity}-${index}`}>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm">{permission.entity}</span>
+                              <span className="text-sm text-gray-700 dark:text-gray-300">{permission.entity}</span>
                               <label className={`inline-flex items-center ${alwaysVisiblePages.includes(permission.entity) ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}>
                                 <input
                                   type="checkbox"
@@ -1189,7 +1189,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                     setFormData({ ...formData, permissions: newPermissions });
                                   }}
                                 />
-                                <div className={`relative w-11 h-6 ${alwaysVisiblePages.includes(permission.entity) ? 'bg-blue-600' : 'bg-gray-200'} peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600`}>
+                                <div className={`relative w-11 h-6 ${alwaysVisiblePages.includes(permission.entity) ? 'bg-blue-600 dark:bg-blue-700' : 'bg-gray-200 dark:bg-gray-700'} peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700`}>
                                   {alwaysVisiblePages.includes(permission.entity) && (
                                     <span className="absolute inset-0 flex items-center justify-center text-xs text-white font-medium">
                                       Fix
@@ -1210,8 +1210,8 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                 const isTableActive = tablePerm.accessLevel === 'both';
                                 return (
                                   <div key={`table-permission-${tablePerm.entity}-${tableIndex}`} 
-                                    className="flex items-center justify-between mt-2 pl-6 border-l-2 border-gray-200">
-                                    <span className="text-sm text-gray-600">└ {tablePerm.entity}</span>
+                                    className="flex items-center justify-between mt-2 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400">└ {tablePerm.entity}</span>
                                     <label className="inline-flex items-center cursor-pointer">
                                       <input
                                         type="checkbox"
@@ -1226,7 +1226,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                           setFormData({ ...formData, permissions: newPermissions });
                                         }}
                                       />
-                                      <div className="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600">
+                                      <div className="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
                                       </div>
                                     </label>
                                   </div>
@@ -1240,17 +1240,17 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                   </div>
                 </div>
               </div>
-              <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-2 rounded-b-lg">
+              <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-2 rounded-b-lg">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none"
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 focus:outline-none"
                 >
                   Abbrechen
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none"
                 >
                   {editingRole ? 'Aktualisieren' : 'Erstellen'}
                 </button>

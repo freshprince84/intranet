@@ -1,6 +1,6 @@
 /**
  * API-Konfiguration für die mobile App
- * Entsprechend der Implementierung im Web-Frontend
+ * Entsprechend der Implementierung im Web-Frontend, angepasst für React Native
  */
 
 // TypeScript-Definition für React Native __DEV__ Variable
@@ -8,21 +8,24 @@ declare const __DEV__: boolean;
 import { Platform } from 'react-native';
 
 /**
- * API-Basis-URL basierend auf der Entwicklungsumgebung
+ * API-Basis-URL basierend auf der Umgebung
  */
 export const API_BASE_URL = __DEV__
-  ? 'http://192.168.1.120:5000'  // Lokale IP des Entwicklungsrechners - ANPASSEN an deine IP!
+  ? 'http://192.168.1.120:5000'  // Entwicklung über IP
   : 'https://65.109.228.106.nip.io'; // Produktionsserver
 
-// Vollständige API-URL mit /api-Präfix
+// Vollständige API-URL
 export const API_URL = `${API_BASE_URL}/api`;
+
+// API-Host ist die Basis-URL ohne /api
+export const API_HOST = API_BASE_URL;
 
 /**
  * API-Konfiguration
  */
 export const API_CONFIG = {
-  // API-Host ist die vollständige Basis-URL
-  API_HOST: API_URL,
+  // API-Host ist die Basis-URL ohne /api
+  API_HOST: API_HOST,
   
   // API-Timeout in Millisekunden
   TIMEOUT: 15000,

@@ -47,7 +47,7 @@ class ErrorBoundary extends Component<Props, State> {
       
       // Ansonsten zeige eine standardmäßige Fehleranzeige
       return (
-        <div className="error-boundary p-4 border border-red-300 rounded-md bg-red-50">
+        <div className="error-boundary p-4 border border-red-300 dark:border-red-800 rounded-md bg-red-50 dark:bg-red-900/30 dark:text-white">
           <ErrorDisplay
             message={`Ein unerwarteter Fehler ist aufgetreten: ${this.state.error?.message || 'Unbekannter Fehler'}`}
             category={ErrorCategory.GENERAL}
@@ -56,7 +56,7 @@ class ErrorBoundary extends Component<Props, State> {
           <div className="mt-4">
             <button
               onClick={() => this.setState({ hasError: false, error: null })}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-700 focus:ring-opacity-50 dark:focus:ring-offset-gray-800"
             >
               Zurücksetzen
             </button>

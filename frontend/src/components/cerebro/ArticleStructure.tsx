@@ -256,10 +256,10 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
       {/* Sidebar mit Artikelstruktur */}
       <div 
         className={`
-          bg-white flex flex-col h-full
+          bg-white dark:bg-gray-800 flex flex-col h-full
           ${isMobile 
-            ? 'fixed top-[150px] left-0 z-20 transition-transform duration-300 ease-in-out w-60 max-h-[calc(100vh-228px)] border-r border-gray-200' 
-            : 'w-full h-full border-r border-gray-200'}
+            ? 'fixed top-[150px] left-0 z-20 transition-transform duration-300 ease-in-out w-60 max-h-[calc(100vh-228px)] border-r border-gray-200 dark:border-gray-700' 
+            : 'w-full h-full border-r border-gray-200 dark:border-gray-700'}
           ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'}
         `}
       >
@@ -272,14 +272,14 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
             {canCreateArticle && (
               <div className="relative group">
                 <button
-                  className="p-2 rounded-full text-blue-600 hover:bg-blue-50"
+                  className="p-2 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900"
                   onClick={() => navigate('/cerebro/create')}
                   aria-label="Neuen Artikel erstellen"
                 >
                   <HPlusIcon className="h-5 w-5" />
                 </button>
                 {/* Tooltip */}
-                <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 dark:bg-gray-700 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
                   Neuen Artikel erstellen
                 </div>
               </div>
@@ -296,7 +296,7 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
                 />
                 <button
                   type="submit"
-                  className="p-2 rounded-r-md border border-l-0 border-gray-300 bg-white hover:bg-gray-50"
+                  className="p-2 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                   aria-label="Suchen"
                 >
                   <SearchIcon />
@@ -316,7 +316,7 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
             
             {/* Fehlermeldung */}
             {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-2 py-2 rounded text-sm">
+              <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-2 py-2 rounded text-sm">
                 {error}
               </div>
             )}
@@ -324,7 +324,7 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
             {/* Normale Artikel aus der Datenbank */}
             {!loading && databaseArticles.length > 0 && (
               <div className="space-y-1 mb-4">
-                <h3 className="font-medium text-gray-700 mb-2">Artikel</h3>
+                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Artikel</h3>
                 <ArticleTree 
                   articles={databaseArticles} 
                   currentSlug={slug}
@@ -341,11 +341,11 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
                 <div className="flex items-center">
                   <button
                     onClick={() => handleToggleExpand(markdownFolder.id)}
-                    className="mr-1 w-4 h-4 flex items-center justify-center text-gray-500"
+                    className="mr-1 w-4 h-4 flex items-center justify-center text-gray-500 dark:text-gray-400"
                   >
                     {expandedIds.has(markdownFolder.id) ? <MinusIcon className="h-4 w-4" /> : <HPlusIcon className="h-4 w-4" />}
                   </button>
-                  <h3 className="font-medium text-gray-700">{markdownFolder.title}</h3>
+                  <h3 className="font-medium text-gray-700 dark:text-gray-300">{markdownFolder.title}</h3>
                 </div>
                 
                 {/* Wenn expandiert, zeige die Markdown-Dateien an */}
@@ -357,8 +357,8 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
                         to={`/cerebro/${mdFile.slug}`}
                         className={`block truncate px-2 py-1 rounded-md ${
                           mdFile.slug === slug
-                            ? 'bg-blue-100 text-blue-800'
-                            : 'hover:bg-gray-100'
+                            ? 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-300'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
                       >
                         {mdFile.title}

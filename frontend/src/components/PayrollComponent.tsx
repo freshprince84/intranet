@@ -159,20 +159,20 @@ const PayrollComponent: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 dark:bg-gray-800">
       
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
       
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
           Mitarbeiter auswählen
         </label>
         <select 
-          className="border border-gray-300 rounded-md p-2 w-full"
+          className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md p-2 w-full"
           value={selectedUser || ''}
           onChange={handleUserChange}
         >
@@ -188,116 +188,116 @@ const PayrollComponent: React.FC = () => {
       {selectedUser && (
         <>
           <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-4">Arbeitsstunden erfassen</h2>
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">Arbeitsstunden erfassen</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Reguläre Stunden
                 </label>
                 <input 
                   type="number" 
                   min="0" 
                   step="0.5"
-                  className="border border-gray-300 rounded-md p-2 w-full"
+                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md p-2 w-full"
                   value={hours.regular}
                   onChange={(e) => handleHoursChange(e, 'regular')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Überstunden
                 </label>
                 <input 
                   type="number" 
                   min="0" 
                   step="0.5"
-                  className="border border-gray-300 rounded-md p-2 w-full"
+                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md p-2 w-full"
                   value={hours.overtime}
                   onChange={(e) => handleHoursChange(e, 'overtime')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Nachtstunden
                 </label>
                 <input 
                   type="number" 
                   min="0" 
                   step="0.5"
-                  className="border border-gray-300 rounded-md p-2 w-full"
+                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md p-2 w-full"
                   value={hours.night}
                   onChange={(e) => handleHoursChange(e, 'night')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Feiertagsstunden
                 </label>
                 <input 
                   type="number" 
                   min="0" 
                   step="0.5"
-                  className="border border-gray-300 rounded-md p-2 w-full"
+                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md p-2 w-full"
                   value={hours.holidayHours}
                   onChange={(e) => handleHoursChange(e, 'holidayHours')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Sonntagsstunden
                 </label>
                 <input 
                   type="number" 
                   min="0" 
                   step="0.5"
-                  className="border border-gray-300 rounded-md p-2 w-full"
+                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md p-2 w-full"
                   value={hours.sundayHoliday}
                   onChange={(e) => handleHoursChange(e, 'sundayHoliday')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nachtüberstunden
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Überstunden (Nacht)
                 </label>
                 <input 
                   type="number" 
                   min="0" 
                   step="0.5"
-                  className="border border-gray-300 rounded-md p-2 w-full"
+                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md p-2 w-full"
                   value={hours.overtimeNight}
                   onChange={(e) => handleHoursChange(e, 'overtimeNight')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Sonntags-/Feiertagsüberstunden
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Überstunden (Sonn-/Feiertag)
                 </label>
                 <input 
                   type="number" 
                   min="0" 
                   step="0.5"
-                  className="border border-gray-300 rounded-md p-2 w-full"
+                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md p-2 w-full"
                   value={hours.overtimeSundayHoliday}
                   onChange={(e) => handleHoursChange(e, 'overtimeSundayHoliday')}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nacht-Sonntags-/Feiertagsüberstunden
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Überstunden (Nacht an Sonn-/Feiertag)
                 </label>
                 <input 
                   type="number" 
                   min="0" 
                   step="0.5"
-                  className="border border-gray-300 rounded-md p-2 w-full"
+                  className="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-md p-2 w-full"
                   value={hours.overtimeNightSundayHoliday}
                   onChange={(e) => handleHoursChange(e, 'overtimeNightSundayHoliday')}
                 />
               </div>
             </div>
             
-            <button 
-              className="mt-4 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:bg-blue-300"
+            <button
+              className="mt-4 bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
               onClick={saveHours}
               disabled={loading}
             >
@@ -305,180 +305,164 @@ const PayrollComponent: React.FC = () => {
             </button>
           </div>
           
-          {payrolls.length > 0 && (
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold mb-4">Bestehende Abrechnungen</h2>
-              <div className="overflow-x-auto mobile-table-container">
-                <table className="min-w-full divide-y divide-gray-200 payroll-table">
-                  <thead className="bg-gray-50">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">Vorherige Abrechnungen</h2>
+            {payrolls.length === 0 ? (
+              <p className="text-gray-600 dark:text-gray-400">Keine Abrechnungen vorhanden</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <span className="hidden sm:inline">Zeitraum</span>
-                        <span className="inline sm:hidden">Zeitr.</span>
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <span className="hidden sm:inline">Gesamt Stunden</span>
-                        <span className="inline sm:hidden">Std.</span>
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <span className="hidden sm:inline">Bruttolohn</span>
-                        <span className="inline sm:hidden">Brutto</span>
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <span className="hidden sm:inline">Nettolohn</span>
-                        <span className="inline sm:hidden">Netto</span>
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <span className="hidden sm:inline">Aktionen</span>
-                        <span className="inline sm:hidden">Akt.</span>
-                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Zeitraum</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Brutto</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Netto</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Aktionen</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {payrolls.map(item => (
-                      <tr key={item.id}>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {new Date(item.periodStart).toLocaleDateString()} - {new Date(item.periodEnd).toLocaleDateString()}
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                    {payrolls.map(payroll => (
+                      <tr key={payroll.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                          {new Date(payroll.periodStart).toLocaleDateString()} - {new Date(payroll.periodEnd).toLocaleDateString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {item.regularHours + item.overtimeHours + item.nightHours + item.holidayHours + 
-                           item.sundayHolidayHours + item.overtimeNightHours + item.overtimeSundayHolidayHours + 
-                           item.overtimeNightSundayHolidayHours}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                          {Number(payroll.grossPay).toFixed(2)} {payroll.currency}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {item.grossPay} {item.currency}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                          {Number(payroll.netPay).toFixed(2)} {payroll.currency}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {item.netPay} {item.currency}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
-                          <div className="flex action-buttons">
-                            <button 
-                              className="text-blue-600 hover:text-blue-800 mr-3"
-                              onClick={() => selectPayroll(item.id)}
-                            >
-                              Details
-                            </button>
-                            <button 
-                              className="text-green-600 hover:text-green-800"
-                              onClick={() => generatePDF(item.id)}
-                            >
-                              PDF
-                            </button>
-                          </div>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button 
+                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-3"
+                            onClick={() => selectPayroll(payroll.id)}
+                          >
+                            Ansehen
+                          </button>
+                          <button 
+                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                            onClick={() => generatePDF(payroll.id)}
+                          >
+                            PDF
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
+            )}
+          </div>
           
           {payroll && (
-            <div className="bg-gray-50 p-6 rounded-lg shadow-sm">
-              <h2 className="text-xl font-semibold mb-4">Lohnabrechnung Details</h2>
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-6 bg-gray-50 dark:bg-gray-800">
+              <h2 className="text-xl font-semibold mb-6 dark:text-white">Gehaltsabrechnung</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="font-medium text-gray-700">Mitarbeiter</h3>
-                  <p>{payroll.user.firstName} {payroll.user.lastName}</p>
+                  <h3 className="text-lg font-medium mb-4 dark:text-gray-300">Mitarbeiterinformationen</h3>
+                  <p className="text-gray-700 dark:text-gray-300 mb-2">
+                    <span className="font-medium">Name:</span> {payroll.user.firstName} {payroll.user.lastName}
+                  </p>
+                  <p className="text-gray-700 dark:text-gray-300 mb-2">
+                    <span className="font-medium">Land:</span> {payroll.user.payrollCountry}
+                  </p>
+                  <p className="text-gray-700 dark:text-gray-300 mb-2">
+                    <span className="font-medium">Vertragstyp:</span> {formatContractType(payroll.user.contractType || '')}
+                  </p>
+                  <p className="text-gray-700 dark:text-gray-300 mb-2">
+                    <span className="font-medium">Stundensatz:</span> {payroll.hourlyRate.toFixed(2)} {payroll.currency}/h
+                  </p>
                 </div>
+                
                 <div>
-                  <h3 className="font-medium text-gray-700">Abrechnungszeitraum</h3>
-                  <p>{new Date(payroll.periodStart).toLocaleDateString()} - {new Date(payroll.periodEnd).toLocaleDateString()}</p>
-                </div>
-                <div>
-                  <h3 className="font-medium text-gray-700">Land</h3>
-                  <p>{payroll.user.payrollCountry === 'CH' ? 'Schweiz' : 'Kolumbien'}</p>
-                </div>
-                {payroll.user.payrollCountry === 'CO' && payroll.user.contractType && (
-                  <div>
-                    <h3 className="font-medium text-gray-700">Vertragsart</h3>
-                    <p>{formatContractType(payroll.user.contractType)}</p>
-                  </div>
-                )}
-              </div>
-              
-              <div className="border-t border-gray-200 pt-4 mb-4">
-                <h3 className="font-medium text-gray-700 mb-2">Arbeitsstunden</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Reguläre Stunden</p>
-                    <p className="font-medium">{payroll.regularHours}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Überstunden</p>
-                    <p className="font-medium">{payroll.overtimeHours}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Nachtstunden</p>
-                    <p className="font-medium">{payroll.nightHours}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Feiertags-/Sonntagsstunden</p>
-                    <p className="font-medium">{payroll.holidayHours + payroll.sundayHolidayHours}</p>
-                  </div>
-                  {payroll.user.payrollCountry === 'CO' && (
-                    <>
-                      <div>
-                        <p className="text-sm text-gray-500">Nachtüberstunden</p>
-                        <p className="font-medium">{payroll.overtimeNightHours}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Sonntags-/Feiertagsüberstunden</p>
-                        <p className="font-medium">{payroll.overtimeSundayHolidayHours}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Nacht-Sonntags-/Feiertagsüberstunden</p>
-                        <p className="font-medium">{payroll.overtimeNightSundayHolidayHours}</p>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              <div className="border-t border-gray-200 pt-4">
-                <h3 className="font-medium text-gray-700 mb-2">Abrechnung</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <p className="text-sm text-gray-500">Stundensatz</p>
-                    <p className="font-medium">{payroll.hourlyRate} {payroll.currency}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Bruttolohn</p>
-                    <p className="font-medium">{payroll.grossPay} {payroll.currency}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Sozialversicherungsbeiträge</p>
-                    <p className="font-medium">{payroll.socialSecurity} {payroll.currency}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Steuern</p>
-                    <p className="font-medium">{payroll.taxes} {payroll.currency}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-500">Nettolohn</p>
-                    <p className="font-medium font-bold">{payroll.netPay} {payroll.currency}</p>
-                  </div>
+                  <h3 className="text-lg font-medium mb-4 dark:text-gray-300">Abrechnungszeitraum</h3>
+                  <p className="text-gray-700 dark:text-gray-300 mb-2">
+                    <span className="font-medium">Von:</span> {new Date(payroll.periodStart).toLocaleDateString()}
+                  </p>
+                  <p className="text-gray-700 dark:text-gray-300 mb-2">
+                    <span className="font-medium">Bis:</span> {new Date(payroll.periodEnd).toLocaleDateString()}
+                  </p>
                 </div>
               </div>
               
               <div className="mt-6">
-                <button 
-                  className="bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700"
+                <h3 className="text-lg font-medium mb-4 dark:text-gray-300">Arbeitsstunden</h3>
+                <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 overflow-hidden">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-600">
+                    <thead className="bg-gray-50 dark:bg-gray-800">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Stundentyp</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Stunden</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 dark:divide-gray-600">
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">Reguläre Stunden</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{payroll.regularHours}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">Überstunden</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{payroll.overtimeHours}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">Nachtstunden</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{payroll.nightHours}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">Feiertagsstunden</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{payroll.holidayHours}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">Sonntagsstunden</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{payroll.sundayHolidayHours}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">Überstunden (Nacht)</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{payroll.overtimeNightHours}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">Überstunden (Sonn-/Feiertag)</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{payroll.overtimeSundayHolidayHours}</td>
+                      </tr>
+                      <tr>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">Überstunden (Nacht an Sonn-/Feiertag)</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">{payroll.overtimeNightSundayHolidayHours}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              
+              <div className="mt-6">
+                <h3 className="text-lg font-medium mb-4 dark:text-gray-300">Abrechnung</h3>
+                <div className="bg-white dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600 p-6">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-700 dark:text-gray-300">Bruttolohn:</span>
+                    <span className="text-gray-900 dark:text-gray-200 font-medium">{Number(payroll.grossPay).toFixed(2)} {payroll.currency}</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-700 dark:text-gray-300">Sozialversicherungsbeiträge:</span>
+                    <span className="text-red-600 dark:text-red-400">-{Number(payroll.socialSecurity).toFixed(2)} {payroll.currency}</span>
+                  </div>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-gray-700 dark:text-gray-300">Steuern:</span>
+                    <span className="text-red-600 dark:text-red-400">-{Number(payroll.taxes).toFixed(2)} {payroll.currency}</span>
+                  </div>
+                  <div className="border-t border-gray-200 dark:border-gray-600 pt-2 mt-2">
+                    <div className="flex justify-between">
+                      <span className="text-gray-900 dark:text-white font-medium">Nettolohn:</span>
+                      <span className="text-green-600 dark:text-green-400 font-bold">{Number(payroll.netPay).toFixed(2)} {payroll.currency}</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <button
+                  className="mt-6 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 text-white font-medium py-2 px-4 rounded"
                   onClick={() => generatePDF(payroll.id)}
                 >
-                  PDF generieren
+                  Als PDF herunterladen
                 </button>
-                
-                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-md">
-                  <h3 className="font-medium text-blue-800 mb-2">Zahlungsanweisung für die Buchhaltung</h3>
-                  <p><strong>Empfänger:</strong> {payroll.user.firstName} {payroll.user.lastName}</p>
-                  <p><strong>Betrag:</strong> {payroll.netPay} {payroll.currency}</p>
-                  <p><strong>Zahlungsgrund:</strong> Lohn {new Date(payroll.periodStart).toLocaleDateString()} - {new Date(payroll.periodEnd).toLocaleDateString()}</p>
-                  <p><strong>Zu zahlen bis:</strong> {new Date(new Date(payroll.periodEnd).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
-                </div>
               </div>
             </div>
           )}

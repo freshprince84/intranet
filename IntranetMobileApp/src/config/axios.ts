@@ -3,13 +3,13 @@
  */
 
 import axios, { AxiosRequestConfig } from 'axios';
-import { API_CONFIG } from './api';
+import { API_CONFIG, API_URL } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
 // Basis-Konfiguration für Axios
 const axiosConfig: AxiosRequestConfig = {
-  baseURL: API_CONFIG.API_HOST,
+  baseURL: API_URL,
   timeout: API_CONFIG.TIMEOUT,
   headers: API_CONFIG.HEADERS
 };

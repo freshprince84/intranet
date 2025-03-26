@@ -10,19 +10,23 @@ import {
   BellAlertIcon, 
   WifiIcon 
 } from '@heroicons/react/24/outline';
+import { useTheme } from '../contexts/ThemeContext.tsx';
+import { API_URL } from '../config/api';
 
 // Standard-Konfiguration als Fallback
 const DEFAULT_APP_CONFIG = {
   android: {
     version: '1.0.0',
-    downloadUrl: 'https://65.109.228.106.nip.io/downloads/intranet-app.apk',
-    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.yourcompany.intranetapp'
+    buildDate: '2023-03-01',
+    downloadUrl: 'https://example.com/app.apk',
+    playStoreUrl: 'https://play.google.com/store/apps',
   },
   ios: {
     version: '1.0.0',
-    appStoreUrl: 'https://apps.apple.com/app/intranet-app/id1234567890'
+    buildDate: '2023-03-01',
+    appStoreUrl: 'https://apps.apple.com/',
   },
-  lastUpdate: '24.03.2023'
+  lastUpdate: '01.03.2023',
 };
 
 // Feature-Liste mit Icons
@@ -57,6 +61,7 @@ const MobileAppLanding: React.FC = () => {
   const [appInfo, setAppInfo] = useState(DEFAULT_APP_CONFIG);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { isDarkMode } = useTheme();
 
   useEffect(() => {
     const fetchAppInfo = async () => {
@@ -131,7 +136,7 @@ const MobileAppLanding: React.FC = () => {
                   </a>
                   <a
                     href={appInfo.android.downloadUrl}
-                    className="flex items-center justify-center w-full px-4 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                    className="flex items-center justify-center w-full px-4 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                   >
                     <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
                     APK direkt herunterladen
@@ -171,12 +176,12 @@ const MobileAppLanding: React.FC = () => {
           </h2>
           <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {FEATURES.map((feature) => (
-              <div key={feature.id} className="bg-white p-6 rounded-lg shadow-md">
-                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-blue-100 text-blue-600 mb-4">
+              <div key={feature.id} className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                <div className="flex items-center justify-center h-12 w-12 rounded-md bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 mb-4">
                   <feature.icon className="h-6 w-6" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-900">{feature.title}</h3>
-                <p className="mt-2 text-base text-gray-500">{feature.description}</p>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">{feature.title}</h3>
+                <p className="mt-2 text-base text-gray-500 dark:text-gray-400">{feature.description}</p>
               </div>
             ))}
           </div>
@@ -187,17 +192,17 @@ const MobileAppLanding: React.FC = () => {
           <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-8">
             Direkt zum Download
           </h2>
-          <div className="bg-white p-6 rounded-lg shadow-lg">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg">
             <QRCodeSVG
               value={appInfo.android.downloadUrl}
               size={200}
               includeMargin={true}
-              bgColor={'#ffffff'}
-              fgColor={'#000000'}
+              bgColor={isDarkMode ? '#1f2937' : '#ffffff'}
+              fgColor={isDarkMode ? '#ffffff' : '#000000'}
               level={'H'}
             />
           </div>
-          <p className="mt-4 text-base text-gray-500">
+          <p className="mt-4 text-base text-gray-500 dark:text-gray-400">
             Scanne den QR-Code mit deinem Smartphone, um die App direkt herunterzuladen
           </p>
         </div>

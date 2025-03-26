@@ -616,25 +616,25 @@ const EditRequestModal = ({
   const renderForm = () => (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700">Titel</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Titel</label>
         <input
           type="text"
           required
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
       </div>
 
       <div>
-        <label htmlFor="description_request_edit" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="description_request_edit" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
           Beschreibung
         </label>
         <div className="relative">
           <textarea
             ref={textareaRef}
             rows={isMobile ? 5 : 10}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             onPaste={handlePaste}
@@ -645,7 +645,7 @@ const EditRequestModal = ({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+            className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
             title="Datei hinzufügen"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -659,8 +659,8 @@ const EditRequestModal = ({
             className="hidden"
           />
           {uploading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
-              <span className="text-sm text-gray-600">Wird hochgeladen...</span>
+            <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70">
+              <span className="text-sm text-gray-600 dark:text-gray-300">Wird hochgeladen...</span>
             </div>
           )}
         </div>
@@ -671,32 +671,31 @@ const EditRequestModal = ({
             <MarkdownPreview 
               content={description}
               temporaryAttachments={temporaryAttachments}
+              showImagePreview={true}
             />
           </div>
         )}
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Verantwortlicher</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Verantwortlicher</label>
         <select
-          required
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
           value={responsibleId}
           onChange={(e) => setResponsibleId(Number(e.target.value))}
         >
           {users.map(user => (
             <option key={user.id} value={user.id}>
-              {user.firstName} {user.username ? `(${user.username})` : ''}
+              {user.firstName} ({user.username})
             </option>
           ))}
         </select>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Niederlassung</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Niederlassung</label>
         <select
-          required
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
           value={branchId}
           onChange={(e) => setBranchId(Number(e.target.value))}
         >
@@ -709,10 +708,10 @@ const EditRequestModal = ({
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Fälligkeitsdatum</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Fälligkeitsdatum</label>
         <input
           type="date"
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
         />
@@ -721,41 +720,41 @@ const EditRequestModal = ({
       <div className="flex items-center">
         <input
           type="checkbox"
-          id="create_todo"
-          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          id="create_todo_edit"
+          className="rounded border-gray-300 text-blue-600 dark:bg-gray-700 dark:border-gray-600"
           checked={createTodo}
           onChange={(e) => setCreateTodo(e.target.checked)}
         />
-        <label htmlFor="create_todo" className="ml-2 block text-sm text-gray-700">
+        <label htmlFor="create_todo_edit" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
           Todo automatisch erstellen
         </label>
       </div>
 
-      <div className="flex justify-between">
+      <div className="flex justify-between pt-4">
         {canDeleteRequest && (
           <button
             type="button"
             onClick={handleDelete}
-            className={`px-4 py-2 text-sm font-medium ${
-              confirmDelete ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700'
-            } rounded-md`}
+            className={`px-4 py-2 rounded-md ${
+              confirmDelete
+                ? 'bg-red-600 text-white dark:bg-red-700 dark:text-white'
+                : 'bg-white text-red-600 border border-red-300 dark:bg-gray-800 dark:text-red-400 dark:border-red-700'
+            }`}
           >
             {confirmDelete ? 'Bestätigen' : 'Löschen'}
           </button>
         )}
-        <div className="flex space-x-2 ml-auto">
+        <div className="flex space-x-2">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
-            disabled={loading}
+            className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
           >
             Abbrechen
           </button>
           <button
             type="submit"
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-            disabled={loading}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
           >
             {loading ? 'Wird gespeichert...' : 'Speichern'}
           </button>
@@ -771,25 +770,26 @@ const EditRequestModal = ({
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-xl w-full bg-white rounded-lg shadow-xl">
-            <div className="flex items-center justify-between p-4 border-b">
-              <Dialog.Title className="text-lg font-semibold">
+          <Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <Dialog.Title className="text-lg font-semibold dark:text-white">
                 Request bearbeiten
               </Dialog.Title>
               <button
                 onClick={onClose}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
 
-            <div className="p-4 overflow-y-auto max-h-[calc(100vh-150px)]">
+            <div className="p-4">
               {error && (
-                <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+                <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
                   {error}
                 </div>
               )}
+
               {renderForm()}
             </div>
           </Dialog.Panel>
@@ -810,15 +810,15 @@ const EditRequestModal = ({
       
       {/* Sidepane von rechts einfahren */}
       <div 
-        className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
-        <div className="flex items-center justify-between p-4 border-b">
-          <Dialog.Title className="text-lg font-semibold">
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+          <Dialog.Title className="text-lg font-semibold dark:text-white">
             Request bearbeiten
           </Dialog.Title>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
@@ -826,7 +826,7 @@ const EditRequestModal = ({
 
         <div className="p-4 overflow-y-auto h-full">
           {error && (
-            <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+            <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
               {error}
             </div>
           )}

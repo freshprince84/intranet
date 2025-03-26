@@ -203,7 +203,12 @@ export const API_BASE_URL = process.env.NODE_ENV === 'development'
   ? window.location.hostname === 'localhost'
     ? 'http://localhost:5000'  // Lokale Entwicklung auf localhost
     : `http://${window.location.hostname}:5000`  // Entwicklung über IP
-  : 'http://localhost:5000';   // Produktionsumgebung
+  : '';   // Produktionsumgebung - leer für relative Pfade
+
+// Vollständige API-URL
+export const API_URL = process.env.NODE_ENV === 'development'
+  ? `${API_BASE_URL}/api`  // Entwicklung: vollständige URL
+  : '/api';  // Produktion: nur /api als Präfix für Nginx
 ```
 
 ### Anfrage- und Antwortformat

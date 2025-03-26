@@ -92,8 +92,8 @@ const CerebroLayout: React.FC = () => {
 // Inhalt für die Startseite - zeigt das README an
 const CerebroHome: React.FC = () => {
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
-      <h1 className="text-2xl font-bold mb-6">Readme - Überblick</h1>
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+      <h1 className="text-2xl font-bold mb-6 dark:text-white">Readme - Überblick</h1>
       <GitHubMarkdownViewer 
         owner={GITHUB_OWNER}
         repo={GITHUB_REPO}
@@ -186,7 +186,7 @@ const GitHubFileView: React.FC = () => {
   
   if (loading) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow flex justify-center">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow flex justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       </div>
     );
@@ -194,16 +194,16 @@ const GitHubFileView: React.FC = () => {
   
   if (!mdFile) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h1 className="text-xl font-semibold mb-4">Datei nicht gefunden</h1>
-        <p>Die angeforderte Markdown-Datei konnte nicht gefunden werden.</p>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+        <h1 className="text-xl font-semibold mb-4 dark:text-white">Datei nicht gefunden</h1>
+        <p className="dark:text-gray-300">Die angeforderte Markdown-Datei konnte nicht gefunden werden.</p>
       </div>
     );
   }
   
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
-      <h1 className="text-2xl font-bold mb-6">{mdFile.title}</h1>
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+      <h1 className="text-2xl font-bold mb-6 dark:text-white">{mdFile.title}</h1>
       <GitHubMarkdownViewer 
         owner={GITHUB_OWNER}
         repo={GITHUB_REPO}
@@ -217,8 +217,8 @@ const GitHubFileView: React.FC = () => {
 // Komponente für alle Artikel
 const CerebroAllArticles: React.FC = () => {
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
-      <h2 className="text-xl font-semibold mb-4">Alle Artikel</h2>
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+      <h2 className="text-xl font-semibold mb-4 dark:text-white">Alle Artikel</h2>
       <ArticleList />
     </div>
   );
@@ -231,9 +231,9 @@ const CerebroSearch: React.FC = () => {
   const query = queryParams.get('q') || '';
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow">
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
       <div className="flex items-center mb-6">
-        <h2 className="text-xl font-semibold">Suchergebnisse für "{query}"</h2>
+        <h2 className="text-xl font-semibold dark:text-white">Suchergebnisse für "{query}"</h2>
       </div>
       <ArticleList searchQuery={query} />
     </div>
@@ -294,7 +294,7 @@ const ArticleViewWithRouter: React.FC = () => {
   
   if (loading) {
     return (
-      <div className="bg-white p-6 rounded-lg shadow flex justify-center">
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow flex justify-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
       </div>
     );

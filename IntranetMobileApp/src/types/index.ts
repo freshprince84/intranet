@@ -102,12 +102,7 @@ export interface RequestAttachment {
 }
 
 // ------ Tasks (Aufgaben) ------
-export enum TaskStatus {
-  open = 'open',
-  inProgress = 'in_progress',
-  done = 'done',
-  cancelled = 'cancelled'
-}
+export type TaskStatus = 'open' | 'in_progress' | 'improval' | 'quality_control' | 'done';
 
 export enum TaskPriority {
   low = 'low',
@@ -119,19 +114,18 @@ export enum TaskPriority {
 export interface Task {
   id: number;
   title: string;
-  description?: string;
+  description: string | null;
   status: TaskStatus;
-  priority: TaskPriority;
-  createdAt: string;
-  updatedAt: string;
-  dueDate?: string;
-  creatorId: number;
-  creator?: User;
-  assigneeId?: number;
-  assignee?: User;
-  branchId?: number;
-  branch?: Branch;
-  documents?: Document[];
+  responsibleId?: number | null;
+  roleId?: number | null;
+  responsible?: User | null;
+  role?: Role | null;
+  qualityControl?: User | null;
+  qualityControlId?: number | null;
+  branch?: Branch | null;
+  branchId?: number | null;
+  dueDate: string | null;
+  attachments?: TaskAttachment[];
 }
 
 export interface TaskAttachment {
@@ -204,19 +198,23 @@ export interface NotificationSettings {
 
 // ------ Worktime und Branch ------
 export interface WorkTime {
-  id?: number;
-  userId: number;
-  branchId: number;
-  branch?: Branch;
+  id: number;
   startTime: Date | string;
   endTime?: Date | string | null;
-  duration?: number;
-  isActive?: boolean;
+  branchId: number;
+  userId: number;
+  branch: {
+    id: number;
+    name: string;
+  };
   notes?: string;
-  createdAt?: string;
-  updatedAt?: string;
+}
+
+export interface MobileWorkTime extends WorkTime {
   offlineId?: string;
   synced?: boolean;
+  notes?: string;
+  active?: boolean;
 }
 
 export interface WorkTimeStatistics {

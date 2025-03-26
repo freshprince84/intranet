@@ -17,15 +17,15 @@ const APP_CONFIG = {
 
 const AppDownload: React.FC = () => {
   return (
-    <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 shadow-sm">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 shadow-sm">
       <div className="flex flex-col md:flex-row items-center justify-between">
         <div className="flex items-center mb-4 md:mb-0">
-          <div className="bg-blue-100 p-3 rounded-full mr-4">
-            <DevicePhoneMobileIcon className="h-6 w-6 text-blue-600" />
+          <div className="bg-blue-100 dark:bg-blue-900/30 p-3 rounded-full mr-4">
+            <DevicePhoneMobileIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h3 className="text-lg font-medium text-gray-900">Intranet Mobile App</h3>
-            <p className="text-sm text-gray-500">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Intranet Mobile App</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Greife auch unterwegs auf deine Arbeitszeiten und Anfragen zu
             </p>
           </div>
@@ -33,7 +33,7 @@ const AppDownload: React.FC = () => {
         
         <Link 
           to="/mobile-app" 
-          className="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
         >
           App herunterladen
           <ArrowRightIcon className="ml-2 -mr-1 h-4 w-4" />

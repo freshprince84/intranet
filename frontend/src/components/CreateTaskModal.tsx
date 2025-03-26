@@ -479,14 +479,14 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
                 <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
                 
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <Dialog.Panel className="mx-auto max-w-xl w-full bg-white rounded-lg shadow-xl">
-                        <div className="flex items-center justify-between p-4 border-b">
-                            <Dialog.Title className="text-lg font-semibold">
+                    <Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+                        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+                            <Dialog.Title className="text-lg font-semibold dark:text-white">
                                 Neue Aufgabe erstellen
                             </Dialog.Title>
                             <button
                                 onClick={handleClose}
-                                className="text-gray-500 hover:text-gray-700"
+                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                             >
                                 <XMarkIcon className="h-6 w-6" />
                             </button>
@@ -547,15 +547,15 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             
             {/* Sidepane von rechts einfahren */}
             <div 
-                className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
             >
-                <div className="flex items-center justify-between p-4 border-b">
-                    <Dialog.Title className="text-lg font-semibold">
+                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+                    <Dialog.Title className="text-lg font-semibold dark:text-white">
                         Neue Aufgabe erstellen
                     </Dialog.Title>
                     <button
                         onClick={handleClose}
-                        className="text-gray-500 hover:text-gray-700"
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                     >
                         <XMarkIcon className="h-6 w-6" />
                     </button>
@@ -686,20 +686,20 @@ const TaskForm: React.FC<TaskFormProps> = ({
     return (
         <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             {error && (
-                <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4">
+                <div className="bg-red-100 dark:bg-red-900 border-l-4 border-red-500 dark:border-red-700 text-red-700 dark:text-red-300 p-4 mb-4">
                     <p>{error}</p>
                 </div>
             )}
 
             {/* Tabs Navigation */}
-            <div className="border-b border-gray-200">
+            <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="-mb-px flex space-x-4" aria-label="Tabs">
                     <button
                         type="button"
                         className={`${
                             activeTab === 'data'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
                         } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
                         onClick={() => setActiveTab('data')}
                     >
@@ -709,8 +709,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
                         type="button"
                         className={`${
                             activeTab === 'cerebro'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
                         } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
                         onClick={() => setActiveTab('cerebro')}
                     >
@@ -723,7 +723,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             {activeTab === 'data' && (
                 <>
                     <div>
-                        <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Titel *
                         </label>
                         <input
@@ -731,14 +731,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
                             id="title"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                             required
                         />
                     </div>
 
                     <div className="space-y-4">
                         <div>
-                            <label htmlFor="description_sidepane" className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="description_sidepane" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Beschreibung
                             </label>
                             <div className="relative">
@@ -746,7 +746,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                     ref={textareaRef}
                                     id="description_task_create"
                                     rows={6}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                    className="block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white sm:text-sm"
                                     value={description}
                                     onChange={(e) => setDescription(e.target.value)}
                                     onPaste={handlePaste}
@@ -758,7 +758,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                 <button
                                     type="button"
                                     onClick={() => fileInputRef?.current?.click()}
-                                    className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                    className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
                                     title="Datei hinzufügen"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -772,8 +772,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                     className="hidden"
                                 />
                                 {uploading && (
-                                    <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
-                                        <span className="text-sm text-gray-500">Wird hochgeladen...</span>
+                                    <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70">
+                                        <span className="text-sm text-gray-500 dark:text-gray-400">Wird hochgeladen...</span>
                                     </div>
                                 )}
                             </div>
@@ -782,8 +782,8 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                 <div className="mt-2">
                                     <ul className="flex flex-wrap gap-2">
                                         {temporaryAttachments.map((attachment, index) => (
-                                            <li key={index} className="inline-flex items-center bg-gray-100 rounded-md px-2 py-1 relative group">
-                                                <span className="text-sm font-medium text-gray-800">
+                                            <li key={index} className="inline-flex items-center bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1 relative group">
+                                                <span className="text-sm font-medium text-gray-800 dark:text-gray-300">
                                                     {attachment.fileName}
                                                 </span>
                                                 <div className="flex ml-2">
@@ -800,7 +800,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                                 </div>
                                                 {/* Tooltip für Bildvorschau bei Bild-Dateien */}
                                                 {attachment.fileType.startsWith('image/') && attachment.file && (
-                                                    <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
+                                                    <div className="absolute z-10 invisible group-hover:visible bg-white dark:bg-gray-800 p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200 dark:border-gray-700">
                                                         <img 
                                                             src={URL.createObjectURL(attachment.file)}
                                                             alt={attachment.fileName}
@@ -825,14 +825,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     </div>
 
                     <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Verantwortlich für *
                         </label>
                         <div className="flex space-x-4">
                             <label className="inline-flex items-center">
                                 <input
                                     type="radio"
-                                    className="form-radio text-blue-600"
+                                    className="form-radio text-blue-600 dark:bg-gray-700 dark:border-gray-600"
                                     name="assigneeType"
                                     value="user"
                                     checked={assigneeType === 'user'}
@@ -841,12 +841,12 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                         setRoleId('');
                                     }}
                                 />
-                                <span className="ml-2">Benutzer</span>
+                                <span className="ml-2 dark:text-gray-300">Benutzer</span>
                             </label>
                             <label className="inline-flex items-center">
                                 <input
                                     type="radio"
-                                    className="form-radio text-blue-600"
+                                    className="form-radio text-blue-600 dark:bg-gray-700 dark:border-gray-600"
                                     name="assigneeType"
                                     value="role"
                                     checked={assigneeType === 'role'}
@@ -855,21 +855,21 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                         setResponsibleId('');
                                     }}
                                 />
-                                <span className="ml-2">Rolle</span>
+                                <span className="ml-2 dark:text-gray-300">Rolle</span>
                             </label>
                         </div>
                     </div>
 
                     {assigneeType === 'user' ? (
                         <div>
-                            <label htmlFor="responsible" className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="responsible" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Verantwortlicher Benutzer *
                             </label>
                             <select
                                 id="responsible"
                                 value={responsibleId}
                                 onChange={(e) => setResponsibleId(e.target.value ? Number(e.target.value) : '')}
-                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 required
                             >
                                 <option value="">Bitte wählen</option>
@@ -882,14 +882,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
                         </div>
                     ) : (
                         <div>
-                            <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Verantwortliche Rolle *
                             </label>
                             <select
                                 id="role"
                                 value={roleId}
                                 onChange={(e) => setRoleId(e.target.value ? Number(e.target.value) : '')}
-                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 required
                             >
                                 <option value="">Bitte wählen</option>
@@ -903,14 +903,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     )}
 
                     <div>
-                        <label htmlFor="qualityControl" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="qualityControl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Qualitätskontrolle
                         </label>
                         <select
                             id="qualityControl"
                             value={qualityControlId}
                             onChange={(e) => setQualityControlId(e.target.value ? Number(e.target.value) : '')}
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         >
                             <option value="">Keine Qualitätskontrolle</option>
                             {Array.isArray(users) && users.map(user => (
@@ -922,14 +922,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     </div>
 
                     <div>
-                        <label htmlFor="branch" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="branch" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Niederlassung *
                         </label>
                         <select
                             id="branch"
                             value={branchId}
                             onChange={(e) => setBranchId(Number(e.target.value))}
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                             required
                         >
                             <option value="">Bitte wählen</option>
@@ -942,7 +942,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     </div>
 
                     <div>
-                        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Fälligkeitsdatum
                         </label>
                         <input
@@ -950,7 +950,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                             id="dueDate"
                             value={dueDate}
                             onChange={(e) => setDueDate(e.target.value)}
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         />
                     </div>
                 </>
@@ -960,13 +960,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
             {activeTab === 'cerebro' && (
                 <div>
                     <div className="mb-4">
-                        <h3 className="text-sm font-medium text-gray-700">Verknüpfte Cerebro-Artikel</h3>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Verknüpfte Cerebro-Artikel</h3>
                         
                         {selectedArticles.length > 0 ? (
                             <ul className="mt-2 space-y-2">
                                 {selectedArticles.map(article => (
-                                    <li key={article.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
-                                        <span>{article.title}</span>
+                                    <li key={article.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
+                                        <span className="dark:text-gray-300">{article.title}</span>
                                         <button
                                             type="button"
                                             onClick={() => onArticleRemove(article.id)}
@@ -978,7 +978,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                 ))}
                             </ul>
                         ) : (
-                            <p className="mt-2 text-sm text-gray-500">Keine Artikel verknüpft</p>
+                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Keine Artikel verknüpft</p>
                         )}
                     </div>
                     
@@ -995,13 +995,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 <button
                     type="button"
                     onClick={handleClose}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
                 >
                     Abbrechen
                 </button>
                 <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800"
                     disabled={loading}
                 >
                     {loading ? 'Wird erstellt...' : 'Erstellen'}

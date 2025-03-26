@@ -3,7 +3,7 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
 import TableColumnConfig from '../components/TableColumnConfig.tsx';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import WorktimeTracker from '../components/WorktimeTracker.tsx';
@@ -90,7 +90,6 @@ const Worktracker: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<Task['status'] | 'all'>('all');
-    const [currentTask, setCurrentTask] = useState<Task | null>(null);
     
     // Neuer State für erweiterte Filterbedingungen
     const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
@@ -264,7 +263,7 @@ const Worktracker: React.FC = () => {
     };
 
     const handleEditClick = (task: Task) => {
-        setCurrentTask(task);
+        setSelectedTask(task);
         setIsEditModalOpen(true);
     };
 
@@ -303,7 +302,7 @@ const Worktracker: React.FC = () => {
                 <button
                     key="back"
                     onClick={() => handleStatusChange(task.id, 'open')}
-                    className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                    className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
                     title="Zurück zu Offen"
                 >
                     <ArrowLeftIcon className="h-5 w-5" />
@@ -314,7 +313,7 @@ const Worktracker: React.FC = () => {
                 <button
                     key="back"
                     onClick={() => handleStatusChange(task.id, 'in_progress')}
-                    className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                    className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
                     title="Zurück in Bearbeitung"
                 >
                     <ArrowLeftIcon className="h-5 w-5" />
@@ -325,7 +324,7 @@ const Worktracker: React.FC = () => {
                 <button
                     key="back"
                     onClick={() => handleStatusChange(task.id, 'quality_control')}
-                    className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                    className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
                     title="Zurück zur Qualitätskontrolle"
                 >
                     <ArrowLeftIcon className="h-5 w-5" />
@@ -339,7 +338,7 @@ const Worktracker: React.FC = () => {
                 <button
                     key="forward"
                     onClick={() => handleStatusChange(task.id, 'in_progress')}
-                    className="p-1 bg-blue-600 text-white rounded hover:bg-blue-700"
+                    className="p-1 bg-blue-600 dark:bg-blue-500 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600"
                     title="In Bearbeitung setzen"
                 >
                     <ArrowRightIcon className="h-5 w-5" />
@@ -350,7 +349,7 @@ const Worktracker: React.FC = () => {
                 <button
                     key="forward"
                     onClick={() => handleStatusChange(task.id, 'quality_control')}
-                    className="p-1 bg-purple-600 text-white rounded hover:bg-purple-700"
+                    className="p-1 bg-purple-600 dark:bg-purple-500 text-white rounded hover:bg-purple-700 dark:hover:bg-purple-600"
                     title="Zur Qualitätskontrolle"
                 >
                     <ArrowRightIcon className="h-5 w-5" />
@@ -361,7 +360,7 @@ const Worktracker: React.FC = () => {
                 <button
                     key="forward"
                     onClick={() => handleStatusChange(task.id, 'done')}
-                    className="p-1 bg-green-600 text-white rounded hover:bg-green-700"
+                    className="p-1 bg-green-600 dark:bg-green-500 text-white rounded hover:bg-green-700 dark:hover:bg-green-600"
                     title="Als erledigt markieren"
                 >
                     <ArrowRightIcon className="h-5 w-5" />
@@ -850,7 +849,7 @@ const Worktracker: React.FC = () => {
             loadTasks();
             
             // Bearbeitungsmodal für den kopierten Task öffnen
-            setCurrentTask(response.data);
+            setSelectedTask(response.data);
             setIsEditModalOpen(true);
             
         } catch (err) {
@@ -881,7 +880,7 @@ const Worktracker: React.FC = () => {
             // Aktualisiere die Aufgabenliste
             loadTasks();
             setIsEditModalOpen(false);
-            setCurrentTask(null);
+            setSelectedTask(null);
             toast.success('Aufgabe erfolgreich aktualisiert');
         } catch (error) {
             console.error('Fehler beim Speichern der Aufgabe:', error);
@@ -892,586 +891,549 @@ const Worktracker: React.FC = () => {
     return (
         <div className="min-h-screen">
             <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
-                {/* Auf mobilen Geräten wird diese Reihenfolge angezeigt - Tasks oben, Zeiterfassung unten */}
-                <div className="block sm:hidden">
-                {/* Tasks */}
-                    <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
-                        <div className="flex items-center justify-between">
-                            {/* Linke Seite: "Neuer Task"-Button */}
-                            <div className="flex items-center">
-                                {hasPermission('tasks', 'write', 'table') && (
-                                    <button 
-                                        onClick={() => setIsCreateModalOpen(true)}
-                                        className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
-                                        style={{ width: '30.19px', height: '30.19px' }}
-                                        title="Neue Aufgabe erstellen"
-                                        aria-label="Neue Aufgabe erstellen"
-                                    >
-                                        <PlusIcon className="h-4 w-4" />
-                                    </button>
-                                )}
-                            </div>
-                            
-                            {/* Mitte: Titel */}
-                            <div className="flex items-center">
-                                <CheckCircleIcon className="h-6 w-6 mr-2" />
-                                <h2 className="text-xl font-semibold">To Do's</h2>
-                            </div>
-                            
-                            {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
-                            <div className="flex items-center gap-1.5">
-                                <input
-                                    type="text"
-                                    placeholder="Suchen..."
-                                    className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                                
-                                {/* Filter-Button */}
-                                <button
-                                    className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
-                                    onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-                                    title="Filter"
-                                >
-                                    <FunnelIcon className="h-5 w-5" />
-                                    {getActiveFilterCount() > 0 && (
-                                        <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
-                                            {getActiveFilterCount()}
-                                        </span>
+                {/* Neu angeordnete UI-Elemente in einer Zeile */}
+                <div className="w-full mb-4">
+                    {/* Auf mobilen Geräten wird diese Reihenfolge angezeigt - Tasks oben, Zeiterfassung unten */}
+                    <div className="block sm:hidden w-full">
+                    {/* Tasks */}
+                        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
+                            <div className="flex items-center justify-between">
+                                {/* Linke Seite: "Neuer Task"-Button */}
+                                <div className="flex items-center">
+                                    {hasPermission('tasks', 'write', 'table') && (
+                                        <button 
+                                            onClick={() => setIsCreateModalOpen(true)}
+                                            className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                                            style={{ width: '30.19px', height: '30.19px' }}
+                                            title="Neue Aufgabe erstellen"
+                                            aria-label="Neue Aufgabe erstellen"
+                                        >
+                                            <PlusIcon className="h-4 w-4" />
+                                        </button>
                                     )}
-                                </button>
-                                
-                                {/* Spalten-Konfiguration */}
-                                <div className="ml-1">
-                                    <TableColumnConfig 
-                                        columns={availableColumns}
-                                        visibleColumns={visibleColumnIds}
-                                        columnOrder={settings.columnOrder}
-                                        onToggleColumnVisibility={toggleColumnVisibility}
-                                        onMoveColumn={handleMoveColumn}
-                                        onClose={() => {}}
-                                    />
                                 </div>
-                            </div>
-                        </div>
-
-                        {/* Filter-Pane */}
-                        {isFilterModalOpen && (
-                            <FilterPane
-                                columns={[...availableColumns, ...filterOnlyColumns]}
-                                onApply={applyFilterConditions}
-                                onReset={resetFilterConditions}
-                                savedConditions={filterConditions}
-                                savedOperators={filterLogicalOperators}
-                                tableId={TODOS_TABLE_ID}
-                            />
-                        )}
-                        
-                        {/* Gespeicherte Filter als Tags anzeigen */}
-                        <SavedFilterTags
-                            tableId={TODOS_TABLE_ID}
-                            onSelectFilter={applyFilterConditions}
-                            onReset={resetFilterConditions}
-                            defaultFilterName="Aktuell"
-                        />
-                        
-                        {/* Tabelle */}
-                        <div className="mt-4 overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 tasks-table">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        {visibleColumnIds.map((columnId) => {
-                                            const column = availableColumns.find(col => col.id === columnId);
-                                            if (!column) return null;
-                                            
-                                            return (
-                                                <th
-                                                    key={columnId}
-                                                    scope="col"
-                                                    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100' : ''}`}
-                                                    draggable={true}
-                                                    onDragStart={() => handleDragStart(columnId)}
-                                                    onDragOver={(e) => handleDragOver(e, columnId)}
-                                                    onDrop={(e) => handleDrop(e, columnId)}
-                                                    onDragEnd={handleDragEnd}
-                                                >
-                                                    <div className="flex items-center">
-                                                        {window.innerWidth <= 640 ? column.shortLabel : column.label}
-                                                        {columnId !== 'actions' && (
-                                                            <button 
-                                                                onClick={() => handleSort(columnId as keyof Task)}
-                                                                className="ml-1 focus:outline-none"
-                                                            >
-                                                                <ArrowsUpDownIcon className="h-4 w-4 text-gray-400" />
-                                                            </button>
-                                                        )}
-                                                    </div>
-                                                </th>
-                                            );
-                                        })}
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
-                                                <div className="flex justify-center">
-                                                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : error ? (
-                                        <tr>
-                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-500">
-                                                {error}
-                                            </td>
-                                        </tr>
-                                    ) : filteredAndSortedTasks.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500">
-                                                <div className="flex flex-col items-center justify-center gap-4">
-                                                    <ClipboardDocumentListIcon className="h-10 w-10 text-gray-400" />
-                                                    <div className="text-sm">Keine To Do's gefunden</div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        <>
-                                        {filteredAndSortedTasks.slice(0, displayLimit).map((task) => (
-                                            <tr key={task.id}>
-                                                {visibleColumnIds.map((columnId) => {
-                                                    if (columnId === 'title') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                                                                {task.title}
-                                                            </td>
-                                                        );
-                                                    }
-                                                    if (columnId === 'status') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap">
-                                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)} status-col`}>
-                                                                    {task.status === 'open' && 'Offen'}
-                                                                    {task.status === 'in_progress' && 'In Bearbeitung'}
-                                                                    {task.status === 'improval' && 'Zu verbessern'}
-                                                                    {task.status === 'quality_control' && 'Qualitätskontrolle'}
-                                                                    {task.status === 'done' && 'Erledigt'}
-                                                                </span>
-                                                            </td>
-                                                        );
-                                                    }
-                                                    if (columnId === 'responsibleAndQualityControl') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap">
-                                                                <div className="flex flex-col">
-                                                                    <div className="text-sm text-gray-900">
-                                                                        <span className="text-xs text-gray-500 hidden sm:inline">Verantwortlich:</span>
-                                                                        <span className="text-xs text-gray-500 inline sm:hidden">Ver.:</span><br />
-                                                                        {task.responsible ? 
-                                                                            `${task.responsible.firstName} ${task.responsible.lastName}` : 
-                                                                            task.role ? 
-                                                                                `Rolle: ${task.role.name}` : 
-                                                                                'Nicht zugewiesen'
-                                                                        }
-                                                                    </div>
-                                                                    {task.qualityControl && (
-                                                                        <div className="text-sm text-gray-900 mt-1">
-                                                                            <span className="text-xs text-gray-500 hidden sm:inline">Qualitätskontrolle:</span>
-                                                                            <span className="text-xs text-gray-500 inline sm:hidden">QK:</span><br />
-                                                                            {`${task.qualityControl.firstName} ${task.qualityControl.lastName}`}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                        );
-                                                    }
-                                                    if (columnId === 'branch') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                                                                {task.branch.name}
-                                                            </td>
-                                                        );
-                                                    }
-                                                    if (columnId === 'dueDate') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                                                                {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
-                                                            </td>
-                                                        );
-                                                    }
-                                                    if (columnId === 'actions') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                                <div className="flex space-x-2 action-buttons">
-                                                                    <div className="status-buttons">
-                                                                        {renderStatusButtons(task)}
-                                                                    </div>
-                                                                    {task.description && (
-                                                                        <div className="relative group">
-                                                                            <button
-                                                                                className="text-gray-600 hover:text-gray-900 info-button"
-                                                                                title="Beschreibung anzeigen"
-                                                                            >
-                                                                                <InformationCircleIcon className="h-5 w-5" />
-                                                                            </button>
-                                                                            <div className="fixed opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50
-                                                                                left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                                                                                <div className="bg-white border border-gray-200 rounded-md shadow-lg p-4 
-                                                                                    w-[80vw] max-w-[500px]">
-                                                                                    {task.description ? (
-                                                                                        <MarkdownPreview 
-                                                                                            content={task.description}
-                                                                                            maxHeight="300px"
-                                                                                            showImagePreview={true}
-                                                                                        />
-                                                                                    ) : (
-                                                                                        <div className="text-sm">Keine Beschreibung vorhanden</div>
-                                                                                    )}
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                    {(hasPermission('tasks', 'write', 'table') || isResponsibleForTask(task)) && (
-                                                                        <button
-                                                                            onClick={() => handleEditClick(task)}
-                                                                            className="text-blue-600 hover:text-blue-900 edit-button"
-                                                                            title="Task bearbeiten"
-                                                                        >
-                                                                            <PencilIcon className="h-5 w-5" />
-                                                                        </button>
-                                                                    )}
-                                                                    {hasPermission('tasks', 'both', 'table') && (
-                                                                        <button
-                                                                            onClick={() => handleCopyTask(task)}
-                                                                            className="text-green-600 hover:text-green-900 copy-button"
-                                                                            title="Task kopieren"
-                                                                        >
-                                                                            <DocumentDuplicateIcon className="h-5 w-5" />
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                        );
-                                                    }
-                                                    return null;
-                                                })}
-                                            </tr>
-                                        ))}
-                                        </>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        
-                        {/* "Mehr anzeigen" Button - Mobil */}
-                        {filteredAndSortedTasks.length > displayLimit && (
-                            <div className="mt-4 flex justify-center">
-                                <button
-                                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50"
-                                    onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
-                                >
-                                    Mehr anzeigen ({filteredAndSortedTasks.length - displayLimit} verbleibend)
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                    
-                    {/* Zeiterfassung - auf Mobilgeräten fixiert über dem Footermenü */}
-                    <div className="fixed bottom-13 left-0 right-0 bg-white z-9 shadow-lg border-t-0">
-                        <WorktimeTracker />
-                    </div>
-                </div>
-
-                {/* Auf größeren Geräten bleibt die ursprüngliche Reihenfolge - Zeiterfassung oben, Tasks unten */}
-                <div className="hidden sm:block">
-                    {/* Zeiterfassung */}
-                    <div className="mb-8">
-                        <WorktimeTracker />
-                    </div>
-                    
-                    {/* Tasks - vollständiger Inhalt für Desktop-Ansicht */}
-                    <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
-                        <div className="flex items-center justify-between">
-                            {/* Linke Seite: "Neuer Task"-Button */}
-                            <div className="flex items-center">
-                                {hasPermission('tasks', 'write', 'table') && (
+                                
+                                {/* Mitte: Titel */}
+                                <div className="flex items-center">
+                                    <CheckCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
+                                    <h2 className="text-xl font-semibold dark:text-white">To Do's</h2>
+                                </div>
+                                
+                                {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
+                                <div className="flex items-center gap-1.5">
+                                    <input
+                                        type="text"
+                                        placeholder="Suchen..."
+                                        className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                    
+                                    {/* Filter-Button */}
                                     <button
-                                        onClick={() => setIsCreateModalOpen(true)}
-                                        className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
-                                        style={{ width: '30.19px', height: '30.19px' }}
-                                        title="Neue Aufgabe erstellen"
-                                        aria-label="Neue Aufgabe erstellen"
+                                        className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
+                                        onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
+                                        title="Filter"
                                     >
-                                        <PlusIcon className="h-4 w-4" />
+                                        <FunnelIcon className="h-5 w-5" />
+                                        {getActiveFilterCount() > 0 && (
+                                            <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                                                {getActiveFilterCount()}
+                                            </span>
+                                        )}
                                     </button>
-                                )}
-                            </div>
-                            
-                            {/* Mitte: Titel */}
-                            <div className="flex items-center">
-                                <CheckCircleIcon className="h-6 w-6 mr-2" />
-                                <h2 className="text-xl font-semibold">To Do's</h2>
-                            </div>
-                            
-                            {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
-                            <div className="flex items-center gap-1.5">
-                                <input
-                                    type="text"
-                                    placeholder="Suchen..."
-                                    className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
-                                
-                                {/* Filter-Button */}
-                                <button
-                                    className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
-                                    onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-                                    title="Filter"
-                                >
-                                    <FunnelIcon className="h-5 w-5" />
-                                    {getActiveFilterCount() > 0 && (
-                                        <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
-                                            {getActiveFilterCount()}
-                                        </span>
-                                    )}
-                                </button>
-                                
-                                {/* Spalten-Konfiguration */}
-                                <div className="ml-1">
-                                    <TableColumnConfig
-                                        columns={availableColumns}
-                                        visibleColumns={visibleColumnIds}
-                                        columnOrder={settings.columnOrder}
-                                        onToggleColumnVisibility={toggleColumnVisibility}
-                                        onMoveColumn={handleMoveColumn}
-                                        onClose={() => {}}
-                                    />
+                                    
+                                    {/* Spalten-Konfiguration */}
+                                    <div className="ml-1">
+                                        <TableColumnConfig 
+                                            columns={availableColumns}
+                                            visibleColumns={visibleColumnIds}
+                                            columnOrder={settings.columnOrder}
+                                            onToggleColumnVisibility={toggleColumnVisibility}
+                                            onMoveColumn={handleMoveColumn}
+                                            onClose={() => {}}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Filter-Pane */}
-                        {isFilterModalOpen && (
-                            <FilterPane
-                                columns={[...availableColumns, ...filterOnlyColumns]}
-                                onApply={applyFilterConditions}
-                                onReset={resetFilterConditions}
-                                savedConditions={filterConditions}
-                                savedOperators={filterLogicalOperators}
+                            {/* Filter-Pane */}
+                            {isFilterModalOpen && (
+                                <FilterPane
+                                    columns={[...availableColumns, ...filterOnlyColumns]}
+                                    onApply={applyFilterConditions}
+                                    onReset={resetFilterConditions}
+                                    savedConditions={filterConditions}
+                                    savedOperators={filterLogicalOperators}
+                                    tableId={TODOS_TABLE_ID}
+                                />
+                            )}
+                            
+                            {/* Gespeicherte Filter als Tags anzeigen */}
+                            <SavedFilterTags
                                 tableId={TODOS_TABLE_ID}
+                                onSelectFilter={applyFilterConditions}
+                                onReset={resetFilterConditions}
+                                defaultFilterName="Aktuell"
                             />
-                        )}
-
-                        {/* Gespeicherte Filter als Tags anzeigen */}
-                        <SavedFilterTags
-                            tableId={TODOS_TABLE_ID}
-                            onSelectFilter={applyFilterConditions}
-                            onReset={resetFilterConditions}
-                            defaultFilterName="Aktuell"
-                        />
-
-                        {/* Tabelle */}
-                        <div className="mt-4 overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 tasks-table">
-                                <thead className="bg-gray-50">
-                                    <tr>
-                                        {visibleColumnIds.map((columnId) => {
-                                            const column = availableColumns.find(col => col.id === columnId);
-                                            if (!column) return null;
-
-                                            return (
-                                                <th 
-                                                    key={columnId}
-                                                    scope="col"
-                                                    className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100' : ''}`}
-                                                    draggable={true}
-                                                    onDragStart={() => handleDragStart(columnId)}
-                                                    onDragOver={(e) => handleDragOver(e, columnId)}
-                                                    onDrop={(e) => handleDrop(e, columnId)}
-                                                    onDragEnd={handleDragEnd}
-                                                >
-                                                    <div className="flex items-center">
-                                                        {window.innerWidth <= 640 ? column.shortLabel : column.label}
-                                                        {columnId !== 'actions' && (
-                                                            <button 
-                                                                onClick={() => handleSort(columnId as keyof Task)}
-                                                                className="ml-1 focus:outline-none"
-                                                            >
-                                                                <ArrowsUpDownIcon className="h-4 w-4 text-gray-400" />
-                                                            </button>
-                                                        )}
+                            
+                            {/* Tabelle */}
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead className="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            {visibleColumnIds.map((columnId) => {
+                                                const column = availableColumns.find(col => col.id === columnId);
+                                                if (!column) return null;
+                                                
+                                                return (
+                                                    <th
+                                                        key={columnId}
+                                                        scope="col"
+                                                        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                        draggable={true}
+                                                        onDragStart={() => handleDragStart(columnId)}
+                                                        onDragOver={(e) => handleDragOver(e, columnId)}
+                                                        onDrop={(e) => handleDrop(e, columnId)}
+                                                        onDragEnd={handleDragEnd}
+                                                    >
+                                                        <div className="flex items-center">
+                                                            {window.innerWidth <= 640 ? column.shortLabel : column.label}
+                                                            {columnId !== 'actions' && (
+                                                                <button 
+                                                                    onClick={() => handleSort(columnId as keyof Task)}
+                                                                    className="ml-1 focus:outline-none"
+                                                                >
+                                                                    <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </th>
+                                                );
+                                            })}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
+                                                    <div className="flex justify-center">
+                                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
                                                     </div>
-                                                </th>
-                                            );
-                                        })}
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
-                                                <div className="flex justify-center">
-                                                    <div className="rounded-full h-6 w-6 border-b-2 border-gray-900"></div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : error ? (
-                                        <tr>
-                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-500">
-                                                {error}
-                                            </td>
-                                        </tr>
-                                    ) : filteredAndSortedTasks.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500">
-                                                <div className="flex flex-col items-center justify-center gap-4">
-                                                    <ClipboardDocumentListIcon className="h-10 w-10 text-gray-400" />
-                                                    <div className="text-sm">Keine To Do's gefunden</div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        <>
-                                        {filteredAndSortedTasks.slice(0, displayLimit).map((task) => (
-                                            <tr key={task.id}>
-                                                {visibleColumnIds.map((columnId) => {
-                                                    if (columnId === 'title') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                                                                {task.title}
-                                                            </td>
-                                                        );
-                                                    }
-                                                    if (columnId === 'status') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap">
-                                                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)} status-col`}>
-                                                                    {task.status === 'open' && 'Offen'}
-                                                                    {task.status === 'in_progress' && 'In Bearbeitung'}
-                                                                    {task.status === 'improval' && 'Zu verbessern'}
-                                                                    {task.status === 'quality_control' && 'Qualitätskontrolle'}
-                                                                    {task.status === 'done' && 'Erledigt'}
-                                                                </span>
-                                                            </td>
-                                                        );
-                                                    }
-                                                    if (columnId === 'responsibleAndQualityControl') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap">
-                                                                <div className="flex flex-col">
-                                                                    <div className="text-sm text-gray-900">
-                                                                        <span className="text-xs text-gray-500 hidden sm:inline">Verantwortlich:</span>
-                                                                        <span className="text-xs text-gray-500 inline sm:hidden">Ver.:</span><br />
-                                                                        {task.responsible ? 
-                                                                            `${task.responsible.firstName} ${task.responsible.lastName}` : 
-                                                                            task.role ? 
-                                                                                `Rolle: ${task.role.name}` : 
-                                                                                'Nicht zugewiesen'
-                                                                        }
-                                                                    </div>
-                                                                    {task.qualityControl && (
-                                                                        <div className="text-sm text-gray-900 mt-1">
-                                                                            <span className="text-xs text-gray-500 hidden sm:inline">Qualitätskontrolle:</span>
-                                                                            <span className="text-xs text-gray-500 inline sm:hidden">QK:</span><br />
-                                                                            {`${task.qualityControl.firstName} ${task.qualityControl.lastName}`}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                        );
-                                                    }
-                                                    if (columnId === 'branch') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                                                                {task.branch.name}
-                                                            </td>
-                                                        );
-                                                    }
-                                                    if (columnId === 'dueDate') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm text-gray-900">
-                                                                {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
-                                                            </td>
-                                                        );
-                                                    }
-                                                    if (columnId === 'actions') {
-                                                        return (
-                                                            <td key={`${task.id}-${columnId}`} className="px-6 py-2 whitespace-nowrap text-sm font-medium">
-                                                                <div className="flex space-x-2 action-buttons">
-                                                                    <div className="status-buttons">
-                                                                        {renderStatusButtons(task)}
-                                                                    </div>
-                                                                    {task.description && (
-                                                                        <div className="relative group">
-                                                                            <button
-                                                                                className="text-gray-600 hover:text-gray-900 info-button"
-                                                                                title="Beschreibung anzeigen"
-                                                                            >
-                                                                                <InformationCircleIcon className="h-5 w-5" />
-                                                                            </button>
-                                                                            <div className="fixed opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-50
-                                                                                left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                                                                                <div className="bg-white border border-gray-200 rounded-md shadow-lg p-4 
-                                                                                    w-[80vw] max-w-[500px]">
-                                                                                    {task.description ? (
-                                                                                        <MarkdownPreview 
-                                                                                            content={task.description}
-                                                                                            maxHeight="300px"
-                                                                                            showImagePreview={true}
-                                                                                        />
-                                                                                    ) : (
-                                                                                        <div className="text-sm">Keine Beschreibung vorhanden</div>
-                                                                                    )}
+                                                </td>
+                                            </tr>
+                                        ) : error ? (
+                                            <tr>
+                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
+                                                    {error}
+                                                </td>
+                                            </tr>
+                                        ) : filteredAndSortedTasks.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                                                    <div className="flex flex-col items-center justify-center gap-4">
+                                                        <ClipboardDocumentListIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+                                                        <div className="text-sm">Keine To Do's gefunden</div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            <>
+                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => (
+                                                <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                    {visibleColumnIds.map(columnId => {
+                                                        switch (columnId) {
+                                                            case 'title':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4">
+                                                                        <div className="text-sm text-gray-900 dark:text-gray-200 break-words flex items-center">
+                                                                            {task.title}
+                                                                            {task.description && (
+                                                                                <div className="ml-2 relative group">
+                                                                                    <button 
+                                                                                        className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                                                                                        title="Beschreibung anzeigen"
+                                                                                    >
+                                                                                        <InformationCircleIcon className="h-5 w-5" />
+                                                                                    </button>
+                                                                                    <div className="hidden group-hover:block absolute left-0 mt-2 p-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 w-144 max-h-96 overflow-y-auto min-w-[36rem] z-10">
+                                                                                        <MarkdownPreview content={task.description} showImagePreview={true} />
+                                                                                    </div>
                                                                                 </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                );
+                                                            case 'status':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)} dark:bg-opacity-30 status-col`}>
+                                                                            {task.status}
+                                                                        </span>
+                                                                    </td>
+                                                                );
+                                                            case 'responsibleAndQualityControl':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                        <div className="flex flex-col">
+                                                                            <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Verantwortlich:</span>
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">Ver.:</span><br />
+                                                                                {task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : task.role ? task.role.name : '-'}
+                                                                            </div>
+                                                                            <div className="text-sm text-gray-900 dark:text-gray-200 mt-1">
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Qualitätskontrolle:</span>
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">QK:</span><br />
+                                                                                {task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-'}
                                                                             </div>
                                                                         </div>
-                                                                    )}
-                                                                    {(hasPermission('tasks', 'write', 'table') || isResponsibleForTask(task)) && (
-                                                                        <button
-                                                                            onClick={() => handleEditClick(task)}
-                                                                            className="text-blue-600 hover:text-blue-900 edit-button"
-                                                                            title="Task bearbeiten"
-                                                                        >
-                                                                            <PencilIcon className="h-5 w-5" />
-                                                                        </button>
-                                                                    )}
-                                                                    {hasPermission('tasks', 'both', 'table') && (
-                                                                        <button
-                                                                            onClick={() => handleCopyTask(task)}
-                                                                            className="text-green-600 hover:text-green-900 copy-button"
-                                                                            title="Task kopieren"
-                                                                        >
-                                                                            <DocumentDuplicateIcon className="h-5 w-5" />
-                                                                        </button>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                        );
-                                                    }
-                                                    return null;
-                                                })}
-                                            </tr>
-                                        ))}
-                                        </>
-                                    )}
-                                </tbody>
-                            </table>
+                                                                    </td>
+                                                                );
+                                                            case 'branch':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                        <div className="text-sm text-gray-900 dark:text-gray-200">{task.branch.name}</div>
+                                                                    </td>
+                                                                );
+                                                            case 'dueDate':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                        <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                            {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
+                                                                        </div>
+                                                                    </td>
+                                                                );
+                                                            case 'actions':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                        <div className="flex space-x-2 action-buttons">
+                                                                            <div className="status-buttons">
+                                                                                {renderStatusButtons(task)}
+                                                                            </div>
+                                                                            {hasPermission('tasks', 'write', 'table') && (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        setSelectedTask(task);
+                                                                                        setIsEditModalOpen(true);
+                                                                                    }}
+                                                                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 edit-button ml-0.5"
+                                                                                >
+                                                                                    <PencilIcon className="h-5 w-5" />
+                                                                                </button>
+                                                                            )}
+                                                                            {hasPermission('tasks', 'both', 'table') && (
+                                                                                <button
+                                                                                    onClick={() => handleCopyTask(task)}
+                                                                                    className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 copy-button ml-0.5"
+                                                                                    title="Task kopieren"
+                                                                                >
+                                                                                    <DocumentDuplicateIcon className="h-5 w-5" />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                );
+                                                            default:
+                                                                return null;
+                                                        }
+                                                    })}
+                                                </tr>
+                                            ))}
+                                            </>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            {/* "Mehr anzeigen" Button - Mobil */}
+                            {filteredAndSortedTasks.length > displayLimit && (
+                                <div className="mt-4 flex justify-center">
+                                    <button
+                                        className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
+                                        onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+                                    >
+                                        Mehr anzeigen ({filteredAndSortedTasks.length - displayLimit} verbleibend)
+                                    </button>
+                                </div>
+                            )}
                         </div>
                         
-                        {/* "Mehr anzeigen" Button - Desktop */}
-                        {filteredAndSortedTasks.length > displayLimit && (
-                            <div className="mt-4 flex justify-center">
-                                <button
-                                    className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50"
-                                    onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
-                                >
-                                    Mehr anzeigen ({filteredAndSortedTasks.length - displayLimit} verbleibend)
-                                </button>
-                            </div>
-                        )}
+                        {/* Zeiterfassung - auf Mobilgeräten fixiert über dem Footermenü */}
+                        <div className="fixed bottom-13 left-0 right-0 w-full bg-white dark:bg-gray-800 z-9 shadow-lg border-t-0 dark:border-t dark:border-gray-700">
+                            <WorktimeTracker />
+                        </div>
+                    </div>
+
+                    {/* Auf größeren Geräten bleibt die ursprüngliche Reihenfolge - Zeiterfassung oben, Tasks unten */}
+                    <div className="hidden sm:block">
+                        {/* Zeiterfassung */}
+                        <div className="mb-8">
+                            <WorktimeTracker />
+                        </div>
                         
+                        {/* Tasks - vollständiger Inhalt für Desktop-Ansicht */}
+                        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
+                            <div className="flex items-center mb-4 justify-between">
+                                {/* Linke Seite: "Neuer Task"-Button */}
+                                <div className="flex items-center">
+                                    {hasPermission('tasks', 'write', 'table') && (
+                                        <button
+                                            onClick={() => setIsCreateModalOpen(true)}
+                                            className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                                            style={{ width: '30.19px', height: '30.19px' }}
+                                            title="Neue Aufgabe erstellen"
+                                            aria-label="Neue Aufgabe erstellen"
+                                        >
+                                            <PlusIcon className="h-4 w-4" />
+                                        </button>
+                                    )}
+                                </div>
+                                
+                                {/* Mitte: Titel */}
+                                <div className="flex items-center">
+                                    <CheckCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
+                                    <h2 className="text-xl font-semibold dark:text-white">To Do's</h2>
+                                </div>
+                                
+                                {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
+                                <div className="flex items-center gap-1.5">
+                                    <input
+                                        type="text"
+                                        placeholder="Suchen..."
+                                        className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                    
+                                    {/* Filter-Button */}
+                                    <button
+                                        className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
+                                        onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
+                                        title="Filter"
+                                    >
+                                        <FunnelIcon className="h-5 w-5" />
+                                        {getActiveFilterCount() > 0 && (
+                                            <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                                                {getActiveFilterCount()}
+                                            </span>
+                                        )}
+                                    </button>
+                                    
+                                    {/* Spalten-Konfiguration */}
+                                    <div className="ml-1">
+                                        <TableColumnConfig
+                                            columns={availableColumns}
+                                            visibleColumns={visibleColumnIds}
+                                            columnOrder={settings.columnOrder}
+                                            onToggleColumnVisibility={toggleColumnVisibility}
+                                            onMoveColumn={handleMoveColumn}
+                                            onClose={() => {}}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Filter-Pane */}
+                            {isFilterModalOpen && (
+                                <FilterPane
+                                    columns={[...availableColumns, ...filterOnlyColumns]}
+                                    onApply={applyFilterConditions}
+                                    onReset={resetFilterConditions}
+                                    savedConditions={filterConditions}
+                                    savedOperators={filterLogicalOperators}
+                                    tableId={TODOS_TABLE_ID}
+                                />
+                            )}
+
+                            {/* Gespeicherte Filter als Tags anzeigen */}
+                            <SavedFilterTags
+                                tableId={TODOS_TABLE_ID}
+                                onSelectFilter={applyFilterConditions}
+                                onReset={resetFilterConditions}
+                                defaultFilterName="Aktuell"
+                            />
+
+                            {/* Tabelle */}
+                            <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <thead className="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            {visibleColumnIds.map((columnId) => {
+                                                const column = availableColumns.find(col => col.id === columnId);
+                                                if (!column) return null;
+
+                                                return (
+                                                    <th 
+                                                        key={columnId}
+                                                        scope="col"
+                                                        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                        draggable={true}
+                                                        onDragStart={() => handleDragStart(columnId)}
+                                                        onDragOver={(e) => handleDragOver(e, columnId)}
+                                                        onDrop={(e) => handleDrop(e, columnId)}
+                                                        onDragEnd={handleDragEnd}
+                                                    >
+                                                        <div className="flex items-center">
+                                                            {window.innerWidth <= 640 ? column.shortLabel : column.label}
+                                                            {columnId !== 'actions' && (
+                                                                <button 
+                                                                    onClick={() => handleSort(columnId as keyof Task)}
+                                                                    className="ml-1 focus:outline-none"
+                                                                >
+                                                                    <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                    </th>
+                                                );
+                                            })}
+                                        </tr>
+                                    </thead>
+                                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        {loading ? (
+                                            <tr>
+                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
+                                                    <div className="flex justify-center">
+                                                        <div className="rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : error ? (
+                                            <tr>
+                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
+                                                    {error}
+                                                </td>
+                                            </tr>
+                                        ) : filteredAndSortedTasks.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                                                    <div className="flex flex-col items-center justify-center gap-4">
+                                                        <ClipboardDocumentListIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+                                                        <div className="text-sm">Keine To Do's gefunden</div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            <>
+                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => (
+                                                <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                                    {visibleColumnIds.map(columnId => {
+                                                        switch (columnId) {
+                                                            case 'title':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4">
+                                                                        <div className="text-sm text-gray-900 dark:text-gray-200 break-words flex items-center">
+                                                                            {task.title}
+                                                                            {task.description && (
+                                                                                <div className="ml-2 relative group">
+                                                                                    <button 
+                                                                                        className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                                                                                        title="Beschreibung anzeigen"
+                                                                                    >
+                                                                                        <InformationCircleIcon className="h-5 w-5" />
+                                                                                    </button>
+                                                                                    <div className="hidden group-hover:block absolute left-0 mt-2 p-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 w-144 max-h-96 overflow-y-auto min-w-[36rem] z-10">
+                                                                                        <MarkdownPreview content={task.description} showImagePreview={true} />
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                );
+                                                            case 'status':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)} dark:bg-opacity-30 status-col`}>
+                                                                            {task.status}
+                                                                        </span>
+                                                                    </td>
+                                                                );
+                                                            case 'responsibleAndQualityControl':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                        <div className="flex flex-col">
+                                                                            <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Verantwortlich:</span>
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">Ver.:</span><br />
+                                                                                {task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : task.role ? task.role.name : '-'}
+                                                                            </div>
+                                                                            <div className="text-sm text-gray-900 dark:text-gray-200 mt-1">
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Qualitätskontrolle:</span>
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">QK:</span><br />
+                                                                                {task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-'}
+                                                                            </div>
+                                                                        </div>
+                                                                    </td>
+                                                                );
+                                                            case 'branch':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                        <div className="text-sm text-gray-900 dark:text-gray-200">{task.branch.name}</div>
+                                                                    </td>
+                                                                );
+                                                            case 'dueDate':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                        <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                            {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
+                                                                        </div>
+                                                                    </td>
+                                                                );
+                                                            case 'actions':
+                                                                return (
+                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                        <div className="flex space-x-2 action-buttons">
+                                                                            <div className="status-buttons">
+                                                                                {renderStatusButtons(task)}
+                                                                            </div>
+                                                                            {hasPermission('tasks', 'write', 'table') && (
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        setSelectedTask(task);
+                                                                                        setIsEditModalOpen(true);
+                                                                                    }}
+                                                                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 edit-button ml-0.5"
+                                                                                >
+                                                                                    <PencilIcon className="h-5 w-5" />
+                                                                                </button>
+                                                                            )}
+                                                                            {hasPermission('tasks', 'both', 'table') && (
+                                                                                <button
+                                                                                    onClick={() => handleCopyTask(task)}
+                                                                                    className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 copy-button ml-0.5"
+                                                                                    title="Task kopieren"
+                                                                                >
+                                                                                    <DocumentDuplicateIcon className="h-5 w-5" />
+                                                                                </button>
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                );
+                                                            default:
+                                                                return null;
+                                                        }
+                                                    })}
+                                                </tr>
+                                            ))}
+                                            </>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            {/* "Mehr anzeigen" Button - Desktop */}
+                            {filteredAndSortedTasks.length > displayLimit && (
+                                <div className="mt-4 flex justify-center">
+                                    <button
+                                        className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
+                                        onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+                                    >
+                                        Mehr anzeigen ({filteredAndSortedTasks.length - displayLimit} verbleibend)
+                                    </button>
+                                </div>
+                            )}
+                            
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1483,15 +1445,15 @@ const Worktracker: React.FC = () => {
                 onTaskCreated={loadTasks}
             />
             
-            {currentTask && (
+            {selectedTask && (
                 <EditTaskModal
                     isOpen={isEditModalOpen}
                     onClose={() => {
                         setIsEditModalOpen(false);
-                        setCurrentTask(null);
+                        setSelectedTask(null);
                     }}
                     onTaskUpdated={loadTasks}
-                    task={currentTask}
+                    task={selectedTask}
                 />
             )}
         </div>

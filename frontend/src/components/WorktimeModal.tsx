@@ -163,9 +163,9 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
 
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700 w-full max-w-4xl max-h-[90vh] flex flex-col">
-                <div className="p-4 border-b flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full max-w-4xl max-h-[90vh] flex flex-col">
+                <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
+                    <h2 className="text-xl font-semibold dark:text-white">
                         Zeiteinträge für {formatDate(selectedDate)}
                     </h2>
                     <div className="flex items-center space-x-2">
@@ -175,11 +175,11 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                             onChange={(e) => {
                                 setSelectedDate(e.target.value);
                             }}
-                            className="border rounded-md px-3 py-2"
+                            className="border dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-700 dark:text-white"
                         />
                         <button 
                             onClick={onClose}
-                            className="text-gray-500 hover:text-gray-700"
+                            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                         >
                             ✕
                         </button>
@@ -189,47 +189,47 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                 <div className="overflow-y-auto flex-grow">
                     {loading ? (
                         <div className="flex justify-center items-center h-32">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 dark:border-gray-300"></div>
                         </div>
                     ) : worktimes.filter(worktime => isWorktimeRelevantForSelectedDate(worktime, selectedDate) && (worktime.endTime !== null || isActiveWorktimeRelevant())).length === 0 ? (
-                        <div className="p-4 text-center text-gray-500">
+                        <div className="p-4 text-center text-gray-500 dark:text-gray-400">
                             Keine Zeiteinträge für diesen Tag gefunden.
                         </div>
                     ) : (
-                        <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                            <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Start
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Ende
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Dauer
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                         Niederlassung
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                 {relevantWorktimes
                                   .filter(worktime => worktime.endTime !== null)
                                   // Sortiere nach Startzeit (frühester Eintrag zuerst)
                                   .sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
                                   .map((worktime) => (
-                                    <tr key={worktime.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <tr key={worktime.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                             {formatTime(worktime.startTime)}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                             {worktime.endTime ? formatTime(worktime.endTime) : '-'}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                             {calculateDuration(worktime.startTime, worktime.endTime)}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                             {worktime.branch.name}
                                         </td>
                                     </tr>
@@ -237,17 +237,17 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                                 
                                 {/* Aktive Zeiterfassung anzeigen, wenn sie für den ausgewählten Tag relevant ist */}
                                 {isActiveWorktimeRelevant() && (
-                                    <tr className="bg-green-50 hover:bg-green-100">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                    <tr className="bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                             {formatTime(activeWorktime.startTime)}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                             <span className="italic">Aktiv</span>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium text-green-600">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200 font-medium text-green-600 dark:text-green-400">
                                             {calculateActiveDuration()}
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                             {activeWorktime.branch?.name || 'Unbekannt'}
                                         </td>
                                     </tr>
@@ -255,12 +255,12 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                             </tbody>
                             
                             {/* Gesamtdauer des Tages */}
-                            <tfoot className="bg-gray-100">
+                            <tfoot className="bg-gray-100 dark:bg-gray-700">
                                 <tr>
-                                    <td colSpan={2} className="px-6 py-3 text-right text-sm font-medium text-gray-700">
+                                    <td colSpan={2} className="px-6 py-3 text-right text-sm font-medium text-gray-700 dark:text-gray-300">
                                         Gesamtdauer des Tages:
                                     </td>
-                                    <td className="px-6 py-3 text-left text-sm font-bold text-gray-900">
+                                    <td className="px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">
                                         {totalDuration}
                                     </td>
                                     <td></td>

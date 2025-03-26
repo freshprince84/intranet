@@ -49,22 +49,22 @@ const UserOvertimeEditor: React.FC<UserOvertimeEditorProps> = ({
   };
 
   return (
-    <div className="bg-gray-50 p-4 rounded-lg mb-6">
-      <h3 className="text-lg font-medium text-gray-900 mb-2">
+    <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg mb-6">
+      <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
         Bewilligte Überstunden
       </h3>
       
       <div className="flex items-center">
         <div className="flex-1">
-          <p className="text-sm text-gray-500 mb-1">
-            Benutzer: <span className="font-medium">{user.firstName} {user.lastName}</span>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+            Benutzer: <span className="font-medium dark:text-gray-300">{user.firstName} {user.lastName}</span>
           </p>
-          <p className="text-sm text-gray-500 mb-1">
-            Normale Arbeitszeit: <span className="font-medium">{user.normalWorkingHours}h pro Tag</span>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
+            Normale Arbeitszeit: <span className="font-medium dark:text-gray-300">{user.normalWorkingHours}h pro Tag</span>
           </p>
           
           <div className="mt-2">
-            <label htmlFor="approved-overtime" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="approved-overtime" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Bewilligte Überstunden
             </label>
             <div className="mt-1 flex rounded-md shadow-sm">
@@ -72,7 +72,7 @@ const UserOvertimeEditor: React.FC<UserOvertimeEditorProps> = ({
                 <input
                   type="number"
                   id="approved-overtime"
-                  className="focus:ring-blue-500 focus:border-blue-500 flex-1 block w-full rounded-md sm:text-sm border-gray-300"
+                  className="focus:ring-blue-500 focus:border-blue-500 flex-1 block w-full rounded-md sm:text-sm border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   value={approvedOvertimeHours}
                   onChange={(e) => setApprovedOvertimeHours(Number(e.target.value))}
                   min="0"
@@ -80,11 +80,11 @@ const UserOvertimeEditor: React.FC<UserOvertimeEditorProps> = ({
                   disabled={isSaving}
                 />
               ) : (
-                <div className="py-2 px-3 bg-white border border-gray-300 rounded-md text-sm">
+                <div className="py-2 px-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md text-sm dark:text-gray-200">
                   {approvedOvertimeHours}h
                 </div>
               )}
-              <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+              <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-600 text-gray-500 dark:text-gray-300 text-sm">
                 Stunden
               </span>
             </div>
@@ -96,7 +96,7 @@ const UserOvertimeEditor: React.FC<UserOvertimeEditorProps> = ({
             <div className="flex flex-col space-y-2">
               <button
                 type="button"
-                className="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
                 onClick={handleSaveEdit}
                 disabled={isSaving || loading}
               >
@@ -104,7 +104,7 @@ const UserOvertimeEditor: React.FC<UserOvertimeEditorProps> = ({
               </button>
               <button
                 type="button"
-                className="inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
                 onClick={handleCancelEdit}
                 disabled={isSaving || loading}
               >
@@ -114,7 +114,7 @@ const UserOvertimeEditor: React.FC<UserOvertimeEditorProps> = ({
           ) : (
             <button
               type="button"
-              className="inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex justify-center items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
               onClick={handleStartEdit}
               disabled={loading}
             >

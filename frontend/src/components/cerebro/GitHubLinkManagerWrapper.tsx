@@ -24,9 +24,9 @@ const GitHubLinkManagerWrapper: React.FC = () => {
   if (!slug) {
     return (
       <div className="w-full p-4">
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h1 className="text-xl font-semibold mb-4">Fehler</h1>
-          <p>Kein Artikel-Slug angegeben.</p>
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <h1 className="text-xl font-semibold mb-4 dark:text-white">Fehler</h1>
+          <p className="dark:text-gray-300">Kein Artikel-Slug angegeben.</p>
         </div>
       </div>
     );
@@ -34,8 +34,8 @@ const GitHubLinkManagerWrapper: React.FC = () => {
   
   return (
     <div className="w-full p-4">
-      <div className="bg-white p-6 rounded-lg shadow">
-        <h1 className="text-xl font-semibold mb-4">GitHub-Link hinzufügen</h1>
+      <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+        <h1 className="text-xl font-semibold mb-4 dark:text-white">GitHub-Link hinzufügen</h1>
         <GitHubLinkManager 
           articleSlug={slug} 
           onLinkAdded={handleLinkAdded}

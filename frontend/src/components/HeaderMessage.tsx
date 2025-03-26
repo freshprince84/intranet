@@ -26,11 +26,11 @@ const HeaderMessage: React.FC = () => {
   // CSS-Klasse basierend auf dem Meldungstyp - angepasst an das ursprüngliche Design der Anwendung
   const getMessageClassName = (type: string) => {
     switch (type) {
-      case 'success': return 'bg-green-100 border border-green-400 text-green-700';
-      case 'error': return 'bg-red-100 border border-red-400 text-red-700';
-      case 'warning': return 'bg-yellow-100 border border-yellow-400 text-yellow-700';
-      case 'info': return 'bg-blue-100 border border-blue-400 text-blue-700';
-      default: return 'bg-gray-100 border border-gray-400 text-gray-700';
+      case 'success': return 'bg-green-100 border border-green-400 text-green-700 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300';
+      case 'error': return 'bg-red-100 border border-red-400 text-red-700 dark:bg-red-900/30 dark:border-red-700 dark:text-red-300';
+      case 'warning': return 'bg-yellow-100 border border-yellow-400 text-yellow-700 dark:bg-yellow-900/30 dark:border-yellow-700 dark:text-yellow-300';
+      case 'info': return 'bg-blue-100 border border-blue-400 text-blue-700 dark:bg-blue-900/30 dark:border-blue-700 dark:text-blue-300';
+      default: return 'bg-gray-100 border border-gray-400 text-gray-700 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300';
     }
   };
   

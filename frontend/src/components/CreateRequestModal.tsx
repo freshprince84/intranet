@@ -434,14 +434,14 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
         <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
         
         <div className="fixed inset-0 flex items-center justify-center p-4">
-          <Dialog.Panel className="mx-auto max-w-xl w-full bg-white rounded-lg shadow-xl">
-            <div className="flex items-center justify-between p-4 border-b">
-              <Dialog.Title className="text-lg font-semibold">
+          <Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <Dialog.Title className="text-lg font-semibold dark:text-white">
                 Neuer Request
               </Dialog.Title>
               <button
                 onClick={onClose}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
@@ -449,25 +449,25 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
 
             <div className="p-4">
               {error && (
-                <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+                <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
                   {error}
                 </div>
               )}
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Titel</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Titel</label>
                   <input
                     type="text"
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="description_request_create" className="block text-sm font-medium text-gray-700">
+                  <label htmlFor="description_request_create" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Beschreibung
                   </label>
                   <div className="relative">
@@ -475,7 +475,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                       ref={textareaRef}
                       id="description_request_create"
                       rows={6}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                       value={formData.description}
                       onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                       onPaste={handlePaste}
@@ -487,7 +487,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                      className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
                       title="Datei hinzufügen"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -501,8 +501,8 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                       className="hidden"
                     />
                     {uploading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
-                        <span className="text-sm text-gray-600">Wird hochgeladen...</span>
+                      <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70">
+                        <span className="text-sm text-gray-600 dark:text-gray-300">Wird hochgeladen...</span>
                       </div>
                     )}
                   </div>
@@ -518,10 +518,10 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Verantwortlicher</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Verantwortlicher</label>
                   <select
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
                     value={formData.responsible_id}
                     onChange={(e) => setFormData({ ...formData, responsible_id: e.target.value })}
                   >
@@ -535,10 +535,10 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Niederlassung</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Niederlassung</label>
                   <select
                     required
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
                     value={formData.branch_id}
                     onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
                   >
@@ -552,10 +552,10 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Fälligkeitsdatum</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Fälligkeitsdatum</label>
                   <input
                     type="date"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
                     value={formData.due_date}
                     onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                   />
@@ -565,11 +565,11 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                   <input
                     type="checkbox"
                     id="create_todo"
-                    className="rounded border-gray-300 text-blue-600"
+                    className="rounded border-gray-300 text-blue-600 dark:bg-gray-700 dark:text-gray-300"
                     checked={formData.create_todo}
                     onChange={(e) => setFormData({ ...formData, create_todo: e.target.checked })}
                   />
-                  <label htmlFor="create_todo" className="ml-2 block text-sm text-gray-700">
+                  <label htmlFor="create_todo" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
                     Todo automatisch erstellen
                   </label>
                 </div>
@@ -578,13 +578,13 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                   <button
                     type="button"
                     onClick={onClose}
-                    className="mr-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                    className="mr-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800"
                   >
                     Abbrechen
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-800 rounded-md hover:bg-blue-700 dark:hover:bg-blue-900"
                     disabled={loading}
                   >
                     {loading ? 'Wird erstellt...' : 'Erstellen'}
@@ -610,15 +610,15 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
       
       {/* Sidepane von rechts einfahren */}
       <div 
-        className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
       >
-        <div className="flex items-center justify-between p-4 border-b">
-          <Dialog.Title className="text-lg font-semibold">
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+          <Dialog.Title className="text-lg font-semibold dark:text-white">
             Neuer Request
           </Dialog.Title>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
@@ -626,25 +626,25 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
 
         <div className="p-4 overflow-y-auto h-full">
           {error && (
-            <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+            <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Titel</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Titel</label>
               <input
                 type="text"
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               />
             </div>
 
             <div>
-              <label htmlFor="description_request_create" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="description_request_create" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Beschreibung
               </label>
               <div className="relative">
@@ -652,7 +652,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                   ref={textareaRef}
                   id="description_request_create"
                   rows={6}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   onPaste={handlePaste}
@@ -664,7 +664,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                  className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
                   title="Datei hinzufügen"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -678,8 +678,8 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                   className="hidden"
                 />
                 {uploading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
-                    <span className="text-sm text-gray-600">Wird hochgeladen...</span>
+                  <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">Wird hochgeladen...</span>
                   </div>
                 )}
               </div>
@@ -695,10 +695,10 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Verantwortlicher</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Verantwortlicher</label>
               <select
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
                 value={formData.responsible_id}
                 onChange={(e) => setFormData({ ...formData, responsible_id: e.target.value })}
               >
@@ -712,10 +712,10 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Niederlassung</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Niederlassung</label>
               <select
                 required
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
                 value={formData.branch_id}
                 onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
               >
@@ -729,10 +729,10 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Fälligkeitsdatum</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Fälligkeitsdatum</label>
               <input
                 type="date"
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
                 value={formData.due_date}
                 onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
               />
@@ -742,11 +742,11 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
               <input
                 type="checkbox"
                 id="create_todo_sidepane"
-                className="rounded border-gray-300 text-blue-600"
+                className="rounded border-gray-300 text-blue-600 dark:bg-gray-700 dark:text-gray-300"
                 checked={formData.create_todo}
                 onChange={(e) => setFormData({ ...formData, create_todo: e.target.checked })}
               />
-              <label htmlFor="create_todo_sidepane" className="ml-2 block text-sm text-gray-700">
+              <label htmlFor="create_todo_sidepane" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
                 Todo automatisch erstellen
               </label>
             </div>
@@ -755,13 +755,13 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
               <button
                 type="button"
                 onClick={onClose}
-                className="mr-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+                className="mr-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800"
               >
                 Abbrechen
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-800 rounded-md hover:bg-blue-700 dark:hover:bg-blue-900"
                 disabled={loading}
               >
                 {loading ? 'Wird erstellt...' : 'Erstellen'}

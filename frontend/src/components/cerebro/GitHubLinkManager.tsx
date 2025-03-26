@@ -124,11 +124,11 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
 
   return (
     <div className="github-link-manager">
-      <h3 className="text-lg font-medium mb-2">GitHub Markdown-Dateien</h3>
+      <h3 className="text-lg font-medium mb-2 dark:text-white">GitHub Markdown-Dateien</h3>
       
       {/* Fehleranzeige */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
@@ -137,7 +137,7 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
       <form onSubmit={addGitHubLink} className="mb-4">
         <div className="flex flex-col space-y-2">
           <div>
-            <label htmlFor="github-url" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="github-url" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               GitHub URL
             </label>
             <input
@@ -148,20 +148,20 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
               placeholder="https://github.com/username/repo/blob/main/file.md"
               className={`w-full px-3 py-2 border rounded-md ${
                 !isValidGitHubUrl(newLink.url) && newLink.url.length > 0
-                  ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
-                  : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
-              }`}
+                  ? 'border-red-300 dark:border-red-700 focus:ring-red-500 focus:border-red-500'
+                  : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500'
+              } dark:bg-gray-700 dark:text-white`}
               required
             />
             {!isValidGitHubUrl(newLink.url) && newLink.url.length > 0 && (
-              <p className="mt-1 text-sm text-red-600">
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
                 Bitte geben Sie eine gültige GitHub-URL ein.
               </p>
             )}
           </div>
           
           <div>
-            <label htmlFor="github-title" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="github-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Titel (optional)
             </label>
             <input
@@ -170,7 +170,7 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
               value={newLink.title}
               onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
               placeholder="z.B. Readme, Dokumentation, etc."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
           
@@ -179,8 +179,8 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
             disabled={loading || !isValidGitHubUrl(newLink.url)}
             className={`mt-2 px-4 py-2 rounded-md text-white ${
               loading || !isValidGitHubUrl(newLink.url)
-                ? 'bg-blue-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700'
+                ? 'bg-blue-400 dark:bg-blue-500/50 cursor-not-allowed'
+                : 'bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600'
             }`}
           >
             {loading ? 'Wird hinzugefügt...' : 'GitHub-Link hinzufügen'}
@@ -190,21 +190,21 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
       
       {/* Liste der vorhandenen GitHub-Links */}
       <div className="space-y-3">
-        <h4 className="text-md font-medium text-gray-700">Verknüpfte Markdown-Dateien</h4>
+        <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">Verknüpfte Markdown-Dateien</h4>
         
         {loading && links.length === 0 ? (
-          <div className="text-gray-500 italic">Lade GitHub-Links...</div>
+          <div className="text-gray-500 dark:text-gray-400 italic">Lade GitHub-Links...</div>
         ) : links.length === 0 ? (
-          <div className="text-gray-500 italic">Keine GitHub-Links vorhanden</div>
+          <div className="text-gray-500 dark:text-gray-400 italic">Keine GitHub-Links vorhanden</div>
         ) : (
           links.map((link) => (
-            <div key={link.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-md">
+            <div key={link.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-md dark:bg-gray-800">
               <div className="truncate flex-1">
                 <a 
                   href={link.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   {link.title || link.url}
                 </a>
@@ -212,7 +212,7 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
               
               <button
                 onClick={() => removeLink(link.id)}
-                className="ml-2 text-red-600 hover:text-red-800"
+                className="ml-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
                 title="GitHub-Link entfernen"
                 disabled={loading}
               >

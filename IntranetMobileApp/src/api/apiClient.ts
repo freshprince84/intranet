@@ -5,8 +5,8 @@
 
 import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ApiResponse, LoginCredentials, AuthResponse, Task, Request, User, Branch, Role, Document, PaginatedResponse, FilterOptions, Notification, NotificationType, WorkTime, WorkTimeStatistics } from '../types';
-import axiosInstance from '../config/axios.ts';
+import { ApiResponse, LoginCredentials, AuthResponse, Task, Request, User, Branch, Role, Document, PaginatedResponse, FilterOptions, Notification, NotificationType, WorkTime, WorkTimeStatistics, TaskStatus, MobileWorkTime } from '../types';
+import axiosInstance from '../config/axios';
 
 // Basis-API-Klasse
 class BaseApiService<T> {
@@ -144,8 +144,8 @@ class TaskApiService extends BaseApiService<Task> {
     super('/tasks');
   }
 
-  // Aufgabenstatus aktualisieren
-  async updateStatus(id: number, status: string): Promise<any> {
+  // Status einer Aufgabe aktualisieren
+  async updateStatus(id: number, status: TaskStatus): Promise<any> {
     const response = await axiosInstance.patch<any>(
       `${this.endpoint}/${id}/status`,
       { status }
@@ -154,9 +154,9 @@ class TaskApiService extends BaseApiService<Task> {
   }
 
   // Aufgaben für einen bestimmten Benutzer abrufen
-  async getByUser(userId: number): Promise<Task[]> {
+  async getByResponsible(userId: number): Promise<Task[]> {
     const response = await axiosInstance.get<Task[]>(
-      `${this.endpoint}/user/${userId}`
+      `${this.endpoint}/responsible/${userId}`
     );
     return response.data;
   }
@@ -165,6 +165,14 @@ class TaskApiService extends BaseApiService<Task> {
   async getByRole(roleId: number): Promise<Task[]> {
     const response = await axiosInstance.get<Task[]>(
       `${this.endpoint}/role/${roleId}`
+    );
+    return response.data;
+  }
+
+  // Aufgaben für eine bestimmte Qualitätskontrolle abrufen
+  async getByQualityControl(userId: number): Promise<Task[]> {
+    const response = await axiosInstance.get<Task[]>(
+      `${this.endpoint}/quality-control/${userId}`
     );
     return response.data;
   }
@@ -193,60 +201,86 @@ class RequestApiService extends BaseApiService<Request> {
   }
 }
 
-class WorktimeApiService extends BaseApiService<WorkTime> {
+class WorktimeApiService extends BaseApiService<MobileWorkTime> {
   constructor() {
     super('/worktime');
   }
 
-  // Aktiven Timer abrufen
-  async getActive(): Promise<any> {
-    const response = await axiosInstance.get<any>(
+  // Aktive Zeiterfassung abrufen
+  async getActive(): Promise<{ active: boolean; startTime?: string; id?: number; branchId?: number }> {
+    console.log('Rufe aktive Zeiterfassung ab');
+    const response = await axiosInstance.get<{ active: boolean; startTime?: string; id?: number; branchId?: number }>(
       `${this.endpoint}/active`
     );
+    console.log('Active worktime API response:', response.data);
     return response.data;
   }
 
-  // Timer starten
-  async start(branchId: number): Promise<any> {
-    const response = await axiosInstance.post<any>(
-      `${this.endpoint}/start`,
-      { branchId }
-    );
-    return response.data;
-  }
-
-  // Timer stoppen
-  async stop(id: number, notes?: string): Promise<any> {
-    const response = await axiosInstance.post<any>(
-      `${this.endpoint}/stop/${id}`,
-      { notes }
-    );
-    return response.data;
-  }
-
-  // Arbeitszeiten für ein bestimmtes Datum abrufen
-  async getByDate(date: string): Promise<WorkTime[]> {
-    const response = await axiosInstance.get<WorkTime[]>(
+  // Zeiterfassung für ein bestimmtes Datum abrufen
+  async getByDate(date: string): Promise<MobileWorkTime[]> {
+    const response = await axiosInstance.get<MobileWorkTime[]>(
       `${this.endpoint}?date=${date}`
     );
     return response.data;
   }
 
-  // Arbeitszeit-Statistiken abrufen
-  async getStats(weekStart: string): Promise<WorkTimeStatistics> {
-    const response = await axiosInstance.get<WorkTimeStatistics>(
-      `${this.endpoint}/stats`,
-      { params: { week: weekStart } }
+  // Zeiterfassung starten
+  async start(branchId: string): Promise<MobileWorkTime> {
+    const startTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+    const response = await axiosInstance.post<MobileWorkTime>(
+      `${this.endpoint}/start`,
+      { 
+        branchId,
+        startTime: startTime.toISOString()
+      }
     );
     return response.data;
   }
-  
-  // Offline-Eintrag mit dem Server synchronisieren
-  async syncOfflineEntries(entries: WorkTime[]): Promise<any> {
-    const response = await axiosInstance.post<any>(
-      `${this.endpoint}/sync-offline`,
-      { entries }
+
+  // Zeiterfassung stoppen
+  async stop(endTime?: Date): Promise<MobileWorkTime> {
+    // Wenn endTime nicht übergeben wurde, aktuelle Zeit verwenden
+    const stopTime = endTime || new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+    
+    console.log('Stopping timer with endTime:', stopTime.toISOString());
+    
+    const response = await axiosInstance.post<MobileWorkTime>(
+      `${this.endpoint}/stop`,
+      { 
+        endTime: stopTime.toISOString()
+      }
     );
+    
+    console.log('Stop timer response:', response.data);
+    
+    return response.data;
+  }
+
+  // Statistiken abrufen
+  async getStats(startDate: string, endDate?: string): Promise<WorkTimeStatistics> {
+    const response = await axiosInstance.get<WorkTimeStatistics>(
+      `${this.endpoint}/stats?startDate=${startDate}${endDate ? `&endDate=${endDate}` : ''}`
+    );
+    return response.data;
+  }
+
+  // Synchronisiere Offline-Einträge
+  async syncOfflineEntries(entries: MobileWorkTime[]): Promise<MobileWorkTime[]> {
+    console.log('Sending offline entries to sync:', entries);
+    
+    // Entferne überflüssige Felder, die das Backend verwirren könnten
+    const cleanedEntries = entries.map(entry => {
+      const { offlineId, synced, active, ...rest } = entry;
+      return rest;
+    });
+    
+    const response = await axiosInstance.post<MobileWorkTime[]>(
+      `${this.endpoint}/sync`,
+      cleanedEntries
+    );
+    
+    console.log('Sync response:', response.data);
+    
     return response.data;
   }
 }

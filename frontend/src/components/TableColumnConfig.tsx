@@ -51,23 +51,23 @@ const DraggableColumnItem: React.FC<DraggableItemProps> = ({
       }}
       onDragEnd={onDragEnd}
       className={`flex items-center justify-between p-2 rounded-md transition-colors duration-150
-        ${isDragging ? 'opacity-50 bg-gray-100' : ''}
-        ${isOver ? 'border-t-2 border-blue-500' : ''}
-        ${!isDragging && !isOver ? 'hover:bg-gray-50' : ''}`}
+        ${isDragging ? 'opacity-50 bg-gray-100 dark:bg-gray-700' : ''}
+        ${isOver ? 'border-t-2 border-blue-500 dark:border-blue-400' : ''}
+        ${!isDragging && !isOver ? 'hover:bg-gray-50 dark:hover:bg-gray-700' : ''}`}
     >
       <div className="flex items-center">
-        <Bars2Icon className="h-4 w-4 mr-2 text-gray-400 cursor-move" />
-        <span className="text-sm">{label}</span>
+        <Bars2Icon className="h-4 w-4 mr-2 text-gray-400 dark:text-gray-500 cursor-move" />
+        <span className="text-sm dark:text-gray-300">{label}</span>
       </div>
       <button
         onClick={() => onToggleVisibility(id)}
-        className="p-1 rounded-full hover:bg-gray-200"
+        className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
         title={isVisible ? "Spalte ausblenden" : "Spalte einblenden"}
       >
         {isVisible ? (
-          <EyeIcon className="w-4 h-4" />
+          <EyeIcon className="w-4 h-4 dark:text-gray-300" />
         ) : (
-          <EyeSlashIcon className="w-4 h-4 text-gray-400" />
+          <EyeSlashIcon className="w-4 h-4 text-gray-400 dark:text-gray-500" />
         )}
       </button>
     </li>
@@ -125,23 +125,23 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
   return (
     <div className="relative">
       <button
-        className="p-2 rounded-md hover:bg-gray-100"
+        className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
         onClick={() => setIsOpen(!isOpen)}
         title="Spalten konfigurieren"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 dark:text-gray-300">
           <path fillRule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 012 10z" clipRule="evenodd" />
         </svg>
       </button>
 
       {isOpen && (
         <div 
-          className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg z-10 border border-gray-300"
+          className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-md shadow-lg z-10 border border-gray-300 dark:border-gray-600"
           onDragOver={(e) => e.preventDefault()}
         >
-          <div className="p-2 border-b border-gray-200">
-            <h3 className="font-medium text-sm">Spalten konfigurieren</h3>
-            <p className="text-xs text-gray-500 mt-1">Ziehe die Spalten, um ihre Reihenfolge zu ändern</p>
+          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="font-medium text-sm dark:text-white">Spalten konfigurieren</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Ziehe die Spalten, um ihre Reihenfolge zu ändern</p>
           </div>
           <ul className="p-2 max-h-64 overflow-y-auto">
             {sortedColumns.map((column, index) => (
@@ -160,7 +160,7 @@ const TableColumnConfig: React.FC<TableColumnConfigProps> = ({
               />
             ))}
           </ul>
-          <div className="p-2 border-t border-gray-200 text-right">
+          <div className="p-2 border-t border-gray-200 dark:border-gray-700 text-right">
             <button
               onClick={handleClose}
               className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"

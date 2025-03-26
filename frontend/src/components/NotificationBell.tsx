@@ -10,7 +10,8 @@ import {
   Box, 
   Button, 
   Divider, 
-  CircularProgress
+  CircularProgress,
+  useTheme
 } from '@mui/material';
 import { BellIcon } from '@heroicons/react/24/outline';
 import { Notification, notificationApi } from '../api/notificationApi.ts';
@@ -25,6 +26,8 @@ const NotificationBell: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
   const navigate = useNavigate();
+  const theme = useTheme();
+  const isDarkMode = theme.palette.mode === 'dark';
   
   const open = Boolean(anchorEl);
   const id = open ? 'notification-popover' : undefined;
@@ -182,6 +185,7 @@ const NotificationBell: React.FC = () => {
         onClick={handleClick}
         aria-label="notifications"
         sx={{ mr: 1 }}
+        className="dark:text-gray-200"
       >
         <Badge badgeContent={unreadCount} color="error">
           <BellIcon className="h-6 w-6" />
@@ -203,9 +207,9 @@ const NotificationBell: React.FC = () => {
         }}
         sx={{ mt: 1 }}
       >
-        <Box sx={{ width: 320, maxHeight: 400, overflow: 'auto', pt: 1 }}>
-          <Box sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Typography variant="subtitle1" fontWeight="bold">
+        <Box sx={{ width: 320, maxHeight: 400, overflow: 'auto', pt: 1 }} className="dark:bg-gray-800">
+          <Box sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="dark:bg-gray-800">
+            <Typography variant="subtitle1" fontWeight="bold" className="dark:text-white">
               Benachrichtigungen
             </Typography>
             
@@ -214,30 +218,31 @@ const NotificationBell: React.FC = () => {
                 size="small" 
                 onClick={markAllAsRead}
                 sx={{ fontSize: '0.75rem' }}
+                className="dark:text-blue-400"
               >
                 Alle als gelesen markieren
               </Button>
             )}
           </Box>
           
-          <Divider />
+          <Divider className="dark:border-gray-700" />
           
           {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-              <CircularProgress size={24} />
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }} className="dark:bg-gray-800">
+              <CircularProgress size={24} className="dark:text-blue-400" />
             </Box>
           ) : error ? (
-            <Box sx={{ p: 2, textAlign: 'center' }}>
+            <Box sx={{ p: 2, textAlign: 'center' }} className="dark:bg-gray-800">
               <Typography color="error">{error}</Typography>
             </Box>
           ) : notifications.length === 0 ? (
-            <Box sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
+            <Box sx={{ p: 2, textAlign: 'center' }} className="dark:bg-gray-800">
+              <Typography variant="body2" color="text.secondary" className="dark:text-gray-400">
                 Keine Benachrichtigungen vorhanden
               </Typography>
             </Box>
           ) : (
-            <List sx={{ p: 0 }}>
+            <List sx={{ p: 0 }} className="dark:bg-gray-800">
               {notifications.map((notification) => (
                 <React.Fragment key={notification.id}>
                   <ListItem
@@ -250,29 +255,30 @@ const NotificationBell: React.FC = () => {
                         bgcolor: notification.read ? 'rgba(0, 0, 0, 0.04)' : 'rgba(25, 118, 210, 0.12)',
                       }
                     }}
+                    className={`dark:hover:bg-gray-700 ${notification.read ? 'dark:bg-gray-800' : 'dark:bg-gray-700'}`}
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <ListItemText
-                      primary={notification.title}
+                      primary={<span className="dark:text-white">{notification.title}</span>}
                       secondary={
                         <React.Fragment>
-                          <Typography variant="body2" component="span">
+                          <Typography variant="body2" component="span" className="dark:text-gray-300">
                             {notification.message}
                           </Typography>
-                          <Typography variant="caption" component="div" color="text.secondary">
+                          <Typography variant="caption" component="div" color="text.secondary" className="dark:text-gray-400">
                             {new Date(notification.createdAt).toLocaleString()}
                           </Typography>
                         </React.Fragment>
                       }
                     />
                   </ListItem>
-                  <Divider />
+                  <Divider className="dark:border-gray-700" />
                 </React.Fragment>
               ))}
             </List>
           )}
           
-          <Box sx={{ p: 1, textAlign: 'center' }}>
+          <Box sx={{ p: 1, textAlign: 'center' }} className="dark:bg-gray-800">
             <Button 
               size="small" 
               onClick={() => {
@@ -280,6 +286,7 @@ const NotificationBell: React.FC = () => {
                 handleClose();
               }}
               fullWidth
+              className="dark:text-blue-400 dark:hover:bg-gray-700"
             >
               Alle Benachrichtigungen anzeigen
             </Button>

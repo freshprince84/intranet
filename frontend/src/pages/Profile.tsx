@@ -227,14 +227,14 @@ const Profile: React.FC = () => {
       {activeTab === 'profile' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center">
+            <h2 className="text-xl font-semibold flex items-center dark:text-white">
               <UserCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
               Benutzerprofil
             </h2>
             {!isEditing && (
               <button
                 onClick={startEditing}
-                className="text-blue-600 hover:text-blue-900"
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
               >
                 <PencilIcon className="h-5 w-5" />
               </button>
@@ -253,7 +253,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.username || '' : user.username || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
@@ -267,7 +267,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.email || '' : user.email || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
@@ -281,7 +281,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.firstName || '' : user.firstName || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
@@ -295,7 +295,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.lastName || '' : user.lastName || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
@@ -309,7 +309,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.birthday || '' : user.birthday || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
@@ -323,7 +323,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.bankDetails || '' : user.bankDetails || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
@@ -337,7 +337,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.contract || '' : user.contract || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
@@ -351,7 +351,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.salary || '' : user.salary || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
@@ -365,7 +365,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.normalWorkingHours || '' : user.normalWorkingHours || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
@@ -378,7 +378,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.country || '' : user.country || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">Select a country</option>
                   {COUNTRIES.map((country) => (
@@ -398,7 +398,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.language || '' : user.language || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">Select a language</option>
                   {LANGUAGES.map((language) => (
@@ -419,7 +419,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.identificationType || '' : user.identificationType || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">Bitte auswählen</option>
                   {ID_TYPES.map((type) => (
@@ -440,7 +440,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.identificationNumber || '' : user.identificationNumber || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
 
@@ -453,7 +453,7 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.identificationIssuingCountry || '' : user.identificationIssuingCountry || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 >
                   <option value="">Bitte auswählen</option>
                   {COUNTRIES.map((country) => (
@@ -474,28 +474,25 @@ const Profile: React.FC = () => {
                   value={isEditing ? formData.identificationExpiryDate || '' : user.identificationExpiryDate || ''}
                   onChange={handleInputChange}
                   disabled={!isEditing}
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
               </div>
             </div>
 
             {isEditing && (
-              <div className="flex justify-end space-x-4 mt-6">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsEditing(false);
-                    setFormData(user);
-                  }}
-                  className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
-                >
-                  Abbrechen
-                </button>
+              <div className="flex mt-6 space-x-3">
                 <button
                   type="submit"
-                  className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
                 >
                   Speichern
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                >
+                  Abbrechen
                 </button>
               </div>
             )}
@@ -504,7 +501,9 @@ const Profile: React.FC = () => {
       )}
 
       {activeTab === 'documents' && user && (
-        <IdentificationDocumentList userId={user.id} />
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <IdentificationDocumentList userId={user.id} />
+        </div>
       )}
     </div>
   );

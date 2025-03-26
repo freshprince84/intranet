@@ -374,7 +374,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
         <select
           id="userSelect"
           onChange={handleUserSelect}
-          className="w-full rounded-md border border-gray-300 px-3 py-2"
+          className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
         >
           <option value="">-- Benutzer auswählen --</option>
           {users.map(user => (
@@ -388,7 +388,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       {selectedUser && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">
+            <h2 className="text-xl font-semibold dark:text-white">
               Benutzer: {selectedUser.firstName} {selectedUser.lastName}
             </h2>
             {!isEditingUser && (
@@ -458,7 +458,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     value={isEditingUser ? userFormData.username || '' : selectedUser.username || ''}
                     onChange={handleUserInputChange}
                     disabled={!isEditingUser}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
@@ -472,7 +472,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     value={isEditingUser ? userFormData.email || '' : selectedUser.email || ''}
                     onChange={handleUserInputChange}
                     disabled={!isEditingUser}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
@@ -486,7 +486,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     value={isEditingUser ? userFormData.firstName || '' : selectedUser.firstName || ''}
                     onChange={handleUserInputChange}
                     disabled={!isEditingUser}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
@@ -500,7 +500,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     value={isEditingUser ? userFormData.lastName || '' : selectedUser.lastName || ''}
                     onChange={handleUserInputChange}
                     disabled={!isEditingUser}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
@@ -514,7 +514,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     value={isEditingUser ? userFormData.birthday || '' : selectedUser.birthday || ''}
                     onChange={handleUserInputChange}
                     disabled={!isEditingUser}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
@@ -528,7 +528,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     value={isEditingUser ? userFormData.bankDetails || '' : selectedUser.bankDetails || ''}
                     onChange={handleUserInputChange}
                     disabled={!isEditingUser}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
@@ -542,7 +542,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     value={isEditingUser ? userFormData.contract || '' : selectedUser.contract || ''}
                     onChange={handleUserInputChange}
                     disabled={!isEditingUser}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
@@ -556,7 +556,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     value={isEditingUser ? (userFormData.salary === null ? '' : userFormData.salary) : (selectedUser.salary === null ? '' : selectedUser.salary)}
                     onChange={handleUserInputChange}
                     disabled={!isEditingUser}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
@@ -571,7 +571,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     value={isEditingUser ? (userFormData.normalWorkingHours === null ? '7.6' : userFormData.normalWorkingHours) : (selectedUser.normalWorkingHours === null ? '7.6' : selectedUser.normalWorkingHours)}
                     onChange={handleUserInputChange}
                     disabled={!isEditingUser}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
@@ -584,7 +584,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     value={isEditingUser ? userFormData.country || 'CO' : selectedUser.country || 'CO'}
                     onChange={handleUserInputChange}
                     disabled={!isEditingUser}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   >
                     {COUNTRIES.map((country) => (
                       <option key={country.code} value={country.code}>
@@ -603,7 +603,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     value={isEditingUser ? userFormData.language || 'es' : selectedUser.language || 'es'}
                     onChange={handleUserInputChange}
                     disabled={!isEditingUser}
-                    className="w-full px-3 py-2 border rounded-md"
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   >
                     {LANGUAGES.map((language) => (
                       <option key={language.code} value={language.code}>
@@ -616,11 +616,11 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
 
               {/* Lohnabrechnung-Einstellungen */}
               <div className="mt-4 border-t pt-4">
-                <h3 className="text-lg font-semibold mb-4">Lohnabrechnung-Einstellungen</h3>
+                <h3 className="text-lg font-semibold mb-4 dark:text-white">Lohnabrechnung-Einstellungen</h3>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Abrechnungsland
                     </label>
                     <select
@@ -628,7 +628,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                       value={isEditingUser ? userFormData.payrollCountry || (selectedUser.payrollCountry || 'CH') : (selectedUser.payrollCountry || 'CH')}
                       onChange={handleUserInputChange}
                       disabled={!isEditingUser}
-                      className="w-full px-3 py-2 border rounded-md"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                     >
                       {PAYROLL_COUNTRIES.map(country => (
                         <option key={country.code} value={country.code}>
@@ -641,7 +641,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   {(userFormData.payrollCountry === 'CO' || 
                     (selectedUser.payrollCountry === 'CO' && !userFormData.payrollCountry)) && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Vertragsart
                       </label>
                       <select
@@ -649,7 +649,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                         value={isEditingUser ? userFormData.contractType || '' : selectedUser.contractType || ''}
                         onChange={handleUserInputChange}
                         disabled={!isEditingUser}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                       >
                         <option value="">Bitte auswählen</option>
                         {CONTRACT_TYPES.map(type => (
@@ -664,7 +664,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                       Stundensatz ({(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? 'CHF' : 'COP'})
                     </label>
                     <input
@@ -677,7 +677,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                         : (selectedUser.hourlyRate === null || selectedUser.hourlyRate === undefined ? '' : selectedUser.hourlyRate)}
                       onChange={handleUserInputChange}
                       disabled={!isEditingUser}
-                      className="w-full px-3 py-2 border rounded-md"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                       placeholder={(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? 'z.B. 45.00' : 'z.B. 50000'}
                     />
                   </div>
@@ -686,7 +686,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     (userFormData.contractType !== 'servicios_externos' && selectedUser.contractType !== 'servicios_externos') &&
                     (userFormData.contractType || selectedUser.contractType)) && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Monatliches Gehalt (COP)
                       </label>
                       <input
@@ -699,7 +699,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                           : (selectedUser.monthlySalary === null || selectedUser.monthlySalary === undefined ? '' : selectedUser.monthlySalary)}
                         onChange={handleUserInputChange}
                         disabled={!isEditingUser}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                         placeholder="z.B. 3500000"
                       />
                     </div>
@@ -712,7 +712,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   <button
                     type="button"
                     onClick={() => setIsEditingUser(false)}
-                    className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded mr-2"
+                    className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 px-4 py-2 rounded mr-2"
                   >
                     Abbrechen
                   </button>
@@ -738,16 +738,16 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
               {/* Rollenzuweisung - nur anzeigen, wenn Rollen geladen wurden */}
               {loadingRoles ? (
                 <div className="mt-4 mb-4">
-                  <h3 className="text-lg font-semibold mb-4">Rollenzuweisung</h3>
-                  <p>Rollen werden geladen...</p>
+                  <h3 className="text-lg font-semibold mb-4 dark:text-white">Rollenzuweisung</h3>
+                  <p className="dark:text-gray-300">Rollen werden geladen...</p>
                 </div>
               ) : roles.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Rollenzuweisung</h3>
+                  <h3 className="text-lg font-semibold mb-4 dark:text-white">Rollenzuweisung</h3>
                   
                   {/* Überprüfung auf unbekannte Rollen */}
                   {selectedRoles.some(roleId => !roles.some(role => role.id === roleId)) && (
-                    <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
+                    <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-700 text-yellow-700 dark:text-yellow-300 px-4 py-3 rounded mb-4">
                       <p className="font-bold">Achtung: Unbekannte Rollen-IDs gefunden</p>
                       <p>Einige Rollen-IDs des Benutzers ({
                         selectedRoles.filter(roleId => !roles.some(role => role.id === roleId)).join(', ')
@@ -758,9 +758,9 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   
                   {/* Aktuell zugewiesene Rollen */}
                   <div className="mb-4">
-                    <h4 className="font-medium text-gray-700 mb-2">Aktuelle Rollen</h4>
+                    <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Aktuelle Rollen</h4>
                     {selectedRoles.length === 0 ? (
-                      <p className="text-gray-500 italic">Keine Rollen zugewiesen</p>
+                      <p className="text-gray-500 dark:text-gray-400 italic">Keine Rollen zugewiesen</p>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Bekannte zugewiesene Rollen */}
@@ -772,12 +772,12 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                             return (
                               <div 
                                 key={role.id} 
-                                className={`border rounded-lg p-4 ${isFixedRole ? 'border-green-500 bg-green-50 cursor-not-allowed' : 'border-blue-500 bg-blue-50 cursor-pointer'}`}
+                                className={`border rounded-lg p-4 ${isFixedRole ? 'border-green-500 bg-green-50 dark:bg-green-900/20 dark:border-green-700 cursor-not-allowed' : 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 cursor-pointer'}`}
                                 onClick={() => !isFixedRole && toggleRole(role.id)}
                               >
                                 <div className="flex justify-between items-center">
                                   <div>
-                                    <h4 className="font-medium flex items-center">
+                                    <h4 className="font-medium flex items-center dark:text-white">
                                       {role.name}
                                       {isFixedRole && (
                                         <span className="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">
@@ -785,9 +785,9 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                                         </span>
                                       )}
                                     </h4>
-                                    <p className="text-sm text-gray-600">{role.description}</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">{role.description}</p>
                                   </div>
-                                  <div className={`flex items-center ${isFixedRole ? 'text-gray-400' : 'text-blue-600'}`}>
+                                  <div className={`flex items-center ${isFixedRole ? 'text-gray-400 dark:text-gray-500' : 'text-blue-600 dark:text-blue-400'}`}>
                                     <span className="mr-2 text-sm">{isFixedRole ? 'Fest zugewiesen' : 'Entfernen'}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
@@ -830,9 +830,9 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   
                   {/* Verfügbare Rollen */}
                   <div>
-                    <h4 className="font-medium text-gray-700 mb-2">Verfügbare Rollen</h4>
+                    <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Verfügbare Rollen</h4>
                     {roles.filter(role => !selectedRoles.includes(role.id)).length === 0 ? (
-                      <p className="text-gray-500 italic">Keine weiteren Rollen verfügbar</p>
+                      <p className="text-gray-500 dark:text-gray-400 italic">Keine weiteren Rollen verfügbar</p>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {roles

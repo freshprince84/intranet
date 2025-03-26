@@ -107,31 +107,31 @@ const WorktimeList: React.FC = () => {
         return 0;
     });
 
-    if (loading) return <div className="p-4">Lädt...</div>;
-    if (error) return <div className="p-4 text-red-600">{error}</div>;
+    if (loading) return <div className="p-4 dark:text-gray-200">Lädt...</div>;
+    if (error) return <div className="p-4 text-red-600 dark:text-red-400">{error}</div>;
 
     return (
-        <div className="bg-white rounded-lg border border-gray-300 dark:border-gray-700">
-            <div className="p-4 border-b">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700">
+            <div className="p-4 border-b dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold">Zeiteinträge</h2>
+                    <h2 className="text-xl font-semibold dark:text-white">Zeiteinträge</h2>
                     <div className="relative">
                         <input
                             type="date"
                             value={dateFilter}
                             onChange={(e) => setDateFilter(e.target.value)}
-                            className="border rounded-md px-3 py-2"
+                            className="border dark:border-gray-600 rounded-md px-3 py-2 dark:bg-gray-700 dark:text-white"
                         />
                     </div>
                 </div>
             </div>
 
             <div className="overflow-x-auto mobile-table-container">
-                <table className="min-w-full divide-y divide-gray-200 worktime-table">
-                    <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 worktime-table">
+                    <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
                             <th 
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('startTime')}
                             >
                                 <span className="hidden sm:inline">Start</span>
@@ -139,7 +139,7 @@ const WorktimeList: React.FC = () => {
                                 {sortConfig.key === 'startTime' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('endTime')}
                             >
                                 <span className="hidden sm:inline">Ende</span>
@@ -147,7 +147,7 @@ const WorktimeList: React.FC = () => {
                                 {sortConfig.key === 'endTime' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('duration')}
                             >
                                 <span className="hidden sm:inline">Dauer</span>
@@ -155,45 +155,45 @@ const WorktimeList: React.FC = () => {
                                 {sortConfig.key === 'duration' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('branch.name')}
                             >
                                 <span className="hidden sm:inline">Niederlassung</span>
                                 <span className="inline sm:hidden">Niedr.</span>
                                 {sortConfig.key === 'branch.name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
-                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                                 <span className="hidden sm:inline">Aktionen</span>
                                 <span className="inline sm:hidden">Akt.</span>
                             </th>
                         </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {sortedWorktimes.map((worktime) => (
-                            <tr key={worktime.id} className="hover:bg-gray-50">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            <tr key={worktime.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                     {formatTime(worktime.startTime)}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                     {worktime.endTime ? formatTime(worktime.endTime) : '-'}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                     {calculateDuration(worktime.startTime, worktime.endTime)}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
                                     {worktime.branch.name}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                     <div className="flex justify-end space-x-2 action-buttons">
                                         <button
                                             onClick={() => {/* TODO: Implement edit */}}
-                                            className="text-gray-600 hover:text-gray-900"
+                                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
                                         >
                                             <PencilIcon className="h-5 w-5" />
                                         </button>
                                         <button
                                             onClick={() => handleDelete(worktime.id)}
-                                            className="text-red-600 hover:text-red-900"
+                                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                                         >
                                             <TrashIcon className="h-5 w-5" />
                                         </button>

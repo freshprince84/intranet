@@ -202,162 +202,99 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
 
   // Filtern und sortieren der Zeiterfassungen
   const filteredAndSortedWorktimes = useMemo(() => {
-    // Filtern nach Suchbegriff und anderen Filterkriterien
-    let filtered = worktimes.filter(worktime => {
-      // Branch-Filter
-      const branch = worktime.branch?.name?.toLowerCase() || '';
-      const branchMatch = !filterState.branch || branch.includes(filterState.branch.toLowerCase());
-      
-      // Datum/Zeit-Filter
-      let startTimeMatch = true;
-      let endTimeMatch = true;
-      
-      // Entferne 'Z' für korrekte Interpretation
-      const startISOString = worktime.startTime.endsWith('Z')
-        ? worktime.startTime.substring(0, worktime.startTime.length - 1)
-        : worktime.startTime;
-      
-      const startTime = new Date(startISOString);
-      
-      // Prüfe startDateFrom
-      if (filterState.startDateFrom) {
-        const fromDate = new Date(filterState.startDateFrom);
-        startTimeMatch = startTimeMatch && startTime >= fromDate;
-      }
-      
-      // Prüfe startDateTo
-      if (filterState.startDateTo) {
-        const toDate = new Date(filterState.startDateTo);
-        toDate.setHours(23, 59, 59, 999); // Ende des Tages
-        startTimeMatch = startTimeMatch && startTime <= toDate;
-      }
-      
-      // Endzeit-Filter nur anwenden, wenn Endzeit vorhanden
-      if (worktime.endTime) {
-        const endISOString = worktime.endTime.endsWith('Z')
-          ? worktime.endTime.substring(0, worktime.endTime.length - 1)
-          : worktime.endTime;
+    return [...worktimes]
+      .filter(worktime => {
+        // Suche
+        const branchName = worktime.branch?.name?.toLowerCase() || '';
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = searchTerm === '' || branchName.includes(searchLower);
         
-        const endTime = new Date(endISOString);
+        // Filter
+        const matchesBranch = !filterState.branch || worktime.branch?.name === filterState.branch;
         
-        // Prüfe endDateFrom
-        if (filterState.endDateFrom) {
-          const fromDate = new Date(filterState.endDateFrom);
-          endTimeMatch = endTimeMatch && endTime >= fromDate;
+        const startTime = new Date(worktime.startTime);
+        const startDateFrom = filterState.startDateFrom ? new Date(filterState.startDateFrom) : null;
+        const startDateTo = filterState.startDateTo ? new Date(filterState.startDateTo) : null;
+        
+        const matchesStartDate = (
+          (!startDateFrom || startTime >= startDateFrom) &&
+          (!startDateTo || startTime <= startDateTo)
+        );
+        
+        const endTime = worktime.endTime ? new Date(worktime.endTime) : null;
+        const endDateFrom = filterState.endDateFrom ? new Date(filterState.endDateFrom) : null;
+        const endDateTo = filterState.endDateTo ? new Date(filterState.endDateTo) : null;
+        
+        const matchesEndDate = (
+          !worktime.endTime ||
+          (!endDateFrom || (endTime && endTime >= endDateFrom)) &&
+          (!endDateTo || (endTime && endTime <= endDateTo))
+        );
+        
+        return matchesSearch && matchesBranch && matchesStartDate && matchesEndDate;
+      })
+      .sort((a, b) => {
+        // Sortierung
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+        
+        if (sortConfig.key === 'branch') {
+          const aName = a.branch?.name || '';
+          const bName = b.branch?.name || '';
+          return sortConfig.direction === 'asc' ? aName.localeCompare(bName) : bName.localeCompare(aName);
         }
         
-        // Prüfe endDateTo
-        if (filterState.endDateTo) {
-          const toDate = new Date(filterState.endDateTo);
-          toDate.setHours(23, 59, 59, 999); // Ende des Tages
-          endTimeMatch = endTimeMatch && endTime <= toDate;
+        if (sortConfig.key === 'duration') {
+          const aStart = new Date(a.startTime);
+          const aEnd = a.endTime ? new Date(a.endTime) : null;
+          const aDuration = aEnd ? aEnd.getTime() - aStart.getTime() : 0;
+          
+          const bStart = new Date(b.startTime);
+          const bEnd = b.endTime ? new Date(b.endTime) : null;
+          const bDuration = bEnd ? bEnd.getTime() - bStart.getTime() : 0;
+          
+          return sortConfig.direction === 'asc' ? aDuration - bDuration : bDuration - aDuration;
         }
-      }
-      
-      // Alle Bedingungen müssen erfüllt sein
-      return branchMatch && startTimeMatch && endTimeMatch;
-    });
-    
-    // Sortieren
-    if (sortConfig.key) {
-      filtered.sort((a, b) => {
-        let valueA: number | null | undefined;
-        let valueB: number | null | undefined;
+        
+        if (!aValue || !bValue) return 0;
         
         if (sortConfig.key === 'startTime' || sortConfig.key === 'endTime') {
-          // Entferne 'Z' für korrekte Interpretation
-          const aISOString = a[sortConfig.key] ? (a[sortConfig.key].endsWith('Z')
-            ? a[sortConfig.key].substring(0, a[sortConfig.key].length - 1)
-            : a[sortConfig.key]) : null;
-          
-          const bISOString = b[sortConfig.key] ? (b[sortConfig.key].endsWith('Z')
-            ? b[sortConfig.key].substring(0, b[sortConfig.key].length - 1)
-            : b[sortConfig.key]) : null;
-          
-          // Wenn einer der Werte null ist (z.B. bei endTime)
-          if (!aISOString && !bISOString) return 0;
-          if (!aISOString) return sortConfig.direction === 'asc' ? 1 : -1;
-          if (!bISOString) return sortConfig.direction === 'asc' ? -1 : 1;
-          
-          valueA = new Date(aISOString).getTime();
-          valueB = new Date(bISOString).getTime();
-        } else if (sortConfig.key === 'duration') {
-          // Berechne Dauer für Sortierung
-          const startAISOString = a.startTime.endsWith('Z')
-            ? a.startTime.substring(0, a.startTime.length - 1)
-            : a.startTime;
-          
-          const startBISOString = b.startTime.endsWith('Z')
-            ? b.startTime.substring(0, b.startTime.length - 1)
-            : b.startTime;
-          
-          const startA = new Date(startAISOString).getTime();
-          const startB = new Date(startBISOString).getTime();
-          
-          let endA = null, endB = null;
-          
-          if (a.endTime) {
-            const endAISOString = a.endTime.endsWith('Z')
-              ? a.endTime.substring(0, a.endTime.length - 1)
-              : a.endTime;
-            endA = new Date(endAISOString).getTime();
-          }
-          
-          if (b.endTime) {
-            const endBISOString = b.endTime.endsWith('Z')
-              ? b.endTime.substring(0, b.endTime.length - 1)
-              : b.endTime;
-            endB = new Date(endBISOString).getTime();
-          }
-          
-          // Berechne Dauer, falls möglich
-          valueA = endA ? endA - startA : null;
-          valueB = endB ? endB - startB : null;
-          
-          // Wenn einer der Werte null ist
-          if (valueA === null && valueB === null) return 0;
-          if (valueA === null) return sortConfig.direction === 'asc' ? 1 : -1;
-          if (valueB === null) return sortConfig.direction === 'asc' ? -1 : 1;
-        } else if (sortConfig.key === 'branch') {
-          valueA = a.branch.name;
-          valueB = b.branch.name;
-        } else {
-          valueA = a[sortConfig.key];
-          valueB = b[sortConfig.key];
+          const aDate = new Date(aValue);
+          const bDate = new Date(bValue);
+          return sortConfig.direction === 'asc' ? aDate.getTime() - bDate.getTime() : bDate.getTime() - aDate.getTime();
         }
         
-        if (valueA < valueB) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (valueA > valueB) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
+        return sortConfig.direction === 'asc'
+          ? aValue.toString().localeCompare(bValue.toString())
+          : bValue.toString().localeCompare(aValue.toString());
       });
-    }
-    
-    return filtered;
-  }, [worktimes, filterState, sortConfig]);
+  }, [worktimes, searchTerm, filterState, sortConfig]);
 
-  // Render-Methode für Spaltenheader
+  // Rendere die Kopfzeile mit Sortierbarkeit
   const renderSortableHeader = (columnId: string, label: string) => {
-    const isSorted = sortConfig.key === columnId;
-    
     return (
       <th
-        scope="col"
-        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer group relative"
-        onClick={() => handleSort(columnId)}
+        key={columnId}
         draggable
         onDragStart={() => handleDragStart(columnId)}
         onDragOver={handleDragOver}
         onDrop={(e) => handleDrop(e, columnId)}
         onDragEnd={handleDragEnd}
+        className={`px-3 py-3 text-left text-xs font-medium uppercase tracking-wider cursor-pointer select-none ${
+          draggedColumn === columnId ? 'opacity-50 bg-blue-100 dark:bg-blue-900/30' : ''
+        }`}
+        style={{ minWidth: columnId === 'actions' ? '120px' : '150px' }}
       >
-        <div className={`flex items-center ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
-          <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />
-          {label} {isSorted && (
-            sortConfig.direction === 'asc' ? '↑' : '↓'
+        <div className="flex items-center text-gray-500 dark:text-gray-300" onClick={() => handleSort(columnId)}>
+          {label}
+          {sortConfig.key === columnId ? (
+            sortConfig.direction === 'asc' ? (
+              <ChevronUpIcon className="w-4 h-4 ml-1" />
+            ) : (
+              <ChevronDownIcon className="w-4 h-4 ml-1" />
+            )
+          ) : (
+            <ArrowsUpDownIcon className="w-4 h-4 ml-1 opacity-30" />
           )}
         </div>
       </th>
@@ -365,286 +302,277 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
   };
 
   return (
-    <div className="mt-6">
-      {/* Header mit Suche und Filteroptionen */}
-      <div className="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0 mb-4">
-        <h3 className="text-lg font-medium text-gray-900">
-          Zeiterfassungen ({filteredAndSortedWorktimes.length})
-        </h3>
-        
-        <div className="flex flex-wrap items-center">
-          {/* Filterschaltfläche */}
+    <div className="relative">
+      {/* Tabellen-Steuerelemente */}
+      <div className="mb-4 flex flex-wrap gap-2 justify-between">
+        <div className="flex space-x-2">
+          {/* Suchfeld */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <MagnifyingGlassIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+            </div>
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Suchen..."
+              className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+            />
+          </div>
+          
+          {/* Filter-Button */}
           <button
-            type="button"
-            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            title="Filter anzeigen"
+            className={`px-3 py-2 border ${
+              Object.values(filterState).some(v => v !== '')
+                ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
+                : 'bg-white text-gray-600 border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'
+            } rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center`}
           >
-            <FunnelIcon className="h-5 w-5" />
+            <FunnelIcon className="w-4 h-4 mr-2" />
+            Filter
+            {Object.values(filterState).some(v => v !== '') && (
+              <span className="ml-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs rounded-full px-1.5">
+                {Object.values(filterState).filter(v => v !== '').length}
+              </span>
+            )}
+          </button>
+        </div>
+        
+        {/* Spalten-Konfiguration */}
+        <div className="relative">
+          <button
+            onClick={() => setIsColumnConfigOpen(!isColumnConfigOpen)}
+            className="px-3 py-2 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center"
+          >
+            <Bars3Icon className="w-4 h-4 mr-2" />
+            Spalten
           </button>
           
-          {/* Spaltenkonfiguration */}
-          <div className="ml-1">
+          {isColumnConfigOpen && (
             <TableColumnConfig
               columns={availableColumns}
               visibleColumns={columnOrder.filter(id => !hiddenColumns.includes(id))}
               columnOrder={columnOrder}
               onToggleColumnVisibility={handleToggleColumnVisibility}
               onMoveColumn={handleMoveColumn}
-              onClose={() => {}}
+              onClose={() => setIsColumnConfigOpen(false)}
             />
-          </div>
+          )}
         </div>
       </div>
       
-      {/* Filter-Panel */}
+      {/* Filter-Bereich */}
       {isFilterOpen && (
-        <div className="bg-gray-50 p-4 rounded-md mb-4 border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="branch-filter" className="block text-sm font-medium text-gray-700">Niederlassung</label>
-              <input
-                id="branch-filter"
-                type="text"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={filterState.branch}
-                onChange={(e) => setFilterState({...filterState, branch: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="startDate-from" className="block text-sm font-medium text-gray-700">Startzeit von</label>
-              <input
-                id="startDate-from"
-                type="date"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={filterState.startDateFrom}
-                onChange={(e) => setFilterState({...filterState, startDateFrom: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="startDate-to" className="block text-sm font-medium text-gray-700">Startzeit bis</label>
-              <input
-                id="startDate-to"
-                type="date"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={filterState.startDateTo}
-                onChange={(e) => setFilterState({...filterState, startDateTo: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="endDate-from" className="block text-sm font-medium text-gray-700">Endzeit von</label>
-              <input
-                id="endDate-from"
-                type="date"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={filterState.endDateFrom}
-                onChange={(e) => setFilterState({...filterState, endDateFrom: e.target.value})}
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="endDate-to" className="block text-sm font-medium text-gray-700">Endzeit bis</label>
-              <input
-                id="endDate-to"
-                type="date"
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                value={filterState.endDateTo}
-                onChange={(e) => setFilterState({...filterState, endDateTo: e.target.value})}
-              />
-            </div>
-          </div>
-          
-          <div className="mt-4 flex justify-end space-x-2">
+        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter</h3>
             <button
-              type="button"
-              className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              onClick={() => setFilterState({
-                branch: '',
-                startDateFrom: '',
-                startDateTo: '',
-                endDateFrom: '',
-                endDateTo: ''
-              })}
+              onClick={() => {
+                setFilterState({
+                  branch: '',
+                  startDateFrom: '',
+                  startDateTo: '',
+                  endDateFrom: '',
+                  endDateTo: ''
+                });
+              }}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
             >
               Zurücksetzen
             </button>
           </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Niederlassung */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Niederlassung
+              </label>
+              <select
+                value={filterState.branch}
+                onChange={(e) => setFilterState({...filterState, branch: e.target.value})}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Alle</option>
+                {[...new Set(worktimes.map(w => w.branch?.name))].filter(Boolean).map(branchName => (
+                  <option key={branchName} value={branchName}>
+                    {branchName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Startzeit von */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Startzeit Von
+              </label>
+              <input
+                type="datetime-local"
+                value={filterState.startDateFrom}
+                onChange={(e) => setFilterState({...filterState, startDateFrom: e.target.value})}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            
+            {/* Startzeit bis */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Startzeit Bis
+              </label>
+              <input
+                type="datetime-local"
+                value={filterState.startDateTo}
+                onChange={(e) => setFilterState({...filterState, startDateTo: e.target.value})}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            
+            {/* Endzeit von */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Endzeit Von
+              </label>
+              <input
+                type="datetime-local"
+                value={filterState.endDateFrom}
+                onChange={(e) => setFilterState({...filterState, endDateFrom: e.target.value})}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            
+            {/* Endzeit bis */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Endzeit Bis
+              </label>
+              <input
+                type="datetime-local"
+                value={filterState.endDateTo}
+                onChange={(e) => setFilterState({...filterState, endDateTo: e.target.value})}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+          </div>
         </div>
       )}
       
-      <div className="border-0 rounded-lg overflow-hidden shadow-sm">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      {/* Tabelle */}
+      <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
               {columnOrder
-                .filter(columnId => !hiddenColumns.includes(columnId))
+                .filter(columnId => isColumnVisible(columnId))
                 .map(columnId => {
                   const column = availableColumns.find(col => col.id === columnId);
-                  if (!column) return null;
-                  
-                  if (columnId === 'actions') {
-                    return (
-                      <th
-                        key={columnId}
-                        scope="col"
-                        className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        draggable
-                        onDragStart={() => handleDragStart(columnId)}
-                        onDragOver={handleDragOver}
-                        onDrop={(e) => handleDrop(e, columnId)}
-                        onDragEnd={handleDragEnd}
-                      >
-                        {column.label}
-                      </th>
-                    );
-                  }
-                  
-                  return renderSortableHeader(columnId, column.label);
-                })
-              }
+                  return column ? renderSortableHeader(columnId, column.label) : null;
+                })}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {filteredAndSortedWorktimes.length === 0 ? (
+          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            {loading ? (
               <tr>
-                <td 
-                  colSpan={columnOrder.filter(id => !hiddenColumns.includes(id)).length} 
-                  className="px-6 py-4 text-center text-sm text-gray-500"
-                >
-                  Keine Zeiterfassungen für diesen Tag gefunden
+                <td colSpan={columnOrder.filter(columnId => isColumnVisible(columnId)).length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  Lade Daten...
+                </td>
+              </tr>
+            ) : filteredAndSortedWorktimes.length === 0 ? (
+              <tr>
+                <td colSpan={columnOrder.filter(columnId => isColumnVisible(columnId)).length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  Keine Daten gefunden
                 </td>
               </tr>
             ) : (
-              filteredAndSortedWorktimes.map((worktime) => {
-                // Entferne das 'Z' am Ende des Strings, damit JS den Zeitstempel nicht als UTC interpretiert
-                const startISOString = worktime.startTime.endsWith('Z')
-                  ? worktime.startTime.substring(0, worktime.startTime.length - 1)
-                  : worktime.startTime;
-                
-                const startTime = new Date(startISOString);
-                
-                let endTime: Date | null = null;
-                if (worktime.endTime) {
-                  const endISOString = worktime.endTime.endsWith('Z')
-                    ? worktime.endTime.substring(0, worktime.endTime.length - 1)
-                    : worktime.endTime;
+              filteredAndSortedWorktimes.map(worktime => (
+                <tr key={worktime.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  {isColumnVisible('startTime') && (
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      {editingId === worktime.id ? (
+                        <input
+                          type="datetime-local"
+                          value={editStartTime}
+                          onChange={(e) => setEditStartTime(e.target.value)}
+                          className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"
+                        />
+                      ) : (
+                        format(new Date(worktime.startTime), "dd.MM.yyyy HH:mm:ss")
+                      )}
+                    </td>
+                  )}
                   
-                  endTime = new Date(endISOString);
-                }
-                
-                return (
-                  <tr key={worktime.id}>
-                    {columnOrder
-                      .filter(columnId => !hiddenColumns.includes(columnId))
-                      .map(columnId => {
-                        if (columnId === 'startTime') {
-                          return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              {editingId === worktime.id ? (
-                                <input
-                                  type="datetime-local"
-                                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                                  value={editStartTime}
-                                  onChange={(e) => setEditStartTime(e.target.value)}
-                                  step="1"
-                                />
-                              ) : (
-                                <div className="text-sm text-gray-900">
-                                  {format(startTime, 'dd.MM.yyyy HH:mm:ss')}
-                                </div>
-                              )}
-                            </td>
-                          );
-                        }
-                        
-                        if (columnId === 'endTime') {
-                          return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              {editingId === worktime.id ? (
-                                <input
-                                  type="datetime-local"
-                                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                                  value={editEndTime}
-                                  onChange={(e) => setEditEndTime(e.target.value)}
-                                  step="1"
-                                />
-                              ) : (
-                                <div className="text-sm text-gray-900">
-                                  {endTime ? format(endTime, 'dd.MM.yyyy HH:mm:ss') : '-'}
-                                </div>
-                              )}
-                            </td>
-                          );
-                        }
-                        
-                        if (columnId === 'duration') {
-                          return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">
-                                {formatDuration(startTime, endTime)}
-                              </div>
-                            </td>
-                          );
-                        }
-                        
-                        if (columnId === 'branch') {
-                          return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {worktime.branch.name}
-                            </td>
-                          );
-                        }
-                        
-                        if (columnId === 'actions') {
-                          return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                              {editingId === worktime.id ? (
-                                <div className="flex justify-end space-x-2">
-                                  <button
-                                    type="button"
-                                    className="inline-flex items-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                                    onClick={() => handleSaveEdit(worktime.id)}
-                                    disabled={savingId === worktime.id}
-                                  >
-                                    <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
-                                    {savingId === worktime.id ? 'Speichern...' : 'Speichern'}
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                    onClick={handleCancelEdit}
-                                    disabled={savingId === worktime.id}
-                                  >
-                                    <XMarkIcon className="h-4 w-4 mr-1" />
-                                    Abbrechen
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  className="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                  onClick={() => handleStartEdit(worktime)}
-                                >
-                                  <PencilIcon className="h-4 w-4 mr-1" />
-                                  Bearbeiten
-                                </button>
-                              )}
-                            </td>
-                          );
-                        }
-                        
-                        return null;
-                      })
-                    }
-                  </tr>
-                );
-              })
+                  {isColumnVisible('endTime') && (
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      {editingId === worktime.id ? (
+                        <input
+                          type="datetime-local"
+                          value={editEndTime}
+                          onChange={(e) => setEditEndTime(e.target.value)}
+                          className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white"
+                        />
+                      ) : (
+                        worktime.endTime 
+                          ? format(new Date(worktime.endTime), "dd.MM.yyyy HH:mm:ss")
+                          : "-"
+                      )}
+                    </td>
+                  )}
+                  
+                  {isColumnVisible('duration') && (
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      {worktime.endTime 
+                        ? formatDuration(new Date(worktime.startTime), new Date(worktime.endTime))
+                        : "-"}
+                    </td>
+                  )}
+                  
+                  {isColumnVisible('branch') && (
+                    <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
+                      {worktime.branch?.name || "-"}
+                    </td>
+                  )}
+                  
+                  {isColumnVisible('actions') && (
+                    <td className="px-3 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {editingId === worktime.id ? (
+                        <div className="flex space-x-2 justify-end">
+                          <button
+                            onClick={() => handleSaveEdit(worktime.id)}
+                            disabled={savingId === worktime.id}
+                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                          >
+                            {savingId === worktime.id ? 'Speichern...' : 'Speichern'}
+                          </button>
+                          <button
+                            onClick={handleCancelEdit}
+                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                          >
+                            Abbrechen
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex space-x-2 justify-end">
+                          <button
+                            onClick={() => handleStartEdit(worktime)}
+                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
+                          >
+                            <PencilIcon className="h-5 w-5" aria-hidden="true" />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))
             )}
           </tbody>
         </table>
+      </div>
+      
+      {/* Legende */}
+      <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
+        <p>Hinweis: Sie können die Tabelle anpassen, indem Sie auf die Spaltenüberschriften klicken, um zu sortieren. Außerdem können Sie die Spalten per Drag & Drop neu anordnen.</p>
       </div>
     </div>
   );

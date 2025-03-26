@@ -219,17 +219,17 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
               leaveFrom="opacity-100 scale-100"
               leaveTo="opacity-0 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+              <Dialog.Panel className="w-full max-w-xl transform overflow-hidden rounded-2xl bg-white dark:bg-gray-800 p-6 text-left align-middle shadow-xl transition-all">
                 <div className="flex justify-between items-start">
                   <Dialog.Title
                     as="h3"
-                    className="text-lg font-medium leading-6 text-gray-900"
+                    className="text-lg font-medium leading-6 text-gray-900 dark:text-white"
                   >
                     Zeiterfassungen bearbeiten
                   </Dialog.Title>
                   <button
                     type="button"
-                    className="bg-white rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="bg-white dark:bg-gray-800 rounded-md text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     onClick={onClose}
                   >
                     <span className="sr-only">Schließen</span>
@@ -238,46 +238,46 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
                 </div>
 
                 <div className="mt-2">
-                  <p className="text-sm text-gray-500">
-                    Bearbeiten Sie die Zeiterfassungen von <strong>{userName}</strong> für den <strong>{selectedDate.split('-').reverse().join('.')}</strong>.
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Bearbeiten Sie die Zeiterfassungen von <strong className="dark:text-gray-300">{userName}</strong> für den <strong className="dark:text-gray-300">{selectedDate.split('-').reverse().join('.')}</strong>.
                   </p>
                 </div>
 
                 {error && (
-                  <div className="mt-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
+                  <div className="mt-2 p-2 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 rounded">
                     {error}
                   </div>
                 )}
 
                 <div className="mt-4">
-                  <div className="overflow-hidden border rounded-lg">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
+                  <div className="overflow-hidden border dark:border-gray-700 rounded-lg">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nr.</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Startzeit</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Endzeit</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Aktion</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nr.</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Startzeit</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Endzeit</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Aktion</th>
                         </tr>
                       </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
+                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {editedEntries.length === 0 ? (
                           <tr>
-                            <td colSpan={4} className="px-4 py-4 text-center text-sm text-gray-500">
+                            <td colSpan={4} className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                               Keine Zeiterfassungen für diesen Tag vorhanden.
                             </td>
                           </tr>
                         ) : (
                           editedEntries.map((entry, index) => (
-                            <tr key={entry.id} className={entry.isDeleted ? 'bg-red-50' : ''}>
-                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
+                            <tr key={entry.id} className={entry.isDeleted ? 'bg-red-50 dark:bg-red-900' : ''}>
+                              <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                 {index + 1}
                               </td>
                               <td className="px-4 py-2 whitespace-nowrap">
                                 <input
                                   type="time"
                                   step="1"
-                                  className={`rounded-md border ${entry.isDeleted ? 'border-red-300 bg-red-50' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm`}
+                                  className={`rounded-md border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white'} shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm`}
                                   value={entry.startTimeTime.substring(0, 5)}
                                   onChange={(e) => handleStartTimeChange(index, e.target.value + ':00')}
                                   disabled={entry.isDeleted}
@@ -287,7 +287,7 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
                                 <input
                                   type="time"
                                   step="1"
-                                  className={`rounded-md border ${entry.isDeleted ? 'border-red-300 bg-red-50' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm`}
+                                  className={`rounded-md border ${entry.isDeleted ? 'border-red-300 bg-red-50 dark:border-red-700 dark:bg-red-900' : 'border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white'} shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm`}
                                   value={entry.endTimeTime ? entry.endTimeTime.substring(0, 5) : ''}
                                   onChange={(e) => {
                                     const value = e.target.value ? e.target.value + ':00' : null;
@@ -300,7 +300,7 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleToggleDelete(index)}
-                                  className={`p-1 rounded ${entry.isDeleted ? 'text-green-600 hover:text-green-900' : 'text-red-600 hover:text-red-900'}`}
+                                  className={`p-1 rounded ${entry.isDeleted ? 'text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300' : 'text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300'}`}
                                   title={entry.isDeleted ? 'Wiederherstellen' : 'Zum Löschen markieren'}
                                 >
                                   <TrashIcon className="h-5 w-5" />
@@ -317,7 +317,7 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
                 <div className="mt-6 flex justify-end space-x-3">
                   <button
                     type="button"
-                    className="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    className="inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                     onClick={onClose}
                     disabled={loading}
                   >

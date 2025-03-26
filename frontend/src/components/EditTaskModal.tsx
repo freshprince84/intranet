@@ -72,11 +72,11 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
     const [title, setTitle] = useState(task.title || '');
     const [description, setDescription] = useState(task.description || '');
     const [status, setStatus] = useState(task.status || 'open');
-    const [assigneeType, setAssigneeType] = useState<'user' | 'role'>((task as any).roleId ? 'role' : 'user');
-    const [responsibleId, setResponsibleId] = useState<number | null>(task.responsible?.id || null);
-    const [roleId, setRoleId] = useState<number | null>((task as any).role?.id || null);
-    const [qualityControlId, setQualityControlId] = useState<number | null>(task.qualityControl?.id || null);
-    const [branchId, setBranchId] = useState<number>(task.branch?.id || 0);
+    const [assigneeType, setAssigneeType] = useState<'user' | 'role'>(task.roleId ? 'role' : 'user');
+    const [responsibleId, setResponsibleId] = useState<number | null>(task.responsibleId || null);
+    const [roleId, setRoleId] = useState<number | null>(task.roleId || null);
+    const [qualityControlId, setQualityControlId] = useState<number | null>(task.qualityControlId || null);
+    const [branchId, setBranchId] = useState<number>(task.branchId || 0);
     const [attachments, setAttachments] = useState<TaskAttachment[]>(task.attachments || []);
     const [temporaryAttachments, setTemporaryAttachments] = useState<TaskAttachment[]>([]);
     const [uploading, setUploading] = useState(false);
@@ -341,14 +341,21 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
 
         try {
             // Validierung
-            if (!title || (!responsibleId && !roleId) || !status || !branchId) {
+            if (!title || !status || !branchId) {
                 setError('Bitte füllen Sie alle erforderlichen Felder aus');
                 setLoading(false);
                 return;
             }
 
-            if (responsibleId && roleId) {
-                setError('Bitte wählen Sie entweder einen verantwortlichen Benutzer ODER eine Rolle aus, nicht beides');
+            // Überprüfen, ob entweder Benutzer oder Rolle ausgewählt wurde
+            if (assigneeType === 'user' && !responsibleId) {
+                setError('Bitte wählen Sie einen verantwortlichen Benutzer aus');
+                setLoading(false);
+                return;
+            }
+            
+            if (assigneeType === 'role' && !roleId) {
+                setError('Bitte wählen Sie eine verantwortliche Rolle aus');
                 setLoading(false);
                 return;
             }
@@ -364,10 +371,12 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             };
 
             // Entweder responsibleId oder roleId hinzufügen, nicht beides
-            if (assigneeType === 'user' && responsibleId) {
+            if (assigneeType === 'user') {
                 taskData.responsibleId = responsibleId;
-            } else if (assigneeType === 'role' && roleId) {
+                taskData.roleId = null; // Rolle explizit auf null setzen, um sie zu entfernen
+            } else if (assigneeType === 'role') {
                 taskData.roleId = roleId;
+                taskData.responsibleId = null; // Benutzer explizit auf null setzen, um ihn zu entfernen
             }
 
             const response = await axiosInstance.put(`${API_ENDPOINTS.TASKS.BASE}/${task.id}`, taskData);
@@ -544,14 +553,14 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
     const renderForm = () => (
         <form onSubmit={handleSubmit} className="space-y-4">
             {/* Tabs Navigation */}
-            <div className="border-b border-gray-200">
+            <div className="border-b border-gray-200 dark:border-gray-700">
                 <nav className="-mb-px flex space-x-4" aria-label="Tabs">
                     <button
                         type="button"
                         className={`${
                             activeTab === 'data'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
                         } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
                         onClick={() => setActiveTab('data')}
                     >
@@ -561,8 +570,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                         type="button"
                         className={`${
                             activeTab === 'cerebro'
-                                ? 'border-blue-500 text-blue-600'
-                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
                         } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
                         onClick={() => setActiveTab('cerebro')}
                     >
@@ -575,7 +584,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             {activeTab === 'data' && (
                 <>
                     <div>
-                        <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Titel
                         </label>
                         <input
@@ -583,13 +592,13 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                             id="title"
                             value={title}
                             onChange={(e) => setTitle(e.target.value)}
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                             required
                         />
                     </div>
 
                     <div>
-                        <label htmlFor="description_edit" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="description_edit" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Beschreibung
                         </label>
                         <div className="relative">
@@ -597,7 +606,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                 ref={textareaRef}
                                 id="description_edit"
                                 rows={6}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 onPaste={handlePaste}
@@ -608,7 +617,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 focus:outline-none"
+                                className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
                                 title="Datei hinzufügen"
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -622,8 +631,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                 className="hidden"
                             />
                             {uploading && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-70">
-                                    <span className="text-sm text-gray-600">Wird hochgeladen...</span>
+                                <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70">
+                                    <span className="text-sm text-gray-600 dark:text-gray-300">Wird hochgeladen...</span>
                                 </div>
                             )}
                         </div>
@@ -640,14 +649,14 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     </div>
 
                     <div>
-                        <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Status
                         </label>
                         <select
                             id="status"
                             value={status}
                             onChange={(e) => setStatus(e.target.value as Task['status'])}
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         >
                             <option value="open">Offen</option>
                             <option value="in_progress">In Bearbeitung</option>
@@ -658,14 +667,14 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     </div>
 
                     <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Verantwortlich für *
                         </label>
                         <div className="flex space-x-4">
                             <label className="inline-flex items-center">
                                 <input
                                     type="radio"
-                                    className="form-radio text-blue-600"
+                                    className="form-radio text-blue-600 dark:bg-gray-700 dark:border-gray-600"
                                     name="assigneeType"
                                     value="user"
                                     checked={assigneeType === 'user'}
@@ -674,12 +683,12 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                         setRoleId(null);
                                     }}
                                 />
-                                <span className="ml-2">Benutzer</span>
+                                <span className="ml-2 dark:text-gray-300">Benutzer</span>
                             </label>
                             <label className="inline-flex items-center">
                                 <input
                                     type="radio"
-                                    className="form-radio text-blue-600"
+                                    className="form-radio text-blue-600 dark:bg-gray-700 dark:border-gray-600"
                                     name="assigneeType"
                                     value="role"
                                     checked={assigneeType === 'role'}
@@ -688,25 +697,25 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                         setResponsibleId(null);
                                     }}
                                 />
-                                <span className="ml-2">Rolle</span>
+                                <span className="ml-2 dark:text-gray-300">Rolle</span>
                             </label>
                         </div>
                     </div>
 
                     {assigneeType === 'user' ? (
                         <div>
-                            <label htmlFor="responsible" className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="responsible" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Verantwortlicher Benutzer *
                             </label>
                             <select
                                 id="responsible"
-                                value={responsibleId || ''}
+                                value={responsibleId === null ? '' : responsibleId}
                                 onChange={(e) => setResponsibleId(e.target.value ? Number(e.target.value) : null)}
-                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 required={assigneeType === 'user'}
                             >
                                 <option value="">Bitte wählen</option>
-                                {users.map(user => (
+                                {Array.isArray(users) && users.map(user => (
                                     <option key={user.id} value={user.id}>
                                         {user.firstName} {user.lastName}
                                     </option>
@@ -715,14 +724,14 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                         </div>
                     ) : (
                         <div>
-                            <label htmlFor="role" className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                                 Verantwortliche Rolle *
                             </label>
                             <select
                                 id="role"
-                                value={roleId || ''}
+                                value={roleId === null ? '' : roleId}
                                 onChange={(e) => setRoleId(e.target.value ? Number(e.target.value) : null)}
-                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 required={assigneeType === 'role'}
                             >
                                 <option value="">Bitte wählen</option>
@@ -736,17 +745,17 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     )}
 
                     <div>
-                        <label htmlFor="qualityControl" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="qualityControl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Qualitätskontrolle
                         </label>
                         <select
                             id="qualityControl"
-                            value={qualityControlId || ''}
+                            value={qualityControlId === null ? '' : qualityControlId}
                             onChange={(e) => setQualityControlId(e.target.value ? Number(e.target.value) : null)}
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         >
                             <option value="">Keine Qualitätskontrolle</option>
-                            {users.map(user => (
+                            {Array.isArray(users) && users.map(user => (
                                 <option key={user.id} value={user.id}>
                                     {user.firstName} {user.lastName}
                                 </option>
@@ -755,18 +764,18 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     </div>
 
                     <div>
-                        <label htmlFor="branch" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="branch" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Niederlassung
                         </label>
                         <select
                             id="branch"
-                            value={branchId}
-                            onChange={(e) => setBranchId(Number(e.target.value))}
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            value={branchId === 0 ? '' : branchId}
+                            onChange={(e) => setBranchId(e.target.value ? Number(e.target.value) : 0)}
+                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                             required
                         >
                             <option value="">Bitte wählen</option>
-                            {branches.map(branch => (
+                            {Array.isArray(branches) && branches.map(branch => (
                                 <option key={branch.id} value={branch.id}>
                                     {branch.name}
                                 </option>
@@ -775,7 +784,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     </div>
 
                     <div>
-                        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">
+                        <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Fälligkeitsdatum
                         </label>
                         <input
@@ -791,7 +800,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                     setDueDate(e.target.value);
                                 }
                             }}
-                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         />
                     </div>
                 </>
@@ -802,22 +811,22 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                 <div>
                     {linkedArticles.length > 0 && (
                         <div className="mb-4">
-                            <h3 className="text-sm font-medium text-gray-700 mb-2">Verknüpfte Cerebro-Artikel</h3>
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Verknüpfte Cerebro-Artikel</h3>
                             <ul className="space-y-2">
                                 {linkedArticles.map(article => (
-                                    <li key={article.id} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                                    <li key={article.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
                                         <a 
                                             href={`/cerebro/articles/${article.slug}`} 
                                             target="_blank" 
                                             rel="noopener noreferrer"
-                                            className="text-blue-600 hover:underline"
+                                            className="text-blue-600 hover:underline dark:text-blue-400 dark:hover:text-blue-300"
                                         >
                                             {article.title}
                                         </a>
                                         <button
                                             type="button"
                                             onClick={() => handleRemoveArticle(article.id)}
-                                            className="text-red-600 hover:text-red-800"
+                                            className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                                         >
                                             Entfernen
                                         </button>
@@ -843,8 +852,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                         onClick={handleDelete}
                         className={`px-4 py-2 rounded-md ${
                             confirmDelete
-                                ? 'bg-red-600 text-white'
-                                : 'bg-white text-red-600 border border-red-300'
+                                ? 'bg-red-600 text-white dark:bg-red-700 dark:text-white'
+                                : 'bg-white text-red-600 border border-red-300 dark:bg-gray-800 dark:text-red-400 dark:border-red-700'
                         }`}
                     >
                         {confirmDelete ? 'Bestätigen' : 'Löschen'}
@@ -854,13 +863,13 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50"
+                        className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
                     >
                         Abbrechen
                     </button>
                     <button
                         type="submit"
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
                     >
                         {loading ? 'Wird gespeichert...' : 'Speichern'}
                     </button>
@@ -876,15 +885,15 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             <div className="mt-2">
                 <ul className="flex flex-wrap gap-2">
                     {attachments.map((attachment) => (
-                        <li key={attachment.id} className="inline-flex items-center bg-gray-100 rounded-md px-2 py-1 relative group">
-                            <span className="text-sm font-medium text-gray-800">
+                        <li key={attachment.id} className="inline-flex items-center bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1 relative group">
+                            <span className="text-sm font-medium text-gray-800 dark:text-gray-300">
                                 {attachment.fileName}
                             </span>
                             <div className="flex ml-2">
                                 <button
                                     type="button"
                                     onClick={() => handleDownloadAttachment(attachment)}
-                                    className="text-blue-600 hover:text-blue-900 mr-1"
+                                    className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-1"
                                     title="Herunterladen"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -894,7 +903,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                 <button
                                     type="button"
                                     onClick={() => handleDeleteAttachment(attachment.id)}
-                                    className="text-red-600 hover:text-red-900 ml-1"
+                                    className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 ml-1"
                                     title="Entfernen"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -904,7 +913,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                             </div>
                             {/* Tooltip für Bildvorschau bei Bild-Dateien */}
                             {attachment.fileType.startsWith('image/') && (
-                                <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
+                                <div className="absolute z-10 invisible group-hover:visible bg-white dark:bg-gray-800 p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200 dark:border-gray-600">
                                     <img 
                                         src={`${window.location.origin}/api${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachment.id)}`}
                                         alt={attachment.fileName}
@@ -926,15 +935,15 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             <div className="mt-2">
                 <ul className="flex flex-wrap gap-2">
                     {temporaryAttachments.map((attachment, index) => (
-                        <li key={`temp-${index}`} className="inline-flex items-center bg-gray-100 rounded-md px-2 py-1 relative group">
-                            <span className="text-sm font-medium text-gray-800">
+                        <li key={`temp-${index}`} className="inline-flex items-center bg-gray-100 dark:bg-gray-700 rounded-md px-2 py-1 relative group">
+                            <span className="text-sm font-medium text-gray-800 dark:text-gray-300">
                                 {attachment.fileName}
                             </span>
                             <div className="flex ml-2">
                                 <button
                                     type="button"
                                     onClick={() => handleRemoveTemporaryAttachment(index)}
-                                    className="text-red-600 hover:text-red-900 ml-1"
+                                    className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 ml-1"
                                     title="Entfernen"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -944,7 +953,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                             </div>
                             {/* Tooltip für Bildvorschau bei Bild-Dateien */}
                             {attachment.fileType?.startsWith('image/') && attachment.file && (
-                                <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
+                                <div className="absolute z-10 invisible group-hover:visible bg-white dark:bg-gray-800 p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200 dark:border-gray-600">
                                     <img 
                                         src={URL.createObjectURL(attachment.file)}
                                         alt={attachment.fileName}
@@ -968,14 +977,14 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                 <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
                 
                 <div className="fixed inset-0 flex items-center justify-center p-4">
-                    <Dialog.Panel className="mx-auto max-w-xl w-full bg-white rounded-lg shadow-xl">
-                        <div className="flex items-center justify-between p-4 border-b">
-                            <Dialog.Title className="text-lg font-semibold">
+                    <Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+                        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+                            <Dialog.Title className="text-lg font-semibold dark:text-white">
                                 Aufgabe bearbeiten
                             </Dialog.Title>
                             <button
                                 onClick={onClose}
-                                className="text-gray-500 hover:text-gray-700"
+                                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                             >
                                 <XMarkIcon className="h-6 w-6" />
                             </button>
@@ -983,7 +992,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
 
                         <div className="p-4">
                             {error && (
-                                <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+                                <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
                                     {error}
                                 </div>
                             )}
@@ -1008,15 +1017,15 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             
             {/* Sidepane von rechts einfahren */}
             <div 
-                className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
             >
-                <div className="flex items-center justify-between p-4 border-b">
-                    <Dialog.Title className="text-lg font-semibold">
+                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+                    <Dialog.Title className="text-lg font-semibold dark:text-white">
                         Aufgabe bearbeiten
                     </Dialog.Title>
                     <button
                         onClick={onClose}
-                        className="text-gray-500 hover:text-gray-700"
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                     >
                         <XMarkIcon className="h-6 w-6" />
                     </button>
@@ -1024,7 +1033,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
 
                 <div className="p-4 overflow-y-auto h-full">
                     {error && (
-                        <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+                        <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
                             {error}
                         </div>
                     )}

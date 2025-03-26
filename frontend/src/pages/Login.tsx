@@ -44,13 +44,13 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center">
-      <div className="max-w-lg w-full space-y-8 p-10 bg-white rounded-lg shadow">
-        <h2 className="text-3xl font-bold text-center">Login</h2>
-        {error && <p className="text-red-500 text-center">{error}</p>}
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="max-w-lg w-full space-y-8 p-10 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white">Login</h2>
+        {error && <p className="text-red-500 dark:text-red-400 text-center">{error}</p>}
         <form onSubmit={handleSubmit} className="mt-8 space-y-6">
           <div>
-            <label htmlFor="username" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Benutzername
             </label>
             <input
@@ -60,12 +60,12 @@ const Login: React.FC = () => {
               value={formData.username}
               onChange={handleChange}
               required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
               disabled={loading}
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Passwort
             </label>
             <input
@@ -75,23 +75,23 @@ const Login: React.FC = () => {
               value={formData.password}
               onChange={handleChange}
               required
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm"
+              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm dark:bg-gray-700 dark:text-white"
               disabled={loading}
             />
           </div>
           <button
             type="submit"
             className={`w-full py-2 px-4 text-white rounded-md ${
-              loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+              loading ? 'bg-blue-400 dark:bg-blue-500 cursor-not-allowed' : 'bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-800'
             }`}
             disabled={loading}
           >
             {loading ? 'Anmeldung läuft...' : 'Anmelden'}
           </button>
         </form>
-        <p className="text-center mt-4">
+        <p className="text-center mt-4 text-gray-700 dark:text-gray-300">
           Noch kein Konto?{' '}
-          <Link to="/register" className="text-blue-600 hover:text-blue-800">
+          <Link to="/register" className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
             Registrieren
           </Link>
         </p>

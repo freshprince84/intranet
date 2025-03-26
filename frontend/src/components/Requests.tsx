@@ -20,8 +20,10 @@ import {
   ArrowsUpDownIcon,
   FunnelIcon,
   DocumentTextIcon,
-  DocumentDuplicateIcon
+  DocumentDuplicateIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
+import MarkdownPreview from './MarkdownPreview.tsx';
 
 interface Request {
   id: number;
@@ -45,6 +47,7 @@ interface Request {
   };
   dueDate: string;
   createTodo: boolean;
+  description?: string;
 }
 
 interface SortConfig {
@@ -649,7 +652,7 @@ const Requests: React.FC = () => {
             {hasPermission('requests', 'write', 'table') && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="bg-white text-blue-600 p-1.5 rounded-full hover:bg-blue-50 border border-blue-200 shadow-sm flex items-center justify-center"
+                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
                 style={{ width: '30.19px', height: '30.19px' }}
                 title="Neuen Request erstellen"
                 aria-label="Neuen Request erstellen"
@@ -661,8 +664,8 @@ const Requests: React.FC = () => {
           
           {/* Mitte: Titel mit Icon */}
           <div className="flex items-center">
-            <DocumentTextIcon className="h-6 w-6 mr-2" />
-            <h2 className="text-xl font-semibold">Requests</h2>
+            <DocumentTextIcon className="h-6 w-6 mr-2 dark:text-white" />
+            <h2 className="text-xl font-semibold dark:text-white">Requests</h2>
           </div>
           
           {/* Rechte Seite: Suchfeld, Filter und Spalten */}
@@ -670,25 +673,23 @@ const Requests: React.FC = () => {
             <input
               type="text"
               placeholder="Suchen..."
-              className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             
             {/* Filter-Button */}
             <button
-              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
+              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1`}
               onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
               title="Filter"
             >
-              <div className="relative">
-                <FunnelIcon className="w-5 h-5" />
-                {getActiveFilterCount() > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                    {getActiveFilterCount()}
-                  </span>
-                )}
-              </div>
+              <FunnelIcon className="h-5 w-5" />
+              {getActiveFilterCount() > 0 && (
+                <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
+                  {getActiveFilterCount()}
+                </span>
+              )}
             </button>
             
             {/* Spalten-Konfiguration */}
@@ -732,9 +733,9 @@ const Requests: React.FC = () => {
           defaultFilterName="Aktuell"
         />
 
-        <div className="overflow-x-auto overflow-y-hidden mobile-table-container">
-          <table className="min-w-full divide-y divide-gray-200 requests-table">
-            <thead className="bg-gray-50">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 {/* Dynamisch generierte Spaltenüberschriften basierend auf den sichtbaren Spalten */}
                 {visibleColumnIds.map(columnId => {
@@ -746,7 +747,7 @@ const Requests: React.FC = () => {
                     return (
                       <th 
                         key={columnId}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-move relative"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-move relative"
                         draggable
                         onDragStart={() => handleDragStart(columnId)}
                         onDragOver={(e) => handleDragOver(e, columnId)}
@@ -754,7 +755,7 @@ const Requests: React.FC = () => {
                         onDragEnd={handleDragEnd}
                       >
                         <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
-                          <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />
+                          <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400 dark:text-gray-500" />
                           <span className="hidden sm:inline">{column.label}</span>
                           <span className="inline sm:hidden">{column.shortLabel}</span>
                         </div>
@@ -772,7 +773,7 @@ const Requests: React.FC = () => {
                   return (
                     <th 
                       key={columnId}
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative ${sortKey ? 'cursor-pointer hover:bg-gray-100' : ''} ${columnId !== 'actions' ? 'cursor-move' : ''}`}
+                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider relative ${sortKey ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''} ${columnId !== 'actions' ? 'cursor-move' : ''}`}
                       onClick={sortKey ? () => handleSort(sortKey) : undefined}
                       draggable={columnId !== 'actions'}
                       onDragStart={columnId !== 'actions' ? () => handleDragStart(columnId) : undefined}
@@ -781,7 +782,7 @@ const Requests: React.FC = () => {
                       onDragEnd={columnId !== 'actions' ? handleDragEnd : undefined}
                     >
                       <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
-                        {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />}
+                        {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400 dark:text-gray-500" />}
                         <span className="hidden sm:inline">{column.label}</span>
                         <span className="inline sm:hidden">{column.shortLabel}</span>
                         {sortKey && sortConfig.key === sortKey && (sortConfig.direction === 'asc' ? '↑' : '↓')}
@@ -791,12 +792,12 @@ const Requests: React.FC = () => {
                 })}
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredAndSortedRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={visibleColumnIds.length} className="px-3 py-4 text-center text-gray-500">
+                  <td colSpan={visibleColumnIds.length} className="px-3 py-4 text-center text-gray-500 dark:text-gray-400">
                     <div className="flex flex-col items-center justify-center gap-4">
-                      <DocumentTextIcon className="h-10 w-10 text-gray-400" />
+                      <DocumentTextIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
                       <div className="text-sm">Keine Requests gefunden</div>
                     </div>
                   </td>
@@ -804,20 +805,35 @@ const Requests: React.FC = () => {
               ) : (
                 <>
                   {filteredAndSortedRequests.slice(0, displayLimit).map(request => (
-                    <tr key={request.id}>
+                    <tr key={request.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                       {/* Dynamisch generierte Zellen basierend auf den sichtbaren Spalten */}
                       {visibleColumnIds.map(columnId => {
                         switch (columnId) {
                           case 'title':
                             return (
                               <td key={columnId} className="px-6 py-4">
-                                <div className="text-sm text-gray-900 break-words">{request.title}</div>
+                                <div className="text-sm text-gray-900 dark:text-gray-200 break-words flex items-center">
+                                  {request.title}
+                                  {request.description && (
+                                    <div className="ml-2 relative group">
+                                      <button 
+                                        className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+                                        title="Beschreibung anzeigen"
+                                      >
+                                        <InformationCircleIcon className="h-5 w-5" />
+                                      </button>
+                                      <div className="hidden group-hover:block absolute left-0 mt-2 p-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 w-144 max-h-96 overflow-y-auto min-w-[36rem] z-10">
+                                        <MarkdownPreview content={request.description} showImagePreview={true} />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                             );
                           case 'status':
                             return (
                               <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)} status-col`}>
+                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)} dark:bg-opacity-30 status-col`}>
                                   {request.status}
                                 </span>
                               </td>
@@ -826,14 +842,14 @@ const Requests: React.FC = () => {
                             return (
                               <td key={columnId} className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex flex-col">
-                                  <div className="text-sm text-gray-900">
-                                    <span className="text-xs text-gray-500 hidden sm:inline">Angefragt von:</span>
-                                    <span className="text-xs text-gray-500 inline sm:hidden">Angefr. v.:</span><br />
+                                  <div className="text-sm text-gray-900 dark:text-gray-200">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Angefragt von:</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">Angefr. v.:</span><br />
                                     {`${request.requestedBy.firstName} ${request.requestedBy.lastName}`}
                                   </div>
-                                  <div className="text-sm text-gray-900 mt-1">
-                                    <span className="text-xs text-gray-500 hidden sm:inline">Verantwortlich:</span>
-                                    <span className="text-xs text-gray-500 inline sm:hidden">Ver.:</span><br />
+                                  <div className="text-sm text-gray-900 dark:text-gray-200 mt-1">
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Verantwortlich:</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">Ver.:</span><br />
                                     {`${request.responsible.firstName} ${request.responsible.lastName}`}
                                   </div>
                                 </div>
@@ -842,13 +858,13 @@ const Requests: React.FC = () => {
                           case 'branch':
                             return (
                               <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">{request.branch.name}</div>
+                                <div className="text-sm text-gray-900 dark:text-gray-200">{request.branch.name}</div>
                               </td>
                             );
                           case 'dueDate':
                             return (
                               <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900">
+                                <div className="text-sm text-gray-900 dark:text-gray-200">
                                   {new Date(request.dueDate).toLocaleDateString()}
                                 </div>
                               </td>
@@ -862,21 +878,21 @@ const Requests: React.FC = () => {
                                     <>
                                       <button
                                         onClick={() => handleStatusChange(request.id, 'approved')}
-                                        className="p-1 bg-green-600 text-white rounded hover:bg-green-700"
+                                        className="p-1 bg-green-600 dark:bg-green-500 text-white rounded hover:bg-green-700 dark:hover:bg-green-600"
                                         title="Genehmigen"
                                       >
                                         <CheckIcon className="h-5 w-5" />
                                       </button>
                                       <button
                                         onClick={() => handleStatusChange(request.id, 'to_improve')}
-                                        className="p-1 bg-orange-600 text-white rounded hover:bg-orange-700"
+                                        className="p-1 bg-orange-600 dark:bg-orange-500 text-white rounded hover:bg-orange-700 dark:hover:bg-orange-600"
                                         title="Verbessern"
                                       >
                                         <ExclamationTriangleIcon className="h-5 w-5" />
                                       </button>
                                       <button
                                         onClick={() => handleStatusChange(request.id, 'denied')}
-                                        className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                                        className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
                                         title="Ablehnen"
                                       >
                                         <XMarkIcon className="h-5 w-5" />
@@ -887,14 +903,14 @@ const Requests: React.FC = () => {
                                     <>
                                       <button
                                         onClick={() => handleStatusChange(request.id, 'approval')}
-                                        className="p-1 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                                        className="p-1 bg-yellow-600 dark:bg-yellow-500 text-white rounded hover:bg-yellow-700 dark:hover:bg-yellow-600"
                                         title="Erneut prüfen"
                                       >
                                         <ArrowPathIcon className="h-5 w-5" />
                                       </button>
                                       <button
                                         onClick={() => handleStatusChange(request.id, 'denied')}
-                                        className="p-1 bg-red-600 text-white rounded hover:bg-red-700"
+                                        className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
                                         title="Ablehnen"
                                       >
                                         <XMarkIcon className="h-5 w-5" />
@@ -904,7 +920,7 @@ const Requests: React.FC = () => {
                                   {(request.status === 'approved' || request.status === 'denied') && hasPermission('requests', 'write', 'table') && (
                                     <button
                                       onClick={() => handleStatusChange(request.id, 'approval')}
-                                      className="p-1 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                                      className="p-1 bg-yellow-600 dark:bg-yellow-500 text-white rounded hover:bg-yellow-700 dark:hover:bg-yellow-600"
                                       title="Erneut prüfen"
                                     >
                                       <ArrowPathIcon className="h-5 w-5" />
@@ -917,7 +933,7 @@ const Requests: React.FC = () => {
                                         setSelectedRequest(request);
                                         setIsEditModalOpen(true);
                                       }}
-                                      className="text-blue-600 hover:text-blue-900 edit-button ml-0.5"
+                                      className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 edit-button ml-0.5"
                                     >
                                       <PencilIcon className="h-5 w-5" />
                                     </button>
@@ -925,7 +941,7 @@ const Requests: React.FC = () => {
                                   {hasPermission('requests', 'both', 'table') && (
                                     <button
                                       onClick={() => handleCopyRequest(request)}
-                                      className="text-green-600 hover:text-green-900 copy-button ml-0.5"
+                                      className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 copy-button ml-0.5"
                                       title="Request kopieren"
                                     >
                                       <DocumentDuplicateIcon className="h-5 w-5" />
@@ -950,7 +966,7 @@ const Requests: React.FC = () => {
         {filteredAndSortedRequests.length > displayLimit && (
           <div className="mt-4 flex justify-center">
             <button
-              className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50"
+              className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
               onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
             >
               Mehr anzeigen ({filteredAndSortedRequests.length - displayLimit} verbleibend)

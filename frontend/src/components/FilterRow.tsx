@@ -145,7 +145,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
         // Request-Status-Optionen
         return (
           <select
-            className="px-3 py-2 border rounded-md w-full"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             value={value as string || ''}
             onChange={(e) => onChange(e.target.value)}
           >
@@ -160,7 +160,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
         // Task-Status-Optionen
         return (
           <select
-            className="px-3 py-2 border rounded-md w-full"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             value={value as string || ''}
             onChange={(e) => onChange(e.target.value)}
           >
@@ -176,7 +176,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
         // Fallback für andere Tabellen mit Status
         return (
           <select
-            className="px-3 py-2 border rounded-md w-full"
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             value={value as string || ''}
             onChange={(e) => onChange(e.target.value)}
           >
@@ -193,7 +193,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
     if (columnId === 'responsible' || columnId === 'responsibleAndQualityControl') {
       return (
         <select
-          className="px-3 py-2 border rounded-md w-full"
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           value={value as string || ''}
           onChange={(e) => onChange(e.target.value)}
           disabled={loadingUsers || loadingRoles}
@@ -231,7 +231,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
     if (columnId === 'qualityControl') {
       return (
         <select
-          className="px-3 py-2 border rounded-md w-full"
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           value={value as string || ''}
           onChange={(e) => onChange(e.target.value)}
           disabled={loadingUsers}
@@ -260,7 +260,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
       return (
         <input
           type="date"
-          className="px-3 py-2 border rounded-md w-full"
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           value={value as string || ''}
           onChange={(e) => onChange(e.target.value)}
         />
@@ -328,7 +328,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
         <button
           type="button"
           onClick={onDelete}
-          className="p-2 text-gray-500 hover:text-red-600 rounded-md"
+          className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500 rounded-md"
           disabled={isFirst && !isLast}
           title="Filterbedingung entfernen"
         >
@@ -340,7 +340,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
           <button
             type="button"
             onClick={onAdd}
-            className="p-2 text-gray-500 hover:text-blue-600 rounded-md"
+            className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 rounded-md"
             title="Neue Filterbedingung hinzufügen"
           >
             <PlusIcon className="h-5 w-5" />

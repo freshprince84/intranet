@@ -30,34 +30,34 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
   const getSeverityStyles = () => {
     switch (severity) {
       case ErrorSeverity.INFO:
-        return 'bg-blue-50 text-blue-700 border-blue-200';
+        return 'bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800';
       case ErrorSeverity.WARNING:
-        return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+        return 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800';
       case ErrorSeverity.CRITICAL:
-        return 'bg-red-100 text-red-900 border-red-300';
+        return 'bg-red-100 dark:bg-red-900/40 text-red-900 dark:text-red-300 border-red-300 dark:border-red-800';
       case ErrorSeverity.ERROR:
       default:
-        return 'bg-red-50 text-red-700 border-red-200';
+        return 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800';
     }
   };
 
   // Icon basierend auf Kategorie und Schweregrad auswählen
   const getIcon = () => {
     if (severity === ErrorSeverity.CRITICAL) {
-      return <ExclamationCircleIcon className="h-5 w-5 text-red-500" />;
+      return <ExclamationCircleIcon className="h-5 w-5 text-red-500 dark:text-red-400" />;
     }
 
     switch (category) {
       case ErrorCategory.AUTHENTICATION:
       case ErrorCategory.PERMISSION:
-        return <ShieldExclamationIcon className="h-5 w-5" />;
+        return <ShieldExclamationIcon className="h-5 w-5 dark:text-gray-300" />;
       case ErrorCategory.VALIDATION:
-        return <ExclamationTriangleIcon className="h-5 w-5" />;
+        return <ExclamationTriangleIcon className="h-5 w-5 dark:text-gray-300" />;
       case ErrorCategory.NETWORK:
       case ErrorCategory.API:
       case ErrorCategory.GENERAL:
       default:
-        return <ExclamationCircleIcon className="h-5 w-5" />;
+        return <ExclamationCircleIcon className="h-5 w-5 dark:text-gray-300" />;
     }
   };
 
@@ -68,7 +68,7 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
           {getIcon()}
         </div>
         <div className="ml-3">
-          <h3 className="text-sm font-medium">
+          <h3 className="text-sm font-medium dark:text-gray-100">
             {category && <span className="font-bold">{category}: </span>}
             {message}
           </h3>
@@ -78,12 +78,12 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
             <div className="-mx-1.5 -my-1.5">
               <button
                 type="button"
-                className={`inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                className={`inline-flex rounded-md p-1.5 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-800 ${
                   severity === ErrorSeverity.CRITICAL || severity === ErrorSeverity.ERROR
-                    ? 'text-red-500 hover:bg-red-100 focus:ring-red-600'
+                    ? 'text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 focus:ring-red-600 dark:focus:ring-red-800'
                     : severity === ErrorSeverity.WARNING
-                    ? 'text-yellow-500 hover:bg-yellow-100 focus:ring-yellow-600'
-                    : 'text-blue-500 hover:bg-blue-100 focus:ring-blue-600'
+                    ? 'text-yellow-500 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/30 focus:ring-yellow-600 dark:focus:ring-yellow-800'
+                    : 'text-blue-500 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 focus:ring-blue-600 dark:focus:ring-blue-800'
                 }`}
                 onClick={onClose}
               >

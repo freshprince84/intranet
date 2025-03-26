@@ -89,10 +89,10 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
   // Falls kein mobiles Gerät, zeige eine Meldung
   if (!isMobile()) {
     return (
-      <div className="p-4 text-center">
+      <div className="p-4 text-center dark:bg-gray-800 dark:text-white">
         <p className="mb-4">Kamerafunktion ist nur auf mobilen Geräten verfügbar.</p>
         <button 
-          className="px-4 py-2 bg-gray-200 rounded-md"
+          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
           onClick={onCancel}
         >
           Zurück
@@ -102,14 +102,14 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
   }
 
   return (
-    <div className="camera-capture p-2">
+    <div className="camera-capture p-2 dark:bg-gray-800">
       <canvas ref={canvasRef} className="hidden" />
       
       {error && (
-        <div className="error bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="error bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-4">
           <p>{error}</p>
           <button 
-            className="mt-2 px-4 py-2 bg-gray-200 rounded-md"
+            className="mt-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
             onClick={onCancel}
           >
             Zurück
@@ -119,7 +119,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
       
       {!error && !capturedImage ? (
         <>
-          <div className="video-container mb-4 rounded overflow-hidden border border-gray-300">
+          <div className="video-container mb-4 rounded overflow-hidden border border-gray-300 dark:border-gray-700">
             <video 
               ref={videoRef} 
               autoPlay 
@@ -130,13 +130,13 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
           
           <div className="flex justify-between">
             <button 
-              className="px-4 py-2 bg-gray-200 rounded-md"
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
               onClick={onCancel}
             >
               Abbrechen
             </button>
             <button 
-              className="px-4 py-2 bg-blue-500 text-white rounded-md"
+              className="px-4 py-2 bg-blue-500 dark:bg-blue-600 text-white rounded-md hover:bg-blue-600 dark:hover:bg-blue-700"
               onClick={captureImage}
             >
               Foto aufnehmen
@@ -145,7 +145,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
         </>
       ) : !error && capturedImage ? (
         <>
-          <div className="preview-container mb-4 rounded overflow-hidden border border-gray-300">
+          <div className="preview-container mb-4 rounded overflow-hidden border border-gray-300 dark:border-gray-700">
             <img 
               src={capturedImage} 
               alt="Aufgenommenes Dokument" 
@@ -155,13 +155,13 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
           
           <div className="flex justify-between">
             <button 
-              className="px-4 py-2 bg-gray-200 rounded-md"
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
               onClick={retakeImage}
             >
               Neu aufnehmen
             </button>
             <button 
-              className="px-4 py-2 bg-green-500 text-white rounded-md"
+              className="px-4 py-2 bg-green-500 dark:bg-green-600 text-white rounded-md hover:bg-green-600 dark:hover:bg-green-700"
               onClick={confirmImage}
             >
               Verwenden
