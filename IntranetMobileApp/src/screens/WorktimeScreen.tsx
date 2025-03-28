@@ -25,7 +25,10 @@ import {
 import NetInfo from '@react-native-community/netinfo';
 import WorktimeListModal from '../components/WorktimeListModal';
 import TimeTrackerBox from '../components/TimeTrackerBox';
-import TaskCard from '../components/TaskCard';
+import TaskList from '../components/TaskList';
+import TaskFilterModal from '../components/TaskFilterModal';
+import TableSettingsModal from '../components/TableSettingsModal';
+import TaskDetailModal from '../components/TaskDetailModal';
 
 // Offline-Daten-Key
 const OFFLINE_WORKTIME_KEY = '@IntranetApp:offlineWorktime';
@@ -54,67 +57,67 @@ const WorktimeScreen = () => {
   const [notes, setNotes] = useState('');
   const [showWorkTimeListModal, setShowWorkTimeListModal] = useState(false);
 
-  // Neuer State für Todo-Funktionalität
+  // State für Todo-Funktionalität
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
-  const [showTodoSection, setShowTodoSection] = useState(true);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [showTaskDetailsModal, setShowTaskDetailsModal] = useState(false);
+  const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   
+  /**
+   * Aktualisiert nur die Timer-Dauer ohne Server-Anfrage
+   */
+  const updateTimerDuration = () => {
+    if (currentWorkTime && isTimerRunning) {
+      // Löse einen Re-Render aus, ohne die Daten neu zu laden
+      setCurrentWorkTime(prev => {
+        if (!prev) return prev;
+        return { ...prev };
+      });
+    }
+  };
+
   // Daten laden, wenn Komponente gemountet wird
   useEffect(() => {
     setupScreen();
-    
-    // Task-Todo-Funktionalität bei Mounting laden
     loadTasks();
     
-    // Polling alle 10 Sekunden für aktivere Synchronisierung des Timer-Status
+    // Polling alle 10 Sekunden für Timer-Status
     const statusInterval = setInterval(async () => {
       if (!isOffline) {
         try {
-          // Nur den Timer-Status abfragen, ohne den ganzen Screen neu zu laden
-          console.log('Timer-Status vom Backend prüfen...');
           await checkRunningTimer();
         } catch (error) {
           console.error('Fehler beim Aktualisieren des Timer-Status:', error);
         }
       }
-    }, 10000); // Alle 10 Sekunden prüfen
+    }, 10000);
     
-    // Komplettes Neuladen alle 30 Sekunden
-    const fullRefreshInterval = setInterval(setupScreen, 30000);
+    // Timer-Dauer alle 5 Sekunden aktualisieren
+    const timerDurationInterval = setInterval(updateTimerDuration, 5000);
     
-    // Todo-Einstellungen aus dem AsyncStorage laden
-    loadTodoSettings();
+    // Vollständige Aktualisierung alle 5 Minuten
+    const fullRefreshInterval = setInterval(setupScreen, 300000);
+    
+    // NetInfo-Listener für Netzwerkänderungen
+    const unsubscribe = NetInfo.addEventListener(state => {
+      const newOfflineState = !state.isConnected;
+      if (isOffline !== newOfflineState) {
+        setIsOffline(newOfflineState);
+        if (!newOfflineState) {
+          // Wenn wieder online, komplette Aktualisierung durchführen
+          setupScreen();
+        }
+      }
+    });
     
     return () => {
       clearInterval(statusInterval);
+      clearInterval(timerDurationInterval);
       clearInterval(fullRefreshInterval);
+      unsubscribe();
     };
   }, []);
-  
-  // Lade Todo-Einstellungen aus dem AsyncStorage
-  const loadTodoSettings = async () => {
-    try {
-      const showTodoValue = await AsyncStorage.getItem('@IntranetApp:showTodoSection');
-      if (showTodoValue !== null) {
-        setShowTodoSection(showTodoValue === 'true');
-      }
-    } catch (error) {
-      console.error('Fehler beim Laden der Todo-Einstellungen:', error);
-    }
-  };
-  
-  // Speichere Todo-Einstellungen im AsyncStorage
-  const saveTodoSettings = async (show: boolean) => {
-    try {
-      await AsyncStorage.setItem('@IntranetApp:showTodoSection', show.toString());
-      setShowTodoSection(show);
-    } catch (error) {
-      console.error('Fehler beim Speichern der Todo-Einstellungen:', error);
-    }
-  };
   
   // Tasks vom Backend laden
   const loadTasks = async () => {
@@ -129,10 +132,19 @@ const WorktimeScreen = () => {
         return;
       }
       
-      // Lade Tasks vom Server
-      const response = await taskApi.getAll();
+      // Lade Tasks vom Server - stelle sicher, dass nur Tasks geladen werden, keine Requests
+      const response = await taskApi.getAll(); // GET /api/tasks endpoint
       console.log('Geladene Tasks:', response);
-      setTasks(response);
+      
+      // Stelle sicher, dass nur Task-Objekte in der Liste sind und keine Requests
+      const filteredTasks = response.filter(item => 
+        // Prüfe ob es sich wirklich um Tasks handelt und nicht um Requests
+        item.hasOwnProperty('status') && 
+        typeof item.status === 'string' && 
+        ['open', 'in_progress', 'improval', 'quality_control', 'done'].includes(item.status)
+      );
+      
+      setTasks(filteredTasks);
     } catch (error) {
       console.error('Fehler beim Laden der Tasks:', error);
       setTasksError('Die Aufgaben konnten nicht geladen werden.');
@@ -161,7 +173,7 @@ const WorktimeScreen = () => {
       );
       
       // Schließe das Modal
-      setShowTaskDetailsModal(false);
+      setShowTaskDetailModal(false);
       
       // Erfolgsbenachrichtigung
       Alert.alert('Erfolg', 'Status wurde aktualisiert');
@@ -766,7 +778,26 @@ const WorktimeScreen = () => {
   // Handler für Task-Auswahl
   const handleTaskPress = (task: Task) => {
     setSelectedTask(task);
-    setShowTaskDetailsModal(true);
+    setShowTaskDetailModal(true);
+  };
+  
+  // Handler für Task-Aktualisierung
+  const handleTaskUpdated = () => {
+    // Nach Änderungen Tasks neu laden
+    loadTasks();
+  };
+  
+  // Alle Aufgaben anzeigen (unabhängig vom Toggle)
+  const handleShowAllTasks = () => {
+    // Hier könnte in Zukunft eine Navigation zum vollständigen TaskScreen erfolgen
+    Alert.alert('Info', 'Die vollständige Aufgabenliste wird in einem späteren Schritt implementiert.');
+  };
+  
+  // Neuen Task erstellen
+  const handleAddTask = () => {
+    // Setze selectedTask auf null für Erstellungsmodus
+    setSelectedTask(null);
+    setShowTaskDetailModal(true);
   };
   
   if (isLoading && !currentWorkTime) {
@@ -793,61 +824,48 @@ const WorktimeScreen = () => {
           </Card>
         )}
         
-        {/* Todo-Sektion mit Ein/Aus-Schalter */}
+        {/* Todo-Sektion */}
         <Card style={styles.card}>
           <Card.Content>
             <View style={styles.cardHeader}>
               <Text style={styles.title}>To-Do Liste</Text>
-              <View style={styles.todoToggle}>
-                <Text style={styles.toggleLabel}>Anzeigen</Text>
-                <Switch
-                  value={showTodoSection}
-                  onValueChange={saveTodoSettings}
-                  color="#3B82F6"
-                />
-              </View>
             </View>
             
-            {showTodoSection ? (
-              tasksLoading ? (
-                <View style={styles.taskLoadingContainer}>
-                  <ActivityIndicator size="small" color="#3B82F6" />
-                  <Text style={styles.taskLoadingText}>Aufgaben werden geladen...</Text>
-                </View>
-              ) : tasksError ? (
-                <View style={styles.taskErrorContainer}>
-                  <Text style={styles.taskErrorText}>{tasksError}</Text>
-                  <Button mode="contained" onPress={loadTasks} style={styles.retryButton}>
-                    Erneut versuchen
-                  </Button>
-                </View>
-              ) : tasks.length === 0 ? (
-                <Text style={styles.emptyText}>Keine Aufgaben vorhanden</Text>
-              ) : (
-                <View style={styles.taskList}>
-                  {tasks.slice(0, 3).map(task => (
-                    <TaskCard 
-                      key={task.id} 
-                      task={task} 
-                      onPress={handleTaskPress} 
-                    />
-                  ))}
-                  
-                  {tasks.length > 3 && (
-                    <Button 
-                      mode="text" 
-                      onPress={() => Alert.alert('Info', 'Task-Übersicht wird in einem späteren Schritt implementiert.')}
-                      style={styles.showMoreButton}
-                    >
-                      Alle {tasks.length} Aufgaben anzeigen
-                    </Button>
-                  )}
-                </View>
-              )
+            {tasksLoading ? (
+              <View style={styles.taskLoadingContainer}>
+                <ActivityIndicator size="small" color="#3B82F6" />
+                <Text style={styles.taskLoadingText}>Aufgaben werden geladen...</Text>
+              </View>
+            ) : tasksError ? (
+              <View style={styles.taskErrorContainer}>
+                <Text style={styles.taskErrorText}>{tasksError}</Text>
+                <Button mode="contained" onPress={loadTasks} style={styles.retryButton}>
+                  Erneut versuchen
+                </Button>
+              </View>
             ) : (
-              <Text style={styles.featureDisabledText}>
-                Todo-Liste ist ausgeblendet. Aktivieren Sie den Schalter, um Ihre Aufgaben zu sehen.
-              </Text>
+              <View>
+                <TaskList
+                  tasks={tasks}
+                  isLoading={tasksLoading}
+                  error={tasksError}
+                  onRefresh={loadTasks}
+                  isRefreshing={isRefreshing}
+                  onTaskPress={handleTaskPress}
+                  showFilters={true}
+                  onAddPress={handleAddTask}
+                />
+
+                {tasks.length > 3 && (
+                  <Button 
+                    mode="text" 
+                    onPress={handleShowAllTasks}
+                    style={styles.showMoreButton}
+                  >
+                    Alle {tasks.length} Aufgaben anzeigen
+                  </Button>
+                )}
+              </View>
             )}
           </Card.Content>
         </Card>
@@ -914,82 +932,13 @@ const WorktimeScreen = () => {
           </Button>
         </Modal>
         
-        {/* Task-Details Modal */}
-        <Modal
-          visible={showTaskDetailsModal}
-          onDismiss={() => setShowTaskDetailsModal(false)}
-          contentContainerStyle={styles.modal}
-        >
-          {selectedTask && (
-            <View>
-              <Text style={styles.modalTitle}>{selectedTask.title}</Text>
-              
-              <View style={styles.statusSection}>
-                <Text style={styles.sectionLabel}>Status:</Text>
-                <View style={styles.statusButtons}>
-                  <Button
-                    mode={selectedTask.status === 'open' ? 'contained' : 'outlined'}
-                    onPress={() => handleTaskStatusChange(selectedTask.id, 'open')}
-                    style={[styles.statusButton, { borderColor: '#3B82F6' }]}
-                    textColor={selectedTask.status === 'open' ? 'white' : '#3B82F6'}
-                    disabled={selectedTask.status === 'open'}
-                  >
-                    Offen
-                  </Button>
-                  <Button
-                    mode={selectedTask.status === 'in_progress' ? 'contained' : 'outlined'}
-                    onPress={() => handleTaskStatusChange(selectedTask.id, 'in_progress')}
-                    style={[styles.statusButton, { borderColor: '#EAB308' }]}
-                    textColor={selectedTask.status === 'in_progress' ? 'white' : '#EAB308'}
-                    disabled={selectedTask.status === 'in_progress'}
-                  >
-                    In Bearbeitung
-                  </Button>
-                  <Button
-                    mode={selectedTask.status === 'done' ? 'contained' : 'outlined'}
-                    onPress={() => handleTaskStatusChange(selectedTask.id, 'done')}
-                    style={[styles.statusButton, { borderColor: '#10B981' }]}
-                    textColor={selectedTask.status === 'done' ? 'white' : '#10B981'}
-                    disabled={selectedTask.status === 'done'}
-                  >
-                    Erledigt
-                  </Button>
-                </View>
-              </View>
-              
-              <Text style={styles.sectionLabel}>Beschreibung:</Text>
-              <Text style={styles.description}>
-                {selectedTask.description || 'Keine Beschreibung vorhanden'}
-              </Text>
-              
-              <View style={styles.detailsSection}>
-                {selectedTask.branch && (
-                  <Text style={styles.detailText}>Branch: {selectedTask.branch.name}</Text>
-                )}
-                
-                {selectedTask.responsible && (
-                  <Text style={styles.detailText}>
-                    Verantwortlich: {selectedTask.responsible.firstName} {selectedTask.responsible.lastName}
-                  </Text>
-                )}
-                
-                {selectedTask.dueDate && (
-                  <Text style={styles.detailText}>
-                    Fällig am: {new Date(selectedTask.dueDate).toLocaleDateString('de-DE')}
-                  </Text>
-                )}
-              </View>
-              
-              <Button
-                mode="contained"
-                onPress={() => setShowTaskDetailsModal(false)}
-                style={styles.closeButton}
-              >
-                Schließen
-              </Button>
-            </View>
-          )}
-        </Modal>
+        {/* TaskDetailModal einbinden */}
+        <TaskDetailModal
+          visible={showTaskDetailModal}
+          onDismiss={() => setShowTaskDetailModal(false)}
+          taskId={selectedTask?.id || null}
+          onTaskUpdated={handleTaskUpdated}
+        />
       </Portal>
 
       {/* WorktimeListModal */}
@@ -1035,14 +984,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-  },
-  todoToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  toggleLabel: {
-    marginRight: 8,
-    color: '#666',
   },
   errorCard: {
     backgroundColor: '#FFEBEE',
@@ -1100,12 +1041,6 @@ const styles = StyleSheet.create({
     padding: 16,
     color: '#666',
   },
-  featureDisabledText: {
-    textAlign: 'center',
-    padding: 16,
-    color: '#666',
-    fontStyle: 'italic',
-  },
   taskList: {
     marginTop: 8,
   },
@@ -1124,25 +1059,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
-  },
-  statusButton: {
-    marginVertical: 4,
-    flex: 1,
-    marginHorizontal: 4,
-  },
-  description: {
-    marginBottom: 16,
-  },
-  detailsSection: {
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  detailText: {
-    marginBottom: 8,
-    color: '#666',
-  },
-  closeButton: {
-    marginTop: 16,
   },
   fab: {
     position: 'absolute',

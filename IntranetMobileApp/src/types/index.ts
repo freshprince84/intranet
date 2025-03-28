@@ -126,6 +126,8 @@ export interface Task {
   branchId?: number | null;
   dueDate: string | null;
   attachments?: TaskAttachment[];
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface TaskAttachment {

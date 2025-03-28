@@ -47,7 +47,16 @@ const TaskScreen = () => {
       // Lade Tasks vom Server
       const response = await taskApi.getAll();
       console.log('Geladene Tasks:', response);
-      setTasks(response);
+      
+      // Stelle sicher, dass nur Task-Objekte in der Liste sind und keine Requests
+      const filteredTasks = response.filter(item => 
+        // Prüfe ob es sich wirklich um Tasks handelt und nicht um Requests
+        item.hasOwnProperty('status') && 
+        typeof item.status === 'string' && 
+        ['open', 'in_progress', 'improval', 'quality_control', 'done'].includes(item.status)
+      );
+      
+      setTasks(filteredTasks);
     } catch (error) {
       console.error('Fehler beim Laden der Tasks:', error);
       setError('Die Aufgaben konnten nicht geladen werden. Bitte versuchen Sie es später erneut.');

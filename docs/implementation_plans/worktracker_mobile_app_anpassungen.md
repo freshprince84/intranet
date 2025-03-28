@@ -645,3 +645,688 @@ const TaskEditForm = ({ task, onSave, onCancel }) => {
    - Fokus auf die jeweils umgesetzten Funktionen
    - Protokollierung von Fehlern und unerwarteten Verhaltensweisen
    - Validierung gegen die Anforderungen 
+
+## Korrekturen und Anpassungen
+
+Nach der ersten Implementierung wurden folgende Probleme identifiziert, die korrigiert werden müssen:
+
+### 1. Entfernung des Toggle-Schalters "Anzeigen" für Tasks
+
+**Problem:**
+- Ein ungewünschter Toggle "Anzeigen" wurde im WorktimeScreen zum Ein-/Ausblenden der Task-Liste implementiert, der nicht im ursprünglichen Plan war.
+
+**Analyse möglicher Probleme:**
+- Die Entfernung des Toggle könnte Auswirkungen auf andere Bereiche des Codes haben, die von `showTodoSection` abhängen
+- Möglicherweise gibt es weitere Stellen im Code, die auf den AsyncStorage-Schlüssel `@IntranetApp:showTodoSection` zugreifen
+- Es könnte Probleme mit dem Layout geben, nachdem der Toggle-Bereich entfernt wurde
+- Die Task-Liste könnte zu groß sein und den Bildschirm überladen, wenn sie immer angezeigt wird
+
+**Erweiterte Lösung:**
+1. Identifizieren der betroffenen Komponente in WorktimeScreen.tsx:
+   - In der Card für To-Do befindet sich ein `<View style={styles.todoToggle}>` mit dem nicht benötigten Toggle
+   - Der zugehörige State `showTodoSection` und die `saveTodoSettings`-Funktion werden ebenfalls entfernt
+
+2. Umfassende Umsetzungsschritte:
+   - Entferne die `showTodoSection`-State-Variable
+   - Entferne die `loadTodoSettings`-Funktion (ca. Zeile 95-109)
+   - Entferne die `saveTodoSettings`-Funktion (ca. Zeile 112-118)
+   - Entferne die bedingte Anzeige basierend auf `showTodoSection` in Zeile 841
+   - Entferne die `todoToggle`-View und den Switch vollständig
+   - Führe eine globale Suche im gesamten Codebase nach `@IntranetApp:showTodoSection` durch, um alle Referenzen zu entfernen
+   - Führe einen grep nach `showTodoSection` aus, um sicherzustellen, dass alle Verwendungen berücksichtigt wurden
+
+3. Anpassung des Layouts:
+   - Passe den Card-Titel an (von "To-Dos (Ein/Aus)" zu einfach "To-Dos")
+   - Erhöhe ggf. den `paddingBottom` im style.content, um genügend Platz für die fixierte Zeiterfassungsbox zu haben
+   - Passe die maximale Höhe der TaskList an, damit sie nicht zu viel Platz einnimmt (z.B. mit maxHeight)
+   - Prüfe, ob ScrollView korrekt implementiert ist, damit die Benutzer durch die Tasks scrollen können
+   - Optimiere die Card-Darstellung für eine dauerhafte Anzeige
+
+4. Manuelle Tests:
+   - Teste die App nach der Änderung auf verschiedenen Bildschirmgrößen
+   - Stelle sicher, dass der Inhalt korrekt scrollbar ist und die fixierte Zeiterfassungsbox nicht überdeckt wird
+
+**Nach dieser Korrektur:**
+1. APK erstellen:
+   ```bash
+   cd IntranetMobileApp
+   cd android
+   ./gradlew assembleRelease
+   ```
+2. APK ins Backend kopieren:
+   ```bash
+   cp android/app/build/outputs/apk/release/app-release.apk /var/www/intranet/backend/public/downloads/intranet-app.apk
+   ```
+3. WICHTIG: Halte den Prozess an, damit der Benutzer testen kann. Warte auf Feedback, bevor du mit dem nächsten Schritt fortfährst.
+
+### 2. Optimierung der Screen-Aktualisierung für die Zeiterfassung
+
+**Problem:**
+- Der komplette WorktimeScreen wird durch Timer-Intervalle alle paar Sekunden neu geladen, was ein schlechtes Benutzererlebnis verursacht.
+
+**Analyse möglicher Probleme:**
+- Die komplette Entfernung des `fullRefreshInterval` könnte dazu führen, dass wichtige Daten nicht mehr aktualisiert werden
+- Die Trennung von Timer-Status-Updates und vollständigen Screen-Updates könnte zu Inkonsistenzen in den angezeigten Daten führen
+- Eine selbst implementierte `updateTimerDuration`-Funktion könnte Fehler enthalten oder nicht alle Fälle abdecken
+- Die Verwendung von React-Memoization könnte komplex sein und unerwartete Nebenwirkungen haben
+- Netzwerkwechsel könnten zu Fehlverhalten führen, wenn sie nicht korrekt behandelt werden
+
+**Erweiterte Lösung:**
+1. Detaillierte Analyse des aktuellen Update-Mechanismus:
+   - `statusInterval` (Zeile 75) lädt alle 10 Sekunden nur den Timer-Status neu
+   - `fullRefreshInterval` (Zeile 88) lädt alle 30 Sekunden den kompletten Screen mit `setupScreen()`
+   - In `checkRunningTimer()` wird nur der Timer-Status abgefragt
+   - `setupScreen()` lädt Branches, Arbeitszeiten und prüft den Timer-Status
+
+2. Gezielte Optimierung der Aktualisierungsstrategie:
+   - Behalte `statusInterval` für das regelmäßige Prüfen des Timer-Status unverändert
+   - Ersetze `fullRefreshInterval` durch einen timerDurationInterval mit höherer Frequenz (z.B. alle 5 Sekunden)
+   - Reduziere die Häufigkeit vollständiger Aktualisierungen auf ein Minimum (z.B. alle 5 Minuten)
+   - Implementiere einen separaten NetInfo-Listener für Netzwerkänderungen
+
+3. Konkrete Implementierungsschritte:
+   ```typescript
+   // Neue Funktion, die nur die Timer-Dauer aktualisiert
+   const updateTimerDuration = () => {
+     if (currentWorkTime && isTimerRunning) {
+       // Löse einen Re-Render aus, ohne die Daten neu zu laden
+       setCurrentWorkTime(prev => {
+         if (!prev) return prev;
+         return { ...prev };
+       });
+     }
+   };
+   
+   // Anpassen der useEffect-Hook
+   useEffect(() => {
+     setupScreen(); // Initiale vollständige Aktualisierung
+     loadTasks();
+     
+     // Häufiger Status-Check
+     const statusInterval = setInterval(async () => {
+       if (!isOffline) {
+         try {
+           await checkRunningTimer();
+         } catch (error) {
+           console.error('Fehler beim Aktualisieren des Timer-Status:', error);
+         }
+       }
+     }, 10000);
+     
+     // Nur Timer-Dauer aktualisieren
+     const timerDurationInterval = setInterval(updateTimerDuration, 5000);
+     
+     // Seltenere vollständige Aktualisierung
+     const fullRefreshInterval = setInterval(setupScreen, 300000); // alle 5 Minuten
+     
+     // NetInfo-Listener für Netzwerkänderungen
+     const unsubscribe = NetInfo.addEventListener(state => {
+       const newOfflineState = !state.isConnected;
+       if (isOffline !== newOfflineState) {
+         setIsOffline(newOfflineState);
+         if (!newOfflineState) {
+           // Wenn wieder online, komplette Aktualisierung durchführen
+           setupScreen();
+         }
+       }
+     });
+     
+     return () => {
+       clearInterval(statusInterval);
+       clearInterval(timerDurationInterval);
+       clearInterval(fullRefreshInterval);
+       unsubscribe();
+     };
+   }, []);
+   ```
+
+4. Optimierung der `checkRunningTimer`-Funktion:
+   - Trenne die Funktion klar von der vollständigen Bildschirmaktualisierung
+   - Mache sie effizienter durch gezielte API-Abfragen nur für den Timer-Status
+   - Implementiere eine optimistische Aktualisierung, die die UI sofort aktualisiert
+
+5. Verwendung von Memoization für die Komponenten:
+   - Setze `React.memo()` für untergeordnete Komponenten ein
+   - Verwende `useCallback` für Event-Handler
+   - Nutze `useMemo` für berechnete Werte
+   - Implementiere eine PureComponent für die TimeTrackerBox
+
+6. Debugging und Fehlerbehandlung:
+   - Füge temporär Konsolenausgaben hinzu, um die Aktualisierungszyklen zu überwachen
+   - Implementiere eine Fallback-Strategie für den Fall, dass die Aktualisierung fehlschlägt
+
+**Nach dieser Korrektur:**
+1. APK erstellen:
+   ```bash
+   cd IntranetMobileApp
+   cd android
+   ./gradlew assembleRelease
+   ```
+2. APK ins Backend kopieren:
+   ```bash
+   cp android/app/build/outputs/apk/release/app-release.apk /var/www/intranet/backend/public/downloads/intranet-app.apk
+   ```
+3. WICHTIG: Halte den Prozess an, damit der Benutzer testen kann. Warte auf Feedback, bevor du mit dem nächsten Schritt fortfährst.
+
+### 3. Entfernung der "Erledigte Aufgaben anzeigen" Option
+
+**Problem:**
+- Die Option "Erledigte Aufgaben anzeigen" bei der Filter-Speicherung war nicht Teil der Anforderungen und soll entfernt werden.
+
+**Analyse möglicher Probleme:**
+- Das Entfernen der Option könnte gespeicherte Filter im AsyncStorage ungültig machen
+- Die TaskFilterModal-Komponente könnte an mehreren Stellen in der App verwendet werden
+- Die Änderung des FilterOptions-Interface könnte zu TypeScript-Fehlern führen
+- Die Filterlogik in der TaskList-Komponente muss angepasst werden, um immer alle Tasks anzuzeigen
+
+**Erweiterte Lösung:**
+1. Genaue Identifizierung der betroffenen Komponenten:
+   - In TaskFilterModal.tsx ist ein State `const [showCompleted, setShowCompleted] = useState(true)` definiert
+   - Eine `<Switch>`-Komponente im switchSection-View steuert diesen Wert
+   - In der TaskList-Komponente gibt es eine Filterlogik, die Tasks mit Status 'done' basierend auf `activeFilters.showCompleted` filtert
+   - Das FilterOptions-Interface enthält ein `showCompleted`-Flag
+
+2. Migrationsplan für bestehende Daten:
+   - Implementiere ein einmaliges Migrationsskript, das bei App-Start ausgeführt wird:
+   ```typescript
+   // In App.tsx oder einem zentralen Initialisierungscode
+   const migrateFilters = async () => {
+     try {
+       const filtersJson = await AsyncStorage.getItem(SAVED_FILTERS_KEY);
+       if (filtersJson) {
+         const filters = JSON.parse(filtersJson);
+         // Entferne showCompleted aus allen gespeicherten Filtern
+         const migratedFilters = filters.map(filter => {
+           const { showCompleted, ...rest } = filter;
+           return rest;
+         });
+         await AsyncStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(migratedFilters));
+         console.log('Filter migriert');
+       }
+     } catch (error) {
+       console.error('Fehler bei der Migration der Filter:', error);
+     }
+   };
+   ```
+
+3. Detaillierte Umsetzungsschritte:
+   - Entferne das `showCompleted`-Flag aus dem `FilterOptions`-Interface in allen Dateien
+   - Entferne den State `showCompleted` aus TaskFilterModal.tsx
+   - Entferne die `<View style={styles.switchSection}>` mit dem Switch für "Erledigte Aufgaben anzeigen"
+   - Passe die `applyFilter`-Methode an, um das Flag nicht mehr zu setzen
+   - Passe die `resetFilters`-Methode entsprechend an
+   - Entferne die Filterlogik in TaskList.tsx, die Tasks basierend auf `activeFilters.showCompleted` filtert:
+   ```typescript
+   // Vor der Änderung
+   if (!activeFilters.showCompleted) {
+     filtered = filtered.filter(task => task.status !== 'done');
+   }
+   
+   // Nach dem Entfernen dieser Zeilen werden alle Tasks unabhängig vom Status angezeigt
+   ```
+
+4. Anpassung der Filter-Speicherung:
+   - Modifiziere die saveFilter-Funktion, um `showCompleted` nicht mehr zu speichern
+   - Passe die Filteranwendung an, um dieses Flag zu ignorieren
+
+5. Regression-Tests:
+   - Teste das Laden und Speichern von Filtern nach der Änderung
+   - Überprüfe, ob alle Tasks korrekt angezeigt werden
+   - Stelle sicher, dass bestehende Filter weiterhin funktionieren
+   - Prüfe, ob das UI korrekt dargestellt wird, nachdem der Switch entfernt wurde
+
+**Nach dieser Korrektur:**
+1. APK erstellen:
+   ```bash
+   cd IntranetMobileApp
+   cd android
+   ./gradlew assembleRelease
+   ```
+2. APK ins Backend kopieren:
+   ```bash
+   cp android/app/build/outputs/apk/release/app-release.apk /var/www/intranet/backend/public/downloads/intranet-app.apk
+   ```
+3. WICHTIG: Halte den Prozess an, damit der Benutzer testen kann. Warte auf Feedback, bevor du mit dem nächsten Schritt fortfährst.
+
+### 4. Überprüfung des Spalten-Konfigurationsbuttons -> DIESE KORREKTUR VORRERST ÜBERSPRINGEN!!
+
+
+
+-> HIER WEITERMACHEN
+### 5. Korrektur des inkonsistenten Verhaltens des Task-Bearbeitungsmodals
+
+**Problem:**
+- Das Modal zum Bearbeiten von Tasks verhält sich inkonsistent: manchmal ermöglicht es die vollständige Bearbeitung aller Felder, manchmal nur die Statusänderung.
+
+**Analyse möglicher Probleme:**
+- Die Inkonsistenz könnte durch mangelnde Zurücksetzung des State zwischen Modalaufrufen entstehen
+- Es scheint zwei separate Modi zu geben (Bearbeiten und Anzeigen), die nicht klar getrennt sind
+- Die Prop-Übergabe zwischen verschiedenen Komponenten könnte inkonsistent sein
+- Der Aufrufkontext (WorktimeScreen vs. TaskScreen) könnte zu unterschiedlichem Verhalten führen
+- Es fehlt ein klarer Reset-Mechanismus beim Öffnen und Schließen des Modals
+
+**Erweiterte Lösung:**
+1. Tiefgehende Ursachenanalyse:
+   - In TaskDetailModal.tsx wird der editMode-State in Zeile 43 definiert
+   - Beim Laden einer bestehenden Aufgabe wird editMode standardmäßig auf false gesetzt
+   - Beim Erstellen einer neuen Aufgabe wird editMode auf true gesetzt
+   - Es gibt zwei verschiedene Renderings je nach editMode-Status
+   - Möglicherweise wird der State nicht korrekt zurückgesetzt, wenn das Modal geschlossen wird
+
+2. Implementierung eines konsistenten State-Managements:
+   - Füge eine useEffect-Hook hinzu, die den State bei Änderungen von visible oder taskId vollständig zurücksetzt:
+   ```typescript
+   // TaskDetailModal.tsx - Erweiterter Reset-Mechanismus
+   useEffect(() => {
+     // Wenn das Modal geschlossen wird, setze den State zurück
+     if (!visible) {
+       setTask(null);
+       setEditMode(false);
+       setTitle('');
+       setDescription('');
+       setStatus('open' as TaskStatus);
+       setDueDate(null);
+       setSelectedUser(null);
+       setSelectedBranch(null);
+       // Weitere State-Resets...
+       
+       console.log('Modal state zurückgesetzt');
+     } else if (visible && taskId) {
+       // Wenn eine bestehende Aufgabe geladen wird
+       loadTask();
+       setEditMode(false); // Immer im Anzeigemodus starten
+     } else if (visible && !taskId) {
+       // Wenn eine neue Aufgabe erstellt wird
+       resetForm();
+       setEditMode(true); // Immer im Bearbeitungsmodus starten
+     }
+   }, [visible, taskId]);
+   ```
+
+3. Klare Trennung der Modi mit expliziten Typdefinitionen:
+   - Definiere einen ModalMode-Enum für bessere Typensicherheit und Klarheit:
+   ```typescript
+   enum ModalMode {
+     VIEW = 'view',
+     EDIT = 'edit',
+     CREATE = 'create'
+   }
+   ```
+   - Ersetze den boolean editMode durch diesen Enum
+   - Passe alle Bedingungen im Code entsprechend an
+   - Implementiere klare Übergänge zwischen den Modi
+
+4. Implementierung von Logging für bessere Fehlerdiagnose:
+   - Füge temporäre Logging-Statements an kritischen Stellen hinzu:
+   ```typescript
+   useEffect(() => {
+     console.log(`Modal geöffnet: ${visible}, TaskId: ${taskId}, Mode: ${modalMode}`);
+   }, [visible, taskId, modalMode]);
+   
+   // Nach dem Laden eines Tasks
+   useEffect(() => {
+     if (task) {
+       console.log('Task geladen:', task.id, task.title, 'Mode:', modalMode);
+     }
+   }, [task, modalMode]);
+   ```
+
+5. Standardisierung der Prop-Übergabe:
+   - Überprüfe alle Stellen, an denen das TaskDetailModal aufgerufen wird
+   - Stelle sicher, dass die Props konsistent übergeben werden
+   - Implementiere PropTypes oder TypeScript-Typen mit strikteren Definitionen
+   - Füge Defaultprops für optionale Parameter hinzu
+
+6. Vereinheitlichung der bearbeitbaren Felder:
+   - Definiere klar, welche Felder in welchem Modus bearbeitbar sein sollen
+   - Stelle sicher, dass im Bearbeitungsmodus immer alle relevanten Felder bearbeitbar sind
+   - Verwende dieselbe Logik für alle Aufrufkontexte
+
+7. Implementierung einer Entkopplung vom Aufrufkontext:
+   - Stelle sicher, dass das Modal-Verhalten unabhängig davon ist, von wo es aufgerufen wird
+   - Verwende einen Kontext oder einen zentralisierten State-Manager, falls nötig
+
+**Nach dieser Korrektur:**
+1. APK erstellen:
+   ```bash
+   cd IntranetMobileApp
+   cd android
+   ./gradlew assembleRelease
+   ```
+2. APK ins Backend kopieren:
+   ```bash
+   cp android/app/build/outputs/apk/release/app-release.apk /var/www/intranet/backend/public/downloads/intranet-app.apk
+   ```
+3. WICHTIG: Halte den Prozess an, damit der Benutzer testen kann. Warte auf Feedback, bevor du mit dem nächsten Schritt fortfährst.
+
+### 6. Verbesserung des Card-Designs
+
+**Problem:**
+- Die Task-Cards nutzen nicht die volle Seitenbreite und sind zu hoch.
+
+**Analyse möglicher Probleme:**
+- Die Änderung der Card-Breite könnte bestehende Layouts stören
+- Eine Verringerung der Card-Höhe könnte die Lesbarkeit beeinträchtigen
+- Verschiedene Gerätebildschirmgrößen könnten zu unterschiedlichen Darstellungsproblemen führen
+- Eine zu starke Einschränkung der numberOfLines könnte wichtige Informationen verbergen
+
+**Erweiterte Lösung:**
+1. Responsive Anpassung des Card-Layouts:
+   - Verwende relative statt absolute Werte für die Breite
+   - Berücksichtige verschiedene Bildschirmgrößen mit Dimensions API
+   ```typescript
+   import { Dimensions } from 'react-native';
+   const { width: screenWidth } = Dimensions.get('window');
+   
+   // TaskCard.tsx - Responsive Styles
+   const styles = StyleSheet.create({
+     card: {
+       marginVertical: 4,
+       marginHorizontal: 2, // Minimal sichtbarer Rand
+       width: screenWidth * 0.98, // 98% der Bildschirmbreite
+       alignSelf: 'center', // Zentriert die Card
+       elevation: 2, // Leichter Schatten
+     },
+     // Weitere Style-Definitionen...
+   });
+   ```
+
+2. Optimierung der Card-Höhe durch effizientere Inhaltsdarstellung:
+   - Reduziere Paddings und Margins auf das Notwendige
+   - Optimiere die Textgrößen für bessere Lesbarkeit bei geringerer Höhe
+   - Verwende einen kompakteren Footer mit horizontaler Anordnung
+   ```typescript
+   content: {
+     padding: 8,
+     paddingVertical: 6,
+   },
+   title: {
+     fontSize: 15,
+     fontWeight: 'bold',
+     marginBottom: 4,
+   },
+   description: {
+     fontSize: 13,
+     marginTop: 3,
+     marginBottom: 3,
+     color: '#4B5563',
+   },
+   footer: {
+     flexDirection: 'row',
+     flexWrap: 'wrap',
+     justifyContent: 'space-between',
+     marginTop: 4,
+   },
+   ```
+
+3. Optimierung des Informationsgehalts:
+   - Limitiere die Anzahl der Textzeilen intelligent:
+   ```typescript
+   <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{task.title}</Text>
+   
+   {task.description ? (
+     <Text style={styles.description} numberOfLines={2} ellipsizeMode="tail">
+       {task.description}
+     </Text>
+   ) : null}
+   ```
+   - Verwende Icons statt Text, wo es sinnvoll ist
+   ```typescript
+   <View style={styles.footerItem}>
+     <MaterialCommunityIcons name="calendar" size={12} color="#6B7280" />
+     <Text style={styles.footerValue}>{formatDate(new Date(task.dueDate))}</Text>
+   </View>
+   ```
+   - Optimiere die Darstellung von Status-Informationen
+   ```typescript
+   <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(task.status) }]} />
+   <Text style={styles.statusText}>{getStatusText(task.status)}</Text>
+   ```
+
+4. Berücksichtigung der Zugänglichkeit:
+   - Stelle sicher, dass der Text trotz Größenreduktion gut lesbar bleibt
+   - Erhöhe die Touchable-Fläche für bessere Bedienbarkeit
+   ```typescript
+   // Sicherstellen, dass die minimale Touchable-Fläche ausreichend ist
+   hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
+   ```
+
+5. Implementierung von Tests auf verschiedenen Geräten:
+   - Teste die Anpassungen auf verschiedenen Bildschirmgrößen
+   - Verwende den React Native Debugger, um die Layouts zu überprüfen
+   - Stelle sicher, dass die Cards auf allen Geräten gut aussehen
+
+**Nach dieser Korrektur:**
+1. APK erstellen:
+   ```bash
+   cd IntranetMobileApp
+   cd android
+   ./gradlew assembleRelease
+   ```
+2. APK ins Backend kopieren:
+   ```bash
+   cp android/app/build/outputs/apk/release/app-release.apk /var/www/intranet/backend/public/downloads/intranet-app.apk
+   ```
+3. WICHTIG: Halte den Prozess an, damit der Benutzer testen kann. Warte auf Feedback, bevor du mit dem nächsten Schritt fortfährst.
+
+### 7. Anpassung der Timer-Steuerungselemente
+
+**Problem:**
+- Die aktuellen Buttons entsprechen nicht dem Frontend-Design: Der "Timer starten" Button soll ein Slider sein, und der "Zeiteinträge" Button sollte ohne Text dargestellt werden.
+
+**Analyse möglicher Probleme:**
+- Die Slider-Implementierung erfordert eine neue Abhängigkeit, die installiert werden muss
+- Der Slider könnte auf verschiedenen Geräten unterschiedlich aussehen
+- Die Änderung des Button-Designs könnte die Benutzerfreundlichkeit beeinträchtigen
+- Die neue Anordnung könnte das bestehende Layout stören
+- Ein reiner IconButton könnte für neue Benutzer weniger intuitiv sein
+
+**Erweiterte Lösung:**
+1. Prüfung und Installation der benötigten Abhängigkeit:
+   - Recherchiere die am besten geeignete Slider-Bibliothek (@react-native-community/slider)
+   - Installiere die Bibliothek und aktualisiere die package.json:
+   ```bash
+   npm install @react-native-community/slider --save
+   # Aktualisiere @types/lodash für TypeScript-Unterstützung, wenn nötig
+   npm install @types/lodash --save-dev
+   ```
+
+2. Umfassende Implementierung des Sliders:
+   - Füge den neuen Import hinzu und implementiere den Slider
+   - Gestalte den Slider nach dem Frontend-Vorbild
+   - Implementiere eine nutzbare Schiebegeste mit passender Schwelle
+   - Füge visuelles Feedback während des Schiebens hinzu
+   ```typescript
+   import Slider from '@react-native-community/slider';
+   import { useRef, useState } from 'react';
+   
+   // TimeTrackerBox.tsx - Slider-Implementierung
+   const TimeTrackerBox: React.FC<TimeTrackerBoxProps> = ({
+     // Bestehende Props...
+   }) => {
+     const [sliderValue, setSliderValue] = useState(0);
+     const slideStartTime = useRef<number | null>(null);
+     
+     const handleSlideStart = () => {
+       slideStartTime.current = Date.now();
+     };
+     
+     const handleSlideComplete = (value: number) => {
+       // Nur starten, wenn der Slider weit genug geschoben wurde
+       if (value > 0.8) {
+         // Setze den Slider zurück
+         setSliderValue(0);
+         // Rufe die startTimer-Funktion auf
+         onStartTimer();
+       } else {
+         // Animation zurück zu 0
+         setSliderValue(0);
+       }
+     };
+     
+     return (
+       <View style={styles.container}>
+         {currentWorkTime ? (
+           // Laufender Timer (bisherige Implementierung)
+           // ...
+         ) : (
+           // Kein laufender Timer - mit Slider
+           <View style={styles.startTimer}>
+             <View style={styles.buttonGroup}>
+               <View style={styles.sliderContainer}>
+                 <Slider
+                   style={styles.slider}
+                   minimumValue={0}
+                   maximumValue={1}
+                   value={sliderValue}
+                   onValueChange={setSliderValue}
+                   onSlidingStart={handleSlideStart}
+                   onSlidingComplete={handleSlideComplete}
+                   minimumTrackTintColor="#3B82F6"
+                   maximumTrackTintColor="#D1D5DB"
+                   thumbTintColor="#3B82F6"
+                   disabled={isLoading || startLoading}
+                 />
+                 <Text style={styles.sliderText}>
+                   {sliderValue > 0.8 ? 'Loslassen zum Starten' : 'Timer starten'}
+                 </Text>
+               </View>
+               
+               <IconButton
+                 icon="format-list-bulleted"
+                 size={24}
+                 style={styles.iconButton}
+                 onPress={onShowWorkTimeList}
+                 disabled={isLoading}
+               />
+             </View>
+           </View>
+         )}
+       </View>
+     );
+   };
+   ```
+
+3. Anpassung des Zeiteinträge-Buttons:
+   - Ersetze den Button durch einen IconButton ohne Text
+   - Stelle sicher, dass der IconButton ausreichend groß und gut erkennbar ist
+   - Positioniere ihn korrekt neben dem Slider
+
+4. Erweiterte Style-Anpassungen für Konsistenz mit dem Frontend:
+   ```typescript
+   const styles = StyleSheet.create({
+     // Bestehende Styles...
+     sliderContainer: {
+       flex: 1,
+       marginRight: 12,
+     },
+     slider: {
+       width: '100%',
+       height: 36,
+     },
+     sliderText: {
+       textAlign: 'center',
+       marginTop: 4,
+       fontSize: 12,
+       color: '#6B7280',
+     },
+     iconButton: {
+       backgroundColor: '#F3F4F6',
+       borderRadius: 8,
+       width: 42,
+       height: 42,
+       justifyContent: 'center',
+       alignItems: 'center',
+     },
+   });
+   ```
+
+5. Zugänglichkeitsverbesserungen:
+   - Füge Accessibility-Labels für den Slider und den IconButton hinzu
+   ```typescript
+   <Slider
+     // Bestehende Props...
+     accessibilityLabel="Timer starten"
+     accessibilityHint="Schieben Sie nach rechts, um den Zeiterfassungs-Timer zu starten"
+   />
+   
+   <IconButton
+     // Bestehende Props...
+     accessibilityLabel="Zeiteinträge anzeigen"
+     accessibilityHint="Zeigt eine Liste Ihrer Zeiterfassungseinträge an"
+   />
+   ```
+
+6. Fallback-Implementierung für den Fall, dass die Bibliothek nicht verfügbar ist:
+   - Implementiere einen Fallback-Mechanismus, der einen regulären Button anzeigt, falls der Slider nicht geladen werden kann
+   ```typescript
+   const renderTimerControl = () => {
+     try {
+       return (
+         <Slider
+           // Slider-Implementierung...
+         />
+       );
+     } catch (error) {
+       console.error('Slider konnte nicht geladen werden:', error);
+       return (
+         <Button 
+           mode="contained" 
+           onPress={onStartTimer}
+           style={styles.fallbackButton}
+           loading={startLoading}
+           disabled={isLoading || startLoading}
+         >
+           Timer starten
+         </Button>
+       );
+     }
+   };
+   ```
+
+**Nach dieser Korrektur:**
+1. APK erstellen:
+   ```bash
+   cd IntranetMobileApp
+   cd android
+   ./gradlew assembleRelease
+   ```
+2. APK ins Backend kopieren:
+   ```bash
+   cp android/app/build/outputs/apk/release/app-release.apk /var/www/intranet/backend/public/downloads/intranet-app.apk
+   ```
+3. WICHTIG: Halte den Prozess an, damit der Benutzer testen kann. Warte auf Feedback, bevor du mit dem nächsten Schritt fortfährst.
+
+## APK-Erstellung nach jeder Korrektur
+
+Nach jeder der oben genannten Korrekturen ist eine neue APK zu erstellen und im Backend zu deployen. Dabei sind folgende Aspekte zu beachten:
+
+1. **Vorbereitung vor dem Build:**
+   - Stelle sicher, dass alle notwendigen Abhängigkeiten installiert sind
+   - Führe `npm install` aus, wenn neue Pakete hinzugefügt wurden
+   - Lösche eventuell vorhandene Caches mit `cd android && ./gradlew clean`
+   - Stelle sicher, dass genügend Arbeitsspeicher für den Build verfügbar ist
+
+2. **APK erstellen:**
+   ```bash
+   cd IntranetMobileApp
+   cd android
+   ./gradlew assembleRelease
+   ```
+
+3. **Überprüfung des Builds:**
+   - Prüfe, ob die APK erfolgreich erstellt wurde
+   - Untersuche die Build-Logs auf mögliche Warnungen oder Fehler
+   - Stelle sicher, dass die APK-Größe angemessen ist
+
+4. **Deployment und Tests:**
+   - Kopiere die APK ins Backend:
+   ```bash
+   scp -i ~/.ssh/intranet_rsa IntranetMobileApp/android/app/build/outputs/apk/release/app-release.apk root@65.109.228.106:/var/www/intranet/backend/public/downloads/intranet-app.apk
+   ```
+   - Versuche alternativ, wenn der direkte Zugriff nicht möglich ist:
+   ```bash
+   adb install -r android/app/build/outputs/apk/release/app-release.apk
+   ```
+   - Teste jede Korrektur gründlich auf einem echten Gerät
+   - Dokumentiere Fehler und Verhaltensweisen für weitere Verbesserungen 

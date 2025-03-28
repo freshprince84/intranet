@@ -7,6 +7,27 @@ import { AxiosRequestConfig, AxiosResponse } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiResponse, LoginCredentials, AuthResponse, Task, Request, User, Branch, Role, Document, PaginatedResponse, FilterOptions, Notification, NotificationType, WorkTime, WorkTimeStatistics, TaskStatus, MobileWorkTime } from '../types';
 import axiosInstance from '../config/axios';
+import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
+
+// Axios-Instance mit base URL
+const apiInstance = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// Request-Interceptor zum Hinzufügen des Authorization-Headers
+apiInstance.interceptors.request.use(
+  async (config) => {
+    const token = await AsyncStorage.getItem('@IntranetApp:token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 // Basis-API-Klasse
 class BaseApiService<T> {
@@ -176,6 +197,24 @@ class TaskApiService extends BaseApiService<Task> {
     );
     return response.data;
   }
+  
+  // Überschreibe die getAll-Methode, um sicherzustellen, dass nur Tasks zurückgegeben werden
+  async getAll(filters?: FilterOptions): Promise<Task[]> {
+    const response = await axiosInstance.get<Task[]>(
+      this.endpoint,
+      { params: filters }
+    );
+    
+    // Filtere die Antwort, um sicherzustellen, dass nur Tasks zurückgegeben werden
+    const tasks = response.data.filter(item => 
+      // Prüfe ob es sich wirklich um Tasks handelt und nicht um Requests
+      item.hasOwnProperty('status') && 
+      typeof item.status === 'string' && 
+      ['open', 'in_progress', 'improval', 'quality_control', 'done'].includes(item.status)
+    );
+    
+    return tasks;
+  }
 }
 
 class RequestApiService extends BaseApiService<Request> {
@@ -289,11 +328,29 @@ class UserApiService extends BaseApiService<User> {
   constructor() {
     super('/users');
   }
+  
+  // Alle Benutzer abrufen
+  async getAllUsers(): Promise<User[]> {
+    return this.getAll();
+  }
+
+  // Benutzer nach Rolle abrufen
+  async getByRole(roleId: number): Promise<User[]> {
+    const response = await axiosInstance.get<User[]>(
+      `${this.endpoint}/role/${roleId}`
+    );
+    return response.data;
+  }
 }
 
 class BranchApiService extends BaseApiService<Branch> {
   constructor() {
     super('/branches');
+  }
+  
+  // Alle Branches abrufen
+  async getAllBranches(): Promise<Branch[]> {
+    return this.getAll();
   }
 }
 
@@ -396,16 +453,16 @@ class NotificationApiService extends BaseApiService<Notification> {
   }
 }
 
-// Erstelle und exportiere API-Instanzen
+// Initialisiere und exportiere die Services
 export const authApi = new AuthService();
 export const taskApi = new TaskApiService();
-export const requestApi = new RequestApiService();
 export const userApi = new UserApiService();
 export const branchApi = new BranchApiService();
-export const roleApi = new RoleApiService();
+export const requestApi = new RequestApiService();
 export const documentApi = new DocumentApiService();
-export const notificationApi = new NotificationApiService();
 export const worktimeApi = new WorktimeApiService();
+export const notificationApi = new NotificationApiService();
+export const roleApi = new RoleApiService();
 
 // Exportiere die Axios-Instanz für direkte Verwendung bei Bedarf
 export default axiosInstance;

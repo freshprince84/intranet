@@ -13,20 +13,18 @@ import {
 import { useTheme } from '../contexts/ThemeContext.tsx';
 import { API_URL } from '../config/api';
 
-// Standard-Konfiguration als Fallback
+// Standard-Konfiguration NICHT ÄNDERN!!!!!!!!!!!!!
 const DEFAULT_APP_CONFIG = {
   android: {
     version: '1.0.0',
-    buildDate: '2023-03-01',
-    downloadUrl: 'https://example.com/app.apk',
-    playStoreUrl: 'https://play.google.com/store/apps',
+    downloadUrl: 'https://65.109.228.106.nip.io/downloads/intranet-app.apk',
+    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.yourcompany.intranetapp'
   },
   ios: {
     version: '1.0.0',
-    buildDate: '2023-03-01',
-    appStoreUrl: 'https://apps.apple.com/',
+    appStoreUrl: 'https://apps.apple.com/app/intranet-app/id1234567890'
   },
-  lastUpdate: '01.03.2023',
+  lastUpdate: '24.03.2023'
 };
 
 // Feature-Liste mit Icons
