@@ -160,60 +160,222 @@ class AuthService {
   }
 }
 
-class TaskApiService extends BaseApiService<Task> {
+export class TaskApiService extends BaseApiService<Task> {
   constructor() {
     super('/tasks');
   }
 
-  // Status einer Aufgabe aktualisieren
-  async updateStatus(id: number, status: TaskStatus): Promise<any> {
-    const response = await axiosInstance.patch<any>(
-      `${this.endpoint}/${id}/status`,
-      { status }
-    );
-    return response.data;
+  // Überschreibe create für bessere Fehlerbehandlung
+  async create(data: Partial<Task>): Promise<Task> {
+    try {
+      if (!data.title || !data.branchId) {
+        throw new Error('Titel und Branch sind erforderlich');
+      }
+
+      const preparedData = this.prepareTaskData(data);
+      console.log('Erstelle Task mit Daten:', preparedData);
+      
+      const response = await axiosInstance.post<Task>(
+        this.endpoint,
+        preparedData
+      );
+      
+      console.log('API-Antwort beim Erstellen:', response.data);
+      return this.validateTaskResponse(response.data);
+    } catch (error) {
+      console.error('Fehler beim Erstellen der Aufgabe:', error);
+      throw this.handleTaskError(error, 'Erstellen');
+    }
+  }
+
+  // Überschreibe update für bessere Fehlerbehandlung
+  async update(id: number, data: Partial<Task>): Promise<Task> {
+    try {
+      if (!id) {
+        throw new Error('Task-ID ist erforderlich');
+      }
+      
+      const preparedData = this.prepareTaskData(data);
+      console.log(`Aktualisiere Task ${id} mit Daten:`, preparedData);
+      
+      const response = await axiosInstance.put<Task>(
+        `${this.endpoint}/${id}`,
+        preparedData
+      );
+      
+      console.log('API-Antwort beim Aktualisieren:', response.data);
+      return this.validateTaskResponse(response.data);
+    } catch (error) {
+      console.error(`Fehler beim Aktualisieren der Aufgabe ${id}:`, error);
+      throw this.handleTaskError(error, 'Aktualisieren');
+    }
+  }
+
+  // Überschreibe getById für bessere Fehlerbehandlung
+  async getById(id: number): Promise<Task> {
+    try {
+      if (!id) {
+        throw new Error('Task-ID ist erforderlich');
+      }
+      
+      console.log(`Lade Task mit ID ${id}`);
+      
+      // Verwende den erweiterten Endpunkt, um Referenzobjekte zu laden
+      const response = await axiosInstance.get<Task>(`${this.endpoint}/${id}?include=responsible,branch`);
+      
+      console.log('API-Antwort beim Laden:', response.data);
+      
+      // Stelle sicher, dass die Daten korrekt geladen wurden
+      if (!response.data) {
+        throw new Error('Der Server hat keine Daten zurückgegeben.');
+      }
+      
+      return this.validateTaskResponse(response.data);
+    } catch (error) {
+      console.error(`Fehler beim Laden der Aufgabe ${id}:`, error);
+      throw this.handleTaskError(error, 'Laden');
+    }
+  }
+
+  // Lade alle Tasks mit Referenzen
+  async getAll(query?: any): Promise<Task[]> {
+    try {
+      console.log('Lade alle Tasks');
+      
+      // Erweitere den Endpoint um Referenzobjekte einzuschließen
+      const response = await axiosInstance.get<Task[]>(`${this.endpoint}?include=responsible,branch`, {
+        params: query
+      });
+      
+      console.log(`${response.data.length} Tasks geladen`);
+      
+      return response.data;
+    } catch (error) {
+      console.error('Fehler beim Laden aller Tasks:', error);
+      throw this.handleTaskError(error, 'Laden aller Tasks');
+    }
+  }
+
+  // Statusaktualisierung mit verbesserter Fehlerbehandlung
+  async updateStatus(id: number, status: TaskStatus): Promise<Task> {
+    try {
+      if (!id) {
+        throw new Error('Task-ID ist erforderlich');
+      }
+      
+      if (!this.isValidTaskStatus(status)) {
+        throw new Error('Ungültiger Task-Status');
+      }
+      
+      console.log(`Aktualisiere Status von Task ${id} auf ${status}`);
+      const response = await axiosInstance.patch<Task>(
+        `${this.endpoint}/${id}/status`,
+        { status }
+      );
+      
+      console.log('API-Antwort bei Statusaktualisierung:', response.data);
+      return this.validateTaskResponse(response.data);
+    } catch (error) {
+      console.error(`Fehler beim Aktualisieren des Status für Aufgabe ${id}:`, error);
+      throw this.handleTaskError(error, 'Statusaktualisierung');
+    }
+  }
+
+  // Private Hilfsmethoden für Validierung und Fehlerbehandlung
+  private prepareTaskData(data: Partial<Task>): Partial<Task> {
+    return {
+      ...data,
+      title: data.title?.trim(),
+      description: data.description?.trim() || null,
+      // Stelle sicher, dass Datumswerte korrekt formatiert sind
+      dueDate: data.dueDate ? 
+        (typeof data.dueDate === 'string' ? data.dueDate : new Date(data.dueDate).toISOString()) : 
+        null
+    };
+  }
+
+  private validateTaskResponse(data: any): Task {
+    if (!data || typeof data !== 'object') {
+      throw new Error('Ungültige Task-Daten vom Server');
+    }
+
+    // Weniger strenge Validierung, um Kompatibilitätsprobleme zu vermeiden
+    if (!data.id) {
+      throw new Error('Ungültige Task-Daten: Keine ID vom Server');
+    }
+
+    // Stelle sicher, dass die Daten das richtige Format haben
+    const taskData: Task = {
+      ...data,
+      // Stelle sicher, dass dueDate ein Datum ist, wenn es existiert
+      dueDate: data.dueDate ? new Date(data.dueDate) : null
+    };
+
+    return taskData;
+  }
+
+  private isValidTaskStatus(status: any): status is TaskStatus {
+    return ['open', 'in_progress', 'improval', 'quality_control', 'done'].includes(status);
+  }
+
+  private handleTaskError(error: any, operation: string): Error {
+    if (error.response?.status === 401) {
+      return new Error('Nicht autorisiert. Bitte melden Sie sich erneut an.');
+    }
+    
+    if (error.response?.status === 403) {
+      return new Error('Keine Berechtigung für diese Aktion.');
+    }
+    
+    if (error.response?.status === 404) {
+      return new Error('Die angeforderte Aufgabe wurde nicht gefunden.');
+    }
+    
+    if (error.response?.data?.message) {
+      return new Error(error.response.data.message);
+    }
+    
+    if (error instanceof Error) {
+      return error;
+    }
+    
+    return new Error(`Die Aufgabe konnte nicht ${operation.toLowerCase()} werden.`);
   }
 
   // Aufgaben für einen bestimmten Benutzer abrufen
   async getByResponsible(userId: number): Promise<Task[]> {
-    const response = await axiosInstance.get<Task[]>(
-      `${this.endpoint}/responsible/${userId}`
-    );
-    return response.data;
+    try {
+      const response = await axiosInstance.get<Task[]>(
+        `${this.endpoint}/responsible/${userId}?include=branch`
+      );
+      return response.data;
+    } catch (error) {
+      throw this.handleTaskError(error, 'Laden');
+    }
   }
 
   // Aufgaben für eine bestimmte Rolle abrufen
   async getByRole(roleId: number): Promise<Task[]> {
-    const response = await axiosInstance.get<Task[]>(
-      `${this.endpoint}/role/${roleId}`
-    );
-    return response.data;
+    try {
+      const response = await axiosInstance.get<Task[]>(
+        `${this.endpoint}/role/${roleId}?include=branch`
+      );
+      return response.data;
+    } catch (error) {
+      throw this.handleTaskError(error, 'Laden');
+    }
   }
 
   // Aufgaben für eine bestimmte Qualitätskontrolle abrufen
   async getByQualityControl(userId: number): Promise<Task[]> {
-    const response = await axiosInstance.get<Task[]>(
-      `${this.endpoint}/quality-control/${userId}`
-    );
-    return response.data;
-  }
-  
-  // Überschreibe die getAll-Methode, um sicherzustellen, dass nur Tasks zurückgegeben werden
-  async getAll(filters?: FilterOptions): Promise<Task[]> {
-    const response = await axiosInstance.get<Task[]>(
-      this.endpoint,
-      { params: filters }
-    );
-    
-    // Filtere die Antwort, um sicherzustellen, dass nur Tasks zurückgegeben werden
-    const tasks = response.data.filter(item => 
-      // Prüfe ob es sich wirklich um Tasks handelt und nicht um Requests
-      item.hasOwnProperty('status') && 
-      typeof item.status === 'string' && 
-      ['open', 'in_progress', 'improval', 'quality_control', 'done'].includes(item.status)
-    );
-    
-    return tasks;
+    try {
+      const response = await axiosInstance.get<Task[]>(
+        `${this.endpoint}/quality-control/${userId}?include=branch`
+      );
+      return response.data;
+    } catch (error) {
+      throw this.handleTaskError(error, 'Laden');
+    }
   }
 }
 

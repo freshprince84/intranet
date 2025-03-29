@@ -245,12 +245,71 @@ Nach Analyse des Problems wurde festgestellt, dass es Kompatibilitätsprobleme m
 - Bei Änderungen: Erstellen und Deployment einer neuen APK
 - Warten auf Benutzer-Feedback
 
-#### 3.5 Korrektur des inkonsistenten Verhaltens des Task-Bearbeitungsmodals
-- Implementierung der Änderungen
-- Testen der Funktionalität
-- Dokumentation der Änderungen in dieser Datei
-- Erstellen und Deployment einer neuen APK
-- Warten auf Benutzer-Feedback
+#### 3.5 Korrektur des inkonsistenten Verhaltens des Task-Bearbeitungsmodals ✅
+
+**Datum:** 28.03.2024
+
+##### Durchgeführte Änderungen:
+
+1. **Grundlegende Überarbeitung der Modal-Struktur:**
+   - Einführung des `ModalMode`-Enums (VIEW/EDIT/CREATE) für klare Modussteuerung
+   - Implementierung des `TaskFormReducer` für robustes State Management
+   - Verbesserte Formularvalidierung und Fehlerbehandlung
+
+2. **Neue Komponenten und Interfaces:**
+   ```typescript
+   export enum ModalMode {
+     VIEW = 'view',
+     EDIT = 'edit',
+     CREATE = 'create'
+   }
+
+   export interface TaskFormData {
+     title: string;
+     description: string;
+     status: TaskStatus;
+     dueDate: Date | null;
+     responsibleId: number | null;
+     branchId: number | null;
+   }
+
+   export interface TaskFormState extends TaskFormData {
+     isLoading: boolean;
+     isUpdating: boolean;
+     error: string | null;
+     formError: string | null;
+   }
+   ```
+
+3. **Verbesserte Benutzerführung:**
+   - Klare visuelle Trennung zwischen Ansichts-, Bearbeitungs- und Erstellungsmodus
+   - Konsistente Statusanzeigen und Feedback-Mechanismen
+   - Intuitive Navigation zwischen den Modi
+   - Verbesserte Fehlerbehandlung mit detaillierten Meldungen
+
+4. **Optimierte API-Integration:**
+   - Strukturierte API-Aufrufe mit Fehlerbehandlung
+   - Speicherung der letzten Branch-Auswahl für neue Tasks
+   - Verbesserte Validierung vor API-Calls
+
+5. **Formularvalidierung:**
+   - Pflichtfeldprüfung für Titel
+   - Branch-Auswahl als Pflichtfeld
+   - Strukturierte Fehleranzeige im Formular
+
+##### Vorteile der neuen Implementierung:
+- Bessere Benutzerfreundlichkeit durch klare Modussteuerung
+- Robusteres State Management durch Reducer-Pattern
+- Verbesserte Fehlerbehandlung und Validierung
+- Konsistentere Benutzeroberfläche
+- Bessere Performance durch optimiertes State Management
+
+##### Build und Deployment:
+- APK erfolgreich erstellt und ins Backend kopiert
+- APK-Größe: 24.49 MB
+- Verfügbar unter: https://65.109.228.106.nip.io/downloads/intranet-app.apk
+
+**Status:** Erfolgreich abgeschlossen. Das Task-Bearbeitungsmodal wurde grundlegend überarbeitet und bietet nun ein konsistentes und benutzerfreundliches Verhalten.
 
 #### 3.6 Verbesserung des Card-Designs
 - Implementierung der Änderungen
@@ -265,6 +324,64 @@ Nach Analyse des Problems wurde festgestellt, dass es Kompatibilitätsprobleme m
 - Dokumentation der Änderungen in dieser Datei
 - Erstellen und Deployment einer neuen APK
 - Warten auf Benutzer-Feedback
+
+#### 2.4 TaskDetailModal Überarbeitung und APK-Build ⏳
+
+**Datum:** 28.03.2024
+
+##### Durchgeführte Änderungen:
+1. **Grundlegende Überarbeitung des TaskDetailModal:**
+   - Einführung des `ModalMode` Enums (VIEW, EDIT, CREATE)
+   - Implementation des `TaskFormReducer` für robustes State Management
+   - Verbesserte Formularvalidierung und Fehlerbehandlung
+   - Definition neuer Komponenten und Interfaces (`TaskFormData`, `TaskFormState`)
+
+2. **API-Integration:**
+   - Strukturierte API-Aufrufe mit Validierung
+   - Optimierte Fehlerbehandlung
+   - Verbesserte Benutzerführung durch klare Status-Anzeigen
+
+##### Vorteile der neuen Implementierung:
+- Klare Trennung zwischen Ansichts-, Bearbeitungs- und Erstellungsmodus
+- Verbesserte Benutzerführung durch eindeutige visuelle Trennung
+- Robusteres State Management durch `useReducer`
+- Bessere Fehlerbehandlung und Validierung
+
+##### Build und Deployment:
+- APK-Build erfolgt
+- APK-Größe: 24.57 MB
+- Datei: `IntranetMobileApp/android/app/build/outputs/apk/release/app-release.apk`
+
+**Status:** ✅ Implementierung abgeschlossen
+
+#### 2.5 Korrektur des "Ungültiger Modal-Zustand"-Fehlers ✅
+
+**Datum:** 29.03.2024
+
+##### Durchgeführte Änderungen:
+1. **Verbesserung der Initialisierungslogik im TaskDetailModal:**
+   - Überarbeitung der if-Bedingungen für Mode/TaskId-Kombinationen
+   - Entfernung des Fehlers "Ungültiger Modal-Zustand" bei unerwarteten aber handhabbaren Zuständen
+   - Einführung von ausführlichem Logging für bessere Diagnose
+   - Vereinfachung der Bedingungen für das Laden von Tasks und Initialisieren neuer Tasks
+
+2. **Modalinitialisierung:**
+   - CREATE-Modus wird jetzt immer korrekt behandelt, unabhängig vom taskId-Wert
+   - Verbesserte Fehlerbehandlung mit aussagekräftigeren Fehlermeldungen
+   - Umwandlung kritischer Fehler in Warnungen, wo angemessen
+
+##### Vorteile der neuen Implementierung:
+- Robusteres Verhalten beim Öffnen des Modals
+- Bessere Benutzerfreundlichkeit durch Vermeidung unnötiger Fehlermeldungen
+- Verbesserte Diagnosemöglichkeiten durch erweiterte Logging-Informationen
+- Konsistenteres Verhalten in allen Modal-Modi
+
+##### Build und Deployment:
+- Neue APK-Version erstellt
+- APK-Größe: 24.57 MB
+- Datei: `IntranetMobileApp/android/app/build/outputs/apk/release/app-release.apk`
+
+**Status:** ✅ Fehler behoben
 
 ## Worktracker Mobile App - Implementierung
 
@@ -361,4 +478,41 @@ Nach Analyse des Problems wurde festgestellt, dass es Kompatibilitätsprobleme m
 
 - Vollständige Integration mit bestehenden Backend-Workflows
 - Erweiterte Offline-Funktionalität
-- Push-Benachrichtigungen für Aufgabenaktualisierungen 
+- Push-Benachrichtigungen für Aufgabenaktualisierungen
+
+## Wichtige Regeln für die Implementierung
+
+1. **Dokumentation ist PFLICHT:**
+   - Jede Änderung MUSS sofort in dieser Datei dokumentiert werden
+   - Die Dokumentation MUSS vor dem nächsten Schritt erfolgen
+   - Format der Dokumentation:
+     ```markdown
+     #### [Nummer].[Nummer] [Titel] ✅
+     
+     **Datum:** [Aktuelles Datum]
+     
+     ##### Durchgeführte Änderungen:
+     1. **[Hauptänderung 1]:**
+        - [Detail 1]
+        - [Detail 2]
+     
+     ##### Vorteile der neuen Implementierung:
+     - [Vorteil 1]
+     - [Vorteil 2]
+     
+     ##### Build und Deployment:
+     - APK-Build-Details
+     - APK-Größe
+     - Download-Link
+     
+     **Status:** [Aktueller Status]
+     ```
+
+2. **Implementierungsschritte:**
+   - Analyse des Problems
+   - Planung der Änderungen
+   - Implementierung
+   - Tests
+   - Dokumentation
+   - Build und Deployment
+   - Warten auf Benutzer-Feedback 

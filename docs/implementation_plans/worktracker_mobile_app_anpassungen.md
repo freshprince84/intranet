@@ -895,407 +895,369 @@ Nach der ersten Implementierung wurden folgende Probleme identifiziert, die korr
 -> HIER WEITERMACHEN
 ### 5. Korrektur des inkonsistenten Verhaltens des Task-Bearbeitungsmodals
 
-**Problem:**
-- Das Modal zum Bearbeiten von Tasks verhält sich inkonsistent: manchmal ermöglicht es die vollständige Bearbeitung aller Felder, manchmal nur die Statusänderung.
+#### Aktuelle Probleme (ANALYSE):
 
-**Analyse möglicher Probleme:**
-- Die Inkonsistenz könnte durch mangelnde Zurücksetzung des State zwischen Modalaufrufen entstehen
-- Es scheint zwei separate Modi zu geben (Bearbeiten und Anzeigen), die nicht klar getrennt sind
-- Die Prop-Übergabe zwischen verschiedenen Komponenten könnte inkonsistent sein
-- Der Aufrufkontext (WorktimeScreen vs. TaskScreen) könnte zu unterschiedlichem Verhalten führen
-- Es fehlt ein klarer Reset-Mechanismus beim Öffnen und Schließen des Modals
+1. **Hauptprobleme:**
+   - Modal öffnet sich ohne Task-Daten beim Klicken auf einen Task
+   - Task-Bearbeitung funktioniert nicht mehr (war vorher funktional)
+   - Neue Tasks können nicht erstellt werden (API-Aufruf schlägt fehl)
 
-**Erweiterte Lösung:**
-1. Tiefgehende Ursachenanalyse:
-   - In TaskDetailModal.tsx wird der editMode-State in Zeile 43 definiert
-   - Beim Laden einer bestehenden Aufgabe wird editMode standardmäßig auf false gesetzt
-   - Beim Erstellen einer neuen Aufgabe wird editMode auf true gesetzt
-   - Es gibt zwei verschiedene Renderings je nach editMode-Status
-   - Möglicherweise wird der State nicht korrekt zurückgesetzt, wenn das Modal geschlossen wird
+2. **Code-Analyse TaskDetailModal.tsx:**
+   - `useEffect` für Task-Laden hat Fehler:
+     ```typescript
+     useEffect(() => {
+       if (visible) {
+         if (mode === ModalMode.CREATE) {
+           initializeNewTask();
+         } else if (taskId) {
+           loadTask();
+         }
+         loadUsersAndBranches();
+       }
+     }, [visible, taskId, mode]);
+     ```
+     Problem: Abhängigkeitsarray enthält `mode`, was zu unerwünschten Re-Renders führt
 
-2. Implementierung eines konsistenten State-Managements:
-   - Füge eine useEffect-Hook hinzu, die den State bei Änderungen von visible oder taskId vollständig zurücksetzt:
-   ```typescript
-   // TaskDetailModal.tsx - Erweiterter Reset-Mechanismus
-   useEffect(() => {
-     // Wenn das Modal geschlossen wird, setze den State zurück
-     if (!visible) {
-       setTask(null);
-       setEditMode(false);
-       setTitle('');
-       setDescription('');
-       setStatus('open' as TaskStatus);
-       setDueDate(null);
-       setSelectedUser(null);
-       setSelectedBranch(null);
-       // Weitere State-Resets...
-       
-       console.log('Modal state zurückgesetzt');
-     } else if (visible && taskId) {
-       // Wenn eine bestehende Aufgabe geladen wird
-       loadTask();
-       setEditMode(false); // Immer im Anzeigemodus starten
-     } else if (visible && !taskId) {
-       // Wenn eine neue Aufgabe erstellt wird
-       resetForm();
-       setEditMode(true); // Immer im Bearbeitungsmodus starten
-     }
-   }, [visible, taskId]);
-   ```
-
-3. Klare Trennung der Modi mit expliziten Typdefinitionen:
-   - Definiere einen ModalMode-Enum für bessere Typensicherheit und Klarheit:
-   ```typescript
-   enum ModalMode {
-     VIEW = 'view',
-     EDIT = 'edit',
-     CREATE = 'create'
-   }
-   ```
-   - Ersetze den boolean editMode durch diesen Enum
-   - Passe alle Bedingungen im Code entsprechend an
-   - Implementiere klare Übergänge zwischen den Modi
-
-4. Implementierung von Logging für bessere Fehlerdiagnose:
-   - Füge temporäre Logging-Statements an kritischen Stellen hinzu:
-   ```typescript
-   useEffect(() => {
-     console.log(`Modal geöffnet: ${visible}, TaskId: ${taskId}, Mode: ${modalMode}`);
-   }, [visible, taskId, modalMode]);
-   
-   // Nach dem Laden eines Tasks
-   useEffect(() => {
-     if (task) {
-       console.log('Task geladen:', task.id, task.title, 'Mode:', modalMode);
-     }
-   }, [task, modalMode]);
-   ```
-
-5. Standardisierung der Prop-Übergabe:
-   - Überprüfe alle Stellen, an denen das TaskDetailModal aufgerufen wird
-   - Stelle sicher, dass die Props konsistent übergeben werden
-   - Implementiere PropTypes oder TypeScript-Typen mit strikteren Definitionen
-   - Füge Defaultprops für optionale Parameter hinzu
-
-6. Vereinheitlichung der bearbeitbaren Felder:
-   - Definiere klar, welche Felder in welchem Modus bearbeitbar sein sollen
-   - Stelle sicher, dass im Bearbeitungsmodus immer alle relevanten Felder bearbeitbar sind
-   - Verwende dieselbe Logik für alle Aufrufkontexte
-
-7. Implementierung einer Entkopplung vom Aufrufkontext:
-   - Stelle sicher, dass das Modal-Verhalten unabhängig davon ist, von wo es aufgerufen wird
-   - Verwende einen Kontext oder einen zentralisierten State-Manager, falls nötig
-
-**Nach dieser Korrektur:**
-1. APK erstellen:
-   ```bash
-   cd IntranetMobileApp
-   cd android
-   ./gradlew assembleRelease
-   ```
-2. APK ins Backend kopieren:
-   ```bash
-   cp android/app/build/outputs/apk/release/app-release.apk /var/www/intranet/backend/public/downloads/intranet-app.apk
-   ```
-3. WICHTIG: Halte den Prozess an, damit der Benutzer testen kann. Warte auf Feedback, bevor du mit dem nächsten Schritt fortfährst.
-
-### 6. Verbesserung des Card-Designs
-
-**Problem:**
-- Die Task-Cards nutzen nicht die volle Seitenbreite und sind zu hoch.
-
-**Analyse möglicher Probleme:**
-- Die Änderung der Card-Breite könnte bestehende Layouts stören
-- Eine Verringerung der Card-Höhe könnte die Lesbarkeit beeinträchtigen
-- Verschiedene Gerätebildschirmgrößen könnten zu unterschiedlichen Darstellungsproblemen führen
-- Eine zu starke Einschränkung der numberOfLines könnte wichtige Informationen verbergen
-
-**Erweiterte Lösung:**
-1. Responsive Anpassung des Card-Layouts:
-   - Verwende relative statt absolute Werte für die Breite
-   - Berücksichtige verschiedene Bildschirmgrößen mit Dimensions API
-   ```typescript
-   import { Dimensions } from 'react-native';
-   const { width: screenWidth } = Dimensions.get('window');
-   
-   // TaskCard.tsx - Responsive Styles
-   const styles = StyleSheet.create({
-     card: {
-       marginVertical: 4,
-       marginHorizontal: 2, // Minimal sichtbarer Rand
-       width: screenWidth * 0.98, // 98% der Bildschirmbreite
-       alignSelf: 'center', // Zentriert die Card
-       elevation: 2, // Leichter Schatten
-     },
-     // Weitere Style-Definitionen...
-   });
-   ```
-
-2. Optimierung der Card-Höhe durch effizientere Inhaltsdarstellung:
-   - Reduziere Paddings und Margins auf das Notwendige
-   - Optimiere die Textgrößen für bessere Lesbarkeit bei geringerer Höhe
-   - Verwende einen kompakteren Footer mit horizontaler Anordnung
-   ```typescript
-   content: {
-     padding: 8,
-     paddingVertical: 6,
-   },
-   title: {
-     fontSize: 15,
-     fontWeight: 'bold',
-     marginBottom: 4,
-   },
-   description: {
-     fontSize: 13,
-     marginTop: 3,
-     marginBottom: 3,
-     color: '#4B5563',
-   },
-   footer: {
-     flexDirection: 'row',
-     flexWrap: 'wrap',
-     justifyContent: 'space-between',
-     marginTop: 4,
-   },
-   ```
-
-3. Optimierung des Informationsgehalts:
-   - Limitiere die Anzahl der Textzeilen intelligent:
-   ```typescript
-   <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{task.title}</Text>
-   
-   {task.description ? (
-     <Text style={styles.description} numberOfLines={2} ellipsizeMode="tail">
-       {task.description}
-     </Text>
-   ) : null}
-   ```
-   - Verwende Icons statt Text, wo es sinnvoll ist
-   ```typescript
-   <View style={styles.footerItem}>
-     <MaterialCommunityIcons name="calendar" size={12} color="#6B7280" />
-     <Text style={styles.footerValue}>{formatDate(new Date(task.dueDate))}</Text>
-   </View>
-   ```
-   - Optimiere die Darstellung von Status-Informationen
-   ```typescript
-   <View style={[styles.statusIndicator, { backgroundColor: getStatusColor(task.status) }]} />
-   <Text style={styles.statusText}>{getStatusText(task.status)}</Text>
-   ```
-
-4. Berücksichtigung der Zugänglichkeit:
-   - Stelle sicher, dass der Text trotz Größenreduktion gut lesbar bleibt
-   - Erhöhe die Touchable-Fläche für bessere Bedienbarkeit
-   ```typescript
-   // Sicherstellen, dass die minimale Touchable-Fläche ausreichend ist
-   hitSlop={{ top: 10, bottom: 10, left: 5, right: 5 }}
-   ```
-
-5. Implementierung von Tests auf verschiedenen Geräten:
-   - Teste die Anpassungen auf verschiedenen Bildschirmgrößen
-   - Verwende den React Native Debugger, um die Layouts zu überprüfen
-   - Stelle sicher, dass die Cards auf allen Geräten gut aussehen
-
-**Nach dieser Korrektur:**
-1. APK erstellen:
-   ```bash
-   cd IntranetMobileApp
-   cd android
-   ./gradlew assembleRelease
-   ```
-2. APK ins Backend kopieren:
-   ```bash
-   cp android/app/build/outputs/apk/release/app-release.apk /var/www/intranet/backend/public/downloads/intranet-app.apk
-   ```
-3. WICHTIG: Halte den Prozess an, damit der Benutzer testen kann. Warte auf Feedback, bevor du mit dem nächsten Schritt fortfährst.
-
-### 7. Anpassung der Timer-Steuerungselemente
-
-**Problem:**
-- Die aktuellen Buttons entsprechen nicht dem Frontend-Design: Der "Timer starten" Button soll ein Slider sein, und der "Zeiteinträge" Button sollte ohne Text dargestellt werden.
-
-**Analyse möglicher Probleme:**
-- Die Slider-Implementierung erfordert eine neue Abhängigkeit, die installiert werden muss
-- Der Slider könnte auf verschiedenen Geräten unterschiedlich aussehen
-- Die Änderung des Button-Designs könnte die Benutzerfreundlichkeit beeinträchtigen
-- Die neue Anordnung könnte das bestehende Layout stören
-- Ein reiner IconButton könnte für neue Benutzer weniger intuitiv sein
-
-**Erweiterte Lösung:**
-1. Prüfung und Installation der benötigten Abhängigkeit:
-   - Recherchiere die am besten geeignete Slider-Bibliothek (@react-native-community/slider)
-   - Installiere die Bibliothek und aktualisiere die package.json:
-   ```bash
-   npm install @react-native-community/slider --save
-   # Aktualisiere @types/lodash für TypeScript-Unterstützung, wenn nötig
-   npm install @types/lodash --save-dev
-   ```
-
-2. Umfassende Implementierung des Sliders:
-   - Füge den neuen Import hinzu und implementiere den Slider
-   - Gestalte den Slider nach dem Frontend-Vorbild
-   - Implementiere eine nutzbare Schiebegeste mit passender Schwelle
-   - Füge visuelles Feedback während des Schiebens hinzu
-   ```typescript
-   import Slider from '@react-native-community/slider';
-   import { useRef, useState } from 'react';
-   
-   // TimeTrackerBox.tsx - Slider-Implementierung
-   const TimeTrackerBox: React.FC<TimeTrackerBoxProps> = ({
-     // Bestehende Props...
-   }) => {
-     const [sliderValue, setSliderValue] = useState(0);
-     const slideStartTime = useRef<number | null>(null);
-     
-     const handleSlideStart = () => {
-       slideStartTime.current = Date.now();
-     };
-     
-     const handleSlideComplete = (value: number) => {
-       // Nur starten, wenn der Slider weit genug geschoben wurde
-       if (value > 0.8) {
-         // Setze den Slider zurück
-         setSliderValue(0);
-         // Rufe die startTimer-Funktion auf
-         onStartTimer();
-       } else {
-         // Animation zurück zu 0
-         setSliderValue(0);
+   - `loadTask` Funktion:
+     ```typescript
+     const loadTask = async () => {
+       if (!taskId) return;
+       dispatch({ type: 'SET_LOADING', value: true });
+       try {
+         const taskData = await taskApi.getById(taskId);
+         dispatch({ type: 'LOAD_TASK', task: taskData });
+         setSelectedUser(taskData.responsible || null);
+         setSelectedBranch(taskData.branch || null);
+       } catch (error) {
+         console.error('Fehler beim Laden der Aufgabe:', error);
+         dispatch({ type: 'SET_ERROR', error: 'Die Aufgabe konnte nicht geladen werden.' });
+       } finally {
+         dispatch({ type: 'SET_LOADING', value: false });
        }
      };
+     ```
+     Problem: Keine Überprüfung ob taskData wirklich Daten enthält
+
+   - `handleSave` Funktion:
+     ```typescript
+     const handleSave = async () => {
+       if (!validateForm()) return;
+       dispatch({ type: 'SET_UPDATING', value: true });
+       try {
+         const taskData = {
+           title: formState.title.trim(),
+           description: formState.description.trim(),
+           status: formState.status,
+           dueDate: formState.dueDate ? formState.dueDate.toISOString() : null,
+           responsibleId: formState.responsibleId,
+           branchId: formState.branchId,
+         };
+         if (mode === ModalMode.EDIT && taskId) {
+           await taskApi.update(taskId, taskData);
+           Alert.alert('Erfolg', 'Die Aufgabe wurde erfolgreich aktualisiert.');
+         } else if (mode === ModalMode.CREATE) {
+           await taskApi.create(taskData);
+           Alert.alert('Erfolg', 'Die Aufgabe wurde erfolgreich erstellt.');
+         }
+         if (onTaskUpdated) {
+           onTaskUpdated();
+         }
+         onDismiss();
+       } catch (error) {
+         console.error('Fehler beim Speichern der Aufgabe:', error);
+         const axiosError = error as any;
+         const errorMessage = axiosError.response?.data?.message || 
+                          axiosError.message || 
+                          'Die Aufgabe konnte nicht gespeichert werden.';
+         dispatch({ type: 'SET_FORM_ERROR', error: errorMessage });
+       } finally {
+         dispatch({ type: 'SET_UPDATING', value: false });
+       }
+     };
+     ```
+     Problem: Keine Validierung der API-Response, keine Überprüfung der taskData-Struktur
+
+3. **API-Integration Analyse:**
+   - TaskApiService in apiClient.ts:
+     ```typescript
+     class TaskApiService extends BaseApiService<Task> {
+       constructor() {
+         super('/tasks');
+       }
+     }
+     ```
+     Problem: Keine spezifische Fehlerbehandlung für Task-spezifische Fehler
+
+4. **State Management Analyse:**
+   - Zu viele separate States:
+     ```typescript
+     const [mode, setMode] = React.useState(initialMode);
+     const [formState, dispatch] = useReducer(taskFormReducer, initialFormState);
+     const [showDatePicker, setShowDatePicker] = React.useState(false);
+     const [showUserMenu, setShowUserMenu] = React.useState(false);
+     const [showBranchMenu, setShowBranchMenu] = React.useState(false);
+     const [showConfirmationDialog, setShowConfirmationDialog] = React.useState(false);
+     const [users, setUsers] = React.useState<User[]>([]);
+     const [branches, setBranches] = React.useState<Branch[]>([]);
+     const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
+     const [selectedBranch, setSelectedBranch] = React.useState<Branch | null>(null);
+     ```
+     Problem: Inkonsistenzen durch zu viele unabhängige States
+
+#### Korrekturplan:
+
+1. **Task-Laden optimieren:**
+   ```typescript
+   // Neuer useEffect ohne mode als Dependency
+   useEffect(() => {
+     if (visible && taskId) {
+       loadTask();
+     }
+   }, [visible, taskId]);
+
+   // Separater useEffect für CREATE mode
+   useEffect(() => {
+     if (visible && mode === ModalMode.CREATE) {
+       initializeNewTask();
+     }
+   }, [visible]);
+
+   // Separater useEffect für Users & Branches
+   useEffect(() => {
+     if (visible) {
+       loadUsersAndBranches();
+     }
+   }, [visible]);
+   ```
+
+2. **loadTask-Funktion verbessern:**
+   ```typescript
+   const loadTask = async () => {
+     if (!taskId) return;
      
-     return (
-       <View style={styles.container}>
-         {currentWorkTime ? (
-           // Laufender Timer (bisherige Implementierung)
-           // ...
-         ) : (
-           // Kein laufender Timer - mit Slider
-           <View style={styles.startTimer}>
-             <View style={styles.buttonGroup}>
-               <View style={styles.sliderContainer}>
-                 <Slider
-                   style={styles.slider}
-                   minimumValue={0}
-                   maximumValue={1}
-                   value={sliderValue}
-                   onValueChange={setSliderValue}
-                   onSlidingStart={handleSlideStart}
-                   onSlidingComplete={handleSlideComplete}
-                   minimumTrackTintColor="#3B82F6"
-                   maximumTrackTintColor="#D1D5DB"
-                   thumbTintColor="#3B82F6"
-                   disabled={isLoading || startLoading}
-                 />
-                 <Text style={styles.sliderText}>
-                   {sliderValue > 0.8 ? 'Loslassen zum Starten' : 'Timer starten'}
-                 </Text>
-               </View>
-               
-               <IconButton
-                 icon="format-list-bulleted"
-                 size={24}
-                 style={styles.iconButton}
-                 onPress={onShowWorkTimeList}
-                 disabled={isLoading}
-               />
-             </View>
-           </View>
-         )}
-       </View>
-     );
-   };
-   ```
-
-3. Anpassung des Zeiteinträge-Buttons:
-   - Ersetze den Button durch einen IconButton ohne Text
-   - Stelle sicher, dass der IconButton ausreichend groß und gut erkennbar ist
-   - Positioniere ihn korrekt neben dem Slider
-
-4. Erweiterte Style-Anpassungen für Konsistenz mit dem Frontend:
-   ```typescript
-   const styles = StyleSheet.create({
-     // Bestehende Styles...
-     sliderContainer: {
-       flex: 1,
-       marginRight: 12,
-     },
-     slider: {
-       width: '100%',
-       height: 36,
-     },
-     sliderText: {
-       textAlign: 'center',
-       marginTop: 4,
-       fontSize: 12,
-       color: '#6B7280',
-     },
-     iconButton: {
-       backgroundColor: '#F3F4F6',
-       borderRadius: 8,
-       width: 42,
-       height: 42,
-       justifyContent: 'center',
-       alignItems: 'center',
-     },
-   });
-   ```
-
-5. Zugänglichkeitsverbesserungen:
-   - Füge Accessibility-Labels für den Slider und den IconButton hinzu
-   ```typescript
-   <Slider
-     // Bestehende Props...
-     accessibilityLabel="Timer starten"
-     accessibilityHint="Schieben Sie nach rechts, um den Zeiterfassungs-Timer zu starten"
-   />
-   
-   <IconButton
-     // Bestehende Props...
-     accessibilityLabel="Zeiteinträge anzeigen"
-     accessibilityHint="Zeigt eine Liste Ihrer Zeiterfassungseinträge an"
-   />
-   ```
-
-6. Fallback-Implementierung für den Fall, dass die Bibliothek nicht verfügbar ist:
-   - Implementiere einen Fallback-Mechanismus, der einen regulären Button anzeigt, falls der Slider nicht geladen werden kann
-   ```typescript
-   const renderTimerControl = () => {
+     dispatch({ type: 'SET_LOADING', value: true });
+     dispatch({ type: 'SET_ERROR', error: null });
+     
      try {
-       return (
-         <Slider
-           // Slider-Implementierung...
-         />
-       );
+       const taskData = await taskApi.getById(taskId);
+       
+       // Validiere taskData
+       if (!taskData || !taskData.id) {
+         throw new Error('Ungültige Task-Daten vom Server');
+       }
+       
+       // Setze alle States auf einmal
+       dispatch({ type: 'LOAD_TASK', task: taskData });
+       setSelectedUser(taskData.responsible || null);
+       setSelectedBranch(taskData.branch || null);
+       
      } catch (error) {
-       console.error('Slider konnte nicht geladen werden:', error);
-       return (
-         <Button 
-           mode="contained" 
-           onPress={onStartTimer}
-           style={styles.fallbackButton}
-           loading={startLoading}
-           disabled={isLoading || startLoading}
-         >
-           Timer starten
-         </Button>
-       );
+       console.error('Fehler beim Laden der Aufgabe:', error);
+       dispatch({ type: 'SET_ERROR', error: 'Die Aufgabe konnte nicht geladen werden.' });
+     } finally {
+       dispatch({ type: 'SET_LOADING', value: false });
      }
    };
    ```
 
-**Nach dieser Korrektur:**
-1. APK erstellen:
-   ```bash
-   cd IntranetMobileApp
-   cd android
-   ./gradlew assembleRelease
+3. **handleSave-Funktion verbessern:**
+   ```typescript
+   const handleSave = async () => {
+     if (!validateForm()) return;
+     
+     dispatch({ type: 'SET_UPDATING', value: true });
+     dispatch({ type: 'SET_ERROR', error: null });
+     
+     try {
+       const taskData = {
+         title: formState.title.trim(),
+         description: formState.description.trim(),
+         status: formState.status,
+         dueDate: formState.dueDate ? formState.dueDate.toISOString() : null,
+         responsibleId: formState.responsibleId,
+         branchId: formState.branchId,
+       };
+       
+       // Validiere taskData
+       if (!taskData.title || !taskData.branchId) {
+         throw new Error('Pflichtfelder fehlen');
+       }
+       
+       let savedTask;
+       if (mode === ModalMode.EDIT && taskId) {
+         savedTask = await taskApi.update(taskId, taskData);
+       } else if (mode === ModalMode.CREATE) {
+         savedTask = await taskApi.create(taskData);
+       }
+       
+       // Validiere Response
+       if (!savedTask || !savedTask.id) {
+         throw new Error('Ungültige Antwort vom Server');
+       }
+       
+       Alert.alert(
+         'Erfolg',
+         mode === ModalMode.CREATE ? 
+           'Die Aufgabe wurde erfolgreich erstellt.' :
+           'Die Aufgabe wurde erfolgreich aktualisiert.'
+       );
+       
+       if (onTaskUpdated) {
+         onTaskUpdated();
+       }
+       
+       onDismiss();
+       
+     } catch (error) {
+       console.error('Fehler beim Speichern der Aufgabe:', error);
+       
+       // Strukturierte Fehlerbehandlung
+       const axiosError = error as any;
+       let errorMessage = 'Die Aufgabe konnte nicht gespeichert werden.';
+       
+       if (axiosError.response?.data?.message) {
+         errorMessage = axiosError.response.data.message;
+       } else if (error instanceof Error) {
+         errorMessage = error.message;
+       }
+       
+       dispatch({ type: 'SET_FORM_ERROR', error: errorMessage });
+     } finally {
+       dispatch({ type: 'SET_UPDATING', value: false });
+     }
+   };
    ```
-2. APK ins Backend kopieren:
-   ```bash
-   cp android/app/build/outputs/apk/release/app-release.apk /var/www/intranet/backend/public/downloads/intranet-app.apk
+
+4. **State Management optimieren:**
+   ```typescript
+   // Reduziere separate States durch Erweiterung des taskFormReducer
+   interface TaskFormState {
+     // ... bisherige Felder ...
+     ui: {
+       showDatePicker: boolean;
+       showUserMenu: boolean;
+       showBranchMenu: boolean;
+       showConfirmationDialog: boolean;
+     };
+     data: {
+       users: User[];
+       branches: Branch[];
+       selectedUser: User | null;
+       selectedBranch: Branch | null;
+     };
+   }
    ```
-3. WICHTIG: Halte den Prozess an, damit der Benutzer testen kann. Warte auf Feedback, bevor du mit dem nächsten Schritt fortfährst.
+
+5. **TaskApiService erweitern:**
+   ```typescript
+   class TaskApiService extends BaseApiService<Task> {
+     constructor() {
+       super('/tasks');
+     }
+     
+     // Überschreibe create für bessere Fehlerbehandlung
+     async create(data: Partial<Task>): Promise<Task> {
+       try {
+         const response = await this.axiosInstance.post<Task>(
+           this.endpoint,
+           this.prepareTaskData(data)
+         );
+         return this.validateTaskResponse(response.data);
+       } catch (error) {
+         throw this.handleTaskError(error, 'Erstellen');
+       }
+     }
+     
+     // Überschreibe update für bessere Fehlerbehandlung
+     async update(id: number, data: Partial<Task>): Promise<Task> {
+       try {
+         const response = await this.axiosInstance.put<Task>(
+           `${this.endpoint}/${id}`,
+           this.prepareTaskData(data)
+         );
+         return this.validateTaskResponse(response.data);
+       } catch (error) {
+         throw this.handleTaskError(error, 'Aktualisieren');
+       }
+     }
+     
+     private prepareTaskData(data: Partial<Task>): Partial<Task> {
+       // Validiere und bereinige Daten vor dem Senden
+       return {
+         ...data,
+         title: data.title?.trim(),
+         description: data.description?.trim() || null,
+         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null
+       };
+     }
+     
+     private validateTaskResponse(data: any): Task {
+       if (!data || !data.id || !data.title) {
+         throw new Error('Ungültige Antwort vom Server');
+       }
+       return data;
+     }
+     
+     private handleTaskError(error: any, operation: string): Error {
+       console.error(`Fehler beim ${operation} der Aufgabe:`, error);
+       
+       if (error.response?.data?.message) {
+         return new Error(error.response.data.message);
+       }
+       
+       if (error instanceof Error) {
+         return error;
+       }
+       
+       return new Error(`Die Aufgabe konnte nicht ${operation.toLowerCase()} werden.`);
+     }
+   }
+   ```
+
+#### Umsetzungsreihenfolge:
+
+1. TaskApiService-Erweiterungen implementieren
+2. State Management optimieren (taskFormReducer erweitern)
+3. Task-Laden-Logik verbessern (useEffect & loadTask)
+4. handleSave-Funktion überarbeiten
+5. Manuelle Tests durchführen:
+   - Task öffnen & Daten prüfen
+   - Task bearbeiten & speichern
+   - Neuen Task erstellen
+   - Fehlerszenarien testen
+
+#### Erwartete Verbesserungen:
+
+1. **Zuverlässigkeit:**
+   - Konsistentes Laden von Task-Daten
+   - Robuste Fehlerbehandlung
+   - Validierte API-Aufrufe
+
+2. **Benutzerfreundlichkeit:**
+   - Klare Fehlermeldungen
+   - Sofortiges Feedback
+   - Keine unerwarteten Modal-Zustände
+
+3. **Wartbarkeit:**
+   - Zentralisierte Fehlerbehandlung
+   - Reduzierte State-Komplexität
+   - Bessere Testbarkeit
+
+#### Risiken & Gegenmaßnahmen:
+
+1. **Datenverlust während der Bearbeitung:**
+   - Implementiere Auto-Save für Entwürfe
+   - Bestätigungsdialog beim Schließen
+
+2. **API-Fehler:**
+   - Offline-Support mit Queuing
+   - Retry-Mechanismus für fehlgeschlagene Requests
+
+3. **State-Inkonsistenzen:**
+   - Strikte Validierung aller State-Änderungen
+   - Logging für Debug-Zwecke
+
+// ... existing code ...
 
 ## APK-Erstellung nach jeder Korrektur
 

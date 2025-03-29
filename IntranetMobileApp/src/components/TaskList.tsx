@@ -42,7 +42,7 @@ interface TaskListProps {
   error: string | null;
   onRefresh: () => void;
   isRefreshing: boolean;
-  onTaskPress: (task: Task) => void;
+  onTaskPress: (taskId: number) => void;
   showFilters?: boolean;
   onFilterPress?: () => void;
   onAddPress?: () => void;
@@ -196,7 +196,7 @@ const TaskList: React.FC<TaskListProps> = ({
       <TaskCard 
         key={task.id}
         task={task} 
-        onPress={onTaskPress}
+        onPress={() => onTaskPress(task.id)}
         visibleColumns={tableSettings.columns}
       />
     );
