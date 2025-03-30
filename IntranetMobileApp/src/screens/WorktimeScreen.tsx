@@ -769,16 +769,29 @@ const WorktimeScreen = () => {
     }
   };
   
-  // Handler für den Start-Timer Button in der TimeTrackerBox
+  // Handler für den Start-Timer Button in der TimeTrackerBox (jetzt für Modal)
   const handleStartTimerPress = () => {
-    setShowBranchModal(true);
+    // Wird jetzt durch handleSlideConfirmation ausgelöst
+    // setShowBranchModal(true);
   };
-  
-  // Handler für den Stop-Timer Button in der TimeTrackerBox
+
+  // Handler für den Stop-Timer Button in der TimeTrackerBox (jetzt für Modal)
   const handleStopTimerPress = () => {
-    setShowNotesModal(true);
+    // Wird jetzt durch handleSlideConfirmation ausgelöst
+    // setShowNotesModal(true);
   };
-  
+
+  // NEUER Handler für Slider-Bestätigung
+  const handleSlideConfirmation = () => {
+    if (isTimerRunning) {
+      // Timer läuft -> Notizen-Modal für Stop anzeigen
+      setShowNotesModal(true);
+    } else {
+      // Timer läuft nicht -> Branch-Modal für Start anzeigen
+      setShowBranchModal(true);
+    }
+  };
+
   // Handler für Task-Auswahl (nimmt jetzt taskId)
   const handleTaskPress = (taskId: number) => {
     // Finde den Task im State
@@ -893,12 +906,9 @@ const WorktimeScreen = () => {
       <TimeTrackerBox 
         currentWorkTime={currentWorkTime}
         branches={branches}
-        onStartTimer={handleStartTimerPress}
-        onStopTimer={handleStopTimerPress}
+        onSlideConfirm={handleSlideConfirmation}
         onShowWorkTimeList={() => setShowWorkTimeListModal(true)}
         isLoading={isLoading}
-        startLoading={startLoading}
-        stopLoading={stopLoading}
       />
 
       <Portal>
