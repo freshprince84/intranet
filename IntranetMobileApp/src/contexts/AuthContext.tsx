@@ -6,6 +6,7 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../api/apiClient';
+import { Branch } from '../types';
 
 // Konstanten für AsyncStorage-Schlüssel
 const TOKEN_STORAGE_KEY = '@IntranetApp:token';
@@ -20,6 +21,8 @@ interface User {
   lastName: string;
   email: string;
   roles?: any[];
+  branchId?: number;
+  branch?: Branch;
 }
 
 interface AuthContextData {

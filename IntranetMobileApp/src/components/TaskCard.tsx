@@ -42,6 +42,10 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, visibleColumns = ['t
         return 'Offen';
       case 'in_progress':
         return 'In Bearbeitung';
+      case 'improval':
+        return 'Nachbesserung';
+      case 'quality_control':
+        return 'Qualitätskontrolle';
       case 'done':
         return 'Erledigt';
       default:

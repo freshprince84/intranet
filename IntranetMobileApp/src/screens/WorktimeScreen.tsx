@@ -13,7 +13,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 import { worktimeApi, branchApi, taskApi } from '../api/apiClient';
-import { Branch, MobileWorkTime, Task, TaskStatus } from '../types';
+import { Branch, MobileWorkTime, Task, TaskStatus, ModalMode } from '../types';
 import { 
   formatDateTime, 
   calculateDuration, 
@@ -61,9 +61,13 @@ const WorktimeScreen = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [tasksLoading, setTasksLoading] = useState(true);
   const [tasksError, setTasksError] = useState<string | null>(null);
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showTaskDetailModal, setShowTaskDetailModal] = useState(false);
   
+  // <<< NEUE STATES FÜR MODAL >>>
+  const [modalTaskId, setModalTaskId] = useState<number | null>(null);
+  const [modalMode, setModalMode] = useState<ModalMode>(ModalMode.CREATE);
+  // <<< ENDE NEUE STATES >>>
+
   /**
    * Aktualisiert nur die Timer-Dauer ohne Server-Anfrage
    */
@@ -775,16 +779,27 @@ const WorktimeScreen = () => {
     setShowNotesModal(true);
   };
   
-  // Handler für Task-Auswahl
-  const handleTaskPress = (task: Task) => {
-    setSelectedTask(task);
+  // Handler für Task-Auswahl (nimmt jetzt taskId)
+  const handleTaskPress = (taskId: number) => {
+    // Finde den Task im State
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) {
+      console.error(`[WorktimeScreen] Task with ID ${taskId} not found in state!`);
+      Alert.alert("Fehler", "Ausgewählte Aufgabe nicht gefunden.");
+      return;
+    }
+    console.log(`[WorktimeScreen] Task pressed: ID=${task.id}, Title=${task.title}`);
+    // Modal States setzen
+    setModalTaskId(task.id);
+    setModalMode(ModalMode.EDIT);
     setShowTaskDetailModal(true);
   };
   
   // Handler für Task-Aktualisierung
   const handleTaskUpdated = () => {
-    // Nach Änderungen Tasks neu laden
-    loadTasks();
+    console.log('[WorktimeScreen] Task updated, reloading tasks...');
+    setShowTaskDetailModal(false); // Modal schließen
+    loadTasks(); // Taskliste neu laden
   };
   
   // Alle Aufgaben anzeigen (unabhängig vom Toggle)
@@ -795,9 +810,12 @@ const WorktimeScreen = () => {
   
   // Neuen Task erstellen
   const handleAddTask = () => {
-    // Setze selectedTask auf null für Erstellungsmodus
-    setSelectedTask(null);
+    console.log('[WorktimeScreen] Add task button pressed');
+    // <<< MODAL STATES SETZEN >>>
+    setModalTaskId(null);
+    setModalMode(ModalMode.CREATE);
     setShowTaskDetailModal(true);
+    // <<< ENDE MODAL STATES SETZEN >>>
   };
   
   if (isLoading && !currentWorkTime) {
@@ -936,7 +954,8 @@ const WorktimeScreen = () => {
         <TaskDetailModal
           visible={showTaskDetailModal}
           onDismiss={() => setShowTaskDetailModal(false)}
-          taskId={selectedTask?.id || null}
+          taskId={modalTaskId}
+          mode={modalMode}
           onTaskUpdated={handleTaskUpdated}
         />
       </Portal>

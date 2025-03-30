@@ -901,25 +901,26 @@ Nach der ersten Implementierung wurden folgende Probleme identifiziert, die korr
    - Modal öffnet sich ohne Task-Daten beim Klicken auf einen Task
    - Task-Bearbeitung funktioniert nicht mehr (war vorher funktional)
    - Neue Tasks können nicht erstellt werden (API-Aufruf schlägt fehl)
+   - Felder (Datum, Verantwortlicher, Branch) werden nicht korrekt geladen oder initialisiert
 
 2. **Code-Analyse TaskDetailModal.tsx:**
    - `useEffect` für Task-Laden hat Fehler:
-     ```typescript
-     useEffect(() => {
+   ```typescript
+   useEffect(() => {
        if (visible) {
          if (mode === ModalMode.CREATE) {
            initializeNewTask();
          } else if (taskId) {
-           loadTask();
-         }
+       loadTask();
+     }
          loadUsersAndBranches();
        }
      }, [visible, taskId, mode]);
-     ```
-     Problem: Abhängigkeitsarray enthält `mode`, was zu unerwünschten Re-Renders führt
+   ```
+     Problem: Abhängigkeiten sind nicht optimal und erzeugen unerwünschte Re-Renders
 
    - `loadTask` Funktion:
-     ```typescript
+   ```typescript
      const loadTask = async () => {
        if (!taskId) return;
        dispatch({ type: 'SET_LOADING', value: true });
@@ -939,7 +940,7 @@ Nach der ersten Implementierung wurden folgende Probleme identifiziert, die korr
      Problem: Keine Überprüfung ob taskData wirklich Daten enthält
 
    - `handleSave` Funktion:
-     ```typescript
+   ```typescript
      const handleSave = async () => {
        if (!validateForm()) return;
        dispatch({ type: 'SET_UPDATING', value: true });
@@ -986,278 +987,254 @@ Nach der ersten Implementierung wurden folgende Probleme identifiziert, die korr
        }
      }
      ```
-     Problem: Keine spezifische Fehlerbehandlung für Task-spezifische Fehler
+     Problem: 
+     - API-Aufrufe holen keine Referenzobjekte (responsible, branch)
+     - Mangelnde spezifische Fehlerbehandlung für Task-spezifische Fehler
 
 4. **State Management Analyse:**
-   - Zu viele separate States:
-     ```typescript
-     const [mode, setMode] = React.useState(initialMode);
-     const [formState, dispatch] = useReducer(taskFormReducer, initialFormState);
-     const [showDatePicker, setShowDatePicker] = React.useState(false);
-     const [showUserMenu, setShowUserMenu] = React.useState(false);
-     const [showBranchMenu, setShowBranchMenu] = React.useState(false);
-     const [showConfirmationDialog, setShowConfirmationDialog] = React.useState(false);
-     const [users, setUsers] = React.useState<User[]>([]);
-     const [branches, setBranches] = React.useState<Branch[]>([]);
-     const [selectedUser, setSelectedUser] = React.useState<User | null>(null);
-     const [selectedBranch, setSelectedBranch] = React.useState<Branch | null>(null);
-     ```
-     Problem: Inkonsistenzen durch zu viele unabhängige States
+   - Inkonsistente State-Struktur mit Referenzobjekten und IDs
+   - Kein Abgleich zwischen Referenzobjekten und den entsprechenden IDs
 
-#### Korrekturplan:
+#### Erweiterter Korrekturplan:
 
-1. **Task-Laden optimieren:**
+1. **TaskApiService verbessern:**
+   1. API-Aufrufe erweitern, um Referenzobjekte einzubeziehen:
+      ```typescript
+      async getById(id: number): Promise<Task> {
+        // Verwende include-Parameter, um Referenzobjekte zu laden
+        const response = await axiosInstance.get<Task>(`${this.endpoint}/${id}?include=responsible,branch`);
+        return this.validateTaskResponse(response.data);
+      }
+      ```
+   2. Datumswerte richtig formatieren und validieren:
+      ```typescript
+      private prepareTaskData(data: Partial<Task>): Partial<Task> {
+        return {
+          ...data,
+          title: data.title?.trim(),
+          description: data.description?.trim() || null,
+          dueDate: data.dueDate ? 
+            (typeof data.dueDate === 'string' ? data.dueDate : new Date(data.dueDate).toISOString()) : 
+            null
+        };
+      }
+      ```
+   3. Verbesserte Fehlerbehandlung:
+      ```typescript
+      private handleTaskError(error: any, operation: string): Error {
+        if (error.response?.status === 401) {
+          return new Error('Nicht autorisiert. Bitte melden Sie sich erneut an.');
+        }
+        // ... weitere Fehlerbehandlung
+      }
+      ```
+
+2. **TaskFormReducer optimieren:**
+   1. Implementiere TaskFormData Interface in types/index.ts:
+      ```typescript
+      export interface TaskFormData {
+        title: string;
+        description: string;
+        status: TaskStatus;
+        dueDate: Date | null;
+        responsibleId: number | null;
+        branchId: number | null;
+      }
+
+      export interface TaskFormState extends TaskFormData {
+        // ... weitere Felder
+      }
+      ```
+   2. Verbessere LOAD_TASK Aktion im Reducer:
+      ```typescript
+      case 'LOAD_TASK': {
+        // Extrahiere Daten und stelle sicher, dass sie das richtige Format haben
+        const dueDate = action.task.dueDate ? 
+          (typeof action.task.dueDate === 'string' ? new Date(action.task.dueDate) : action.task.dueDate) : 
+          null;
+        
+        // Extrahiere responsibleId und branchId
+        const responsibleId = action.task.responsibleId || (action.task.responsible?.id || null);
+        const branchId = action.task.branchId || (action.task.branch?.id || null);
+        
+        // Verarbeite die Referenzobjekte
+        const selectedUser = action.task.responsible || 
+          (responsibleId ? state.data.users.find(u => u.id === responsibleId) || null : null);
+        
+        const selectedBranch = action.task.branch || 
+          (branchId ? state.data.branches.find(b => b.id === branchId) || null : null);
+        
+        return {
+          ...state,
+          title: action.task.title,
+          description: action.task.description || '',
+          status: action.task.status,
+          dueDate,
+          responsibleId,
+          branchId,
+          data: {
+            ...state.data,
+            selectedUser,
+            selectedBranch
+          },
+          error: null,
+          formError: null
+        };
+      }
+      ```
+
+3. **TaskDetailModal verbessern:**
+   1. Implementiere getDefaultDueDate-Methode (wie im Frontend):
    ```typescript
-   // Neuer useEffect ohne mode als Dependency
-   useEffect(() => {
-     if (visible && taskId) {
-       loadTask();
-     }
-   }, [visible, taskId]);
-
-   // Separater useEffect für CREATE mode
-   useEffect(() => {
-     if (visible && mode === ModalMode.CREATE) {
-       initializeNewTask();
-     }
-   }, [visible]);
-
-   // Separater useEffect für Users & Branches
-   useEffect(() => {
-     if (visible) {
-       loadUsersAndBranches();
-     }
-   }, [visible]);
-   ```
-
-2. **loadTask-Funktion verbessern:**
+      const getDefaultDueDate = () => {
+        const date = new Date();
+        date.setDate(date.getDate() + 7);
+        return date;
+      };
+      ```
+   2. Verbessere initializeNewTask um Standardwerte zu setzen:
    ```typescript
-   const loadTask = async () => {
-     if (!taskId) return;
-     
-     dispatch({ type: 'SET_LOADING', value: true });
-     dispatch({ type: 'SET_ERROR', error: null });
-     
-     try {
-       const taskData = await taskApi.getById(taskId);
-       
-       // Validiere taskData
-       if (!taskData || !taskData.id) {
-         throw new Error('Ungültige Task-Daten vom Server');
-       }
-       
-       // Setze alle States auf einmal
-       dispatch({ type: 'LOAD_TASK', task: taskData });
-       setSelectedUser(taskData.responsible || null);
-       setSelectedBranch(taskData.branch || null);
-       
-     } catch (error) {
-       console.error('Fehler beim Laden der Aufgabe:', error);
-       dispatch({ type: 'SET_ERROR', error: 'Die Aufgabe konnte nicht geladen werden.' });
-     } finally {
-       dispatch({ type: 'SET_LOADING', value: false });
-     }
-   };
-   ```
+      const initializeNewTask = async () => {
+        dispatch({ type: 'RESET_FORM' });
+        
+        // Standardwerte setzen (wie im Frontend)
+        dispatch({ type: 'SET_FIELD', field: 'dueDate', value: getDefaultDueDate() });
+        
+        // ... weitere Initialisierung
+      };
+      ```
+   3. Richtiger useEffect für Modalinitialisierung:
+      ```typescript
+      useEffect(() => {
+        if (visible) {
+          const initializeModal = async () => {
+            try {
+              dispatch({ type: 'SET_LOADING', value: true });
+              
+              // Lade Benutzer und Branches zuerst
+              await loadUsersAndBranches();
+              
+              if (mode === ModalMode.CREATE) {
+                await initializeNewTask();
+              } else if (taskId) {
+                await loadTask();
+              }
+            } catch (error) {
+              // ... Fehlerbehandlung
+            } finally {
+              dispatch({ type: 'SET_LOADING', value: false });
+            }
+          };
+          
+          initializeModal();
+        }
+      }, [visible, mode, taskId]);  // Mode als Abhängigkeit beibehalten
+      ```
 
-3. **handleSave-Funktion verbessern:**
+4. **Optimierte handleSave Funktion:**
    ```typescript
    const handleSave = async () => {
-     if (!validateForm()) return;
+     dispatch({ type: 'VALIDATE_FORM' });
+     if (formState.formError) {
+       Alert.alert('Validierungsfehler', formState.formError);
+       return;
+     }
      
      dispatch({ type: 'SET_UPDATING', value: true });
-     dispatch({ type: 'SET_ERROR', error: null });
      
      try {
-       const taskData = {
-         title: formState.title.trim(),
-         description: formState.description.trim(),
-         status: formState.status,
-         dueDate: formState.dueDate ? formState.dueDate.toISOString() : null,
-         responsibleId: formState.responsibleId,
-         branchId: formState.branchId,
-       };
+       const taskData = prepareTaskData();
+       let successMessage = '';
+       let savedTask = null;
        
-       // Validiere taskData
-       if (!taskData.title || !taskData.branchId) {
-         throw new Error('Pflichtfelder fehlen');
-       }
-       
-       let savedTask;
        if (mode === ModalMode.EDIT && taskId) {
          savedTask = await taskApi.update(taskId, taskData);
+         successMessage = 'Die Aufgabe wurde erfolgreich aktualisiert.';
        } else if (mode === ModalMode.CREATE) {
          savedTask = await taskApi.create(taskData);
+         successMessage = 'Die Aufgabe wurde erfolgreich erstellt.';
+         
+         // Speichere die letzte ausgewählte Branch
+         if (taskData.branchId) {
+           await AsyncStorage.setItem('lastSelectedBranchId', taskData.branchId.toString());
+         }
+       } else {
+         throw new Error('Ungültiger Modus für Speichern');
        }
        
-       // Validiere Response
+       // Validiere Antwort
        if (!savedTask || !savedTask.id) {
          throw new Error('Ungültige Antwort vom Server');
        }
        
-       Alert.alert(
-         'Erfolg',
-         mode === ModalMode.CREATE ? 
-           'Die Aufgabe wurde erfolgreich erstellt.' :
-           'Die Aufgabe wurde erfolgreich aktualisiert.'
-       );
+       // Aktualisiere den Cache mit den gespeicherten Task-Daten
+       dispatch({ type: 'LOAD_TASK', task: savedTask });
        
        if (onTaskUpdated) {
          onTaskUpdated();
        }
        
+       Alert.alert('Erfolg', successMessage);
        onDismiss();
-       
      } catch (error) {
-       console.error('Fehler beim Speichern der Aufgabe:', error);
-       
-       // Strukturierte Fehlerbehandlung
-       const axiosError = error as any;
-       let errorMessage = 'Die Aufgabe konnte nicht gespeichert werden.';
-       
-       if (axiosError.response?.data?.message) {
-         errorMessage = axiosError.response.data.message;
-       } else if (error instanceof Error) {
-         errorMessage = error.message;
-       }
-       
-       dispatch({ type: 'SET_FORM_ERROR', error: errorMessage });
+       // ... Fehlerbehandlung
      } finally {
        dispatch({ type: 'SET_UPDATING', value: false });
      }
    };
    ```
 
-4. **State Management optimieren:**
-   ```typescript
-   // Reduziere separate States durch Erweiterung des taskFormReducer
-   interface TaskFormState {
-     // ... bisherige Felder ...
-     ui: {
-       showDatePicker: boolean;
-       showUserMenu: boolean;
-       showBranchMenu: boolean;
-       showConfirmationDialog: boolean;
-     };
-     data: {
-       users: User[];
-       branches: Branch[];
-       selectedUser: User | null;
-       selectedBranch: Branch | null;
-     };
-   }
-   ```
-
-5. **TaskApiService erweitern:**
-   ```typescript
-   class TaskApiService extends BaseApiService<Task> {
-     constructor() {
-       super('/tasks');
-     }
-     
-     // Überschreibe create für bessere Fehlerbehandlung
-     async create(data: Partial<Task>): Promise<Task> {
-       try {
-         const response = await this.axiosInstance.post<Task>(
-           this.endpoint,
-           this.prepareTaskData(data)
-         );
-         return this.validateTaskResponse(response.data);
-       } catch (error) {
-         throw this.handleTaskError(error, 'Erstellen');
-       }
-     }
-     
-     // Überschreibe update für bessere Fehlerbehandlung
-     async update(id: number, data: Partial<Task>): Promise<Task> {
-       try {
-         const response = await this.axiosInstance.put<Task>(
-           `${this.endpoint}/${id}`,
-           this.prepareTaskData(data)
-         );
-         return this.validateTaskResponse(response.data);
-       } catch (error) {
-         throw this.handleTaskError(error, 'Aktualisieren');
-       }
-     }
-     
-     private prepareTaskData(data: Partial<Task>): Partial<Task> {
-       // Validiere und bereinige Daten vor dem Senden
-       return {
-         ...data,
-         title: data.title?.trim(),
-         description: data.description?.trim() || null,
-         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null
-       };
-     }
-     
-     private validateTaskResponse(data: any): Task {
-       if (!data || !data.id || !data.title) {
-         throw new Error('Ungültige Antwort vom Server');
-       }
-       return data;
-     }
-     
-     private handleTaskError(error: any, operation: string): Error {
-       console.error(`Fehler beim ${operation} der Aufgabe:`, error);
-       
-       if (error.response?.data?.message) {
-         return new Error(error.response.data.message);
-       }
-       
-       if (error instanceof Error) {
-         return error;
-       }
-       
-       return new Error(`Die Aufgabe konnte nicht ${operation.toLowerCase()} werden.`);
-     }
-   }
-   ```
-
 #### Umsetzungsreihenfolge:
 
-1. TaskApiService-Erweiterungen implementieren
-2. State Management optimieren (taskFormReducer erweitern)
-3. Task-Laden-Logik verbessern (useEffect & loadTask)
-4. handleSave-Funktion überarbeiten
-5. Manuelle Tests durchführen:
-   - Task öffnen & Daten prüfen
-   - Task bearbeiten & speichern
-   - Neuen Task erstellen
-   - Fehlerszenarien testen
+1. **Gründliche API-Service Anpassungen:**
+   - API-Aufrufe erweitern (include-Parameter)
+   - Datenvalidierung verbessern
+   - Fehlerbehandlung ausbauen
 
-#### Erwartete Verbesserungen:
+2. **TypeScript-Typdefinitionen aktualisieren:**
+   - TaskFormData Interface definieren
+   - Task-Typen mit korrekten Datumswerten und Referenzen erweitern
 
-1. **Zuverlässigkeit:**
-   - Konsistentes Laden von Task-Daten
-   - Robuste Fehlerbehandlung
-   - Validierte API-Aufrufe
+3. **TaskFormReducer optimieren:**
+   - LOAD_TASK-Aktion verbessern
+   - Referenzobjekte und IDs synchronisieren
+   - Ausführliches Logging für Debugging
 
-2. **Benutzerfreundlichkeit:**
-   - Klare Fehlermeldungen
-   - Sofortiges Feedback
-   - Keine unerwarteten Modal-Zustände
+4. **TaskDetailModal-Komponente verbessern:**
+   - useEffect-Abhängigkeiten korrigieren
+   - getDefaultDueDate-Funktion implementieren
+   - Modal-Initialisierungslogik verbessern
+   - handleSave-Funktion optimieren
 
-3. **Wartbarkeit:**
-   - Zentralisierte Fehlerbehandlung
-   - Reduzierte State-Komplexität
-   - Bessere Testbarkeit
+5. **Testen und Validieren:**
+   - Überprüfen der Datenladeprozesse
+   - Testen der CREATE, VIEW und EDIT-Modi
+   - Sicherstellen, dass Felder korrekt befüllt werden
+   - Validieren der korrekten Speicherung von Tasks
 
-#### Risiken & Gegenmaßnahmen:
+#### Implementationshinweise:
 
-1. **Datenverlust während der Bearbeitung:**
-   - Implementiere Auto-Save für Entwürfe
-   - Bestätigungsdialog beim Schließen
+1. **API-Integration:**
+   - Achte auf die korrekte API-Struktur mit include-Parametern
+   - Die API-Struktur muss mit dem Backend kompatibel sein
 
-2. **API-Fehler:**
-   - Offline-Support mit Queuing
-   - Retry-Mechanismus für fehlgeschlagene Requests
+2. **State-Management:**
+   - Stelle sicher, dass alle State-Updates mit useReducer funktionieren
+   - Achte auf korrekte State-Initialisierung
 
-3. **State-Inkonsistenzen:**
-   - Strikte Validierung aller State-Änderungen
-   - Logging für Debug-Zwecke
+3. **Datumswerte:**
+   - Konvertiere String-Datumsangaben zu Date-Objekten für den internen Gebrauch
+   - Konvertiere Date-Objekte zu ISO-Strings beim API-Aufruf
 
-// ... existing code ...
+4. **Referenzobjekte:**
+   - Nutze direkt die Referenzobjekte, wenn möglich (responsible statt responsibleId)
+   - Implementiere Fallback-Mechanismen für fehlende Daten
+
+5. **Debugging:**
+   - Verwende ausführliches Logging für Fehlerbehebung
+   - Überprüfe State-Transformationen mit console.log
+
+Nach Abschluss aller Änderungen sollte das TaskDetailModal fehlerfrei funktionieren, Felder korrekt befüllen und alle Modi (CREATE, VIEW, EDIT) unterstützen.
 
 ## APK-Erstellung nach jeder Korrektur
 

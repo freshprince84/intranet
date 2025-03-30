@@ -1,7 +1,7 @@
-import { Task, TaskFormState, TaskStatus, User, Branch } from '../types';
+import { Task, TaskFormData, TaskFormState, TaskStatus, User, Branch, Role } from '../types';
 
 export type TaskFormAction = 
-  | { type: 'SET_FIELD'; field: keyof TaskFormData; value: any }
+  | { type: 'SET_FIELD'; field: keyof TaskFormState; value: any }
   | { type: 'RESET_FORM' }
   | { type: 'LOAD_TASK'; task: Task }
   | { type: 'SET_LOADING'; value: boolean }
@@ -17,87 +17,161 @@ export type TaskFormAction =
   | { type: 'VALIDATE_FORM' };
 
 export const initialFormState: TaskFormState = {
-  // Form data
   title: '',
   description: '',
-  status: 'open' as TaskStatus,
+  status: 'open',
   dueDate: null,
   responsibleId: null,
   branchId: null,
-  
-  // Status flags
+  qualityControlId: null,
+  roleId: null,
   isLoading: false,
   isUpdating: false,
   error: null,
   formError: null,
-  
-  // UI state
   ui: {
     showDatePicker: false,
     showUserMenu: false,
     showBranchMenu: false,
+    showQcMenu: false,
     showConfirmationDialog: false,
   },
-  
-  // Data state
   data: {
     users: [],
     branches: [],
     selectedUser: null,
     selectedBranch: null,
-  }
+  },
 };
 
 const validateForm = (state: TaskFormState): string | null => {
+  // Titel prüfen
   if (!state.title.trim()) {
     return 'Bitte geben Sie einen Titel ein.';
   }
-  
+
+  // Branch prüfen
   if (!state.branchId) {
-    return 'Bitte wählen Sie eine Branch aus.';
+    return 'Bitte wählen Sie eine Filiale aus.'; // Korrekter Text
   }
-  
+
+  // Verantwortlichen prüfen (wichtig für Benutzer-Tasks)
+  // TODO: Dies muss angepasst werden, wenn Rollen implementiert sind (entweder User ODER Rolle)
+  if (!state.responsibleId) {
+    return 'Bitte wählen Sie einen Verantwortlichen aus.';
+  }
+
+  // Wenn alles ok ist, null zurückgeben
   return null;
 };
 
 export const taskFormReducer = (state: TaskFormState, action: TaskFormAction): TaskFormState => {
   switch (action.type) {
     case 'SET_FIELD': {
-      const newState = { ...state, [action.field]: action.value };
-      
-      // Automatische Validierung bei Änderungen
-      const formError = validateForm(newState);
-      return { ...newState, formError };
+      return { ...state, [action.field]: action.value };
     }
-    
-    case 'RESET_FORM':
-      return { 
+
+    case 'RESET_FORM': {
+      return {
         ...initialFormState,
+        qualityControlId: null,
+        ui: {
+          ...initialFormState.ui,
+        },
         data: {
           ...state.data,
-          users: state.data.users,
-          branches: state.data.branches
+          selectedUser: null,
+          selectedBranch: null
         }
       };
-    
-    case 'LOAD_TASK':
+    }
+
+    case 'LOAD_TASK': {
+      if (!action.task || !action.task.id) {
+        return {
+          ...state,
+          error: 'Ungültige Task-Daten empfangen'
+        };
+      }
+
+      // Extrahiere die Daten aus der Task
+      const {
+        id,
+        title,
+        description,
+        status,
+        dueDate,
+        responsible,
+        branch,
+        responsibleId,
+        branchId,
+        qualityControl,
+        qualityControlId,
+      } = action.task;
+
+      // Verarbeite Verantwortlicher-Information
+      let selectedUser = null;
+      let responsibleIdToUse = null;
+
+      if (responsible && typeof responsible === 'object' && responsible.id) {
+        selectedUser = responsible;
+        responsibleIdToUse = responsible.id;
+      } else if (responsibleId) {
+        responsibleIdToUse = responsibleId;
+        selectedUser = state.data.users.find(u => u.id === responsibleId) || null;
+      }
+
+      // Verarbeite Branch-Information
+      let selectedBranch = null;
+      let branchIdToUse = null;
+
+      if (branch && typeof branch === 'object' && branch.id) {
+        selectedBranch = branch;
+        branchIdToUse = branch.id;
+      } else if (branchId) {
+        branchIdToUse = branchId;
+        selectedBranch = state.data.branches.find(b => b.id === branchId) || null;
+      }
+
+      // Verarbeite QC-Information
+      let qcIdToUse = null;
+      if (qualityControl && typeof qualityControl === 'object' && qualityControl.id) {
+        qcIdToUse = qualityControl.id;
+      } else if (qualityControlId) {
+        qcIdToUse = qualityControlId;
+      }
+
+      // Stelle sicher, dass der Status einen Wert hat (Fallback zu 'open')
+      const taskStatus = status || 'open';
+
+      // Konvertiere das Datum in ein Date-Objekt, falls es ein String ist
+      let formattedDueDate = null;
+      if (dueDate) {
+        try {
+          formattedDueDate = dueDate instanceof Date ? dueDate : new Date(dueDate);
+        } catch (error) {
+        }
+      }
+
       return {
         ...state,
-        title: action.task.title,
-        description: action.task.description || '',
-        status: action.task.status,
-        dueDate: action.task.dueDate ? new Date(action.task.dueDate) : null,
-        responsibleId: action.task.responsible?.id || null,
-        branchId: action.task.branch?.id || null,
+        title: title || '',
+        description: description || '',
+        status: taskStatus as TaskStatus,
+        dueDate: formattedDueDate,
+        responsibleId: responsibleIdToUse,
+        branchId: branchIdToUse,
+        qualityControlId: qcIdToUse,
         data: {
           ...state.data,
-          selectedUser: action.task.responsible || null,
-          selectedBranch: action.task.branch || null
+          selectedUser,
+          selectedBranch
         },
         error: null,
         formError: null
       };
-    
+    }
+
     case 'SET_LOADING':
       return { ...state, isLoading: action.value };
     
@@ -128,50 +202,70 @@ export const taskFormReducer = (state: TaskFormState, action: TaskFormAction): T
         }
       };
     
-    case 'SET_USERS':
+    case 'SET_USERS': {
+      let selectedUser = state.data.selectedUser;
+      if (state.responsibleId && !selectedUser) {
+        selectedUser = action.users.find(u => u.id === state.responsibleId) || null;
+      }
+      
       return {
         ...state,
         data: {
           ...state.data,
-          users: action.users
+          users: action.users,
+          selectedUser: selectedUser
         }
       };
-    
-    case 'SET_BRANCHES':
+    }
+
+    case 'SET_BRANCHES': {
+      let selectedBranch = state.data.selectedBranch;
+      if (state.branchId && !selectedBranch) {
+        selectedBranch = action.branches.find(b => b.id === state.branchId) || null;
+      }
+
       return {
         ...state,
         data: {
           ...state.data,
-          branches: action.branches
+          branches: action.branches,
+          selectedBranch: selectedBranch
         }
       };
-    
-    case 'SET_SELECTED_USER':
+    }
+
+    case 'SET_SELECTED_USER': {
+      const userId = action.user?.id || null;
       return {
         ...state,
-        responsibleId: action.user?.id || null,
+        responsibleId: userId,
         data: {
           ...state.data,
           selectedUser: action.user
         }
       };
-    
-    case 'SET_SELECTED_BRANCH':
+    }
+
+    case 'SET_SELECTED_BRANCH': {
+      const branchId = action.branch?.id || null;
       return {
         ...state,
-        branchId: action.branch?.id || null,
+        branchId: branchId,
         data: {
           ...state.data,
           selectedBranch: action.branch
         }
       };
-    
-    case 'VALIDATE_FORM':
+    }
+
+    case 'VALIDATE_FORM': {
+      const formError = validateForm(state);
       return {
         ...state,
-        formError: validateForm(state)
+        formError
       };
-    
+    }
+
     default:
       return state;
   }

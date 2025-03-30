@@ -124,7 +124,7 @@ export interface Task {
   qualityControlId?: number | null;
   branch?: Branch | null;
   branchId?: number | null;
-  dueDate: string | null;
+  dueDate: string | Date | null;
   attachments?: TaskAttachment[];
   createdAt?: string | Date;
   updatedAt?: string | Date;
@@ -138,6 +138,46 @@ export interface TaskAttachment {
   fileSize: number;
   filePath: string;
   uploadedAt: Date | string;
+}
+
+// TaskFormData Interface für den TaskFormReducer
+export interface TaskFormData {
+  id?: number;
+  title: string;
+  description: string | null;
+  status: TaskStatus;
+  dueDate: Date | null;
+  responsibleId: number | null;
+  branchId: number | null;
+  qualityControlId: number | null;
+  roleId: number | null;
+}
+
+export interface TaskFormState extends TaskFormData {
+  isLoading: boolean;
+  isUpdating: boolean;
+  error: string | null;
+  formError: string | null;
+  ui: {
+    showDatePicker: boolean;
+    showUserMenu: boolean;
+    showBranchMenu: boolean;
+    showQcMenu: boolean;
+    showConfirmationDialog: boolean;
+  };
+  data: {
+    users: User[];
+    branches: Branch[];
+    selectedUser: User | null;
+    selectedBranch: Branch | null;
+  };
+}
+
+// Modaltypen für TaskDetailModal
+export enum ModalMode {
+  VIEW = 'view',
+  EDIT = 'edit',
+  CREATE = 'create'
 }
 
 // ------ Benachrichtigungen ------
@@ -289,39 +329,4 @@ export interface PaginatedResponse<T> {
 // ------ Filter-Optionen ------
 export interface FilterOptions {
   [key: string]: string | number | boolean | Date | undefined;
-}
-
-export enum ModalMode {
-  VIEW = 'view',
-  EDIT = 'edit',
-  CREATE = 'create'
-}
-
-// Task Form Types
-export interface TaskFormData {
-  title: string;
-  description: string;
-  status: TaskStatus;
-  dueDate: Date | null;
-  responsibleId: number | null;
-  branchId: number | null;
-}
-
-export interface TaskFormState extends TaskFormData {
-  isLoading: boolean;
-  isUpdating: boolean;
-  error: string | null;
-  formError: string | null;
-  ui: {
-    showDatePicker: boolean;
-    showUserMenu: boolean;
-    showBranchMenu: boolean;
-    showConfirmationDialog: boolean;
-  };
-  data: {
-    users: User[];
-    branches: Branch[];
-    selectedUser: User | null;
-    selectedBranch: Branch | null;
-  };
 } 

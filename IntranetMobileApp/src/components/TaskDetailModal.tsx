@@ -1,12 +1,13 @@
-import React, { useEffect, useReducer } from 'react';
+import React, { useEffect, useReducer, useRef } from 'react';
 import { View, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
-import { Modal, Portal, Button, Text, TextInput, Chip, IconButton, Divider, Menu, ActivityIndicator } from 'react-native-paper';
+import { Modal, Portal, Button, Text, TextInput, Chip, IconButton, Divider, Menu, ActivityIndicator, HelperText, MD2Colors } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Task, TaskStatus, User, Branch, ModalMode } from '../types';
 import { taskApi, userApi, branchApi } from '../api/apiClient';
 import { formatDate, formatDateTime } from '../utils/dateUtils';
 import { taskFormReducer, initialFormState } from '../reducers/taskFormReducer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../contexts/AuthContext';
 
 interface TaskDetailModalProps {
   visible: boolean;
@@ -25,6 +26,12 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
 }) => {
   const [mode, setMode] = React.useState(initialMode);
   const [formState, dispatch] = useReducer(taskFormReducer, initialFormState);
+  const auth = useAuth();
+  const taskFormStateRef = useRef(formState);
+
+  useEffect(() => {
+    taskFormStateRef.current = formState;
+  }, [formState]);
 
   // Reset des Formulars beim Schließen
   useEffect(() => {
@@ -34,36 +41,6 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     }
   }, [visible, initialMode]);
 
-  // Initialisierung beim Öffnen des Modals
-  useEffect(() => {
-    if (visible) {
-      const initializeModal = async () => {
-        try {
-          dispatch({ type: 'SET_LOADING', value: true });
-          
-          // Lade Benutzer und Branches zuerst
-          await loadUsersAndBranches();
-          
-          console.log('Modal initialisieren mit mode:', mode, 'und taskId:', taskId);
-          
-          if (mode === ModalMode.CREATE) {
-            await initializeNewTask();
-          } else if (taskId) {
-            await loadTask();
-          }
-        } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten';
-          console.error('Fehler bei der Modal-Initialisierung:', errorMessage);
-          dispatch({ type: 'SET_ERROR', error: errorMessage });
-        } finally {
-          dispatch({ type: 'SET_LOADING', value: false });
-        }
-      };
-      
-      initializeModal();
-    }
-  }, [visible, mode, taskId]);  // Mode wieder als Abhängigkeit hinzufügen
-
   // Hilfsfunktion für Standarddatum (wie im Frontend)
   const getDefaultDueDate = () => {
     const date = new Date();
@@ -71,95 +48,215 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     return date;
   };
 
-  const loadTask = async () => {
-    if (!taskId) {
-      throw new Error('Keine Task-ID vorhanden');
-    }
-    
-    console.log(`Lade Task mit ID ${taskId} für Modus ${mode}`);
-    
+  // Laden von Benutzern und Branches - vereinfacht und mit Rückgabe der Daten
+  const loadUsersAndBranches = async (): Promise<{users: User[], branches: Branch[]}> => {
     try {
-      // Task laden
-      const taskData = await taskApi.getById(taskId);
-      
-      if (!taskData || !taskData.id) {
-        throw new Error('Die Aufgabe konnte nicht gefunden werden oder hat ungültige Daten');
-      }
-      
-      console.log('Geladene Task-Daten:', taskData);
-      
-      // Task-Daten in den State laden
-      dispatch({ type: 'LOAD_TASK', task: taskData });
-      
-      // Verantwortlichen Benutzer und Branch direkt setzen
-      if (taskData.responsible) {
-        dispatch({ type: 'SET_SELECTED_USER', user: taskData.responsible });
-      } else if (taskData.responsibleId) {
-        const user = formState.data.users.find(u => u.id === taskData.responsibleId);
-        if (user) {
-          dispatch({ type: 'SET_SELECTED_USER', user });
-        }
-      }
-      
-      if (taskData.branch) {
-        dispatch({ type: 'SET_SELECTED_BRANCH', branch: taskData.branch });
-      } else if (taskData.branchId) {
-        const branch = formState.data.branches.find(b => b.id === taskData.branchId);
-        if (branch) {
-          dispatch({ type: 'SET_SELECTED_BRANCH', branch });
-        }
-      }
-      
-      dispatch({ type: 'VALIDATE_FORM' });
-    } catch (error) {
-      console.error('Fehler beim Laden der Aufgabe:', error);
-      throw new Error('Die Aufgabe konnte nicht geladen werden: ' + (error instanceof Error ? error.message : 'Unbekannter Fehler'));
-    }
-  };
-
-  const loadUsersAndBranches = async () => {
-    try {
-      const [usersData, branchesData] = await Promise.all([
+      // Lade Benutzer und Branches parallel für bessere Performance
+      const [usersResponse, branchesResponse] = await Promise.all([
         userApi.getAllUsers(),
         branchApi.getAllBranches()
       ]);
       
-      if (!Array.isArray(usersData) || !Array.isArray(branchesData)) {
-        throw new Error('Ungültiges Datenformat von der API');
+      const users = Array.isArray(usersResponse) ? usersResponse : [];
+      const branches = Array.isArray(branchesResponse) ? branchesResponse : [];
+      
+      // Überprüfe, ob Daten erfolgreich geladen wurden
+      if (users.length === 0) {
+        throw new Error('Keine Benutzer gefunden. Bitte versuchen Sie es später erneut.');
       }
       
-      dispatch({ type: 'SET_USERS', users: usersData });
-      dispatch({ type: 'SET_BRANCHES', branches: branchesData });
+      if (branches.length === 0) {
+        throw new Error('Keine Branches gefunden. Bitte versuchen Sie es später erneut.');
+      }
+      
+      // Setze die Daten in den State
+      dispatch({ type: 'SET_USERS', users });
+      dispatch({ type: 'SET_BRANCHES', branches });
+      
+      // Gib die geladenen Daten zurück, damit sie direkt verwendet werden können
+      return { users, branches };
     } catch (error) {
-      console.error('Fehler beim Laden von Benutzern und Branches:', error);
-      throw new Error('Benutzer und Branches konnten nicht geladen werden');
+      const errorMessage = error instanceof Error ? error.message : 'Fehler beim Laden von Benutzern und Branches';
+      dispatch({ type: 'SET_ERROR', error: errorMessage });
+      throw error;
     }
   };
 
-  const initializeNewTask = async () => {
-    // Formular zurücksetzen
-    dispatch({ type: 'RESET_FORM' });
-    
-    try {
-      // Standardwerte setzen (wie im Frontend)
-      dispatch({ type: 'SET_FIELD', field: 'dueDate', value: getDefaultDueDate() });
-      
-      // Zuletzt verwendete Branch laden, falls vorhanden
-      const lastBranchId = await AsyncStorage.getItem('lastSelectedBranchId');
-      if (lastBranchId) {
-        const branch = formState.data.branches.find(b => b.id === parseInt(lastBranchId));
-        if (branch) {
-          dispatch({ type: 'SET_SELECTED_BRANCH', branch });
+  // Initialisierung beim Öffnen des Modals
+  useEffect(() => {
+    if (visible) {
+      console.log(`[TaskDetailModal] MODAL OPENED - Initial Props: mode=${initialMode}, taskId=${taskId}`);
+      console.log(`[TaskDetailModal] Initializing - Mode: ${initialMode}, TaskId: ${taskId}`);
+      const initializeModal = async () => {
+        dispatch({ type: 'RESET_FORM' });
+        dispatch({ type: 'SET_LOADING', value: true });
+
+        try {
+          // Immer Benutzer und Branches laden
+          const [users, branches] = await Promise.all([
+            userApi.getAll(),
+            branchApi.getAll()
+          ]);
+          dispatch({ type: 'SET_USERS', users: users || [] });
+          dispatch({ type: 'SET_BRANCHES', branches: branches || [] });
+          console.log('[TaskDetailModal] Users and Branches loaded.');
+
+          // Modus-spezifische Initialisierung
+          if (initialMode === ModalMode.CREATE) {
+            setMode(ModalMode.CREATE);
+            console.log('[TaskDetailModal] Initializing for CREATE mode (Simplified).');
+            // Standardwerte setzen
+            dispatch({ type: 'SET_FIELD', field: 'status', value: 'open' });
+            dispatch({ type: 'SET_FIELD', field: 'dueDate', value: getDefaultDueDate() });
+
+            // Aktuellen Benutzer setzen (aus bereits geladener Liste)
+            if (auth?.user?.id) {
+              const currentAuthUser = auth.user;
+              const currentUserFromList = users.find(u => u.id === currentAuthUser.id);
+              
+              if (currentUserFromList) {
+                dispatch({ type: 'SET_SELECTED_USER', user: currentUserFromList });
+                console.log(`[TaskDetailModal] CREATE Mode: Dispatched SET_SELECTED_USER with user from list: ID=${currentUserFromList.id}`);
+                
+                // Branch setzen (aus auth.user Kontext oder Fallback)
+                // VERSUCH 1: Direkte Branch-ID aus auth.user (falls vorhanden)
+                // Annahme: auth.user könnte { ..., branchId: number } oder { ..., branch: { id: number } } enthalten
+                const authBranchId = currentAuthUser.branchId ?? currentAuthUser.branch?.id; 
+                let branchSet = false;
+                
+                if (typeof authBranchId === 'number' && authBranchId > 0) {
+                    console.log(`[TaskDetailModal] Attempting to set branch from auth context, branchId: ${authBranchId}`);
+                    const authBranch = branches.find(b => b.id === authBranchId);
+                    if (authBranch) {
+                        dispatch({ type: 'SET_SELECTED_BRANCH', branch: authBranch });
+                        console.log(`[TaskDetailModal] Branch set from auth context: ${authBranch.name}`);
+                        branchSet = true;
+                    } else {
+                         console.warn(`[TaskDetailModal] Branch ID ${authBranchId} from auth context not found in loaded branches list.`);
+                    }
+                }
+
+                // VERSUCH 2: Fallback (wenn nicht über auth.user gesetzt)
+                if (!branchSet) {
+                    console.log('[TaskDetailModal] Branch not set from auth context, attempting fallback.');
+                    const lastBranchIdStr = await AsyncStorage.getItem('lastSelectedBranchId');
+                    const lastBranchId = lastBranchIdStr ? parseInt(lastBranchIdStr, 10) : null;
+                    const lastBranch = lastBranchId ? branches.find(b => b.id === lastBranchId) : null;
+
+                    if (lastBranch) {
+                        dispatch({ type: 'SET_SELECTED_BRANCH', branch: lastBranch });
+                        console.log(`[TaskDetailModal] Fallback: Set last used branch: ${lastBranch.name}`);
+                    } else if (branches.length > 0) {
+                        dispatch({ type: 'SET_SELECTED_BRANCH', branch: branches[0] });
+                        console.log(`[TaskDetailModal] Fallback: Set first branch: ${branches[0].name}`);
+                    } else {
+                        console.error('[TaskDetailModal] No branches available for fallback.');
+                        dispatch({ type: 'SET_FORM_ERROR', error: 'Keine Filialen verfügbar.' });
+                    }
+                }
+              } else {
+                 console.warn(`[TaskDetailModal] CREATE Mode: Authenticated user ID ${currentAuthUser.id} not found in loaded users list. Cannot set default user.`);
+                 // Trotzdem Branch-Fallback versuchen
+                 console.log('[TaskDetailModal] Branch fallback (user not found in list).');
+                 const lastBranchIdStr = await AsyncStorage.getItem('lastSelectedBranchId');
+                 const lastBranchId = lastBranchIdStr ? parseInt(lastBranchIdStr, 10) : null;
+                 const lastBranch = lastBranchId ? branches.find(b => b.id === lastBranchId) : null;
+                    if (lastBranch) {
+                        dispatch({ type: 'SET_SELECTED_BRANCH', branch: lastBranch });
+                        console.log(`[TaskDetailModal] Fallback: Set last used branch: ${lastBranch.name}`);
+                    } else if (branches.length > 0) {
+                        dispatch({ type: 'SET_SELECTED_BRANCH', branch: branches[0] });
+                        console.log(`[TaskDetailModal] Fallback: Set first branch: ${branches[0].name}`);
+                    } else {
+                        console.error('[TaskDetailModal] No branches available for fallback.');
+                        dispatch({ type: 'SET_FORM_ERROR', error: 'Keine Filialen verfügbar.' });
+                    }
+              }
+            } else {
+               console.warn('[TaskDetailModal] No authenticated user found for CREATE mode defaults.');
+               // Nur Branch-Fallback
+               console.log('[TaskDetailModal] Branch fallback (no authenticated user).');
+               const lastBranchIdStr = await AsyncStorage.getItem('lastSelectedBranchId');
+               const lastBranchId = lastBranchIdStr ? parseInt(lastBranchIdStr, 10) : null;
+               const lastBranch = lastBranchId ? branches.find(b => b.id === lastBranchId) : null;
+                  if (lastBranch) {
+                     dispatch({ type: 'SET_SELECTED_BRANCH', branch: lastBranch });
+                     console.log(`[TaskDetailModal] Fallback: Set last used branch: ${lastBranch.name}`);
+                  } else if (branches.length > 0) {
+                     dispatch({ type: 'SET_SELECTED_BRANCH', branch: branches[0] });
+                     console.log(`[TaskDetailModal] Fallback: Set first branch: ${branches[0].name}`);
+                  } else {
+                       console.error('[TaskDetailModal] No branches available for fallback.');
+                       dispatch({ type: 'SET_FORM_ERROR', error: 'Keine Filialen verfügbar.' });
+                  }
+            }
+
+          } else if (taskId && (initialMode === ModalMode.EDIT || initialMode === ModalMode.VIEW)) {
+            setMode(initialMode); // Setze Modus VIEW oder EDIT
+            console.log(`[TaskDetailModal] Initializing for ${initialMode} mode with Task ID: ${taskId}.`);
+            try {
+              // Task Daten abrufen
+              const task = await taskApi.getById(taskId);
+              if (!task) {
+                throw new Error(`Task mit ID ${taskId} nicht gefunden.`);
+              }
+              console.log('[TaskDetailModal] Task data loaded:', task);
+              dispatch({ type: 'LOAD_TASK', task });
+            } catch (taskLoadError) {
+              console.error('[TaskDetailModal] Error loading task:', taskLoadError);
+              dispatch({ type: 'SET_ERROR', error: 'Aufgabe konnte nicht geladen werden.' });
+              onDismiss(); // Modal schließen bei Fehler
+            }
+          } else {
+            // Ungültige Kombination (z.B. EDIT ohne ID)
+            console.warn(`[TaskDetailModal] Invalid combination or missing data - Mode: ${initialMode}, TaskId: ${taskId}. Switching to CREATE.`);
+            setMode(ModalMode.CREATE); // Wechsel zu CREATE
+            // Initialisierungslogik für CREATE (ggf. vereinfacht ohne userApi.getById, nur Fallbacks)
+             dispatch({ type: 'SET_FIELD', field: 'status', value: 'open' });
+             dispatch({ type: 'SET_FIELD', field: 'dueDate', value: getDefaultDueDate() });
+             if (auth?.user?.id) { // Zusätzliche Prüfung
+                 const currentAuthUser = auth.user;
+                 const currentUser = users.find(u => u.id === currentAuthUser.id); 
+                 if (currentUser) {
+                    dispatch({ type: 'SET_SELECTED_USER', user: currentUser });
+                    console.log(`[TaskDetailModal] Fallback CREATE: Set SET_SELECTED_USER.`);
+                 } else {
+                   console.warn(`[TaskDetailModal] Fallback CREATE: User ${currentAuthUser.id} not found in loaded user list.`);
+                 }
+             }
+             const lastBranchIdStr = await AsyncStorage.getItem('lastSelectedBranchId');
+             const lastBranchId = lastBranchIdStr ? parseInt(lastBranchIdStr, 10) : null;
+             const lastBranch = lastBranchId ? branches.find(b => b.id === lastBranchId) : null;
+             if (lastBranch) {
+                 dispatch({ type: 'SET_SELECTED_BRANCH', branch: lastBranch });
+                 console.log(`[TaskDetailModal] Fallback CREATE: Set last used branch: ${lastBranch.name}`);
+             } else if (branches.length > 0) {
+                 dispatch({ type: 'SET_SELECTED_BRANCH', branch: branches[0] });
+                 console.log(`[TaskDetailModal] Fallback CREATE: Set first branch: ${branches[0].name}`);
+             }
+          }
+
+        } catch (error) {
+          console.error('[TaskDetailModal] General initialization error:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Ein unerwarteter Fehler ist aufgetreten';
+          dispatch({ type: 'SET_ERROR', error: errorMessage });
+        } finally {
+          dispatch({ type: 'SET_LOADING', value: false });
         }
-      }
-      
-      // Formular validieren
-      dispatch({ type: 'VALIDATE_FORM' });
-    } catch (error) {
-      console.error('Fehler beim Initialisieren eines neuen Tasks:', error);
-      // Kein throw, da dies nicht kritisch ist
+      };
+
+      initializeModal(); // Nur noch aufrufen
+
     }
-  };
+  // Abhängigkeiten: visible, taskId, initialMode, auth?.user?.id bleiben
+  }, [visible, taskId, initialMode, auth?.user?.id]);
+
+  // Separate useEffect für mode-Änderungen
+  useEffect(() => {
+    if (visible && mode !== initialMode) {
+      setMode(initialMode);
+    }
+  }, [initialMode, visible]);
 
   const handleStatusChange = async (newStatus: TaskStatus) => {
     if (formState.isUpdating || mode === ModalMode.CREATE) return;
@@ -185,90 +282,135 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     }
   };
 
-  const prepareTaskData = () => {
-    console.log('Bereite Task-Daten vor:', formState);
-    
-    const taskData = {
+  // Helper function to prepare data for API
+  const prepareTaskData = (): Partial<Task> => {
+    // Sicherstellen, dass IDs wirklich Zahlen sind
+    const responsibleIdNum = typeof formState.responsibleId === 'number' 
+        ? formState.responsibleId 
+        : (formState.responsibleId ? parseInt(String(formState.responsibleId), 10) : null);
+        
+    const branchIdNum = typeof formState.branchId === 'number' 
+        ? formState.branchId 
+        : (formState.branchId ? parseInt(String(formState.branchId), 10) : null);
+        
+    // Überprüfen, ob die Konvertierung erfolgreich war und > 0 ist
+    if (!responsibleIdNum || responsibleIdNum <= 0) {
+        console.error('[TaskDetailModal] prepareTaskData: Invalid responsibleId after parsing:', responsibleIdNum);
+        // Optional: Hier einen Fehler werfen oder null setzen, je nach Backend-Erwartung
+        // throw new Error("Ungültige Verantwortlichen-ID."); 
+    }
+    if (!branchIdNum || branchIdNum <= 0) {
+        console.error('[TaskDetailModal] prepareTaskData: Invalid branchId after parsing:', branchIdNum);
+        // Optional: Hier einen Fehler werfen oder null setzen
+        // throw new Error("Ungültige Filialen-ID.");
+    }
+
+    const dataToSave: Partial<Task> = {
       title: formState.title.trim(),
-      description: formState.description.trim(),
+      description: formState.description?.trim() || null,
       status: formState.status,
-      dueDate: formState.dueDate ? formState.dueDate.toISOString() : null,
-      responsibleId: formState.data.selectedUser?.id || null,
-      branchId: formState.data.selectedBranch?.id || null,
+      dueDate: formState.dueDate ? new Date(formState.dueDate).toISOString() : null,
+      responsibleId: responsibleIdNum, // Verwende die geparste Nummer
+      branchId: branchIdNum,         // Verwende die geparste Nummer
+      qualityControlId: formState.qualityControlId,
     };
     
-    console.log('Vorbereitete Task-Daten:', taskData);
-
-    // Validiere die Pflichtfelder
-    if (!taskData.title) {
-      throw new Error('Bitte geben Sie einen Titel ein.');
-    }
-    if (!taskData.branchId) {
-      throw new Error('Bitte wählen Sie eine Branch aus.');
-    }
-
-    return taskData;
+    console.log('[TaskDetailModal] Data prepared for API (with explicit ID parsing):', dataToSave);
+    return dataToSave;
   };
 
   const handleSave = async () => {
+    // 1. Explizite Validierung auslösen
     dispatch({ type: 'VALIDATE_FORM' });
-    if (formState.formError) {
-      Alert.alert('Validierungsfehler', formState.formError);
+    
+    // 2. KURZ warten, damit der State (formError) sich aktualisieren kann (Workaround)
+    await new Promise(resolve => setTimeout(resolve, 50)); 
+
+    // 3. **NACH** dem Timeout den aktuellen formError prüfen
+    // Zugriff auf den *korrekt platzierten und aktualisierten* Ref
+    const currentFormError = taskFormStateRef.current.formError;
+    if (currentFormError) {
+      console.log('[TaskDetailModal] Validation failed before API call:', currentFormError);
+      Alert.alert('Validierungsfehler', currentFormError);
       return;
     }
     
+    // 4. Zusätzliche explizite Prüfungen für IDs (Sicherheitsnetz)
+    // Verwende den aktuellen State direkt oder aus dem Ref
+    if (typeof taskFormStateRef.current.responsibleId !== 'number' || taskFormStateRef.current.responsibleId <= 0) {
+        const errorMsg = 'Kein gültiger Verantwortlicher ausgewählt.';
+        dispatch({ type: 'SET_FORM_ERROR', error: errorMsg });
+        Alert.alert('Validierungsfehler', errorMsg);
+        return;
+    }
+    if (typeof taskFormStateRef.current.branchId !== 'number' || taskFormStateRef.current.branchId <= 0) {
+        const errorMsg = 'Keine gültige Filiale ausgewählt.';
+        dispatch({ type: 'SET_FORM_ERROR', error: errorMsg });
+        Alert.alert('Validierungsfehler', errorMsg);
+        return;
+    }
+
+    // 5. Wenn alles ok ist -> Speichern
     dispatch({ type: 'SET_UPDATING', value: true });
     
     try {
+      // Datenaufbereitung NACH der Validierung
       const taskData = prepareTaskData();
       let successMessage = '';
-      let savedTask = null;
-      
-      console.log(`Speichere Task im Modus ${mode}${taskId ? ' mit ID ' + taskId : ''}`);
-      
+      let savedTask: Task | null = null;
+
       if (mode === ModalMode.EDIT && taskId) {
+        console.log(`[TaskDetailModal] Sending UPDATE request for task ${taskId}`);
         savedTask = await taskApi.update(taskId, taskData);
         successMessage = 'Die Aufgabe wurde erfolgreich aktualisiert.';
       } else if (mode === ModalMode.CREATE) {
+        console.log('[TaskDetailModal] Sending CREATE request');
         savedTask = await taskApi.create(taskData);
         successMessage = 'Die Aufgabe wurde erfolgreich erstellt.';
-        
-        // Speichere die letzte ausgewählte Branch
-        if (taskData.branchId) {
+
+        // Speichere die letzte ausgewählte Branch nur bei erfolgreicher Erstellung
+        if (savedTask && taskData.branchId) {
           await AsyncStorage.setItem('lastSelectedBranchId', taskData.branchId.toString());
         }
       } else {
         throw new Error('Ungültiger Modus für Speichern');
       }
-      
-      console.log('Gespeicherte Task:', savedTask);
-      
+
+      // Validiere Antwort
       if (!savedTask || !savedTask.id) {
-        throw new Error('Ungültige Antwort vom Server');
+        throw new Error('Ungültige Antwort vom Server nach dem Speichern');
       }
-      
-      // Aktualisiere den Cache mit den gespeicherten Task-Daten
-      dispatch({ type: 'LOAD_TASK', task: savedTask });
-      
+
+      // Task Liste aktualisieren
       if (onTaskUpdated) {
         onTaskUpdated();
       }
-      
+
       Alert.alert('Erfolg', successMessage);
-      onDismiss();
+      onDismiss(); // Modal schließen
+
     } catch (error) {
-      console.error('Fehler beim Speichern der Aufgabe:', error);
-      
+      console.error('[TaskDetailModal] Fehler beim Speichern der Aufgabe:', error);
+      const axiosError = error as any; // Type assertion
       let errorMessage = 'Die Aufgabe konnte nicht gespeichert werden.';
-      
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if ((error as any)?.response?.data?.message) {
-        errorMessage = (error as any).response.data.message;
+
+      if (axiosError.response) {
+        // Backend hat geantwortet, aber mit Fehlerstatus
+        console.error('Backend Error Response:', axiosError.response.data);
+        errorMessage = axiosError.response.data?.message || `Serverfehler ${axiosError.response.status}`;
+      } else if (axiosError.request) {
+        // Request wurde gesendet, aber keine Antwort erhalten
+        console.error('No response received:', axiosError.request);
+        errorMessage = 'Keine Antwort vom Server erhalten.';
+      } else {
+        // Fehler beim Setup des Requests
+        console.error('Error setting up request:', axiosError.message);
+        errorMessage = `Fehler: ${axiosError.message}`;
       }
-      
+       // Setze den Fehler im Formular-State
       dispatch({ type: 'SET_FORM_ERROR', error: errorMessage });
-      Alert.alert('Fehler', errorMessage);
+      // Zeige den Fehler auch als Alert an
+      Alert.alert('Speicherfehler', errorMessage);
     } finally {
       dispatch({ type: 'SET_UPDATING', value: false });
     }
@@ -312,6 +454,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         return '#3B82F6'; // Blau
       case 'in_progress':
         return '#EAB308'; // Gelb
+      case 'improval':
+        return '#EF4444'; // Rot
+      case 'quality_control':
+        return '#8B5CF6'; // Lila
       case 'done':
         return '#10B981'; // Grün
       default:
@@ -325,6 +471,10 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         return 'Offen';
       case 'in_progress':
         return 'In Bearbeitung';
+      case 'improval':
+        return 'Nachbesserung';
+      case 'quality_control':
+        return 'Qualitätskontrolle';
       case 'done':
         return 'Erledigt';
       default:
@@ -332,6 +482,30 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     }
   };
 
+  // Korrektur Titelanzeige
+  const getModalTitle = () => {
+    switch (mode) { // Verwende den lokalen 'mode' State
+      case ModalMode.CREATE:
+        return 'Neue Aufgabe';
+      case ModalMode.EDIT:
+        return 'Aufgabe bearbeiten';
+      case ModalMode.VIEW:
+        return 'Aufgabendetails';
+      default:
+        return 'Aufgabe';
+    }
+  };
+
+  // === Hilfsfunktion für QC Button Titel (korrekt platziert) ===
+  const getQcButtonTitle = (): string => { // Garantiert string
+    const qcUserId = formState.qualityControlId;
+    if (!qcUserId) return 'Qualitätskontrolle auswählen *';
+    const qcUser = formState.data.users.find(u => u.id === qcUserId);
+    return qcUser ? `${qcUser.firstName} ${qcUser.lastName}` : 'ID nicht gefunden - Auswählen *'; 
+  };
+  const qcButtonTitle = getQcButtonTitle();
+
+  // === UI Rendering ===
   const renderContent = () => {
     if (formState.isLoading) {
       return (
@@ -346,7 +520,39 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       return (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{formState.error}</Text>
-          <Button mode="contained" onPress={loadTask} style={styles.retryButton}>
+          <Button 
+            mode="contained" 
+            onPress={() => {
+              // Versuche, die Initialisierung erneut durchzuführen
+              if (visible) {
+                dispatch({ type: 'SET_LOADING', value: true });
+                dispatch({ type: 'SET_ERROR', error: null });
+                
+                // Lade alle Daten neu
+                loadUsersAndBranches().then(() => {
+                  if (taskId) {
+                    // Erneuter Versuch, die Task zu laden
+                    taskApi.getById(taskId)
+                      .then(task => {
+                        dispatch({ type: 'LOAD_TASK', task });
+                        dispatch({ type: 'SET_LOADING', value: false });
+                      })
+                      .catch(error => {
+                        const errorMessage = error instanceof Error ? error.message : 'Fehler beim Laden der Aufgabe';
+                        dispatch({ type: 'SET_ERROR', error: errorMessage });
+                        dispatch({ type: 'SET_LOADING', value: false });
+                      });
+                  } else {
+                    // Bei neuen Tasks keine weiteren Aktionen notwendig
+                    dispatch({ type: 'SET_LOADING', value: false });
+                  }
+                }).catch(() => {
+                  dispatch({ type: 'SET_LOADING', value: false });
+                });
+              }
+            }} 
+            style={styles.retryButton}
+          >
             Erneut versuchen
           </Button>
           <Button mode="outlined" onPress={onDismiss} style={styles.closeButton}>
@@ -387,6 +593,26 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               disabled={formState.isUpdating || formState.status === 'in_progress'}
             >
               In Bearbeitung
+            </Button>
+            <Button
+              mode={formState.status === 'improval' ? 'contained' : 'outlined'}
+              onPress={() => handleStatusChange('improval')}
+              style={[styles.statusButton, { borderColor: '#EF4444' }]}
+              textColor={formState.status === 'improval' ? 'white' : '#EF4444'}
+              disabled={formState.isUpdating || formState.status === 'improval'}
+            >
+              Nachbesserung
+            </Button>
+          </View>
+          <View style={styles.statusButtons}>
+            <Button
+              mode={formState.status === 'quality_control' ? 'contained' : 'outlined'}
+              onPress={() => handleStatusChange('quality_control')}
+              style={[styles.statusButton, { borderColor: '#8B5CF6' }]}
+              textColor={formState.status === 'quality_control' ? 'white' : '#8B5CF6'}
+              disabled={formState.isUpdating || formState.status === 'quality_control'}
+            >
+              Qualitätskontrolle
             </Button>
             <Button
               mode={formState.status === 'done' ? 'contained' : 'outlined'}
@@ -452,7 +678,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         
         <TextInput
           label="Beschreibung"
-          value={formState.description}
+          value={formState.description ?? ''}
           onChangeText={(value) => dispatch({ type: 'SET_FIELD', field: 'description', value })}
           multiline
           numberOfLines={4}
@@ -479,6 +705,26 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             disabled={formState.isUpdating}
           >
             In Bearbeitung
+          </Button>
+          <Button
+            mode={formState.status === 'improval' ? 'contained' : 'outlined'}
+            onPress={() => dispatch({ type: 'SET_FIELD', field: 'status', value: 'improval' })}
+            style={[styles.statusButton, { borderColor: '#EF4444' }]}
+            textColor={formState.status === 'improval' ? 'white' : '#EF4444'}
+            disabled={formState.isUpdating}
+          >
+            Nachbesserung
+          </Button>
+        </View>
+        <View style={styles.statusButtons}>
+          <Button
+            mode={formState.status === 'quality_control' ? 'contained' : 'outlined'}
+            onPress={() => dispatch({ type: 'SET_FIELD', field: 'status', value: 'quality_control' })}
+            style={[styles.statusButton, { borderColor: '#8B5CF6' }]}
+            textColor={formState.status === 'quality_control' ? 'white' : '#8B5CF6'}
+            disabled={formState.isUpdating}
+          >
+            Qualitätskontrolle
           </Button>
           <Button
             mode={formState.status === 'done' ? 'contained' : 'outlined'}
@@ -525,11 +771,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         <Text style={styles.sectionLabel}>Verantwortlich:</Text>
         <Menu
           visible={formState.ui.showUserMenu}
-          onDismiss={() => dispatch({ type: 'SET_UI', key: 'showUserMenu', value: false })}
+          onDismiss={() => dispatch({ type: 'TOGGLE_UI', key: 'showUserMenu' })}
           anchor={
             <Button
               mode="outlined"
-              onPress={() => dispatch({ type: 'SET_UI', key: 'showUserMenu', value: true })}
+              onPress={() => dispatch({ type: 'TOGGLE_UI', key: 'showUserMenu' })}
               icon="account"
               style={styles.selectButton}
               disabled={formState.isUpdating}
@@ -545,7 +791,8 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               key={user.id}
               onPress={() => {
                 dispatch({ type: 'SET_SELECTED_USER', user });
-                dispatch({ type: 'SET_UI', key: 'showUserMenu', value: false });
+                dispatch({ type: 'SET_FIELD', field: 'responsibleId', value: user.id });
+                dispatch({ type: 'TOGGLE_UI', key: 'showUserMenu' });
               }}
               title={`${user.firstName} ${user.lastName}`}
             />
@@ -555,11 +802,11 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         <Text style={styles.sectionLabel}>Branch:</Text>
         <Menu
           visible={formState.ui.showBranchMenu}
-          onDismiss={() => dispatch({ type: 'SET_UI', key: 'showBranchMenu', value: false })}
+          onDismiss={() => dispatch({ type: 'TOGGLE_UI', key: 'showBranchMenu' })}
           anchor={
             <Button
               mode="outlined"
-              onPress={() => dispatch({ type: 'SET_UI', key: 'showBranchMenu', value: true })}
+              onPress={() => dispatch({ type: 'TOGGLE_UI', key: 'showBranchMenu' })}
               icon="source-branch"
               style={styles.selectButton}
               disabled={formState.isUpdating}
@@ -573,41 +820,85 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
               key={branch.id}
               onPress={() => {
                 dispatch({ type: 'SET_SELECTED_BRANCH', branch });
-                dispatch({ type: 'SET_UI', key: 'showBranchMenu', value: false });
+                dispatch({ type: 'SET_FIELD', field: 'branchId', value: branch.id });
+                dispatch({ type: 'TOGGLE_UI', key: 'showBranchMenu' });
               }}
               title={branch.name}
             />
           ))}
         </Menu>
         
+        <Text style={styles.sectionLabel}>Qualitätskontrolle:</Text>
+        <Menu
+          visible={formState.ui.showQcMenu}
+          onDismiss={() => dispatch({ type: 'TOGGLE_UI', key: 'showQcMenu' })}
+          anchor={
+            <Button
+              mode="outlined"
+              onPress={() => dispatch({ type: 'TOGGLE_UI', key: 'showQcMenu' })}
+              icon="account-check-outline"
+              style={styles.dropdownButton}
+              disabled={formState.isLoading}
+            >
+              {qcButtonTitle}
+            </Button>
+          }
+          style={styles.menuContainer}
+        >
+          {formState.data.users.map((user) => (
+            <Menu.Item
+              key={`qc-${user.id}`}
+              onPress={() => {
+                dispatch({ type: 'SET_FIELD', field: 'qualityControlId', value: user.id });
+                dispatch({ type: 'TOGGLE_UI', key: 'showQcMenu' });
+              }}
+              title={`${user.firstName} ${user.lastName}`}
+            />
+          ))}
+          <Divider />
+          <Menu.Item
+            onPress={() => {
+              dispatch({ type: 'SET_FIELD', field: 'qualityControlId', value: null });
+              dispatch({ type: 'TOGGLE_UI', key: 'showQcMenu' });
+            }}
+            title="Keine Qualitätskontrolle"
+          />
+        </Menu>
+        
         {formState.formError && (
-          <Text style={styles.formError}>{formState.formError}</Text>
+          <HelperText type="error" visible={true}>{formState.formError}</HelperText>
         )}
         
         <View style={styles.buttonContainer}>
+          {(mode === ModalMode.EDIT || mode === ModalMode.CREATE) && (
+            <Button
+              mode="contained"
+              onPress={handleSave}
+              style={styles.button}
+              disabled={formState.isUpdating || formState.isLoading}
+              loading={formState.isUpdating}
+            >
+              {mode === ModalMode.CREATE ? 'Erstellen' : 'Speichern'}
+            </Button>
+          )}
+          {mode === ModalMode.EDIT && (
+            <Button
+              mode="outlined"
+              onPress={() => dispatch({ type: 'TOGGLE_UI', key: 'showConfirmationDialog'})}
+              style={styles.button}
+              color={MD2Colors.red500}
+              disabled={formState.isUpdating || formState.isLoading}
+            >
+              Löschen
+            </Button>
+          )}
           <Button
-            mode="outlined"
-            onPress={() => {
-              if (mode === ModalMode.EDIT) {
-                dispatch({ type: 'RESET_FORM' });
-                loadTask();
-              } else {
-                onDismiss();
-              }
-            }}
+            mode="text"
+            onPress={onDismiss}
             style={styles.button}
             disabled={formState.isUpdating}
           >
             Abbrechen
-          </Button>
-          <Button
-            mode="contained"
-            onPress={handleSave}
-            style={styles.button}
-            loading={formState.isUpdating}
-            disabled={formState.isUpdating || !formState.title.trim()}
-          >
-            {mode === ModalMode.CREATE ? 'Erstellen' : 'Speichern'}
           </Button>
         </View>
       </ScrollView>
@@ -624,9 +915,7 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       >
         <View style={styles.header}>
           <Text style={styles.title}>
-            {mode === ModalMode.CREATE ? 'Neue Aufgabe' : 
-             mode === ModalMode.EDIT ? 'Aufgabe bearbeiten' : 
-             'Aufgabendetails'}
+            {getModalTitle()}
           </Text>
           
           {mode === ModalMode.VIEW && taskId && (
@@ -843,6 +1132,12 @@ const styles = StyleSheet.create({
   },
   selectButton: {
     marginVertical: 8,
+  },
+  dropdownButton: {
+    marginVertical: 8,
+  },
+  menuContainer: {
+    maxHeight: 200,
   },
 });
 
