@@ -8,22 +8,23 @@ import { View, Text, StyleSheet } from 'react-native';
 import { Button } from 'react-native-paper';
 import { Branch, MobileWorkTime } from '../types';
 import { formatTime, calculateDuration } from '../utils/dateUtils';
-import SlideToConfirm from './SlideToConfirm';
 
 interface TimeTrackerBoxProps {
   currentWorkTime: MobileWorkTime | null;
   branches: Branch[];
-  onSlideConfirm: () => void;
+  onStartTimer: () => void;
+  onStopTimer: () => void;
   onShowWorkTimeList: () => void;
   isLoading: boolean;
-  startLoading?: boolean;
-  stopLoading?: boolean;
+  startLoading: boolean;
+  stopLoading: boolean;
 }
 
 const TimeTrackerBox: React.FC<TimeTrackerBoxProps> = ({
   currentWorkTime,
   branches,
-  onSlideConfirm,
+  onStartTimer,
+  onStopTimer,
   onShowWorkTimeList,
   isLoading,
   startLoading,
@@ -40,17 +41,8 @@ const TimeTrackerBox: React.FC<TimeTrackerBoxProps> = ({
       // Initial die Zeit berechnen
       const updateElapsedTime = () => {
         const now = new Date();
-        const startTimeDate = currentWorkTime.startTime instanceof Date
-          ? currentWorkTime.startTime
-          : new Date(currentWorkTime.startTime);
-
-        if (isNaN(startTimeDate.getTime())) {
-          console.error("Ungültiges startTime in TimeTrackerBox:", currentWorkTime.startTime);
-          setElapsedTime('Error');
-          return;
-        }
-
-        const diff = now.getTime() - startTimeDate.getTime();
+        const startTime = new Date(currentWorkTime.startTime);
+        const diff = now.getTime() - startTime.getTime();
         
         // Berechnung mit Millisekunden
         const totalSeconds = Math.floor(diff / 1000);
@@ -90,45 +82,45 @@ const TimeTrackerBox: React.FC<TimeTrackerBoxProps> = ({
               {currentWorkTime.branch?.name || 'Unbekannte Niederlassung'}
             </Text>
           </View>
-          <View style={styles.sliderButtonRow}>
-            <View style={styles.sliderWrapper}>
-              <SlideToConfirm
-                onConfirm={onSlideConfirm}
-                isTimerRunning={true}
-              />
-            </View>
+          <View style={styles.buttonContainer}>
+            <Button
+              mode="contained"
+              onPress={onStopTimer}
+              loading={stopLoading}
+              disabled={isLoading || stopLoading}
+              style={styles.button}
+            >
+              Timer stoppen
+            </Button>
             <Button
               mode="outlined"
-              icon="history"
               onPress={onShowWorkTimeList}
               disabled={isLoading}
-              style={styles.listButton}
-              contentStyle={styles.listButtonContent}
-              labelStyle={styles.listButtonLabel}
+              style={[styles.button, styles.listButton]}
             >
-              Zeiten
+              Zeiteinträge
             </Button>
           </View>
         </View>
       ) : (
         <View style={styles.startTimer}>
-          <View style={styles.sliderButtonRow}>
-            <View style={styles.sliderWrapper}>
-              <SlideToConfirm
-                onConfirm={onSlideConfirm}
-                isTimerRunning={false}
-              />
-            </View>
+          <View style={styles.buttonGroup}>
+            <Button
+              mode="contained"
+              onPress={onStartTimer}
+              loading={startLoading}
+              disabled={isLoading || startLoading || branches.length === 0}
+              style={[styles.button, styles.startButton]}
+            >
+              Timer starten
+            </Button>
             <Button
               mode="outlined"
-              icon="history"
               onPress={onShowWorkTimeList}
               disabled={isLoading}
-              style={styles.listButton}
-              contentStyle={styles.listButtonContent}
-              labelStyle={styles.listButtonLabel}
+              style={[styles.button, styles.listButton]}
             >
-              Zeiten
+              Zeiteinträge
             </Button>
           </View>
         </View>
@@ -148,7 +140,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 5,
-    gap: 12,
   },
   activeTimer: {
     flexDirection: 'column',
@@ -171,32 +162,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
+  buttonContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
   startTimer: {
     flexDirection: 'column',
     gap: 12,
   },
-  sliderButtonRow: {
+  buttonGroup: {
     flexDirection: 'row',
-    alignItems: 'center',
     gap: 8,
   },
-  sliderWrapper: {
+  button: {
     flex: 1,
+  },
+  startButton: {
+    backgroundColor: '#3B82F6',
   },
   listButton: {
     borderColor: '#3B82F6',
-    borderWidth: 1.5,
-    borderRadius: 20,
   },
-  listButtonContent: {
-    height: 40,
-    paddingHorizontal: 8,
-  },
-  listButtonLabel: {
-    fontSize: 12,
-    marginHorizontal: 0,
-    marginLeft: 0,
-  }
 });
 
 export default TimeTrackerBox; 
