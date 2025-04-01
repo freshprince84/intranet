@@ -52,9 +52,6 @@ const WorktimeScreen = () => {
   const [startLoading, setStartLoading] = useState(false);
   const [stopLoading, setStopLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showBranchModal, setShowBranchModal] = useState(false);
-  const [showNotesModal, setShowNotesModal] = useState(false);
-  const [notes, setNotes] = useState('');
   const [showWorkTimeListModal, setShowWorkTimeListModal] = useState(false);
 
   // State für Todo-Funktionalität
@@ -457,29 +454,40 @@ const WorktimeScreen = () => {
     }
   };
   
-  /**
-   * Startet Timer für Zeiterfassung
-   */
-  const startTimer = async () => {
+  // --- Handler für Timer-Aktionen --- 
+  const handleStartTimerAction = async () => {
     if (!selectedBranch) {
-      Alert.alert('Fehler', 'Bitte wähle eine Niederlassung aus.');
+      Alert.alert(
+        "Fehler", 
+        "Keine Niederlassung verfügbar oder geladen. Bitte sicherstellen, dass Niederlassungen zugewiesen sind und die App eine Verbindung hat."
+      );
       return;
+    }
+    await startTimer(selectedBranch); 
+  };
+
+  const handleStopTimerAction = () => {
+    stopTimer();
+  };
+
+  // Funktion zum Starten des Timers (akzeptiert jetzt wieder die Branch, verwendet aber die aus dem State)
+  const startTimer = async (branchToStart: Branch) => { 
+    const branchToUse = selectedBranch; 
+    if (!branchToUse) { 
+       Alert.alert('Fehler', 'Keine ausgewählte Niederlassung im State gefunden.');
+       return;
     }
 
     setStartLoading(true);
     try {
-      // Prüfe Verbindungsstatus vor API-Call
       const isOfflineMode = await isOfflineCheck();
       setIsOffline(isOfflineMode);
 
-      // Online-Modus: starte Timer auf dem Server
       if (!isOfflineMode) {
         try {
-          const branchId = selectedBranch.id.toString();
+          const branchId = branchToUse.id.toString(); 
           const response = await worktimeApi.start(branchId);
           
-          // Speichere auch lokal für Offline-Zugriff
-          // Konvertiere String zu Date für lokale Speicherung
           const startTime = typeof response.startTime === 'string'
             ? new Date(response.startTime)
             : response.startTime;
@@ -487,33 +495,34 @@ const WorktimeScreen = () => {
           const activeWorktime = {
             ...response,
             startTime,
-            branch: selectedBranch
+            branch: branchToUse // Verwende State-Branch
           };
           
           await AsyncStorage.setItem('@IntranetApp:currentTimer', JSON.stringify(activeWorktime));
           setCurrentWorkTime(activeWorktime);
           setIsTimerRunning(true);
         } catch (error) {
-          console.error('Fehler beim Starten des Timers:', error);
-          
-          // Prüfe ob es wirklich ein Offline-Problem ist
-          const isNetworkError = error instanceof Error && 
-            (error.message?.includes('Network Error') || 
-             error.message?.includes('timeout') || 
-             error.message?.includes('connection') ||
-             await isOfflineCheck());
-          
-          if (isNetworkError) {
-            Alert.alert('Offline-Modus', 'Timer wird im Offline-Modus gestartet.');
-            setIsOffline(true);
-            await createOfflineTimer();
-          } else {
-            Alert.alert('Fehler', `Der Timer konnte nicht gestartet werden. ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
-          }
+           console.error('Fehler beim Starten des Timers:', error);
+           const currentBranch = branchToUse; 
+           
+           // Definition von isNetworkError muss *vor* der Verwendung stehen
+           const isNetworkError = error instanceof Error && 
+             (error.message?.includes('Network Error') || 
+              error.message?.includes('timeout') || 
+              error.message?.includes('connection') ||
+              await isOfflineCheck());
+
+            if (isNetworkError) {
+              Alert.alert('Offline-Modus', 'Timer wird im Offline-Modus gestartet.');
+              setIsOffline(true);
+              await createOfflineTimer(currentBranch); 
+            } else {
+              Alert.alert('Fehler', `Der Timer konnte nicht gestartet werden. ${error instanceof Error ? error.message : 'Unbekannter Fehler'}`);
+            }
         }
       } else {
-        // Offline-Modus: lokalen Timer erstellen
-        await createOfflineTimer();
+         const currentBranch = branchToUse;
+         await createOfflineTimer(currentBranch); 
       }
     } catch (error) {
       console.error('Fehler beim Starten des Timers:', error);
@@ -526,14 +535,14 @@ const WorktimeScreen = () => {
   /**
    * Erstellt einen Offline-Timer
    */
-  const createOfflineTimer = async () => {
+  const createOfflineTimer = async (branchForOffline: Branch) => {
     const newWorkTime: MobileWorkTime = {
       id: Date.now(), // Temporäre ID für Offline-Einträge
       startTime: new Date(),
-      branchId: selectedBranch?.id || 1,
+      branchId: branchForOffline.id,
       userId: user?.id || 0,
       offlineId: Date.now().toString(), // Offline-Identifier statt offline: true
-      branch: selectedBranch || { id: 1, name: 'Hauptsitz', isActive: true }
+      branch: branchForOffline
     };
     
     setCurrentWorkTime(newWorkTime);
@@ -769,16 +778,6 @@ const WorktimeScreen = () => {
     }
   };
   
-  // Handler für den Start-Timer Button in der TimeTrackerBox
-  const handleStartTimerPress = () => {
-    setShowBranchModal(true);
-  };
-  
-  // Handler für den Stop-Timer Button in der TimeTrackerBox
-  const handleStopTimerPress = () => {
-    setShowNotesModal(true);
-  };
-  
   // Handler für Task-Auswahl (nimmt jetzt taskId)
   const handleTaskPress = (taskId: number) => {
     // Finde den Task im State
@@ -828,164 +827,122 @@ const WorktimeScreen = () => {
   }
   
   return (
-    <View style={styles.container}>
-      {/* Hauptbereich mit Content, der scrollbar ist */}
-      <ScrollView 
-        style={styles.content}
-        contentContainerStyle={styles.contentContainer}
-      >
-        {error && (
-          <Card style={[styles.card, styles.errorCard]}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Hauptbereich mit Content, der scrollbar ist */}
+        <ScrollView 
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+        >
+          {error && (
+            <Card style={[styles.card, styles.errorCard]}>
+              <Card.Content>
+                <Text style={styles.error}>{error}</Text>
+              </Card.Content>
+            </Card>
+          )}
+          
+          {/* Todo-Sektion */}
+          <Card style={styles.card}>
             <Card.Content>
-              <Text style={styles.error}>{error}</Text>
+              <View style={styles.cardHeader}>
+                <Text style={styles.title}>To-Do Liste</Text>
+              </View>
+              
+              {tasksLoading ? (
+                <View style={styles.taskLoadingContainer}>
+                  <ActivityIndicator size="small" color="#3B82F6" />
+                  <Text style={styles.taskLoadingText}>Aufgaben werden geladen...</Text>
+                </View>
+              ) : tasksError ? (
+                <View style={styles.taskErrorContainer}>
+                  <Text style={styles.taskErrorText}>{tasksError}</Text>
+                  <Button mode="contained" onPress={loadTasks} style={styles.retryButton}>
+                    Erneut versuchen
+                  </Button>
+                </View>
+              ) : (
+                <View>
+                  <TaskList
+                    tasks={tasks}
+                    isLoading={tasksLoading}
+                    error={tasksError}
+                    onRefresh={loadTasks}
+                    isRefreshing={isRefreshing}
+                    onTaskPress={handleTaskPress}
+                    showFilters={true}
+                    onAddPress={handleAddTask}
+                  />
+
+                  {tasks.length > 3 && (
+                    <Button 
+                      mode="text" 
+                      onPress={handleShowAllTasks}
+                      style={styles.showMoreButton}
+                    >
+                      Alle {tasks.length} Aufgaben anzeigen
+                    </Button>
+                  )}
+                </View>
+              )}
             </Card.Content>
           </Card>
-        )}
-        
-        {/* Todo-Sektion */}
-        <Card style={styles.card}>
-          <Card.Content>
-            <View style={styles.cardHeader}>
-              <Text style={styles.title}>To-Do Liste</Text>
-            </View>
-            
-            {tasksLoading ? (
-              <View style={styles.taskLoadingContainer}>
-                <ActivityIndicator size="small" color="#3B82F6" />
-                <Text style={styles.taskLoadingText}>Aufgaben werden geladen...</Text>
-              </View>
-            ) : tasksError ? (
-              <View style={styles.taskErrorContainer}>
-                <Text style={styles.taskErrorText}>{tasksError}</Text>
-                <Button mode="contained" onPress={loadTasks} style={styles.retryButton}>
-                  Erneut versuchen
-                </Button>
-              </View>
-            ) : (
-              <View>
-                <TaskList
-                  tasks={tasks}
-                  isLoading={tasksLoading}
-                  error={tasksError}
-                  onRefresh={loadTasks}
-                  isRefreshing={isRefreshing}
-                  onTaskPress={handleTaskPress}
-                  showFilters={true}
-                  onAddPress={handleAddTask}
-                />
+        </ScrollView>
 
-                {tasks.length > 3 && (
-                  <Button 
-                    mode="text" 
-                    onPress={handleShowAllTasks}
-                    style={styles.showMoreButton}
-                  >
-                    Alle {tasks.length} Aufgaben anzeigen
-                  </Button>
-                )}
-              </View>
-            )}
-          </Card.Content>
-        </Card>
-      </ScrollView>
+        {/* Die Zeiterfassungsbox wird am unteren Bildschirmrand fixiert */}
+        <TimeTrackerBox 
+          currentWorkTime={currentWorkTime}
+          branches={branches}
+          onStartTimer={handleStartTimerAction}
+          onStopTimer={handleStopTimerAction}
+          onShowWorkTimeList={() => setShowWorkTimeListModal(true)}
+          isLoading={isLoading}
+          startLoading={startLoading}
+          stopLoading={stopLoading}
+        />
 
-      {/* Die Zeiterfassungsbox wird am unteren Bildschirmrand fixiert */}
-      <TimeTrackerBox 
-        currentWorkTime={currentWorkTime}
-        branches={branches}
-        onStartTimer={handleStartTimerPress}
-        onStopTimer={handleStopTimerPress}
-        onShowWorkTimeList={() => setShowWorkTimeListModal(true)}
-        isLoading={isLoading}
-        startLoading={startLoading}
-        stopLoading={stopLoading}
-      />
-
-      <Portal>
-        <Modal
-          visible={showBranchModal}
-          onDismiss={() => setShowBranchModal(false)}
-          contentContainerStyle={styles.modal}
-        >
-          <Text style={styles.modalTitle}>Branch auswählen</Text>
-          {branches.map((branch) => (
-            <Button
-              key={branch.id}
-              mode="outlined"
-              onPress={() => {
-                setSelectedBranch(branch);
-                setShowBranchModal(false);
-                startTimer();
-              }}
-              style={styles.branchButton}
-            >
-              {branch.name}
-            </Button>
-          ))}
-        </Modal>
-
-        <Modal
-          visible={showNotesModal}
-          onDismiss={() => setShowNotesModal(false)}
-          contentContainerStyle={styles.modal}
-        >
-          <Text style={styles.modalTitle}>Notizen</Text>
-          <TextInput
-            label="Notizen"
-            value={notes}
-            onChangeText={setNotes}
-            multiline
-            numberOfLines={4}
-            style={styles.notesInput}
+        <Portal>
+          {/* TaskDetailModal einbinden */}
+          <TaskDetailModal
+            visible={showTaskDetailModal}
+            onDismiss={() => setShowTaskDetailModal(false)}
+            taskId={modalTaskId}
+            mode={modalMode}
+            onTaskUpdated={handleTaskUpdated}
           />
-          <Button 
-            mode="contained" 
-            onPress={() => {
-              stopTimer(notes);
-              setShowNotesModal(false);
-            }}
-            style={styles.stopButton}
-          >
-            Timer stoppen
-          </Button>
-        </Modal>
-        
-        {/* TaskDetailModal einbinden */}
-        <TaskDetailModal
-          visible={showTaskDetailModal}
-          onDismiss={() => setShowTaskDetailModal(false)}
-          taskId={modalTaskId}
-          mode={modalMode}
-          onTaskUpdated={handleTaskUpdated}
-        />
-      </Portal>
+        </Portal>
 
-      {/* WorktimeListModal */}
-      <WorktimeListModal
-        visible={showWorkTimeListModal}
-        onDismiss={() => setShowWorkTimeListModal(false)}
-        workTimes={workTimes}
-        isRefreshing={isRefreshing}
-        onRefresh={onRefresh}
-      />
-
-      {/* FAB für Synchronisierung im Offline-Modus */}
-      {isOffline && (
-        <FAB
-          icon="sync"
-          style={styles.fab}
-          onPress={syncOfflineData}
-          label="Synchronisieren"
+        {/* WorktimeListModal */}
+        <WorktimeListModal
+          visible={showWorkTimeListModal}
+          onDismiss={() => setShowWorkTimeListModal(false)}
+          workTimes={workTimes}
+          isRefreshing={isRefreshing}
+          onRefresh={onRefresh}
         />
-      )}
-    </View>
+
+        {/* FAB für Synchronisierung im Offline-Modus */}
+        {isOffline && (
+          <FAB
+            icon="sync"
+            style={styles.fab}
+            onPress={syncOfflineData}
+            label="Synchronisieren"
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F9FAFB', // Hellgrau Hintergrund aus Design Standards
+  },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F9FAFB', // Hellgrau Hintergrund aus Design Standards
   },
   content: {
     flex: 1,
@@ -997,6 +954,13 @@ const styles = StyleSheet.create({
   },
   card: {
     marginBottom: 16,
+    borderRadius: 12, // Größerer Radius für moderneres Aussehen
+    elevation: 2, // Subtiler Schatten für Android
+    shadowColor: '#000', // Schatten für iOS
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    backgroundColor: '#FFFFFF', // Weiß für die Karten
   },
   cardHeader: {
     flexDirection: 'row',
@@ -1005,34 +969,45 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   errorCard: {
-    backgroundColor: '#FFEBEE',
+    backgroundColor: '#FEF2F2', // Helleres Rot für Fehler aus Design Standards
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600', // SemiBold statt Bold für moderneren Look
+    color: '#111827', // Dunkelgrau/fast schwarz für Titel
   },
   error: {
-    color: 'red',
+    color: '#DC2626', // Rot aus Design Standards
+    fontSize: 14,
   },
   modal: {
     backgroundColor: 'white',
     padding: 20,
     margin: 20,
-    borderRadius: 8,
+    borderRadius: 12, // Größerer Radius für moderneres Aussehen
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '600',
     marginBottom: 16,
+    color: '#111827',
   },
   branchButton: {
     marginVertical: 4,
+    borderRadius: 8,
   },
   notesInput: {
     marginBottom: 16,
+    backgroundColor: '#F9FAFB',
   },
   stopButton: {
-    marginTop: 8,
+    marginTop: 12,
+    borderRadius: 8,
   },
   taskLoadingContainer: {
     padding: 20,
@@ -1040,59 +1015,69 @@ const styles = StyleSheet.create({
   },
   taskLoadingText: {
     marginTop: 8,
-    color: '#666',
+    color: '#6B7280', // Mittelgrau für sekundären Text
   },
   taskErrorContainer: {
     padding: 16,
-    backgroundColor: '#FFEBEE',
-    borderRadius: 4,
+    backgroundColor: '#FEF2F2', // Helleres Rot
+    borderRadius: 8,
     marginTop: 8,
   },
   taskErrorText: {
-    color: '#D32F2F',
+    color: '#DC2626', // Rot aus Design Standards
     marginBottom: 8,
+    fontSize: 14,
   },
   retryButton: {
-    backgroundColor: '#D32F2F',
+    backgroundColor: '#DC2626', // Rot aus Design Standards
+    borderRadius: 8,
   },
   emptyText: {
     textAlign: 'center',
     padding: 16,
-    color: '#666',
+    color: '#6B7280', // Mittelgrau für sekundären Text
+    fontSize: 14,
   },
   taskList: {
     marginTop: 8,
   },
   showMoreButton: {
-    marginTop: 8,
+    marginTop: 12,
+    marginBottom: 4,
   },
   statusSection: {
     marginBottom: 16,
   },
   sectionLabel: {
-    fontWeight: 'bold',
+    fontWeight: '600', // SemiBold statt Bold
     marginTop: 16,
     marginBottom: 8,
+    color: '#111827', // Dunkelgrau/fast schwarz
+    fontSize: 15,
   },
   statusButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
+    gap: 8, // Gleichmäßige Abstände zwischen Buttons
   },
   fab: {
     position: 'absolute',
     margin: 16,
     right: 0,
     bottom: 80, // Höher positionieren wegen der Zeiterfassungsbox unten
+    backgroundColor: '#3B82F6', // Blau als Primärfarbe
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#F9FAFB', // Konsistenter Hintergrund
   },
   loadingText: {
-    marginTop: 8,
-    color: '#3B82F6',
+    marginTop: 12,
+    color: '#3B82F6', // Blau als Primärfarbe
+    fontSize: 14,
   },
 });
 

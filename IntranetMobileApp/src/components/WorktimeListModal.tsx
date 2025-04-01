@@ -99,9 +99,14 @@ const styles = StyleSheet.create({
   modal: {
     backgroundColor: 'white',
     margin: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     height: '80%',
-    padding: 0
+    padding: 0,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   modalContent: {
     flex: 1
@@ -113,14 +118,24 @@ const styles = StyleSheet.create({
     padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
+    backgroundColor: '#f8f9fa',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    color: '#111827',
   },
   card: {
-    marginBottom: 8,
-    marginHorizontal: 16
+    marginVertical: 6,
+    marginHorizontal: 16,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -129,7 +144,9 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   divider: {
-    marginVertical: 8
+    marginVertical: 8,
+    height: 1,
+    backgroundColor: '#E5E7EB',
   },
   workTimeDetails: {
     flexDirection: 'row',
@@ -138,14 +155,15 @@ const styles = StyleSheet.create({
   },
   branchText: {
     marginTop: 8,
-    color: '#666'
+    color: '#4B5563',
+    fontSize: 14,
   },
   listContent: {
     paddingTop: 8,
     paddingBottom: 24
   },
   emptyList: {
-    padding: 16,
+    padding: 32,
     alignItems: 'center'
   }
 });

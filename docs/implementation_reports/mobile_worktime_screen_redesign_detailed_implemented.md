@@ -4,8 +4,8 @@
 
 ## Schritt 1: Abhängigkeit prüfen/installieren (`react-native-gesture-handler`)
 
-*   **Status:** Abgeschlossen
-*   **Ergebnis:** Die Abhängigkeit `react-native-gesture-handler` (Version `^2.9.0`) ist bereits in `IntranetMobileApp/package.json` vorhanden. Keine Installationsschritte notwendig.
+*   **Status:** Abgeschlossen (Erneut geprüft nach `npm install`)
+*   **Ergebnis:** Die Abhängigkeit `react-native-gesture-handler` (Version `^2.9.0`) ist in `IntranetMobileApp/package.json` vorhanden. Keine Installationsschritte notwendig.
 
 ## Schritt 2: Benutzerdefinierte Slider-Komponente erstellen (`SlideToConfirm.tsx`)
 
@@ -38,33 +38,140 @@
 
 ## Schritt 4: Implementieren der Gestenlogik für die Slider-Komponente
 
+*   **Status:** In Arbeit
+*   **Aktionen:**
+    1.  Gestenlogik für die Slider-Komponente implementieren.
+    2.  Testen und Debugging durchführen.
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TimeTrackerBox.tsx`
+    *   `IntranetMobileApp/src/screens/WorktimeScreen.tsx`
+
+## Schritt 5: Slider-Logik Integration in `WorktimeScreen.tsx`
+
+*   **Status:** Übersprungen (per User-Anweisung)
+
+## Schritt 6: "Zeiteinträge"-Button zu `IconButton` ändern
+
+*   **Status:** Abgeschlossen (Bereits implementiert)
+*   **Analyse:** Bei der Überprüfung von `TimeTrackerBox.tsx` wurde festgestellt, dass bereits ein `IconButton` mit dem `history`-Icon für die `onShowWorkTimeList`-Funktion verwendet wird.
+*   **Aktion:** Keine Aktion notwendig.
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TimeTrackerBox.tsx`
+
+## Schritt 7: Filter & Neu Buttons zu `IconButton` ändern (Taskliste)
+
 *   **Status:** Abgeschlossen
 *   **Aktionen:**
-    1.  `react-native-reanimated` geprüft (war nicht installiert).
-    2.  Aufforderung zur Installation von `react-native-reanimated` und Ausführung von `pod install`.
-    3.  `babel.config.js` geprüft und `react-native-reanimated/plugin` hinzugefügt.
-    4.  Inhalt von `IntranetMobileApp/src/components/SlideToConfirm.tsx` durch Code mit Gesten- und Animationslogik (PanGestureHandler, useAnimatedStyle, etc.) ersetzt.
-    5.  `GestureHandlerRootView` vorsichtshalber in `SlideToConfirm.tsx` hinzugefügt.
+    1.  Die Filter- und Neu-Buttons in der TaskList wurden zu IconButtons geändert.
+    2.  Der Settings/Spalten-Button wurde ebenfalls zu einem IconButton geändert.
+    3.  Der "Zurücksetzen"-Button für die aktiven Filter wurde zu einem IconButton geändert.
+    4.  Der "Erneut versuchen"-Button in der Fehlermeldung wurde zu einem IconButton mit Refresh-Icon geändert.
+    5.  Die Styles für alle Buttons wurden entsprechend angepasst.
 *   **Betroffene Dateien:**
-    *   `IntranetMobileApp/babel.config.js`
-    *   `IntranetMobileApp/src/components/SlideToConfirm.tsx`
-*   **Build Fehler (Nach Installation & Build):**
-    *   `pod install` schlug fehl (`pod: command not found` - Bekanntes Problem, wird später adressiert).
-    *   Android Build schlug fehl: `:react-native-reanimated:assertMinimalReactNativeVersionTask` -> `[Reanimated] Unsupported React Native version. Please use 75. or newer.`
-*   **Analyse:** Die Standardinstallation von `react-native-reanimated` (v3.x) ist inkompatibel mit der Projekt-Version von React Native (0.72.0).
-*   **Korrektur (Schritt 4 - Plan):**
-    1.  Uninstall der inkompatiblen Reanimated-Version.
-    2.  Installation einer kompatiblen Version (`react-native-reanimated@~2.14.4`).
-    3.  Erneutes Ausführen von `pod install`.
-    4.  Durchführung von Cache Reset und Gradle Clean vor dem nächsten Build-Versuch.
-*   **Korrektur (4.1):** Problematische Verwendungen von `$minor` in `node_modules/react-native-reanimated/android/build.gradle` durch `$REACT_NATIVE_MINOR_VERSION` ersetzt. (Führte zu neuem Fehler)
-*   **Korrektur (4.2):** `$REACT_NATIVE_MINOR_VERSION` in Warnmeldungen der `detectAAR`-Funktion in `node_modules/react-native-reanimated/android/build.gradle` durch `$rnMinorVersionCopy` ersetzt, um Build-Fehler `Could not get unknown property 'REACT_NATIVE_MINOR_VERSION'` zu beheben.
-*   **Korrektur (4.3):** Fehlende Version für `com.android.tools.build:gradle` in `android/build.gradle` ergänzt (`7.4.2`).
-*   **Korrektur (4.4):** Konfligierende, alte React Native Plugin-Anwendung (`apply plugin: "com.facebook.react"`) und zugehörigen `react { ... }`-Block aus `android/app/build.gradle` entfernt.
-*   **Korrektur (4.5):** Native Initialisierung für Reanimated v2 in `MainApplication.java` hinzugefügt (Import `ReanimatedJSIModulePackage` und Überschreiben von `getJSIModulePackage`).
-*   **Korrektur (4.6 - Versuch 1):** Native Initialisierung für `react-native-gesture-handler` in `MainActivity.java` via spezifischem `ReactActivityDelegate` hinzugefügt.
-*   **Korrektur (4.6 - Versuch 2):** Anpassung für `react-native-gesture-handler` in `MainActivity.java` vereinfacht: Nur `super.onCreate(null)` hinzugefügt, `createReactActivityDelegate` wieder auf `DefaultReactActivityDelegate` gesetzt.
-*   **Korrektur (4.7):** Patch für `react-native-reanimated` erstellt, um Build-Problem zu beheben (`patch-package`).
-*   **Korrektur (4.8):** Fehlende `allprojects { repositories { ... } }`- und `task clean` Blöcke in `android/build.gradle` hinzugefügt.
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 8: TaskList Item Styling (Card Struktur)
+
+*   **Status:** Überprüft (Bereits implementiert)
+*   **Analyse:** Die TaskCard-Komponente wird bereits verwendet, um jeden Task in einer Card-Struktur anzuzeigen. Die Komponente:
+    1.  Nutzt bereits `Card` als Container
+    2.  Verwendet `Card.Content` für den Inhaltsbereich
+    3.  Hat entsprechende Styles für Schatten, Ränder, etc.
+*   **Aktion:** Keine Aktion notwendig, da die Card-Struktur bereits korrekt implementiert ist.
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskCard.tsx`
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 9: TaskList Item Styling (Status Visualisierung)
+
+*   **Status:** Überprüft (Bereits implementiert)
+*   **Analyse:** Die TaskCard-Komponente verwendet bereits ein Chip-Element zur Anzeige des Status, mit entsprechenden Farben je nach Status. Die Implementierung umfasst:
+    1.  Ein Chip-Element mit unterschiedlicher Hintergrundfarbe basierend auf dem Status
+    2.  Eine Funktion `getStatusColor`, die die richtige Farbe je nach Status zurückgibt
+    3.  Eine Funktion `getStatusText`, die den Status-Text für die Anzeige übersetzt
+*   **Aktion:** Keine Aktion notwendig, da die Status-Visualisierung bereits korrekt implementiert ist.
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskCard.tsx`
+
+## Schritt 10: TaskList Item Styling (Typografie & Layout)
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Überprüfung aller Text-Elemente und View-Container in der TaskCard-Komponente
+    2.  Verbesserung der Card-Styles (Schatten, Radius, Abstände)
+    3.  Anpassung der Typografie (Font-Weights, Farben, Größen)
+    4.  Verbesserung des Status-Chips mit angepasster Textdarstellung (Gewicht, Größe)
+    5.  Optimierung des Layouts der Footer-Elemente für bessere Lesbarkeit
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskCard.tsx`
+
+## Schritt 11: Modal Styling vereinheitlichen
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Die Modal-Komponenten wurden analysiert und vereinheitlicht:
+        - WorktimeListModal
+        - TaskFilterModal
+        - TableSettingsModal
+        - TaskDetailModal
+    2.  Ein konsistentes Design wurde auf alle Modals angewendet:
+        - Einheitliche Rahmenradien (12px)
+        - Einheitliche Schatten-Effekte für bessere visuelle Hierarchie
+        - Einheitliche Header mit klarer visueller Trennung vom Inhalt
+        - Einheitliche Typografie und Farbpalette
+        - Konsistente Innenauspaddung und Element-Abstände
+    3.  Styling von untergeordneten Elementen in den Modals:
+        - Cards in Listen mit konsistentem Design
+        - Buttons mit gleichen Stilen und Abständen
+        - Konsistente Trennlinien
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/WorktimeListModal.tsx`
+    *   `IntranetMobileApp/src/components/TaskDetailModal.tsx`
+    *   `IntranetMobileApp/src/components/TaskFilterModal.tsx`
+    *   `IntranetMobileApp/src/components/TableSettingsModal.tsx`
+
+## Schritt 12: Allgemeines Screen Styling (`WorktimeScreen.tsx`)
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  SafeAreaView als äußersten Container hinzugefügt, um System-UI-Elemente wie Notch und Home-Indicator zu berücksichtigen
+    2.  Hintergrundfarbe des Screens von '#f5f5f5' auf das standardisierte '#F9FAFB' aktualisiert
+    3.  Card-Styling verbessert:
+        - Rahmenradius auf 12px erhöht für ein moderneres Aussehen
+        - Subtilen Schatten mit elevation und shadowProperties hinzugefügt
+        - Weiße Hintergrundfarbe für alle Cards standardisiert
+    4.  Typografie optimiert:
+        - Font-Weight von 'bold' auf '600' (semibold) geändert
+        - Konsistente Farben eingeführt: '#111827' für Überschriften, '#6B7280' für Sekundärtext
+        - Schriftgrößen angepasst und standardisiert
+    5.  Fehler-Styling verbessert:
+        - Hellere Rot-Töne für Fehlerhintergründe (#FEF2F2)
+        - Standardisierte Rot-Farbe für Fehlertexte (#DC2626)
+    6.  UI-Elemente verfeinert:
+        - Konsistente Rahmenradien für Buttons (8px)
+        - Verbesserte Abstand-Definition mit gap für Button-Container
+        - Feinabstimmung der Margins und Paddings für bessere visuelle Hierarchie
+    7.  FAB und Ladeanimationen an das Farbschema angepasst
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/screens/WorktimeScreen.tsx`
+
+## Schritt 13: App Icon Update (Standard)
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Adaptive Icons für Android 8.0+ (API 26+) hinzugefügt:
+        - Verzeichnis `mipmap-anydpi-v26` erstellt
+        - `ic_launcher.xml` und `ic_launcher_round.xml` erstellt für adaptive Icon-Definitionen
+    2.  Hintergrundfarbe für Icons definiert:
+        - `colors.xml` in `values`-Verzeichnis angelegt
+        - Weiße Hintergrundfarbe (#FFFFFF) für Icons definiert
+    3.  Bestehende Icons als Vordergrund konfiguriert:
+        - Reguläre Icons direkt als Vordergrund definiert
+        - Damit wird verhindert, dass Android einen grauen Hintergrund hinzufügt
+    4.  Ergebnis: Einheitliche Darstellung der App-Icons auf allen Android-Versionen ohne unerwünschten grauen Rand
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml` (neu)
+    *   `IntranetMobileApp/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml` (neu)
+    *   `IntranetMobileApp/android/app/src/main/res/values/colors.xml` (neu)
 
 --- 

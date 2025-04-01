@@ -156,7 +156,10 @@ const TableSettingsModal: React.FC<TableSettingsModalProps> = ({
         onDismiss={onDismiss}
         contentContainerStyle={styles.modal}
       >
-        <Text style={styles.modalTitle}>Spalten konfigurieren</Text>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Spalten konfigurieren</Text>
+          <Button onPress={onDismiss}>Schließen</Button>
+        </View>
         
         <ScrollView style={styles.scrollView}>
           <Text style={styles.description}>
@@ -217,24 +220,42 @@ const styles = StyleSheet.create({
   modal: {
     backgroundColor: 'white',
     margin: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 20,
     maxHeight: '80%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 8,
+    color: '#111827',
   },
   description: {
     marginBottom: 16,
-    color: '#666',
+    color: '#4B5563',
+    fontSize: 14,
+    lineHeight: 20,
   },
   scrollView: {
     marginBottom: 16,
   },
   divider: {
     marginBottom: 16,
+    height: 1,
+    backgroundColor: '#E5E7EB',
   },
   columnList: {
     marginBottom: 16,
@@ -242,26 +263,35 @@ const styles = StyleSheet.create({
   columnItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
+    padding: 8,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
   },
   columnLabel: {
     marginLeft: 8,
+    fontSize: 14,
+    color: '#374151',
   },
   requiredText: {
     fontStyle: 'italic',
-    color: '#666',
+    color: '#9CA3AF',
     fontSize: 12,
   },
   actions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
   rightButtons: {
     flexDirection: 'row',
   },
   resetButton: {
-    borderColor: '#9e9e9e',
+    marginRight: 8,
   },
   cancelButton: {
     marginRight: 8,

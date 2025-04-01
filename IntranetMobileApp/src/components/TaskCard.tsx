@@ -67,7 +67,7 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, visibleColumns = ['t
         {isColumnVisible('status') && (
           <Chip
             style={[styles.statusChip, { backgroundColor: getStatusColor(task.status) }]}
-            textStyle={{ color: 'white' }}
+            textStyle={{ color: 'white', fontWeight: '600', fontSize: 12 }}
           >
             {getStatusText(task.status)}
           </Chip>
@@ -112,46 +112,63 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, visibleColumns = ['t
 
 const styles = StyleSheet.create({
   card: {
-    marginVertical: 4,
+    marginVertical: 6,
     marginHorizontal: 0,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   content: {
-    padding: 8,
+    padding: 12,
   },
   title: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 8,
+    color: '#111827',
   },
   statusChip: {
     alignSelf: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 10,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
   },
   description: {
     marginTop: 8,
-    marginBottom: 8,
+    marginBottom: 10,
     color: '#4B5563',
+    fontSize: 14,
+    lineHeight: 20,
   },
   divider: {
-    marginVertical: 8,
+    marginVertical: 10,
+    height: 1,
+    backgroundColor: '#E5E7EB',
   },
   footer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
+    marginTop: 4,
   },
   footerItem: {
     flexDirection: 'row',
-    marginRight: 8,
+    marginRight: 12,
     marginBottom: 4,
   },
   footerLabel: {
     fontSize: 12,
+    fontWeight: '500',
     color: '#6B7280',
     marginRight: 4,
   },
   footerValue: {
     fontSize: 12,
+    fontWeight: '400',
     color: '#1F2937',
   },
 });

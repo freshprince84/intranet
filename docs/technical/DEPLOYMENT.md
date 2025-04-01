@@ -945,3 +945,43 @@ location /downloads {
     add_header Content-Disposition "attachment" always;
 }
 ``` 
+
+
+
+
+
+
+
+
+
+# Deployment Details
+
+This document stores specific details required for deployment processes, such as building and uploading the mobile app.
+
+## Mobile App (Android APK)
+
+*   **Build Command (run in workspace root):**
+    ```bash
+    cd IntranetMobileApp/android && ./gradlew assembleRelease && cd ../..
+    ```
+*   **Generated APK Location (relative to workspace):**
+    `IntranetMobileApp/android/app/build/outputs/apk/release/app-release.apk`
+*   **Backend Storage Location (relative to workspace):**
+    `backend/public/downloads/intranet-app.apk`
+    *(Note: The filename `intranet-app.apk` is used for consistency)*
+*   **Copy Command (run in workspace root):**
+    ```bash
+    cp IntranetMobileApp/android/app/build/outputs/apk/release/app-release.apk backend/public/downloads/intranet-app.apk
+    ```
+
+## Server Details for SCP
+
+*   **Server IP Address:** `65.109.228.106`
+*   **SSH/SCP User:** `root`
+*   **SSH Key:** `~/.ssh/intranet_rsa` (as mentioned in `SERVER_UPDATE.md` for SSH connection)
+*   **Target Directory for APK on Server:** `/var/www/intranet/backend/public/downloads/`
+*   **Target Filename on Server:** `intranet-app.apk`
+*   **SCP Upload Command (run in workspace root):**
+    ```bash
+    scp -i ~/.ssh/intranet_rsa backend/public/downloads/intranet-app.apk root@65.109.228.106:/var/www/intranet/backend/public/downloads/intranet-app.apk
+    ```

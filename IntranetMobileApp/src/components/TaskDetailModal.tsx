@@ -910,101 +910,58 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       <Modal
         visible={visible}
         onDismiss={onDismiss}
-        contentContainerStyle={styles.modal}
-        dismissable={!formState.isUpdating}
+        contentContainerStyle={styles.modalContainer}
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>
-            {getModalTitle()}
-          </Text>
-          
-          {mode === ModalMode.VIEW && taskId && (
-            <View style={styles.actionButtons}>
-              <IconButton
-                icon="pencil"
-                size={20}
-                onPress={() => setMode(ModalMode.EDIT)}
-              />
-              <IconButton
-                icon="delete"
-                size={20}
-                onPress={() => dispatch({ type: 'SET_UI', key: 'showConfirmationDialog', value: true })}
-                iconColor="#EF4444"
-              />
-            </View>
-          )}
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>{getModalTitle()}</Text>
+          <IconButton icon="close" size={24} onPress={onDismiss} />
         </View>
         
-        <Divider style={styles.divider} />
-        
-        {formState.isLoading ? (
-          <ActivityIndicator size="large" />
-        ) : (
-          <>
-            <ScrollView>
-              {renderContent()}
-            </ScrollView>
-            
-            <Portal>
-              <Modal
-                visible={formState.ui.showConfirmationDialog}
-                onDismiss={() => dispatch({ type: 'SET_UI', key: 'showConfirmationDialog', value: false })}
-                contentContainerStyle={styles.confirmationDialog}
-              >
-                <Text style={styles.confirmationTitle}>Aufgabe löschen</Text>
-                <Text style={styles.confirmationText}>
-                  Möchten Sie diese Aufgabe wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
-                </Text>
-                <View style={styles.confirmationButtons}>
-                  <Button
-                    mode="outlined"
-                    onPress={() => dispatch({ type: 'SET_UI', key: 'showConfirmationDialog', value: false })}
-                    style={styles.confirmationButton}
-                  >
-                    Abbrechen
-                  </Button>
-                  <Button
-                    mode="contained"
-                    onPress={handleDelete}
-                    style={[styles.confirmationButton, styles.deleteButton]}
-                    loading={formState.isUpdating}
-                  >
-                    Löschen
-                  </Button>
-                </View>
-              </Modal>
-            </Portal>
-          </>
-        )}
+        <ScrollView style={styles.scrollView}>
+          {renderContent()}
+        </ScrollView>
       </Modal>
     </Portal>
   );
 };
 
 const styles = StyleSheet.create({
-  modal: {
+  modalContainer: {
     backgroundColor: 'white',
     margin: 20,
+    borderRadius: 12,
     padding: 0,
-    borderRadius: 8,
     maxHeight: '80%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  header: {
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#f8f9fa',
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
-  title: {
+  modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#111827',
+  },
+  scrollView: {
+    padding: 16,
   },
   divider: {
-    marginBottom: 8,
-  },
-  content: {
-    padding: 16,
-    paddingTop: 0,
+    marginVertical: 8,
+    height: 1,
+    backgroundColor: '#E5E7EB',
   },
   input: {
     marginBottom: 16,

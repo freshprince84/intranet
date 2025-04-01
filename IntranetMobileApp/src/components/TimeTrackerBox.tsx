@@ -5,9 +5,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Button } from 'react-native-paper';
+import { Button, IconButton } from 'react-native-paper';
 import { Branch, MobileWorkTime } from '../types';
 import { formatTime, calculateDuration } from '../utils/dateUtils';
+import SwipeButton from './SwipeButton';
 
 interface TimeTrackerBoxProps {
   currentWorkTime: MobileWorkTime | null;
@@ -71,6 +72,15 @@ const TimeTrackerBox: React.FC<TimeTrackerBoxProps> = ({
     };
   }, [currentWorkTime]);
 
+  // Handler für Slider-Confirmation
+  const handleSliderConfirm = () => {
+    if (currentWorkTime) {
+      onStopTimer();
+    } else {
+      onStartTimer();
+    }
+  };
+
   return (
     <View style={styles.container}>
       {currentWorkTime ? (
@@ -82,46 +92,43 @@ const TimeTrackerBox: React.FC<TimeTrackerBoxProps> = ({
               {currentWorkTime.branch?.name || 'Unbekannte Niederlassung'}
             </Text>
           </View>
-          <View style={styles.buttonContainer}>
-            <Button
-              mode="contained"
-              onPress={onStopTimer}
-              loading={stopLoading}
-              disabled={isLoading || stopLoading}
-              style={styles.button}
-            >
-              Timer stoppen
-            </Button>
-            <Button
-              mode="outlined"
+          
+          <View style={styles.controlsContainer}>
+            <SwipeButton 
+              onSwipeComplete={handleSliderConfirm}
+              isTimerRunning={!!currentWorkTime}
+              text={currentWorkTime ? "Zum Stoppen ziehen" : "Zum Starten ziehen"}
+              disabled={isLoading || startLoading || stopLoading || branches.length === 0}
+            />
+            
+            <IconButton
+              icon="history"
+              size={24}
               onPress={onShowWorkTimeList}
               disabled={isLoading}
-              style={[styles.button, styles.listButton]}
-            >
-              Zeiteinträge
-            </Button>
+              accessibilityLabel="Zeiteinträge anzeigen"
+              style={styles.historyButton}
+            />
           </View>
         </View>
       ) : (
         <View style={styles.startTimer}>
-          <View style={styles.buttonGroup}>
-            <Button
-              mode="contained"
-              onPress={onStartTimer}
-              loading={startLoading}
-              disabled={isLoading || startLoading || branches.length === 0}
-              style={[styles.button, styles.startButton]}
-            >
-              Timer starten
-            </Button>
-            <Button
-              mode="outlined"
+          <View style={styles.controlsContainer}>
+            <SwipeButton 
+              onSwipeComplete={handleSliderConfirm}
+              isTimerRunning={!!currentWorkTime}
+              text={currentWorkTime ? "Zum Stoppen ziehen" : "Zum Starten ziehen"}
+              disabled={isLoading || startLoading || stopLoading || branches.length === 0}
+            />
+            
+            <IconButton
+              icon="history"
+              size={24}
               onPress={onShowWorkTimeList}
               disabled={isLoading}
-              style={[styles.button, styles.listButton]}
-            >
-              Zeiteinträge
-            </Button>
+              accessibilityLabel="Zeiteinträge anzeigen"
+              style={styles.historyButton}
+            />
           </View>
         </View>
       )}
@@ -162,27 +169,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
-  buttonContainer: {
+  controlsContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
     gap: 8,
   },
   startTimer: {
     flexDirection: 'column',
     gap: 12,
   },
-  buttonGroup: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  button: {
-    flex: 1,
-  },
-  startButton: {
-    backgroundColor: '#3B82F6',
-  },
-  listButton: {
-    borderColor: '#3B82F6',
-  },
+  historyButton: {
+    marginLeft: 4,
+  }
 });
 
 export default TimeTrackerBox; 

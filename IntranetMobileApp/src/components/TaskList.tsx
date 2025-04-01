@@ -260,37 +260,35 @@ const TaskList: React.FC<TaskListProps> = ({
         
         <View style={styles.actionButtons}>
           {showFilters && (
-            <Button
+            <IconButton
               icon="filter"
               mode="outlined"
               onPress={() => setShowFilterModal(true)}
               style={styles.filterButton}
-              compact
-            >
-              Filter
-            </Button>
+              size={20}
+              containerColor="#FFFFFF"
+            />
           )}
           
-          <Button
+          <IconButton
             icon="cog-outline"
             mode="outlined"
             onPress={() => setShowSettingsModal(true)}
             style={styles.settingsButton}
-            compact
-          >
-            Spalten
-          </Button>
+            size={20}
+            containerColor="#FFFFFF"
+          />
           
           {onAddPress && (
-            <Button
+            <IconButton
               icon="plus"
               mode="contained"
               onPress={onAddPress}
               style={styles.addButton}
-              compact
-            >
-              Neu
-            </Button>
+              size={20}
+              containerColor="#3B82F6"
+              iconColor="#FFFFFF"
+            />
           )}
         </View>
       </View>
@@ -314,9 +312,8 @@ const TaskList: React.FC<TaskListProps> = ({
               </Text>
             )}
           </View>
-          <Button
+          <IconButton
             icon="close"
-            mode="text"
             onPress={() => {
               setActiveFilters({
                 status: [],
@@ -324,10 +321,8 @@ const TaskList: React.FC<TaskListProps> = ({
               });
               setSearchQuery('');
             }}
-            compact
-          >
-            Zurücksetzen
-          </Button>
+            size={20}
+          />
         </View>
       )}
       
@@ -335,9 +330,15 @@ const TaskList: React.FC<TaskListProps> = ({
       {error && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{error}</Text>
-          <Button mode="contained" onPress={onRefresh} style={styles.retryButton}>
-            Erneut versuchen
-          </Button>
+          <IconButton
+            icon="refresh"
+            mode="contained"
+            onPress={onRefresh}
+            style={styles.retryButton}
+            size={24}
+            iconColor="#FFFFFF"
+            containerColor="#D32F2F"
+          />
         </View>
       )}
       
@@ -434,19 +435,18 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
   },
   filterButton: {
-    flex: 1,
-    marginRight: 4,
+    marginRight: 8,
+    backgroundColor: '#f0f0f0',
   },
   settingsButton: {
-    flex: 1,
-    marginHorizontal: 4,
+    marginHorizontal: 8,
+    backgroundColor: '#f0f0f0',
   },
   addButton: {
-    flex: 1,
-    marginLeft: 4,
-    backgroundColor: '#3B82F6',
+    marginLeft: 8,
   },
   divider: {
     height: 1,

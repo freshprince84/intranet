@@ -40,3 +40,6 @@ prisma/.env
 
 # Uploads
 /uploads
+
+# Android
+IntranetMobileApp/android/app/release.keystore  

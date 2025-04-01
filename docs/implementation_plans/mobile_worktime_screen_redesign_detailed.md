@@ -305,6 +305,249 @@
 
 ---
 
+**Schritt 5b: Ersetzen des Sliders durch einen Swipe-Button**
+
+*   **Ziel:** Den implementierten Slider durch einen modernen Swipe-Button ersetzen, der besser dem SBB-Design entspricht und intuitiver ist.
+*   **Hintergrund:** Ursprünglich war ein `SlideToConfirm` mit PanResponder geplant, stattdessen wurde ein `SimpleSlider` mit `@react-native-community/slider` implementiert. Dieser soll nun durch einen Swipe-Button im SBB-Stil ersetzt werden.
+*   **Ausgangslage (Aktueller Stand):**
+    *   Die aktuelle Implementierung verwendet `SimpleSlider.tsx` statt `SlideToConfirm.tsx`
+    *   Der Slider nutzt die externe Abhängigkeit `@react-native-community/slider`
+    *   Die `TimeTrackerBox` integriert den `SimpleSlider` und ruft die `handleSliderConfirm`-Funktion auf
+    *   Die Timer-Start/Stopp-Logik ist bereits in den Funktionen `handleStartTimerAction` und `handleStopTimerAction` in `WorktimeScreen.tsx` implementiert
+*   **Datei-Übersicht:**
+    *   Neue Datei: `IntranetMobileApp/src/components/SwipeButton.tsx` (zu erstellen)
+    *   Zu ändern: `IntranetMobileApp/src/components/TimeTrackerBox.tsx` (SimpleSlider durch SwipeButton ersetzen)
+    *   Zu entfernen: `IntranetMobileApp/src/components/SimpleSlider.tsx` (nach erfolgreicher Migration)
+    *   Optional zu aktualisieren: `package.json` (Abhängigkeit `@react-native-community/slider` entfernen, wenn nicht anderweitig benötigt)
+
+#### Teilschritt 5b.1: Erstellen der `SwipeButton`-Komponente
+
+*   **Aktion:**
+    1.  Erstelle die Datei `IntranetMobileApp/src/components/SwipeButton.tsx`
+    2.  Implementiere folgende `SwipeButton`-Komponente:
+        ```typescript
+        import React, { useEffect } from 'react';
+        import { View, Text, StyleSheet, Dimensions, Image } from 'react-native';
+        import { PanGestureHandler, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+        import Animated, {
+          useSharedValue,
+          useAnimatedGestureHandler,
+          useAnimatedStyle,
+          withSpring,
+          runOnJS,
+        } from 'react-native-reanimated';
+        import { MaterialCommunityIcons } from '@expo/vector-icons';
+
+        interface SwipeButtonProps {
+          onSwipeComplete: () => void;
+          isTimerRunning: boolean;
+          text?: string;
+          confirmThreshold?: number;
+          height?: number;
+          buttonColor?: string;
+          trackColor?: string;
+          textColor?: string;
+          disabled?: boolean;
+        }
+
+        const SCREEN_WIDTH = Dimensions.get('window').width;
+        const BUTTON_WIDTH = SCREEN_WIDTH * 0.8; // 80% der Bildschirmbreite
+        const THUMB_SIZE = 50; // Grösse des runden Buttons
+        const SWIPE_RANGE = BUTTON_WIDTH - THUMB_SIZE - 10; // Swipe-Bereich (mit Padding)
+
+        const SwipeButton: React.FC<SwipeButtonProps> = ({
+          onSwipeComplete,
+          isTimerRunning,
+          text,
+          confirmThreshold = 0.8,
+          height = 60,
+          buttonColor = '#00C853', // Grün für Start (ähnlich SBB)
+          trackColor = '#333333', // Dunkelgrau für Track
+          textColor = '#FFFFFF', // Weiss für Text
+          disabled = false,
+        }) => {
+          // Position des Thumbs (0 = links, SWIPE_RANGE = rechts)
+          const translateX = useSharedValue(0);
+          
+          // Text, der im Track angezeigt wird
+          const swipeText = text ?? (isTimerRunning ? 'Swipe zum Stoppen' : 'Swipe zum Starten');
+          
+          // Farbe je nach Status (können auch importierte Farben aus Theme sein)
+          const dynamicButtonColor = isTimerRunning ? '#F44336' : buttonColor; // Rot für Stop
+          
+          // Gesten-Handler für den Swipe
+          const gestureHandler = useAnimatedGestureHandler<PanGestureHandlerGestureEvent, { startX: number }>({
+            onStart: (_, ctx) => {
+              ctx.startX = translateX.value;
+            },
+            onActive: (event, ctx) => {
+              let newValue = ctx.startX + event.translationX;
+              // Begrenze Bewegung zwischen 0 und SWIPE_RANGE
+              translateX.value = Math.max(0, Math.min(newValue, SWIPE_RANGE));
+            },
+            onEnd: () => {
+              // Prüfe, ob Schwellwert erreicht wurde
+              if (translateX.value > SWIPE_RANGE * confirmThreshold) {
+                // Aktion ausführen
+                runOnJS(onSwipeComplete)();
+                // Nach kurzer Verzögerung zurückspringen (bessere UX)
+                setTimeout(() => {
+                  translateX.value = withSpring(0);
+                }, 200);
+              } else {
+                // Sofort zurückspringen, wenn nicht weit genug
+                translateX.value = withSpring(0);
+              }
+            },
+          });
+
+          // Animierter Style für den Button
+          const thumbStyle = useAnimatedStyle(() => ({
+            transform: [{ translateX: translateX.value }],
+          }));
+
+          return (
+            <View style={[styles.container, { opacity: disabled ? 0.6 : 1 }]}>
+              <View style={[styles.track, { backgroundColor: trackColor, height }]}>
+                <Text style={[styles.trackText, { color: textColor }]}>
+                  {swipeText}
+                </Text>
+                
+                <PanGestureHandler onGestureEvent={gestureHandler} enabled={!disabled}>
+                  <Animated.View 
+                    style={[
+                      styles.thumb, 
+                      { backgroundColor: dynamicButtonColor, height: THUMB_SIZE, width: THUMB_SIZE },
+                      thumbStyle
+                    ]}
+                  >
+                    <MaterialCommunityIcons 
+                      name={isTimerRunning ? "stop" : "arrow-right"} 
+                      size={24} 
+                      color="white" 
+                    />
+                  </Animated.View>
+                </PanGestureHandler>
+              </View>
+            </View>
+          );
+        };
+
+        const styles = StyleSheet.create({
+          container: {
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginVertical: 15,
+          },
+          track: {
+            width: BUTTON_WIDTH,
+            borderRadius: 30,
+            justifyContent: 'center',
+            alignItems: 'center',
+            paddingLeft: THUMB_SIZE + 10, // Platz für den Thumb + etwas Abstand
+            paddingRight: 10,
+            overflow: 'hidden',
+          },
+          trackText: {
+            fontSize: 16,
+            fontWeight: '600',
+            textAlign: 'center',
+          },
+          thumb: {
+            borderRadius: THUMB_SIZE / 2,
+            position: 'absolute',
+            left: 5, // Kleiner Abstand zum Rand
+            justifyContent: 'center',
+            alignItems: 'center',
+            elevation: 5, // Android Schatten
+            shadowColor: '#000', // iOS Schatten
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 3,
+          },
+        });
+
+        export default SwipeButton;
+        ```
+
+*   **STOPP:** Prüfe, ob beide benötigten Abhängigkeiten vorhanden sind:
+    *   `react-native-gesture-handler` (laut Report bereits installiert)
+    *   `react-native-reanimated` (ggf. installieren: `npm install react-native-reanimated` oder `yarn add react-native-reanimated`)
+    *   Falls `react-native-reanimated` neu installiert wurde: In `babel.config.js` den Plugin hinzufügen `plugins: ['react-native-reanimated/plugin']` und Metro Bundler neu starten
+
+#### Teilschritt 5b.2: Integration in `TimeTrackerBox.tsx`
+
+*   **Datei:** `IntranetMobileApp/src/components/TimeTrackerBox.tsx`
+*   **Analyse:** Die aktuelle `TimeTrackerBox` verwendet `SimpleSlider`, der durch den neuen `SwipeButton` ersetzt werden soll.
+*   **Aktion:**
+    1.  Ändere den Import von `SimpleSlider` zu `SwipeButton`:
+        ```typescript
+        // Alt (entfernen):
+        import SimpleSlider from './SimpleSlider';
+        
+        // Neu (hinzufügen):
+        import SwipeButton from './SwipeButton';
+        ```
+    2.  Ersetze die `SimpleSlider`-Komponente im JSX:
+        ```tsx
+        {/* Alt (entfernen): */}
+        <SimpleSlider 
+          onConfirm={handleSliderConfirm}
+          isTimerRunning={!!currentWorkTime}
+          text={currentWorkTime ? "Zum Stoppen ziehen" : "Zum Starten ziehen"}
+          disabled={isLoading || startLoading || stopLoading || branches.length === 0}
+        />
+
+        {/* Neu (hinzufügen): */}
+        <SwipeButton 
+          onSwipeComplete={handleSliderConfirm}
+          isTimerRunning={!!currentWorkTime}
+          text={currentWorkTime ? "Zum Stoppen ziehen" : "Zum Starten ziehen"}
+          disabled={isLoading || startLoading || stopLoading || branches.length === 0}
+        />
+        ```
+    3.  Stelle sicher, dass das `controlsContainer` Layout in den Styles weiterhin korrekt für den neuen `SwipeButton` passt:
+        ```typescript
+        controlsContainer: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'flex-start',
+          gap: 8,
+        },
+        ```
+
+*   **STOPP:** Baue die App. Überprüfe, ob der Swipe-Button korrekt angezeigt wird, ob das Icon passend zum Status (Start/Stopp) wechselt, und ob die Swipe-Funktionalität wie erwartet arbeitet. **Warte auf Freigabe.**
+
+#### Teilschritt 5b.3: Saubere Entfernung des Sliders und seiner Abhängigkeiten
+
+*   **Ziel:** Nach erfolgreicher Integration des Swipe-Buttons alle Überreste des alten Sliders entfernen, um die Codebasis sauber zu halten.
+*   **Aktion:**
+    1.  Stelle sicher, dass der `SwipeButton` vollständig funktioniert und keine Fehler auftreten.
+    2.  Überprüfe, ob `SimpleSlider.tsx` noch anderweitig verwendet wird:
+        ```bash
+        # Terminal-Befehl zum Suchen aller Vorkommen
+        grep -r "SimpleSlider" --include="*.tsx" --include="*.ts" ./IntranetMobileApp/src
+        ```
+    3.  Wenn keine weitere Verwendung besteht:
+        *   Lösche die Datei `IntranetMobileApp/src/components/SimpleSlider.tsx`
+    4.  Überprüfe, ob `@react-native-community/slider` noch anderweitig verwendet wird:
+        ```bash
+        # Terminal-Befehl zum Suchen aller Vorkommen
+        grep -r "@react-native-community/slider" --include="*.tsx" --include="*.ts" ./IntranetMobileApp/src
+        ```
+    5.  Wenn keine weitere Verwendung besteht:
+        *   Entferne die Abhängigkeit aus `package.json`: 
+            ```bash
+            # NPM
+            npm uninstall @react-native-community/slider
+            # oder Yarn
+            yarn remove @react-native-community/slider
+            ```
+
+*   **STOPP:** Baue die App ein letztes Mal, um sicherzustellen, dass nach dem Entfernen des Sliders und der Abhängigkeit keine Fehler auftreten. **Warte auf Freigabe vor der Fortsetzung mit Schritt 6.**
+
+---
+
 **Schritt 6: "Zeiteinträge"-Button zu `IconButton` ändern**
 
 *   **Ziel:** Den Text-Button für die Anzeige der Arbeitszeitliste durch einen Icon-Button ersetzen.

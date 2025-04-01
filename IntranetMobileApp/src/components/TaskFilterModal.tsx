@@ -175,7 +175,10 @@ const TaskFilterModal: React.FC<TaskFilterModalProps> = ({
         onDismiss={onDismiss}
         contentContainerStyle={styles.modal}
       >
-        <Text style={styles.modalTitle}>Aufgaben filtern</Text>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Aufgaben filtern</Text>
+          <Button onPress={onDismiss}>Schließen</Button>
+        </View>
         
         <ScrollView style={styles.scrollView}>
           {/* Gespeicherte Filter */}
@@ -292,28 +295,44 @@ const styles = StyleSheet.create({
   modal: {
     backgroundColor: 'white',
     margin: 20,
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 20,
     maxHeight: '80%',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 16,
+    color: '#111827',
   },
   scrollView: {
-    maxHeight: '80%',
+    maxHeight: '70%',
   },
   section: {
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: 10,
+    color: '#374151',
   },
   input: {
-    marginBottom: 8,
+    marginBottom: 10,
+    backgroundColor: '#f8f9fa',
   },
   statusContainer: {
     flexDirection: 'row',
@@ -323,6 +342,7 @@ const styles = StyleSheet.create({
   statusChip: {
     marginRight: 8,
     marginBottom: 8,
+    borderRadius: 16,
   },
   savedFiltersContainer: {
     flexDirection: 'row',
@@ -330,20 +350,27 @@ const styles = StyleSheet.create({
   },
   savedFilterChip: {
     marginRight: 8,
+    borderRadius: 16,
   },
   saveFilterButton: {
-    marginBottom: 8,
+    marginBottom: 10,
   },
   saveFilterSection: {
-    marginTop: 8,
+    marginTop: 10,
+    padding: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 8,
   },
   saveButton: {
-    marginTop: 8,
+    marginTop: 10,
   },
   modalFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 16,
+    marginTop: 20,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
   },
   resetButton: {
     flex: 1,
@@ -352,6 +379,7 @@ const styles = StyleSheet.create({
   applyButton: {
     flex: 1,
     marginLeft: 8,
+    backgroundColor: '#3B82F6',
   },
 });
 
