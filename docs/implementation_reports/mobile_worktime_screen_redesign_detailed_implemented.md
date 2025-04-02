@@ -174,4 +174,351 @@
     *   `IntranetMobileApp/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml` (neu)
     *   `IntranetMobileApp/android/app/src/main/res/values/colors.xml` (neu)
 
+## Schritt 14: Integration der gespeicherten Filter
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Implementierung der Filter-Chips:
+        - Horizontale ScrollView für Filter-Chips erstellt
+        - Aktiver Filter wird visuell hervorgehoben (blau)
+        - Reset-Chip erscheint bei aktivem Filter
+    2.  AsyncStorage Integration:
+        - Funktion zum Laden der gespeicherten Filter implementiert
+        - Funktion zum Speichern neuer Filter implementiert
+        - Automatisches Laden beim App-Start
+    3.  Filter-Logik:
+        - Implementierung der Filter-Anwendung
+        - Status-basierte Filterung
+        - Suchbegriff-basierte Filterung
+        - Kombination mehrerer Filter möglich
+    4.  UI/UX Optimierungen:
+        - Responsive Layout-Anpassungen
+        - Einheitliche Styling-Standards
+        - Klare visuelle Rückmeldung bei Filteraktivierung
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/screens/WorktimeScreen.tsx`
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 15: Korrektur des On/Off Swipe-Buttons
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Anpassung der Standardfarben in der SwipeButton-Komponente:
+        - Weißer Hintergrund statt dunkelgrau
+        - Dunkelgrauer Text für bessere Lesbarkeit
+    2.  Hinzufügung eines grauen Rahmens zum Track
+    3.  Feinabstimmung der visuellen Erscheinung
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/SwipeButton.tsx`
+
+## Schritt 16: Korrektur des Zeiterfassungseinträge-Icons
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Icon von "history" zu "format-list-bulleted" geändert
+    2.  Größe und Position des Icons angepasst
+    3.  Accessibility Label aktualisiert
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TimeTrackerBox.tsx`
+
+## Schritt 17: Korrektur der Icon-Positionierung
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Neuanordnung der Icons gemäß Dokumentation
+    2.  Implementierung eines flexiblen Layout-Systems
+    3.  Optimierung der Abstände zwischen den Icons
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/screens/WorktimeScreen.tsx`
+
+## Schritt 18: Integration des Suchfelds
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Suchfeld zwischen "Neuer Task" und Filter/Spalten-Buttons platziert
+    2.  Styling des Suchfelds angepasst
+    3.  Layout-Container für flexible Positionierung erstellt
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/screens/WorktimeScreen.tsx`
+
+## Schritt 19: Korrektur des Task-Card-Designs
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Anpassung der Card-Breite
+    2.  Optimierung des inneren Layouts
+    3.  Verbesserung der visuellen Hierarchie
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 20: Integration der gespeicherten Filter
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Implementierung der Filter-Chips
+    2.  Integration der Filter-Logik
+    3.  Optimierung der Benutzeroberfläche
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/screens/WorktimeScreen.tsx`
+
+## Schritt 21: Korrektur des Filter-Icons
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Angleichung des Icons an das Frontend-Design
+    2.  Anpassung der Icon-Größe
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 22: Korrektur des Spalten-Konfigurations-Icons
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Angleichung des Icons an das Frontend-Design
+    2.  Anpassung der Icon-Größe und Position
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 23: Entfernung des Card-Hintergrunds
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Entfernung des grauen Hintergrunds
+    2.  Entfernung des Rands der Container-View
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 24: Anpassung der Card-Breite
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Verbreiterung der Cards auf volle Komponenten-Breite
+    2.  Entfernung der horizontalen Margins
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskCard.tsx`
+
+## Schritt 25: Verschiebung des "Neue Aufgabe"-Buttons
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Entfernung des Buttons aus der Header-Zeile
+    2.  Implementierung als FAB am unteren rechten Rand
+    3.  Styling des FAB gemäß Design-Standards
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 26: Verschiebung des To-Do-Liste-Titels
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Integration des Titels in die Header-Zeile
+    2.  Anpassung des Layouts für optimale Platzierung
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 27: Optimierung der Icon-Buttons
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Verkleinerung der Icons auf 20px
+    2.  Reduzierung der Abstände zwischen den Icons
+    3.  Entfernung überflüssiger Margins
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 28: Timer-Text-Optimierung
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Timer-Text in eine Zeile gebracht durch:
+        - Hinzufügung von `numberOfLines={1}` und `ellipsizeMode="tail"`
+        - Implementierung eines flexiblen Container-Layouts
+    2.  Styling optimiert:
+        - Schriftgröße auf 16px erhöht
+        - Textfarbe auf #374151 angepasst
+        - Horizontales Padding hinzugefügt
+    3.  Layout verbessert:
+        - Flexibles Row-Layout für bessere Platzausnutzung
+        - Zentrierte Ausrichtung
+        - Automatische Textkürzung bei Überlauf
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TimeTrackerBox.tsx`
+
+## Schritt 29: Entfernung des Swipe-Button-Schatten-Effekts
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Entfernung aller Schatten-bezogenen Properties:
+        - `elevation` auf 0 gesetzt
+        - `shadowColor` auf undefined gesetzt
+        - `shadowOffset` auf undefined gesetzt
+        - `shadowOpacity` auf 0 gesetzt
+        - `shadowRadius` auf 0 gesetzt
+    2.  Sicherstellung einer flachen Darstellung des Buttons ohne sechseckigen Schatten-Effekt während des Ladens
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/SwipeButton.tsx`
+
+## Schritt 30: Korrektur der gespeicherten Filter
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Filter-Chips unter der Suchzeile und über den Cards platziert:
+        - Horizontale ScrollView mit `showsHorizontalScrollIndicator={false}`
+        - Konsistentes Padding und Abstände
+        - Flexibles Layout für optimale Darstellung
+    2.  Standard-Filter "Alle" und "Archiv" hinzugefügt:
+        - "Alle" als Standardauswahl
+        - "Archiv" für archivierte Tasks
+        - Reset-Chip erscheint bei aktivem Filter
+    3.  Filter-Logik implementiert:
+        - Standardmäßige Aktivierung des "Alle"-Filters
+        - Handler-Funktionen für Filter-Auswahl
+        - Reset-Funktion für Filter-Zurücksetzung
+    4.  Styling optimiert:
+        - Einheitliche Chip-Darstellung
+        - Aktiver Filter visuell hervorgehoben
+        - Responsive Anpassung der Breite
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 31: Entfernung des doppelten To-Do-Liste-Titels
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Entfernung des To-Do-Liste-Titels aus der Header-Zeile der TaskList-Komponente:
+        - Der redundante Titel `<Text style={styles.title}>To-Do-Liste</Text>` wurde aus der `headerContainer`-View entfernt
+        - Der Titel verbleibt im übergeordneten WorktimeScreen, wo er im `cardHeader` angezeigt wird
+    2.  Anpassung des Layouts:
+        - Anpassung des Suchfeld-Containers: `marginHorizontal: 12` zu `marginRight: 12` geändert
+        - Sicherstellung, dass das Suchfeld nun mehr Platz einnimmt und korrekt ausgerichtet ist
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 32: Wiederherstellung des Filter-Icons
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Problem identifiziert: Die Filter- und Spalten-Icons waren aufgrund absoluter Positionierung übereinander platziert:
+        - Beide Icons hatten den Style `position: 'absolute', right: 0`, wodurch sie an derselben Position angezeigt wurden
+        - Dadurch war nur das oberste Icon (Spalten-Konfiguration) sichtbar
+    2.  Korrektur der Darstellung:
+        - Entfernung des `style`-Attributs mit absoluter Positionierung bei beiden IconButtons
+        - Anpassung des `iconButton`-Styles, Entfernung von `position: 'absolute', right: 0`
+        - Hinzufügung von `margin: 0` für eine kompaktere Anordnung
+    3.  Verbesserung der Icon-Anordnung:
+        - Nutzung des Flex-Layout-Systems in `rightButtons` mit `flexDirection: 'row'` und `gap: 4`
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 33: Reduzierung der Card-Höhe
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Reduzierung der vertikalen Abstände:
+        - `marginVertical` der Card von 4 auf 2 reduziert
+        - `padding` des Card-Inhalts von 16 auf 12 reduziert
+        - `marginBottom` des Titels von 8 auf 4 reduziert
+        - Alle vertikalen Abstände zwischen Elementen optimiert
+    2.  Verkleinerung des Status-Chips:
+        - `paddingVertical` von 6 auf 2 reduziert
+        - `paddingHorizontal` von 12 auf 8 reduziert
+        - `borderRadius` von 16 auf 12 reduziert
+        - `marginBottom` von 12 auf 6 reduziert
+    3.  Optimierung der Schriftgröße und Zeilenhöhe:
+        - Titel-Schriftgröße von 16 auf 15 reduziert
+        - Beschreibungs-Schriftgröße von 14 auf 13 reduziert
+        - `lineHeight` der Beschreibung von 20 auf 18 reduziert
+    4.  Verkleinerung der Fußzeile:
+        - `marginTop` von 4 auf 2 reduziert
+        - `gap` zwischen Elementen von 8 auf 6 reduziert
+        - `marginBottom` der Fußzeilenelemente von 4 auf 2 reduziert
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskCard.tsx`
+
+## Schritt 34: Verschiebung des "Neue Aufgabe"-Buttons
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Entfernung des Buttons aus der Header-Zeile
+    2.  Implementierung als FAB am unteren rechten Rand
+    3.  Styling des FAB gemäß Design-Standards
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 35: Verschiebung des To-Do-Liste-Titels
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Integration des Titels in die Header-Zeile
+    2.  Anpassung des Layouts für optimale Platzierung
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 36: Optimierung der Icon-Buttons
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Verkleinerung der Icons auf 20px
+    2.  Reduzierung der Abstände zwischen den Icons
+    3.  Entfernung überflüssiger Margins
+*   **Betroffene Dateien:**
+    *   `IntranetMobileApp/src/components/TaskList.tsx`
+
+## Schritt 37: Dokumentation der Implementierung
+
+*   **Status:** Abgeschlossen
+*   **Aktionen:**
+    1.  Überprüfung aller durchgeführten Schritte:
+        - Schritte 1-36 wurden analysiert
+        - Implementierungsstatus jedes Schritts wurde verifiziert
+        - Offene Punkte wurden identifiziert
+    2.  Dokumentation der Änderungen pro Komponente:
+        - TimeTrackerBox:
+            * Swipe-Button-Integration
+            * Timer-Text-Optimierung
+            * Icon-Anpassungen
+        - TaskList:
+            * Card-Layout-Verbesserungen
+            * Filter-System-Integration
+            * Such- und Icon-Optimierungen
+        - TaskCard:
+            * Höhenreduzierung
+            * Layout-Optimierung
+            * Status-Visualisierung
+        - SwipeButton:
+            * Richtungsanpassung
+            * Text-Zentrierung
+            * Schatten-Entfernung
+        - Filter-System:
+            * Integration gespeicherter Filter
+            * Chip-basierte Darstellung
+            * Reset-Funktionalität
+        - Modal-System:
+            * Einheitliches Styling
+            * Konsistente Abstände
+            * Verbesserte Typografie
+    3.  Dokumentation der Auswirkungen:
+        - UI/UX-Verbesserungen:
+            * Moderneres, konsistenteres Design
+            * Intuitivere Benutzerführung
+            * Verbesserte visuelle Hierarchie
+        - Performance-Optimierungen:
+            * Reduzierte Re-Renders
+            * Optimierte Animationen
+            * Effizientere Filterung
+        - Wartbarkeitsverbesserungen:
+            * Einheitliche Komponenten-Struktur
+            * Klare Trennung der Zuständigkeiten
+            * Verbesserte Code-Organisation
+    4.  Zusammenfassung der Gesamtimplementierung:
+        - Alle geplanten Features wurden umgesetzt
+        - Design entspricht nun den Vorgaben
+        - Benutzerfreundlichkeit wurde deutlich verbessert
+*   **Betroffene Dateien:**
+    *   Alle Dateien aus den vorherigen Schritten
+*   **Nächste Schritte:**
+    1.  Finale Überprüfung aller Implementierungen
+    2.  Sammlung von Benutzer-Feedback
+    3.  Planung eventueller Verfeinerungen
+
 --- 

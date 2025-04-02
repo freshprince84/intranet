@@ -844,11 +844,7 @@ const WorktimeScreen = () => {
           
           {/* Todo-Sektion */}
           <Card style={styles.card}>
-            <Card.Content>
-              <View style={styles.cardHeader}>
-                <Text style={styles.title}>To-Do Liste</Text>
-              </View>
-              
+            <Card.Content>              
               {tasksLoading ? (
                 <View style={styles.taskLoadingContainer}>
                   <ActivityIndicator size="small" color="#3B82F6" />
@@ -930,6 +926,21 @@ const WorktimeScreen = () => {
             label="Synchronisieren"
           />
         )}
+
+        {/* FAB hier einfügen, außerhalb der TaskList */}
+        <FAB
+          icon="plus"
+          style={styles.fab}
+          onPress={() => {
+            setModalMode(ModalMode.CREATE);
+            setModalTaskId(null);
+            setShowTaskDetailModal(true);
+          }}
+          accessibilityLabel="Neue Aufgabe erstellen"
+          color="#FFFFFF"
+          mode="elevated"
+          customSize={56}
+        />
       </View>
     </SafeAreaView>
   );
@@ -1063,10 +1074,11 @@ const styles = StyleSheet.create({
   },
   fab: {
     position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 80, // Höher positionieren wegen der Zeiterfassungsbox unten
-    backgroundColor: '#3B82F6', // Blau als Primärfarbe
+    right: 16,
+    bottom: 180, // Position angepasst auf 180px
+    backgroundColor: '#3B82F6',
+    zIndex: 1000,
+    borderRadius: 28,
   },
   loadingContainer: {
     flex: 1,

@@ -589,6 +589,56 @@ class NotificationApiService extends BaseApiService<Notification> {
   }
 }
 
+// Interface für gespeicherte Filter
+export interface SavedFilter {
+  id: number;
+  name: string;
+  tableId: string;
+  conditions: any[];
+  operators: string[];
+  userId?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+class SavedFilterApiService extends BaseApiService<SavedFilter> {
+  constructor() {
+    super('/saved-filters');
+  }
+  
+  // Lade gespeicherte Filter für eine bestimmte Tabelle
+  async getByTable(tableId: string): Promise<SavedFilter[]> {
+    try {
+      const response = await this.api.get<SavedFilter[]>(`${this.endpoint}/${tableId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Fehler beim Laden der gespeicherten Filter:', error);
+      throw this.handleError(error, 'Laden gespeicherter Filter');
+    }
+  }
+  
+  // Erstelle oder aktualisiere einen gespeicherten Filter
+  async saveFilter(filter: Omit<SavedFilter, 'id' | 'userId' | 'createdAt' | 'updatedAt'>): Promise<SavedFilter> {
+    try {
+      const response = await this.api.post<SavedFilter>(this.endpoint, filter);
+      return response.data;
+    } catch (error) {
+      console.error('Fehler beim Speichern des Filters:', error);
+      throw this.handleError(error, 'Speichern des Filters');
+    }
+  }
+  
+  // Lösche einen gespeicherten Filter
+  async deleteFilter(filterId: number): Promise<void> {
+    try {
+      await this.api.delete(`${this.endpoint}/${filterId}`);
+    } catch (error) {
+      console.error('Fehler beim Löschen des Filters:', error);
+      throw this.handleError(error, 'Löschen des Filters');
+    }
+  }
+}
+
 export const authApi = new AuthService();
 export const taskApi = new TaskApiService();
 export const userApi = new UserApiService();
@@ -598,5 +648,6 @@ export const documentApi = new DocumentApiService();
 export const worktimeApi = new WorktimeApiService();
 export const notificationApi = new NotificationApiService();
 export const roleApi = new RoleApiService();
+export const savedFilterApi = new SavedFilterApiService();
 
 export default axiosInstance;

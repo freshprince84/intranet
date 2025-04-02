@@ -59,19 +59,21 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, visibleColumns = ['t
       onPress={() => onPress && onPress(task)}
       mode="outlined"
     >
-      <Card.Content style={styles.content}>
-        {isColumnVisible('title') && (
-          <Text style={styles.title} numberOfLines={1}>{task.title}</Text>
-        )}
-        
-        {isColumnVisible('status') && (
-          <Chip
-            style={[styles.statusChip, { backgroundColor: getStatusColor(task.status) }]}
-            textStyle={{ color: 'white', fontWeight: '600', fontSize: 12 }}
-          >
-            {getStatusText(task.status)}
-          </Chip>
-        )}
+      <Card.Content style={styles.cardContent}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          {isColumnVisible('title') && (
+            <Text style={styles.title} numberOfLines={1}>{task.title}</Text>
+          )}
+          
+          {isColumnVisible('status') && (
+            <Chip
+              style={[styles.chip, { backgroundColor: getStatusColor(task.status) }]}
+              textStyle={{ color: 'white', fontWeight: '600', fontSize: 12 }}
+            >
+              {getStatusText(task.status)}
+            </Chip>
+          )}
+        </View>
         
         {isColumnVisible('description') && task.description && (
           <Text style={styles.description} numberOfLines={2}>
@@ -112,53 +114,58 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onPress, visibleColumns = ['t
 
 const styles = StyleSheet.create({
   card: {
-    marginVertical: 6,
+    width: '100%',
+    marginVertical: 2,
     marginHorizontal: 0,
-    borderRadius: 8,
+    borderRadius: 12,
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 3,
+    backgroundColor: '#FFFFFF',
   },
-  content: {
+  cardContent: {
     padding: 12,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '700',
-    marginBottom: 8,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 4,
     color: '#111827',
+    flex: 1,
+    marginRight: 12,
   },
-  statusChip: {
-    alignSelf: 'flex-start',
-    marginBottom: 10,
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+  chip: {
     borderRadius: 12,
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    alignSelf: 'flex-start',
+    marginBottom: 6,
   },
   description: {
-    marginTop: 8,
-    marginBottom: 10,
+    marginTop: 4,
+    marginBottom: 6,
     color: '#4B5563',
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 13,
+    lineHeight: 18,
   },
   divider: {
-    marginVertical: 10,
+    marginVertical: 6,
     height: 1,
     backgroundColor: '#E5E7EB',
   },
   footer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-start',
-    marginTop: 4,
+    justifyContent: 'space-between',
+    marginTop: 2,
+    gap: 6,
   },
   footerItem: {
     flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
     marginRight: 12,
-    marginBottom: 4,
   },
   footerLabel: {
     fontSize: 12,

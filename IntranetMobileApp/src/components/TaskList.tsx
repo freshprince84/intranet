@@ -4,14 +4,16 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, FlatList, StyleSheet, ActivityIndicator, Text } from 'react-native';
-import { Button, Divider, Searchbar, IconButton, Menu } from 'react-native-paper';
+import { View, FlatList, StyleSheet, ActivityIndicator, Text, ScrollView, TextInput, Pressable } from 'react-native';
+import { Button, Divider, Searchbar, IconButton, Menu, Chip, FAB } from 'react-native-paper';
 import { Task, TaskStatus } from '../types';
 import TaskCard from './TaskCard';
 import TaskFilterModal from './TaskFilterModal';
 import TableSettingsModal from './TableSettingsModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { debounce } from 'lodash';
+import Svg, { Path } from 'react-native-svg';
+import { savedFilterApi } from '../api/apiClient';
 
 // Interface für Filteroptionen
 interface FilterOptions {
@@ -32,9 +34,22 @@ interface TableSettings {
   itemsPerPage?: number;
 }
 
+// Interface für gespeicherte Filter
+interface SavedFilter {
+  id: string;
+  name: string;
+  status: TaskStatus[];
+  searchTerm: string;
+  dateRange?: {
+    from: string | null;
+    to: string | null;
+  };
+}
+
 // Speicherkeys für AsyncStorage
 const RECENT_SEARCHES_KEY = '@IntranetApp:recentSearches';
 const TASK_TABLE_SETTINGS_KEY = '@IntranetApp:tableSettings_tasks';
+const SAVED_FILTERS_KEY = '@IntranetApp:savedFilters';
 
 interface TaskListProps {
   tasks: Task[];
@@ -67,7 +82,8 @@ const TaskList: React.FC<TaskListProps> = ({
   
   // State für Filter und Einstellungen
   const [showFilterModal, setShowFilterModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showTableSettingsModal, setShowTableSettingsModal] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('all');
   const [activeFilters, setActiveFilters] = useState<FilterOptions>({
     status: [],
     searchTerm: ''
@@ -76,6 +92,10 @@ const TaskList: React.FC<TaskListProps> = ({
     tableId: 'tasks',
     columns: ['title', 'status', 'description', 'dueDate']
   });
+  
+  // Neue States für gespeicherte Filter
+  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [activeFilterId, setActiveFilterId] = useState<string | null>(null);
   
   // Suche mit Debounce
   const debouncedSetSearchQuery = useMemo(
@@ -97,6 +117,7 @@ const TaskList: React.FC<TaskListProps> = ({
   useEffect(() => {
     loadRecentSearches();
     loadTableSettings();
+    loadSavedFilters();
   }, []);
   
   // Lade gespeicherte Suchanfragen
@@ -122,6 +143,59 @@ const TaskList: React.FC<TaskListProps> = ({
       }
     } catch (error) {
       console.error('Fehler beim Laden der Tabelleneinstellungen:', error);
+    }
+  };
+  
+  // Lade gespeicherte Filter
+  const loadSavedFilters = async () => {
+    try {
+      // Versuche zuerst, Filter vom API zu laden
+      try {
+        console.log('Lade Filter vom Backend');
+        const backendFilters = await savedFilterApi.getByTable('tasks');
+        console.log('Backend-Filter geladen:', backendFilters);
+        
+        if (backendFilters && backendFilters.length > 0) {
+          // Konvertiere die Backend-Filter in das für die App benötigte Format
+          const formattedFilters = backendFilters.map(filter => {
+            // Extrahiere Status-Bedingungen aus den Filter-Conditions
+            const statusConditions = filter.conditions
+              .filter(condition => condition.column === 'status' && condition.operator === 'equals')
+              .map(condition => condition.value as TaskStatus);
+              
+            // Extrahiere Suchbegriff-Bedingungen
+            const searchTermCondition = filter.conditions.find(
+              condition => condition.column === 'title' && condition.operator === 'contains'
+            );
+            
+            return {
+              id: filter.id.toString(),
+              name: filter.name,
+              status: statusConditions.length > 0 ? statusConditions : [],
+              searchTerm: searchTermCondition ? (searchTermCondition.value as string) : ''
+            };
+          });
+          
+          console.log('Formatierte Filter:', formattedFilters);
+          setSavedFilters(formattedFilters);
+          
+          // Speichere die formatierten Filter auch im AsyncStorage für Offline-Zugriff
+          await AsyncStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(formattedFilters));
+          return;
+        }
+      } catch (apiError) {
+        console.error('Fehler beim Laden der Filter vom Backend:', apiError);
+        // Bei API-Fehler fallback auf AsyncStorage
+      }
+      
+      // Fallback: Lade Filter aus dem AsyncStorage
+      const filtersJson = await AsyncStorage.getItem(SAVED_FILTERS_KEY);
+      if (filtersJson) {
+        const filters = JSON.parse(filtersJson);
+        setSavedFilters(filters);
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der gespeicherten Filter:', error);
     }
   };
   
@@ -169,6 +243,26 @@ const TaskList: React.FC<TaskListProps> = ({
     setTableSettings(settings);
   };
   
+  // Wende einen gespeicherten Filter an
+  const applyFilter = (filter: SavedFilter) => {
+    setActiveFilterId(filter.id);
+    setActiveFilters({
+      status: filter.status,
+      searchTerm: filter.searchTerm
+    });
+    setSearchQuery(filter.searchTerm);
+  };
+  
+  // Setze Filter zurück
+  const resetFilters = () => {
+    setActiveFilter('all');
+    setActiveFilters({
+      status: ['open', 'in_progress', 'improval', 'quality_control'],
+      searchTerm: ''
+    });
+    setSearchQuery('');
+  };
+  
   // Filtere Tasks basierend auf Suchbegriff und aktiven Filtern
   const filteredTasks = useMemo(() => {
     let filtered = [...tasks];
@@ -182,7 +276,7 @@ const TaskList: React.FC<TaskListProps> = ({
       );
     }
     
-    // Filtere nach Status, wenn Status-Filter aktiv sind
+    // Filtere nach Status
     if (activeFilters.status.length > 0) {
       filtered = filtered.filter(task => activeFilters.status.includes(task.status));
     }
@@ -202,6 +296,41 @@ const TaskList: React.FC<TaskListProps> = ({
     );
   };
   
+  const handleFilterSelect = (filterId: string) => {
+    setActiveFilter(filterId);
+    
+    // Filterlogik implementieren
+    if (filterId === 'all') {
+      // "Alle" Filter: Alle Tasks außer den erledigten (done) anzeigen
+      setActiveFilters({
+        status: ['open', 'in_progress', 'improval', 'quality_control'],
+        searchTerm: activeFilters.searchTerm
+      });
+    } else if (filterId === 'archive') {
+      // "Archiv" Filter: Nur erledigte (done) Tasks anzeigen
+      setActiveFilters({
+        status: ['done'],
+        searchTerm: activeFilters.searchTerm
+      });
+    } else {
+      // Hier später: Unterstützung für benutzerdefinierte Filter
+      const filter = savedFilters.find(f => f.id === filterId);
+      if (filter) {
+        setActiveFilters({
+          status: filter.status,
+          searchTerm: filter.searchTerm,
+          dateRange: filter.dateRange
+        });
+      }
+    }
+  };
+  
+  // Beim ersten Laden die Standard-Filter setzen
+  useEffect(() => {
+    // Standardmäßig "Alle" Filter aktiv setzen (alle außer done)
+    resetFilters();
+  }, []);
+  
   if (isLoading && tasks.length === 0) {
     return (
       <View style={styles.centerContainer}>
@@ -213,118 +342,86 @@ const TaskList: React.FC<TaskListProps> = ({
 
   return (
     <View style={styles.container}>
-      {/* Suchleiste mit Optionen */}
-      <View style={styles.searchBarContainer}>
-        <View style={styles.searchBarWrapper}>
-          <Searchbar
-            placeholder="Aufgaben suchen"
-            onChangeText={setSearchQuery}
+      {/* Header mit Icons und Suchfeld */}
+      <View style={styles.headerContainer}>
+        <Text style={styles.title}>To-Do-Liste</Text>
+        <View style={styles.searchContainer}>
+          <TextInput
+            placeholder="Suchen..."
+            style={styles.searchInput}
             value={searchQuery}
-            style={styles.searchBar}
-            onFocus={() => setShowSearchHistory(true)}
-            onSubmitEditing={() => {
-              saveSearch(searchQuery);
-              setShowSearchHistory(false);
-            }}
+            onChangeText={setSearchQuery}
           />
-          
-          {searchQuery.length > 0 && (
-            <IconButton
-              icon="close"
-              size={20}
-              style={styles.clearSearchButton}
-              onPress={() => setSearchQuery('')}
-            />
-          )}
         </View>
-        
-        {/* Kürzlich verwendete Suchen */}
-        {showSearchHistory && recentSearches.length > 0 && (
-          <View style={styles.recentSearches}>
-            <Text style={styles.recentSearchesTitle}>Letzte Suchen</Text>
-            <Divider style={styles.divider} />
-            {recentSearches.map((search, index) => (
-              <Button
-                key={index}
-                icon="history"
-                mode="text"
-                onPress={() => applySearch(search)}
-                style={styles.recentSearchButton}
-                labelStyle={styles.recentSearchButtonLabel}
-              >
-                {search}
-              </Button>
-            ))}
-          </View>
-        )}
-        
-        <View style={styles.actionButtons}>
-          {showFilters && (
-            <IconButton
-              icon="filter"
-              mode="outlined"
-              onPress={() => setShowFilterModal(true)}
-              style={styles.filterButton}
-              size={20}
-              containerColor="#FFFFFF"
-            />
-          )}
-          
-          <IconButton
-            icon="cog-outline"
-            mode="outlined"
-            onPress={() => setShowSettingsModal(true)}
-            style={styles.settingsButton}
-            size={20}
-            containerColor="#FFFFFF"
-          />
-          
-          {onAddPress && (
-            <IconButton
-              icon="plus"
-              mode="contained"
-              onPress={onAddPress}
-              style={styles.addButton}
-              size={20}
-              containerColor="#3B82F6"
-              iconColor="#FFFFFF"
-            />
-          )}
+        <View style={styles.rightButtons}>
+          <Pressable onPress={() => setShowFilterModal(true)} style={styles.iconButton}>
+            <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V20l-4 2v-7.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                fill="#111827"
+                stroke="#111827"
+                strokeWidth="0.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </Pressable>
+          <Pressable onPress={() => setShowTableSettingsModal(true)} style={styles.iconButton}>
+            <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <Path fillRule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 012 10z" fill="#111827" clipRule="evenodd" />
+            </Svg>
+          </Pressable>
         </View>
       </View>
-      
-      <Divider style={styles.divider} />
-      
-      {/* Aktive Filter anzeigen */}
-      {(activeFilters.status.length > 0 ||
-        activeFilters.searchTerm) && (
-        <View style={styles.activeFiltersContainer}>
-          <Text style={styles.activeFiltersText}>Aktive Filter:</Text>
-          <View style={styles.activeFiltersList}>
-            {activeFilters.status.length > 0 && (
-              <Text style={styles.activeFilter}>
-                Status: {activeFilters.status.length} ausgewählt
-              </Text>
-            )}
-            {activeFilters.searchTerm && (
-              <Text style={styles.activeFilter}>
-                Suche: {activeFilters.searchTerm}
-              </Text>
-            )}
-          </View>
-          <IconButton
+
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filtersContainer}
+      >
+        <Chip
+          selected={activeFilter === 'all'}
+          onPress={() => handleFilterSelect('all')}
+          style={[
+            styles.filterChip,
+            activeFilter === 'all' && styles.activeFilterChip
+          ]}
+        >
+          Alle
+        </Chip>
+        <Chip
+          selected={activeFilter === 'archive'}
+          onPress={() => handleFilterSelect('archive')}
+          style={[
+            styles.filterChip,
+            activeFilter === 'archive' && styles.activeFilterChip
+          ]}
+        >
+          Archiv
+        </Chip>
+        {savedFilters.map((filter) => (
+          <Chip
+            key={filter.id}
+            selected={activeFilter === filter.id}
+            onPress={() => handleFilterSelect(filter.id)}
+            style={[
+              styles.filterChip,
+              activeFilter === filter.id && styles.activeFilterChip
+            ]}
+          >
+            {filter.name}
+          </Chip>
+        ))}
+        {activeFilter !== 'all' && (
+          <Chip
             icon="close"
-            onPress={() => {
-              setActiveFilters({
-                status: [],
-                searchTerm: ''
-              });
-              setSearchQuery('');
-            }}
-            size={20}
-          />
-        </View>
-      )}
+            onPress={resetFilters}
+            style={styles.resetFilterChip}
+          >
+            Zurücksetzen
+          </Chip>
+        )}
+      </ScrollView>
       
       {/* Fehlermeldung */}
       {error && (
@@ -372,8 +469,8 @@ const TaskList: React.FC<TaskListProps> = ({
       
       {/* Spalteneinstellungen Modal */}
       <TableSettingsModal
-        visible={showSettingsModal}
-        onDismiss={() => setShowSettingsModal(false)}
+        visible={showTableSettingsModal}
+        onDismiss={() => setShowTableSettingsModal(false)}
         onApplySettings={applyTableSettings}
         tableId="tasks"
       />
@@ -384,7 +481,6 @@ const TaskList: React.FC<TaskListProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centerContainer: {
     flex: 1,
@@ -392,25 +488,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  searchBarContainer: {
+  headerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#ffffff',
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  searchBarWrapper: {
+  leftButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
+    minWidth: 48, // Breite eines IconButtons
   },
-  searchBar: {
+  rightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    minWidth: 96, // Breite von zwei IconButtons
+  },
+  searchContainer: {
     flex: 1,
-    marginBottom: 8,
-    elevation: 0,
-    backgroundColor: '#f0f0f0',
+    marginHorizontal: 12,
   },
-  clearSearchButton: {
-    position: 'absolute',
-    right: 0,
+  searchInput: {
+    flex: 1,
+    elevation: 0,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    height: 40,
+  },
+  iconButton: {
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   recentSearches: {
     backgroundColor: '#ffffff',
@@ -428,25 +541,6 @@ const styles = StyleSheet.create({
   recentSearchButton: {
     justifyContent: 'flex-start',
     paddingHorizontal: 0,
-  },
-  recentSearchButtonLabel: {
-    color: '#3B82F6',
-  },
-  actionButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  filterButton: {
-    marginRight: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  settingsButton: {
-    marginHorizontal: 8,
-    backgroundColor: '#f0f0f0',
-  },
-  addButton: {
-    marginLeft: 8,
   },
   divider: {
     height: 1,
@@ -478,7 +572,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   listContent: {
-    padding: 16,
+    padding: 0,
+    width: '100%',
   },
   loadingText: {
     marginTop: 8,
@@ -504,6 +599,27 @@ const styles = StyleSheet.create({
   emptyText: {
     color: '#666',
     textAlign: 'center',
+  },
+  filtersContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    gap: 8,
+  },
+  filterChip: {
+    backgroundColor: '#F3F4F6',
+  },
+  activeFilterChip: {
+    backgroundColor: '#3B82F6',
+  },
+  resetFilterChip: {
+    backgroundColor: '#EF4444',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111827',
+    minWidth: 100,
   },
 });
 

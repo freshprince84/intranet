@@ -8,6 +8,16 @@
 *   **Plan:** `docs/implementation_plans/mobile_worktime_screen_redesign_detailed.md` (Diese Datei)
 *   **Report:** `docs/implementation_reports/mobile_worktime_screen_redesign_detailed_implemented.md` (Wird während der Umsetzung gefüllt)
 
+**WICHTIGER HINWEIS ZUR IMPLEMENTIERUNG:**
+Dieser Plan dokumentiert die notwendigen Schritte. Bei jedem "STOPP" muss der Benutzer:
+1. Die Änderungen prüfen
+2. Die App selbst bauen
+3. Die Funktionalität testen
+4. Die Ergebnisse im Report-File `docs/implementation_reports/mobile_worktime_screen_redesign_detailed_implemented.md` protokollieren
+5. Die Freigabe für den nächsten Schritt erteilen
+
+Der Plan dient NUR der Dokumentation - alle Build- und Test-Aktionen werden vom Benutzer durchgeführt!
+
 ---
 
 **Schritt 0: Vorbereitung**
@@ -27,7 +37,11 @@
     2.  Führe `npm install react-native-gesture-handler` ODER `yarn add react-native-gesture-handler` aus.
     3.  Führe `cd ios && pod install && cd ..` aus.
 *   **Wichtiger Hinweis:** Das Hinzufügen von nativen Abhängigkeiten erfordert oft einen Neustart des Metro Bundlers und manchmal eine Bereinigung der Builds (`android/gradlew clean`, Xcode Clean Build Folder).
-*   **STOPP:** Baue die App für Android (`npm run android` oder via Android Studio) und iOS (`npm run ios` oder via Xcode). Stelle sicher, dass die App ohne Fehler startet, auch wenn noch keine sichtbaren Änderungen vorhanden sind. **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
@@ -95,7 +109,11 @@
 
         export default SlideToConfirm;
         ```
-*   **STOPP:** Baue die App. Es ist noch keine Funktion implementiert, aber der Build sollte ohne Fehler durchlaufen und die neue Datei erkennen. **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
@@ -131,7 +149,11 @@
         )}
         */}
         ```
-*   **STOPP:** Baue die App. Du solltest nun den Platzhalter-Slider anstelle der alten Buttons sehen. Die Funktionalität ist noch nicht gegeben. **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
@@ -278,7 +300,11 @@
     export default SlideToConfirm;
     ```
 *   **Wichtiger Hinweis:** `react-native-reanimated` v2+ benötigt Konfiguration in `babel.config.js`. Stelle sicher, dass `plugins: ['react-native-reanimated/plugin']` vorhanden ist. Eventuell ist ein Cache-Reset (`npm start -- --reset-cache` oder `yarn start --reset-cache`) und Neuinstallation der App nötig.
-*   **STOPP:** Baue die App. Der Slider sollte jetzt funktionieren (zieh- und rückfederbar). Die `onConfirm`-Logik (Start/Stop) wird ausgelöst, wenn weit genug gezogen wird. Teste dies (z.B. mit `console.log` im Handler in `WorktimeScreen.tsx`). **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
@@ -301,14 +327,18 @@
       }
     }}
     ```
-*   **STOPP:** Baue die App. Teste, ob das Ziehen des Sliders nun korrekt die Zeiterfassung startet bzw. stoppt. Überprüfe die UI-Updates (Timer-Anzeige etc.) und mögliche Ladezustände/Fehlermeldungen. **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
 **Schritt 5b: Ersetzen des Sliders durch einen Swipe-Button**
 
 *   **Ziel:** Den implementierten Slider durch einen modernen Swipe-Button ersetzen, der besser dem SBB-Design entspricht und intuitiver ist.
-*   **Hintergrund:** Ursprünglich war ein `SlideToConfirm` mit PanResponder geplant, stattdessen wurde ein `SimpleSlider` mit `@react-native-community/slider` implementiert. Dieser soll nun durch einen Swipe-Button im SBB-Stil ersetzt werden.
+*   **Hintergrund:** Ursprünglich war ein `SlideToConfirm` mit PanResponder geplant, stattdessen wurde ein `SimpleSlider` mit `@react-native-community/slider` implementiert. Dieser soll nun durch einen Swipe-Button ersetzt werden.
 *   **Ausgangslage (Aktueller Stand):**
     *   Die aktuelle Implementierung verwendet `SimpleSlider.tsx` statt `SlideToConfirm.tsx`
     *   Der Slider nutzt die externe Abhängigkeit `@react-native-community/slider`
@@ -362,8 +392,8 @@
           confirmThreshold = 0.8,
           height = 60,
           buttonColor = '#00C853', // Grün für Start (ähnlich SBB)
-          trackColor = '#333333', // Dunkelgrau für Track
-          textColor = '#FFFFFF', // Weiss für Text
+          trackColor = '#FFFFFF', // Weiß statt dunkelgrau
+          textColor = '#374151', // Dunkelgrau für Text
           disabled = false,
         }) => {
           // Position des Thumbs (0 = links, SWIPE_RANGE = rechts)
@@ -408,7 +438,7 @@
 
           return (
             <View style={[styles.container, { opacity: disabled ? 0.6 : 1 }]}>
-              <View style={[styles.track, { backgroundColor: trackColor, height }]}>
+              <View style={[styles.track, { backgroundColor: trackColor, height, borderWidth: 1, borderColor: '#D1D5DB' }]}>
                 <Text style={[styles.trackText, { color: textColor }]}>
                   {swipeText}
                 </Text>
@@ -470,10 +500,11 @@
         export default SwipeButton;
         ```
 
-*   **STOPP:** Prüfe, ob beide benötigten Abhängigkeiten vorhanden sind:
-    *   `react-native-gesture-handler` (laut Report bereits installiert)
-    *   `react-native-reanimated` (ggf. installieren: `npm install react-native-reanimated` oder `yarn add react-native-reanimated`)
-    *   Falls `react-native-reanimated` neu installiert wurde: In `babel.config.js` den Plugin hinzufügen `plugins: ['react-native-reanimated/plugin']` und Metro Bundler neu starten
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 #### Teilschritt 5b.2: Integration in `TimeTrackerBox.tsx`
 
@@ -516,7 +547,11 @@
         },
         ```
 
-*   **STOPP:** Baue die App. Überprüfe, ob der Swipe-Button korrekt angezeigt wird, ob das Icon passend zum Status (Start/Stopp) wechselt, und ob die Swipe-Funktionalität wie erwartet arbeitet. **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 #### Teilschritt 5b.3: Saubere Entfernung des Sliders und seiner Abhängigkeiten
 
@@ -544,7 +579,11 @@
             yarn remove @react-native-community/slider
             ```
 
-*   **STOPP:** Baue die App ein letztes Mal, um sicherzustellen, dass nach dem Entfernen des Sliders und der Abhängigkeit keine Fehler auftreten. **Warte auf Freigabe vor der Fortsetzung mit Schritt 6.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
@@ -565,7 +604,11 @@
         />
         ```
     3.  Platziere diesen `IconButton` logisch im Layout, z.B. in einer `View` neben dem Slider oder in der Kopfzeile der Zeiterfassungs-Box.
-*   **STOPP:** Baue die App. Überprüfe, ob der Icon-Button korrekt angezeigt wird und das Klicken darauf die Arbeitszeitliste öffnet. **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
@@ -595,14 +638,18 @@
         />
         ```
     4.  Ordne diese Buttons logisch an, z.B. in einer Reihe in der Kopfzeile der Taskliste.
-*   **STOPP:** Baue die App. Überprüfe, ob die Icon-Buttons in der Taskliste korrekt angezeigt werden und das Klicken darauf die entsprechenden Modals (Filter, Neues Task Detail) öffnet. **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
 **Schritt 8: TaskList Item Styling (Card Struktur)**
 
 *   **Ziel:** Jeden Task in der Liste mit einer `react-native-paper` Card umschliessen.
-*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx` (oder wo immer das Rendering eines einzelnen Tasks stattfindet, z.B. in einer `.map`-Funktion in `WorktimeScreen.tsx`).
+*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx`
 *   **Analyse:** Finde die Komponente oder den JSX-Block, der einen einzelnen Task rendert (oft eine `View` oder `TouchableOpacity`).
 *   **Aktion:**
     1.  Importiere `Card` von `react-native-paper`.
@@ -644,7 +691,11 @@
           // ... weitere Styles für Task-Details
         });
         ```
-*   **STOPP:** Baue die App. Die Taskliste sollte nun aus einzelnen Cards bestehen. Überprüfe das grundlegende Layout und die Klickbarkeit (falls implementiert). **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
@@ -698,7 +749,11 @@
            }
         });
         ```
-*   **STOPP:** Baue die App. Überprüfe, ob der Status jedes Tasks nun als Chip mit passendem Icon/Farbe angezeigt wird. **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
@@ -708,7 +763,11 @@
 *   **Datei:** Wo das einzelne Task-Item gerendert wird.
 *   **Analyse:** Überprüfe alle `Text`-Komponenten und `View`-Container innerhalb der `Card.Content`.
 *   **Aktion:** Passe die `style`-Props aller Elemente an die Vorgaben aus `DESIGN_STANDARDS.md` an (Schriftgrössen `sm`, `base`, `lg`; Schriftstärken `normal`, `medium`, `semibold`; Farben `Primärtext`, `Sekundärtext`; Abstände `margin`, `padding`).
-*   **STOPP:** Baue die App. Überprüfe das finale Aussehen der Task-Items auf Lesbarkeit, Konsistenz und Einhaltung der Design-Vorgaben. **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
@@ -742,7 +801,11 @@
         });
         ```
     3.  Überprüfe und vereinheitliche das Styling der Elemente *innerhalb* der Modals (Titel, TextInputs, Buttons) gemäss `DESIGN_STANDARDS.md`.
-*   **STOPP:** Baue die App. Öffne nacheinander die verschiedenen Modals (Zeiteinträge, Task Filter, Task Detail) und prüfe auf ein konsistentes, modernes Erscheinungsbild. **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
@@ -756,7 +819,11 @@
     2.  Setze eine passende Hintergrundfarbe für den gesamten Screen (z.B. `backgroundColor: '#F9FAFB'` für Hellgrau aus `DESIGN_STANDARDS.md`) auf die äusserste `View` oder `ScrollView`.
     3.  Überprüfe globale Paddings/Margins für den Screen-Inhalt.
     4.  Prüfe, ob ein `PaperProvider` mit einem Theme verwendet wird (typischerweise in `App.tsx`). Falls ja, stelle sicher, dass das Theme die Farben/Schriften aus `DESIGN_STANDARDS.md` korrekt definiert.
-*   **STOPP:** Baue die App. Überprüfe das Gesamtlayout, den Hintergrund und die Abstände des `WorktimeScreen`. Stelle sicher, dass Inhalte nicht von Notch oder Home Indicator verdeckt werden. **Warte auf Freigabe.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
 ---
 
@@ -770,6 +837,959 @@
     1.  **Skalieren:** Erstelle alle benötigten Grössen des neuen Icons für Android (`ic_launcher.png`, `ic_launcher_round.png` in `mdpi`, `hdpi`, `xhdpi`, `xxhdpi`, `xxxhdpi`) und iOS (siehe `AppIcon.appiconset/Contents.json` für die genauen Grössen).
     2.  **Ersetzen (Android):** Ersetze die vorhandenen `.png`-Dateien in allen `mipmap-*`-Ordnern durch deine neuen Dateien.
     3.  **Ersetzen (iOS):** Ersetze die vorhandenen `.png`-Dateien im `AppIcon.appiconset`-Ordner durch deine neuen Dateien.
-*   **STOPP:** **NACHDEM** du die Icon-Dateien manuell ersetzt hast: Baue die App für Android und iOS komplett neu (ggf. Build-Cache löschen). Überprüfe auf dem Homescreen des Geräts/Emulators, ob das neue App-Icon korrekt angezeigt wird. **Warte auf Freigabe für den Abschluss.**
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
 
---- 
+---
+
+**Schritt 14: Korrektur des On/Off Swipe-Buttons**
+
+*   **Ziel:** Anpassung des Designs des Swipe-Buttons gemäß den Vorgaben.
+*   **Datei:** `IntranetMobileApp/src/components/SwipeButton.tsx`
+*   **Analyse:** Der aktuelle Button verwendet einen schwarzen Hintergrund und muss auf weiß mit grauem Rahmen geändert werden.
+*   **Aktion:**
+    1.  Ändere die Standardfarben in der `SwipeButton`-Komponente:
+        ```typescript
+        trackColor = '#FFFFFF', // Weiß statt dunkelgrau
+        textColor = '#374151', // Dunkelgrau für Text
+        ```
+    2.  Füge einen grauen Rahmen zum Track hinzu:
+        ```typescript
+        track: {
+          // ... existing code ...
+          borderWidth: 1,
+          borderColor: '#D1D5DB', // Grauer Rahmen
+        }
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 15: Korrektur der Swipe-Richtung**
+
+*   **Ziel:** Anpassung der Swipe-Logik, sodass bei aktivem Timer der Knopf rechts ist und nach links gewischt werden muss.
+*   **Datei:** `IntranetMobileApp/src/components/SwipeButton.tsx`
+*   **Analyse:** Aktuell ist der Knopf immer links und muss nach rechts gewischt werden.
+*   **Aktion:**
+    1.  Ändere die Position des Thumbs basierend auf `isTimerRunning`:
+        ```typescript
+        const initialPosition = isTimerRunning ? SWIPE_RANGE : 0;
+        const [translateX] = useState(new Animated.Value(initialPosition));
+        ```
+    2.  Passe die Swipe-Logik an:
+        ```typescript
+        const handleGestureEvent = (event: any) => {
+          const { translationX } = event.nativeEvent;
+          const newPosition = isTimerRunning
+            ? Math.max(0, Math.min(initialPosition + translationX, SWIPE_RANGE))
+            : Math.max(0, Math.min(translationX, SWIPE_RANGE));
+          translateX.setValue(newPosition);
+        };
+
+        const handleHandlerStateChange = (event: any) => {
+          if (event.nativeEvent.state === State.END) {
+            const { translationX } = event.nativeEvent;
+            const threshold = SWIPE_RANGE * confirmThreshold;
+            
+            if (isTimerRunning) {
+              // Wenn Timer läuft: Nach links wischen zum Stoppen
+              if (translationX < -threshold) {
+                onSwipeComplete();
+                setTimeout(() => {
+                  Animated.spring(translateX, {
+                    toValue: 0,
+                    useNativeDriver: true,
+                  }).start();
+                }, 200);
+              } else {
+                // Zurück nach rechts
+                Animated.spring(translateX, {
+                  toValue: SWIPE_RANGE,
+                  useNativeDriver: true,
+                }).start();
+              }
+            } else {
+              // Wenn Timer gestoppt: Nach rechts wischen zum Starten
+              if (translationX > threshold) {
+                onSwipeComplete();
+                setTimeout(() => {
+                  Animated.spring(translateX, {
+                    toValue: SWIPE_RANGE,
+                    useNativeDriver: true,
+                  }).start();
+                }, 200);
+              } else {
+                // Zurück nach links
+                Animated.spring(translateX, {
+                  toValue: 0,
+                  useNativeDriver: true,
+                }).start();
+              }
+            }
+          }
+        };
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 16: Korrektur des Zeiterfassungseinträge-Icons**
+
+*   **Ziel:** Anpassung des Icons für die Anzeige der Zeiterfassungseinträge gemäß Frontend.
+*   **Datei:** `IntranetMobileApp/src/components/TimeTrackerBox.tsx`
+*   **Analyse:** Das aktuelle Icon muss durch das gleiche Icon wie im Frontend ersetzt werden.
+*   **Aktion:**
+    1.  Ändere das Icon in der `TimeTrackerBox`-Komponente:
+        ```typescript
+        <IconButton
+          icon="format-list-bulleted" // Gleiches Icon wie im Frontend
+          size={24}
+          onPress={onShowWorkTimeList}
+          disabled={isLoading}
+          accessibilityLabel="Zeiteinträge anzeigen"
+          style={styles.historyButton}
+        />
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 17: Korrektur der Icon-Positionierung**
+
+*   **Ziel:** Neuanordnung der Icons für Filter, Spalten konfigurieren und Neuer Task gemäß Dokumentation.
+*   **Datei:** `IntranetMobileApp/src/screens/WorktimeScreen.tsx`
+*   **Analyse:** Die Icons sind aktuell falsch positioniert und müssen neu angeordnet werden.
+*   **Aktion:**
+    1.  Erstelle einen neuen Container für die Buttons:
+        ```typescript
+        const styles = StyleSheet.create({
+          // ... existing code ...
+          headerContainer: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            paddingHorizontal: 16,
+            marginBottom: 16,
+          },
+          leftButtons: {
+            flexDirection: 'row',
+            alignItems: 'center',
+          },
+          rightButtons: {
+            flexDirection: 'row',
+            alignItems: 'center',
+          },
+        });
+        ```
+    2.  Ordne die Buttons neu an:
+        ```typescript
+        <View style={styles.headerContainer}>
+          <View style={styles.leftButtons}>
+            <IconButton
+              icon="plus"
+              size={24}
+              onPress={() => {
+                setModalMode(ModalMode.CREATE);
+                setModalTaskId(null);
+                setShowTaskDetailModal(true);
+              }}
+              accessibilityLabel="Neuen Task erstellen"
+            />
+          </View>
+          
+          <View style={styles.rightButtons}>
+            <IconButton
+              icon="filter-variant"
+              size={24}
+              onPress={() => setShowFilterModal(true)}
+              accessibilityLabel="Filter öffnen"
+            />
+            <IconButton
+              icon="cog"
+              size={24}
+              onPress={() => setShowTableSettingsModal(true)}
+              accessibilityLabel="Spalten konfigurieren"
+            />
+          </View>
+        </View>
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 18: Integration des Suchfelds**
+
+*   **Ziel:** Verschieben des Suchfelds in die gleiche Zeile wie die Buttons.
+*   **Datei:** `IntranetMobileApp/src/screens/WorktimeScreen.tsx`
+*   **Analyse:** Das Suchfeld muss zwischen dem "Neuer Task"-Button und den Filter/Spalten-Buttons platziert werden.
+*   **Aktion:**
+    1.  Erweitere die Styles:
+        ```typescript
+        const styles = StyleSheet.create({
+          // ... existing code ...
+          searchContainer: {
+            flex: 1,
+            marginHorizontal: 16,
+          },
+          searchInput: {
+            height: 40,
+            backgroundColor: '#F3F4F6',
+            borderRadius: 8,
+            paddingHorizontal: 12,
+          },
+        });
+        ```
+    2.  Füge das Suchfeld in den Header ein:
+        ```typescript
+        <View style={styles.headerContainer}>
+          <View style={styles.leftButtons}>
+            <IconButton
+              icon="plus"
+              size={24}
+              onPress={() => {
+                setModalMode(ModalMode.CREATE);
+                setModalTaskId(null);
+                setShowTaskDetailModal(true);
+              }}
+              accessibilityLabel="Neuen Task erstellen"
+            />
+          </View>
+          
+          <View style={styles.searchContainer}>
+            <TextInput
+              placeholder="Suchen..."
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          
+          <View style={styles.rightButtons}>
+            <IconButton
+              icon="filter-variant"
+              size={24}
+              onPress={() => setShowFilterModal(true)}
+              accessibilityLabel="Filter öffnen"
+            />
+            <IconButton
+              icon="cog"
+              size={24}
+              onPress={() => setShowTableSettingsModal(true)}
+              accessibilityLabel="Spalten konfigurieren"
+            />
+          </View>
+        </View>
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 19: Korrektur des Task-Card-Designs**
+
+*   **Ziel:** Verbesserung des Designs der Task-Cards gemäß den Vorgaben.
+*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx`
+*   **Analyse:** Die Task-Cards müssen breiter sein und das Layout muss angepasst werden.
+*   **Aktion:**
+    1.  Passe die Styles der Task-Cards an:
+        ```typescript
+        const styles = StyleSheet.create({
+          // ... existing code ...
+          taskCard: {
+            marginHorizontal: 8,
+            marginVertical: 4,
+            borderRadius: 8,
+          },
+          cardContent: {
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+          },
+          mainContent: {
+            flex: 0.8,
+          },
+          sideContent: {
+            flex: 0.2,
+            alignItems: 'flex-end',
+          },
+          title: {
+            fontSize: 16,
+            fontWeight: '600',
+            marginBottom: 4,
+          },
+          description: {
+            fontSize: 14,
+            color: '#6B7280',
+          },
+          status: {
+            marginBottom: 4,
+          },
+          dueDate: {
+            fontSize: 12,
+            color: '#6B7280',
+          },
+        });
+        ```
+    2.  Aktualisiere das Layout der Task-Cards:
+        ```typescript
+        <Card style={styles.taskCard} mode="outlined">
+          <Card.Content>
+            <View style={styles.cardContent}>
+              <View style={styles.mainContent}>
+                <Text style={styles.title}>{task.title}</Text>
+                <Text style={styles.description} numberOfLines={2}>
+                  {task.description}
+                </Text>
+              </View>
+              
+              <View style={styles.sideContent}>
+                <Chip style={styles.status} textStyle={{ color: 'white' }} mode="flat">
+                  {getStatusText(task.status)}
+                </Chip>
+                <Text style={styles.dueDate}>
+                  {task.dueDate ? formatDate(task.dueDate) : '-'}
+                </Text>
+              </View>
+            </View>
+          </Card.Content>
+        </Card>
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 20: Integration der gespeicherten Filter**
+
+*   **Ziel:** Anzeige der gespeicherten Filter analog zum Frontend.
+*   **Datei:** `IntranetMobileApp/src/screens/WorktimeScreen.tsx`
+*   **Analyse:** Die gespeicherten Filter müssen aus dem Modal in die Hauptansicht verschoben werden.
+*   **Aktion:**
+    1.  Füge die Styles für die Filter-Chips hinzu:
+        ```typescript
+        const styles = StyleSheet.create({
+          // ... existing code ...
+          filterChipsContainer: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            paddingHorizontal: 16,
+            marginBottom: 16,
+            gap: 8,
+          },
+          filterChip: {
+            backgroundColor: '#F3F4F6',
+          },
+          activeFilterChip: {
+            backgroundColor: '#3B82F6',
+          },
+        });
+        ```
+    2.  Füge die Filter-Chips unter dem Header ein:
+        ```typescript
+        <View style={styles.filterChipsContainer}>
+          <Chip
+            selected={activeFilter === 'all'}
+            onPress={() => handleFilterSelect('all')}
+            style={[
+              styles.filterChip,
+              activeFilter === 'all' && styles.activeFilterChip
+            ]}
+          >
+            Alle
+          </Chip>
+          <Chip
+            selected={activeFilter === 'archive'}
+            onPress={() => handleFilterSelect('archive')}
+            style={[
+              styles.filterChip,
+              activeFilter === 'archive' && styles.activeFilterChip
+            ]}
+          >
+            Archiv
+          </Chip>
+          {savedFilters.map((filter) => (
+            <Chip
+              key={filter.id}
+              selected={activeFilter === filter.id}
+              onPress={() => handleFilterSelect(filter.id)}
+              style={[
+                styles.filterChip,
+                activeFilter === filter.id && styles.activeFilterChip
+              ]}
+            >
+              {filter.name}
+            </Chip>
+          ))}
+          {activeFilter !== 'all' && (
+            <Chip
+              icon="close"
+              onPress={resetFilters}
+              style={styles.resetFilterChip}
+            >
+              Zurücksetzen
+            </Chip>
+          )}
+        </View>
+        ```
+    3.  Implementiere die Filter-Logik:
+        ```typescript
+        const [activeFilter, setActiveFilter] = useState('all');
+        
+        useEffect(() => {
+          // Setze den Standard-Filter beim Laden
+          setActiveFilter('my');
+        }, []);
+        
+        const filteredTasks = useMemo(() => {
+          switch (activeFilter) {
+            case 'my':
+              return tasks.filter(task => task.assignedTo?.id === user?.id);
+            case 'open':
+              return tasks.filter(task => task.status === 'open');
+            default:
+              return tasks;
+          }
+        }, [tasks, activeFilter, user]);
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 21: Korrektur des Filter-Icons**
+
+*   **Ziel:** Angleichung des Filter-Icons an das Frontend.
+*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx`
+*   **Analyse:** Das aktuelle Filter-Icon muss mit dem Frontend-Icon verglichen und angepasst werden.
+*   **Aktion:**
+    1.  Frontend-Icon analysieren und exakten Namen identifizieren
+    2.  Icon in der TaskList-Komponente aktualisieren:
+        ```typescript
+        <IconButton
+          icon="filter-outline" // Wird mit korrektem Icon-Namen aus Frontend ersetzt
+          size={24}
+          onPress={() => setShowFilterModal(true)}
+          accessibilityLabel="Filter öffnen"
+        />
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 22: Korrektur des Spalten-Konfigurations-Icons**
+
+*   **Ziel:** Angleichung des Spalten-Konfigurations-Icons an das Frontend.
+*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx`
+*   **Analyse:** Das aktuelle Spalten-Konfigurations-Icon muss mit dem Frontend-Icon verglichen und angepasst werden.
+*   **Aktion:**
+    1.  Frontend-Icon analysieren und exakten Namen identifizieren
+    2.  Icon in der TaskList-Komponente aktualisieren:
+        ```typescript
+        <IconButton
+          icon="table-column" // Wird mit korrektem Icon-Namen aus Frontend ersetzt
+          size={24}
+          onPress={() => setShowTableSettingsModal(true)}
+          accessibilityLabel="Spalten konfigurieren"
+        />
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 23: Entfernung des Card-Hintergrunds**
+
+*   **Ziel:** Entfernung des grauen Hintergrunds und Rands hinter den Cards.
+*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx`
+*   **Analyse:** Der graue Hintergrund und Rand der Container-View muss entfernt werden.
+*   **Aktion:**
+    1.  Styles der Container-View anpassen:
+        ```typescript
+        const styles = StyleSheet.create({
+          container: {
+            flex: 1,
+            // Entferne backgroundColor und borderWidth/Color
+          },
+          // ... andere Styles
+        });
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 24: Anpassung der Card-Breite**
+
+*   **Ziel:** Verbreiterung der Cards auf volle Komponenten-Breite.
+*   **Datei:** `IntranetMobileApp/src/components/TaskCard.tsx`
+*   **Analyse:** Die Cards müssen die volle Breite der To-Do-Liste ausnutzen.
+*   **Aktion:**
+    1.  Styles der Card und des Containers anpassen:
+        ```typescript
+        const styles = StyleSheet.create({
+          card: {
+            width: '100%',
+            marginHorizontal: 0, // Entferne seitliche Margins
+            borderRadius: 8,
+          },
+          container: {
+            width: '100%',
+            paddingHorizontal: 0, // Entferne seitliches Padding
+          },
+          // ... andere Styles
+        });
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 25: Verschiebung des "Neue Aufgabe"-Buttons**
+
+*   **Ziel:** Umwandlung in einen schwebenden Action Button (FAB).
+*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx`
+*   **Analyse:** Der "Neue Aufgabe"-Button muss aus der Header-Zeile entfernt und als FAB implementiert werden.
+*   **Aktion:**
+    1.  Button aus dem Header entfernen
+    2.  FAB am unteren rechten Rand implementieren:
+        ```typescript
+        import { FAB } from 'react-native-paper';
+
+        // Im JSX, nach der TaskList:
+        <FAB
+          style={{
+            position: 'absolute',
+            right: 16,
+            bottom: 16,
+            backgroundColor: '#3B82F6', // Primärfarbe
+          }}
+          icon="plus"
+          onPress={() => {
+            setModalMode(ModalMode.CREATE);
+            setModalTaskId(null);
+            setShowTaskDetailModal(true);
+          }}
+        />
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 26: Verschiebung des To-Do-Liste-Titels**
+
+*   **Ziel:** Integration des Titels in die Zeile mit Suchfeld und Buttons.
+*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx`
+*   **Analyse:** Der Titel muss in die Header-Zeile verschoben werden.
+*   **Aktion:**
+    1.  Titel in den Header-Container verschieben:
+        ```typescript
+        <View style={styles.headerContainer}>
+          <Text style={styles.title}>To-Do-Liste</Text>
+          <View style={styles.searchContainer}>
+            <TextInput
+              placeholder="Suchen..."
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+          </View>
+          <View style={styles.rightButtons}>
+            {/* ... Filter & Spalten Buttons ... */}
+          </View>
+        </View>
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 27: Optimierung der Icon-Buttons**
+
+*   **Ziel:** Verkleinerung und engere Platzierung der Filter- und Spalten-Icons.
+*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx`
+*   **Analyse:** Die Icons müssen kleiner werden und enger zusammenrücken.
+*   **Aktion:**
+    1.  Icon-Größe und Abstände anpassen:
+        ```typescript
+        <View style={styles.rightButtons}>
+          <IconButton
+            icon="filter-variant"
+            size={20} // Kleiner
+            style={styles.iconButton}
+            onPress={() => setShowFilterModal(true)}
+          />
+          <IconButton
+            icon="table-column"
+            size={20} // Kleiner
+            style={styles.iconButton}
+            onPress={() => setShowTableSettingsModal(true)}
+          />
+        </View>
+
+        const styles = StyleSheet.create({
+          rightButtons: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 4, // Engerer Abstand
+          },
+          iconButton: {
+            margin: 0, // Entferne Standard-Margins
+          },
+          // ... andere Styles
+        });
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 28: Timer-Text-Optimierung**
+
+*   **Ziel:** Timer-Text in eine Zeile bringen.
+*   **Datei:** `IntranetMobileApp/src/components/TimeTrackerBox.tsx`
+*   **Analyse:** Der Timer-Text muss in einer Zeile angezeigt werden.
+*   **Aktion:**
+    1.  Layout des Timer-Texts anpassen:
+        ```typescript
+        <View style={styles.timerContainer}>
+          <Text style={styles.timerText}>
+            Timer läuft seit {formattedDuration} {branchName}
+          </Text>
+        </View>
+
+        const styles = StyleSheet.create({
+          timerContainer: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'center',
+          },
+          timerText: {
+            fontSize: 16,
+            color: '#374151',
+            textAlign: 'center',
+          },
+          // ... andere Styles
+        });
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 29: Entfernung des Swipe-Button-Schatten-Effekts**
+
+*   **Ziel:** Entfernung des sechseckigen Schatten-Effekts während des Ladens.
+*   **Datei:** `IntranetMobileApp/src/components/SwipeButton.tsx`
+*   **Analyse:** Der Schatten-Effekt muss während der Lade-Animation entfernt werden.
+*   **Aktion:**
+    1.  Styles und Animation des Buttons anpassen:
+        ```typescript
+        const thumbStyle = useAnimatedStyle(() => ({
+          transform: [{ translateX: translateX.value }],
+          // Entferne shadow-bezogene Styles während der Animation
+        }));
+
+        const styles = StyleSheet.create({
+          thumb: {
+            // ... andere Styles
+            // Entferne oder modifiziere shadow-bezogene Properties
+            elevation: 0,
+            shadowOpacity: 0,
+          },
+        });
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 30: Korrektur der gespeicherten Filter**
+
+*   **Ziel:** Korrekte Positionierung und Standardfilter entsprechend dem Frontend.
+*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx`
+*   **Analyse:** In Schritt 20 wurden bereits Filter integriert, aber sie erscheinen nicht an der richtigen Position und die Standardfilter ("Alle" und "Archiv") fehlen. Zudem ist kein Filter standardmäßig aktiviert.
+*   **Aktion:**
+    1.  Korrektur der Position der Filter (UNTER der Suchzeile, ÜBER den Cards):
+        ```typescript
+        // Nach dem Header-Container und VOR der Card-Liste:
+        <View style={styles.headerContainer}>
+          {/* ... Suchfeld und Buttons ... */}
+        </View>
+            
+        {/* Hier die Filter-Chips einfügen */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersContainer}
+        >
+          <Chip
+            selected={activeFilter === 'all'}
+            onPress={() => handleFilterSelect('all')}
+            style={[
+              styles.filterChip,
+              activeFilter === 'all' && styles.activeFilterChip
+            ]}
+          >
+            Alle
+          </Chip>
+          <Chip
+            selected={activeFilter === 'archive'}
+            onPress={() => handleFilterSelect('archive')}
+            style={[
+              styles.filterChip,
+              activeFilter === 'archive' && styles.activeFilterChip
+            ]}
+          >
+            Archiv
+          </Chip>
+          {savedFilters.map((filter) => (
+            <Chip
+              key={filter.id}
+              selected={activeFilter === filter.id}
+              onPress={() => handleFilterSelect(filter.id)}
+              style={[
+                styles.filterChip,
+                activeFilter === filter.id && styles.activeFilterChip
+              ]}
+            >
+              {filter.name}
+            </Chip>
+          ))}
+          {activeFilter !== 'all' && (
+            <Chip
+              icon="close"
+              onPress={resetFilters}
+              style={styles.resetFilterChip}
+            >
+              Zurücksetzen
+            </Chip>
+          )}
+        </ScrollView>
+            
+        {/* Task-List */}
+        ```
+    2.  Standardmäßigen Filter aktivieren:
+        ```typescript
+        // In useEffect oder direkt bei der State-Initialisierung
+        const [activeFilter, setActiveFilter] = useState('all');
+        
+        // Filter-Handler-Funktion
+        const handleFilterSelect = (filterId) => {
+          setActiveFilter(filterId);
+          // Logik zur Anwendung des Filters
+          if (filterId === 'all') {
+            // Alle Tasks anzeigen (keine Filterung)
+            // ...
+          } else if (filterId === 'archive') {
+            // Nur archivierte Tasks anzeigen
+            // ...
+          } else {
+            // Gespeicherten Filter anwenden
+            const filter = savedFilters.find(f => f.id === filterId);
+            if (filter) {
+              // Filter anwenden
+              // ...
+            }
+          }
+        };
+        
+        // Filter zurücksetzen
+        const resetFilters = () => {
+          setActiveFilter('all');
+          // Weitere Reset-Logik
+          // ...
+        };
+        ```
+    3.  Styles für die Filter-Container anpassen:
+        ```typescript
+        const styles = StyleSheet.create({
+          // ... existierende Styles
+          filtersContainer: {
+            paddingHorizontal: 16,
+            paddingVertical: 8,
+            flexDirection: 'row',
+            gap: 8,
+          },
+          filterChip: {
+            backgroundColor: '#F3F4F6',
+          },
+          activeFilterChip: {
+            backgroundColor: '#3B82F6',
+          },
+          resetFilterChip: {
+            backgroundColor: '#EF4444', // Rot für Reset
+          },
+        });
+        ```
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.** 
+
+**Schritt 31: Entfernung des doppelten To-Do-Liste-Titels**
+
+*   **Ziel:** Entfernung des doppelten "To-Do-Liste"-Titels.
+*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx`
+*   **Analyse:** Aktuell erscheint der "To-Do-Liste"-Titel zweimal - einmal in der Zeile mit dem Suchfilter und einmal darunter. Der erste (oberste) Titel muss entfernt werden, während der zweite bestehen bleiben soll.
+*   **Aktion:**
+    1.  Exakte Lokalisierung des doppelten Titels im Code
+    2.  Entfernung des ersten (oberen) Titels, während der zweite bestehen bleibt
+    3.  Sicherstellen, dass das Layout trotz der Entfernung korrekt bleibt
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 32: Wiederherstellung des Filter-Icons**
+
+*   **Ziel:** Das verschwundene Filter-Icon wieder hinzufügen.
+*   **Datei:** `IntranetMobileApp/src/components/TaskList.tsx`
+*   **Analyse:** Seit Schritt 30 ist das Filter-Icon verschwunden. Die gespeicherten Filter werden korrekt angezeigt, aber der Filter-Button für das Modal muss ebenfalls wieder angezeigt werden.
+*   **Aktion:**
+    1.  Überprüfen, in welchem Code-Block das Filter-Icon entfernt wurde
+    2.  Wiederherstellung des Filter-Icons an der ursprünglichen Position
+    3.  Sicherstellen, dass beide Konzepte (gespeicherte Filter-Chips und Filter-Icon für das Modal) parallel existieren
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 33: Reduzierung der Card-Höhe**
+
+*   **Ziel:** Verringerung der Höhe der Task-Cards.
+*   **Datei:** `IntranetMobileApp/src/components/TaskCard.tsx`
+*   **Analyse:** Die Cards werden zu hoch dargestellt, obwohl bereits verschiedene Maßnahmen ergriffen wurden. Weitere Anpassungen sind nötig, um die Höhe zu reduzieren.
+*   **Aktion:**
+    1.  Reduzierung aller Abstände innerhalb der Cards, besonders zwischen den Zeilen
+    2.  Verringerung der Höhe der farbigen Hintergründe für die Status-Anzeige
+    3.  Optimierung aller Paddings und Margins, die zur Gesamthöhe beitragen
+    4.  Überprüfung der Schriftgrößen und ggf. Anpassung, wo sinnvoll
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 34: Korrektur des Textes im TimeTracker**
+
+*   **Ziel:** Anzeige der drei Timer-Texte in einer Zeile.
+*   **Datei:** `IntranetMobileApp/src/components/TimeTrackerBox.tsx`
+*   **Analyse:** Die drei Textelemente im Timer-Bereich ("Timer läuft seit...", der Zähler und die Niederlassung) werden aktuell untereinander angezeigt. Sie müssen in einer Zeile nebeneinander angeordnet werden.
+*   **Aktion:**
+    1.  Überprüfung der bereits vorgenommenen Änderungen aus Schritt 28
+    2.  Anpassung des Layouts, um alle drei Textelemente in einer Zeile anzuzeigen
+    3.  Implementierung eines flexiblen Row-Layouts mit passenden Abständen
+    4.  Bei Bedarf: Anpassung der Schriftgröße oder Implementierung von Ellipsis (...)
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 35: Zentrierter Text im Swiper**
+
+*   **Ziel:** Korrektur der Textposition im Swipe-Button.
+*   **Datei:** `IntranetMobileApp/src/components/SwipeButton.tsx`
+*   **Analyse:** Der Text "Zum Stoppen ziehen" ist zu weit rechts platziert und dadurch zu nah am roten Stop-Thumb. Er sollte innerhalb des Swipe-Tracks zentriert sein.
+*   **Aktion:**
+    1.  Anpassung des Track-Layouts für eine zentrierte Textposition
+    2.  Entfernung jeglicher Verschiebung des Textes Richtung Thumb
+    3.  Implementierung einer flexiblen Zentrierung, die unabhängig vom Thumb-Status funktioniert
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+**Schritt 36: App-Icon-Korrektur**
+
+*   **Ziel:** Wiederherstellung des korrekten App-Icons.
+*   **Datei:** Android-Manifest und zugehörige Ressourcen-Dateien
+*   **Analyse:** Das App-Icon wird nicht mehr korrekt angezeigt, stattdessen erscheint das Android-Standard-Icon. Es muss überprüft werden, was in Schritt 13 geändert wurde und warum das Icon nicht mehr funktioniert.
+*   **Aktion:**
+    1.  Überprüfung der in Schritt 13 vorgenommenen Änderungen
+    2.  Korrektur der Icon-Dateien und Verweise in den Android-Ressourcen
+    3.  Sicherstellen, dass das Manifest korrekt auf die Icon-Ressourcen verweist
+    4.  Verifizierung der adaptiven Icon-Konfiguration
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**
+
+---
+
+**Wichtiger Hinweis für alle weiteren Schritte:**
+
+Bei jedem der oben beschriebenen Korrekturschritte wird wie folgt vorgegangen:
+
+1. **Analysephase:**
+   - Aktuellen Code gründlich analysieren
+   - Planungs- und Report-Dateien durchlesen, um zu verstehen, was bereits implementiert wurde
+   - Potenzielle Problembereiche identifizieren
+
+2. **Planungsphase:**
+   - Notwendige Änderungen detailliert dokumentieren
+   - Betroffene Codestellen und geplante Modifikationen im Planungsdokument festhalten
+   - Sicherstellen, dass alle Aspekte der Anforderung abgedeckt sind
+
+3. **Umsetzungsphase:**
+   - Änderungen gemäß Plan implementieren
+   - Nach jedem Schritt anhalten für APK-Erstellung und Tests
+   - Jeden Schritt im zugehörigen Report-MD-File protokollieren
+
+Die Planung ist darauf ausgerichtet, dass nach jedem Schritt ein Build und Test erfolgt, um Regressionen zu vermeiden und die korrekte Implementierung zu verifizieren.
+
+Jede Änderung muss exakt den genannten Anforderungen entsprechen, ohne Interpretation oder Abweichung.
+
+**Schritt 37: Dokumentation der Implementierung**
+
+*   **Ziel:** Vollständige Dokumentation aller durchgeführten Änderungen und deren Auswirkungen.
+*   **Datei:** `docs/implementation_reports/mobile_worktime_screen_redesign_detailed_implemented.md`
+*   **Analyse:** Die bisherigen Änderungen müssen systematisch dokumentiert werden, um die Nachvollziehbarkeit zu gewährleisten.
+*   **Aktion:**
+    1.  Überprüfung aller durchgeführten Schritte
+    2.  Dokumentation der Änderungen pro Komponente:
+        - TimeTrackerBox
+        - TaskList
+        - TaskCard
+        - SwipeButton
+        - Filter-System
+        - Modal-System
+    3.  Dokumentation der Auswirkungen:
+        - UI/UX-Verbesserungen
+        - Performance-Optimierungen
+        - Wartbarkeitsverbesserungen
+    4.  Zusammenfassung der Gesamtimplementierung
+*   **STOPP:** 
+    1. Prüfen Sie die Änderungen. 
+    2. Bauen und testen Sie die App. 
+    3. Protokollieren Sie die Ergebnisse im Report-File.
+    4. **Warte auf Ihre Freigabe zum Fortfahren.**

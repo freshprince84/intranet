@@ -86,7 +86,9 @@ const TimeTrackerBox: React.FC<TimeTrackerBoxProps> = ({
       {currentWorkTime ? (
         <View style={styles.activeTimer}>
           <View style={styles.timerInfo}>
-            <Text style={styles.timerText}>Timer läuft seit {formatTime(currentWorkTime.startTime)}</Text>
+            <Text style={styles.timerText} numberOfLines={1} ellipsizeMode="tail">
+              Timer läuft seit {formatTime(currentWorkTime.startTime)}
+            </Text>
             <Text style={styles.durationText}>{elapsedTime}</Text>
             <Text style={styles.branchText}>
               {currentWorkTime.branch?.name || 'Unbekannte Niederlassung'}
@@ -102,7 +104,7 @@ const TimeTrackerBox: React.FC<TimeTrackerBoxProps> = ({
             />
             
             <IconButton
-              icon="history"
+              icon="format-list-bulleted"
               size={24}
               onPress={onShowWorkTimeList}
               disabled={isLoading}
@@ -122,7 +124,7 @@ const TimeTrackerBox: React.FC<TimeTrackerBoxProps> = ({
             />
             
             <IconButton
-              icon="history"
+              icon="format-list-bulleted"
               size={24}
               onPress={onShowWorkTimeList}
               disabled={isLoading}
@@ -153,21 +155,30 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   timerInfo: {
-    flexDirection: 'column',
-    gap: 4,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 8,
   },
   timerText: {
-    fontSize: 14,
-    color: '#4B5563',
+    fontSize: 16,
+    color: '#374151',
+    textAlign: 'left',
+    flex: 1,
   },
   durationText: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#1F2937',
+    textAlign: 'center',
+    flex: 1,
   },
   branchText: {
     fontSize: 14,
     color: '#6B7280',
+    textAlign: 'right',
+    flex: 1,
   },
   controlsContainer: {
     flexDirection: 'row',
