@@ -40,6 +40,13 @@ div[class*="bg-white"][class*="rounded-lg"][class*="border"] + div[class*="bg-wh
   margin-top: 1.5rem !important; /* Einheitlicher Abstand zwischen Boxen */
 }
 
+/* Spezifische Regel für Consultation Cards auf Mobile/Tablet */
+@media (max-width: 1023px) {
+  div[class*="bg-white"][class*="shadow"][class*="rounded-lg"] + div[class*="bg-white"][class*="shadow"][class*="rounded-lg"] {
+    margin-top: 1px !important; /* Minimaler Abstand für Consultation Cards */
+  }
+}
+
 /* Entferne zusätzliches Padding bei p-4 Container auf oberster Ebene */
 .min-h-screen > div.p-4 {
   padding-top: 1rem !important;

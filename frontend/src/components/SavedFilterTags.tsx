@@ -17,6 +17,9 @@ interface SavedFilterTagsProps {
   tableId: string;
   onSelectFilter: (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => void;
   onReset: () => void;
+  activeFilterName?: string;
+  selectedFilterId?: number | null;
+  onFilterChange?: (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => void;
   defaultFilterName?: string;
 }
 
@@ -24,13 +27,14 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   tableId, 
   onSelectFilter, 
   onReset,
-  defaultFilterName = 'Aktuell'
+  activeFilterName,
+  selectedFilterId,
+  onFilterChange,
+  defaultFilterName = 'Heute'
 }) => {
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
-  const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [defaultFilterApplied, setDefaultFilterApplied] = useState(false);
   const [recentClientNames, setRecentClientNames] = useState<string[]>([]);
 
   // Lade Recent Clients für Consultation-Tabelle
@@ -63,16 +67,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         }
         
         const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId));
-        
         setSavedFilters(response.data);
 
-        // Wende den Standard-Filter an, wenn vorhanden und noch nicht angewendet
-        if (defaultFilterName && !defaultFilterApplied) {
+        // Nur Default-Filter anwenden wenn es eine uncontrolled component ist (legacy)
+        if (!onFilterChange && defaultFilterName && !activeFilterName) {
           const defaultFilter = response.data.find((filter: SavedFilter) => filter.name === defaultFilterName);
           if (defaultFilter) {
-            setSelectedFilterId(defaultFilter.id);
             onSelectFilter(defaultFilter.conditions, defaultFilter.operators);
-            setDefaultFilterApplied(true);
           }
         }
       } catch (err) {
@@ -84,19 +85,42 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     };
     
     fetchSavedFilters();
-  }, [tableId, defaultFilterName, onSelectFilter, defaultFilterApplied]);
+  }, [tableId]);
+
+  // Refresh Filter-Liste (für external updates)
+  const refreshFilters = async () => {
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId));
+      setSavedFilters(response.data);
+    } catch (error) {
+      console.error('Fehler beim Neuladen der Filter:', error);
+    }
+  };
+
+  // Expose refresh function für Parent-Komponenten
+  useEffect(() => {
+    // Erstelle eine globale Referenz für externe Updates
+    (window as any).refreshSavedFilters = refreshFilters;
+    return () => {
+      delete (window as any).refreshSavedFilters;
+    };
+  }, []);
   
   // Wähle einen gespeicherten Filter aus
   const handleSelectFilter = (filter: SavedFilter) => {
-    setSelectedFilterId(filter.id);
-    onSelectFilter(filter.conditions, filter.operators);
+    if (onFilterChange) {
+      // Controlled component
+      onFilterChange(filter.name, filter.id, filter.conditions, filter.operators);
+    } else {
+      // Backward compatibility - uncontrolled component
+      onSelectFilter(filter.conditions, filter.operators);
+    }
   };
   
   // Lösche einen gespeicherten Filter
   const handleDeleteFilter = async (e: React.MouseEvent, filterId: number) => {
-    e.stopPropagation(); // Verhindere, dass der Filter ausgewählt wird
+    e.stopPropagation();
     
-    // Prüfe, ob der zu löschende Filter einer der Standard-Filter ist
     const filterToDelete = savedFilters.find(filter => filter.id === filterId);
     if (filterToDelete && isStandardFilter(filterToDelete.name)) {
       toast.error('Standard-Filter können nicht gelöscht werden');
@@ -113,13 +137,17 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       
       await axiosInstance.delete(API_ENDPOINTS.SAVED_FILTERS.BY_ID(filterId));
       
-      // Entferne den gelöschten Filter aus dem State
       setSavedFilters(savedFilters.filter(filter => filter.id !== filterId));
       
-      // Wenn der aktuell ausgewählte Filter gelöscht wurde, setze die Auswahl zurück
-      if (selectedFilterId === filterId) {
-        setSelectedFilterId(null);
-        onReset();
+      // Wenn der aktuell ausgewählte Filter gelöscht wurde
+      if (selectedFilterId === filterId || (!onFilterChange && filterId)) {
+        if (onFilterChange) {
+          // Controlled: Parent entscheidet was passiert
+          onFilterChange('', null, [], []);
+        } else {
+          // Uncontrolled: Reset
+          onReset();
+        }
       }
       
       toast.success('Filter erfolgreich gelöscht');
@@ -131,21 +159,16 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Prüfen, ob ein Filter ein Standard-Filter ist
   const isStandardFilter = (filterName: string) => {
-    // Basis Standard-Filter
     const baseStandardFilters = ['Archiv', 'Aktuell', 'Aktive', 'Alle', 'Heute', 'Diese Woche'];
     
-    // Wenn es einer der Basis-Filter ist
     if (baseStandardFilters.includes(filterName)) {
       return true;
     }
     
-    // Für Consultation-Tabelle: Recent Client-Namen sind auch Standard-Filter (nicht löschbar)
     if (tableId === 'consultations-table') {
-      // Hauptfilter sind nicht löschbar
       if (filterName === 'Archiv' || filterName === 'Heute' || filterName === 'Diese Woche') {
         return true;
       }
-      // Recent Client-Filter sind ebenfalls nicht löschbar
       if (recentClientNames.includes(filterName)) {
         return true;
       }
@@ -157,42 +180,41 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   // Sortiere Filter nach gewünschter Reihenfolge
   const sortedFilters = useMemo(() => {
     if (tableId !== 'consultations-table') {
-      return savedFilters; // Für andere Tabellen keine spezielle Sortierung
+      return savedFilters;
     }
 
     const heute = savedFilters.find(f => f.name === 'Heute');
     const dieseWoche = savedFilters.find(f => f.name === 'Diese Woche');
     const archiv = savedFilters.find(f => f.name === 'Archiv');
     
-    // Recent Client-Filter (in der Reihenfolge wie sie vom Backend kommen)
     const recentClientFilters = savedFilters.filter(f => recentClientNames.includes(f.name));
     
-    // Benutzerdefinierte Filter (alle anderen, außer den Standard-Filtern)
     const customFilters = savedFilters.filter(f => 
       !['Heute', 'Diese Woche', 'Archiv'].includes(f.name) && 
       !recentClientNames.includes(f.name)
     );
 
-    // Zusammenfügen in gewünschter Reihenfolge
     const orderedFilters: SavedFilter[] = [];
     
-    // 1. Heute
     if (heute) orderedFilters.push(heute);
-    
-    // 2. Diese Woche  
     if (dieseWoche) orderedFilters.push(dieseWoche);
-    
-    // 3. Recent Client-Filter
     orderedFilters.push(...recentClientFilters);
-    
-    // 4. Benutzerdefinierte Filter
     orderedFilters.push(...customFilters);
-    
-    // 5. Archiv (immer als letzter)
     if (archiv) orderedFilters.push(archiv);
     
     return orderedFilters;
   }, [savedFilters, recentClientNames, tableId]);
+
+  // Bestimme welcher Filter aktiv ist
+  const getActiveFilterId = () => {
+    if (onFilterChange) {
+      // Controlled component - verwende selectedFilterId prop
+      return selectedFilterId;
+    } else {
+      // Uncontrolled - fallback auf internen State (legacy)
+      return null; // In legacy mode nicht visuell hervorheben
+    }
+  };
   
   if (loading) {
     return <div className="flex justify-center items-center py-2">Lade Filter...</div>;
@@ -203,7 +225,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   }
   
   if (savedFilters.length === 0) {
-    return null; // Zeige nichts an, wenn keine Filter vorhanden sind
+    return null;
   }
   
   return (
@@ -213,13 +235,12 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           key={filter.id}
           onClick={() => handleSelectFilter(filter)}
           className={`flex items-center px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors ${
-            selectedFilterId === filter.id
+            getActiveFilterId() === filter.id
               ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
               : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
           } ${isStandardFilter(filter.name) ? 'font-bold' : ''}`}
         >
           <span>{filter.name}</span>
-          {/* Zeige den Lösch-Button nur für Filter an, die keine Standard-Filter sind */}
           {!isStandardFilter(filter.name) && (
             <button
               onClick={(e) => handleDeleteFilter(e, filter.id)}

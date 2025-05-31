@@ -6,7 +6,8 @@ import {
   getConsultations,
   linkTaskToConsultation,
   createTaskForConsultation,
-  updateConsultationNotes
+  updateConsultationNotes,
+  deleteConsultation
 } from '../controllers/consultationController';
 
 const router = express.Router();
@@ -21,5 +22,6 @@ router.get('/', getConsultations);
 router.post('/:id/link-task', linkTaskToConsultation);
 router.post('/:id/create-task', createTaskForConsultation);
 router.patch('/:id/notes', updateConsultationNotes);
+router.delete('/:id', deleteConsultation);
 
 export default router; 

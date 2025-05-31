@@ -245,4 +245,86 @@ export const createLocalDate = (dateString: string): Date => {
   const date = new Date(dateString);
   // Korrigiere den Zeitzonenversatz
   return new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+};
+
+/* CLAUDE-ANCHOR: TIMEZONE-CONVERSION-001 - Zentrale Timezone-sichere Konvertierung für datetime-local Inputs */
+/**
+ * KRITISCH: Konvertiert datetime-local Input-Werte korrekt für die API.
+ * 
+ * PROBLEM: datetime-local gibt lokale Zeit zurück (z.B. "2024-01-15T14:01")
+ * Wenn wir einfach ":00.000" anhängen, wird es als UTC interpretiert → 5h Unterschied!
+ * 
+ * LÖSUNG: Explizit als lokale Zeit interpretieren und korrekt formatieren.
+ * 
+ * @param datetimeLocalValue Wert aus datetime-local Input (Format: "YYYY-MM-DDTHH:mm")
+ * @returns ISO-String der als lokale Zeit interpretiert wird (ohne 'Z' Suffix)
+ * 
+ * @example
+ * Input: "2024-01-15T14:01" (User gibt 14:01 ein)
+ * Output: "2024-01-15T14:01:00.000" (wird als lokale Zeit gespeichert)
+ * Nicht: "2024-01-15T14:01:00.000Z" (würde als UTC interpretiert)
+ */
+export const convertDatetimeLocalToApi = (datetimeLocalValue: string): string => {
+    if (!datetimeLocalValue) {
+        throw new Error('Datetime-local Wert ist erforderlich');
+    }
+    
+    try {
+        // datetime-local Format: "YYYY-MM-DDTHH:mm"
+        // Wir fügen nur Sekunden und Millisekunden hinzu, KEIN 'Z' Suffix
+        const apiFormat = `${datetimeLocalValue}:00.000`;
+        
+        // Zusätzliche Validierung: Prüfe ob das Format gültig ist
+        if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}$/.test(apiFormat)) {
+            throw new Error(`Ungültiges Datumsformat: ${apiFormat}`);
+        }
+        
+        return apiFormat;
+    } catch (error) {
+        console.error('Fehler bei der Datetime-Local Konvertierung:', error);
+        throw new Error(`Konvertierung von datetime-local fehlgeschlagen: ${datetimeLocalValue}`);
+    }
+};
+
+/**
+ * KRITISCH: Konvertiert API-Zeitstempel zurück zu datetime-local Format.
+ * 
+ * Wird verwendet beim Bearbeiten von Zeiten - konvertiert DB-Zeit zurück zu Input-Format.
+ * Behandelt sowohl UTC-Timestamps (mit 'Z') als auch lokale Timestamps (ohne 'Z').
+ * 
+ * @param apiTimestamp Zeitstempel aus der API (ISO-String)
+ * @returns Formatiert für datetime-local Input (Format: "YYYY-MM-DDTHH:mm")
+ * 
+ * @example
+ * Input: "2024-01-15T14:01:00.000Z" (UTC aus DB)
+ * Output: "2024-01-15T14:01" (für datetime-local Input)
+ */
+export const convertApiToDatetimeLocal = (apiTimestamp: string): string => {
+    if (!apiTimestamp) {
+        throw new Error('API-Timestamp ist erforderlich');
+    }
+    
+    try {
+        // Entferne das 'Z' am Ende des Strings, damit JS den Zeitstempel nicht als UTC interpretiert
+        // Dies ist wichtig für konsistente Zeitbehandlung
+        const localISOString = apiTimestamp.endsWith('Z')
+            ? apiTimestamp.substring(0, apiTimestamp.length - 1)
+            : apiTimestamp;
+        
+        const date = new Date(localISOString);
+        
+        // Validierung: Prüfe ob das Datum gültig ist
+        if (isNaN(date.getTime())) {
+            throw new Error(`Ungültiger Zeitstempel: ${apiTimestamp}`);
+        }
+        
+        // Formatiere für datetime-local Input: "YYYY-MM-DDTHH:mm"
+        const formattedDate = format(date, 'yyyy-MM-dd');
+        const formattedTime = format(date, 'HH:mm');
+        
+        return `${formattedDate}T${formattedTime}`;
+    } catch (error) {
+        console.error('Fehler bei der API-zu-Datetime-Local Konvertierung:', error);
+        throw new Error(`Konvertierung von API-Timestamp fehlgeschlagen: ${apiTimestamp}`);
+    }
 }; 

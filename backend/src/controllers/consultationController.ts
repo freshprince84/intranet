@@ -278,4 +278,53 @@ export const updateConsultationNotes = async (req: Request, res: Response) => {
     console.error('Fehler beim Aktualisieren der Notizen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
+};
+
+// Beratung löschen
+export const deleteConsultation = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Nicht authentifiziert' });
+    }
+
+    // Prüfe ob die Beratung dem User gehört
+    const consultation = await prisma.workTime.findFirst({
+      where: {
+        id: Number(id),
+        userId: Number(userId),
+        clientId: { not: null } // Nur Beratungen, nicht normale Arbeitszeiten
+      }
+    });
+
+    if (!consultation) {
+      return res.status(404).json({ message: 'Beratung nicht gefunden oder keine Berechtigung' });
+    }
+
+    // Prüfe ob die Beratung noch aktiv ist (ohne Endzeit)
+    if (!consultation.endTime) {
+      return res.status(400).json({ message: 'Aktive Beratungen können nicht gelöscht werden. Bitte beenden Sie die Beratung zuerst.' });
+    }
+
+    // Lösche zuerst alle Task-Verknüpfungen
+    await prisma.workTimeTask.deleteMany({
+      where: {
+        workTimeId: Number(id)
+      }
+    });
+
+    // Lösche die Beratung
+    await prisma.workTime.delete({
+      where: {
+        id: Number(id)
+      }
+    });
+
+    res.json({ message: 'Beratung erfolgreich gelöscht' });
+  } catch (error) {
+    console.error('Fehler beim Löschen der Beratung:', error);
+    res.status(500).json({ message: 'Interner Serverfehler' });
+  }
 }; 

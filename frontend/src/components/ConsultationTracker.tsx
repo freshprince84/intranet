@@ -9,16 +9,20 @@ import { toast } from 'react-toastify';
 import ClientSelectModal from './ClientSelectModal.tsx';
 import CreateClientModal from './CreateClientModal.tsx';
 import { Client, Consultation } from '../types/client.ts';
+import * as consultationApi from '../api/consultationApi.ts';
+import * as clientApi from '../api/clientApi.ts';
 
 interface ConsultationTrackerProps {
-  onConsultationChange?: () => void;
+  onConsultationChange: () => void;
+  onConsultationStarted?: (clientName: string) => void;
 }
 
-const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultationChange }) => {
+const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultationChange, onConsultationStarted }) => {
   const { user } = useAuth();
   const { selectedBranch } = useBranch();
   const [activeConsultation, setActiveConsultation] = useState<Consultation | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isStarting, setIsStarting] = useState(false);
   const [isClientSelectModalOpen, setIsClientSelectModalOpen] = useState(false);
   const [isCreateClientModalOpen, setIsCreateClientModalOpen] = useState(false);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
@@ -51,68 +55,54 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
 
   const loadRecentClients = async () => {
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.CLIENTS.RECENT);
-      setRecentClients(response.data || []);
+      const clients = await clientApi.getRecentClients();
+      setRecentClients(clients || []);
     } catch (error) {
       // Stille Behandlung - normale Situation wenn noch keine Clients beraten wurden
     }
   };
 
-  const startConsultation = async (client: Client) => {
+  const handleStartConsultation = async (clientId: number, notes?: string) => {
     if (!selectedBranch) {
-      toast.error('Bitte wählen Sie eine Niederlassung in der Kopfzeile aus');
+      toast.error('Bitte wählen Sie eine Niederlassung aus');
       return;
     }
 
     try {
-      const data: any = {
+      setIsStarting(true);
+      
+      // Zeitzone-korrigierte aktuelle Zeit (gleiche Logik wie bei stopConsultation)
+      const correctedStartTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+      
+      const consultation = await consultationApi.startConsultation({
         branchId: selectedBranch,
-        clientId: client.id,
-        notes: notes || null
-      };
+        clientId,
+        notes: notes || '',
+        startTime: correctedStartTime.toISOString()
+      });
 
-      console.log('Starte Beratung mit Daten:', data); // Debug-Log
-
-      if (isManualEntry) {
-        if (!manualStartTime || !manualEndTime) {
-          toast.error('Bitte geben Sie Start- und Endzeit an');
-          return;
-        }
-        data.startTime = `${manualStartTime}:00.000`;
-        
-        // Erstelle die Beratung
-        await axiosInstance.post(API_ENDPOINTS.CONSULTATIONS.START, data);
-        
-        // Beende sie sofort mit der Endzeit
-        await axiosInstance.post(API_ENDPOINTS.CONSULTATIONS.STOP, {
-          endTime: `${manualEndTime}:00.000`,
-          notes: notes || null
-        });
-        
-        toast.success('Beratung erfolgreich erfasst');
-        setIsManualEntry(false);
-        setManualStartTime('');
-        setManualEndTime('');
-        setNotes('');
-        setSelectedClient(null);
-        // Recent Clients nach manueller Erfassung aktualisieren
-        loadRecentClients();
-        // Beratungsliste aktualisieren
-        onConsultationChange?.();
-      } else {
-        data.startTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
-        
-        const response = await axiosInstance.post(API_ENDPOINTS.CONSULTATIONS.START, data);
-        setActiveConsultation(response.data);
-        toast.success('Beratung gestartet');
-        // Beratungsliste aktualisieren
-        onConsultationChange?.();
+      setActiveConsultation(consultation);
+      setNotes(notes || '');
+      setSelectedClient(null);
+      setIsClientSelectModalOpen(false);
+      
+      // Lade Recent Clients neu
+      loadRecentClients();
+      
+      // Callback für Parent-Komponente
+      onConsultationChange();
+      
+      // Callback für Filter-Wechsel (wenn Client-Name verfügbar)
+      if (onConsultationStarted && consultation.client?.name) {
+        onConsultationStarted(consultation.client.name);
       }
       
-      loadRecentClients();
-    } catch (error: any) {
+      toast.success('Beratung gestartet');
+    } catch (error) {
       console.error('Fehler beim Starten der Beratung:', error);
-      toast.error(error.response?.data?.message || 'Fehler beim Starten der Beratung');
+      toast.error('Fehler beim Starten der Beratung');
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -120,9 +110,9 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
     try {
       const correctedEndTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
       
-      await axiosInstance.post(API_ENDPOINTS.CONSULTATIONS.STOP, {
-        endTime: correctedEndTime,
-        notes: notes || null
+      await consultationApi.stopConsultation({
+        endTime: correctedEndTime.toISOString(),
+        notes: notes || undefined
       });
       setActiveConsultation(null);
       setNotes('');
@@ -130,7 +120,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       // Recent Clients nach dem Stoppen aktualisieren
       loadRecentClients();
       // Beratungsliste aktualisieren
-      onConsultationChange?.();
+      onConsultationChange();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Fehler beim Beenden der Beratung');
     }
@@ -140,7 +130,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
     setSelectedClient(client);
     setIsClientSelectModalOpen(false);
     if (!isManualEntry) {
-      startConsultation(client);
+      handleStartConsultation(client.id, notes);
     }
   };
 
@@ -153,26 +143,98 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
     setIsCreateClientModalOpen(false);
     setSelectedClient(client);
     if (!isManualEntry) {
-      startConsultation(client);
+      handleStartConsultation(client.id, notes);
     }
   };
 
-  const handleManualSave = () => {
+  /* CLAUDE-ANCHOR: CONSULTATION-MANUAL-SAVE-001 - Timezone-sichere manuelle Beratungserfassung */
+  const handleManualSave = async () => {
     if (!selectedClient) {
       toast.error('Bitte wählen Sie einen Client aus');
       return;
     }
-    startConsultation(selectedClient);
+    if (!manualStartTime || !manualEndTime) {
+      toast.error('Bitte geben Sie Start- und Endzeit an');
+      return;
+    }
+    if (!selectedBranch) {
+      toast.error('Bitte wählen Sie eine Niederlassung aus');
+      return;
+    }
+
+    try {
+      setIsStarting(true);
+      
+      /* KRITISCHE TIMEZONE-BEHANDLUNG:
+       * Problem: Inkonsistenz zwischen normaler und manueller Beratung!
+       * 
+       * NORMAL WORKING (✅):
+       * const correctedTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+       * 
+       * MANUAL BROKEN (❌):
+       * convertDatetimeLocalToApi() führt zu 5h Versatz
+       * 
+       * LÖSUNG: Gleiche getTimezoneOffset-Logik für beide verwenden!
+       * 
+       * datetime-local Input: "2024-01-15T14:01"
+       * → new Date("2024-01-15T14:01") erstellt lokales Date-Objekt
+       * → getTimezoneOffset() korrigiert zur gleichen Zeit wie bei normaler Beratung
+       * → KONSISTENTE Zeitbehandlung!
+       */
+      
+      // ✅ KORRIGIERT: Verwende gleiche Logik wie bei normalem Start/Stop
+      const manualStart = new Date(manualStartTime);
+      const correctedStartTime = new Date(manualStart.getTime() - manualStart.getTimezoneOffset() * 60000);
+      
+      const manualEnd = new Date(manualEndTime);
+      const correctedEndTime = new Date(manualEnd.getTime() - manualEnd.getTimezoneOffset() * 60000);
+      
+      // Starte die Beratung mit der korrigierten Startzeit
+      const consultation = await consultationApi.startConsultation({
+        branchId: selectedBranch,
+        clientId: selectedClient.id,
+        notes: notes || '',
+        startTime: correctedStartTime.toISOString()  // ✅ Konsistent mit normaler Beratung
+      });
+      
+      // Beende sie sofort mit der korrigierten Endzeit
+      await consultationApi.stopConsultation({
+        endTime: correctedEndTime.toISOString(),      // ✅ Konsistent mit normaler Beratung
+        notes: notes || ''
+      });
+      
+      // Reset der Eingaben
+      setIsManualEntry(false);
+      setManualStartTime('');
+      setManualEndTime('');
+      setNotes('');
+      setSelectedClient(null);
+      
+      // Lade Recent Clients neu
+      loadRecentClients();
+      
+      // Callback für Parent-Komponente
+      onConsultationChange();
+      
+      // Callback für Filter-Wechsel
+      if (onConsultationStarted && selectedClient.name) {
+        onConsultationStarted(selectedClient.name);
+      }
+      
+      toast.success('Beratung erfolgreich erfasst');
+    } catch (error) {
+      console.error('Fehler beim Erfassen der Beratung:', error);
+      toast.error('Fehler beim Erfassen der Beratung');
+    } finally {
+      setIsStarting(false);
+    }
   };
 
   const updateNotes = async () => {
     if (!activeConsultation) return;
     
     try {
-      await axiosInstance.patch(
-        API_ENDPOINTS.CONSULTATIONS.UPDATE_NOTES(activeConsultation.id),
-        { notes }
-      );
+      await consultationApi.updateConsultationNotes(activeConsultation.id, { notes });
     } catch (error) {
       // Stille Behandlung - Auto-Save sollte nicht störend sein
     }
@@ -292,7 +354,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                   {recentClients.map((client) => (
                     <button
                       key={client.id}
-                      onClick={() => startConsultation(client)}
+                      onClick={() => handleStartConsultation(client.id, notes)}
                       className="inline-flex items-center px-3 py-2 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
                     >
                       {client.name}

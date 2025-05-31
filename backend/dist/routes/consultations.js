@@ -16,5 +16,6 @@ router.get('/', consultationController_1.getConsultations);
 router.post('/:id/link-task', consultationController_1.linkTaskToConsultation);
 router.post('/:id/create-task', consultationController_1.createTaskForConsultation);
 router.patch('/:id/notes', consultationController_1.updateConsultationNotes);
+router.delete('/:id', consultationController_1.deleteConsultation);
 exports.default = router;
 //# sourceMappingURL=consultations.js.map

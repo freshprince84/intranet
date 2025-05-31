@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateConsultationNotes = exports.createTaskForConsultation = exports.linkTaskToConsultation = exports.getConsultations = exports.stopConsultation = exports.startConsultation = void 0;
+exports.deleteConsultation = exports.updateConsultationNotes = exports.createTaskForConsultation = exports.linkTaskToConsultation = exports.getConsultations = exports.stopConsultation = exports.startConsultation = void 0;
 const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 // Beratung starten (erweiterte Version von worktime/start)
@@ -264,4 +264,47 @@ const updateConsultationNotes = (req, res) => __awaiter(void 0, void 0, void 0, 
     }
 });
 exports.updateConsultationNotes = updateConsultationNotes;
+// Beratung löschen
+const deleteConsultation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const userId = req.userId;
+        if (!userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        // Prüfe ob die Beratung dem User gehört
+        const consultation = yield prisma.workTime.findFirst({
+            where: {
+                id: Number(id),
+                userId: Number(userId),
+                clientId: { not: null } // Nur Beratungen, nicht normale Arbeitszeiten
+            }
+        });
+        if (!consultation) {
+            return res.status(404).json({ message: 'Beratung nicht gefunden oder keine Berechtigung' });
+        }
+        // Prüfe ob die Beratung noch aktiv ist (ohne Endzeit)
+        if (!consultation.endTime) {
+            return res.status(400).json({ message: 'Aktive Beratungen können nicht gelöscht werden. Bitte beenden Sie die Beratung zuerst.' });
+        }
+        // Lösche zuerst alle Task-Verknüpfungen
+        yield prisma.workTimeTask.deleteMany({
+            where: {
+                workTimeId: Number(id)
+            }
+        });
+        // Lösche die Beratung
+        yield prisma.workTime.delete({
+            where: {
+                id: Number(id)
+            }
+        });
+        res.json({ message: 'Beratung erfolgreich gelöscht' });
+    }
+    catch (error) {
+        console.error('Fehler beim Löschen der Beratung:', error);
+        res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+exports.deleteConsultation = deleteConsultation;
 //# sourceMappingURL=consultationController.js.map
