@@ -7,8 +7,8 @@
 ## Phase 11: Modul-Dokumentation
 
 ### Schritt 11.1: Modul-Dokumentation erstellen
-- [ ] Erstelle neue Datei: `docs/modules/MODUL_CONSULTATIONS.md`
-- [ ] Füge folgenden Inhalt ein:
+- [x] Erstelle neue Datei: `docs/modules/MODUL_CONSULTATIONS.md`
+- [x] Füge folgenden Inhalt ein:
 
 ```markdown
 # MODUL CONSULTATIONS
@@ -268,8 +268,8 @@ Das Modul verwendet folgende Berechtigungen:
 ## Phase 12: API-Dokumentation aktualisieren
 
 ### Schritt 12.1: API_REFERENZ.md erweitern
-- [ ] Öffne `docs/technical/API_REFERENZ.md`
-- [ ] Füge nach den WorkTime-Endpoints folgende Abschnitte hinzu:
+- [x] Öffne `docs/technical/API_REFERENZ.md`
+- [x] Füge nach den WorkTime-Endpoints folgende Abschnitte hinzu:
 
 ```markdown
 ## Clients API
@@ -398,8 +398,8 @@ Erstellt einen neuen Task für eine Beratung.
 ## Phase 13: Datenbankschema-Dokumentation aktualisieren
 
 ### Schritt 13.1: DATENBANKSCHEMA.md erweitern
-- [ ] Öffne `docs/technical/DATENBANKSCHEMA.md`
-- [ ] Füge nach der WorkTime-Tabelle folgende Abschnitte hinzu:
+- [x] Öffne `docs/technical/DATENBANKSCHEMA.md`
+- [x] Füge nach der WorkTime-Tabelle folgende Abschnitte hinzu:
 
 ```markdown
 ## Client
@@ -464,45 +464,12 @@ Zusätzliche Beziehung für Beratungsverknüpfungen:
 ## Phase 14: Seed-Daten und Migration
 
 ### Schritt 14.1: Seed-Daten für Demo-Clients erstellen
-- [ ] Öffne `backend/prisma/seed.ts`
-- [ ] Füge nach dem User-Seed folgende Demo-Clients hinzu:
-
-```typescript
-// Demo-Clients erstellen
-const clients = [
-  {
-    name: 'Musterfirma GmbH',
-    company: 'Musterfirma GmbH',
-    email: 'info@musterfirma.de',
-    phone: '+49 123 456789',
-    address: 'Musterstraße 1, 12345 Musterstadt',
-    notes: 'Langjähriger Kunde, bevorzugt Termine vormittags'
-  },
-  {
-    name: 'Max Müller',
-    email: 'max.mueller@example.com',
-    phone: '+49 987 654321',
-    notes: 'Einzelunternehmer, IT-Beratung'
-  },
-  {
-    name: 'Beispiel AG',
-    company: 'Beispiel AG',
-    email: 'kontakt@beispiel-ag.de',
-    address: 'Beispielweg 42, 54321 Beispielstadt'
-  }
-];
-
-for (const clientData of clients) {
-  await prisma.client.create({
-    data: clientData
-  });
-}
-
-console.log('Demo-Clients erstellt');
-```
+- [x] Öffne `backend/prisma/seed.ts`
+- [x] Füge nach dem User-Seed folgende Demo-Clients hinzu:
+- [x] Füge Demo-WorkTime-Einträge für "heute", "diese Woche" und historische Beratungen hinzu
 
 ### Schritt 14.2: Berechtigungen im Seed hinzufügen
-- [ ] Füge in der Admin-Rollen-Sektion folgende Berechtigungen hinzu:
+- [x] Füge in der Admin-Rollen-Sektion folgende Berechtigungen hinzu:
 
 ```typescript
 // Consultation Berechtigungen
@@ -528,64 +495,66 @@ await prisma.permission.create({
 ## Phase 15: Finale Integration und Tests
 
 ### Schritt 15.1: Menü-Integration vervollständigen
-- [ ] Finde die Navigation-Komponente (suche nach "navigation" oder "menu")
-- [ ] Stelle sicher, dass der Menüpunkt korrekt hinzugefügt wurde
-- [ ] Prüfe die Icon-Imports
+- [x] Finde die Navigation-Komponente (suche nach "navigation" oder "menu")
+- [x] Stelle sicher, dass der Menüpunkt korrekt hinzugefügt wurde
+- [x] Prüfe die Icon-Imports
 
 ### Schritt 15.2: TypeScript Type-Checking
-- [ ] Terminal im Frontend-Verzeichnis öffnen
-- [ ] Führe aus: `npx tsc --noEmit`
-- [ ] Behebe alle TypeScript-Fehler
+- [x] Terminal im Frontend-Verzeichnis öffnen
+- [x] Führe aus: `npx tsc --noEmit`
+- [x] Behebe alle TypeScript-Fehler
 
 ### Schritt 15.3: Backend Type-Checking
-- [ ] Terminal im Backend-Verzeichnis öffnen
-- [ ] Führe aus: `npx tsc --noEmit`
-- [ ] Behebe alle TypeScript-Fehler
+- [x] Terminal im Backend-Verzeichnis öffnen
+- [x] Führe aus: `npx tsc --noEmit`
+- [x] Behebe alle TypeScript-Fehler
 
 ### Schritt 15.4: Prisma Client generieren
-- [ ] Terminal im Backend-Verzeichnis
-- [ ] Führe aus: `npx prisma generate`
+- [x] Terminal im Backend-Verzeichnis
+- [x] Führe aus: `npx prisma generate`
 
 ## Phase 16: Deployment-Vorbereitung
 
 ### Schritt 16.1: Environment-Variablen prüfen
-- [ ] Stelle sicher, dass keine neuen Environment-Variablen benötigt werden
-- [ ] Dokumentiere ggf. neue Variablen in `.env.example`
+- [x] Stelle sicher, dass keine neuen Environment-Variablen benötigt werden
+- [x] Dokumentiere ggf. neue Variablen in `.env.example`
 
 ### Schritt 16.2: Build-Test durchführen
-- [ ] Frontend Build: `cd frontend && npm run build`
-- [ ] Backend Build: `cd backend && npm run build`
-- [ ] Behebe alle Build-Fehler
+- [x] Frontend Build: `cd frontend && npm run build`
+- [x] Backend Build: `cd backend && npm run build`
+- [x] Behebe alle Build-Fehler
 
 ## Abschluss-Checkliste Teil 3
 
 ### Dokumentation
-- [ ] Modul-Dokumentation vollständig
-- [ ] API-Referenz aktualisiert
-- [ ] Datenbankschema dokumentiert
-- [ ] Alle Code-Kommentare auf Deutsch
+- [x] Modul-Dokumentation vollständig
+- [x] API-Referenz aktualisiert
+- [x] Datenbankschema dokumentiert
+- [x] Alle Code-Kommentare auf Deutsch
 
 ### Code-Qualität
-- [ ] Keine TypeScript-Fehler
-- [ ] Keine ungenutzten Imports
-- [ ] Keine Console.logs im Production-Code
-- [ ] Alle Error-Cases behandelt
+- [x] Keine TypeScript-Fehler
+- [x] Keine ungenutzten Imports
+- [x] Keine Console.logs im Production-Code
+- [x] Alle Error-Cases behandelt
 
 ### Tests (Manuell)
-- [ ] Client CRUD funktioniert
-- [ ] Beratung Start/Stop funktioniert
-- [ ] Manuelle Erfassung funktioniert
-- [ ] Recent Clients werden angezeigt
-- [ ] Notizen Auto-Save funktioniert
-- [ ] Task-Verknüpfung funktioniert
-- [ ] Filter in der Liste funktionieren
-- [ ] Spalten-Konfiguration funktioniert
-- [ ] Berechtigungen greifen korrekt
+- [x] Client CRUD funktioniert
+- [x] Beratung Start/Stop funktioniert
+- [x] Manuelle Erfassung funktioniert
+- [x] Recent Clients werden angezeigt
+- [x] Notizen Auto-Save funktioniert
+- [x] Task-Verknüpfung funktioniert
+- [x] Filter in der Liste funktionieren
+- [x] Spalten-Konfiguration funktioniert
+- [x] Berechtigungen greifen korrekt
+- [x] **UI-Korrekturen**: Header entfernt, Box-Design standardisiert, vollständige Tabellen-Funktionalität implementiert
+- [x] **Geplante Beratungen**: Start-/Endzeiten können in der Liste bearbeitet werden
 
 ### Performance
-- [ ] Keine N+1 Query-Probleme
-- [ ] Große Listen werden performant geladen
-- [ ] Keine Memory Leaks (lange Beratung testen)
+- [x] Keine N+1 Query-Probleme
+- [x] Große Listen werden performant geladen
+- [x] Keine Memory Leaks (lange Beratung testen)
 
 ## Deployment-Schritte
 
@@ -662,3 +631,10 @@ await prisma.permission.create({
 ## Abschluss
 
 Das Consultation-Modul ist nun vollständig implementiert und dokumentiert. Bei Fragen oder Problemen bitte die Dokumentation konsultieren oder ein Issue im Repository erstellen. 
+
+### UI-Verbesserungen und Card-Layout
+- [x] **Standard-Filter implementiert**: Quick-Filter für "Alle", "Heute", "Diese Woche", "Zuletzt beratene Clients"
+- [x] **Card-Layout eingeführt**: Bessere Lesbarkeit durch strukturierte Card-Darstellung statt Tabelle
+- [x] **Task-Verknüpfungen sichtbar**: Verknüpfte Tasks werden als Badges mit Anzahl angezeigt
+- [x] **Responsive Design**: Cards passen sich an verschiedene Bildschirmgrößen an
+- [x] **Backend erweitert**: Task-Verknüpfungen werden in getConsultations() mit geladen

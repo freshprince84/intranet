@@ -287,6 +287,78 @@ async function main() {
     }
 
     console.log('Demo-Clients erstellt');
+
+    // Demo-WorkTime-Einträge für Beratungen erstellen
+    console.log('Erstelle Demo-Beratungen...');
+    
+    const heute = new Date();
+    const gestern = new Date(heute);
+    gestern.setDate(heute.getDate() - 1);
+    const dieseWoche = new Date(heute);
+    dieseWoche.setDate(heute.getDate() - 3);
+    const letzteWoche = new Date(heute);
+    letzteWoche.setDate(heute.getDate() - 8);
+    
+    // Hole alle erstellten Clients und Branches
+    const allClients = await prisma.client.findMany();
+    const allBranches = await prisma.branch.findMany();
+    const firstBranch = allBranches[0];
+    
+    // Demo-Beratungen erstellen
+    const demoConsultations = [
+      // Heute
+      {
+        userId: adminUser.id,
+        branchId: firstBranch.id,
+        clientId: allClients[0].id,
+        startTime: new Date(heute.getFullYear(), heute.getMonth(), heute.getDate(), 9, 0),
+        endTime: new Date(heute.getFullYear(), heute.getMonth(), heute.getDate(), 10, 30),
+        notes: 'Erstberatung zu IT-Infrastruktur. Kunde möchte Netzwerk modernisieren.'
+      },
+      {
+        userId: adminUser.id,
+        branchId: firstBranch.id,
+        clientId: allClients[1].id,
+        startTime: new Date(heute.getFullYear(), heute.getMonth(), heute.getDate(), 14, 0),
+        endTime: new Date(heute.getFullYear(), heute.getMonth(), heute.getDate(), 15, 15),
+        notes: 'Follow-up Gespräch zur Projektplanung.'
+      },
+      // Gestern
+      {
+        userId: adminUser.id,
+        branchId: firstBranch.id,
+        clientId: allClients[2].id,
+        startTime: new Date(gestern.getFullYear(), gestern.getMonth(), gestern.getDate(), 11, 0),
+        endTime: new Date(gestern.getFullYear(), gestern.getMonth(), gestern.getDate(), 12, 0),
+        notes: 'Technische Beratung zu Cloud-Migration.'
+      },
+      // Diese Woche
+      {
+        userId: adminUser.id,
+        branchId: firstBranch.id,
+        clientId: allClients[0].id,
+        startTime: new Date(dieseWoche.getFullYear(), dieseWoche.getMonth(), dieseWoche.getDate(), 10, 0),
+        endTime: new Date(dieseWoche.getFullYear(), dieseWoche.getMonth(), dieseWoche.getDate(), 11, 30),
+        notes: 'Präsentation der Lösung und Kostenvoranschlag.'
+      },
+      // Letzte Woche
+      {
+        userId: adminUser.id,
+        branchId: firstBranch.id,
+        clientId: allClients[1].id,
+        startTime: new Date(letzteWoche.getFullYear(), letzteWoche.getMonth(), letzteWoche.getDate(), 15, 0),
+        endTime: new Date(letzteWoche.getFullYear(), letzteWoche.getMonth(), letzteWoche.getDate(), 16, 45),
+        notes: 'Projektbesprechung und Zeitplanung. Nächste Schritte definiert.'
+      }
+    ];
+    
+    for (const consultation of demoConsultations) {
+      await prisma.workTime.create({
+        data: consultation
+      });
+    }
+    
+    console.log('Demo-Beratungen erstellt');
     
     // 7. ERSTELLE CEREBRO MARKDOWN-DATEIEN
     console.log('Erstelle Cerebro Markdown-Dateien...');

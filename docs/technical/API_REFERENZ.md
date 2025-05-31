@@ -10,14 +10,16 @@ Diese Dokumentation bietet eine vollständige Referenz aller API-Endpunkte des I
 4. [Authentifizierung](#authentifizierung)
 5. [Benutzer-API](#benutzer-api)
 6. [Zeiterfassungs-API](#zeiterfassungs-api)
-7. [Task-API](#task-api)
-8. [Request-API](#request-api)
-9. [Benachrichtigungs-API](#benachrichtigungs-api)
-10. [Cerebro-API](#cerebro-api)
-11. [Lohnabrechnung-API](#lohnabrechnung-api)
-12. [Filter-API](#filter-api)
-13. [Fehlerbehandlung](#fehlerbehandlung)
-14. [Dokumentenerkennung und Identifikationsdokumente](#dokumentenerkennung-und-identifikationsdokumente)
+7. [Clients API](#clients-api)
+8. [Consultations API](#consultations-api)
+9. [Task-API](#task-api)
+10. [Request-API](#request-api)
+11. [Benachrichtigungs-API](#benachrichtigungs-api)
+12. [Cerebro-API](#cerebro-api)
+13. [Lohnabrechnung-API](#lohnabrechnung-api)
+14. [Filter-API](#filter-api)
+15. [Fehlerbehandlung](#fehlerbehandlung)
+16. [Dokumentenerkennung und Identifikationsdokumente](#dokumentenerkennung-und-identifikationsdokumente)
 
 ## API-Konfiguration und Integration
 
@@ -753,6 +755,383 @@ Authorization: Bearer {token}
   "success": true,
   "data": {
     "message": "Zeiterfassung erfolgreich gelöscht"
+  }
+}
+```
+
+## Clients API
+
+### Alle Clients abrufen
+
+**Endpunkt**: `GET /api/clients`
+
+**Beschreibung**: Ruft alle Clients ab.
+
+**Response**:
+```json
+[
+  {
+    "id": 1,
+    "name": "Max Mustermann",
+    "company": "Musterfirma GmbH",
+    "email": "max@musterfirma.de",
+    "phone": "+49 123 456789",
+    "address": "Musterstraße 1, 12345 Musterstadt",
+    "notes": "Wichtiger Kunde",
+    "isActive": true,
+    "createdAt": "2024-01-01T10:00:00Z",
+    "updatedAt": "2024-01-01T10:00:00Z"
+  }
+]
+```
+
+### Einzelnen Client abrufen
+
+**Endpunkt**: `GET /api/clients/:id`
+
+**Beschreibung**: Ruft einen einzelnen Client mit seinen letzten 10 Beratungen ab.
+
+**Response**:
+```json
+{
+  "id": 1,
+  "name": "Max Mustermann", 
+  "company": "Musterfirma GmbH",
+  "email": "max@musterfirma.de",
+  "phone": "+49 123 456789",
+  "address": "Musterstraße 1, 12345 Musterstadt",
+  "notes": "Wichtiger Kunde",
+  "isActive": true,
+  "createdAt": "2024-01-01T10:00:00Z",
+  "updatedAt": "2024-01-01T10:00:00Z",
+  "recentConsultations": [
+    {
+      "id": 5,
+      "startTime": "2024-01-15T10:00:00Z",
+      "endTime": "2024-01-15T11:30:00Z",
+      "notes": "Erstberatung erfolgreich"
+    }
+  ]
+}
+```
+
+### Neuen Client erstellen
+
+**Endpunkt**: `POST /api/clients`
+
+**Beschreibung**: Erstellt einen neuen Client.
+
+**Request-Body**:
+```json
+{
+  "name": "Max Mustermann",
+  "company": "Musterfirma GmbH",
+  "email": "max@musterfirma.de",
+  "phone": "+49 123 456789",
+  "address": "Musterstraße 1, 12345 Musterstadt",
+  "notes": "Wichtiger Kunde"
+}
+```
+
+**Response**:
+```json
+{
+  "id": 2,
+  "name": "Max Mustermann",
+  "company": "Musterfirma GmbH",
+  "email": "max@musterfirma.de",
+  "phone": "+49 123 456789",
+  "address": "Musterstraße 1, 12345 Musterstadt",
+  "notes": "Wichtiger Kunde",
+  "isActive": true,
+  "createdAt": "2024-01-01T10:00:00Z",
+  "updatedAt": "2024-01-01T10:00:00Z"
+}
+```
+
+### Client aktualisieren
+
+**Endpunkt**: `PUT /api/clients/:id`
+
+**Beschreibung**: Aktualisiert einen bestehenden Client.
+
+**Request-Body**:
+```json
+{
+  "name": "Max Mustermann Updated",
+  "email": "max.updated@musterfirma.de",
+  "notes": "Sehr wichtiger Kunde"
+}
+```
+
+**Response**:
+```json
+{
+  "id": 1,
+  "name": "Max Mustermann Updated",
+  "company": "Musterfirma GmbH",
+  "email": "max.updated@musterfirma.de",
+  "phone": "+49 123 456789",
+  "address": "Musterstraße 1, 12345 Musterstadt",
+  "notes": "Sehr wichtiger Kunde",
+  "isActive": true,
+  "createdAt": "2024-01-01T10:00:00Z",
+  "updatedAt": "2024-01-01T15:30:00Z"
+}
+```
+
+### Client löschen
+
+**Endpunkt**: `DELETE /api/clients/:id`
+
+**Beschreibung**: Löscht einen Client.
+
+**Response**:
+```json
+{
+  "message": "Client erfolgreich gelöscht"
+}
+```
+
+### Zuletzt beratene Clients
+
+**Endpunkt**: `GET /api/clients/recent`
+
+**Beschreibung**: Ruft die 10 zuletzt beratenen Clients des aktuellen Benutzers ab.
+
+**Response**:
+```json
+[
+  {
+    "id": 1,
+    "name": "Max Mustermann",
+    "company": "Musterfirma GmbH",
+    "lastConsultation": "2024-01-15T11:30:00Z"
+  },
+  {
+    "id": 3,
+    "name": "Anna Beispiel",
+    "company": null,
+    "lastConsultation": "2024-01-14T16:00:00Z"
+  }
+]
+```
+
+## Consultations API
+
+### Alle Beratungen abrufen
+
+**Endpunkt**: `GET /api/consultations`
+
+**Beschreibung**: Ruft alle Beratungen des aktuellen Benutzers ab.
+
+**Query-Parameter**:
+- `clientId` (optional): Filtert nach Client
+- `from` (optional): Start-Datum (ISO 8601)
+- `to` (optional): End-Datum (ISO 8601)
+
+**Response**:
+```json
+[
+  {
+    "id": 5,
+    "startTime": "2024-01-15T10:00:00Z",
+    "endTime": "2024-01-15T11:30:00Z",
+    "notes": "Erstberatung erfolgreich",
+    "userId": 1,
+    "branchId": 1,
+    "clientId": 1,
+    "branch": {
+      "id": 1,
+      "name": "Hauptniederlassung"
+    },
+    "client": {
+      "id": 1,
+      "name": "Max Mustermann",
+      "company": "Musterfirma GmbH"
+    },
+    "taskLinks": [
+      {
+        "id": 1,
+        "taskId": 10,
+        "task": {
+          "id": 10,
+          "title": "Follow-up Beratung"
+        }
+      }
+    ]
+  }
+]
+```
+
+### Beratung starten
+
+**Endpunkt**: `POST /api/consultations/start`
+
+**Beschreibung**: Startet eine neue Beratung.
+
+**Request-Body**:
+```json
+{
+  "branchId": 1,
+  "clientId": 1,
+  "notes": "Erste Notizen",
+  "startTime": "2024-01-15T10:00:00Z"
+}
+```
+
+**Response**:
+```json
+{
+  "id": 6,
+  "startTime": "2024-01-15T10:00:00Z",
+  "endTime": null,
+  "notes": "Erste Notizen",
+  "userId": 1,
+  "branchId": 1,
+  "clientId": 1,
+  "branch": {
+    "id": 1,
+    "name": "Hauptniederlassung"
+  },
+  "client": {
+    "id": 1,
+    "name": "Max Mustermann",
+    "company": "Musterfirma GmbH"
+  }
+}
+```
+
+### Beratung beenden
+
+**Endpunkt**: `POST /api/consultations/stop`
+
+**Beschreibung**: Beendet die aktive Beratung.
+
+**Request-Body**:
+```json
+{
+  "notes": "Finale Notizen",
+  "endTime": "2024-01-15T11:30:00Z"
+}
+```
+
+**Response**:
+```json
+{
+  "id": 6,
+  "startTime": "2024-01-15T10:00:00Z",
+  "endTime": "2024-01-15T11:30:00Z",
+  "notes": "Finale Notizen",
+  "userId": 1,
+  "branchId": 1,
+  "clientId": 1,
+  "branch": {
+    "id": 1,
+    "name": "Hauptniederlassung"
+  },
+  "client": {
+    "id": 1,
+    "name": "Max Mustermann",
+    "company": "Musterfirma GmbH"
+  }
+}
+```
+
+### Notizen einer Beratung aktualisieren
+
+**Endpunkt**: `PATCH /api/consultations/:id/notes`
+
+**Beschreibung**: Aktualisiert die Notizen einer Beratung.
+
+**Request-Body**:
+```json
+{
+  "notes": "Aktualisierte Notizen"
+}
+```
+
+**Response**:
+```json
+{
+  "id": 6,
+  "startTime": "2024-01-15T10:00:00Z",
+  "endTime": "2024-01-15T11:30:00Z",
+  "notes": "Aktualisierte Notizen",
+  "userId": 1,
+  "branchId": 1,
+  "clientId": 1
+}
+```
+
+### Task mit Beratung verknüpfen
+
+**Endpunkt**: `POST /api/consultations/:id/link-task`
+
+**Beschreibung**: Verknüpft einen Task mit einer Beratung.
+
+**Request-Body**:
+```json
+{
+  "taskId": 123
+}
+```
+
+**Response**:
+```json
+{
+  "id": 1,
+  "workTimeId": 6,
+  "taskId": 123,
+  "createdAt": "2024-01-15T12:00:00Z",
+  "task": {
+    "id": 123,
+    "title": "Follow-up Beratung",
+    "status": "open"
+  },
+  "workTime": {
+    "id": 6,
+    "client": {
+      "id": 1,
+      "name": "Max Mustermann"
+    }
+  }
+}
+```
+
+### Neuen Task für Beratung erstellen
+
+**Endpunkt**: `POST /api/consultations/:id/create-task`
+
+**Beschreibung**: Erstellt einen neuen Task für eine Beratung.
+
+**Request-Body**:
+```json
+{
+  "title": "Follow-up Beratung",
+  "description": "Details zum Follow-up",
+  "dueDate": "2024-01-22T10:00:00Z",
+  "branchId": 1,
+  "qualityControlId": 2
+}
+```
+
+**Response**:
+```json
+{
+  "task": {
+    "id": 124,
+    "title": "Follow-up Beratung",
+    "description": "Details zum Follow-up",
+    "dueDate": "2024-01-22T10:00:00Z",
+    "status": "open",
+    "branchId": 1,
+    "qualityControlId": 2
+  },
+  "link": {
+    "id": 2,
+    "workTimeId": 6,
+    "taskId": 124
   }
 }
 ```

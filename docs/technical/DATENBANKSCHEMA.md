@@ -15,6 +15,8 @@ Diese Dokumentation beschreibt das vollständige Datenbankschema des Intranet-Sy
    - [Branch](#branch)
    - [UsersBranches](#usersbranches)
    - [WorkTime](#worktime)
+   - [Client](#client)
+   - [WorkTimeTask](#worktimetask)
    - [Task](#task)
    - [Request](#request)
    - [Settings](#settings)
@@ -44,6 +46,7 @@ Die Datenbank unterstützt alle Funktionen des Intranet-Systems, einschließlich
 - Benutzerverwaltung und Authentifizierung
 - Rollen- und Berechtigungssystem
 - Zeiterfassung
+- Kundenberatungen und Client-Verwaltung
 - Aufgabenverwaltung
 - Anfragen- und Genehmigungsworkflow
 - Benachrichtigungssystem
@@ -188,6 +191,8 @@ model WorkTime {
   startTime DateTime  // Enthält die lokale Systemzeit des Benutzers ohne UTC-Konvertierung 
   endTime   DateTime? // Enthält die lokale Systemzeit des Benutzers ohne UTC-Konvertierung
   timezone  String?   // Speichert die Zeitzone des Benutzers, z.B. "America/Bogota"
+  clientId  Int?      // Client-ID für Beratungen
+  notes     String?   // Notizen zur Beratung
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }
@@ -504,7 +509,7 @@ Die `UsersBranches`-Tabelle verbindet Benutzer mit Niederlassungen (N:M-Beziehun
 
 ### WorkTime
 
-Die `WorkTime`-Tabelle protokolliert die Arbeitszeiterfassung.
+Die `WorkTime`-Tabelle protokolliert die Arbeitszeiterfassung und wurde für Beratungen erweitert.
 
 | Spalte | Typ | Beschreibung | Constraints |
 |--------|-----|--------------|------------|
@@ -514,12 +519,58 @@ Die `WorkTime`-Tabelle protokolliert die Arbeitszeiterfassung.
 | startTime | DateTime | Startzeitpunkt | |
 | endTime | DateTime | Endzeitpunkt | @nullable |
 | timezone | String | Zeitzone des Benutzers | @nullable |
+| clientId | Int | Client-ID für Beratungen | @foreign key @nullable |
+| notes | String | Notizen zur Beratung | @nullable |
 | createdAt | DateTime | Erstellungszeitpunkt | @default(now()) |
 | updatedAt | DateTime | Aktualisierungszeitpunkt | @updatedAt |
 
+#### Beziehungen
+- `user`: Many-to-One zu User
+- `branch`: Many-to-One zu Branch  
+- `client`: Many-to-One zu Client (für Beratungen)
+- `taskLinks`: One-to-Many zu WorkTimeTask
+
+### Client
+
+Die `Client`-Tabelle speichert Informationen über Kunden für Beratungen.
+
+| Spalte | Typ | Beschreibung | Constraints |
+|--------|-----|--------------|-------------|
+| id | Int | Primärschlüssel | PK, Auto-increment |
+| name | String | Name des Clients | NOT NULL |
+| company | String | Firmenname | @nullable |
+| email | String | E-Mail-Adresse | @nullable |
+| phone | String | Telefonnummer | @nullable |
+| address | String | Adresse | @nullable |
+| notes | String | Allgemeine Notizen | Text @nullable |
+| isActive | Boolean | Aktiv-Status | DEFAULT true |
+| createdAt | DateTime | Erstellungszeitpunkt | DEFAULT now() |
+| updatedAt | DateTime | Letztes Update | @updatedAt |
+
+#### Beziehungen
+- `workTimes`: One-to-Many zu WorkTime (alle Beratungen mit diesem Client)
+
+### WorkTimeTask
+
+Verknüpfungstabelle zwischen WorkTime (Beratungen) und Tasks.
+
+| Spalte | Typ | Beschreibung | Constraints |
+|--------|-----|--------------|-------------|
+| id | Int | Primärschlüssel | PK, Auto-increment |
+| workTimeId | Int | Verweis auf WorkTime | FK zu WorkTime |
+| taskId | Int | Verweis auf Task | FK zu Task |
+| createdAt | DateTime | Erstellungszeitpunkt | DEFAULT now() |
+
+#### Constraints
+- Unique Index auf (workTimeId, taskId)
+
+#### Beziehungen
+- `workTime`: Many-to-One zu WorkTime
+- `task`: Many-to-One zu Task
+
 ### Task
 
-Die `Task`-Tabelle verwaltet Aufgaben.
+Die `Task`-Tabelle verwaltet Aufgaben und wurde für Beratungsverknüpfungen erweitert.
 
 | Spalte | Typ | Beschreibung | Constraints |
 |--------|-----|--------------|------------|
@@ -533,6 +584,9 @@ Die `Task`-Tabelle verwaltet Aufgaben.
 | dueDate | DateTime | Fälligkeitsdatum | @nullable |
 | createdAt | DateTime | Erstellungszeitpunkt | @default(now()) |
 | updatedAt | DateTime | Aktualisierungszeitpunkt | @updatedAt |
+
+#### Neue Beziehungen
+- `workTimeLinks`: One-to-Many zu WorkTimeTask (Verknüpfungen mit Beratungen)
 
 ### Request
 

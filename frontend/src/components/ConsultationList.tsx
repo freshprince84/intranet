@@ -1,361 +1,643 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  PencilIcon, 
   ClockIcon, 
   UserIcon,
-  BuildingOfficeIcon,
-  DocumentTextIcon,
-  MagnifyingGlassIcon,
   FunnelIcon,
-  ArrowsUpDownIcon,
   XMarkIcon,
   LinkIcon
 } from '@heroicons/react/24/outline';
-import { format } from 'date-fns';
-import { de } from 'date-fns/locale';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { formatTime, calculateDuration } from '../utils/dateUtils.ts';
-import { Consultation } from '../types/client.ts';
+import { Consultation, Client } from '../types/client.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { toast } from 'react-toastify';
 import LinkTaskModal from './LinkTaskModal.tsx';
+import FilterPane from './FilterPane.tsx';
+import SavedFilterTags from './SavedFilterTags.tsx';
+import { FilterCondition } from './FilterRow.tsx';
 
-interface SortConfig {
-  key: keyof Consultation | 'client.name' | 'duration';
-  direction: 'asc' | 'desc';
-}
+// TableID für gespeicherte Filter
+const CONSULTATIONS_TABLE_ID = 'consultations-table';
 
 const ConsultationList: React.FC = () => {
   const { hasPermission } = usePermissions();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
+  const [recentClients, setRecentClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [sortConfig, setSortConfig] = useState<SortConfig>({ 
-    key: 'startTime', 
-    direction: 'desc' 
-  });
-  
-  // Editing States
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const [editNotes, setEditNotes] = useState('');
-  const [savingId, setSavingId] = useState<number | null>(null);
-
-  // Task Linking States
-  const [isLinkTaskModalOpen, setIsLinkTaskModalOpen] = useState(false);
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
+  const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+  const [editingNotesId, setEditingNotesId] = useState<number | null>(null);
+  const [editingNotes, setEditingNotes] = useState('');
+  const [editingTimeId, setEditingTimeId] = useState<number | null>(null);
+  const [editingTimeType, setEditingTimeType] = useState<'startTime' | 'endTime' | null>(null);
+  const [editingTimeValue, setEditingTimeValue] = useState('');
+  const [linkTaskModalOpen, setLinkTaskModalOpen] = useState(false);
   const [selectedConsultationId, setSelectedConsultationId] = useState<number | null>(null);
-
-  useEffect(() => {
-    loadConsultations();
-  }, []);
 
   const loadConsultations = async () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get(API_ENDPOINTS.CONSULTATIONS.BASE);
-      setConsultations(response.data);
+      setConsultations(response.data || []);
       setError(null);
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Fehler beim Laden der Beratungen:', error);
       setError('Fehler beim Laden der Beratungen');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSort = (key: SortConfig['key']) => {
-    setSortConfig(current => ({
-      key,
-      direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
-    }));
-  };
-
-  const handleEditNotes = (consultation: Consultation) => {
-    setEditingId(consultation.id);
-    setEditNotes(consultation.notes || '');
-  };
-
-  const handleSaveNotes = async (consultationId: number) => {
+  const loadRecentClients = async () => {
     try {
-      setSavingId(consultationId);
-      await axiosInstance.patch(
-        API_ENDPOINTS.CONSULTATIONS.UPDATE_NOTES(consultationId),
-        { notes: editNotes }
-      );
-      
-      // Aktualisiere die lokale Liste
-      setConsultations(prev => 
-        prev.map(c => c.id === consultationId ? { ...c, notes: editNotes } : c)
-      );
-      
-      setEditingId(null);
-      toast.success('Notizen gespeichert');
-    } catch (error: any) {
-      toast.error('Fehler beim Speichern der Notizen');
-    } finally {
-      setSavingId(null);
+      const response = await axiosInstance.get(API_ENDPOINTS.CLIENTS.RECENT);
+      setRecentClients(response.data || []);
+    } catch (error) {
+      // Stille Behandlung - normale Situation wenn noch keine Clients beraten wurden
     }
   };
 
-  const handleCancelEdit = () => {
-    setEditingId(null);
-    setEditNotes('');
+  useEffect(() => {
+    loadConsultations();
+    loadRecentClients();
+  }, []);
+
+  useEffect(() => {
+    const createStandardFilters = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        // Prüfe, ob Standard-Filter bereits existieren
+        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(CONSULTATIONS_TABLE_ID));
+        const existingFilters = response.data;
+
+        const alleFilterExists = existingFilters.some((filter: any) => filter.name === 'Alle');
+        const heuteFilterExists = existingFilters.some((filter: any) => filter.name === 'Heute');
+        const dieseWocheFilterExists = existingFilters.some((filter: any) => filter.name === 'Diese Woche');
+        const zuletztBeratenFilterExists = existingFilters.some((filter: any) => filter.name === 'Zuletzt beraten');
+
+        // Erstelle "Alle"-Filter (zeigt alle Beratungen ohne Einschränkung)
+        if (!alleFilterExists) {
+          const alleFilter = {
+            tableId: CONSULTATIONS_TABLE_ID,
+            name: 'Alle',
+            conditions: [],
+            operators: []
+          };
+          await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, alleFilter);
+        }
+
+        // Erstelle "Heute"-Filter
+        if (!heuteFilterExists) {
+          const today = new Date().toISOString().split('T')[0];
+          const heuteFilter = {
+            tableId: CONSULTATIONS_TABLE_ID,
+            name: 'Heute',
+            conditions: [
+              { column: 'startTime', operator: 'after', value: today }
+            ],
+            operators: []
+          };
+          await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, heuteFilter);
+        }
+
+        // Erstelle "Diese Woche"-Filter
+        if (!dieseWocheFilterExists) {
+          const today = new Date();
+          const startOfWeek = new Date(today);
+          startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Montag
+          const dieseWocheFilter = {
+            tableId: CONSULTATIONS_TABLE_ID,
+            name: 'Diese Woche',
+            conditions: [
+              { column: 'startTime', operator: 'after', value: startOfWeek.toISOString().split('T')[0] }
+            ],
+            operators: []
+          };
+          await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, dieseWocheFilter);
+        }
+
+        // Erstelle "Zuletzt beraten"-Filter (basiert auf Recent Clients)
+        if (!zuletztBeratenFilterExists && recentClients.length > 0) {
+          const clientConditions = recentClients.map(client => ({
+            column: 'client',
+            operator: 'equals' as const,
+            value: client.name
+          }));
+          const operators = new Array(clientConditions.length - 1).fill('OR') as ('AND' | 'OR')[];
+          
+          const zuletztBeratenFilter = {
+            tableId: CONSULTATIONS_TABLE_ID,
+            name: 'Zuletzt beraten',
+            conditions: clientConditions,
+            operators: operators
+          };
+          await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, zuletztBeratenFilter);
+        }
+      } catch (error) {
+        console.error('Fehler beim Erstellen der Standard-Filter:', error);
+      }
+    };
+
+    createStandardFilters();
+  }, [recentClients]);
+
+  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    setFilterConditions(conditions);
+    setFilterLogicalOperators(operators);
   };
 
-  const handleOpenLinkTaskModal = (consultationId: number) => {
+  const resetFilterConditions = () => {
+    setFilterConditions([]);
+    setFilterLogicalOperators([]);
+  };
+
+  const getActiveFilterCount = () => {
+    return filterConditions.length;
+  };
+
+  const updateNotes = async (consultationId: number, notes: string) => {
+    try {
+      await axiosInstance.patch(API_ENDPOINTS.CONSULTATIONS.UPDATE_NOTES(consultationId), { notes });
+      setConsultations(prev => 
+        prev.map(consultation => 
+          consultation.id === consultationId 
+            ? { ...consultation, notes }
+            : consultation
+        )
+      );
+      toast.success('Notizen aktualisiert');
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren der Notizen:', error);
+      toast.error('Fehler beim Aktualisieren der Notizen');
+    }
+  };
+
+  const handleNotesEdit = (consultation: Consultation) => {
+    setEditingNotesId(consultation.id);
+    setEditingNotes(consultation.notes || '');
+  };
+
+  const handleNotesSave = (consultationId: number) => {
+    updateNotes(consultationId, editingNotes);
+    setEditingNotesId(null);
+  };
+
+  const handleNotesCancel = () => {
+    setEditingNotesId(null);
+    setEditingNotes('');
+  };
+
+  const handleTimeEdit = (consultation: Consultation, timeType: 'startTime' | 'endTime') => {
+    setEditingTimeId(consultation.id);
+    setEditingTimeType(timeType);
+    const currentTime = timeType === 'startTime' ? consultation.startTime : consultation.endTime;
+    if (currentTime) {
+      const date = new Date(currentTime);
+      const localDateTime = date.toISOString().slice(0, 16);
+      setEditingTimeValue(localDateTime);
+    }
+  };
+
+  const handleTimeSave = async (consultationId: number) => {
+    if (!editingTimeType || !editingTimeValue) return;
+    
+    try {
+      const isoTime = new Date(editingTimeValue).toISOString();
+      await axiosInstance.patch(`${API_ENDPOINTS.WORKTIME.BASE}/${consultationId}`, {
+        [editingTimeType]: isoTime
+      });
+      
+      setConsultations(prev => 
+        prev.map(consultation => 
+          consultation.id === consultationId 
+            ? { ...consultation, [editingTimeType]: isoTime }
+            : consultation
+        )
+      );
+      
+      toast.success('Zeit aktualisiert');
+      setEditingTimeId(null);
+      setEditingTimeType(null);
+      setEditingTimeValue('');
+    } catch (error) {
+      console.error('Fehler beim Aktualisieren der Zeit:', error);
+      toast.error('Fehler beim Aktualisieren der Zeit');
+    }
+  };
+
+  const handleTimeCancel = () => {
+    setEditingTimeId(null);
+    setEditingTimeType(null);
+    setEditingTimeValue('');
+  };
+
+  const handleLinkTask = (consultationId: number) => {
     setSelectedConsultationId(consultationId);
-    setIsLinkTaskModalOpen(true);
+    setLinkTaskModalOpen(true);
   };
 
   const handleTaskLinked = () => {
-    loadConsultations(); // Lade die Liste neu um verknüpfte Tasks zu zeigen
+    loadConsultations();
+    setLinkTaskModalOpen(false);
+    setSelectedConsultationId(null);
   };
 
-  // Gefilterte und sortierte Beratungen
-  const filteredAndSortedConsultations = useMemo(() => {
+  const applyFiltersAndSearch = (consultations: Consultation[]) => {
     let filtered = consultations;
 
-    // Globale Suche
+    // Suchterm-Filter
     if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase();
+      const search = searchTerm.toLowerCase();
       filtered = filtered.filter(consultation => 
-        consultation.client?.name.toLowerCase().includes(searchLower) ||
-        consultation.branch.name.toLowerCase().includes(searchLower) ||
-        (consultation.notes && consultation.notes.toLowerCase().includes(searchLower))
+        consultation.client?.name?.toLowerCase().includes(search) ||
+        consultation.notes?.toLowerCase().includes(search) ||
+        consultation.branch?.name?.toLowerCase().includes(search)
       );
     }
 
-    // Sortierung
-    const sorted = [...filtered].sort((a, b) => {
-      let aValue: any;
-      let bValue: any;
+    // Erweiterte Filter
+    if (filterConditions.length > 0) {
+      filtered = filtered.filter((consultation) => {
+        let result = true;
+        
+        for (let i = 0; i < filterConditions.length; i++) {
+          const condition = filterConditions[i];
+          let conditionResult = false;
+          
+          switch (condition.column) {
+            case 'client':
+              conditionResult = consultation.client?.name?.toLowerCase().includes(String(condition.value).toLowerCase()) || false;
+              break;
+            case 'branch':
+              conditionResult = consultation.branch?.name?.toLowerCase().includes(String(condition.value).toLowerCase()) || false;
+              break;
+            case 'notes':
+              conditionResult = consultation.notes?.toLowerCase().includes(String(condition.value).toLowerCase()) || false;
+              break;
+            case 'startTime':
+              const consultationDate = new Date(consultation.startTime).toISOString().split('T')[0];
+              const filterDate = String(condition.value);
+              switch (condition.operator) {
+                case 'after':
+                  conditionResult = consultationDate >= filterDate;
+                  break;
+                case 'before':
+                  conditionResult = consultationDate <= filterDate;
+                  break;
+                case 'equals':
+                  conditionResult = consultationDate === filterDate;
+                  break;
+                default:
+                  conditionResult = false;
+              }
+              break;
+            case 'duration':
+              const duration = calculateDurationInMinutes(consultation.startTime, consultation.endTime);
+              const filterValue = Number(condition.value) * 60; // Convert hours to minutes
+              switch (condition.operator) {
+                case 'greater_than':
+                  conditionResult = duration > filterValue;
+                  break;
+                case 'less_than':
+                  conditionResult = duration < filterValue;
+                  break;
+                case 'equals':
+                  conditionResult = Math.abs(duration - filterValue) < 30; // 30-minute tolerance
+                  break;
+                default:
+                  conditionResult = false;
+              }
+              break;
+            default:
+              conditionResult = false;
+          }
+          
+          if (i === 0) {
+            result = conditionResult;
+          } else {
+            const operator = filterLogicalOperators[i - 1];
+            if (operator === 'AND') {
+              result = result && conditionResult;
+            } else {
+              result = result || conditionResult;
+            }
+          }
+        }
+        
+        return result;
+      });
+    }
 
-      switch (sortConfig.key) {
-        case 'startTime':
-          aValue = new Date(a.startTime).getTime();
-          bValue = new Date(b.startTime).getTime();
-          break;
-        case 'endTime':
-          aValue = a.endTime ? new Date(a.endTime).getTime() : 0;
-          bValue = b.endTime ? new Date(b.endTime).getTime() : 0;
-          break;
-        case 'client.name':
-          aValue = a.client?.name || '';
-          bValue = b.client?.name || '';
-          break;
-        case 'duration':
-          aValue = a.endTime ? new Date(a.endTime).getTime() - new Date(a.startTime).getTime() : 0;
-          bValue = b.endTime ? new Date(b.endTime).getTime() - new Date(b.startTime).getTime() : 0;
-          break;
-        default:
-          return 0;
-      }
+    return filtered;
+  };
 
-      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-      return 0;
+  const calculateDurationInMinutes = (startTime: string, endTime: string | null): number => {
+    if (!endTime) return 0;
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+    return (end.getTime() - start.getTime()) / (1000 * 60);
+  };
+
+  const filteredConsultations = useMemo(() => {
+    return applyFiltersAndSearch(consultations).sort((a, b) => {
+      return new Date(b.startTime).getTime() - new Date(a.startTime).getTime();
     });
+  }, [consultations, filterConditions, filterLogicalOperators]);
 
-    return sorted;
-  }, [consultations, searchTerm, sortConfig]);
-
-  const renderSortableHeader = (label: string, sortKey?: SortConfig['key']) => (
-    <th
-      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${
-        sortKey ? 'cursor-pointer select-none hover:bg-gray-50 dark:hover:bg-gray-700' : ''
-      }`}
-      onClick={() => sortKey && handleSort(sortKey)}
-    >
-      <div className="flex items-center space-x-1">
-        <span>{label}</span>
-        {sortKey && sortConfig.key === sortKey && (
-          <span className="text-blue-500">
-            {sortConfig.direction === 'asc' ? '↑' : '↓'}
-          </span>
-        )}
-      </div>
-    </th>
-  );
-
-  if (loading && consultations.length === 0) {
-    return (
-      <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4 mb-4"></div>
-          <div className="space-y-3">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="p-4">Lädt...</div>;
+  if (error) return <div className="p-4 text-red-600">{error}</div>;
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 sm:p-6">
         {/* Header */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Beratungsliste
-            </h2>
+        <div className="flex items-center mb-6 justify-between">
+          <div className="flex items-center">
+            <ClockIcon className="h-6 w-6 mr-2 dark:text-white" />
+            <h2 className="text-xl font-semibold dark:text-white">Beratungsliste</h2>
           </div>
-
-          {/* Suchfeld */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
-            </div>
+          
+          <div className="flex items-center gap-1.5">
             <input
               type="text"
+              placeholder="Suchen..."
+              className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              placeholder="Beratungen durchsuchen..."
             />
+            
+            <button
+              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
+              onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+              title="Erweiterte Filter"
+            >
+              <FunnelIcon className="h-5 w-5" />
+              {getActiveFilterCount() > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
+                  {getActiveFilterCount()}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
-        {/* Tabelle */}
-        {error ? (
-          <div className="p-6 text-center text-red-600 dark:text-red-400">
-            {error}
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  {renderSortableHeader('Startzeit', 'startTime')}
-                  {renderSortableHeader('Endzeit', 'endTime')}
-                  {renderSortableHeader('Dauer', 'duration')}
-                  {renderSortableHeader('Client', 'client.name')}
-                  {renderSortableHeader('Niederlassung')}
-                  {renderSortableHeader('Notizen')}
-                  {renderSortableHeader('Tasks')}
-                  {renderSortableHeader('Aktionen')}
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                {filteredAndSortedConsultations.map((consultation) => (
-                  <tr key={consultation.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                      {formatTime(consultation.startTime)}
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                      {consultation.endTime ? formatTime(consultation.endTime) : '-'}
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                      {calculateDuration(consultation.startTime, consultation.endTime)}
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                      <div className="flex items-center">
-                        <UserIcon className="h-4 w-4 mr-2 text-gray-400" />
-                        {consultation.client?.name || '-'}
+        {/* Filter-Pane */}
+        {isFilterPanelOpen && (
+          <FilterPane
+            columns={[
+              { id: 'client', label: 'Client' },
+              { id: 'branch', label: 'Niederlassung' },
+              { id: 'notes', label: 'Notizen' },
+              { id: 'startTime', label: 'Datum' },
+              { id: 'duration', label: 'Dauer (Stunden)' }
+            ]}
+            onApply={applyFilterConditions}
+            onReset={resetFilterConditions}
+            savedConditions={filterConditions}
+            savedOperators={filterLogicalOperators}
+            tableId={CONSULTATIONS_TABLE_ID}
+          />
+        )}
+        
+        {/* Gespeicherte Filter als Tags anzeigen */}
+        <SavedFilterTags
+          tableId={CONSULTATIONS_TABLE_ID}
+          onSelectFilter={applyFilterConditions}
+          onReset={resetFilterConditions}
+          defaultFilterName="Alle"
+        />
+
+        {/* Cards Grid */}
+        <div className="space-y-4">
+          {filteredConsultations.length === 0 ? (
+            <div className="text-center py-12">
+              <ClockIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+              <div>
+                <p className="font-medium text-gray-900 dark:text-white">Keine Beratungen gefunden</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  {searchTerm || filterConditions.length > 0
+                    ? 'Versuchen Sie andere Suchbegriffe oder Filter.' 
+                    : 'Es wurden noch keine Beratungen durchgeführt.'}
+                </p>
+              </div>
+            </div>
+          ) : (
+            filteredConsultations.map((consultation) => (
+              <div
+                key={consultation.id}
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+              >
+                {/* Card Content - Always 2 columns */}
+                <div className="p-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Left: Compact Info */}
+                    <div className="space-y-3">
+                      {/* Client Header */}
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-md flex items-center justify-center">
+                          <UserIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-medium text-gray-900 dark:text-white text-sm truncate">
+                            {consultation.client?.name}
+                          </h3>
+                          {consultation.client?.company && (
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {consultation.client.company}
+                            </p>
+                          )}
+                        </div>
+                        {hasPermission('consultations', 'write') && (
+                          <button
+                            onClick={() => handleLinkTask(consultation.id)}
+                            className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded"
+                            title="Task verknüpfen"
+                          >
+                            <LinkIcon className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                      <div className="flex items-center">
-                        <BuildingOfficeIcon className="h-4 w-4 mr-2 text-gray-400" />
-                        {consultation.branch.name}
+
+                      {/* Time Range - Single compact field */}
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Zeit</p>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">
+                          {editingTimeId === consultation.id && editingTimeType === 'startTime' ? (
+                            <div className="flex items-center space-x-1">
+                              <input
+                                type="datetime-local"
+                                value={editingTimeValue}
+                                onChange={(e) => setEditingTimeValue(e.target.value)}
+                                className="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 w-full"
+                              />
+                              <button
+                                onClick={() => handleTimeSave(consultation.id)}
+                                className="p-0.5 text-green-600 hover:text-green-700"
+                                title="Speichern"
+                              >
+                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={handleTimeCancel}
+                                className="p-0.5 text-red-600 hover:text-red-700"
+                                title="Abbrechen"
+                              >
+                                <XMarkIcon className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ) : editingTimeId === consultation.id && editingTimeType === 'endTime' ? (
+                            <div className="flex items-center space-x-1">
+                              <input
+                                type="datetime-local"
+                                value={editingTimeValue}
+                                onChange={(e) => setEditingTimeValue(e.target.value)}
+                                className="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 w-full"
+                              />
+                              <button
+                                onClick={() => handleTimeSave(consultation.id)}
+                                className="p-0.5 text-green-600 hover:text-green-700"
+                                title="Speichern"
+                              >
+                                <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                              </button>
+                              <button
+                                onClick={handleTimeCancel}
+                                className="p-0.5 text-red-600 hover:text-red-700"
+                                title="Abbrechen"
+                              >
+                                <XMarkIcon className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-1">
+                              <button
+                                onClick={() => handleTimeEdit(consultation, 'startTime')}
+                                className="text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+                              >
+                                {formatTime(consultation.startTime)}
+                              </button>
+                              <span className="text-gray-400">-</span>
+                              {consultation.endTime ? (
+                                <button
+                                  onClick={() => handleTimeEdit(consultation, 'endTime')}
+                                  className="text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+                                >
+                                  {formatTime(consultation.endTime)}
+                                </button>
+                              ) : (
+                                <div className="flex items-center">
+                                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></div>
+                                  <span className="text-green-600 dark:text-green-400 text-xs">Aktiv</span>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </td>
-                    
-                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-gray-200">
-                      {editingId === consultation.id ? (
-                        <div className="flex items-center space-x-2">
+
+                      {/* Duration */}
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Dauer</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">
+                          {calculateDuration(consultation.startTime, consultation.endTime)}
+                        </p>
+                      </div>
+
+                      {/* Tasks - Compact */}
+                      {consultation.taskLinks && consultation.taskLinks.length > 0 && (
+                        <div>
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                            Tasks ({consultation.taskLinks.length})
+                          </p>
+                          <div className="space-y-1">
+                            {consultation.taskLinks.slice(0, 2).map((taskLink) => (
+                              <div
+                                key={taskLink.id}
+                                className="flex items-center text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 rounded px-2 py-1"
+                              >
+                                <LinkIcon className="h-3 w-3 mr-1 flex-shrink-0" />
+                                <span className="truncate">{taskLink.task.title}</span>
+                              </div>
+                            ))}
+                            {consultation.taskLinks.length > 2 && (
+                              <p className="text-xs text-gray-500">
+                                +{consultation.taskLinks.length - 2} weitere
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Right: Notes */}
+                    <div>
+                      <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Notizen</p>
+                      {editingNotesId === consultation.id ? (
+                        <div className="space-y-2">
                           <textarea
-                            value={editNotes}
-                            onChange={(e) => setEditNotes(e.target.value)}
-                            className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded dark:bg-gray-700 dark:text-white text-sm"
-                            rows={2}
+                            value={editingNotes}
+                            onChange={(e) => setEditingNotes(e.target.value)}
+                            className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm resize-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            rows={3}
+                            placeholder="Notizen zur Beratung..."
                           />
-                          <button
-                            onClick={() => handleSaveNotes(consultation.id)}
-                            disabled={savingId === consultation.id}
-                            className="p-1 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                          >
-                            ✓
-                          </button>
-                          <button
-                            onClick={handleCancelEdit}
-                            className="p-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                          >
-                            ✗
-                          </button>
+                          <div className="flex justify-end space-x-2">
+                            <button
+                              onClick={handleNotesCancel}
+                              className="px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                            >
+                              Abbrechen
+                            </button>
+                            <button
+                              onClick={() => handleNotesSave(consultation.id)}
+                              className="px-2 py-1 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded"
+                            >
+                              Speichern
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div 
-                          className="max-w-xs truncate cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
-                          onClick={() => handleEditNotes(consultation)}
-                          title={consultation.notes || 'Klicken zum Bearbeiten'}
+                          className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded p-2 min-h-[60px] border border-dashed border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
+                          onClick={() => handleNotesEdit(consultation)}
                         >
-                          {consultation.notes || (
-                            <span className="text-gray-400 italic">Notizen hinzufügen...</span>
+                          {consultation.notes ? (
+                            <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap leading-relaxed">
+                              {consultation.notes}
+                            </p>
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-center">
+                              <span className="text-xs text-gray-400 dark:text-gray-500">
+                                Notizen hinzufügen...
+                              </span>
+                            </div>
                           )}
                         </div>
                       )}
-                    </td>
-
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                      {consultation.taskLinks && consultation.taskLinks.length > 0 ? (
-                        <div className="flex items-center">
-                          <LinkIcon className="h-4 w-4 mr-1 text-gray-400" />
-                          <span>{consultation.taskLinks.length}</span>
-                        </div>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                    
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <button
-                          onClick={() => handleEditNotes(consultation)}
-                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                          title="Notizen bearbeiten"
-                        >
-                          <PencilIcon className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleOpenLinkTaskModal(consultation.id)}
-                          className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                          title="Task verknüpfen"
-                        >
-                          <LinkIcon className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                
-                {filteredAndSortedConsultations.length === 0 && !loading && (
-                  <tr>
-                    <td colSpan={8} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                      {searchTerm ? 'Keine Beratungen gefunden' : 'Noch keine Beratungen vorhanden'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
 
-      {/* Link Task Modal */}
-      {isLinkTaskModalOpen && selectedConsultationId && (
+      {/* Modals */}
+      {linkTaskModalOpen && selectedConsultationId && (
         <LinkTaskModal
-          isOpen={isLinkTaskModalOpen}
-          onClose={() => {
-            setIsLinkTaskModalOpen(false);
-            setSelectedConsultationId(null);
-          }}
+          isOpen={linkTaskModalOpen}
+          onClose={() => setLinkTaskModalOpen(false)}
           consultationId={selectedConsultationId}
           onTaskLinked={handleTaskLinked}
         />

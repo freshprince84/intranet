@@ -184,10 +184,10 @@ const ConsultationTracker: React.FC = () => {
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center">
-            <UserGroupIcon className="h-8 w-8 mr-2" />
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 sm:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center pl-2 sm:pl-0">
+            <UserGroupIcon className="h-6 w-6 mr-2 sm:h-6 sm:w-6 sm:mr-2" />
             Beratungs-Tracker
           </h2>
           {activeConsultation && (
