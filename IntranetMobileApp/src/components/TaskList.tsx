@@ -13,7 +13,7 @@ import TableSettingsModal from './TableSettingsModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { debounce } from 'lodash';
 import Svg, { Path } from 'react-native-svg';
-import { savedFilterApi } from '../api/apiClient';
+import { useFilter } from '../contexts/FilterContext';
 
 // Interface für Filteroptionen
 interface FilterOptions {
@@ -34,22 +34,9 @@ interface TableSettings {
   itemsPerPage?: number;
 }
 
-// Interface für gespeicherte Filter
-interface SavedFilter {
-  id: string;
-  name: string;
-  status: TaskStatus[];
-  searchTerm: string;
-  dateRange?: {
-    from: string | null;
-    to: string | null;
-  };
-}
-
 // Speicherkeys für AsyncStorage
 const RECENT_SEARCHES_KEY = '@IntranetApp:recentSearches';
 const TASK_TABLE_SETTINGS_KEY = '@IntranetApp:tableSettings_tasks';
-const SAVED_FILTERS_KEY = '@IntranetApp:savedFilters';
 
 interface TaskListProps {
   tasks: Task[];
@@ -74,8 +61,7 @@ const TaskList: React.FC<TaskListProps> = ({
   onFilterPress,
   onAddPress
 }) => {
-  // State für Suche und Filter
-  const [searchQuery, setSearchQuery] = useState('');
+  // State für Suche
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
   const [showSearchHistory, setShowSearchHistory] = useState(false);
@@ -83,19 +69,21 @@ const TaskList: React.FC<TaskListProps> = ({
   // State für Filter und Einstellungen
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [showTableSettingsModal, setShowTableSettingsModal] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [activeFilters, setActiveFilters] = useState<FilterOptions>({
-    status: [],
-    searchTerm: ''
-  });
   const [tableSettings, setTableSettings] = useState<TableSettings>({
     tableId: 'tasks',
     columns: ['title', 'status', 'description', 'dueDate']
   });
   
-  // Neue States für gespeicherte Filter
-  const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
-  const [activeFilterId, setActiveFilterId] = useState<string | null>(null);
+  // Verwenden des FilterContexts
+  const { 
+    savedFilters, 
+    activeFilter, 
+    activeFilters, 
+    searchQuery, 
+    setSearchQuery, 
+    handleFilterSelect, 
+    isLoading: filtersLoading 
+  } = useFilter();
   
   // Suche mit Debounce
   const debouncedSetSearchQuery = useMemo(
@@ -113,11 +101,10 @@ const TaskList: React.FC<TaskListProps> = ({
     };
   }, [searchQuery, debouncedSetSearchQuery]);
   
-  // Lade kürzlich verwendete Suchanfragen
+  // Lade kürzlich verwendete Suchanfragen und Tabelleneinstellungen
   useEffect(() => {
     loadRecentSearches();
     loadTableSettings();
-    loadSavedFilters();
   }, []);
   
   // Lade gespeicherte Suchanfragen
@@ -143,59 +130,6 @@ const TaskList: React.FC<TaskListProps> = ({
       }
     } catch (error) {
       console.error('Fehler beim Laden der Tabelleneinstellungen:', error);
-    }
-  };
-  
-  // Lade gespeicherte Filter
-  const loadSavedFilters = async () => {
-    try {
-      // Versuche zuerst, Filter vom API zu laden
-      try {
-        console.log('Lade Filter vom Backend');
-        const backendFilters = await savedFilterApi.getByTable('tasks');
-        console.log('Backend-Filter geladen:', backendFilters);
-        
-        if (backendFilters && backendFilters.length > 0) {
-          // Konvertiere die Backend-Filter in das für die App benötigte Format
-          const formattedFilters = backendFilters.map(filter => {
-            // Extrahiere Status-Bedingungen aus den Filter-Conditions
-            const statusConditions = filter.conditions
-              .filter(condition => condition.column === 'status' && condition.operator === 'equals')
-              .map(condition => condition.value as TaskStatus);
-              
-            // Extrahiere Suchbegriff-Bedingungen
-            const searchTermCondition = filter.conditions.find(
-              condition => condition.column === 'title' && condition.operator === 'contains'
-            );
-            
-            return {
-              id: filter.id.toString(),
-              name: filter.name,
-              status: statusConditions.length > 0 ? statusConditions : [],
-              searchTerm: searchTermCondition ? (searchTermCondition.value as string) : ''
-            };
-          });
-          
-          console.log('Formatierte Filter:', formattedFilters);
-          setSavedFilters(formattedFilters);
-          
-          // Speichere die formatierten Filter auch im AsyncStorage für Offline-Zugriff
-          await AsyncStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(formattedFilters));
-          return;
-        }
-      } catch (apiError) {
-        console.error('Fehler beim Laden der Filter vom Backend:', apiError);
-        // Bei API-Fehler fallback auf AsyncStorage
-      }
-      
-      // Fallback: Lade Filter aus dem AsyncStorage
-      const filtersJson = await AsyncStorage.getItem(SAVED_FILTERS_KEY);
-      if (filtersJson) {
-        const filters = JSON.parse(filtersJson);
-        setSavedFilters(filters);
-      }
-    } catch (error) {
-      console.error('Fehler beim Laden der gespeicherten Filter:', error);
     }
   };
   
@@ -230,37 +164,18 @@ const TaskList: React.FC<TaskListProps> = ({
   
   // Wende Filter an
   const applyFilters = (filters: FilterOptions) => {
-    setActiveFilters(filters);
+    // Statt activeFilters direkt zu setzen, übergeben wir die Werte an den Context
+    setSearchQuery(filters.searchTerm);
     
-    // Aktualisiere die Suche, wenn sie Teil der Filter ist
-    if (filters.searchTerm !== searchQuery) {
-      setSearchQuery(filters.searchTerm);
+    // Zurücksetzen des aktiven Filters im Context, wenn wir manuelle Filter anwenden
+    if (activeFilter) {
+      // TODO: Das sollte durch den Context übernommen werden
     }
   };
   
   // Anwenden der Tabelleneinstellungen
   const applyTableSettings = (settings: TableSettings) => {
     setTableSettings(settings);
-  };
-  
-  // Wende einen gespeicherten Filter an
-  const applyFilter = (filter: SavedFilter) => {
-    setActiveFilterId(filter.id);
-    setActiveFilters({
-      status: filter.status,
-      searchTerm: filter.searchTerm
-    });
-    setSearchQuery(filter.searchTerm);
-  };
-  
-  // Setze Filter zurück
-  const resetFilters = () => {
-    setActiveFilter('all');
-    setActiveFilters({
-      status: ['open', 'in_progress', 'improval', 'quality_control'],
-      searchTerm: ''
-    });
-    setSearchQuery('');
   };
   
   // Filtere Tasks basierend auf Suchbegriff und aktiven Filtern
@@ -296,41 +211,6 @@ const TaskList: React.FC<TaskListProps> = ({
     );
   };
   
-  const handleFilterSelect = (filterId: string) => {
-    setActiveFilter(filterId);
-    
-    // Filterlogik implementieren
-    if (filterId === 'all') {
-      // "Alle" Filter: Alle Tasks außer den erledigten (done) anzeigen
-      setActiveFilters({
-        status: ['open', 'in_progress', 'improval', 'quality_control'],
-        searchTerm: activeFilters.searchTerm
-      });
-    } else if (filterId === 'archive') {
-      // "Archiv" Filter: Nur erledigte (done) Tasks anzeigen
-      setActiveFilters({
-        status: ['done'],
-        searchTerm: activeFilters.searchTerm
-      });
-    } else {
-      // Hier später: Unterstützung für benutzerdefinierte Filter
-      const filter = savedFilters.find(f => f.id === filterId);
-      if (filter) {
-        setActiveFilters({
-          status: filter.status,
-          searchTerm: filter.searchTerm,
-          dateRange: filter.dateRange
-        });
-      }
-    }
-  };
-  
-  // Beim ersten Laden die Standard-Filter setzen
-  useEffect(() => {
-    // Standardmäßig "Alle" Filter aktiv setzen (alle außer done)
-    resetFilters();
-  }, []);
-  
   if (isLoading && tasks.length === 0) {
     return (
       <View style={styles.centerContainer}>
@@ -339,127 +219,142 @@ const TaskList: React.FC<TaskListProps> = ({
       </View>
     );
   }
-
+  
+  if (error) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <Button mode="contained" onPress={onRefresh}>
+          Erneut versuchen
+        </Button>
+      </View>
+    );
+  }
+  
   return (
     <View style={styles.container}>
-      {/* Header mit Icons und Suchfeld */}
-      <View style={styles.headerContainer}>
-        <Text style={styles.title}>To-Do-Liste</Text>
-        <View style={styles.searchContainer}>
-          <TextInput
-            placeholder="Suchen..."
-            style={styles.searchInput}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-        <View style={styles.rightButtons}>
-          <Pressable onPress={() => setShowFilterModal(true)} style={styles.iconButton}>
-            <Svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V20l-4 2v-7.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                fill="#111827"
-                stroke="#111827"
-                strokeWidth="0.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </Pressable>
-          <Pressable onPress={() => setShowTableSettingsModal(true)} style={styles.iconButton}>
-            <Svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <Path fillRule="evenodd" d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 10.5a.75.75 0 01.75-.75h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75zM2 10a.75.75 0 01.75-.75h7.5a.75.75 0 010 1.5h-7.5A.75.75 0 012 10z" fill="#111827" clipRule="evenodd" />
-            </Svg>
-          </Pressable>
-        </View>
-      </View>
-
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filtersContainer}
-      >
-        <Chip
-          selected={activeFilter === 'all'}
-          onPress={() => handleFilterSelect('all')}
-          style={[
-            styles.filterChip,
-            activeFilter === 'all' && styles.activeFilterChip
-          ]}
-        >
-          Alle
-        </Chip>
-        <Chip
-          selected={activeFilter === 'archive'}
-          onPress={() => handleFilterSelect('archive')}
-          style={[
-            styles.filterChip,
-            activeFilter === 'archive' && styles.activeFilterChip
-          ]}
-        >
-          Archiv
-        </Chip>
-        {savedFilters.map((filter) => (
-          <Chip
-            key={filter.id}
-            selected={activeFilter === filter.id}
-            onPress={() => handleFilterSelect(filter.id)}
-            style={[
-              styles.filterChip,
-              activeFilter === filter.id && styles.activeFilterChip
-            ]}
-          >
-            {filter.name}
-          </Chip>
-        ))}
-        {activeFilter !== 'all' && (
-          <Chip
-            icon="close"
-            onPress={resetFilters}
-            style={styles.resetFilterChip}
-          >
-            Zurücksetzen
-          </Chip>
-        )}
-      </ScrollView>
-      
-      {/* Fehlermeldung */}
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{error}</Text>
+      {/* Suchleiste */}
+      <Searchbar
+        placeholder="Suchen..."
+        onChangeText={setSearchQuery}
+        value={searchQuery}
+        style={styles.searchBar}
+        onFocus={() => setShowSearchHistory(true)}
+        icon={() => (
           <IconButton
-            icon="refresh"
-            mode="contained"
-            onPress={onRefresh}
-            style={styles.retryButton}
-            size={24}
-            iconColor="#FFFFFF"
-            containerColor="#D32F2F"
+            icon="magnify"
+            size={20}
+            onPress={() => {}}
           />
+        )}
+        clearIcon={() => (
+          searchQuery ? (
+            <IconButton
+              icon="close"
+              size={20}
+              onPress={() => setSearchQuery('')}
+            />
+          ) : null
+        )}
+      />
+      
+      {/* Suchverlauf */}
+      {showSearchHistory && recentSearches.length > 0 && (
+        <View style={styles.searchHistoryContainer}>
+          <Text style={styles.searchHistoryTitle}>Letzte Suchanfragen</Text>
+          {recentSearches.map((search, index) => (
+            <Pressable
+              key={index}
+              style={styles.searchHistoryItem}
+              onPress={() => applySearch(search)}
+            >
+              <Text>{search}</Text>
+            </Pressable>
+          ))}
+          <Button
+            mode="text"
+            onPress={() => setShowSearchHistory(false)}
+            style={styles.closeHistoryButton}
+          >
+            Schließen
+          </Button>
+        </View>
+      )}
+      
+      {/* Filter und Einstellungen */}
+      {showFilters && (
+        <View style={styles.filtersContainer}>
+          {/* Filter-Chips anzeigen */}
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filtersScrollContent}
+          >
+            {/* Gespeicherte Filter anzeigen */}
+            {savedFilters.map((filter) => (
+              <Chip
+                key={filter.id}
+                selected={activeFilter === filter.id}
+                onPress={() => handleFilterSelect(filter.id)}
+                style={[
+                  styles.filterChip,
+                  activeFilter === filter.id ? styles.activeFilterChip : null
+                ]}
+                textStyle={activeFilter === filter.id ? styles.activeFilterChipText : null}
+              >
+                {filter.name}
+              </Chip>
+            ))}
+          </ScrollView>
+          
+          {/* Filter- und Einstellungs-Buttons */}
+          <View style={styles.filterButtonsContainer}>
+            <IconButton
+              icon="filter-variant"
+              mode="contained"
+              size={20}
+              onPress={() => setShowFilterModal(true)}
+              style={styles.filterButton}
+            />
+            <IconButton
+              icon="cog"
+              mode="contained"
+              size={20}
+              onPress={() => setShowTableSettingsModal(true)}
+              style={styles.settingsButton}
+            />
+          </View>
         </View>
       )}
       
       {/* Task-Liste */}
-      <FlatList
-        data={filteredTasks}
-        renderItem={({ item }) => renderTaskWithColumns(item)}
-        keyExtractor={item => item.id.toString()}
-        contentContainerStyle={styles.listContent}
-        refreshing={isRefreshing}
-        onRefresh={onRefresh}
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>
-              {(debouncedSearchQuery || activeFilters.searchTerm || activeFilters.status.length > 0)
-                ? 'Keine Aufgaben gefunden, die Ihren Filterkriterien entsprechen.' 
-                : 'Keine Aufgaben vorhanden.'
-              }
-            </Text>
-          </View>
-        }
-      />
+      {filteredTasks.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Keine Aufgaben gefunden</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={filteredTasks}
+          renderItem={({ item }) => renderTaskWithColumns(item)}
+          keyExtractor={(item) => item.id.toString()}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          ItemSeparatorComponent={() => <Divider style={styles.divider} />}
+          onRefresh={onRefresh}
+          refreshing={isRefreshing}
+        />
+      )}
       
-      {/* Filter Modal */}
+      {/* Neuer Task Button (nur anzeigen, wenn onAddPress verfügbar ist) */}
+      {onAddPress && (
+        <FAB
+          icon="plus"
+          style={styles.fab}
+          onPress={onAddPress}
+        />
+      )}
+      
+      {/* Filter-Modal */}
       <TaskFilterModal
         visible={showFilterModal}
         onDismiss={() => setShowFilterModal(false)}
@@ -488,138 +383,107 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
   },
-  headerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+  loadingText: {
+    marginTop: 12,
+    color: '#6B7280',
+  },
+  errorText: {
+    marginBottom: 16,
+    color: '#DC2626',
+    textAlign: 'center',
+  },
+  searchBar: {
+    margin: 8,
+    elevation: 2,
     backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+  },
+  searchHistoryContainer: {
+    backgroundColor: '#FFFFFF',
+    margin: 8,
+    marginTop: 0,
+    padding: 12,
+    borderRadius: 12,
+    elevation: 2,
+    position: 'absolute',
+    top: 64,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  searchHistoryTitle: {
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#4B5563',
+  },
+  searchHistoryItem: {
+    paddingVertical: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  leftButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minWidth: 48, // Breite eines IconButtons
-  },
-  rightButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    minWidth: 96, // Breite von zwei IconButtons
-  },
-  searchContainer: {
-    flex: 1,
-    marginHorizontal: 12,
-  },
-  searchInput: {
-    flex: 1,
-    elevation: 0,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    height: 40,
-  },
-  iconButton: {
-    padding: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  recentSearches: {
-    backgroundColor: '#ffffff',
-    borderRadius: 4,
-    marginBottom: 8,
-    padding: 8,
-    elevation: 2,
-  },
-  recentSearchesTitle: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginBottom: 4,
-    color: '#666',
-  },
-  recentSearchButton: {
-    justifyContent: 'flex-start',
-    paddingHorizontal: 0,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#e0e0e0',
-  },
-  activeFiltersContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E3F2FD',
-    padding: 8,
-    borderRadius: 4,
-    margin: 8,
-  },
-  activeFiltersText: {
-    fontWeight: 'bold',
-    marginRight: 8,
-  },
-  activeFiltersList: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  activeFilter: {
-    backgroundColor: '#BBDEFB',
-    padding: 4,
-    borderRadius: 4,
-    marginRight: 4,
-    marginBottom: 4,
-    fontSize: 12,
-  },
-  listContent: {
-    padding: 0,
-    width: '100%',
-  },
-  loadingText: {
+  closeHistoryButton: {
     marginTop: 8,
-    color: '#666',
-  },
-  errorContainer: {
-    padding: 16,
-    backgroundColor: '#FFEBEE',
-    margin: 16,
-    borderRadius: 4,
-  },
-  errorText: {
-    color: '#D32F2F',
-    marginBottom: 8,
-  },
-  retryButton: {
-    backgroundColor: '#D32F2F',
-  },
-  emptyContainer: {
-    padding: 24,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#666',
-    textAlign: 'center',
+    alignSelf: 'flex-end',
   },
   filtersContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
     flexDirection: 'row',
-    gap: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    marginBottom: 8,
+  },
+  filtersScrollContent: {
+    paddingRight: 70, // Platz für die Buttons
+    paddingLeft: 8,
   },
   filterChip: {
+    marginRight: 8,
     backgroundColor: '#F3F4F6',
   },
   activeFilterChip: {
     backgroundColor: '#3B82F6',
   },
-  resetFilterChip: {
-    backgroundColor: '#EF4444',
+  activeFilterChipText: {
+    color: '#FFFFFF',
   },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    minWidth: 100,
+  filterButtonsContainer: {
+    flexDirection: 'row',
+    position: 'absolute',
+    right: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  filterButton: {
+    marginRight: 4,
+    backgroundColor: '#F3F4F6',
+  },
+  settingsButton: {
+    backgroundColor: '#F3F4F6',
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: 8,
+    paddingBottom: 16,
+  },
+  divider: {
+    marginVertical: 8,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 16,
+  },
+  fab: {
+    position: 'absolute',
+    margin: 16,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#3B82F6',
   },
 });
 

@@ -454,71 +454,167 @@
 *   **Betroffene Dateien:**
     *   `IntranetMobileApp/src/components/TaskList.tsx`
 
-## Schritt 36: Optimierung der Icon-Buttons
+## Schritt 36: App-Icon-Korrektur (vormals: Optimierung der Icon-Buttons)
 
 *   **Status:** Abgeschlossen
 *   **Aktionen:**
-    1.  Verkleinerung der Icons auf 20px
-    2.  Reduzierung der Abstände zwischen den Icons
-    3.  Entfernung überflüssiger Margins
+    1.  Problem identifiziert: App-Icon wurde nicht korrekt angezeigt (Android-Standard-Icon) und Build schlug fehl aufgrund fehlender Ressourcen.
+    2.  Ursachenanalyse: Die Dateien `strings.xml` und `styles.xml` im Verzeichnis `IntranetMobileApp/android/app/src/main/res/values/` fehlten.
+    3.  Korrektur:
+        *   Fehlende Dateien (`strings.xml`, `styles.xml`) mittels `git checkout <commit_hash> -- <pfad>` aus einem früheren Commit (231d3741c3e93252f81b9ef275ea2e3b32770d31) wiederhergestellt.
+        *   Die `ic_launcher_foreground.png`-Dateien in allen `mipmap-*`-Ordnern wurden manuell durch den Benutzer mit Versionen **ohne** grauen Rand ersetzt, um die korrekte Darstellung mit dem adaptiven Icon-Hintergrund (definiert in `colors.xml`) zu gewährleisten.
+        *   Normale `ic_launcher.png` und `ic_launcher_round.png` wurden ebenfalls mit den korrekten Versionen aktualisiert.
+    4.  Ergebnis: Build war erfolgreich und das App-Icon wird nun korrekt mit dem vorgesehenen Logo und weißem Hintergrund ohne doppelten Rand angezeigt.
 *   **Betroffene Dateien:**
-    *   `IntranetMobileApp/src/components/TaskList.tsx`
+    *   `IntranetMobileApp/android/app/src/main/res/values/strings.xml` (wiederhergestellt)
+    *   `IntranetMobileApp/android/app/src/main/res/values/styles.xml` (wiederhergestellt)
+    *   `IntranetMobileApp/android/app/src/main/res/mipmap-*/ic_launcher_foreground.png` (ersetzt durch Benutzer)
+    *   `IntranetMobileApp/android/app/src/main/res/mipmap-*/ic_launcher.png` (ersetzt durch Benutzer)
+    *   `IntranetMobileApp/android/app/src/main/res/mipmap-*/ic_launcher_round.png` (ersetzt durch Benutzer)
 
-## Schritt 37: Dokumentation der Implementierung
+## Schritt 37: Implementierung der Standardfilter im Backend
 
-*   **Status:** Abgeschlossen
+*   **Status:** In Bearbeitung
 *   **Aktionen:**
-    1.  Überprüfung aller durchgeführten Schritte:
-        - Schritte 1-36 wurden analysiert
-        - Implementierungsstatus jedes Schritts wurde verifiziert
-        - Offene Punkte wurden identifiziert
-    2.  Dokumentation der Änderungen pro Komponente:
-        - TimeTrackerBox:
-            * Swipe-Button-Integration
-            * Timer-Text-Optimierung
-            * Icon-Anpassungen
-        - TaskList:
-            * Card-Layout-Verbesserungen
-            * Filter-System-Integration
-            * Such- und Icon-Optimierungen
-        - TaskCard:
-            * Höhenreduzierung
-            * Layout-Optimierung
-            * Status-Visualisierung
-        - SwipeButton:
-            * Richtungsanpassung
-            * Text-Zentrierung
-            * Schatten-Entfernung
-        - Filter-System:
-            * Integration gespeicherter Filter
-            * Chip-basierte Darstellung
-            * Reset-Funktionalität
-        - Modal-System:
-            * Einheitliches Styling
-            * Konsistente Abstände
-            * Verbesserte Typografie
-    3.  Dokumentation der Auswirkungen:
-        - UI/UX-Verbesserungen:
-            * Moderneres, konsistenteres Design
-            * Intuitivere Benutzerführung
-            * Verbesserte visuelle Hierarchie
-        - Performance-Optimierungen:
-            * Reduzierte Re-Renders
-            * Optimierte Animationen
-            * Effizientere Filterung
-        - Wartbarkeitsverbesserungen:
-            * Einheitliche Komponenten-Struktur
-            * Klare Trennung der Zuständigkeiten
-            * Verbesserte Code-Organisation
-    4.  Zusammenfassung der Gesamtimplementierung:
-        - Alle geplanten Features wurden umgesetzt
-        - Design entspricht nun den Vorgaben
-        - Benutzerfreundlichkeit wurde deutlich verbessert
-*   **Betroffene Dateien:**
-    *   Alle Dateien aus den vorherigen Schritten
-*   **Nächste Schritte:**
-    1.  Finale Überprüfung aller Implementierungen
-    2.  Sammlung von Benutzer-Feedback
-    3.  Planung eventueller Verfeinerungen
+    1.  Import der savedFilterApi in WorktimeScreen.tsx hinzugefügt:
+        ```typescript
+        import { worktimeApi, branchApi, taskApi, savedFilterApi } from '../api/apiClient';
+        ```
+    2.  Neue Funktion `createStandardFilters` implementiert, die die Standardfilter automatisch in der Datenbank anlegt:
+        ```typescript
+        /**
+         * Erstellt die Standardfilter "Alle" und "Archiv" in der Datenbank, falls noch nicht vorhanden
+         * Analog zum Frontend, wo die Filter ebenfalls als echte Filter in der Datenbank gespeichert werden
+         */
+        const createStandardFilters = async () => {
+          try {
+            // Prüfe Internetverbindung
+            if (await isOfflineCheck()) {
+              console.log('Keine Internetverbindung. Standardfilter können nicht erstellt werden.');
+              return;
+            }
+            
+            // Lade vorhandene Filter vom Server
+            console.log('Prüfe existierende Filter...');
+            const existingFilters = await savedFilterApi.getByTable('tasks');
+            console.log('Existierende Filter:', existingFilters);
+            
+            // Prüfe, ob die Standardfilter bereits existieren
+            const alleFilterExists = existingFilters.some(filter => filter.name === 'Alle');
+            const archivFilterExists = existingFilters.some(filter => filter.name === 'Archiv');
+            
+            // Erstelle "Alle"-Filter, wenn noch nicht vorhanden
+            if (!alleFilterExists) {
+              console.log('Erstelle "Alle"-Filter...');
+              const alleFilter = {
+                tableId: 'tasks',
+                name: 'Alle',
+                conditions: [
+                  { column: 'status', operator: 'equals', value: 'open' },
+                  { column: 'status', operator: 'equals', value: 'in_progress' },
+                  { column: 'status', operator: 'equals', value: 'improval' },
+                  { column: 'status', operator: 'equals', value: 'quality_control' }
+                ],
+                operators: ['OR', 'OR', 'OR']
+              };
+              
+              await savedFilterApi.create(alleFilter);
+              console.log('Alle-Filter erstellt');
+            }
+            
+            // Erstelle "Archiv"-Filter, wenn noch nicht vorhanden
+            if (!archivFilterExists) {
+              console.log('Erstelle "Archiv"-Filter...');
+              const archivFilter = {
+                tableId: 'tasks',
+                name: 'Archiv',
+                conditions: [
+                  { column: 'status', operator: 'equals', value: 'done' }
+                ],
+                operators: []
+              };
+              
+              await savedFilterApi.create(archivFilter);
+              console.log('Archiv-Filter erstellt');
+            }
+          } catch (error) {
+            console.error('Fehler beim Erstellen der Standardfilter:', error);
+          }
+        };
+        ```
+    3.  Aufruf der Funktion in der `useEffect`-Hook beim App-Start hinzugefügt:
+        ```typescript
+        useEffect(() => {
+          setupScreen();
+          loadTasks();
+          createStandardFilters(); // Hier die Funktion aufrufen
+          
+          // ... vorhandener Code
+        }, []);
+        ```
+*   **Zwischenergebnis:** Die Funktion zum Erstellen der Standardfilter in der Datenbank wurde implementiert. Beim Start der App wird geprüft, ob die Filter "Alle" und "Archiv" bereits existieren. Falls nicht, werden sie in der Datenbank angelegt. Diese Implementierung ist analog zum Frontend, wo die Standardfilter ebenfalls als echte Filter in der Datenbank gespeichert werden.
 
---- 
+## Schritt 38: Implementierung des zentralen Filter-Managements mit FilterContext
+
+**Status:** Abgeschlossen
+
+**Änderungsdatum:** 02.04.2023
+
+### Ziel
+Implementierung eines zentralen Filter-Managements für die Aufgabenliste in der mobilen App, um Filter zwischen der TaskList-Komponente und dem TaskFilterModal zu synchronisieren.
+
+### Analyse des Problems
+- TaskList und TaskFilterModal laden und verwalten ihre Filter unabhängig voneinander
+- Wenn in TaskFilterModal ein neuer Filter hinzugefügt wird, wird er nicht automatisch in TaskList angezeigt
+- Standardfilter und benutzerdefinierte Filter werden unterschiedlich behandelt
+
+### Lösung
+1. **Erstellung eines FilterContext**
+   - Zentralisierte Verwaltung von gespeicherten Filtern
+   - API zur Verwaltung von Filtern (laden, speichern, löschen)
+   - Synchronisierung von Filtern zwischen Komponenten
+
+2. **Anpassung der TaskList-Komponente**
+   - Verwendung des FilterContext anstelle lokaler Filter-Logik
+   - Entfernen doppelter Filter-Verwaltung
+   - Konsistente Darstellung der Filter
+
+3. **Anpassung des TaskFilterModal**
+   - Verwendung des FilterContext
+   - Delegation der Filter-Operationen an den Context
+   - Verbesserung der Benutzeroberfläche
+
+4. **Integration in WorktimeScreen**
+   - Umschließung der relevanten Komponenten mit dem FilterProvider
+
+### Implementierung
+
+1. **Implementierung des FilterContext**
+   - Erstellt in `IntranetMobileApp/src/contexts/FilterContext.tsx`
+   - Verwaltet Filter-State zentral
+   - Bietet API zum Laden, Speichern und Löschen von Filtern
+
+2. **Anpassung der TaskList**
+   - Entfernung der lokalen Filter-Logik
+   - Verwendung des useFilter-Hooks
+   - Verbesserte Darstellung der gespeicherten Filter
+
+3. **Anpassung des TaskFilterModal**
+   - Zentrale Verwaltung der Filter
+   - Verbesserte Benutzeroberfläche
+   - Konsistente Benennung von Funktionen
+
+4. **Integration in WorktimeScreen**
+   - Umschließung der Komponenten mit FilterProvider
+
+### Ergebnisse
+- Filter werden zentral verwaltet und zwischen Komponenten synchronisiert
+- Standardfilter und benutzerdefinierte Filter werden einheitlich behandelt
+- Verbessertes Benutzererlebnis durch konsistente Filter-Darstellung
+- Vereinfachte Komponenten durch Auslagerung der Filter-Logik
+
+### Nächste Schritte
+- Unit-Tests für den FilterContext
+- Mögliche Erweiterung um komplexere Filterbedingungen
+- Offline-Support verbessern
+

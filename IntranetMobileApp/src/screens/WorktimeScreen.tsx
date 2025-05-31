@@ -12,7 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
-import { worktimeApi, branchApi, taskApi } from '../api/apiClient';
+import { worktimeApi, branchApi, taskApi, savedFilterApi } from '../api/apiClient';
 import { Branch, MobileWorkTime, Task, TaskStatus, ModalMode } from '../types';
 import { 
   formatDateTime, 
@@ -82,6 +82,7 @@ const WorktimeScreen = () => {
   useEffect(() => {
     setupScreen();
     loadTasks();
+    createStandardFilters();
     
     // Polling alle 10 Sekunden für Timer-Status
     const statusInterval = setInterval(async () => {
@@ -151,6 +152,66 @@ const WorktimeScreen = () => {
       setTasksError('Die Aufgaben konnten nicht geladen werden.');
     } finally {
       setTasksLoading(false);
+    }
+  };
+  
+  /**
+   * Erstellt die Standardfilter "Alle" und "Archiv" in der Datenbank, falls noch nicht vorhanden
+   * Analog zum Frontend, wo die Filter ebenfalls als echte Filter in der Datenbank gespeichert werden
+   */
+  const createStandardFilters = async () => {
+    try {
+      // Prüfe Internetverbindung
+      if (await isOfflineCheck()) {
+        console.log('Keine Internetverbindung. Standardfilter können nicht erstellt werden.');
+        return;
+      }
+      
+      // Lade vorhandene Filter vom Server
+      console.log('Prüfe existierende Filter...');
+      const existingFilters = await savedFilterApi.getByTable('tasks');
+      console.log('Existierende Filter:', existingFilters);
+      
+      // Prüfe, ob die Standardfilter bereits existieren
+      const alleFilterExists = existingFilters.some(filter => filter.name === 'Alle');
+      const archivFilterExists = existingFilters.some(filter => filter.name === 'Archiv');
+      
+      // Erstelle "Alle"-Filter, wenn noch nicht vorhanden
+      if (!alleFilterExists) {
+        console.log('Erstelle "Alle"-Filter...');
+        const alleFilter = {
+          tableId: 'tasks',
+          name: 'Alle',
+          conditions: [
+            { column: 'status', operator: 'equals', value: 'open' },
+            { column: 'status', operator: 'equals', value: 'in_progress' },
+            { column: 'status', operator: 'equals', value: 'improval' },
+            { column: 'status', operator: 'equals', value: 'quality_control' }
+          ],
+          operators: ['OR', 'OR', 'OR']
+        };
+        
+        await savedFilterApi.create(alleFilter);
+        console.log('Alle-Filter erstellt');
+      }
+      
+      // Erstelle "Archiv"-Filter, wenn noch nicht vorhanden
+      if (!archivFilterExists) {
+        console.log('Erstelle "Archiv"-Filter...');
+        const archivFilter = {
+          tableId: 'tasks',
+          name: 'Archiv',
+          conditions: [
+            { column: 'status', operator: 'equals', value: 'done' }
+          ],
+          operators: []
+        };
+        
+        await savedFilterApi.create(archivFilter);
+        console.log('Archiv-Filter erstellt');
+      }
+    } catch (error) {
+      console.error('Fehler beim Erstellen der Standardfilter:', error);
     }
   };
   
