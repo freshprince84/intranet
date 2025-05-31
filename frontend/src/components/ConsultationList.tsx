@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { 
   ClockIcon, 
   UserIcon,
@@ -20,7 +20,16 @@ import { FilterCondition } from './FilterRow.tsx';
 // TableID für gespeicherte Filter
 const CONSULTATIONS_TABLE_ID = 'consultations-table';
 
-const ConsultationList: React.FC = () => {
+interface ConsultationListProps {
+  onConsultationChange?: () => void;
+}
+
+// Ref-Interface für imperatives Handle
+export interface ConsultationListRef {
+  refresh: () => void;
+}
+
+const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(({ onConsultationChange }, ref) => {
   const { hasPermission } = usePermissions();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [recentClients, setRecentClients] = useState<Client[]>([]);
@@ -60,6 +69,11 @@ const ConsultationList: React.FC = () => {
       // Stille Behandlung - normale Situation wenn noch keine Clients beraten wurden
     }
   };
+
+  // Imperatives Handle für Ref-basierte Refresh-Funktion
+  useImperativeHandle(ref, () => ({
+    refresh: loadConsultations
+  }));
 
   useEffect(() => {
     loadConsultations();
@@ -267,15 +281,16 @@ const ConsultationList: React.FC = () => {
     if (!editingTimeType || !editingTimeValue) return;
     
     try {
-      const isoTime = new Date(editingTimeValue).toISOString();
+      const timeString = `${editingTimeValue}:00.000`;
+      
       await axiosInstance.patch(`${API_ENDPOINTS.WORKTIME.BASE}/${consultationId}`, {
-        [editingTimeType]: isoTime
+        [editingTimeType]: timeString
       });
       
       setConsultations(prev => 
         prev.map(consultation => 
           consultation.id === consultationId 
-            ? { ...consultation, [editingTimeType]: isoTime }
+            ? { ...consultation, [editingTimeType]: timeString }
             : consultation
         )
       );
@@ -704,6 +719,6 @@ const ConsultationList: React.FC = () => {
       )}
     </>
   );
-};
+});
 
 export default ConsultationList; 

@@ -10,7 +10,11 @@ import ClientSelectModal from './ClientSelectModal.tsx';
 import CreateClientModal from './CreateClientModal.tsx';
 import { Client, Consultation } from '../types/client.ts';
 
-const ConsultationTracker: React.FC = () => {
+interface ConsultationTrackerProps {
+  onConsultationChange?: () => void;
+}
+
+const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultationChange }) => {
   const { user } = useAuth();
   const { selectedBranch } = useBranch();
   const [activeConsultation, setActiveConsultation] = useState<Consultation | null>(null);
@@ -74,14 +78,14 @@ const ConsultationTracker: React.FC = () => {
           toast.error('Bitte geben Sie Start- und Endzeit an');
           return;
         }
-        data.startTime = new Date(manualStartTime).toISOString();
+        data.startTime = `${manualStartTime}:00.000`;
         
         // Erstelle die Beratung
         await axiosInstance.post(API_ENDPOINTS.CONSULTATIONS.START, data);
         
         // Beende sie sofort mit der Endzeit
         await axiosInstance.post(API_ENDPOINTS.CONSULTATIONS.STOP, {
-          endTime: new Date(manualEndTime).toISOString(),
+          endTime: `${manualEndTime}:00.000`,
           notes: notes || null
         });
         
@@ -93,10 +97,16 @@ const ConsultationTracker: React.FC = () => {
         setSelectedClient(null);
         // Recent Clients nach manueller Erfassung aktualisieren
         loadRecentClients();
+        // Beratungsliste aktualisieren
+        onConsultationChange?.();
       } else {
+        data.startTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+        
         const response = await axiosInstance.post(API_ENDPOINTS.CONSULTATIONS.START, data);
         setActiveConsultation(response.data);
         toast.success('Beratung gestartet');
+        // Beratungsliste aktualisieren
+        onConsultationChange?.();
       }
       
       loadRecentClients();
@@ -108,7 +118,10 @@ const ConsultationTracker: React.FC = () => {
 
   const stopConsultation = async () => {
     try {
+      const correctedEndTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
+      
       await axiosInstance.post(API_ENDPOINTS.CONSULTATIONS.STOP, {
+        endTime: correctedEndTime,
         notes: notes || null
       });
       setActiveConsultation(null);
@@ -116,6 +129,8 @@ const ConsultationTracker: React.FC = () => {
       toast.success('Beratung beendet');
       // Recent Clients nach dem Stoppen aktualisieren
       loadRecentClients();
+      // Beratungsliste aktualisieren
+      onConsultationChange?.();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Fehler beim Beenden der Beratung');
     }

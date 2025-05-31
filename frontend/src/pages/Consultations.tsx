@@ -1,10 +1,17 @@
-import React from 'react';
+import React, { useCallback, useRef } from 'react';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import ConsultationTracker from '../components/ConsultationTracker.tsx';
-import ConsultationList from '../components/ConsultationList.tsx';
+import ConsultationList, { ConsultationListRef } from '../components/ConsultationList.tsx';
 
 const Consultations: React.FC = () => {
   const { hasPermission } = usePermissions();
+  const consultationListRef = useRef<ConsultationListRef>(null);
+
+  // Callback-Funktion für das Neuladen der Beratungsliste
+  const handleConsultationChange = useCallback(() => {
+    // Triggert ein Neuladen der Beratungsliste
+    consultationListRef.current?.refresh();
+  }, []);
 
   // Prüfe Berechtigungen
   if (!hasPermission('consultations', 'read')) {
@@ -24,11 +31,11 @@ const Consultations: React.FC = () => {
       <div className="py-1 space-y-6">
         {/* Consultation Tracker Box */}
         <div className="px-2 sm:px-0">
-          <ConsultationTracker />
+          <ConsultationTracker onConsultationChange={handleConsultationChange} />
         </div>
         
         {/* Consultation List Box */}
-        <ConsultationList />
+        <ConsultationList ref={consultationListRef} onConsultationChange={handleConsultationChange} />
       </div>
     </div>
   );
