@@ -20,12 +20,14 @@ const Consultations: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Consultation Tracker Box */}
-      <ConsultationTracker />
-      
-      {/* Consultation List Box */}
-      <ConsultationList />
+    <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
+      <div className="py-1 space-y-6">
+        {/* Consultation Tracker Box */}
+        <ConsultationTracker />
+        
+        {/* Consultation List Box */}
+        <ConsultationList />
+      </div>
     </div>
   );
 };
