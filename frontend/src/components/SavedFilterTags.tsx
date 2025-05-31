@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import { FilterCondition } from './FilterRow.tsx';
 import axiosInstance from '../config/axios.ts';
@@ -31,6 +31,24 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [defaultFilterApplied, setDefaultFilterApplied] = useState(false);
+  const [recentClientNames, setRecentClientNames] = useState<string[]>([]);
+
+  // Lade Recent Clients für Consultation-Tabelle
+  useEffect(() => {
+    const loadRecentClients = async () => {
+      if (tableId === 'consultations-table') {
+        try {
+          const response = await axiosInstance.get('/api/clients/recent');
+          const clientNames = response.data.map((client: any) => client.name);
+          setRecentClientNames(clientNames);
+        } catch (error) {
+          // Stille Behandlung - normale Situation wenn noch keine Clients beraten wurden
+        }
+      }
+    };
+
+    loadRecentClients();
+  }, [tableId]);
 
   // Lade gespeicherte Filter beim ersten Render
   useEffect(() => {
@@ -111,6 +129,71 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     }
   };
   
+  // Prüfen, ob ein Filter ein Standard-Filter ist
+  const isStandardFilter = (filterName: string) => {
+    // Basis Standard-Filter
+    const baseStandardFilters = ['Archiv', 'Aktuell', 'Aktive', 'Alle', 'Heute', 'Diese Woche'];
+    
+    // Wenn es einer der Basis-Filter ist
+    if (baseStandardFilters.includes(filterName)) {
+      return true;
+    }
+    
+    // Für Consultation-Tabelle: Recent Client-Namen sind auch Standard-Filter (nicht löschbar)
+    if (tableId === 'consultations-table') {
+      // Hauptfilter sind nicht löschbar
+      if (filterName === 'Archiv' || filterName === 'Heute' || filterName === 'Diese Woche') {
+        return true;
+      }
+      // Recent Client-Filter sind ebenfalls nicht löschbar
+      if (recentClientNames.includes(filterName)) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  // Sortiere Filter nach gewünschter Reihenfolge
+  const sortedFilters = useMemo(() => {
+    if (tableId !== 'consultations-table') {
+      return savedFilters; // Für andere Tabellen keine spezielle Sortierung
+    }
+
+    const heute = savedFilters.find(f => f.name === 'Heute');
+    const dieseWoche = savedFilters.find(f => f.name === 'Diese Woche');
+    const archiv = savedFilters.find(f => f.name === 'Archiv');
+    
+    // Recent Client-Filter (in der Reihenfolge wie sie vom Backend kommen)
+    const recentClientFilters = savedFilters.filter(f => recentClientNames.includes(f.name));
+    
+    // Benutzerdefinierte Filter (alle anderen, außer den Standard-Filtern)
+    const customFilters = savedFilters.filter(f => 
+      !['Heute', 'Diese Woche', 'Archiv'].includes(f.name) && 
+      !recentClientNames.includes(f.name)
+    );
+
+    // Zusammenfügen in gewünschter Reihenfolge
+    const orderedFilters: SavedFilter[] = [];
+    
+    // 1. Heute
+    if (heute) orderedFilters.push(heute);
+    
+    // 2. Diese Woche  
+    if (dieseWoche) orderedFilters.push(dieseWoche);
+    
+    // 3. Recent Client-Filter
+    orderedFilters.push(...recentClientFilters);
+    
+    // 4. Benutzerdefinierte Filter
+    orderedFilters.push(...customFilters);
+    
+    // 5. Archiv (immer als letzter)
+    if (archiv) orderedFilters.push(archiv);
+    
+    return orderedFilters;
+  }, [savedFilters, recentClientNames, tableId]);
+  
   if (loading) {
     return <div className="flex justify-center items-center py-2">Lade Filter...</div>;
   }
@@ -123,14 +206,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     return null; // Zeige nichts an, wenn keine Filter vorhanden sind
   }
   
-  // Prüfen, ob ein Filter ein Standard-Filter ist
-  const isStandardFilter = (filterName: string) => {
-    return filterName === 'Archiv' || filterName === 'Aktuell' || filterName === 'Aktive' || filterName === 'Alle';
-  };
-  
   return (
     <div className="flex flex-wrap gap-2 mb-3 mt-1">
-      {savedFilters.map(filter => (
+      {sortedFilters.map(filter => (
         <div
           key={filter.id}
           onClick={() => handleSelectFilter(filter)}

@@ -91,6 +91,8 @@ const ConsultationTracker: React.FC = () => {
         setManualEndTime('');
         setNotes('');
         setSelectedClient(null);
+        // Recent Clients nach manueller Erfassung aktualisieren
+        loadRecentClients();
       } else {
         const response = await axiosInstance.post(API_ENDPOINTS.CONSULTATIONS.START, data);
         setActiveConsultation(response.data);
@@ -112,6 +114,8 @@ const ConsultationTracker: React.FC = () => {
       setActiveConsultation(null);
       setNotes('');
       toast.success('Beratung beendet');
+      // Recent Clients nach dem Stoppen aktualisieren
+      loadRecentClients();
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Fehler beim Beenden der Beratung');
     }
@@ -169,6 +173,19 @@ const ConsultationTracker: React.FC = () => {
     
     return () => clearTimeout(timeout);
   }, [notes, activeConsultation]);
+
+  // Recent Clients aktualisieren wenn Fenster wieder fokussiert wird
+  useEffect(() => {
+    const handleFocus = () => {
+      loadRecentClients();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   if (loading) {
     return (
@@ -238,13 +255,25 @@ const ConsultationTracker: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Zuletzt beratene Clients als Tags */}
+            {/* Zuletzt beratene Clients als Tags mit "Neuer Client" Button */}
             {recentClients.length > 0 && !isManualEntry && (
               <div>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Zuletzt beraten:
                 </p>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 items-center">
+                  {/* Neuer Client Button - links von den Tags positioniert */}
+                  <button
+                    onClick={() => setIsCreateClientModalOpen(true)}
+                    className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                    style={{ width: '30.19px', height: '30.19px' }}
+                    title="Neuen Client anlegen"
+                    aria-label="Neuen Client anlegen"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                  </button>
+                  
+                  {/* Bestehende Client-Tags */}
                   {recentClients.map((client) => (
                     <button
                       key={client.id}
@@ -259,21 +288,13 @@ const ConsultationTracker: React.FC = () => {
             )}
 
             {/* Start-Buttons */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="space-y-3">
               <button
                 onClick={() => setIsClientSelectModalOpen(true)}
-                className="flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                title="Beratung starten"
               >
-                <PlayIcon className="h-5 w-5 mr-2" />
-                Beratung starten
-              </button>
-
-              <button
-                onClick={() => setIsCreateClientModalOpen(true)}
-                className="flex items-center justify-center px-4 py-3 border border-gray-300 dark:border-gray-600 text-base font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <PlusIcon className="h-5 w-5 mr-2" />
-                Neuer Client
+                <PlayIcon className="h-5 w-5" />
               </button>
 
               <button
@@ -284,14 +305,14 @@ const ConsultationTracker: React.FC = () => {
                   setManualEndTime('');
                   setNotes('');
                 }}
-                className={`flex items-center justify-center px-4 py-3 border text-base font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                className={`w-full flex items-center justify-center px-4 py-3 border text-base font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
                   isManualEntry
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
                     : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'
                 }`}
+                title="Planen"
               >
-                <ClockIcon className="h-5 w-5 mr-2" />
-                Planen
+                <ClockIcon className="h-5 w-5" />
               </button>
             </div>
 
@@ -327,10 +348,11 @@ const ConsultationTracker: React.FC = () => {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Zeit-Inputs */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Start
+                      Startzeit
                     </label>
                     <input
                       type="datetime-local"
@@ -341,7 +363,7 @@ const ConsultationTracker: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Ende
+                      Endzeit
                     </label>
                     <input
                       type="datetime-local"
@@ -351,6 +373,8 @@ const ConsultationTracker: React.FC = () => {
                     />
                   </div>
                 </div>
+
+                {/* Notizen */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Notizen
@@ -363,7 +387,7 @@ const ConsultationTracker: React.FC = () => {
                     placeholder="Optionale Notizen..."
                   />
                 </div>
-                
+
                 {/* Speichern-Button */}
                 <div className="flex justify-end">
                   <button

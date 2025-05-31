@@ -76,20 +76,33 @@ const ConsultationList: React.FC = () => {
         const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(CONSULTATIONS_TABLE_ID));
         const existingFilters = response.data;
 
-        const alleFilterExists = existingFilters.some((filter: any) => filter.name === 'Alle');
+        // Lösche veralteten "Alle" Filter falls vorhanden
+        const alleFilter = existingFilters.find((filter: any) => filter.name === 'Alle');
+        if (alleFilter) {
+          try {
+            await axiosInstance.delete(API_ENDPOINTS.SAVED_FILTERS.BY_ID(alleFilter.id));
+            console.log('Veralteter "Alle" Filter gelöscht');
+          } catch (error) {
+            console.error('Fehler beim Löschen des "Alle" Filters:', error);
+          }
+        }
+
+        const archivFilterExists = existingFilters.some((filter: any) => filter.name === 'Archiv');
         const heuteFilterExists = existingFilters.some((filter: any) => filter.name === 'Heute');
         const dieseWocheFilterExists = existingFilters.some((filter: any) => filter.name === 'Diese Woche');
-        const zuletztBeratenFilterExists = existingFilters.some((filter: any) => filter.name === 'Zuletzt beraten');
 
-        // Erstelle "Alle"-Filter (zeigt alle Beratungen ohne Einschränkung)
-        if (!alleFilterExists) {
-          const alleFilter = {
+        // Erstelle "Archiv"-Filter (zeigt nur vergangene Beratungen - strikt vor heute)
+        if (!archivFilterExists) {
+          const today = new Date().toISOString().split('T')[0];
+          const archivFilter = {
             tableId: CONSULTATIONS_TABLE_ID,
-            name: 'Alle',
-            conditions: [],
+            name: 'Archiv',
+            conditions: [
+              { column: 'startTime', operator: 'before', value: today }
+            ],
             operators: []
           };
-          await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, alleFilter);
+          await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, archivFilter);
         }
 
         // Erstelle "Heute"-Filter
@@ -121,30 +134,76 @@ const ConsultationList: React.FC = () => {
           };
           await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, dieseWocheFilter);
         }
-
-        // Erstelle "Zuletzt beraten"-Filter (basiert auf Recent Clients)
-        if (!zuletztBeratenFilterExists && recentClients.length > 0) {
-          const clientConditions = recentClients.map(client => ({
-            column: 'client',
-            operator: 'equals' as const,
-            value: client.name
-          }));
-          const operators = new Array(clientConditions.length - 1).fill('OR') as ('AND' | 'OR')[];
-          
-          const zuletztBeratenFilter = {
-            tableId: CONSULTATIONS_TABLE_ID,
-            name: 'Zuletzt beraten',
-            conditions: clientConditions,
-            operators: operators
-          };
-          await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, zuletztBeratenFilter);
-        }
       } catch (error) {
         console.error('Fehler beim Erstellen der Standard-Filter:', error);
       }
     };
 
     createStandardFilters();
+  }, []); // Nur einmal beim ersten Laden
+
+  // Separater Effect für Client-Filter-Management
+  useEffect(() => {
+    const updateClientFilters = async () => {
+      if (recentClients.length === 0) return; // Warte bis Recent Clients geladen sind
+      
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        // Hole aktuelle Filter
+        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(CONSULTATIONS_TABLE_ID));
+        const existingFilters = response.data;
+
+        // Finde alle bestehenden Client-Filter (alle Filter außer den Standard-Filtern)
+        const existingClientFilters = existingFilters.filter((filter: any) => 
+          !['Archiv', 'Heute', 'Diese Woche'].includes(filter.name)
+        );
+        
+        // Aktuelle Recent Client Namen
+        const currentRecentClientNames = recentClients.map(client => client.name);
+        
+        // Lösche veraltete Client-Filter (die nicht mehr in Recent Clients sind)
+        for (const existingFilter of existingClientFilters) {
+          if (!currentRecentClientNames.includes(existingFilter.name)) {
+            try {
+              await axiosInstance.delete(API_ENDPOINTS.SAVED_FILTERS.BY_ID(existingFilter.id));
+              console.log(`Veralteter Client-Filter gelöscht: ${existingFilter.name}`);
+            } catch (error) {
+              console.error(`Fehler beim Löschen des veralteten Client-Filters ${existingFilter.name}:`, error);
+            }
+          }
+        }
+        
+        // Erstelle neue Client-Filter für aktuelle Recent Clients
+        for (const client of recentClients) {
+          const clientFilterName = client.name;
+          const clientFilterExists = existingFilters.some((filter: any) => filter.name === clientFilterName);
+          
+          if (!clientFilterExists) {
+            const clientFilter = {
+              tableId: CONSULTATIONS_TABLE_ID,
+              name: clientFilterName,
+              conditions: [
+                { column: 'client', operator: 'equals', value: client.name }
+              ],
+              operators: []
+            };
+            await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, clientFilter);
+            console.log(`Neuer Client-Filter erstellt: ${clientFilterName}`);
+          }
+        }
+      } catch (error) {
+        console.error('Fehler beim Aktualisieren der Client-Filter:', error);
+      }
+    };
+
+    // Debounce um Race Conditions zu vermeiden
+    const timeoutId = setTimeout(() => {
+      updateClientFilters();
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
   }, [recentClients]);
 
   const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
@@ -288,7 +347,7 @@ const ConsultationList: React.FC = () => {
                   conditionResult = consultationDate >= filterDate;
                   break;
                 case 'before':
-                  conditionResult = consultationDate <= filterDate;
+                  conditionResult = consultationDate < filterDate;
                   break;
                 case 'equals':
                   conditionResult = consultationDate === filterDate;
@@ -410,7 +469,7 @@ const ConsultationList: React.FC = () => {
           tableId={CONSULTATIONS_TABLE_ID}
           onSelectFilter={applyFilterConditions}
           onReset={resetFilterConditions}
-          defaultFilterName="Alle"
+          defaultFilterName="Heute"
         />
 
         {/* Cards Grid */}
