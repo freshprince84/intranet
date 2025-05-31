@@ -414,9 +414,9 @@ const ConsultationList: React.FC = () => {
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-6 sm:p-6 sm:shadow sm:rounded-lg sm:border sm:border-gray-200 sm:dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 sm:shadow sm:rounded-lg sm:p-6 sm:border sm:border-gray-200 sm:dark:border-gray-700">
         {/* Header */}
-        <div className="flex items-center mb-6 justify-between">
+        <div className="flex items-center mb-6 justify-between px-2 sm:px-0">
           <div className="flex items-center">
             <ClockIcon className="h-6 w-6 mr-2 dark:text-white" />
             <h2 className="text-xl font-semibold dark:text-white">Beratungsliste</h2>
@@ -448,34 +448,38 @@ const ConsultationList: React.FC = () => {
 
         {/* Filter-Pane */}
         {isFilterPanelOpen && (
-          <FilterPane
-            columns={[
-              { id: 'client', label: 'Client' },
-              { id: 'branch', label: 'Niederlassung' },
-              { id: 'notes', label: 'Notizen' },
-              { id: 'startTime', label: 'Datum' },
-              { id: 'duration', label: 'Dauer (Stunden)' }
-            ]}
-            onApply={applyFilterConditions}
-            onReset={resetFilterConditions}
-            savedConditions={filterConditions}
-            savedOperators={filterLogicalOperators}
-            tableId={CONSULTATIONS_TABLE_ID}
-          />
+          <div className="px-2 sm:px-0">
+            <FilterPane
+              columns={[
+                { id: 'client', label: 'Client' },
+                { id: 'branch', label: 'Niederlassung' },
+                { id: 'notes', label: 'Notizen' },
+                { id: 'startTime', label: 'Datum' },
+                { id: 'duration', label: 'Dauer (Stunden)' }
+              ]}
+              onApply={applyFilterConditions}
+              onReset={resetFilterConditions}
+              savedConditions={filterConditions}
+              savedOperators={filterLogicalOperators}
+              tableId={CONSULTATIONS_TABLE_ID}
+            />
+          </div>
         )}
         
         {/* Gespeicherte Filter als Tags anzeigen */}
-        <SavedFilterTags
-          tableId={CONSULTATIONS_TABLE_ID}
-          onSelectFilter={applyFilterConditions}
-          onReset={resetFilterConditions}
-          defaultFilterName="Heute"
-        />
+        <div className="px-2 sm:px-0">
+          <SavedFilterTags
+            tableId={CONSULTATIONS_TABLE_ID}
+            onSelectFilter={applyFilterConditions}
+            onReset={resetFilterConditions}
+            defaultFilterName="Heute"
+          />
+        </div>
 
         {/* Cards Grid */}
-        <div className="space-y-4">
+        <div className="space-y-0 md:space-y-4">
           {filteredConsultations.length === 0 ? (
-            <div className="text-center py-12">
+            <div className="text-center py-12 px-2 sm:px-0">
               <ClockIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
               <div>
                 <p className="font-medium text-gray-900 dark:text-white">Keine Beratungen gefunden</p>
@@ -490,7 +494,7 @@ const ConsultationList: React.FC = () => {
             filteredConsultations.map((consultation) => (
               <div
                 key={consultation.id}
-                className="mx-2 sm:mx-0 bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+                className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 md:rounded-lg md:shadow-sm md:border md:hover:shadow-md md:mb-4 transition-shadow"
               >
                 {/* Card Content - Mobile: 1/3 left, 2/3 right */}
                 <div className="p-4">
