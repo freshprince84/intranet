@@ -1,22 +1,15 @@
-/**
- * FilterContext für die mobile App
- * Verwaltet die Filter für Task-Listen und stellt sie allen Komponenten zur Verfügung
- */
-
 import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { savedFilterApi, SavedFilter as BackendSavedFilter } from '../api/apiClient';
+import { savedFilterApi } from '../api/apiClient';
 import { TaskStatus } from '../types';
 import { useNetInfo } from '@react-native-community/netinfo';
-
-// Speicherkey für AsyncStorage
-const SAVED_FILTERS_KEY = '@IntranetApp:savedFilters';
 
 // Interface für gespeicherte Filter
 export interface SavedFilter {
   id: string;
   name: string;
   status: TaskStatus[];
+  excludedStatus?: TaskStatus[];
   searchTerm: string;
   dateRange?: {
     from: string | null;
@@ -30,6 +23,7 @@ interface FilterContextType {
   activeFilter: string | null;
   activeFilters: {
     status: TaskStatus[];
+    excludedStatus?: TaskStatus[];
     searchTerm: string;
     dateRange?: {
       from: string | null;
@@ -46,6 +40,9 @@ interface FilterContextType {
   isLoading: boolean;
 }
 
+// Speicherkey für AsyncStorage
+const SAVED_FILTERS_KEY = '@IntranetApp:savedFilters';
+
 // Context erstellen
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
 
@@ -56,6 +53,7 @@ export const FilterProvider: React.FC<{children: ReactNode}> = ({ children }) =>
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<{
     status: TaskStatus[];
+    excludedStatus?: TaskStatus[];
     searchTerm: string;
     dateRange?: {
       from: string | null;
@@ -63,6 +61,7 @@ export const FilterProvider: React.FC<{children: ReactNode}> = ({ children }) =>
     };
   }>({
     status: [],
+    excludedStatus: [],
     searchTerm: ''
   });
   const [isLoading, setIsLoading] = useState(false);
@@ -77,27 +76,42 @@ export const FilterProvider: React.FC<{children: ReactNode}> = ({ children }) =>
       if (netInfo.isConnected) {
         try {
           console.log('FilterContext: Lade Filter vom Backend');
-          const backendFilters = await savedFilterApi.getByTable('tasks');
+          const backendFilters = await savedFilterApi.getByTable('worktracker-todos');
           console.log('FilterContext: Backend-Filter geladen:', backendFilters);
           
           if (backendFilters && backendFilters.length > 0) {
             // Konvertiere die Backend-Filter in das für die App benötigte Format
-            const formattedFilters = backendFilters.map((filter: BackendSavedFilter) => {
+            const formattedFilters = backendFilters.map((filter: any) => {
               // Extrahiere Status-Bedingungen aus den Filter-Conditions
               const statusConditions = filter.conditions
-                .filter(condition => condition.column === 'status' && condition.operator === 'equals')
-                .map(condition => condition.value as TaskStatus);
+                .filter((condition: any) => condition.column === 'status' && 
+                  (condition.operator === 'equals' || condition.operator === 'notEquals'))
+                .map((condition: any) => ({
+                  value: condition.value as TaskStatus,
+                  operator: condition.operator
+                }));
                 
               // Extrahiere Suchbegriff-Bedingungen
               const searchTermCondition = filter.conditions.find(
-                condition => (condition.column === 'title' || condition.column === 'description') && 
+                (condition: any) => (condition.column === 'title' || condition.column === 'description') && 
                              condition.operator === 'contains'
               );
+
+              // Extrahiere die Status-Werte anhand der Operatoren
+              const statusValues = statusConditions
+                .filter((condition: {operator: string}) => condition.operator === 'equals')
+                .map((condition: {value: TaskStatus}) => condition.value);
+
+              // Extrahiere die ausgeschlossenen Status-Werte
+              const excludedStatusValues = statusConditions
+                .filter((condition: {operator: string}) => condition.operator === 'notEquals')
+                .map((condition: {value: TaskStatus}) => condition.value);
               
               return {
                 id: filter.id.toString(),
                 name: filter.name,
-                status: statusConditions.length > 0 ? statusConditions : [],
+                status: statusValues,
+                excludedStatus: excludedStatusValues,
                 searchTerm: searchTermCondition ? (searchTermCondition.value as string) : ''
               };
             });
@@ -105,9 +119,14 @@ export const FilterProvider: React.FC<{children: ReactNode}> = ({ children }) =>
             console.log('FilterContext: Formatierte Filter:', formattedFilters);
             setSavedFilters(formattedFilters);
             
-            // Aktiviere standardmäßig den "Alle"-Filter, wenn noch kein Filter aktiv ist
-            if (!activeFilter) {
-              const alleFilter = formattedFilters.find((filter: SavedFilter) => filter.name === 'Alle');
+            // Aktiviere standardmäßig den "Aktuell"-Filter
+            const aktuellFilter = formattedFilters.find(filter => filter.name === 'Aktuell');
+            if (aktuellFilter) {
+              console.log('FilterContext: Aktiviere Aktuell-Filter:', aktuellFilter);
+              handleFilterSelect(aktuellFilter.id);
+            } else if (!activeFilter) {
+              // Fallback auf Alle-Filter, wenn Aktuell nicht existiert
+              const alleFilter = formattedFilters.find(filter => filter.name === 'Alle');
               if (alleFilter) {
                 handleFilterSelect(alleFilter.id);
               }
@@ -129,8 +148,12 @@ export const FilterProvider: React.FC<{children: ReactNode}> = ({ children }) =>
         const filters = JSON.parse(filtersJson);
         setSavedFilters(filters);
         
-        // Aktiviere standardmäßig den "Alle"-Filter, wenn noch kein Filter aktiv ist
-        if (!activeFilter) {
+        // Aktiviere standardmäßig den "Aktuell"-Filter
+        const aktuellFilter = filters.find((filter: SavedFilter) => filter.name === 'Aktuell');
+        if (aktuellFilter) {
+          handleFilterSelect(aktuellFilter.id);
+        } else if (!activeFilter) {
+          // Fallback auf Alle-Filter, wenn Aktuell nicht existiert
           const alleFilter = filters.find((filter: SavedFilter) => filter.name === 'Alle');
           if (alleFilter) {
             handleFilterSelect(alleFilter.id);
@@ -149,10 +172,11 @@ export const FilterProvider: React.FC<{children: ReactNode}> = ({ children }) =>
     setActiveFilter(filterId);
     
     // Anwendung des Filters über die savedFilters-Liste
-    const filter = savedFilters.find((f: SavedFilter) => f.id === filterId);
+    const filter: SavedFilter | undefined = savedFilters.find((f: SavedFilter) => f.id === filterId);
     if (filter) {
       setActiveFilters({
         status: filter.status,
+        excludedStatus: filter.excludedStatus || [],
         searchTerm: filter.searchTerm
       });
       
@@ -168,6 +192,7 @@ export const FilterProvider: React.FC<{children: ReactNode}> = ({ children }) =>
     setActiveFilter(null);
     setActiveFilters({
       status: [],
+      excludedStatus: [],
       searchTerm: ''
     });
     setSearchQuery('');
@@ -211,14 +236,14 @@ export const FilterProvider: React.FC<{children: ReactNode}> = ({ children }) =>
       
       // Erstelle Backend-Filter
       const backendFilter = {
-        tableId: 'tasks',
+        tableId: 'worktracker-todos',
         name: name,
         conditions: conditions,
         operators: operators
       };
       
       // Speichere Filter im Backend
-      const savedFilter = await savedFilterApi.saveFilter(backendFilter);
+      const savedFilter = await savedFilterApi.create(backendFilter);
       
       // Lade aktualisierte Filter
       await loadSavedFilters();

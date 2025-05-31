@@ -974,14 +974,4 @@ This document stores specific details required for deployment processes, such as
     cp IntranetMobileApp/android/app/build/outputs/apk/release/app-release.apk backend/public/downloads/intranet-app.apk
     ```
 
-## Server Details for SCP
 
-*   **Server IP Address:** `65.109.228.106`
-*   **SSH/SCP User:** `root`
-*   **SSH Key:** `~/.ssh/intranet_rsa` (as mentioned in `SERVER_UPDATE.md` for SSH connection)
-*   **Target Directory for APK on Server:** `/var/www/intranet/backend/public/downloads/`
-*   **Target Filename on Server:** `intranet-app.apk`
-*   **SCP Upload Command (run in workspace root):**
-    ```bash
-    scp -i ~/.ssh/intranet_rsa backend/public/downloads/intranet-app.apk root@65.109.228.106:/var/www/intranet/backend/public/downloads/intranet-app.apk
-    ```

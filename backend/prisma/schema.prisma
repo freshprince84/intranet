@@ -116,6 +116,10 @@ model WorkTime {
   timezone  String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  clientId    Int?
+  client      Client?   @relation(fields: [clientId], references: [id])
+  notes       String?   @db.Text
+  taskLinks   WorkTimeTask[]
   branch    Branch    @relation(fields: [branchId], references: [id])
   user      User      @relation(fields: [userId], references: [id])
 }
@@ -138,6 +142,7 @@ model Task {
   role             Role?                 @relation(fields: [roleId], references: [id])
   carticles        TaskCerebroCarticle[]
   attachments      TaskAttachment[]
+  workTimeLinks    WorkTimeTask[]
 }
 
 model Request {
@@ -404,6 +409,51 @@ model RequestAttachment {
   request     Request  @relation(fields: [requestId], references: [id], onDelete: Cascade)
 }
 
+model IdentificationDocument {
+  id                 Int       @id @default(autoincrement())
+  userId             Int
+  user               User      @relation(fields: [userId], references: [id])
+  documentType       String    // z.B. passport, national_id, etc.
+  documentNumber     String
+  issueDate          DateTime?
+  expiryDate         DateTime?
+  issuingCountry     String
+  issuingAuthority   String?
+  documentFile       String?
+  isVerified         Boolean   @default(false)
+  verificationDate   DateTime?
+  verifiedBy         Int?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@unique([userId, documentType])
+}
+
+model Client {
+  id          Int        @id @default(autoincrement())
+  name        String
+  company     String?
+  email       String?
+  phone       String?
+  address     String?
+  notes       String?    @db.Text
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  workTimes   WorkTime[]
+}
+
+model WorkTimeTask {
+  id          Int       @id @default(autoincrement())
+  workTimeId  Int
+  taskId      Int
+  createdAt   DateTime  @default(now())
+  workTime    WorkTime  @relation(fields: [workTimeId], references: [id])
+  task        Task      @relation(fields: [taskId], references: [id])
+  
+  @@unique([workTimeId, taskId])
+}
+
 enum TaskStatus {
   open
   in_progress
@@ -435,24 +485,4 @@ enum NotificationType {
   system
   cerebro
   worktime_manager_stop
-}
-
-model IdentificationDocument {
-  id                 Int       @id @default(autoincrement())
-  userId             Int
-  user               User      @relation(fields: [userId], references: [id])
-  documentType       String    // z.B. passport, national_id, etc.
-  documentNumber     String
-  issueDate          DateTime?
-  expiryDate         DateTime?
-  issuingCountry     String
-  issuingAuthority   String?
-  documentFile       String?
-  isVerified         Boolean   @default(false)
-  verificationDate   DateTime?
-  verifiedBy         Int?
-  createdAt          DateTime  @default(now())
-  updatedAt          DateTime  @updatedAt
-
-  @@unique([userId, documentType])
 }

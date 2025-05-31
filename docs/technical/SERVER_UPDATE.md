@@ -2,6 +2,18 @@
 
 Diese Anleitung beschreibt die Schritte, die zur Aktualisierung des Servers nach dem Pull der neuesten Änderungen von GitHub erforderlich sind.
 
+## Server Details for SCP
+
+*   **Server IP Address:** `65.109.228.106`
+*   **SSH/SCP User:** `root`
+*   **SSH Key:** `~/.ssh/intranet_rsa` (as mentioned in `SERVER_UPDATE.md` for SSH connection)
+*   **Target Directory for APK on Server:** `/var/www/intranet/backend/public/downloads/`
+*   **Target Filename on Server:** `intranet-app.apk`
+*   **SCP Upload Command (run in workspace root):**
+    ```bash
+    scp -i ~/.ssh/intranet_rsa backend/public/downloads/intranet-app.apk root@65.109.228.106:/var/www/intranet/backend/public/downloads/intranet-app.apk
+    ```
+
 ## Schritt 1: Git Pull
 
 Zuerst müssen die neuesten Änderungen von GitHub gezogen werden:
@@ -359,3 +371,15 @@ sudo systemctl restart nginx
   tail -f logs/app.log
   ```
 - Wie im README.md erwähnt: "Server-Neustart nur nach Absprache" 
+
+
+
+
+## Server Details for SCP
+
+*   **Server IP Address:** `65.109.228.106`
+*   **SSH/SCP User:** `root`
+*   **SSH Key:** `~/.ssh/intranet_rsa` (as mentioned in `SERVER_UPDATE.md` for SSH connection)
+*   **Target Directory for APK on Server:** `/var/www/intranet/backend/public/downloads/`
+*   **Target Filename on Server:** `intranet-app.apk`
+*   **SCP Upload Command (run in workspace root):**

@@ -63,6 +63,7 @@ async function main() {
       // Seiten-Berechtigungen
       { entity: 'dashboard', entityType: 'page', accessLevel: 'both' },
       { entity: 'worktracker', entityType: 'page', accessLevel: 'both' },
+      { entity: 'consultations', entityType: 'page', accessLevel: 'both' },
       { entity: 'usermanagement', entityType: 'page', accessLevel: 'both' },
       { entity: 'settings', entityType: 'page', accessLevel: 'both' },
       { entity: 'profile', entityType: 'page', accessLevel: 'both' },
@@ -77,6 +78,7 @@ async function main() {
       { entity: 'users', entityType: 'table', accessLevel: 'both' },
       { entity: 'roles', entityType: 'table', accessLevel: 'both' },
       { entity: 'team_worktime', entityType: 'table', accessLevel: 'both' },
+      { entity: 'clients', entityType: 'table', accessLevel: 'both' },
     ];
     
     // User-Berechtigungen - EINGESCHRÄNKTE RECHTE
@@ -84,10 +86,12 @@ async function main() {
       // Seiten
       { entity: 'dashboard', entityType: 'page', accessLevel: 'read' },
       { entity: 'worktracker', entityType: 'page', accessLevel: 'both' },
+      { entity: 'consultations', entityType: 'page', accessLevel: 'both' },
       { entity: 'settings', entityType: 'page', accessLevel: 'read' },
       { entity: 'team_worktime_control', entityType: 'page', accessLevel: 'read' },
       { entity: 'requests', entityType: 'table', accessLevel: 'both' },
       { entity: 'tasks', entityType: 'table', accessLevel: 'both' },
+      { entity: 'clients', entityType: 'table', accessLevel: 'both' },
     ];
     
     // Hamburger-Berechtigungen - BASIS-RECHTE
@@ -121,6 +125,8 @@ async function main() {
             data: { accessLevel: accessLevel }
           });
           console.log(`Berechtigung aktualisiert: ${entity} ${entityType} für Rolle ${roleId}`);
+        } else {
+          console.log(`Berechtigung bereits vorhanden: ${entity} ${entityType} für Rolle ${roleId}`);
         }
       } else {
         // Neue Berechtigung erstellen
@@ -248,6 +254,39 @@ async function main() {
         }
       });
     }
+    
+    // Demo-Clients erstellen
+    console.log('Erstelle Demo-Clients...');
+    const clients = [
+      {
+        name: 'Musterfirma GmbH',
+        company: 'Musterfirma GmbH',
+        email: 'info@musterfirma.de',
+        phone: '+49 123 456789',
+        address: 'Musterstraße 1, 12345 Musterstadt',
+        notes: 'Langjähriger Kunde, bevorzugt Termine vormittags'
+      },
+      {
+        name: 'Max Müller',
+        email: 'max.mueller@example.com',
+        phone: '+49 987 654321',
+        notes: 'Einzelunternehmer, IT-Beratung'
+      },
+      {
+        name: 'Beispiel AG',
+        company: 'Beispiel AG',
+        email: 'kontakt@beispiel-ag.de',
+        address: 'Beispielweg 42, 54321 Beispielstadt'
+      }
+    ];
+
+    for (const clientData of clients) {
+      await prisma.client.create({
+        data: clientData
+      });
+    }
+
+    console.log('Demo-Clients erstellt');
     
     // 7. ERSTELLE CEREBRO MARKDOWN-DATEIEN
     console.log('Erstelle Cerebro Markdown-Dateien...');

@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import { Modal, Portal, Text, Button, Chip, TextInput, Divider, IconButton } from 'react-native-paper';
+import { Modal, Portal, Text, Button, Chip, TextInput, Divider } from 'react-native-paper';
 import { TaskStatus } from '../types';
 import { useFilter } from '../contexts/FilterContext';
 
@@ -48,65 +48,68 @@ const TaskFilterModal: React.FC<TaskFilterModalProps> = ({
   currentSearchTerm = ''
 }) => {
   // Verwende den FilterContext
-  const { 
-    savedFilters, 
-    activeFilters, 
-    saveFilter, 
-    deleteFilter, 
-    resetFilters,
-    isLoading 
+  const {
+    savedFilters,
+    activeFilters,
+    searchQuery,
+    setSearchQuery,
+    saveFilter,
+    deleteFilter,
+    handleFilterSelect,
+    resetFilters
   } = useFilter();
   
-  // Lokale States für das Modal, die mit den activeFilters synchronisiert werden
+  // Lokale Filter-Status
   const [selectedStatus, setSelectedStatus] = useState<TaskStatus[]>([]);
   const [searchTerm, setSearchTerm] = useState(currentSearchTerm);
-  
-  // State für Filtererstellung
   const [newFilterName, setNewFilterName] = useState('');
   const [showSaveFilterSection, setShowSaveFilterSection] = useState(false);
   
-  // Synchronisiere lokale States mit activeFilters, wenn sich das Modal öffnet
+  // Aktualisiere lokale Filter-Status, wenn sich activeFilters ändert oder das Modal geöffnet wird
   useEffect(() => {
     if (visible) {
       setSelectedStatus(activeFilters.status);
-      setSearchTerm(activeFilters.searchTerm || currentSearchTerm);
+      setSearchTerm(searchQuery);
     }
-  }, [visible, activeFilters, currentSearchTerm]);
+  }, [visible, activeFilters, searchQuery]);
   
-  // Umschalten des Status-Filters
-  const toggleStatus = (status: TaskStatus) => {
-    if (selectedStatus.includes(status)) {
-      setSelectedStatus(selectedStatus.filter(s => s !== status));
-    } else {
-      setSelectedStatus([...selectedStatus, status]);
-    }
-  };
-  
-  // Filter zurücksetzen
+  // Eigene Reset-Funktion für lokale Filter-Zustände
   const handleResetFilters = () => {
     setSelectedStatus([]);
     setSearchTerm('');
   };
   
-  // Filter anwenden
-  const handleApplyFilters = () => {
-    onApplyFilters({
-      status: selectedStatus,
-      searchTerm: searchTerm
-    });
-    onDismiss();
+  // Wechsele den Status eines Filters
+  const toggleStatus = (status: TaskStatus) => {
+    setSelectedStatus(prev => 
+      prev.includes(status)
+        ? prev.filter(s => s !== status)
+        : [...prev, status]
+    );
   };
   
-  // Neuen Filter speichern
-  const handleSaveFilter = async () => {
-    if (!newFilterName.trim()) {
-      Alert.alert('Fehler', 'Bitte geben Sie einen Namen für den Filter ein.');
-      return;
+  // Wende einen gespeicherten Filter an
+  const applyFilter = (filterId: string) => {
+    const filter = savedFilters.find(f => f.id === filterId);
+    if (filter) {
+      setSelectedStatus(filter.status);
+      setSearchTerm(filter.searchTerm);
     }
-    
+  };
+  
+  // Speichere einen neuen Filter
+  const handleSaveFilter = async () => {
     try {
-      // Speichere einen Filter mit dem aktuellen Status und Suchbegriff
-      const success = await saveFilter(newFilterName.trim(), selectedStatus, searchTerm);
+      if (!newFilterName.trim()) {
+        Alert.alert('Fehler', 'Bitte geben Sie einen Namen für den Filter ein.');
+        return;
+      }
+      
+      const success = await saveFilter(
+        newFilterName.trim(),
+        selectedStatus,
+        searchTerm
+      );
       
       if (success) {
         setNewFilterName('');
@@ -116,41 +119,25 @@ const TaskFilterModal: React.FC<TaskFilterModalProps> = ({
         Alert.alert('Fehler', 'Der Filter konnte nicht gespeichert werden.');
       }
     } catch (error) {
-      Alert.alert('Fehler', 'Der Filter konnte nicht gespeichert werden.');
       console.error('Fehler beim Speichern des Filters:', error);
+      Alert.alert('Fehler', 'Der Filter konnte nicht gespeichert werden.');
     }
   };
   
-  // Filter löschen
-  const handleDeleteFilter = async (filterId: string) => {
-    try {
-      // Frage den Benutzer, ob er den Filter wirklich löschen möchte
-      Alert.alert(
-        'Filter löschen',
-        'Möchten Sie diesen Filter wirklich löschen?',
-        [
-          {
-            text: 'Abbrechen',
-            style: 'cancel'
-          },
-          {
-            text: 'Löschen',
-            onPress: async () => {
-              const success = await deleteFilter(filterId);
-              if (success) {
-                Alert.alert('Erfolg', 'Filter wurde gelöscht.');
-              } else {
-                Alert.alert('Fehler', 'Der Filter konnte nicht gelöscht werden.');
-              }
-            },
-            style: 'destructive'
-          }
-        ]
-      );
-    } catch (error) {
-      Alert.alert('Fehler', 'Der Filter konnte nicht gelöscht werden.');
-      console.error('Fehler beim Löschen des Filters:', error);
-    }
+  // Wende Filter an und wähle ihn aus
+  const applySelectedFilter = () => {
+    // Speichere den aktiven Filter temporär in den App-Status
+    // und wende ihn als Filter auf die Aufgabenliste an
+    onApplyFilters({
+      status: selectedStatus,
+      searchTerm: searchTerm
+    });
+    
+    // Wichtig: Wir aktualisieren auch den Context, um die Filter-Status zu synchronisieren
+    setSearchQuery(searchTerm);
+    
+    // Schließe den Modal
+    onDismiss();
   };
   
   return (
@@ -170,101 +157,83 @@ const TaskFilterModal: React.FC<TaskFilterModalProps> = ({
           {savedFilters.length > 0 && (
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Gespeicherte Filter</Text>
-              <View style={styles.savedFiltersContainer}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                >
-                  {savedFilters.map((filter) => (
-                    <View key={filter.id} style={styles.savedFilterContainer}>
-                      <Chip
-                        onPress={() => {
-                          setSelectedStatus(filter.status);
-                          setSearchTerm(filter.searchTerm);
-                        }}
-                        style={styles.savedFilterChip}
-                      >
-                        {filter.name}
-                      </Chip>
-                      <IconButton
-                        icon="delete"
-                        size={16}
-                        onPress={() => handleDeleteFilter(filter.id)}
-                        style={styles.deleteFilterButton}
-                      />
-                    </View>
-                  ))}
-                </ScrollView>
-              </View>
+              <ScrollView horizontal style={styles.savedFiltersContainer}>
+                {savedFilters.map(filter => (
+                  <Chip
+                    key={filter.id}
+                    onPress={() => applyFilter(filter.id)}
+                    onClose={() => deleteFilter(filter.id)}
+                    style={styles.savedFilterChip}
+                  >
+                    {filter.name}
+                  </Chip>
+                ))}
+              </ScrollView>
             </View>
           )}
           
-          {/* Suchbegriff */}
+          {/* Textsuche */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Suchbegriff</Text>
+            <Text style={styles.sectionTitle}>Textsuche</Text>
             <TextInput
-              placeholder="Suchbegriff eingeben..."
+              style={styles.input}
               value={searchTerm}
               onChangeText={setSearchTerm}
-              style={styles.input}
+              placeholder="Nach Text suchen..."
+              mode="outlined"
             />
           </View>
           
-          {/* Status */}
+          {/* Status-Filter */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Status</Text>
             <View style={styles.statusContainer}>
-              {(Object.keys(statusLabels) as TaskStatus[]).map((status) => (
+              {Object.entries(statusLabels).map(([status, label]) => (
                 <Chip
                   key={status}
-                  selected={selectedStatus.includes(status)}
-                  onPress={() => toggleStatus(status)}
+                  selected={selectedStatus.includes(status as TaskStatus)}
+                  onPress={() => toggleStatus(status as TaskStatus)}
                   style={[
                     styles.statusChip,
-                    selectedStatus.includes(status) && { backgroundColor: statusColors[status] }
+                    { backgroundColor: selectedStatus.includes(status as TaskStatus) ? statusColors[status as TaskStatus] : '#E5E7EB' }
                   ]}
+                  textStyle={{ color: selectedStatus.includes(status as TaskStatus) ? 'white' : '#374151' }}
                 >
-                  {statusLabels[status]}
+                  {label}
                 </Chip>
               ))}
             </View>
           </View>
           
           {/* Filter speichern */}
-          {!showSaveFilterSection ? (
+          <View style={styles.section}>
             <Button
-              mode="outlined"
-              onPress={() => setShowSaveFilterSection(true)}
-              icon="content-save"
+              mode="text"
+              onPress={() => setShowSaveFilterSection(!showSaveFilterSection)}
               style={styles.saveFilterButton}
             >
-              Filter speichern
+              {showSaveFilterSection ? 'Abbrechen' : 'Filter speichern'}
             </Button>
-          ) : (
-            <View style={styles.saveFilterSection}>
-              <Text style={styles.sectionTitle}>Filter speichern</Text>
-              <TextInput
-                placeholder="Name des Filters..."
-                value={newFilterName}
-                onChangeText={setNewFilterName}
-                style={styles.input}
-              />
-              <Button
-                mode="contained"
-                onPress={handleSaveFilter}
-                disabled={!newFilterName.trim()}
-                style={styles.saveButton}
-              >
-                Speichern
-              </Button>
-              <Button
-                mode="text"
-                onPress={() => setShowSaveFilterSection(false)}
-              >
-                Abbrechen
-              </Button>
-            </View>
-          )}
+            
+            {showSaveFilterSection && (
+              <View style={styles.saveFilterSection}>
+                <TextInput
+                  style={styles.input}
+                  value={newFilterName}
+                  onChangeText={setNewFilterName}
+                  placeholder="Filter-Name eingeben..."
+                  mode="outlined"
+                />
+                <Button
+                  mode="contained"
+                  onPress={handleSaveFilter}
+                  style={styles.saveButton}
+                >
+                  Speichern
+                </Button>
+              </View>
+            )}
+          </View>
         </ScrollView>
         
         <View style={styles.modalFooter}>
@@ -277,10 +246,10 @@ const TaskFilterModal: React.FC<TaskFilterModalProps> = ({
           </Button>
           <Button
             mode="contained"
-            onPress={handleApplyFilters}
+            onPress={applySelectedFilter}
             style={styles.applyButton}
           >
-            Anwenden
+            Filter anwenden
           </Button>
         </View>
       </Modal>
@@ -345,20 +314,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginBottom: 16,
   },
-  savedFilterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginRight: 8,
-  },
   savedFilterChip: {
-    marginRight: 4,
+    marginRight: 8,
     borderRadius: 16,
-  },
-  deleteFilterButton: {
-    padding: 0,
-    margin: 0,
-    height: 24,
-    width: 24,
   },
   saveFilterButton: {
     marginBottom: 10,

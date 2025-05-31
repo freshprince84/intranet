@@ -125,6 +125,22 @@ export const API_ENDPOINTS = {
         BASE: '/saved-filters',
         BY_TABLE: (tableId: string) => `/saved-filters/${tableId}`,
         BY_ID: (id: number) => `/saved-filters/${id}`
+    },
+    // Clients
+    CLIENTS: {
+        BASE: '/clients',
+        BY_ID: (id: number) => `/clients/${id}`,
+        RECENT: '/clients/recent'
+    },
+    // Consultations
+    CONSULTATIONS: {
+        BASE: '/consultations',
+        START: '/consultations/start',
+        STOP: '/consultations/stop',
+        BY_ID: (id: number) => `/consultations/${id}`,
+        LINK_TASK: (id: number) => `/consultations/${id}/link-task`,
+        CREATE_TASK: (id: number) => `/consultations/${id}/create-task`,
+        UPDATE_NOTES: (id: number) => `/consultations/${id}/notes`
     }
 };
 

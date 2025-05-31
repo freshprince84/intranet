@@ -18,6 +18,8 @@ import identificationDocumentRoutes from './routes/identificationDocuments';
 import documentRecognitionRoutes from './routes/documentRecognition';
 import savedFiltersRoutes from './routes/savedFilters';
 import urlMetadataRoutes from './routes/urlMetadata';
+import clientRoutes from './routes/clients';
+import consultationRoutes from './routes/consultations';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 
 const app = express();
@@ -136,6 +138,8 @@ app.use('/api/identification-documents', identificationDocumentRoutes);
 app.use('/api/document-recognition', documentRecognitionRoutes);
 app.use('/api/saved-filters', savedFiltersRoutes);
 app.use('/api/url-metadata', urlMetadataRoutes);
+app.use('/api/clients', clientRoutes);
+app.use('/api/consultations', consultationRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

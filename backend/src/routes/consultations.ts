@@ -1,0 +1,25 @@
+import express from 'express';
+import { authMiddleware } from '../middleware/auth';
+import {
+  startConsultation,
+  stopConsultation,
+  getConsultations,
+  linkTaskToConsultation,
+  createTaskForConsultation,
+  updateConsultationNotes
+} from '../controllers/consultationController';
+
+const router = express.Router();
+
+// Alle Routen erfordern Authentifizierung
+router.use(authMiddleware);
+
+// Consultation-Routen
+router.post('/start', startConsultation);
+router.post('/stop', stopConsultation);
+router.get('/', getConsultations);
+router.post('/:id/link-task', linkTaskToConsultation);
+router.post('/:id/create-task', createTaskForConsultation);
+router.patch('/:id/notes', updateConsultationNotes);
+
+export default router; 

@@ -169,7 +169,7 @@ const WorktimeScreen = () => {
       
       // Lade vorhandene Filter vom Server
       console.log('Prüfe existierende Filter...');
-      const existingFilters = await savedFilterApi.getByTable('tasks');
+      const existingFilters = await savedFilterApi.getByTable('worktracker-todos');
       console.log('Existierende Filter:', existingFilters);
       
       // Prüfe, ob die Standardfilter bereits existieren
@@ -180,7 +180,7 @@ const WorktimeScreen = () => {
       if (!alleFilterExists) {
         console.log('Erstelle "Alle"-Filter...');
         const alleFilter = {
-          tableId: 'tasks',
+          tableId: 'worktracker-todos',
           name: 'Alle',
           conditions: [
             { column: 'status', operator: 'equals', value: 'open' },
@@ -199,7 +199,7 @@ const WorktimeScreen = () => {
       if (!archivFilterExists) {
         console.log('Erstelle "Archiv"-Filter...');
         const archivFilter = {
-          tableId: 'tasks',
+          tableId: 'worktracker-todos',
           name: 'Archiv',
           conditions: [
             { column: 'status', operator: 'equals', value: 'done' }

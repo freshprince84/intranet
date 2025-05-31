@@ -38,13 +38,15 @@ interface TableSettingsModalProps {
   onDismiss: () => void;
   onApplySettings: (settings: TableSettings) => void;
   tableId: string;
+  tableSettings?: TableSettings;
 }
 
 const TableSettingsModal: React.FC<TableSettingsModalProps> = ({
   visible,
   onDismiss,
   onApplySettings,
-  tableId
+  tableId,
+  tableSettings: initialTableSettings
 }) => {
   // State für ausgewählte Spalten
   const [selectedColumns, setSelectedColumns] = useState<string[]>(['title', 'status', 'description']);
@@ -56,12 +58,19 @@ const TableSettingsModal: React.FC<TableSettingsModalProps> = ({
     itemsPerPage: 10
   });
   
-  // Lade Einstellungen beim Öffnen des Modals
+  // Lade Einstellungen beim Öffnen des Modals oder wenn sich tableSettings ändert
   useEffect(() => {
     if (visible) {
-      loadSettings();
+      if (initialTableSettings) {
+        // Verwende übergebene tableSettings, falls vorhanden
+        setSettings(initialTableSettings);
+        setSelectedColumns(initialTableSettings.columns);
+      } else {
+        // Sonst lade aus AsyncStorage
+        loadSettings();
+      }
     }
-  }, [visible, tableId]);
+  }, [visible, tableId, initialTableSettings]);
   
   // Lade gespeicherte Einstellungen aus dem AsyncStorage
   const loadSettings = async () => {

@@ -17,7 +17,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 // Definiere die möglichen Seitenbezeichnungen
-type PageName = 'dashboard' | 'worktracker' | 'team_worktime_control' | 'usermanagement' | 'settings' | 'profile' | 'cerebro' | 'payroll';
+type PageName = 'dashboard' | 'worktracker' | 'consultations' | 'team_worktime_control' | 'usermanagement' | 'settings' | 'profile' | 'cerebro' | 'payroll';
 
 // Definiere die Struktur für die Menüelemente
 interface MenuItem {
@@ -97,6 +97,13 @@ const Sidebar: React.FC = () => {
             path: '/worktracker',
             icon: <ClipboardDocumentListIcon className="h-full w-full" />,
             page: 'worktracker',
+            group: 'main'
+        },
+        {
+            name: 'Beratungen',
+            path: '/consultations',
+            icon: <UserGroupIcon className="h-full w-full" />,
+            page: 'consultations',
             group: 'main'
         },
         {

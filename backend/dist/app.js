@@ -32,6 +32,8 @@ const identificationDocuments_1 = __importDefault(require("./routes/identificati
 const documentRecognition_1 = __importDefault(require("./routes/documentRecognition"));
 const savedFilters_1 = __importDefault(require("./routes/savedFilters"));
 const urlMetadata_1 = __importDefault(require("./routes/urlMetadata"));
+const clients_1 = __importDefault(require("./routes/clients"));
+const consultations_1 = __importDefault(require("./routes/consultations"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const app = (0, express_1.default)();
 // Middleware
@@ -136,6 +138,8 @@ app.use('/api/identification-documents', identificationDocuments_1.default);
 app.use('/api/document-recognition', documentRecognition_1.default);
 app.use('/api/saved-filters', savedFilters_1.default);
 app.use('/api/url-metadata', urlMetadata_1.default);
+app.use('/api/clients', clients_1.default);
+app.use('/api/consultations', consultations_1.default);
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

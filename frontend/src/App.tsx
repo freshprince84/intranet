@@ -21,6 +21,7 @@ import NotificationList from './components/NotificationList.tsx';
 import FaviconLoader from './components/FaviconLoader.tsx';
 import Cerebro from './pages/Cerebro.tsx';
 import Payroll from './pages/Payroll.tsx';
+import Consultations from './pages/Consultations.tsx';
 import { MessageProvider } from './contexts/MessageContext.tsx';
 import { ErrorProvider } from './contexts/ErrorContext.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
@@ -62,6 +63,7 @@ const App: React.FC = () => {
                                                     <Route index element={<Navigate to="/dashboard" replace />} />
                                                     <Route path="/dashboard" element={<Dashboard />} />
                                                     <Route path="/worktracker" element={<Worktracker />} />
+                                                    <Route path="/consultations" element={<ProtectedRoute><Consultations /></ProtectedRoute>} />
                                                     <Route path="/team-worktime-control" element={
                                                         <ProtectedRoute entity="team_worktime_control" accessLevel="read">
                                                             <TeamWorktimeControl />

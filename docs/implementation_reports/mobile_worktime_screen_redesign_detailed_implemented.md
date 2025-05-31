@@ -554,67 +554,226 @@
         ```
 *   **Zwischenergebnis:** Die Funktion zum Erstellen der Standardfilter in der Datenbank wurde implementiert. Beim Start der App wird geprüft, ob die Filter "Alle" und "Archiv" bereits existieren. Falls nicht, werden sie in der Datenbank angelegt. Diese Implementierung ist analog zum Frontend, wo die Standardfilter ebenfalls als echte Filter in der Datenbank gespeichert werden.
 
-## Schritt 38: Implementierung des zentralen Filter-Managements mit FilterContext
+## Schritt 38: Anpassung der TaskList-Komponente
 
-**Status:** Abgeschlossen
+*   **Status:** In Bearbeitung
+*   **Aktionen:**
+    1.  Entfernung der hart codierten Filter-Chips für "Alle" und "Archiv" aus der ScrollView:
+        ```typescript
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filtersContainer}
+        >
+          {/* Entfernt:
+          <Chip
+            selected={activeFilter === 'all'}
+            onPress={() => handleFilterSelect('all')}
+            style={[
+              styles.filterChip,
+              activeFilter === 'all' && styles.activeFilterChip
+            ]}
+          >
+            Alle
+          </Chip>
+          <Chip
+            selected={activeFilter === 'archive'}
+            onPress={() => handleFilterSelect('archive')}
+            style={[
+              styles.filterChip,
+              activeFilter === 'archive' && styles.activeFilterChip
+            ]}
+          >
+            Archiv
+          </Chip>
+          */}
+          {savedFilters.map((filter) => (
+            <Chip
+              key={filter.id}
+              selected={activeFilter === filter.id}
+              onPress={() => handleFilterSelect(filter.id)}
+              style={[
+                styles.filterChip,
+                activeFilter === filter.id && styles.activeFilterChip
+              ]}
+            >
+              {filter.name}
+            </Chip>
+          ))}
+          {activeFilter !== '' && (
+            <Chip
+              icon="close"
+              onPress={resetFilters}
+              style={styles.resetFilterChip}
+            >
+              Zurücksetzen
+            </Chip>
+          )}
+        </ScrollView>
+        ```
+    2.  Vereinheitlichung der Filter-Logik in `handleFilterSelect`:
+        ```typescript
+        const handleFilterSelect = (filterId: string) => {
+          setActiveFilter(filterId);
+          
+          // Anwendung aller Filter über die savedFilters-Liste
+          const filter = savedFilters.find(f => f.id === filterId);
+          if (filter) {
+            setActiveFilters({
+              status: filter.status,
+              searchTerm: filter.searchTerm,
+              dateRange: filter.dateRange
+            });
+            
+            // Aktualisiere die Suchleiste, wenn der Filter einen Suchbegriff enthält
+            if (filter.searchTerm) {
+              setSearchQuery(filter.searchTerm);
+            }
+          }
+        };
+        ```
+    3.  Verbesserung der `resetFilters`-Funktion:
+        ```typescript
+        const resetFilters = () => {
+          setActiveFilter('');  // Leerer String statt null
+          setActiveFilters({
+            status: [],
+            searchTerm: ''
+          });
+          setSearchQuery('');
+        };
+        ```
+    4.  Optimierung der `loadSavedFilters`-Funktion für korrekte Konvertierung und Aktivierung des Standardfilters:
+        ```typescript
+        const loadSavedFilters = async () => {
+          try {
+            // Versuche zuerst, Filter vom API zu laden
+            try {
+              console.log('Lade Filter vom Backend');
+              const backendFilters = await savedFilterApi.getByTable('tasks');
+              console.log('Backend-Filter geladen:', backendFilters);
+              
+              if (backendFilters && backendFilters.length > 0) {
+                // Konvertiere die Backend-Filter in das für die App benötigte Format
+                const formattedFilters = backendFilters.map(filter => {
+                  // Extrahiere Status-Bedingungen aus den Filter-Conditions
+                  const statusConditions = filter.conditions
+                    .filter(condition => condition.column === 'status' && condition.operator === 'equals')
+                    .map(condition => condition.value as TaskStatus);
+                    
+                  // Extrahiere Suchbegriff-Bedingungen
+                  const searchTermCondition = filter.conditions.find(
+                    condition => (condition.column === 'title' || condition.column === 'description') && 
+                                condition.operator === 'contains'
+                  );
+                  
+                  return {
+                    id: filter.id.toString(),
+                    name: filter.name,
+                    status: statusConditions.length > 0 ? statusConditions : [],
+                    searchTerm: searchTermCondition ? (searchTermCondition.value as string) : ''
+                  };
+                });
+                
+                console.log('Formatierte Filter:', formattedFilters);
+                setSavedFilters(formattedFilters);
+                
+                // Aktiviere standardmäßig den "Alle"-Filter
+                const alleFilter = formattedFilters.find((filter: SavedFilter) => filter.name === 'Alle');
+                if (alleFilter) {
+                  console.log('Aktiviere "Alle"-Filter:', alleFilter);
+                  handleFilterSelect(alleFilter.id);
+                }
+                
+                // Speichere die formatierten Filter auch im AsyncStorage für Offline-Zugriff
+                await AsyncStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(formattedFilters));
+                return;
+              }
+            } catch (apiError) {
+              console.error('Fehler beim Laden der Filter vom Backend:', apiError);
+              // Bei API-Fehler fallback auf AsyncStorage
+            }
+            
+            // Fallback: Lade Filter aus dem AsyncStorage
+            const filtersJson = await AsyncStorage.getItem(SAVED_FILTERS_KEY);
+            if (filtersJson) {
+              const filters = JSON.parse(filtersJson);
+              setSavedFilters(filters);
+              
+              // Aktiviere standardmäßig den "Alle"-Filter
+              const alleFilter = filters.find((filter: SavedFilter) => filter.name === 'Alle');
+              if (alleFilter) {
+                console.log('Aktiviere "Alle"-Filter aus AsyncStorage:', alleFilter);
+                handleFilterSelect(alleFilter.id);
+              }
+            }
+          } catch (error) {
+            console.error('Fehler beim Laden der gespeicherten Filter:', error);
+          }
+        };
+        ```
+*   **Zwischenergebnis:** Die TaskList-Komponente wurde angepasst, um die hart codierten Filter zu entfernen und stattdessen die aus der Datenbank geladenen Filter anzuzeigen. Die Filter-Logik wurde vereinheitlicht, sodass alle Filter (Standard- und benutzerdefinierte) einheitlich behandelt werden.
 
-**Änderungsdatum:** 02.04.2023
+## Schritt 39: Integration mit dem TaskFilterModal
 
-### Ziel
-Implementierung eines zentralen Filter-Managements für die Aufgabenliste in der mobilen App, um Filter zwischen der TaskList-Komponente und dem TaskFilterModal zu synchronisieren.
-
-### Analyse des Problems
-- TaskList und TaskFilterModal laden und verwalten ihre Filter unabhängig voneinander
-- Wenn in TaskFilterModal ein neuer Filter hinzugefügt wird, wird er nicht automatisch in TaskList angezeigt
-- Standardfilter und benutzerdefinierte Filter werden unterschiedlich behandelt
-
-### Lösung
-1. **Erstellung eines FilterContext**
-   - Zentralisierte Verwaltung von gespeicherten Filtern
-   - API zur Verwaltung von Filtern (laden, speichern, löschen)
-   - Synchronisierung von Filtern zwischen Komponenten
-
-2. **Anpassung der TaskList-Komponente**
-   - Verwendung des FilterContext anstelle lokaler Filter-Logik
-   - Entfernen doppelter Filter-Verwaltung
-   - Konsistente Darstellung der Filter
-
-3. **Anpassung des TaskFilterModal**
-   - Verwendung des FilterContext
-   - Delegation der Filter-Operationen an den Context
-   - Verbesserung der Benutzeroberfläche
-
-4. **Integration in WorktimeScreen**
-   - Umschließung der relevanten Komponenten mit dem FilterProvider
-
-### Implementierung
-
-1. **Implementierung des FilterContext**
-   - Erstellt in `IntranetMobileApp/src/contexts/FilterContext.tsx`
-   - Verwaltet Filter-State zentral
-   - Bietet API zum Laden, Speichern und Löschen von Filtern
-
-2. **Anpassung der TaskList**
-   - Entfernung der lokalen Filter-Logik
-   - Verwendung des useFilter-Hooks
-   - Verbesserte Darstellung der gespeicherten Filter
-
-3. **Anpassung des TaskFilterModal**
-   - Zentrale Verwaltung der Filter
-   - Verbesserte Benutzeroberfläche
-   - Konsistente Benennung von Funktionen
-
-4. **Integration in WorktimeScreen**
-   - Umschließung der Komponenten mit FilterProvider
-
-### Ergebnisse
-- Filter werden zentral verwaltet und zwischen Komponenten synchronisiert
-- Standardfilter und benutzerdefinierte Filter werden einheitlich behandelt
-- Verbessertes Benutzererlebnis durch konsistente Filter-Darstellung
-- Vereinfachte Komponenten durch Auslagerung der Filter-Logik
-
-### Nächste Schritte
-- Unit-Tests für den FilterContext
-- Mögliche Erweiterung um komplexere Filterbedingungen
-- Offline-Support verbessern
+*   **Status:** In Bearbeitung
+*   **Aktionen:**
+    1.  Import der savedFilterApi in TaskFilterModal.tsx:
+        ```typescript
+        import { savedFilterApi } from '../api/apiClient';
+        ```
+    2.  Anpassung der `loadSavedFilters`-Funktion, um Filter vom Backend zu laden:
+        ```typescript
+        const loadSavedFilters = async () => {
+          try {
+            // Versuche zuerst, Filter vom API zu laden
+            if (netInfo.isConnected) {
+              try {
+                const backendFilters = await savedFilterApi.getByTable('tasks');
+                if (backendFilters && backendFilters.length > 0) {
+                  // Konvertiere die Backend-Filter in das für die App benötigte Format
+                  const formattedFilters = backendFilters.map((filter: any) => {
+                    // Extrahiere Status-Bedingungen aus den Filter-Conditions
+                    const statusConditions = filter.conditions
+                      .filter((condition: any) => condition.column === 'status' && condition.operator === 'equals')
+                      .map((condition: any) => condition.value as TaskStatus);
+                      
+                    // Extrahiere Suchbegriff-Bedingungen
+                    const searchTermCondition = filter.conditions.find(
+                      (condition: any) => (condition.column === 'title' || condition.column === 'description') && 
+                                   condition.operator === 'contains'
+                    );
+                    
+                    return {
+                      id: filter.id.toString(),
+                      name: filter.name,
+                      status: statusConditions.length > 0 ? statusConditions : [],
+                      searchTerm: searchTermCondition ? (searchTermCondition.value as string) : ''
+                    };
+                  });
+                  
+                  setSavedFilters(formattedFilters);
+                  
+                  // Speichere die formatierten Filter auch im AsyncStorage für Offline-Zugriff
+                  await AsyncStorage.setItem(SAVED_FILTERS_KEY, JSON.stringify(formattedFilters));
+                  return;
+                }
+              } catch (apiError) {
+                console.error('Fehler beim Laden der Filter vom Backend:', apiError);
+                // Bei API-Fehler Fallback auf AsyncStorage
+              }
+            }
+            
+            // Fallback: Lade Filter aus dem AsyncStorage
+            const savedFiltersJson = await AsyncStorage.getItem(SAVED_FILTERS_KEY);
+            if (savedFiltersJson) {
+              const parsedFilters = JSON.parse(savedFiltersJson);
+              setSavedFilters(parsedFilters);
+            }
+          } catch (error) {
+            console.error('Fehler beim Laden der gespeicherten Filter:', error);
+          }
+        };
+        ```
+*   **Zwischenergebnis:** Das TaskFilterModal wurde angepasst, um Filter sowohl vom Backend als auch aus dem AsyncStorage zu laden. Dadurch werden jetzt sowohl die Standardfilter "Alle" und "Archiv" als auch benutzerdefinierte Filter im Modal angezeigt.
 

@@ -4,6 +4,7 @@
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider } from './contexts/AuthContext';
+import { FilterProvider } from './contexts/FilterContext';
 import AppNavigator from './navigation';
 import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
 import DynamicAppIcon from './components/DynamicAppIcon';
@@ -29,8 +30,10 @@ export default function App() {
     <SafeAreaProvider>
       <PaperProvider theme={theme}>
         <AuthProvider>
-          <DynamicAppIcon />
-          <AppNavigator />
+          <FilterProvider>
+            <DynamicAppIcon />
+            <AppNavigator />
+          </FilterProvider>
         </AuthProvider>
       </PaperProvider>
     </SafeAreaProvider>
