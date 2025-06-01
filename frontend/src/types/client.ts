@@ -9,6 +9,8 @@ export interface Client {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  lastConsultationDate?: string;
+  status?: 'past' | 'planned';
 }
 
 export interface Consultation {
@@ -35,6 +37,16 @@ export interface Consultation {
       id: number;
       title: string;
       status: string;
+    };
+  }[];
+  invoiceItems?: {
+    id: number;
+    invoice: {
+      id: number;
+      invoiceNumber: string;
+      status: 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED';
+      issueDate: string;
+      total: number;
     };
   }[];
 } 

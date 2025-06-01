@@ -14,6 +14,7 @@ Dieses Dokument beschreibt die Implementierung und Funktionsweise des Consultati
 8. [Berechtigungen](#berechtigungen)
 9. [Integration mit anderen Modulen](#integration-mit-anderen-modulen)
 10. [Besonderheiten](#besonderheiten)
+11. [Abrechnungsfunktionalität](#abrechnungsfunktionalität)
 
 ## Überblick
 
@@ -178,6 +179,51 @@ model WorkTimeTask {
 }
 ```
 
+### Abrechnungsfunktionalität
+
+#### Übersicht
+Das Consultation-Modul bietet eine integrierte Abrechnungsfunktion, die es ermöglicht, gefilterte Beratungslisten als Swiss QR-Rechnungen zu generieren. Die Lösung entspricht den Schweizer Standards und verhindert doppelte Abrechnungen.
+
+#### Features
+- **QR-Rechnung generieren** - Erstellt PDF-Rechnungen mit Swiss QR Code
+- **Schweizer Standards** - Erfüllt alle Anforderungen der Swiss QR Bill Guidelines
+- **Doppelabrechnung verhindern** - Bereits abgerechnete Stunden können nicht erneut abgerechnet werden
+- **Rechnungsverwaltung** - Separate Verwaltung aller erstellten Rechnungen
+- **Zahlungsverfolgung** - Tracking von Zahlungseingängen
+
+#### Datenmodell Erweiterungen
+
+```prisma
+model ConsultationInvoice {
+  id                    Int                      @id @default(autoincrement())
+  invoiceNumber         String                   @unique
+  clientId              Int
+  userId                Int
+  status                InvoiceStatus            @default(DRAFT)
+  total                 Decimal                  @db.Decimal(10, 2)
+  // ... weitere Felder
+  items                 ConsultationInvoiceItem[]
+}
+
+model ConsultationInvoiceItem {
+  id                    Int                      @id @default(autoincrement())
+  invoiceId             Int
+  workTimeId            Int
+  // ... weitere Felder
+  @@unique([invoiceId, workTimeId]) // Verhindert doppelte Abrechnung
+}
+```
+
+#### Integration
+- **In ConsultationList** - Button "Rechnung erstellen" bei aktiven Filtern
+- **In Lohnabrechnung** - Neuer Tab "Beratungsrechnungen" für die Verwaltung
+- **Markierung** - Abgerechnete Beratungen werden visuell gekennzeichnet
+
+#### Sicherheit
+- Berechtigungssystem mit spezifischen Rollen für Rechnungserstellung
+- Validierung aller Eingaben
+- Audit-Trail für alle Rechnungsaktionen
+
 ## Benutzeroberfläche
 
 ### Consultations-Seite Layout
@@ -195,6 +241,7 @@ model WorkTimeTask {
 3. **ConsultationList Box**
    - Suchfeld
    - Filter-Button
+   - **Total-Anzeige** - Zeigt Anzahl der Beratungen und Gesamtdauer aller abgeschlossenen Beratungen
    - Spalten-Konfiguration
    - Sortierbare Tabelle
 
@@ -207,6 +254,18 @@ Folgende Filterkriterien sind verfügbar:
 - Dauer (größer/kleiner/gleich in Stunden)
 
 Filter können mit UND/ODER verknüpft und gespeichert werden.
+
+### Total-Funktionalität
+
+Die Beratungsliste zeigt im Header eine intelligente Total-Anzeige:
+- Anzahl aller sichtbaren Beratungen (gefiltert)
+- Anzahl abgeschlossener Beratungen in Klammern
+- Gesamtdauer aller abgeschlossenen Beratungen im Format "Xh Ym"
+- Automatische Aktualisierung bei Filteränderungen
+
+**Beispiel:** "12 Beratungen (10 abgeschlossen) - Total: 8h 45m"
+
+**Hinweis:** Nur Beratungen mit `endTime` werden zur Gesamtdauer gezählt. Laufende Beratungen werden in der Anzahl berücksichtigt, aber nicht in der Zeitberechnung.
 
 ## Berechtigungen
 
@@ -245,8 +304,14 @@ Das Modul verwendet folgende Berechtigungen:
 - Recent Clients werden gecacht
 - Lazy Loading für Task-Verknüpfungen
 - Pagination bei großen Datenmengen (geplant)
+- **Total-Berechnung** wird als useMemo optimiert und aktualisiert sich nur bei Filteränderungen
 
 ### Keyboard Shortcuts (geplant)
 - `Strg+N` - Neue Beratung starten
 - `Strg+S` - Notizen speichern
-- `ESC` - Modal schließen 
+- `ESC` - Modal schließen
+
+### Utility-Funktionen
+- **formatTotalDuration()** - Berechnet und formatiert die Gesamtdauer einer Liste von Beratungen
+- Berücksichtigt automatisch Zeitzonenkonvertierung
+- Nur abgeschlossene Beratungen werden einbezogen 

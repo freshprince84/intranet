@@ -8,27 +8,70 @@
 
 **Root Cause:** Inkonsistente Behandlung von lokaler Zeit vs. UTC zwischen Frontend und Backend.
 
-### ✅ DIE LÖSUNG: Konsistente getTimezoneOffset-Logik
+### ✅ DIE LÖSUNG: Konsistente UTC-Zeit-Behandlung
 
-#### ✅ Korrekte Implementierung (BEHOBEN):
+#### ✅ Frontend → Backend (datetime-local zu API):
 ```javascript
 // Für datetime-local Inputs → API-Calls (Frontend → Backend)
-const inputTime = new Date(datetimeLocalValue);  // z.B. "2024-01-15T14:01"
-const correctedTime = new Date(inputTime.getTime() - inputTime.getTimezoneOffset() * 60000);
-const apiTime = correctedTime.toISOString();     // ✅ Konsistent für API
+const timeString = `${editingTimeValue}:00.000Z`;  // "2025-05-31T11:35:00.000Z"
 
-// Für API-Zeitstempel → datetime-local Inputs (Backend → Frontend)
-const dbTime = new Date(apiTimestamp);           // z.B. "2024-01-15T14:01:00.000Z"
-const localDateTime = new Date(dbTime.getTime() + dbTime.getTimezoneOffset() * 60000);
-const inputValue = localDateTime.toISOString().slice(0, 16); // "2024-01-15T14:01"
+// ✅ KORREKT: Direkter UTC-String ohne getTimezoneOffset-Manipulation
 ```
 
-#### ❌ Alte problematische Implementierungen (ENTFERNT):
+#### ✅ Backend → Frontend (API-Zeitstempel zu datetime-local):
 ```javascript
-// ❌ ENTFERNT - führte zu Timezone-Problemen
-const timeString = `${datetimeValue}:00.000`;              // Inkonsistent
-const timeString = convertDatetimeLocalToApi(datetimeValue);  // Verschiedene Logik
+// Für API-Zeitstempel → datetime-local Input (Backend → Frontend)
+const dbTime = new Date(currentTime);
+
+// UTC-Komponenten direkt extrahieren
+const year = dbTime.getUTCFullYear();
+const month = String(dbTime.getUTCMonth() + 1).padStart(2, '0');
+const day = String(dbTime.getUTCDate()).padStart(2, '0');
+const hours = String(dbTime.getUTCHours()).padStart(2, '0');
+const minutes = String(dbTime.getUTCMinutes()).padStart(2, '0');
+
+const inputValue = `${year}-${month}-${day}T${hours}:${minutes}`;
 ```
+
+### ✅ ARCHITEKTUR-VERBESSERUNG: Konsistente API-Schicht
+
+**Problem:** Direkte `axiosInstance` Calls in Komponenten führten zu inkonsistenter Architektur.
+
+**Lösung:** Alle API-Calls werden über dedizierte API-Funktionen gemacht:
+
+```javascript
+// ❌ VORHER: Direkter API-Call in Komponente
+const response = await axiosInstance.put(`${API_ENDPOINTS.WORKTIME.BASE}/${consultationId}`, data);
+
+// ✅ NACHHER: Zentralisierte API-Funktion
+const response = await consultationApi.updateConsultationTime(consultationId, data);
+```
+
+**Vorteile:**
+- ✅ **Testbarkeit:** API-Funktionen können einfach gemockt werden
+- ✅ **Wartbarkeit:** Endpoint-Änderungen nur an einer Stelle
+- ✅ **Konsistenz:** Einheitliche Fehlerbehandlung und Logging
+- ✅ **Wiederverwendbarkeit:** API-Funktionen können in mehreren Komponenten verwendet werden
+
+### Implementierte Lösung
+
+1. **ConsultationTracker.tsx:** Beratung planen/starten - ✅ Funktioniert
+2. **ConsultationList.tsx:** Zeit bearbeiten/speichern - ✅ Funktioniert  
+3. **Timeline-Anzeige:** UTC-basierte Tages-/Mittag-Markierungen - ✅ Funktioniert
+
+### Code-Locations
+
+- **API-Schicht:** `frontend/src/api/consultationApi.ts`
+- **Zeit-Update-Funktion:** `updateConsultationTime()`
+- **Timezone-Behandlung:** Direkte UTC-String-Manipulation ohne Browser-Timezone-Offset
+
+### Wichtige Hinweise für Entwickler
+
+⚠️ **WICHTIG:** Verwende NIEMALS `getTimezoneOffset()` bei datetime-local Inputs für Consultations!
+
+✅ **KORREKT:** Direkte UTC-String-Erstellung: `${datetimeValue}:00.000Z`
+
+✅ **IMMER:** Verwende API-Funktionen statt direkte axiosInstance-Calls
 
 ### ✅ Betroffene Komponenten (ALLE BEHOBEN):
 

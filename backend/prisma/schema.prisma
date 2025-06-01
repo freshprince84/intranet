@@ -49,6 +49,8 @@ model User {
   workTimes                WorkTime[]
   identificationDocuments  IdentificationDocument[]  // Neue Beziehung
   savedFilters             SavedFilter[]
+  consultationInvoices     ConsultationInvoice[]
+  invoiceSettings          InvoiceSettings?
 }
 
 model Role {
@@ -120,6 +122,7 @@ model WorkTime {
   client      Client?   @relation(fields: [clientId], references: [id])
   notes       String?   @db.Text
   taskLinks   WorkTimeTask[]
+  invoiceItems ConsultationInvoiceItem[]
   branch    Branch    @relation(fields: [branchId], references: [id])
   user      User      @relation(fields: [userId], references: [id])
 }
@@ -441,6 +444,87 @@ model Client {
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
   workTimes   WorkTime[]
+  consultationInvoices  ConsultationInvoice[]
+}
+
+model ConsultationInvoice {
+  id                    Int                      @id @default(autoincrement())
+  invoiceNumber         String                   @unique
+  clientId              Int
+  userId                Int                     // Berater
+  issueDate             DateTime                 @default(now())
+  dueDate               DateTime
+  status                InvoiceStatus            @default(DRAFT)
+  subtotal              Decimal                  @db.Decimal(10, 2)
+  vatRate               Decimal?                 @db.Decimal(5, 2)
+  vatAmount             Decimal?                 @db.Decimal(10, 2)
+  total                 Decimal                  @db.Decimal(10, 2)
+  currency              String                   @default("CHF")
+  paymentTerms          String                   @default("30 Tage netto")
+  notes                 String?                  @db.Text
+  pdfPath               String?
+  qrReference           String?                  // QR-Referenznummer
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  
+  client                Client                   @relation(fields: [clientId], references: [id])
+  user                  User                     @relation(fields: [userId], references: [id])
+  items                 ConsultationInvoiceItem[]
+  payments              InvoicePayment[]
+}
+
+model ConsultationInvoiceItem {
+  id                    Int                      @id @default(autoincrement())
+  invoiceId             Int
+  workTimeId            Int
+  description           String
+  quantity              Decimal                  @db.Decimal(10, 2) // Stunden
+  unitPrice             Decimal                  @db.Decimal(10, 2) // Stundensatz
+  amount                Decimal                  @db.Decimal(10, 2) // Total
+  createdAt             DateTime                 @default(now())
+  
+  invoice               ConsultationInvoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  workTime              WorkTime                 @relation(fields: [workTimeId], references: [id])
+  
+  @@unique([invoiceId, workTimeId]) // Verhindert doppelte Abrechnung
+}
+
+model InvoicePayment {
+  id                    Int                      @id @default(autoincrement())
+  invoiceId             Int
+  amount                Decimal                  @db.Decimal(10, 2)
+  paymentDate           DateTime
+  paymentMethod         String
+  reference             String?
+  notes                 String?
+  createdAt             DateTime                 @default(now())
+  
+  invoice               ConsultationInvoice      @relation(fields: [invoiceId], references: [id])
+}
+
+model InvoiceSettings {
+  id                    Int                      @id @default(autoincrement())
+  userId                Int                      @unique
+  companyName           String
+  companyAddress        String
+  companyZip            String
+  companyCity           String
+  companyCountry        String                   @default("CH")
+  companyPhone          String?
+  companyEmail          String?
+  companyWebsite        String?
+  vatNumber             String?
+  iban                  String
+  bankName              String?
+  defaultHourlyRate     Decimal                  @db.Decimal(10, 2)
+  defaultVatRate        Decimal?                 @db.Decimal(5, 2)
+  invoicePrefix         String                   @default("INV")
+  nextInvoiceNumber     Int                      @default(1)
+  footerText            String?                  @db.Text
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  
+  user                  User                     @relation(fields: [userId], references: [id])
 }
 
 model WorkTimeTask {
@@ -485,4 +569,12 @@ enum NotificationType {
   system
   cerebro
   worktime_manager_stop
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  PAID
+  OVERDUE
+  CANCELLED
 }

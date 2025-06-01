@@ -327,4 +327,111 @@ export const convertApiToDatetimeLocal = (apiTimestamp: string): string => {
         console.error('Fehler bei der API-zu-Datetime-Local Konvertierung:', error);
         throw new Error(`Konvertierung von API-Timestamp fehlgeschlagen: ${apiTimestamp}`);
     }
+};
+
+/**
+ * Formatiert die Gesamtdauer einer Liste von Beratungen in Stunden und Minuten.
+ * Berücksichtigt nur abgeschlossene Beratungen (mit endTime).
+ * 
+ * @param consultations Array von Consultation-Objekten
+ * @returns Formatierte Gesamtdauer als "Xh Ym" oder "0h 0m" bei leerer Liste
+ * 
+ * @example
+ * // Bei Beratungen mit Gesamtdauer von 125 Minuten
+ * formatTotalDuration(consultations) // "2h 5m"
+ */
+export const formatTotalDuration = (consultations: Array<{ startTime: string; endTime: string | null }>): string => {
+    try {
+        // Berechne die Gesamtdauer in Minuten
+        const totalMinutes = consultations.reduce((total, consultation) => {
+            // Nur abgeschlossene Beratungen berücksichtigen
+            if (!consultation.endTime) return total;
+            
+            // Berechne Dauer dieser Beratung in Minuten
+            const startTime = consultation.startTime.endsWith('Z') 
+                ? consultation.startTime.substring(0, consultation.startTime.length - 1)
+                : consultation.startTime;
+            
+            const endTime = consultation.endTime.endsWith('Z') 
+                ? consultation.endTime.substring(0, consultation.endTime.length - 1)
+                : consultation.endTime;
+            
+            const start = new Date(startTime);
+            const end = new Date(endTime);
+            
+            const durationMs = end.getTime() - start.getTime();
+            const durationMinutes = Math.floor(durationMs / (1000 * 60));
+            
+            return total + durationMinutes;
+        }, 0);
+        
+        // Konvertiere zu Stunden und Minuten
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        
+        return `${hours}h ${minutes}m`;
+    } catch (error) {
+        console.error('Fehler bei der Formatierung der Gesamtdauer:', error);
+        return '0h 0m';
+    }
+};
+
+/**
+ * Prüft, ob eine Beratung bereits abgerechnet wurde.
+ * 
+ * @param consultation Consultation-Objekt
+ * @returns true wenn abgerechnet, false wenn nicht
+ */
+export const isConsultationInvoiced = (consultation: { invoiceItems?: Array<{ invoice: { status: string } }> }): boolean => {
+    return !!(consultation.invoiceItems && consultation.invoiceItems.length > 0);
+};
+
+/**
+ * Holt die Rechnungsinformationen einer Beratung.
+ * 
+ * @param consultation Consultation-Objekt
+ * @returns Rechnungsinfo oder null wenn nicht abgerechnet
+ */
+export const getConsultationInvoiceInfo = (consultation: { invoiceItems?: Array<{ invoice: { id: number; invoiceNumber: string; status: string; issueDate: string; total: number } }> }) => {
+    if (!consultation.invoiceItems || consultation.invoiceItems.length === 0) {
+        return null;
+    }
+    
+    // Nimm die erste (und normalerweise einzige) Rechnung
+    const firstItem = consultation.invoiceItems[0];
+    return firstItem.invoice;
+};
+
+/**
+ * Erstellt einen benutzerfreundlichen Text für den Rechnungsstatus.
+ * 
+ * @param status Rechnungsstatus
+ * @returns Deutscher Status-Text
+ */
+export const getInvoiceStatusText = (status: 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED'): string => {
+    const statusMap = {
+        'DRAFT': 'Entwurf',
+        'SENT': 'Gesendet',
+        'PAID': 'Bezahlt',
+        'OVERDUE': 'Überfällig',
+        'CANCELLED': 'Storniert'
+    };
+    return statusMap[status] || status;
+};
+
+/**
+ * Gibt die Farbe für einen Rechnungsstatus zurück.
+ * 
+ * @param status Rechnungsstatus
+ * @returns CSS-Klassen für die Statusfarbe
+ */
+export const getInvoiceStatusColor = (status: 'DRAFT' | 'SENT' | 'PAID' | 'OVERDUE' | 'CANCELLED'): string => {
+    const colorMap = {
+        'DRAFT': 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+        'SENT': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+        'PAID': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+        'OVERDUE': 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+        'CANCELLED': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+    };
+    return colorMap[status] || 'bg-gray-100 text-gray-800';
 }; 

@@ -117,17 +117,33 @@ export const deleteClient = async (req: Request, res: Response) => {
 // Zuletzt beratene Clients abrufen
 export const getRecentClients = async (req: Request, res: Response) => {
   try {
+    console.log('🚀 DEBUG: getRecentClients wurde aufgerufen');
+    console.log('🚀 DEBUG: req.userId:', req.userId);
+    console.log('🚀 DEBUG: headers:', req.headers.authorization?.substring(0, 20) + '...');
+    
     const userId = req.userId;
     
     if (!userId) {
+      console.log('❌ DEBUG: Nicht authentifiziert');
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
     
-    // Hole die letzten 10 unterschiedlichen Clients, die der User beraten hat
-    const recentConsultations = await prisma.workTime.findMany({
+    console.log('✅ DEBUG: Benutzer authentifiziert, userId:', userId);
+    
+    // ✅ TIMEZONE-FIX: Verwende gleiche Logik wie Frontend (getTimezoneOffset)
+    // Das Frontend verwendet: new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000)
+    // Backend muss dasselbe verwenden für konsistente Zeitvergleiche
+    const localNow = new Date();
+    const now = new Date(localNow.getTime() - localNow.getTimezoneOffset() * 60000);
+    
+    console.log('🕒 DEBUG: Timezone-korrigierte Zeit:', now.toISOString());
+    
+    // Hole vergangene Beratungen (startTime < jetzt) - diese sind "zuletzt beraten"
+    const pastConsultations = await prisma.workTime.findMany({
       where: {
         userId: Number(userId),
-        clientId: { not: null }
+        clientId: { not: null },
+        startTime: { lt: now }
       },
       select: {
         clientId: true,
@@ -139,11 +155,73 @@ export const getRecentClients = async (req: Request, res: Response) => {
       take: 10
     });
     
-    const recentClients = recentConsultations
-      .filter(c => c.client !== null)
-      .map(c => c.client);
+    // Hole geplante Beratungen (startTime >= jetzt)
+    const plannedConsultations = await prisma.workTime.findMany({
+      where: {
+        userId: Number(userId),
+        clientId: { not: null },
+        startTime: { gte: now }
+      },
+      select: {
+        clientId: true,
+        client: true,
+        startTime: true
+      },
+      orderBy: { startTime: 'asc' }, // Geplante chronologisch sortiert
+      distinct: ['clientId'],
+      take: 5
+    });
     
-    res.json(recentClients);
+    // Sammle alle Client-IDs aus vergangenen Beratungen
+    const pastClientIds = new Set(pastConsultations.map(c => c.clientId));
+    
+    // Filtere geplante Beratungen: nur Clients die noch nicht in vergangenen enthalten sind
+    const uniquePlannedConsultations = plannedConsultations.filter(
+      c => !pastClientIds.has(c.clientId)
+    );
+    
+    // Kombiniere: Vergangene Beratungen zuerst, dann geplante
+    const combinedConsultations = [
+      ...pastConsultations,
+      ...uniquePlannedConsultations
+    ];
+    
+    // Limitiere auf 10 Clients insgesamt
+    const limitedConsultations = combinedConsultations.slice(0, 10);
+    
+    // Erweiterte Antwort mit Status und Startzeit
+    const recentClientsWithStatus = limitedConsultations
+      .filter(c => c.client !== null)
+      .map(consultation => ({
+        ...consultation.client,
+        lastConsultationDate: consultation.startTime,
+        status: consultation.startTime < now ? 'past' : 'planned'
+      }));
+    
+    // DEBUG: Log die Sortierreihenfolge mit Timezone-Infos
+    console.log('=== RECENT CLIENTS DEBUG (TIMEZONE-FIXED) ===');
+    console.log('User ID:', userId);
+    console.log('Local now (raw):', localNow.toISOString());
+    console.log('Corrected now (with timezone offset):', now.toISOString());
+    console.log('Timezone offset minutes:', localNow.getTimezoneOffset());
+    console.log('Past consultations:', pastConsultations.length);
+    pastConsultations.forEach((consultation, index) => {
+      const isPast = consultation.startTime < now;
+      console.log(`  Past ${index + 1}. Client: ${consultation.client?.name}, StartTime: ${consultation.startTime.toISOString()}, isPast: ${isPast}`);
+    });
+    console.log('Planned consultations:', plannedConsultations.length);
+    plannedConsultations.forEach((consultation, index) => {
+      const isPlanned = consultation.startTime >= now;
+      console.log(`  Planned ${index + 1}. Client: ${consultation.client?.name}, StartTime: ${consultation.startTime.toISOString()}, isPlanned: ${isPlanned}`);
+    });
+    console.log('Unique planned (after filtering):', uniquePlannedConsultations.length);
+    uniquePlannedConsultations.forEach((consultation, index) => {
+      console.log(`  Unique Planned ${index + 1}. Client: ${consultation.client?.name}, StartTime: ${consultation.startTime.toISOString()}`);
+    });
+    console.log('Final clients order with status:', recentClientsWithStatus.map(c => `${c.name} (${c.status})`));
+    console.log('=== END DEBUG ===');
+    
+    res.json(recentClientsWithStatus);
   } catch (error) {
     console.error('Fehler beim Abrufen der zuletzt beratenen Clients:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });

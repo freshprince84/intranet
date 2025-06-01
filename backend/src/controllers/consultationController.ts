@@ -132,6 +132,19 @@ export const getConsultations = async (req: Request, res: Response) => {
           include: {
             task: true
           }
+        },
+        invoiceItems: {
+          include: {
+            invoice: {
+              select: {
+                id: true,
+                invoiceNumber: true,
+                status: true,
+                issueDate: true,
+                total: true
+              }
+            }
+          }
         }
       },
       orderBy: {

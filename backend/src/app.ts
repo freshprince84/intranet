@@ -20,6 +20,8 @@ import savedFiltersRoutes from './routes/savedFilters';
 import urlMetadataRoutes from './routes/urlMetadata';
 import clientRoutes from './routes/clients';
 import consultationRoutes from './routes/consultations';
+import invoiceSettingsRoutes from './routes/invoiceSettings';
+import consultationInvoicesRoutes from './routes/consultationInvoices';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 
 const app = express();
@@ -70,6 +72,7 @@ import fs from 'fs';
 const cerebroUploadsPath = path.join(uploadsPath, 'cerebro');
 const taskAttachmentsPath = path.join(uploadsPath, 'task-attachments');
 const requestAttachmentsPath = path.join(uploadsPath, 'request-attachments');
+const invoicesPath = path.join(uploadsPath, 'invoices');
 
 if (!fs.existsSync(cerebroUploadsPath)) {
   fs.mkdirSync(cerebroUploadsPath, { recursive: true });
@@ -81,6 +84,10 @@ if (!fs.existsSync(taskAttachmentsPath)) {
 
 if (!fs.existsSync(requestAttachmentsPath)) {
   fs.mkdirSync(requestAttachmentsPath, { recursive: true });
+}
+
+if (!fs.existsSync(invoicesPath)) {
+  fs.mkdirSync(invoicesPath, { recursive: true });
 }
 
 // Sicherstellen, dass das Downloads-Verzeichnis existiert
@@ -140,6 +147,8 @@ app.use('/api/saved-filters', savedFiltersRoutes);
 app.use('/api/url-metadata', urlMetadataRoutes);
 app.use('/api/clients', clientRoutes);
 app.use('/api/consultations', consultationRoutes);
+app.use('/api/invoice-settings', invoiceSettingsRoutes);
+app.use('/api/consultation-invoices', consultationInvoicesRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

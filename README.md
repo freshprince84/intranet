@@ -48,6 +48,13 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [MODUL_FILTERSYSTEM.md](docs/modules/MODUL_FILTERSYSTEM.md) - Erweitertes Filtersystem mit benutzerdefinierten Filtern
 - [ROLE_SWITCH.md](docs/modules/ROLE_SWITCH.md) - Funktionalität zum Wechseln der Benutzerrollen
 - [WORKFLOW_AUTOMATISIERUNG.md](docs/modules/WORKFLOW_AUTOMATISIERUNG.md) - Workflow-Automatisierung für Task-Bearbeitung
+- [MODUL_CONSULTATIONS.md](docs/modules/MODUL_CONSULTATIONS.md) - Beratungsstunden-Verwaltung mit Client-Tracking
+
+### Implementierungspläne
+- [CONSULTATION_MODULE_IMPLEMENTATION.md](docs/implementation_plans/CONSULTATION_MODULE_IMPLEMENTATION.md) - Schritt-für-Schritt Plan für Consultation-Modul
+- [CONSULTATION_MODULE_IMPLEMENTATION_PART2.md](docs/implementation_plans/CONSULTATION_MODULE_IMPLEMENTATION_PART2.md) - Teil 2: Frontend-Implementierung
+- [CONSULTATION_MODULE_IMPLEMENTATION_PART3.md](docs/implementation_plans/CONSULTATION_MODULE_IMPLEMENTATION_PART3.md) - Teil 3: Erweiterte Features
+- [CONSULTATION_INVOICE_IMPLEMENTATION.md](docs/implementation_plans/CONSULTATION_INVOICE_IMPLEMENTATION.md) - Abrechnungsmodul für Beratungsstunden
 
 ## Claude-spezifische Dokumentation
 - [claude/README.md](claude/README.md) - Übersicht der speziell für Claude optimierten Ressourcen

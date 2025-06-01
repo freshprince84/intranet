@@ -127,6 +127,19 @@ const getConsultations = (req, res) => __awaiter(void 0, void 0, void 0, functio
                     include: {
                         task: true
                     }
+                },
+                invoiceItems: {
+                    include: {
+                        invoice: {
+                            select: {
+                                id: true,
+                                invoiceNumber: true,
+                                status: true,
+                                issueDate: true,
+                                total: true
+                            }
+                        }
+                    }
                 }
             },
             orderBy: {

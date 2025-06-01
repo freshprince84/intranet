@@ -79,6 +79,13 @@ async function main() {
       { entity: 'roles', entityType: 'table', accessLevel: 'both' },
       { entity: 'team_worktime', entityType: 'table', accessLevel: 'both' },
       { entity: 'clients', entityType: 'table', accessLevel: 'both' },
+      { entity: 'consultation_invoices', entityType: 'table', accessLevel: 'both' },
+      
+      // Button-Berechtigungen für Invoice-Funktionen
+      { entity: 'invoice_create', entityType: 'button', accessLevel: 'both' },
+      { entity: 'invoice_download', entityType: 'button', accessLevel: 'both' },
+      { entity: 'invoice_mark_paid', entityType: 'button', accessLevel: 'both' },
+      { entity: 'invoice_settings', entityType: 'button', accessLevel: 'both' },
     ];
     
     // User-Berechtigungen - EINGESCHRÄNKTE RECHTE
@@ -89,9 +96,18 @@ async function main() {
       { entity: 'consultations', entityType: 'page', accessLevel: 'both' },
       { entity: 'settings', entityType: 'page', accessLevel: 'read' },
       { entity: 'team_worktime_control', entityType: 'page', accessLevel: 'read' },
+      { entity: 'payroll', entityType: 'page', accessLevel: 'both' },
+      
+      // Tabellen
       { entity: 'requests', entityType: 'table', accessLevel: 'both' },
       { entity: 'tasks', entityType: 'table', accessLevel: 'both' },
       { entity: 'clients', entityType: 'table', accessLevel: 'both' },
+      { entity: 'consultation_invoices', entityType: 'table', accessLevel: 'read' },
+      
+      // Button-Berechtigungen für Invoice-Funktionen - LIMITED
+      { entity: 'invoice_create', entityType: 'button', accessLevel: 'write' },
+      { entity: 'invoice_download', entityType: 'button', accessLevel: 'read' },
+      { entity: 'invoice_settings', entityType: 'button', accessLevel: 'write' }, // Eigene Settings
     ];
     
     // Hamburger-Berechtigungen - BASIS-RECHTE

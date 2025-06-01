@@ -34,6 +34,8 @@ const savedFilters_1 = __importDefault(require("./routes/savedFilters"));
 const urlMetadata_1 = __importDefault(require("./routes/urlMetadata"));
 const clients_1 = __importDefault(require("./routes/clients"));
 const consultations_1 = __importDefault(require("./routes/consultations"));
+const invoiceSettings_1 = __importDefault(require("./routes/invoiceSettings"));
+const consultationInvoices_1 = __importDefault(require("./routes/consultationInvoices"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const app = (0, express_1.default)();
 // Middleware
@@ -78,6 +80,7 @@ const fs_1 = __importDefault(require("fs"));
 const cerebroUploadsPath = path_1.default.join(uploadsPath, 'cerebro');
 const taskAttachmentsPath = path_1.default.join(uploadsPath, 'task-attachments');
 const requestAttachmentsPath = path_1.default.join(uploadsPath, 'request-attachments');
+const invoicesPath = path_1.default.join(uploadsPath, 'invoices');
 if (!fs_1.default.existsSync(cerebroUploadsPath)) {
     fs_1.default.mkdirSync(cerebroUploadsPath, { recursive: true });
 }
@@ -86,6 +89,9 @@ if (!fs_1.default.existsSync(taskAttachmentsPath)) {
 }
 if (!fs_1.default.existsSync(requestAttachmentsPath)) {
     fs_1.default.mkdirSync(requestAttachmentsPath, { recursive: true });
+}
+if (!fs_1.default.existsSync(invoicesPath)) {
+    fs_1.default.mkdirSync(invoicesPath, { recursive: true });
 }
 // Sicherstellen, dass das Downloads-Verzeichnis existiert
 if (!fs_1.default.existsSync(downloadsPath)) {
@@ -140,6 +146,8 @@ app.use('/api/saved-filters', savedFilters_1.default);
 app.use('/api/url-metadata', urlMetadata_1.default);
 app.use('/api/clients', clients_1.default);
 app.use('/api/consultations', consultations_1.default);
+app.use('/api/invoice-settings', invoiceSettings_1.default);
+app.use('/api/consultation-invoices', consultationInvoices_1.default);
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

@@ -45,12 +45,19 @@ const getOperatorsByColumnType = (columnId: string): { value: string; label: str
     { value: 'endsWith', label: 'endet mit' }
   ];
 
-  // Datum-Operatoren
+  // Datum-Operatoren (benutzerfreundliche Labels)
   const dateOperators = [
-    { value: 'equals', label: '=' },
-    { value: 'before', label: '<' },
-    { value: 'after', label: '>' },
+    { value: 'equals', label: 'ist genau' },
+    { value: 'after', label: 'ab' },           // "ab nächstem Monat"
+    { value: 'before', label: 'bis' },         // "bis Ende letztes Jahr"
     { value: 'between', label: 'zwischen' }
+  ];
+
+  // Dauer-Operatoren (für Zeitspannen)
+  const durationOperators = [
+    { value: 'equals', label: 'ist gleich' },
+    { value: 'greater_than', label: 'länger als' },
+    { value: 'less_than', label: 'kürzer als' }
   ];
 
   // Status-Operatoren (für Enum-Werte)
@@ -60,8 +67,10 @@ const getOperatorsByColumnType = (columnId: string): { value: string; label: str
   ];
 
   // Je nach Spaltentyp entsprechende Operatoren zurückgeben
-  if (columnId === 'dueDate') {
+  if (columnId === 'dueDate' || columnId === 'startTime') {
     return dateOperators;
+  } else if (columnId === 'duration') {
+    return durationOperators;
   } else if (columnId === 'status') {
     return statusOperators;
   } else if (columnId === 'responsible' || columnId === 'qualityControl' || columnId === 'responsibleAndQualityControl') {
@@ -256,7 +265,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
     }
     
     // Für Datumsfelder ein Datumseingabefeld rendern
-    if (columnId === 'dueDate') {
+    if (columnId === 'dueDate' || columnId === 'startTime') {
       return (
         <input
           type="date"
@@ -286,7 +295,12 @@ const FilterRow: React.FC<FilterRowProps> = ({
         <select
           className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
           value={condition.column}
-          onChange={(e) => onChange({ ...condition, column: e.target.value, operator: operators[0]?.value || 'equals' })}
+          onChange={(e) => onChange({ 
+            ...condition, 
+            column: e.target.value, 
+            operator: operators[0]?.value || 'equals',
+            value: null  // ✅ VALUE ZURÜCKSETZEN beim Spaltenwechsel
+          })}
         >
           <option value="">Spalte wählen</option>
           {columns.map((column) => (

@@ -141,6 +141,21 @@ export const API_ENDPOINTS = {
         LINK_TASK: (id: number) => `/consultations/${id}/link-task`,
         CREATE_TASK: (id: number) => `/consultations/${id}/create-task`,
         UPDATE_NOTES: (id: number) => `/consultations/${id}/notes`
+    },
+    // Invoice Settings
+    INVOICE_SETTINGS: {
+        BASE: '/invoice-settings',
+        NEXT_NUMBER: '/invoice-settings/next-number'
+    },
+    // Consultation Invoices
+    CONSULTATION_INVOICES: {
+        BASE: '/consultation-invoices',
+        BY_ID: (id: number) => `/consultation-invoices/${id}`,
+        CREATE_FROM_CONSULTATIONS: '/consultation-invoices/create-from-consultations',
+        GENERATE_PDF: (id: number) => `/consultation-invoices/${id}/pdf`,
+        UPDATE_STATUS: (id: number) => `/consultation-invoices/${id}/status`,
+        MARK_PAID: (id: number) => `/consultation-invoices/${id}/mark-paid`,
+        CANCEL: (id: number) => `/consultation-invoices/${id}/cancel`
     }
 };
 

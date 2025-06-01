@@ -51,4 +51,15 @@ Folgende Hauptsysteme sind im Intranet-Projekt implementiert:
 - **Dokumentenerkennung**
 - **Erweitertes Filtersystem**
 - **Einheitliches Suchfeld-Design**
-- **Mobile App (React Native)** - Mobile Version des Intranet-Systems 
+- **Mobile App (React Native)** - Mobile Version des Intranet-Systems
+- **Consultation-Modul** - Beratungsstunden-Verwaltung mit Client-Tracking
+- **Abrechnungsmodul (in Planung)** - Swiss QR-Rechnungen für Beratungsstunden
+
+## Implementierungspläne
+
+Für die strukturierte Umsetzung neuer Module existieren detaillierte Schritt-für-Schritt Pläne:
+
+- **Consultation-Modul** - Vollständig in 3 Teilen dokumentiert
+- **Abrechnungsmodul** - Plan für Swiss QR-Rechnungen mit Zahlungsverfolgung
+
+Details zu allen Plänen siehe `/docs/implementation_plans/` 

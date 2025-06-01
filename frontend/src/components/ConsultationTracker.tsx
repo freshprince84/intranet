@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } from 'react';
 import { PlayIcon, StopIcon, PlusIcon, ClockIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
@@ -11,6 +11,20 @@ import CreateClientModal from './CreateClientModal.tsx';
 import { Client, Consultation } from '../types/client.ts';
 import * as consultationApi from '../api/consultationApi.ts';
 import * as clientApi from '../api/clientApi.ts';
+
+// Union-Type für Client und Placeholder
+type ClientOrPlaceholder = Client | {
+  id: string;
+  name: string;
+  isPlaceholder: boolean;
+  status?: 'past' | 'planned';
+  lastConsultationDate?: string;
+};
+
+// Type Guard für Placeholder
+const isPlaceholder = (client: ClientOrPlaceholder): client is { id: string; name: string; isPlaceholder: boolean; status?: 'past' | 'planned'; lastConsultationDate?: string; } => {
+  return 'isPlaceholder' in client && client.isPlaceholder === true;
+};
 
 interface ConsultationTrackerProps {
   onConsultationChange: () => void;
@@ -28,6 +42,13 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [recentClients, setRecentClients] = useState<Client[]>([]);
   const [notes, setNotes] = useState('');
+  const [lastStartedClientId, setLastStartedClientId] = useState<number | null>(null);
+  
+  // Responsive Tag-Display States (optimiert)
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [visibleTagCount, setVisibleTagCount] = useState(3); // Fallback für SSR
+  const [containerWidth, setContainerWidth] = useState(0);
+  const resizeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Manuelle Erfassung States
   const [isManualEntry, setIsManualEntry] = useState(false);
@@ -55,9 +76,12 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
 
   const loadRecentClients = async () => {
     try {
+      console.log('=== FRONTEND: loadRecentClients() called ===');
       const clients = await clientApi.getRecentClients();
+      console.log('=== FRONTEND: received clients:', clients);
       setRecentClients(clients || []);
     } catch (error) {
+      console.error('=== FRONTEND: loadRecentClients() ERROR ===', error);
       // Stille Behandlung - normale Situation wenn noch keine Clients beraten wurden
     }
   };
@@ -86,7 +110,14 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       setSelectedClient(null);
       setIsClientSelectModalOpen(false);
       
-      // Lade Recent Clients neu
+      // Speichere den zuletzt gestarteten Client für Tag-Priorisierung
+      setLastStartedClientId(clientId);
+      
+      // Sende Event für SavedFilterTags Aktualisierung
+      window.dispatchEvent(new CustomEvent('consultationChanged'));
+      
+      // Entfernt: Frontend LRU-Logic - Backend sortiert bereits korrekt nach startTime DESC
+      // Lade Recent Clients neu vom Server (Backend liefert bereits richtige Sortierung)
       loadRecentClients();
       
       // Callback für Parent-Komponente
@@ -121,6 +152,9 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       loadRecentClients();
       // Beratungsliste aktualisieren
       onConsultationChange();
+      // Sende Event für SavedFilterTags Aktualisierung
+      console.log('🛑 ConsultationTracker: Sending consultationChanged event (stop)');
+      window.dispatchEvent(new CustomEvent('consultationChanged'));
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Fehler beim Beenden der Beratung');
     }
@@ -142,9 +176,14 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
   const handleClientCreated = (client: Client) => {
     setIsCreateClientModalOpen(false);
     setSelectedClient(client);
-    if (!isManualEntry) {
-      handleStartConsultation(client.id, notes);
-    }
+    // Entfernt: Automatischer Beratungsstart nach Client-Erstellung
+    // Client wird nur gespeichert, Beratung muss manuell gestartet werden
+    
+    // Recent Clients neu laden um den neuen Client anzuzeigen
+    loadRecentClients();
+    
+    // Success-Toast für Client-Erstellung (wird bereits im Modal angezeigt)
+    // toast.success(`Client "${client.name}" wurde angelegt`);
   };
 
   /* CLAUDE-ANCHOR: CONSULTATION-MANUAL-SAVE-001 - Timezone-sichere manuelle Beratungserfassung */
@@ -210,6 +249,13 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       setNotes('');
       setSelectedClient(null);
       
+      // Speichere den zuletzt gestarteten Client für Tag-Priorisierung
+      setLastStartedClientId(selectedClient.id);
+      
+      // Sende Event für SavedFilterTags Aktualisierung
+      console.log('🚀 ConsultationTracker: Sending consultationChanged event (start)');
+      window.dispatchEvent(new CustomEvent('consultationChanged'));
+      
       // Lade Recent Clients neu
       loadRecentClients();
       
@@ -263,6 +309,111 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       window.removeEventListener('focus', handleFocus);
     };
   }, []);
+
+  // Optimierte Tag-Breiten-Berechnung mit useMemo
+  const averageTagWidth = useMemo(() => {
+    if (recentClients.length === 0) return 85; // Reduzierter Fallback
+    
+    return recentClients.reduce((sum, client) => {
+      // Präzisere Schätzung: ~6px pro Zeichen + 24px Padding
+      return sum + (client.name.length * 6 + 24);
+    }, 0) / recentClients.length;
+  }, [recentClients]);
+
+  // Optimierte Sichtbarkeits-Berechnung mit useCallback (vereinfacht ohne Dropdown)
+  const calculateVisibleTags = useCallback(() => {
+    if (!containerRef.current || recentClients.length === 0) return;
+
+    const container = containerRef.current;
+    const currentWidth = container.clientWidth;
+    
+    // Nur neu berechnen wenn sich die Breite signifikant geändert hat (>= 40px)
+    if (Math.abs(currentWidth - containerWidth) < 40) return;
+    
+    setContainerWidth(currentWidth);
+    
+    // Moderate responsive Abstände für bessere Tag-Anzeige
+    const isMobile = currentWidth < 768; // md breakpoint
+    const PLUS_BUTTON_WIDTH = 32; // Reduziert von 42
+    const GAPS_AND_MARGINS = isMobile ? 8 : 20; // Mobile: 8px, Desktop: 20px (weniger extrem)
+    const BUFFER = 12; // Reduziert von 16
+    
+    const availableWidth = currentWidth - PLUS_BUTTON_WIDTH - GAPS_AND_MARGINS - BUFFER;
+    
+    // Berechne maximal mögliche Tags (einfach soviele wie reinpassen)
+    const maxPossibleTags = Math.max(1, Math.floor(availableWidth / averageTagWidth));
+    
+    // Zeige soviele Tags wie reinpassen, maximal aber die verfügbaren
+    setVisibleTagCount(Math.min(maxPossibleTags, recentClients.length));
+  }, [recentClients, averageTagWidth, containerWidth]);
+
+  // Debounced ResizeObserver für bessere Performance
+  const handleResize = useCallback(() => {
+    if (resizeTimeoutRef.current) {
+      clearTimeout(resizeTimeoutRef.current);
+    }
+    
+    resizeTimeoutRef.current = setTimeout(() => {
+      calculateVisibleTags();
+    }, 150); // 150ms Debounce für smooth responsive behavior
+  }, [calculateVisibleTags]);
+
+  // Optimierter ResizeObserver
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    const resizeObserver = new ResizeObserver(handleResize);
+    resizeObserver.observe(containerRef.current);
+    
+    // Auch Window-Resize überwachen für bessere Abdeckung
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimeoutRef.current) {
+        clearTimeout(resizeTimeoutRef.current);
+      }
+    };
+  }, [handleResize]);
+
+  // Initial calculation nach Client-Änderungen
+  useLayoutEffect(() => {
+    calculateVisibleTags();
+  }, [calculateVisibleTags]);
+
+  // Optimistische Tag-Anzeige für bessere UX
+  const showOptimisticTags = recentClients.length === 0 && loading;
+  const optimisticTags = useMemo(() => {
+    if (!showOptimisticTags) return [];
+    return Array(3).fill(null).map((_, i) => ({
+      id: `placeholder-${i}`,
+      name: '████████', // Placeholder
+      isPlaceholder: true,
+      status: undefined,
+      lastConsultationDate: undefined
+    }));
+  }, [showOptimisticTags]);
+
+  const displayTags = showOptimisticTags ? optimisticTags : recentClients;
+  const currentVisibleCount = showOptimisticTags ? optimisticTags.length : visibleTagCount;
+
+  // Sortiere displayTags: Zuletzt gestarteter Client zuerst
+  const sortedDisplayTags = useMemo(() => {
+    if (showOptimisticTags || !lastStartedClientId) {
+      return displayTags;
+    }
+    
+    // Finde den zuletzt gestarteten Client
+    const lastStartedClient = displayTags.find(client => client.id === lastStartedClientId);
+    if (!lastStartedClient) {
+      return displayTags;
+    }
+    
+    // Setze den zuletzt gestarteten Client an die erste Position
+    const otherClients = displayTags.filter(client => client.id !== lastStartedClientId);
+    return [lastStartedClient, ...otherClients];
+  }, [displayTags, lastStartedClientId, showOptimisticTags]);
 
   if (loading) {
     return (
@@ -332,17 +483,21 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Zuletzt beratene Clients als Tags mit "Neuer Client" Button */}
-            {recentClients.length > 0 && !isManualEntry && (
+            {/* Zuletzt beratene Clients als Tags mit vereinfachtem responsive Layout (ohne Dropdown) */}
+            {(sortedDisplayTags.length > 0) && !isManualEntry && (
               <div>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Zuletzt beraten:
+                  {sortedDisplayTags.some(c => !isPlaceholder(c) && c.status === 'planned') ? 
+                    'Zuletzt beraten & geplante Beratungen:' : 
+                    'Zuletzt beraten:'
+                  }
                 </p>
-                <div className="flex flex-wrap gap-4 items-center">
-                  {/* Neuer Client Button - links von den Tags positioniert */}
+                <div ref={containerRef} className="flex items-center gap-0.5 md:gap-6">
+                  {/* Neuer Client Button - links positioniert mit extremen responsiven Abständen */}
                   <button
                     onClick={() => setIsCreateClientModalOpen(true)}
-                    className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                    disabled={showOptimisticTags}
+                    className={`bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center flex-shrink-0 ${showOptimisticTags ? 'opacity-50 cursor-not-allowed' : ''}`}
                     style={{ width: '30.19px', height: '30.19px' }}
                     title="Neuen Client anlegen"
                     aria-label="Neuen Client anlegen"
@@ -350,16 +505,48 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                     <PlusIcon className="h-4 w-4" />
                   </button>
                   
-                  {/* Bestehende Client-Tags */}
-                  {recentClients.map((client) => (
-                    <button
-                      key={client.id}
-                      onClick={() => handleStartConsultation(client.id, notes)}
-                      className="inline-flex items-center px-3 py-2 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    >
-                      {client.name}
-                    </button>
-                  ))}
+                  {/* Soviele Client-Tags wie reinpassen (ohne Dropdown) */}
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    {sortedDisplayTags.slice(0, currentVisibleCount).map((client, index) => {
+                      const isPast = !isPlaceholder(client) && client.status === 'past';
+                      const isPlanned = !isPlaceholder(client) && client.status === 'planned';
+                      
+                      return (
+                        <button
+                          key={client.id}
+                          onClick={() => !isPlaceholder(client) && handleStartConsultation(Number(client.id), notes)}
+                          disabled={isPlaceholder(client)}
+                          className={`inline-flex items-center px-3 py-2 rounded-full text-sm font-medium flex-shrink-0 transition-colors ${
+                            isPlaceholder(client) 
+                              ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 animate-pulse cursor-default'
+                              : isPlanned
+                                ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 hover:bg-blue-200 dark:hover:bg-blue-900/50 cursor-pointer border border-blue-200 dark:border-blue-700'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600 cursor-pointer'
+                          }`}
+                          title={
+                            isPlaceholder(client) 
+                              ? 'Lädt...' 
+                              : isPlanned
+                                ? `Geplante Beratung mit ${client.name} am ${client.lastConsultationDate ? new Date(client.lastConsultationDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}`
+                                : `Beratung mit ${client.name} starten (zuletzt beraten${client.lastConsultationDate ? ` am ${new Date(client.lastConsultationDate).toLocaleDateString('de-DE')}` : ''})`
+                          }
+                        >
+                          {isPlanned && !isPlaceholder(client) && (
+                            <svg className="h-3 w-3 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd"/>
+                            </svg>
+                          )}
+                          <span className="truncate max-w-[120px]">
+                            {isPlaceholder(client) ? (
+                              <span className="inline-block w-16 h-4 bg-gray-300 dark:bg-gray-500 rounded animate-pulse"></span>
+                            ) : (
+                              client.name
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}

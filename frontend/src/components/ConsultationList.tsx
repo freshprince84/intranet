@@ -4,11 +4,20 @@ import {
   FunnelIcon,
   XMarkIcon,
   LinkIcon,
-  TrashIcon
+  TrashIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
-import { formatTime, calculateDuration } from '../utils/dateUtils.ts';
+import { 
+  formatTime, 
+  calculateDuration, 
+  formatTotalDuration, 
+  isConsultationInvoiced, 
+  getConsultationInvoiceInfo,
+  getInvoiceStatusText,
+  getInvoiceStatusColor 
+} from '../utils/dateUtils.ts';
 import { Consultation, Client } from '../types/client.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { toast } from 'react-toastify';
@@ -20,6 +29,7 @@ import * as consultationApi from '../api/consultationApi.ts';
 import * as clientApi from '../api/clientApi.ts';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import CreateInvoiceModal from './CreateInvoiceModal.tsx';
 
 // TableID für gespeicherte Filter
 const CONSULTATIONS_TABLE_ID = 'consultations-table';
@@ -55,6 +65,9 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
   // Filter State Management
   const [activeFilterName, setActiveFilterName] = useState<string>('Heute');
   const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
+
+  // Invoice Creation State
+  const [showCreateInvoiceModal, setShowCreateInvoiceModal] = useState(false);
 
   const loadConsultations = async () => {
     try {
@@ -183,6 +196,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
         const archivFilterExists = existingFilters.some((filter: any) => filter.name === 'Archiv');
         const heuteFilterExists = existingFilters.some((filter: any) => filter.name === 'Heute');
         const dieseWocheFilterExists = existingFilters.some((filter: any) => filter.name === 'Diese Woche');
+        const nichtAbgerechnetFilterExists = existingFilters.some((filter: any) => filter.name === 'Nicht abgerechnet');
 
         // Erstelle "Archiv"-Filter (zeigt nur vergangene Beratungen - strikt vor heute)
         if (!archivFilterExists) {
@@ -195,37 +209,63 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
             ],
             operators: []
           };
-          await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, archivFilter);
+          try {
+            await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, archivFilter);
+          } catch (error) {
+            console.error('Fehler beim Erstellen des Archiv-Filters:', error);
+          }
         }
 
         // Erstelle "Heute"-Filter
         if (!heuteFilterExists) {
-          const today = new Date().toISOString().split('T')[0];
           const heuteFilter = {
             tableId: CONSULTATIONS_TABLE_ID,
             name: 'Heute',
             conditions: [
-              { column: 'startTime', operator: 'after', value: today }
+              { column: 'startTime', operator: 'equals', value: '__TODAY__' }
             ],
             operators: []
           };
-          await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, heuteFilter);
+          try {
+            await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, heuteFilter);
+          } catch (error) {
+            console.error('Fehler beim Erstellen des Heute-Filters:', error);
+          }
         }
 
         // Erstelle "Diese Woche"-Filter
         if (!dieseWocheFilterExists) {
-          const today = new Date();
-          const startOfWeek = new Date(today);
-          startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Montag
           const dieseWocheFilter = {
             tableId: CONSULTATIONS_TABLE_ID,
             name: 'Diese Woche',
             conditions: [
-              { column: 'startTime', operator: 'after', value: startOfWeek.toISOString().split('T')[0] }
+              { column: 'startTime', operator: 'after', value: '__THIS_WEEK_START__' },
+              { column: 'startTime', operator: 'before', value: '__THIS_WEEK_END__' }
+            ],
+            operators: ['AND']
+          };
+          try {
+            await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, dieseWocheFilter);
+          } catch (error) {
+            console.error('Fehler beim Erstellen des Diese Woche-Filters:', error);
+          }
+        }
+
+        // Erstelle "Nicht abgerechnet"-Filter
+        if (!nichtAbgerechnetFilterExists) {
+          const nichtAbgerechnetFilter = {
+            tableId: CONSULTATIONS_TABLE_ID,
+            name: 'Nicht abgerechnet',
+            conditions: [
+              { column: 'invoiceStatus', operator: 'equals', value: 'nicht abgerechnet' }
             ],
             operators: []
           };
-          await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, dieseWocheFilter);
+          try {
+            await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, nichtAbgerechnetFilter);
+          } catch (error) {
+            console.error('Fehler beim Erstellen des Nicht abgerechnet-Filters:', error);
+          }
         }
       } catch (error) {
         console.error('Fehler beim Erstellen der Standard-Filter:', error);
@@ -233,6 +273,70 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
     };
 
     createStandardFilters();
+  }, []); // Nur einmal beim ersten Laden
+
+  // Aktualisiere bestehende Filter die alte statische Datumswerte haben
+  useEffect(() => {
+    const updateExistingFilters = async () => {
+      try {
+        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(CONSULTATIONS_TABLE_ID));
+        const existingFilters = response.data;
+
+        // Finde "Heute" Filter mit statischem Datum
+        const heuteFilter = existingFilters.find((filter: any) => filter.name === 'Heute');
+        if (heuteFilter && heuteFilter.conditions.length > 0) {
+          const condition = heuteFilter.conditions[0];
+          // Prüfe ob es ein statisches Datum ist (Format: YYYY-MM-DD) anstatt unseres Markers
+          if (condition.value && condition.value !== '__TODAY__' && /^\d{4}-\d{2}-\d{2}$/.test(condition.value)) {
+            console.log('Aktualisiere Heute-Filter mit dynamischem Marker...');
+            await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, {
+              tableId: CONSULTATIONS_TABLE_ID,
+              name: 'Heute',
+              conditions: [
+                { column: 'startTime', operator: 'equals', value: '__TODAY__' }
+              ],
+              operators: []
+            });
+          }
+        }
+
+        // Finde "Diese Woche" Filter mit statischen Datums
+        const dieseWocheFilter = existingFilters.find((filter: any) => filter.name === 'Diese Woche');
+        if (dieseWocheFilter && dieseWocheFilter.conditions.length >= 2) {
+          const firstCondition = dieseWocheFilter.conditions[0];
+          const secondCondition = dieseWocheFilter.conditions[1];
+          
+          // Prüfe ob es statische Datumsangaben sind
+          const hasStaticDates = (
+            firstCondition.value !== '__THIS_WEEK_START__' && /^\d{4}-\d{2}-\d{2}$/.test(firstCondition.value)
+          ) || (
+            secondCondition.value !== '__THIS_WEEK_END__' && /^\d{4}-\d{2}-\d{2}$/.test(secondCondition.value)
+          );
+
+          if (hasStaticDates) {
+            console.log('Aktualisiere Diese Woche-Filter mit dynamischen Markern...');
+            await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, {
+              tableId: CONSULTATIONS_TABLE_ID,
+              name: 'Diese Woche',
+              conditions: [
+                { column: 'startTime', operator: 'after', value: '__THIS_WEEK_START__' },
+                { column: 'startTime', operator: 'before', value: '__THIS_WEEK_END__' }
+              ],
+              operators: ['AND']
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Fehler beim Aktualisieren bestehender Filter:', error);
+      }
+    };
+
+    // Nach kurzer Verzögerung ausführen, damit die Standard-Filter-Erstellung abgeschlossen ist
+    const timeoutId = setTimeout(() => {
+      updateExistingFilters();
+    }, 1000);
+
+    return () => clearTimeout(timeoutId);
   }, []); // Nur einmal beim ersten Laden
 
   // Separater Effect für Client-Filter-Management
@@ -438,8 +542,35 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
 
   const handleTaskLinked = () => {
     loadConsultations();
-    setLinkTaskModalOpen(false);
-    setSelectedConsultationId(null);
+    onConsultationChange?.();
+  };
+
+  // Prüfung ob Rechnung erstellt werden kann
+  const canCreateInvoice = () => {
+    // Prüfe zuerst die Berechtigung
+    const canCreate = hasPermission('invoice_create', 'write', 'button');
+    if (!canCreate) return false;
+    
+    const hasConsultations = filteredConsultations.length > 0;
+    if (!hasConsultations) return false;
+    
+    // Filter müssen aktiv sein (außer Standard-Filter)
+    const hasActiveFilters = filterConditions.length > 0 || searchTerm.trim() !== '';
+    if (!hasActiveFilters) return false;
+    
+    // Alle Beratungen müssen abgeschlossen sein (endTime vorhanden)
+    const allCompleted = filteredConsultations.every(c => c.endTime);
+    if (!allCompleted) return false;
+    
+    // Keine bereits abgerechneten Beratungen
+    const hasInvoicedConsultations = filteredConsultations.some(c => isConsultationInvoiced(c));
+    if (hasInvoicedConsultations) return false;
+    
+    return true;
+  };
+
+  const handleCreateInvoice = () => {
+    setShowCreateInvoiceModal(true);
   };
 
   const handleDeleteConsultation = async (consultationId: number) => {
@@ -499,7 +630,23 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
               break;
             case 'startTime':
               const consultationDate = new Date(consultation.startTime).toISOString().split('T')[0];
-              const filterDate = String(condition.value);
+              let filterDate = String(condition.value);
+              
+              // Dynamische Datums-Marker verarbeiten
+              if (filterDate === '__TODAY__') {
+                filterDate = new Date().toISOString().split('T')[0];
+              } else if (filterDate === '__THIS_WEEK_START__') {
+                const today = new Date();
+                const startOfWeek = new Date(today);
+                startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Montag
+                filterDate = startOfWeek.toISOString().split('T')[0];
+              } else if (filterDate === '__THIS_WEEK_END__') {
+                const today = new Date();
+                const endOfWeek = new Date(today);
+                endOfWeek.setDate(today.getDate() - today.getDay() + 8); // Montag nächste Woche (für "before" Operator)
+                filterDate = endOfWeek.toISOString().split('T')[0];
+              }
+              
               switch (condition.operator) {
                 case 'after':
                   conditionResult = consultationDate >= filterDate;
@@ -529,6 +676,25 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                   break;
                 default:
                   conditionResult = false;
+              }
+              break;
+            case 'invoiceStatus':
+              const isInvoiced = isConsultationInvoiced(consultation);
+              const filterValueLower = String(condition.value).toLowerCase();
+              
+              if (filterValueLower === 'abgerechnet' || filterValueLower === 'invoiced' || filterValueLower === 'ja') {
+                conditionResult = isInvoiced;
+              } else if (filterValueLower === 'nicht abgerechnet' || filterValueLower === 'not invoiced' || filterValueLower === 'nein') {
+                conditionResult = !isInvoiced;
+              } else {
+                // Exact status match wenn ein spezifischer Status eingegeben wurde
+                if (isInvoiced) {
+                  const invoiceInfo = getConsultationInvoiceInfo(consultation);
+                  const statusText = invoiceInfo ? getInvoiceStatusText(invoiceInfo.status as any).toLowerCase() : '';
+                  conditionResult = statusText.includes(filterValueLower);
+                } else {
+                  conditionResult = false;
+                }
               }
               break;
             default:
@@ -630,6 +796,16 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
     });
   }, [consultations, filterConditions, filterLogicalOperators]);
 
+  // Total-Dauer aller sichtbaren Beratungen berechnen
+  const totalDuration = useMemo(() => {
+    return formatTotalDuration(filteredConsultations);
+  }, [filteredConsultations]);
+
+  // Anzahl abgeschlossener Beratungen berechnen
+  const completedConsultationsCount = useMemo(() => {
+    return filteredConsultations.filter(c => c.endTime).length;
+  }, [filteredConsultations]);
+
   // Timeline-Markierungen berechnen
   const timelineMarkers = useMemo(() => {
     return generateTimelineMarkers(filteredConsultations);
@@ -645,7 +821,16 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
         <div className="flex items-center mb-6 justify-between px-2 sm:px-0">
           <div className="flex items-center">
             <ClockIcon className="h-6 w-6 mr-2 dark:text-white" />
-            <h2 className="text-xl font-semibold dark:text-white">Beratungsliste</h2>
+            <div>
+              <h2 className="text-xl font-semibold dark:text-white">Beratungsliste</h2>
+              {/* Total-Anzeige */}
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                {filteredConsultations.length} Beratung{filteredConsultations.length !== 1 ? 'en' : ''} 
+                {completedConsultationsCount > 0 && (
+                  ` (${completedConsultationsCount} abgeschlossen) - Total: ${totalDuration}`
+                )}
+              </p>
+            </div>
           </div>
           
           <div className="flex items-center gap-1.5">
@@ -669,6 +854,17 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                 </span>
               )}
             </button>
+
+            {/* Rechnung erstellen Button */}
+            {canCreateInvoice() && (
+              <button
+                onClick={handleCreateInvoice}
+                className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors ml-2"
+                title="Rechnung aus gefilterten Beratungen erstellen"
+              >
+                Rechnung erstellen
+              </button>
+            )}
           </div>
         </div>
 
@@ -681,7 +877,8 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                 { id: 'branch', label: 'Niederlassung' },
                 { id: 'notes', label: 'Notizen' },
                 { id: 'startTime', label: 'Datum' },
-                { id: 'duration', label: 'Dauer (Stunden)' }
+                { id: 'duration', label: 'Dauer (Stunden)' },
+                { id: 'invoiceStatus', label: 'Abrechnungsstatus' }
               ]}
               onApply={applyFilterConditions}
               onReset={resetFilterConditions}
@@ -791,6 +988,31 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                               )}
                             </div>
                           </div>
+
+                          {/* Invoice Indicator */}
+                          {isConsultationInvoiced(consultation) && (
+                            <div className="flex items-center space-x-2">
+                              <div className="flex items-center space-x-1">
+                                <DocumentTextIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                <span className="text-xs text-green-700 dark:text-green-400 font-medium">
+                                  Abgerechnet
+                                </span>
+                              </div>
+                              {(() => {
+                                const invoiceInfo = getConsultationInvoiceInfo(consultation);
+                                return invoiceInfo ? (
+                                  <div className="flex items-center space-x-1">
+                                    <span 
+                                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getInvoiceStatusColor(invoiceInfo.status as any)}`}
+                                      title={`Rechnung ${invoiceInfo.invoiceNumber} vom ${format(new Date(invoiceInfo.issueDate), 'dd.MM.yyyy', { locale: de })}`}
+                                    >
+                                      {getInvoiceStatusText(invoiceInfo.status as any)}
+                                    </span>
+                                  </div>
+                                ) : null;
+                              })()}
+                            </div>
+                          )}
 
                           {/* Time Range - Single compact field */}
                           <div>
@@ -963,13 +1185,30 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Link Task Modal */}
       {linkTaskModalOpen && selectedConsultationId && (
         <LinkTaskModal
           isOpen={linkTaskModalOpen}
-          onClose={() => setLinkTaskModalOpen(false)}
+          onClose={() => {
+            setLinkTaskModalOpen(false);
+            setSelectedConsultationId(null);
+          }}
           consultationId={selectedConsultationId}
           onTaskLinked={handleTaskLinked}
+        />
+      )}
+
+      {/* Create Invoice Modal */}
+      {showCreateInvoiceModal && (
+        <CreateInvoiceModal
+          isOpen={showCreateInvoiceModal}
+          onClose={() => setShowCreateInvoiceModal(false)}
+          consultations={filteredConsultations}
+          onInvoiceCreated={(invoiceId) => {
+            setShowCreateInvoiceModal(false);
+            loadConsultations(); // Refresh list
+            toast.success(`Rechnung erstellt! PDF kann in der Rechnungsverwaltung heruntergeladen werden.`);
+          }}
         />
       )}
     </>
