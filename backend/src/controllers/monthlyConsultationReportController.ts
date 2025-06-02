@@ -120,9 +120,9 @@ export const generateMonthlyReport = async (req: AuthenticatedRequest, res: Resp
         },
         AND: [
           // Nur Beratungen, die noch nicht in einer Rechnung sind
-          { invoiceItems: { none: {} } }
-          // TODO: Nach deinem Prisma Update wieder aktivieren:
-          // { monthlyReportId: null }
+          { invoiceItems: { none: {} } },
+          // Nicht in einem Monthly Report abgerechnet
+          { monthlyReportId: null }
         ]
       },
       include: {
@@ -198,8 +198,6 @@ export const generateMonthlyReport = async (req: AuthenticatedRequest, res: Resp
       });
 
       // Verknüpfe alle WorkTime-Einträge mit dem Report
-      // TODO: Nach deinem Prisma Update wieder aktivieren:
-      /*
       await tx.workTime.updateMany({
         where: {
           id: { in: consultations.map(c => c.id) }
@@ -208,7 +206,6 @@ export const generateMonthlyReport = async (req: AuthenticatedRequest, res: Resp
           monthlyReportId: newReport.id
         }
       });
-      */
 
       return newReport;
     });
