@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { CogIcon, UserIcon, BellIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import { useTheme } from '../contexts/ThemeContext.tsx';
-import { Cog6ToothIcon, BellIcon, UserCircleIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
-import NotificationSettingsComponent from '../components/NotificationSettings.tsx';
-import { API_URL } from '../config/api.ts';
 import useMessage from '../hooks/useMessage.ts';
+import { MonthlyReportSettings } from '../types/monthlyConsultationReport.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
+import axiosInstance from '../config/axios.ts';
+import { toast } from 'react-toastify';
+import { useTheme } from '../contexts/ThemeContext.tsx';
+import { Cog6ToothIcon, UserCircleIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
+import NotificationSettingsComponent from '../components/NotificationSettings.tsx';
+import MonthlyReportSettingsModal from '../components/MonthlyReportSettingsModal.tsx';
+import { API_URL } from '../config/api.ts';
 
 const Settings: React.FC = () => {
     const { user } = useAuth();
@@ -18,6 +24,15 @@ const Settings: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     // Tab-Zustand für Navigation zwischen den Einstellungen
     const [activeTab, setActiveTab] = useState<'personal' | 'notifications' | 'system'>('personal');
+    
+    // Monatsabrechnungs-Einstellungen
+    const [monthlyReportSettings, setMonthlyReportSettings] = useState<MonthlyReportSettings>({
+        monthlyReportEnabled: false,
+        monthlyReportDay: 25,
+        monthlyReportRecipient: ''
+    });
+    const [isLoadingSettings, setIsLoadingSettings] = useState(true);
+    const [isMonthlyReportModalOpen, setIsMonthlyReportModalOpen] = useState(false);
 
     // Debug-Ausgaben
     useEffect(() => {
@@ -25,6 +40,70 @@ const Settings: React.FC = () => {
         console.log('Is Admin:', isAdmin());
         console.log('User Roles:', user?.roles);
     }, [user, isAdmin]);
+
+    // Monatsabrechnungs-Einstellungen laden
+    useEffect(() => {
+        const loadMonthlyReportSettings = async () => {
+            if (!user?.invoiceSettings) {
+                setIsLoadingSettings(false);
+                return;
+            }
+
+            try {
+                setMonthlyReportSettings({
+                    monthlyReportEnabled: user.invoiceSettings.monthlyReportEnabled || false,
+                    monthlyReportDay: user.invoiceSettings.monthlyReportDay || 25,
+                    monthlyReportRecipient: user.invoiceSettings.monthlyReportRecipient || ''
+                });
+            } catch (error) {
+                console.error('Fehler beim Laden der Monatsabrechnungs-Einstellungen:', error);
+                showMessage('Fehler beim Laden der Einstellungen', 'error');
+            } finally {
+                setIsLoadingSettings(false);
+            }
+        };
+
+        loadMonthlyReportSettings();
+    }, [user, showMessage]);
+
+    // Toggle für Monthly Report - öffnet Modal bei Aktivierung
+    const handleMonthlyReportToggle = (enabled: boolean) => {
+        if (enabled) {
+            // Aktivierung: Modal öffnen
+            setIsMonthlyReportModalOpen(true);
+        } else {
+            // Deaktivierung: Direkt speichern
+            updateMonthlyReportSettings({
+                monthlyReportEnabled: false,
+                monthlyReportDay: monthlyReportSettings.monthlyReportDay,
+                monthlyReportRecipient: monthlyReportSettings.monthlyReportRecipient
+            });
+        }
+    };
+
+    // Alle Monthly Report Settings auf einmal speichern
+    const updateMonthlyReportSettings = async (settings: MonthlyReportSettings) => {
+        try {
+            // Alle Felder auf einmal senden
+            await axiosInstance.put(API_ENDPOINTS.USERS.INVOICE_SETTINGS, {
+                monthlyReportEnabled: settings.monthlyReportEnabled,
+                monthlyReportDay: settings.monthlyReportDay,
+                monthlyReportRecipient: settings.monthlyReportRecipient
+            });
+            
+            // Lokalen State aktualisieren
+            setMonthlyReportSettings(settings);
+            
+            // Erfolg-Toast (nur bei Deaktivierung, bei Aktivierung macht das Modal den Toast)
+            if (!settings.monthlyReportEnabled) {
+                toast.success('Automatische Monatsabrechnung deaktiviert');
+            }
+        } catch (error) {
+            console.error('Fehler beim Speichern der Monatsabrechnungs-Einstellungen:', error);
+            toast.error('Fehler beim Speichern der Einstellungen');
+            throw error; // Für Modal error handling
+        }
+    };
 
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
@@ -182,7 +261,8 @@ const Settings: React.FC = () => {
 
                 {/* Tab-Inhalte */}
                 {activeTab === 'personal' && (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
+                        {/* Dark Mode */}
                         <div className="flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-medium dark:text-white">Dark Mode</h3>
@@ -197,6 +277,39 @@ const Settings: React.FC = () => {
                                 />
                                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
                             </label>
+                        </div>
+
+                        {/* Monatsabrechnungs-Einstellungen */}
+                        <div className="border-t pt-6">
+                            {isLoadingSettings ? (
+                                <div className="text-gray-500 dark:text-gray-400">Einstellungen werden geladen...</div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {/* Toggle für Monthly Report (wie Dark Mode) */}
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h3 className="text-lg font-medium dark:text-white">Automatische Monatsabrechnung</h3>
+                                            <p className="text-gray-600 dark:text-gray-400">
+                                                Monatliche Berichte automatisch generieren und versenden
+                                                {monthlyReportSettings.monthlyReportEnabled && monthlyReportSettings.monthlyReportRecipient && (
+                                                    <span className="block text-sm text-green-600 dark:text-green-400 mt-1">
+                                                        ✓ Aktiviert - Berichte gehen an: {monthlyReportSettings.monthlyReportRecipient.split('\n')[0]}
+                                                    </span>
+                                                )}
+                                            </p>
+                                        </div>
+                                        <label className="relative inline-flex items-center cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={monthlyReportSettings.monthlyReportEnabled}
+                                                onChange={(e) => handleMonthlyReportToggle(e.target.checked)}
+                                            />
+                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -311,6 +424,14 @@ const Settings: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Monthly Report Settings Modal */}
+            <MonthlyReportSettingsModal
+                isOpen={isMonthlyReportModalOpen}
+                onClose={() => setIsMonthlyReportModalOpen(false)}
+                onSave={updateMonthlyReportSettings}
+                currentSettings={monthlyReportSettings}
+            />
         </div>
     );
 };

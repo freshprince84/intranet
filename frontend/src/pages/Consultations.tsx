@@ -41,7 +41,7 @@ const Consultations: React.FC = () => {
   }
 
   return (
-    <div className="py-0 px-0 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
+    <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
       <div className="py-1 space-y-6">
         {/* Consultation Tracker */}
         <div className="px-2 sm:px-0">

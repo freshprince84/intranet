@@ -36,6 +36,7 @@ const clients_1 = __importDefault(require("./routes/clients"));
 const consultations_1 = __importDefault(require("./routes/consultations"));
 const invoiceSettings_1 = __importDefault(require("./routes/invoiceSettings"));
 const consultationInvoices_1 = __importDefault(require("./routes/consultationInvoices"));
+const monthlyConsultationReports_1 = __importDefault(require("./routes/monthlyConsultationReports"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const app = (0, express_1.default)();
 // Middleware
@@ -148,6 +149,7 @@ app.use('/api/clients', clients_1.default);
 app.use('/api/consultations', consultations_1.default);
 app.use('/api/invoice-settings', invoiceSettings_1.default);
 app.use('/api/consultation-invoices', consultationInvoices_1.default);
+app.use('/api/monthly-consultation-reports', monthlyConsultationReports_1.default);
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import PayrollComponent from '../components/PayrollComponent.tsx';
 import InvoiceManagementTab from '../components/InvoiceManagementTab.tsx';
-import { CalculatorIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import MonthlyReportsTab from '../components/MonthlyReportsTab.tsx';
+import { CalculatorIcon, DocumentTextIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 
-type TabType = 'payroll' | 'invoices';
+type TabType = 'payroll' | 'invoices' | 'monthly-reports';
 
 const Payroll: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('payroll');
@@ -20,6 +21,12 @@ const Payroll: React.FC = () => {
       name: 'Beratungsrechnungen',
       icon: DocumentTextIcon,
       component: <InvoiceManagementTab />
+    },
+    {
+      id: 'monthly-reports' as TabType,
+      name: 'Monatsabrechnungen',
+      icon: ClipboardDocumentListIcon,
+      component: <MonthlyReportsTab />
     }
   ];
 

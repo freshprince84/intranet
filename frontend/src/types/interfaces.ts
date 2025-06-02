@@ -20,6 +20,8 @@ export interface User {
   employeeNumber?: string | null;
   roles: UserRole[];
   identificationDocuments?: IdentificationDocument[];
+  settings?: Settings;
+  invoiceSettings?: InvoiceSettings;
 }
 
 export interface UserRole {
@@ -58,6 +60,42 @@ export interface IdentificationDocument {
   isVerified: boolean;
   verificationDate: string | null;
   verifiedBy: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Settings {
+  id: number;
+  userId: number;
+  companyLogo?: string | null;
+  darkMode: boolean;
+  sidebarCollapsed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface InvoiceSettings {
+  id: number;
+  userId: number;
+  companyName: string;
+  companyAddress: string;
+  companyZip: string;
+  companyCity: string;
+  companyCountry: string;
+  companyPhone?: string | null;
+  companyEmail?: string | null;
+  companyWebsite?: string | null;
+  vatNumber?: string | null;
+  iban: string;
+  bankName?: string | null;
+  defaultHourlyRate: number;
+  defaultVatRate?: number | null;
+  invoicePrefix: string;
+  nextInvoiceNumber: number;
+  footerText?: string | null;
+  monthlyReportEnabled: boolean;
+  monthlyReportDay: number;
+  monthlyReportRecipient?: string | null;
   createdAt: string;
   updatedAt: string;
 } 

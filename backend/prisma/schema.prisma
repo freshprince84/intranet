@@ -51,6 +51,7 @@ model User {
   savedFilters             SavedFilter[]
   consultationInvoices     ConsultationInvoice[]
   invoiceSettings          InvoiceSettings?
+  monthlyReports           MonthlyConsultationReport[]
 }
 
 model Role {
@@ -168,14 +169,14 @@ model Request {
 }
 
 model Settings {
-  id               Int      @id @default(autoincrement())
-  userId           Int      @unique
-  companyLogo      String?
-  darkMode         Boolean  @default(false)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  sidebarCollapsed Boolean  @default(false)
-  user             User     @relation(fields: [userId], references: [id])
+  id                      Int      @id @default(autoincrement())
+  userId                  Int      @unique
+  companyLogo             String?
+  darkMode                Boolean  @default(false)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  sidebarCollapsed        Boolean  @default(false)
+  user                    User     @relation(fields: [userId], references: [id])
 }
 
 model UserTableSettings {
@@ -445,6 +446,7 @@ model Client {
   updatedAt   DateTime   @updatedAt
   workTimes   WorkTime[]
   consultationInvoices  ConsultationInvoice[]
+  monthlyReportItems MonthlyConsultationReportItem[]
 }
 
 model ConsultationInvoice {
@@ -521,10 +523,46 @@ model InvoiceSettings {
   invoicePrefix         String                   @default("INV")
   nextInvoiceNumber     Int                      @default(1)
   footerText            String?                  @db.Text
+  monthlyReportEnabled  Boolean                  @default(false)
+  monthlyReportDay      Int                      @default(25)
+  monthlyReportRecipient String?
   createdAt             DateTime                 @default(now())
   updatedAt             DateTime                 @updatedAt
   
   user                  User                     @relation(fields: [userId], references: [id])
+}
+
+model MonthlyConsultationReport {
+  id                Int                           @id @default(autoincrement())
+  userId            Int                          // Berater
+  reportNumber      String                       @unique
+  periodStart       DateTime                     // Beginn des Abrechnungszeitraums
+  periodEnd         DateTime                     // Ende des Abrechnungszeitraums
+  recipient         String                       // Rechnungsempfänger
+  totalHours        Decimal                      @db.Decimal(10, 2)
+  totalAmount       Decimal?                     @db.Decimal(10, 2)
+  currency          String                       @default("CHF")
+  pdfPath           String?
+  status            MonthlyReportStatus          @default(GENERATED)
+  generatedAt       DateTime                     @default(now())
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+  
+  user              User                         @relation(fields: [userId], references: [id])
+  items             MonthlyConsultationReportItem[]
+}
+
+model MonthlyConsultationReportItem {
+  id                Int                           @id @default(autoincrement())
+  reportId          Int
+  clientId          Int
+  clientName        String                       // Snapshot des Client-Namens
+  totalHours        Decimal                      @db.Decimal(10, 2)
+  consultationCount Int                          // Anzahl Beratungen
+  createdAt         DateTime                     @default(now())
+  
+  report            MonthlyConsultationReport    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  client            Client                       @relation(fields: [clientId], references: [id])
 }
 
 model WorkTimeTask {
@@ -577,4 +615,10 @@ enum InvoiceStatus {
   PAID
   OVERDUE
   CANCELLED
+}
+
+enum MonthlyReportStatus {
+  GENERATED
+  SENT
+  ARCHIVED
 }

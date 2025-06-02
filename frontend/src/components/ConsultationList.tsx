@@ -812,11 +812,6 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
     return formatTotalDuration(filteredConsultations);
   }, [filteredConsultations]);
 
-  // Anzahl abgeschlossener Beratungen berechnen
-  const completedConsultationsCount = useMemo(() => {
-    return filteredConsultations.filter(c => c.endTime).length;
-  }, [filteredConsultations]);
-
   // Timeline-Markierungen berechnen
   const timelineMarkers = useMemo(() => {
     return generateTimelineMarkers(filteredConsultations);
@@ -836,10 +831,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
               <h2 className="text-xl font-semibold dark:text-white">Beratungsliste</h2>
               {/* Total-Anzeige */}
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                {filteredConsultations.length} Beratung{filteredConsultations.length !== 1 ? 'en' : ''} 
-                {completedConsultationsCount > 0 && (
-                  ` (${completedConsultationsCount} abgeschlossen) - Total: ${totalDuration}`
-                )}
+                {filteredConsultations.length} Beratung{filteredConsultations.length !== 1 ? 'en' : ''} - Total: {totalDuration}
               </p>
             </div>
           </div>
@@ -913,7 +905,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
         </div>
 
         {/* Timeline + Cards Layout */}
-        <div className="space-y-px">
+        <div className="space-y-0.5 sm:space-y-1">
           {filteredConsultations.length === 0 ? (
             <div className="text-center py-12 px-2 sm:px-0">
               <ClockIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
@@ -961,11 +953,11 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
 
                   {/* Card ohne Timeline-Punkt */}
                   <div className="bg-white dark:bg-gray-800 shadow rounded-lg md:border md:border-gray-200 md:dark:border-gray-700 hover:shadow-md transition-shadow">
-                    {/* Card Content - Mobile: 1/3 left, 2/3 right */}
+                    {/* Card Content - 1/3 left, 2/3 right auf allen Bildschirmgrößen */}
                     <div className="p-4">
-                      <div className="grid grid-cols-3 sm:grid-cols-2 gap-4">
-                        {/* Left: Compact Info - 1/3 on mobile, 1/2 on desktop */}
-                        <div className="col-span-1 sm:col-span-1 space-y-3">
+                      <div className="grid grid-cols-3 gap-4">
+                        {/* Left: Compact Info - 1/3 auf allen Bildschirmgrößen */}
+                        <div className="col-span-1 space-y-3">
                           {/* Client Header */}
                           <div className="flex items-center space-x-2">
                             <div className="min-w-0 flex-1">
@@ -976,26 +968,6 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                                   {consultation.client.company}
                                 </p>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              {hasPermission('consultations', 'write') && (
-                                <button
-                                  onClick={() => handleLinkTask(consultation.id)}
-                                  className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded"
-                                  title="Task verknüpfen"
-                                >
-                                  <LinkIcon className="h-4 w-4" />
-                                </button>
-                              )}
-                              {hasPermission('consultations', 'write') && consultation.endTime && (
-                                <button
-                                  onClick={() => handleDeleteConsultation(consultation.id)}
-                                  className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded"
-                                  title="Beratung löschen"
-                                >
-                                  <TrashIcon className="h-4 w-4" />
-                                </button>
                               )}
                             </div>
                           </div>
@@ -1140,8 +1112,30 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                           )}
                         </div>
 
-                        {/* Right: Notes - 2/3 on mobile, 1/2 on desktop */}
-                        <div className="col-span-2 sm:col-span-1">
+                        {/* Right: Notes - 2/3 auf allen Bildschirmgrößen */}
+                        <div className="col-span-2 relative">
+                          {/* Action Icons in der rechten oberen Ecke */}
+                          <div className="absolute top-0 right-0 flex items-center space-x-1 z-10">
+                            {hasPermission('consultations', 'write') && (
+                              <button
+                                onClick={() => handleLinkTask(consultation.id)}
+                                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded"
+                                title="Task verknüpfen"
+                              >
+                                <LinkIcon className="h-4 w-4" />
+                              </button>
+                            )}
+                            {hasPermission('consultations', 'write') && consultation.endTime && (
+                              <button
+                                onClick={() => handleDeleteConsultation(consultation.id)}
+                                className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded"
+                                title="Beratung löschen"
+                              >
+                                <TrashIcon className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+                          
                           <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Notizen</p>
                           {editingNotesId === consultation.id ? (
                             <div className="space-y-2">

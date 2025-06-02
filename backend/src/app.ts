@@ -22,6 +22,7 @@ import clientRoutes from './routes/clients';
 import consultationRoutes from './routes/consultations';
 import invoiceSettingsRoutes from './routes/invoiceSettings';
 import consultationInvoicesRoutes from './routes/consultationInvoices';
+import monthlyConsultationReportsRoutes from './routes/monthlyConsultationReports';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 
 const app = express();
@@ -149,6 +150,7 @@ app.use('/api/clients', clientRoutes);
 app.use('/api/consultations', consultationRoutes);
 app.use('/api/invoice-settings', invoiceSettingsRoutes);
 app.use('/api/consultation-invoices', consultationInvoicesRoutes);
+app.use('/api/monthly-consultation-reports', monthlyConsultationReportsRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

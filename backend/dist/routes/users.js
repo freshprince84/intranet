@@ -11,6 +11,7 @@ router.get('/', userController_1.getAllUsers);
 router.get('/profile', userController_1.getCurrentUser);
 router.put('/profile', userController_1.updateProfile);
 router.put('/settings', userController_1.updateUserSettings);
+router.put('/invoice-settings', userController_1.updateInvoiceSettings);
 router.put('/switch-role', userController_1.switchUserRole);
 // Neue Routen für Benutzerverwaltung
 router.get('/:id', userController_1.getUserById);

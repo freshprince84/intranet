@@ -78,7 +78,8 @@ export const API_ENDPOINTS = {
     USERS: {
         BASE: '/users',
         BY_ID: (id: number) => `/users/${id}`,
-        CHANGE_ROLE: (id: number) => `/users/${id}/role`
+        CHANGE_ROLE: (id: number) => `/users/${id}/role`,
+        INVOICE_SETTINGS: '/users/invoice-settings'
     },
     // Team Worktime Control
     TEAM_WORKTIME: {
@@ -156,6 +157,16 @@ export const API_ENDPOINTS = {
         UPDATE_STATUS: (id: number) => `/consultation-invoices/${id}/status`,
         MARK_PAID: (id: number) => `/consultation-invoices/${id}/mark-paid`,
         CANCEL: (id: number) => `/consultation-invoices/${id}/cancel`
+    },
+    // Monthly Consultation Reports
+    MONTHLY_CONSULTATION_REPORTS: {
+        BASE: '/monthly-consultation-reports',
+        BY_ID: (id: number) => `/monthly-consultation-reports/${id}`,
+        GENERATE: '/monthly-consultation-reports/generate',
+        GENERATE_AUTOMATIC: '/monthly-consultation-reports/generate-automatic',
+        UPDATE_STATUS: (id: number) => `/monthly-consultation-reports/${id}/status`,
+        CHECK_UNBILLED: '/monthly-consultation-reports/check-unbilled',
+        PDF: (id: number) => `/monthly-consultation-reports/${id}/pdf`
     }
 };
 

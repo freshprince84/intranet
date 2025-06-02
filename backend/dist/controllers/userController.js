@@ -12,7 +12,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateUserSettings = exports.updateUserRoles = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsers = void 0;
+exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateInvoiceSettings = exports.updateUserSettings = exports.updateUserRoles = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsers = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
 const prisma = new client_1.PrismaClient();
@@ -96,6 +96,7 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 salary: true,
                 normalWorkingHours: true,
                 settings: true,
+                invoiceSettings: true,
                 roles: {
                     include: {
                         role: {
@@ -455,6 +456,58 @@ const updateUserSettings = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.updateUserSettings = updateUserSettings;
+const updateInvoiceSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    try {
+        console.log('DEBUG updateInvoiceSettings:', {
+            userId: req.userId,
+            userIdType: typeof req.userId,
+            userObject: (_a = req.user) === null || _a === void 0 ? void 0 : _a.id,
+            body: req.body
+        });
+        const userId = parseInt(req.userId, 10);
+        if (isNaN(userId)) {
+            console.error('ERROR: userId is NaN', {
+                rawUserId: req.userId,
+                userObjectId: (_b = req.user) === null || _b === void 0 ? void 0 : _b.id
+            });
+            return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
+        }
+        // Validierung für monthlyReportDay
+        if (req.body.monthlyReportDay !== undefined) {
+            const day = req.body.monthlyReportDay;
+            if (day < 1 || day > 28) {
+                return res.status(400).json({ message: 'Abrechnungstag muss zwischen 1 und 28 liegen' });
+            }
+        }
+        // Prüfen, ob es bereits Invoice-Einstellungen gibt
+        let invoiceSettings = yield prisma.invoiceSettings.findUnique({
+            where: { userId }
+        });
+        if (invoiceSettings) {
+            // Invoice-Einstellungen aktualisieren
+            invoiceSettings = yield prisma.invoiceSettings.update({
+                where: { userId },
+                data: Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (req.body.monthlyReportEnabled !== undefined && { monthlyReportEnabled: req.body.monthlyReportEnabled })), (req.body.monthlyReportDay !== undefined && { monthlyReportDay: req.body.monthlyReportDay })), (req.body.monthlyReportRecipient !== undefined && { monthlyReportRecipient: req.body.monthlyReportRecipient })), (req.body.companyName !== undefined && { companyName: req.body.companyName })), (req.body.companyAddress !== undefined && { companyAddress: req.body.companyAddress })), (req.body.companyZip !== undefined && { companyZip: req.body.companyZip })), (req.body.companyCity !== undefined && { companyCity: req.body.companyCity })), (req.body.companyCountry !== undefined && { companyCountry: req.body.companyCountry })), (req.body.companyPhone !== undefined && { companyPhone: req.body.companyPhone })), (req.body.companyEmail !== undefined && { companyEmail: req.body.companyEmail })), (req.body.companyWebsite !== undefined && { companyWebsite: req.body.companyWebsite })), (req.body.vatNumber !== undefined && { vatNumber: req.body.vatNumber })), (req.body.iban !== undefined && { iban: req.body.iban })), (req.body.bankName !== undefined && { bankName: req.body.bankName })), (req.body.defaultHourlyRate !== undefined && { defaultHourlyRate: req.body.defaultHourlyRate })), (req.body.defaultVatRate !== undefined && { defaultVatRate: req.body.defaultVatRate })), (req.body.invoicePrefix !== undefined && { invoicePrefix: req.body.invoicePrefix })), (req.body.nextInvoiceNumber !== undefined && { nextInvoiceNumber: req.body.nextInvoiceNumber })), (req.body.footerText !== undefined && { footerText: req.body.footerText }))
+            });
+        }
+        else {
+            // Neue Invoice-Einstellungen erstellen mit Defaults
+            invoiceSettings = yield prisma.invoiceSettings.create({
+                data: Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ userId, companyName: req.body.companyName || '', companyAddress: req.body.companyAddress || '', companyZip: req.body.companyZip || '', companyCity: req.body.companyCity || '', companyCountry: req.body.companyCountry || 'CH', iban: req.body.iban || '', defaultHourlyRate: req.body.defaultHourlyRate || '0' }, (req.body.monthlyReportEnabled !== undefined && { monthlyReportEnabled: req.body.monthlyReportEnabled })), (req.body.monthlyReportDay !== undefined && { monthlyReportDay: req.body.monthlyReportDay })), (req.body.monthlyReportRecipient !== undefined && { monthlyReportRecipient: req.body.monthlyReportRecipient })), (req.body.companyPhone !== undefined && { companyPhone: req.body.companyPhone })), (req.body.companyEmail !== undefined && { companyEmail: req.body.companyEmail })), (req.body.companyWebsite !== undefined && { companyWebsite: req.body.companyWebsite })), (req.body.vatNumber !== undefined && { vatNumber: req.body.vatNumber })), (req.body.bankName !== undefined && { bankName: req.body.bankName })), (req.body.defaultVatRate !== undefined && { defaultVatRate: req.body.defaultVatRate })), (req.body.invoicePrefix !== undefined && { invoicePrefix: req.body.invoicePrefix })), (req.body.nextInvoiceNumber !== undefined && { nextInvoiceNumber: req.body.nextInvoiceNumber })), (req.body.footerText !== undefined && { footerText: req.body.footerText }))
+            });
+        }
+        res.json(invoiceSettings);
+    }
+    catch (error) {
+        console.error('Error in updateInvoiceSettings:', error);
+        res.status(500).json({
+            message: 'Fehler beim Aktualisieren der Invoice-Einstellungen',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.updateInvoiceSettings = updateInvoiceSettings;
 // Aktive Rolle eines Benutzers wechseln
 const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
