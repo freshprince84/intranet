@@ -98,6 +98,17 @@ export const generateMonthlyReport = async (req: AuthenticatedRequest, res: Resp
     const startDate = new Date(periodStart);
     const endDate = new Date(periodEnd);
 
+    // Hole alle bestehenden Monthly Reports um deren Zeiträume zu ermitteln
+    const existingReports = await prisma.monthlyConsultationReport.findMany({
+      where: {
+        userId
+      },
+      select: {
+        periodStart: true,
+        periodEnd: true
+      }
+    });
+
     // Hole alle nicht-abgerechneten Beratungen im Zeitraum
     const consultations = await prisma.workTime.findMany({
       where: {
@@ -107,10 +118,12 @@ export const generateMonthlyReport = async (req: AuthenticatedRequest, res: Resp
           gte: startDate,
           lte: endDate
         },
-        // Nur Beratungen, die noch nicht in einer Rechnung sind
-        invoiceItems: {
-          none: {}
-        }
+        AND: [
+          // Nur Beratungen, die noch nicht in einer Rechnung sind
+          { invoiceItems: { none: {} } }
+          // TODO: Nach deinem Prisma Update wieder aktivieren:
+          // { monthlyReportId: null }
+        ]
       },
       include: {
         client: true
@@ -183,6 +196,19 @@ export const generateMonthlyReport = async (req: AuthenticatedRequest, res: Resp
       await tx.monthlyConsultationReportItem.createMany({
         data: reportItems
       });
+
+      // Verknüpfe alle WorkTime-Einträge mit dem Report
+      // TODO: Nach deinem Prisma Update wieder aktivieren:
+      /*
+      await tx.workTime.updateMany({
+        where: {
+          id: { in: consultations.map(c => c.id) }
+        },
+        data: {
+          monthlyReportId: newReport.id
+        }
+      });
+      */
 
       return newReport;
     });
@@ -366,7 +392,12 @@ export const checkUnbilledConsultations = async (req: AuthenticatedRequest, res:
       userId,
       clientId: { not: null },
       endTime: { not: null },
-      invoiceItems: { none: {} }
+      AND: [
+        // Nicht in einer Rechnung abgerechnet
+        { invoiceItems: { none: {} } }
+        // TODO: Nach deinem Prisma Update wieder aktivieren:
+        // { monthlyReportId: null }
+      ]
     };
 
     if (periodStart && periodEnd) {

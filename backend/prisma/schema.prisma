@@ -124,6 +124,8 @@ model WorkTime {
   notes       String?   @db.Text
   taskLinks   WorkTimeTask[]
   invoiceItems ConsultationInvoiceItem[]
+  monthlyReportId Int?
+  monthlyReport   MonthlyConsultationReport? @relation(fields: [monthlyReportId], references: [id])
   branch    Branch    @relation(fields: [branchId], references: [id])
   user      User      @relation(fields: [userId], references: [id])
 }
@@ -550,6 +552,7 @@ model MonthlyConsultationReport {
   
   user              User                         @relation(fields: [userId], references: [id])
   items             MonthlyConsultationReportItem[]
+  workTimes         WorkTime[]                   // Verknüpfte WorkTime Einträge
 }
 
 model MonthlyConsultationReportItem {
