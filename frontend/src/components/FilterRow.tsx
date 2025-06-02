@@ -266,13 +266,45 @@ const FilterRow: React.FC<FilterRowProps> = ({
     
     // Für Datumsfelder ein Datumseingabefeld rendern
     if (columnId === 'dueDate' || columnId === 'startTime') {
+      // Prüfe ob der Wert eine Variable ist
+      const isVariable = value === '__TODAY__';
+      const isCustomDate = !isVariable && value;
+      
       return (
-        <input
-          type="date"
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-          value={value as string || ''}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        <div className="space-y-2">
+          {/* Auswahl zwischen Datum und Variable */}
+          <select
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
+            value={isVariable ? 'variable' : 'date'}
+            onChange={(e) => {
+              if (e.target.value === 'variable') {
+                onChange('__TODAY__');
+              } else {
+                onChange('');
+              }
+            }}
+          >
+            <option value="date">Datum wählen</option>
+            <option value="variable">Aktueller Tag</option>
+          </select>
+          
+          {/* Datum-Input nur anzeigen wenn nicht Variable */}
+          {!isVariable && (
+            <input
+              type="date"
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              value={value as string || ''}
+              onChange={(e) => onChange(e.target.value)}
+            />
+          )}
+          
+          {/* Variable-Anzeige */}
+          {isVariable && (
+            <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-blue-700 dark:text-blue-300 text-sm">
+              📅 Aktueller Tag (dynamisch)
+            </div>
+          )}
+        </div>
       );
     }
     

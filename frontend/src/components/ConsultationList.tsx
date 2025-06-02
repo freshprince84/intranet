@@ -193,9 +193,20 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
           }
         }
 
+        // Lösche veralteten "Diese Woche" Filter falls vorhanden
+        const dieseWocheFilter = existingFilters.find((filter: any) => filter.name === 'Diese Woche');
+        if (dieseWocheFilter) {
+          try {
+            await axiosInstance.delete(API_ENDPOINTS.SAVED_FILTERS.BY_ID(dieseWocheFilter.id));
+            console.log('Veralteter "Diese Woche" Filter gelöscht');
+          } catch (error) {
+            console.error('Fehler beim Löschen des "Diese Woche" Filters:', error);
+          }
+        }
+
         const archivFilterExists = existingFilters.some((filter: any) => filter.name === 'Archiv');
         const heuteFilterExists = existingFilters.some((filter: any) => filter.name === 'Heute');
-        const dieseWocheFilterExists = existingFilters.some((filter: any) => filter.name === 'Diese Woche');
+        const wocheFilterExists = existingFilters.some((filter: any) => filter.name === 'Woche');
         const nichtAbgerechnetFilterExists = existingFilters.some((filter: any) => filter.name === 'Nicht abgerechnet');
 
         // Erstelle "Archiv"-Filter (zeigt nur vergangene Beratungen - strikt vor heute)
@@ -233,21 +244,21 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
           }
         }
 
-        // Erstelle "Diese Woche"-Filter
-        if (!dieseWocheFilterExists) {
-          const dieseWocheFilter = {
+        // Erstelle "Woche"-Filter (von heute bis heute + 7 Tage)
+        if (!wocheFilterExists) {
+          const wocheFilter = {
             tableId: CONSULTATIONS_TABLE_ID,
-            name: 'Diese Woche',
+            name: 'Woche',
             conditions: [
-              { column: 'startTime', operator: 'after', value: '__THIS_WEEK_START__' },
-              { column: 'startTime', operator: 'before', value: '__THIS_WEEK_END__' }
+              { column: 'startTime', operator: 'after', value: '__TODAY__' },
+              { column: 'startTime', operator: 'before', value: '__WEEK_FROM_TODAY__' }
             ],
             operators: ['AND']
           };
           try {
-            await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, dieseWocheFilter);
+            await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, wocheFilter);
           } catch (error) {
-            console.error('Fehler beim Erstellen des Diese Woche-Filters:', error);
+            console.error('Fehler beim Erstellen des Woche-Filters:', error);
           }
         }
 
@@ -300,27 +311,27 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
           }
         }
 
-        // Finde "Diese Woche" Filter mit statischen Datums
-        const dieseWocheFilter = existingFilters.find((filter: any) => filter.name === 'Diese Woche');
-        if (dieseWocheFilter && dieseWocheFilter.conditions.length >= 2) {
-          const firstCondition = dieseWocheFilter.conditions[0];
-          const secondCondition = dieseWocheFilter.conditions[1];
+        // Finde "Woche" Filter mit statischen Datums
+        const wocheFilter = existingFilters.find((filter: any) => filter.name === 'Woche');
+        if (wocheFilter && wocheFilter.conditions.length >= 2) {
+          const firstCondition = wocheFilter.conditions[0];
+          const secondCondition = wocheFilter.conditions[1];
           
           // Prüfe ob es statische Datumsangaben sind
           const hasStaticDates = (
-            firstCondition.value !== '__THIS_WEEK_START__' && /^\d{4}-\d{2}-\d{2}$/.test(firstCondition.value)
+            firstCondition.value !== '__TODAY__' && /^\d{4}-\d{2}-\d{2}$/.test(firstCondition.value)
           ) || (
-            secondCondition.value !== '__THIS_WEEK_END__' && /^\d{4}-\d{2}-\d{2}$/.test(secondCondition.value)
+            secondCondition.value !== '__WEEK_FROM_TODAY__' && /^\d{4}-\d{2}-\d{2}$/.test(secondCondition.value)
           );
 
           if (hasStaticDates) {
-            console.log('Aktualisiere Diese Woche-Filter mit dynamischen Markern...');
+            console.log('Aktualisiere Woche-Filter mit dynamischen Markern...');
             await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, {
               tableId: CONSULTATIONS_TABLE_ID,
-              name: 'Diese Woche',
+              name: 'Woche',
               conditions: [
-                { column: 'startTime', operator: 'after', value: '__THIS_WEEK_START__' },
-                { column: 'startTime', operator: 'before', value: '__THIS_WEEK_END__' }
+                { column: 'startTime', operator: 'after', value: '__TODAY__' },
+                { column: 'startTime', operator: 'before', value: '__WEEK_FROM_TODAY__' }
               ],
               operators: ['AND']
             });
@@ -354,7 +365,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
 
         // Finde alle bestehenden Client-Filter (alle Filter außer den Standard-Filtern)
         const existingClientFilters = existingFilters.filter((filter: any) => 
-          !['Archiv', 'Heute', 'Diese Woche'].includes(filter.name)
+          !['Archiv', 'Heute', 'Woche'].includes(filter.name)
         );
         
         // Aktuelle Recent Client Namen
@@ -634,17 +645,17 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
               
               // Dynamische Datums-Marker verarbeiten
               if (filterDate === '__TODAY__') {
-                filterDate = new Date().toISOString().split('T')[0];
-              } else if (filterDate === '__THIS_WEEK_START__') {
-                const today = new Date();
-                const startOfWeek = new Date(today);
-                startOfWeek.setDate(today.getDate() - today.getDay() + 1); // Montag
-                filterDate = startOfWeek.toISOString().split('T')[0];
-              } else if (filterDate === '__THIS_WEEK_END__') {
-                const today = new Date();
-                const endOfWeek = new Date(today);
-                endOfWeek.setDate(today.getDate() - today.getDay() + 8); // Montag nächste Woche (für "before" Operator)
-                filterDate = endOfWeek.toISOString().split('T')[0];
+                // ✅ KORREKT: Lokale Zeit verwenden (Timezone-Dokumentation befolgen)
+                const localToday = new Date();
+                const correctedToday = new Date(localToday.getTime() - localToday.getTimezoneOffset() * 60000);
+                filterDate = correctedToday.toISOString().split('T')[0];
+              } else if (filterDate === '__WEEK_FROM_TODAY__') {
+                // ✅ KORREKT: Lokale Zeit verwenden (Timezone-Dokumentation befolgen)
+                const localToday = new Date();
+                const correctedToday = new Date(localToday.getTime() - localToday.getTimezoneOffset() * 60000);
+                const weekFromToday = new Date(correctedToday);
+                weekFromToday.setDate(correctedToday.getDate() + 7); // Heute + 7 Tage
+                filterDate = weekFromToday.toISOString().split('T')[0];
               }
               
               switch (condition.operator) {

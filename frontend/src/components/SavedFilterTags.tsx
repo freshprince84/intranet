@@ -231,14 +231,14 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Prüfen, ob ein Filter ein Standard-Filter ist
   const isStandardFilter = (filterName: string) => {
-    const baseStandardFilters = ['Archiv', 'Aktuell', 'Aktive', 'Alle', 'Heute', 'Diese Woche'];
+    const baseStandardFilters = ['Archiv', 'Aktuell', 'Aktive', 'Alle', 'Heute', 'Woche'];
     
     if (baseStandardFilters.includes(filterName)) {
       return true;
     }
     
     if (tableId === 'consultations-table') {
-      if (filterName === 'Archiv' || filterName === 'Heute' || filterName === 'Diese Woche') {
+      if (filterName === 'Archiv' || filterName === 'Heute' || filterName === 'Woche') {
         return true;
       }
       if (recentClientNames.includes(filterName)) {
@@ -260,7 +260,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     console.log('🗂️ SavedFilterTags: savedFilters:', savedFilters.map(f => f.name));
 
     const heute = savedFilters.find(f => f.name === 'Heute');
-    const dieseWoche = savedFilters.find(f => f.name === 'Diese Woche');
+    const woche = savedFilters.find(f => f.name === 'Woche');
     const archiv = savedFilters.find(f => f.name === 'Archiv');
     
     // Recent Client Filter in der exakten Reihenfolge der Recent Clients API sortieren
@@ -271,7 +271,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     console.log('✅ SavedFilterTags: sortedRecentClientFilters:', sortedRecentClientFilters.map(f => f.name));
     
     const customFilters = savedFilters.filter(f => 
-      !['Heute', 'Diese Woche', 'Archiv'].includes(f.name) && 
+      !['Heute', 'Woche', 'Archiv'].includes(f.name) && 
       !recentClientNames.includes(f.name)
     );
     
@@ -280,7 +280,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     const orderedFilters: SavedFilter[] = [];
     
     if (heute) orderedFilters.push(heute);
-    if (dieseWoche) orderedFilters.push(dieseWoche);
+    if (woche) orderedFilters.push(woche);
     orderedFilters.push(...sortedRecentClientFilters);
     orderedFilters.push(...customFilters);
     if (archiv) orderedFilters.push(archiv);
@@ -292,11 +292,12 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
 
   // Optimistische Filter-Anzeige für bessere UX (MOVED BEFORE EARLY RETURNS)
   const showOptimisticFilters = savedFilters.length === 0 && loading;
+  
   const optimisticFilters = useMemo(() => {
     if (!showOptimisticFilters) return [];
     return Array(3).fill(null).map((_, i) => ({
       id: `placeholder-${i}`,
-      name: i === 0 ? 'Heute' : i === 1 ? 'Diese Woche' : '████████',
+      name: i === 0 ? 'Heute' : i === 1 ? 'Woche' : '████████',
       isPlaceholder: true,
       tableId,
       conditions: [],
