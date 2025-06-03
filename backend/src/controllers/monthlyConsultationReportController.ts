@@ -121,7 +121,7 @@ export const generateMonthlyReport = async (req: AuthenticatedRequest, res: Resp
         AND: [
           // Nur Beratungen, die noch nicht in einer Rechnung sind
           { invoiceItems: { none: {} } },
-          // Nicht in einem Monthly Report abgerechnet
+          // Und noch nicht in einem Monatsbericht sind
           { monthlyReportId: null }
         ]
       },
@@ -391,9 +391,9 @@ export const checkUnbilledConsultations = async (req: AuthenticatedRequest, res:
       endTime: { not: null },
       AND: [
         // Nicht in einer Rechnung abgerechnet
-        { invoiceItems: { none: {} } }
-        // TODO: Nach deinem Prisma Update wieder aktivieren:
-        // { monthlyReportId: null }
+        { invoiceItems: { none: {} } },
+        // Und nicht in einem Monatsbericht abgerechnet
+        { monthlyReportId: null }
       ]
     };
 

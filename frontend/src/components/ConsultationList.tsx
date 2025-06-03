@@ -5,8 +5,10 @@ import {
   XMarkIcon,
   LinkIcon,
   TrashIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  ChartBarIcon
 } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { 
@@ -46,6 +48,7 @@ export interface ConsultationListRef {
 
 const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(({ onConsultationChange }, ref) => {
   const { hasPermission } = usePermissions();
+  const navigate = useNavigate();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [recentClients, setRecentClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -691,18 +694,32 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
               break;
             case 'invoiceStatus':
               const isInvoiced = isConsultationInvoiced(consultation);
+              const isInMonthlyReport = isConsultationInMonthlyReport(consultation);
               const filterValueLower = String(condition.value).toLowerCase();
               
               if (filterValueLower === 'abgerechnet' || filterValueLower === 'invoiced' || filterValueLower === 'ja') {
-                conditionResult = isInvoiced;
+                conditionResult = isInvoiced || isInMonthlyReport;
               } else if (filterValueLower === 'nicht abgerechnet' || filterValueLower === 'not invoiced' || filterValueLower === 'nein') {
-                conditionResult = !isInvoiced;
+                conditionResult = !isInvoiced && !isInMonthlyReport;
+              } else if (filterValueLower === 'einzelrechnung' || filterValueLower === 'invoice') {
+                conditionResult = isInvoiced;
+              } else if (filterValueLower === 'monatsbericht' || filterValueLower === 'monthly report') {
+                conditionResult = isInMonthlyReport;
               } else {
                 // Exact status match wenn ein spezifischer Status eingegeben wurde
                 if (isInvoiced) {
                   const invoiceInfo = getConsultationInvoiceInfo(consultation);
                   const statusText = invoiceInfo ? getInvoiceStatusText(invoiceInfo.status as any).toLowerCase() : '';
                   conditionResult = statusText.includes(filterValueLower);
+                } else if (isInMonthlyReport) {
+                  const monthlyReportInfo = getConsultationMonthlyReportInfo(consultation);
+                  if (monthlyReportInfo) {
+                    const statusText = monthlyReportInfo.status === 'GENERATED' ? 'erstellt' : 
+                                     monthlyReportInfo.status === 'SENT' ? 'gesendet' : 'archiviert';
+                    conditionResult = statusText.includes(filterValueLower);
+                  } else {
+                    conditionResult = false;
+                  }
                 } else {
                   conditionResult = false;
                 }
@@ -816,6 +833,59 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
   const timelineMarkers = useMemo(() => {
     return generateTimelineMarkers(filteredConsultations);
   }, [filteredConsultations]);
+
+  // Helper function to check if consultation is billed in monthly report
+  const isConsultationInMonthlyReport = (consultation: Consultation): boolean => {
+    return consultation.monthlyReportId !== null && consultation.monthlyReportId !== undefined;
+  };
+
+  // Helper function to get monthly report info
+  const getConsultationMonthlyReportInfo = (consultation: Consultation) => {
+    return consultation.monthlyReport;
+  };
+
+  // Helper function to get the billing status
+  const getConsultationBillingStatus = (consultation: Consultation) => {
+    const isInvoiced = isConsultationInvoiced(consultation);
+    const isInMonthlyReport = isConsultationInMonthlyReport(consultation);
+    
+    if (isInvoiced) {
+      const invoiceInfo = getConsultationInvoiceInfo(consultation);
+      return {
+        type: 'invoice' as const,
+        status: 'Einzelrechnung',
+        info: invoiceInfo
+      };
+    } else if (isInMonthlyReport) {
+      const monthlyReportInfo = getConsultationMonthlyReportInfo(consultation);
+      return {
+        type: 'monthly' as const,
+        status: 'Monatsbericht',
+        info: monthlyReportInfo
+      };
+    }
+    
+    return null;
+  };
+
+  // Navigation functions
+  const navigateToMonthlyReports = (reportId?: number) => {
+    const url = reportId 
+      ? `/payroll?tab=monthly-reports&reportId=${reportId}`
+      : '/payroll?tab=monthly-reports';
+    navigate(url);
+  };
+
+  const navigateToInvoices = (invoiceId?: number) => {
+    const url = invoiceId 
+      ? `/payroll?tab=invoices&invoiceId=${invoiceId}`
+      : '/payroll?tab=invoices';
+    navigate(url);
+  };
+
+  const navigateToTask = (taskId: number) => {
+    navigate(`/worktracker?editTask=${taskId}`);
+  };
 
   if (loading) return <div className="p-4">Lädt...</div>;
   if (error) return <div className="p-4 text-red-600">{error}</div>;
@@ -972,30 +1042,69 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                             </div>
                           </div>
 
-                          {/* Invoice Indicator */}
-                          {isConsultationInvoiced(consultation) && (
-                            <div className="flex items-center space-x-2">
-                              <div className="flex items-center space-x-1">
-                                <DocumentTextIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
-                                <span className="text-xs text-green-700 dark:text-green-400 font-medium">
-                                  Abgerechnet
-                                </span>
-                              </div>
-                              {(() => {
-                                const invoiceInfo = getConsultationInvoiceInfo(consultation);
-                                return invoiceInfo ? (
-                                  <div className="flex items-center space-x-1">
-                                    <span 
-                                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getInvoiceStatusColor(invoiceInfo.status as any)}`}
-                                      title={`Rechnung ${invoiceInfo.invoiceNumber} vom ${format(new Date(invoiceInfo.issueDate), 'dd.MM.yyyy', { locale: de })}`}
-                                    >
-                                      {getInvoiceStatusText(invoiceInfo.status as any)}
-                                    </span>
+                          {/* Billing Status Indicator */}
+                          {(() => {
+                            const billingStatus = getConsultationBillingStatus(consultation);
+                            
+                            if (billingStatus) {
+                              if (billingStatus.type === 'invoice') {
+                                // Individual invoice
+                                return (
+                                  <div className="flex items-center space-x-2">
+                                    <div className="flex items-center space-x-1">
+                                      <DocumentTextIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                      <button 
+                                        onClick={() => navigateToInvoices(billingStatus.info?.id)}
+                                        className="text-xs text-green-700 dark:text-green-400 font-medium hover:underline cursor-pointer"
+                                      >
+                                        Einzelrechnung
+                                      </button>
+                                    </div>
+                                    {billingStatus.info && 'invoiceNumber' in billingStatus.info && (
+                                      <div className="flex items-center space-x-1">
+                                        <button
+                                          onClick={() => navigateToInvoices(billingStatus.info?.id)}
+                                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium hover:opacity-80 cursor-pointer ${getInvoiceStatusColor(billingStatus.info.status as any)}`}
+                                          title={`Rechnung ${billingStatus.info.invoiceNumber} vom ${format(new Date(billingStatus.info.issueDate), 'dd.MM.yyyy', { locale: de })}`}
+                                        >
+                                          {getInvoiceStatusText(billingStatus.info.status as any)}
+                                        </button>
+                                      </div>
+                                    )}
                                   </div>
-                                ) : null;
-                              })()}
-                            </div>
-                          )}
+                                );
+                              } else if (billingStatus.type === 'monthly') {
+                                // Monthly report
+                                return (
+                                  <div className="flex items-center space-x-2">
+                                    <div className="flex items-center space-x-1">
+                                      <ChartBarIcon className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                      <button 
+                                        onClick={() => navigateToMonthlyReports(billingStatus.info?.id)}
+                                        className="text-xs text-green-700 dark:text-green-400 font-medium hover:underline cursor-pointer"
+                                      >
+                                        Monatsbericht
+                                      </button>
+                                    </div>
+                                    {billingStatus.info && 'reportNumber' in billingStatus.info && (
+                                      <div className="flex items-center space-x-1">
+                                        <button 
+                                          onClick={() => navigateToMonthlyReports(billingStatus.info?.id)}
+                                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 hover:opacity-80 cursor-pointer"
+                                          title={`Monatsbericht ${billingStatus.info.reportNumber}`}
+                                        >
+                                          {billingStatus.info.status === 'GENERATED' ? 'Erstellt' : 
+                                           billingStatus.info.status === 'SENT' ? 'Gesendet' : 'Archiviert'}
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                            }
+                            
+                            return null;
+                          })()}
 
                           {/* Time Range - Single compact field */}
                           <div>
@@ -1094,18 +1203,27 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                               </p>
                               <div className="space-y-1">
                                 {consultation.taskLinks.slice(0, 2).map((taskLink) => (
-                                  <div
+                                  <button
                                     key={taskLink.id}
-                                    className="flex items-center text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 rounded px-2 py-1"
+                                    onClick={() => navigateToTask(taskLink.task.id)}
+                                    className="flex items-center text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 rounded px-2 py-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors cursor-pointer w-full text-left"
                                   >
                                     <LinkIcon className="h-3 w-3 mr-1 flex-shrink-0" />
                                     <span className="truncate">{taskLink.task.title}</span>
-                                  </div>
+                                  </button>
                                 ))}
                                 {consultation.taskLinks.length > 2 && (
-                                  <p className="text-xs text-gray-500">
+                                  <button
+                                    onClick={() => {
+                                      // Navigate to first task if more than 2 tasks
+                                      if (consultation.taskLinks && consultation.taskLinks.length > 0) {
+                                        navigateToTask(consultation.taskLinks[0].task.id);
+                                      }
+                                    }}
+                                    className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer"
+                                  >
                                     +{consultation.taskLinks.length - 2} weitere
-                                  </p>
+                                  </button>
                                 )}
                               </div>
                             </div>

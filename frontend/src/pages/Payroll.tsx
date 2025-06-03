@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import PayrollComponent from '../components/PayrollComponent.tsx';
 import InvoiceManagementTab from '../components/InvoiceManagementTab.tsx';
 import MonthlyReportsTab from '../components/MonthlyReportsTab.tsx';
@@ -7,7 +8,36 @@ import { CalculatorIcon, DocumentTextIcon, ClipboardDocumentListIcon } from '@he
 type TabType = 'invoices' | 'monthly-reports' | 'payroll';
 
 const Payroll: React.FC = () => {
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<TabType>('invoices');
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
+
+  // URL-Parameter verarbeiten
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const tabParam = queryParams.get('tab') as TabType;
+    const invoiceIdParam = queryParams.get('invoiceId');
+    const reportIdParam = queryParams.get('reportId');
+
+    if (tabParam && ['invoices', 'monthly-reports', 'payroll'].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+
+    if (invoiceIdParam) {
+      const invoiceId = parseInt(invoiceIdParam, 10);
+      if (!isNaN(invoiceId)) {
+        setSelectedInvoiceId(invoiceId);
+      }
+    }
+
+    if (reportIdParam) {
+      const reportId = parseInt(reportIdParam, 10);
+      if (!isNaN(reportId)) {
+        setSelectedReportId(reportId);
+      }
+    }
+  }, [location.search]);
 
   const tabs = [
     {

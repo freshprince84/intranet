@@ -24,6 +24,7 @@ import invoiceSettingsRoutes from './routes/invoiceSettings';
 import consultationInvoicesRoutes from './routes/consultationInvoices';
 import monthlyConsultationReportsRoutes from './routes/monthlyConsultationReports';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
+import { checkAndGenerateMonthlyReports, triggerMonthlyReportCheck } from './services/monthlyReportScheduler';
 
 const app = express();
 
@@ -96,12 +97,33 @@ if (!fs.existsSync(downloadsPath)) {
   fs.mkdirSync(downloadsPath, { recursive: true });
 }
 
-// Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 5 Minuten)
-const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 5 Minuten
+// Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 2 Minuten)
+const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 2 Minuten
 setInterval(async () => {
   console.log('Starte automatische Überprüfung der Arbeitszeiten...');
   await checkAndStopExceededWorktimes();
 }, CHECK_INTERVAL_MS);
+
+// Timer für die tägliche Überprüfung der Monatsabrechnungen (alle 10 Minuten)
+// Überprüft, ob heute ein Stichdatum für automatische Monatsabrechnungen ist
+const MONTHLY_REPORT_CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten
+let lastMonthlyReportCheck = '';
+
+setInterval(async () => {
+  const today = new Date().toDateString();
+  
+  // Führe die Prüfung nur einmal pro Tag aus
+  if (lastMonthlyReportCheck !== today) {
+    const currentHour = new Date().getHours();
+    
+    // Führe die Prüfung nur zwischen 9:00 und 10:00 Uhr aus
+    if (currentHour >= 9 && currentHour < 10) {
+      console.log('Starte tägliche Überprüfung für automatische Monatsabrechnungen...');
+      await checkAndGenerateMonthlyReports();
+      lastMonthlyReportCheck = today;
+    }
+  }
+}, MONTHLY_REPORT_CHECK_INTERVAL_MS);
 
 // Eine direkte Test-Route für die Diagnose
 app.get('/api/test-route', (req: Request, res: Response) => {
@@ -110,6 +132,20 @@ app.get('/api/test-route', (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV
   });
+});
+
+// Test-Route für manuelle Auslösung der Monatsabrechnungsprüfung
+app.post('/api/admin/trigger-monthly-reports', async (req: Request, res: Response) => {
+  try {
+    const result = await triggerMonthlyReportCheck();
+    res.json(result);
+  } catch (error) {
+    console.error('Fehler beim manuellen Auslösen der Monatsabrechnungsprüfung:', error);
+    res.status(500).json({ 
+      message: 'Fehler beim Auslösen der Monatsabrechnungsprüfung',
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+    });
+  }
 });
 
 // Mobile App Download-Links-Route

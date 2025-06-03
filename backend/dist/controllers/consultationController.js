@@ -140,6 +140,13 @@ const getConsultations = (req, res) => __awaiter(void 0, void 0, void 0, functio
                             }
                         }
                     }
+                },
+                monthlyReport: {
+                    select: {
+                        id: true,
+                        reportNumber: true,
+                        status: true
+                    }
                 }
             },
             orderBy: {

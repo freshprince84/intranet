@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
@@ -85,6 +86,7 @@ const TODOS_TABLE_ID = 'worktracker-todos';
 const Worktracker: React.FC = () => {
     const { user } = useAuth();
     const { hasPermission } = usePermissions();
+    const location = useLocation();
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -157,6 +159,25 @@ const Worktracker: React.FC = () => {
     useEffect(() => {
         loadTasks();
     }, []);
+
+    // URL-Parameter für editTask verarbeiten
+    useEffect(() => {
+        if (tasks.length > 0) {
+            const queryParams = new URLSearchParams(location.search);
+            const editTaskId = queryParams.get('editTask');
+            
+            if (editTaskId) {
+                const taskId = parseInt(editTaskId, 10);
+                if (!isNaN(taskId)) {
+                    const task = tasks.find(t => t.id === taskId);
+                    if (task) {
+                        setSelectedTask(task);
+                        setIsEditModalOpen(true);
+                    }
+                }
+            }
+        }
+    }, [tasks, location.search]);
 
     // Standard-Filter erstellen und speichern
     useEffect(() => {

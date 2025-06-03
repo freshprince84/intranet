@@ -38,6 +38,7 @@ const invoiceSettings_1 = __importDefault(require("./routes/invoiceSettings"));
 const consultationInvoices_1 = __importDefault(require("./routes/consultationInvoices"));
 const monthlyConsultationReports_1 = __importDefault(require("./routes/monthlyConsultationReports"));
 const worktimeController_1 = require("./controllers/worktimeController");
+const monthlyReportScheduler_1 = require("./services/monthlyReportScheduler");
 const app = (0, express_1.default)();
 // Middleware
 app.use(express_1.default.json({ limit: '50mb' })); // Größere JSON-Payload für Bilder erlauben
@@ -98,12 +99,29 @@ if (!fs_1.default.existsSync(invoicesPath)) {
 if (!fs_1.default.existsSync(downloadsPath)) {
     fs_1.default.mkdirSync(downloadsPath, { recursive: true });
 }
-// Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 5 Minuten)
-const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 5 Minuten
+// Timer für die regelmäßige Überprüfung der Arbeitszeiten (alle 2 Minuten)
+const CHECK_INTERVAL_MS = 2 * 60 * 1000; // 2 Minuten
 setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Starte automatische Überprüfung der Arbeitszeiten...');
     yield (0, worktimeController_1.checkAndStopExceededWorktimes)();
 }), CHECK_INTERVAL_MS);
+// Timer für die tägliche Überprüfung der Monatsabrechnungen (alle 10 Minuten)
+// Überprüft, ob heute ein Stichdatum für automatische Monatsabrechnungen ist
+const MONTHLY_REPORT_CHECK_INTERVAL_MS = 10 * 60 * 1000; // 10 Minuten
+let lastMonthlyReportCheck = '';
+setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
+    const today = new Date().toDateString();
+    // Führe die Prüfung nur einmal pro Tag aus
+    if (lastMonthlyReportCheck !== today) {
+        const currentHour = new Date().getHours();
+        // Führe die Prüfung nur zwischen 9:00 und 10:00 Uhr aus
+        if (currentHour >= 9 && currentHour < 10) {
+            console.log('Starte tägliche Überprüfung für automatische Monatsabrechnungen...');
+            yield (0, monthlyReportScheduler_1.checkAndGenerateMonthlyReports)();
+            lastMonthlyReportCheck = today;
+        }
+    }
+}), MONTHLY_REPORT_CHECK_INTERVAL_MS);
 // Eine direkte Test-Route für die Diagnose
 app.get('/api/test-route', (req, res) => {
     res.json({
@@ -112,6 +130,20 @@ app.get('/api/test-route', (req, res) => {
         env: process.env.NODE_ENV
     });
 });
+// Test-Route für manuelle Auslösung der Monatsabrechnungsprüfung
+app.post('/api/admin/trigger-monthly-reports', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const result = yield (0, monthlyReportScheduler_1.triggerMonthlyReportCheck)();
+        res.json(result);
+    }
+    catch (error) {
+        console.error('Fehler beim manuellen Auslösen der Monatsabrechnungsprüfung:', error);
+        res.status(500).json({
+            message: 'Fehler beim Auslösen der Monatsabrechnungsprüfung',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+}));
 // Mobile App Download-Links-Route
 app.get('/api/mobile-app/info', (req, res) => {
     res.json({

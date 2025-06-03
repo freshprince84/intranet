@@ -21,6 +21,7 @@ export interface Consultation {
   userId: number;
   clientId: number | null;
   notes: string | null;
+  monthlyReportId?: number | null;
   branch: {
     id: number;
     name: string;
@@ -49,4 +50,9 @@ export interface Consultation {
       total: number;
     };
   }[];
+  monthlyReport?: {
+    id: number;
+    reportNumber: string;
+    status: 'GENERATED' | 'SENT' | 'ARCHIVED';
+  } | null;
 } 

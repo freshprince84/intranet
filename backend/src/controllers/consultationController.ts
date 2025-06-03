@@ -145,6 +145,13 @@ export const getConsultations = async (req: Request, res: Response) => {
               }
             }
           }
+        },
+        monthlyReport: {
+          select: {
+            id: true,
+            reportNumber: true,
+            status: true
+          }
         }
       },
       orderBy: {

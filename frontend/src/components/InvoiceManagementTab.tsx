@@ -6,7 +6,14 @@ import {
   DocumentArrowDownIcon,
   EyeIcon,
   PlusIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  ChevronDownIcon,
+  PencilIcon,
+  TrashIcon,
+  CheckIcon,
+  XMarkIcon,
+  CalendarIcon,
+  ClockIcon
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -68,19 +75,19 @@ interface ConsultationInvoice {
 }
 
 interface SortConfig {
-  key: keyof ConsultationInvoice | 'client.name' | 'user.name';
+  key: keyof ConsultationInvoice | 'client.name';
   direction: 'asc' | 'desc';
 }
 
 // Verfügbare Spalten
 const availableColumns = [
+  { id: 'expand', label: '', shortLabel: '' }, // Expand-Button Spalte
   { id: 'invoiceNumber', label: 'Rechnungsnummer', shortLabel: 'Nr.' },
   { id: 'client', label: 'Kunde', shortLabel: 'Kunde' },
   { id: 'issueDate', label: 'Rechnungsdatum', shortLabel: 'Datum' },
   { id: 'dueDate', label: 'Fälligkeitsdatum', shortLabel: 'Fällig' },
   { id: 'total', label: 'Betrag', shortLabel: 'Betrag' },
   { id: 'status', label: 'Status', shortLabel: 'Status' },
-  { id: 'user', label: 'Berater', shortLabel: 'Berater' },
   { id: 'actions', label: 'Aktionen', shortLabel: 'Akt.' }
 ];
 
@@ -104,7 +111,11 @@ const getStatusBadge = (status: ConsultationInvoice['status']) => {
   );
 };
 
-const InvoiceManagementTab: React.FC = () => {
+interface InvoiceManagementTabProps {
+  selectedInvoiceId?: number | null;
+}
+
+const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInvoiceId: initialSelectedInvoiceId }) => {
   const { hasPermission } = usePermissions();
   const [invoices, setInvoices] = useState<ConsultationInvoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,8 +132,18 @@ const InvoiceManagementTab: React.FC = () => {
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
   
   // Detail Modal State
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(initialSelectedInvoiceId || null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  
+  // Expand/Collapse States (nach Tasks & Requests Standard)
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  
+  // Sidepane States (nach Tasks & Requests Standard) 
+  const [isEditSidepaneOpen, setIsEditSidepaneOpen] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState<ConsultationInvoice | null>(null);
+  
+  // Position States für Position-Bearbeitung innerhalb Sidepane
+  const [editingPositions, setEditingPositions] = useState<Record<number, any[]>>({});
   
   // Berechtigungsprüfungen
   const canViewInvoices = hasPermission('consultation_invoices', 'read', 'table');
@@ -147,6 +168,17 @@ const InvoiceManagementTab: React.FC = () => {
   useEffect(() => {
     loadInvoices();
   }, []);
+
+  // Auto-open detail modal wenn selectedInvoiceId von außen gesetzt wird
+  useEffect(() => {
+    if (initialSelectedInvoiceId && invoices.length > 0) {
+      const invoice = invoices.find(inv => inv.id === initialSelectedInvoiceId);
+      if (invoice) {
+        setSelectedInvoiceId(initialSelectedInvoiceId);
+        setIsDetailModalOpen(true);
+      }
+    }
+  }, [initialSelectedInvoiceId, invoices]);
 
   const loadInvoices = async () => {
     try {
@@ -221,6 +253,31 @@ const InvoiceManagementTab: React.FC = () => {
   const handleShowDetails = (invoiceId: number) => {
     setSelectedInvoiceId(invoiceId);
     setIsDetailModalOpen(true);
+  };
+
+  // Expand/Collapse Handler (nach Tasks & Requests Standard)
+  const toggleExpanded = (invoiceId: number) => {
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(invoiceId)) {
+        newSet.delete(invoiceId);
+      } else {
+        newSet.add(invoiceId);
+      }
+      return newSet;
+    });
+  };
+
+  // Sidepane Handler (nach Tasks & Requests Standard)
+  const openEditSidepane = (invoice: ConsultationInvoice) => {
+    setEditingInvoice(invoice);
+    setIsEditSidepaneOpen(true);
+  };
+
+  const closeEditSidepane = () => {
+    setIsEditSidepaneOpen(false);
+    setEditingInvoice(null);
+    setEditingPositions({});
   };
 
   // Filter-Funktionen
@@ -322,10 +379,6 @@ const InvoiceManagementTab: React.FC = () => {
         case 'client.name':
           aValue = a.client.name;
           bValue = b.client.name;
-          break;
-        case 'user.name':
-          aValue = `${a.user.firstName} ${a.user.lastName}`;
-          bValue = `${b.user.firstName} ${b.user.lastName}`;
           break;
         case 'total':
           aValue = a.total;
@@ -466,6 +519,12 @@ const InvoiceManagementTab: React.FC = () => {
                     if (!column) return null;
                     
                     switch (columnId) {
+                      case 'expand':
+                        return (
+                          <th key="expand" className="px-6 py-3 text-left w-12">
+                            {/* Leerer Header für Expand-Spalte */}
+                          </th>
+                        );
                       case 'invoiceNumber':
                         return renderSortableHeader('invoiceNumber', column.label, 'invoiceNumber');
                       case 'client':
@@ -476,8 +535,8 @@ const InvoiceManagementTab: React.FC = () => {
                         return renderSortableHeader('dueDate', column.label, 'dueDate');
                       case 'total':
                         return renderSortableHeader('total', column.label, 'total');
-                      case 'user':
-                        return renderSortableHeader('user', column.label, 'user.name');
+                      case 'status':
+                        return renderSortableHeader('status', column.label, 'status');
                       default:
                         return renderSortableHeader(columnId, column.label);
                     }
@@ -486,90 +545,239 @@ const InvoiceManagementTab: React.FC = () => {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredAndSortedInvoices.map((invoice) => (
-                <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  {isColumnVisible('invoiceNumber') && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-200">
-                      {invoice.invoiceNumber}
-                    </td>
-                  )}
-                  
-                  {isColumnVisible('client') && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                      <div>
-                        <div className="font-medium">{invoice.client.name}</div>
-                        {invoice.client.company && (
-                          <div className="text-gray-500 dark:text-gray-400 text-xs">
-                            {invoice.client.company}
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                  
-                  {isColumnVisible('issueDate') && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                      {format(new Date(invoice.issueDate), 'dd.MM.yyyy', { locale: de })}
-                    </td>
-                  )}
-                  
-                  {isColumnVisible('dueDate') && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                      {format(new Date(invoice.dueDate), 'dd.MM.yyyy', { locale: de })}
-                    </td>
-                  )}
-                  
-                  {isColumnVisible('total') && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                      {invoice.currency} {Number(invoice.total).toFixed(2)}
-                    </td>
-                  )}
-                  
-                  {isColumnVisible('status') && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(invoice.status)}
-                    </td>
-                  )}
-                  
-                  {isColumnVisible('user') && (
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                      {invoice.user ? `${invoice.user.firstName} ${invoice.user.lastName}` : 'Unbekannt'}
-                    </td>
-                  )}
-                  
-                  {isColumnVisible('actions') && (
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        {canDownloadInvoices && (
+                <React.Fragment key={invoice.id}>
+                  <tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                    {isColumnVisible('expand') && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => toggleExpanded(invoice.id)}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          title={expandedRows.has(invoice.id) ? 'Einklappen' : 'Ausklappen'}
+                        >
+                          <ChevronDownIcon 
+                            className={`h-4 w-4 transition-transform ${
+                              expandedRows.has(invoice.id) ? 'rotate-180' : ''
+                            }`} 
+                          />
+                        </button>
+                      </td>
+                    )}
+
+                    {isColumnVisible('invoiceNumber') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-200">
+                        {invoice.invoiceNumber}
+                      </td>
+                    )}
+                    
+                    {isColumnVisible('client') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                        <div>
+                          <div className="font-medium">{invoice.client.name}</div>
+                          {invoice.client.company && (
+                            <div className="text-gray-500 dark:text-gray-400 text-xs">
+                              {invoice.client.company}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                    
+                    {isColumnVisible('issueDate') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                        {format(new Date(invoice.issueDate), 'dd.MM.yyyy', { locale: de })}
+                      </td>
+                    )}
+                    
+                    {isColumnVisible('dueDate') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                        {format(new Date(invoice.dueDate), 'dd.MM.yyyy', { locale: de })}
+                      </td>
+                    )}
+                    
+                    {isColumnVisible('total') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
+                        {invoice.currency} {Number(invoice.total).toFixed(2)}
+                      </td>
+                    )}
+                    
+                    {isColumnVisible('status') && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {getStatusBadge(invoice.status)}
+                      </td>
+                    )}
+                    
+                    {isColumnVisible('actions') && (
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
                           <button
-                            onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
+                            onClick={() => openEditSidepane(invoice)}
                             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            title="PDF herunterladen"
+                            title="Bearbeiten"
                           >
-                            <DocumentArrowDownIcon className="h-5 w-5" />
+                            <PencilIcon className="h-5 w-5" />
                           </button>
-                        )}
-                        {canViewInvoices && (
-                          <button
-                            onClick={() => handleShowDetails(invoice.id)}
-                            className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                            title="Details anzeigen"
-                          >
-                            <EyeIcon className="h-5 w-5" />
-                          </button>
-                        )}
-                        {canEditInvoices && invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
-                          <button
-                            onClick={() => handleMarkAsPaid(invoice.id)}
-                            className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                            title="Als bezahlt markieren"
-                          >
-                            <CurrencyDollarIcon className="h-5 w-5" />
-                          </button>
-                        )}
-                      </div>
-                    </td>
+                          {canDownloadInvoices && (
+                            <button
+                              onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
+                              className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                              title="PDF herunterladen"
+                            >
+                              <DocumentArrowDownIcon className="h-5 w-5" />
+                            </button>
+                          )}
+                          {canViewInvoices && (
+                            <button
+                              onClick={() => handleShowDetails(invoice.id)}
+                              className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                              title="Details anzeigen"
+                            >
+                              <EyeIcon className="h-5 w-5" />
+                            </button>
+                          )}
+                          {canEditInvoices && invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
+                            <button
+                              onClick={() => handleMarkAsPaid(invoice.id)}
+                              className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+                              title="Als bezahlt markieren"
+                            >
+                              <CurrencyDollarIcon className="h-5 w-5" />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+
+                  {/* Erweiterte Details-Zeile */}
+                  {expandedRows.has(invoice.id) && (
+                    <tr className="bg-gray-50 dark:bg-gray-900">
+                      <td colSpan={settings.columnOrder.filter(col => isColumnVisible(col)).length} className="px-6 py-4">
+                        <div className="space-y-4">
+                          <h4 className="text-lg font-medium text-gray-900 dark:text-white">
+                            Rechnungsdetails & Positionen
+                          </h4>
+                          
+                          {/* Rechnungsinformationen */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Rechnungsnummer
+                              </label>
+                              <div className="text-sm text-gray-900 dark:text-gray-200">
+                                {invoice.invoiceNumber}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Berater
+                              </label>
+                              <div className="text-sm text-gray-900 dark:text-gray-200">
+                                {invoice.user ? `${invoice.user.firstName} ${invoice.user.lastName}` : 'Unbekannt'}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Zahlungsbedingungen
+                              </label>
+                              <div className="text-sm text-gray-900 dark:text-gray-200">
+                                {invoice.paymentTerms}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                Untertotal
+                              </label>
+                              <div className="text-sm text-gray-900 dark:text-gray-200">
+                                {invoice.currency} {Number(invoice.subtotal).toFixed(2)}
+                              </div>
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                                MwSt.
+                              </label>
+                              <div className="text-sm text-gray-900 dark:text-gray-200">
+                                {invoice.vatAmount ? `${invoice.currency} ${Number(invoice.vatAmount).toFixed(2)} (${invoice.vatRate}%)` : 'Keine MwSt.'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Notizen */}
+                          {invoice.notes && (
+                            <div className="mb-6">
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Notizen
+                              </label>
+                              <div className="text-sm text-gray-900 dark:text-gray-200 bg-white dark:bg-gray-800 p-3 rounded border">
+                                {invoice.notes}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Rechnungspositionen */}
+                          <div>
+                            <div className="flex items-center justify-between mb-4">
+                              <h5 className="text-md font-medium text-gray-900 dark:text-white">
+                                Rechnungspositionen ({invoice.items?.length || 0})
+                              </h5>
+                              <button
+                                onClick={() => openEditSidepane(invoice)}
+                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                              >
+                                <PencilIcon className="h-4 w-4 mr-2" />
+                                Positionen bearbeiten
+                              </button>
+                            </div>
+                            
+                            {invoice.items && invoice.items.length > 0 ? (
+                              <div className="overflow-x-auto">
+                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                  <thead className="bg-gray-100 dark:bg-gray-700">
+                                    <tr>
+                                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Beschreibung
+                                      </th>
+                                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Menge/Stunden
+                                      </th>
+                                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Stundensatz
+                                      </th>
+                                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                        Betrag
+                                      </th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                    {invoice.items.map((item) => (
+                                      <tr key={item.id}>
+                                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">
+                                          {item.description}
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">
+                                          {Number(item.quantity).toFixed(2)}
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">
+                                          {invoice.currency} {Number(item.unitPrice).toFixed(2)}
+                                        </td>
+                                        <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">
+                                          {invoice.currency} {Number(item.amount).toFixed(2)}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                                Keine Rechnungspositionen vorhanden
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
                   )}
-                </tr>
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -618,6 +826,234 @@ const InvoiceManagementTab: React.FC = () => {
           invoiceId={selectedInvoiceId}
           onInvoiceUpdated={loadInvoices}
         />
+      )}
+
+      {/* Edit Sidepane (nach Tasks & Requests Standard) */}
+      {isEditSidepaneOpen && editingInvoice && (
+        <div className="fixed inset-0 overflow-hidden z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 overflow-hidden">
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeEditSidepane}></div>
+            
+            {/* Panel */}
+            <div className="fixed inset-y-0 right-0 pl-10 max-w-full flex">
+              <div className="w-screen max-w-2xl">
+                <div className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-xl overflow-y-scroll">
+                  {/* Header */}
+                  <div className="px-4 py-6 bg-gray-50 dark:bg-gray-700 sm:px-6">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-medium text-gray-900 dark:text-white" id="slide-over-title">
+                        Rechnung bearbeiten: {editingInvoice.invoiceNumber}
+                      </h2>
+                      <div className="ml-3 h-7 flex items-center">
+                        <button
+                          type="button"
+                          className="bg-gray-50 dark:bg-gray-700 rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          onClick={closeEditSidepane}
+                        >
+                          <span className="sr-only">Panel schließen</span>
+                          <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 px-4 py-6 sm:px-6">
+                    <div className="space-y-6">
+                      
+                      {/* Grundinformationen */}
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
+                          Grundinformationen
+                        </h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Rechnungsnummer
+                            </label>
+                            <input
+                              type="text"
+                              value={editingInvoice.invoiceNumber}
+                              disabled
+                              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Status
+                            </label>
+                            <select
+                              value={editingInvoice.status}
+                              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                            >
+                              <option value="DRAFT">Entwurf</option>
+                              <option value="SENT">Gesendet</option>
+                              <option value="PAID">Bezahlt</option>
+                              <option value="OVERDUE">Überfällig</option>
+                              <option value="CANCELLED">Storniert</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Rechnungsdatum
+                            </label>
+                            <input
+                              type="date"
+                              value={editingInvoice.issueDate.split('T')[0]}
+                              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                              Fälligkeitsdatum
+                            </label>
+                            <input
+                              type="date"
+                              value={editingInvoice.dueDate.split('T')[0]}
+                              className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Notizen */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Notizen
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={editingInvoice.notes || ''}
+                          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                          placeholder="Zusätzliche Notizen zur Rechnung..."
+                        />
+                      </div>
+
+                      {/* Rechnungspositionen */}
+                      <div>
+                        <div className="flex items-center justify-between mb-4">
+                          <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                            Rechnungspositionen
+                          </h3>
+                          <button
+                            type="button"
+                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          >
+                            <PlusIcon className="h-4 w-4 mr-2" />
+                            Position hinzufügen
+                          </button>
+                        </div>
+
+                        <div className="space-y-3">
+                          {editingInvoice.items?.map((item, index) => (
+                            <div key={item.id || index} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                                <div className="sm:col-span-2">
+                                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                    Beschreibung
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={item.description}
+                                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                    Stunden
+                                  </label>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    value={item.quantity}
+                                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
+                                    Stundensatz
+                                  </label>
+                                  <div className="flex items-center space-x-2">
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      value={item.unitPrice}
+                                      className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                                    />
+                                    <button
+                                      type="button"
+                                      className="mt-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                      title="Position löschen"
+                                    >
+                                      <TrashIcon className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="mt-2 text-right">
+                                <span className="text-sm text-gray-500 dark:text-gray-400">
+                                  Betrag: {editingInvoice.currency} {Number(item.amount).toFixed(2)}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Totals */}
+                      <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-gray-600 dark:text-gray-400">Untertotal:</span>
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              {editingInvoice.currency} {Number(editingInvoice.subtotal).toFixed(2)}
+                            </span>
+                          </div>
+                          {editingInvoice.vatAmount && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-gray-600 dark:text-gray-400">
+                                MwSt. ({editingInvoice.vatRate}%):
+                              </span>
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                {editingInvoice.currency} {Number(editingInvoice.vatAmount).toFixed(2)}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-600">
+                            <span className="text-base font-medium text-gray-900 dark:text-white">Total:</span>
+                            <span className="text-base font-bold text-gray-900 dark:text-white">
+                              {editingInvoice.currency} {Number(editingInvoice.total).toFixed(2)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="flex-shrink-0 px-4 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+                    <div className="flex justify-end space-x-3">
+                      <button
+                        type="button"
+                        className="bg-white dark:bg-gray-600 py-2 px-4 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        onClick={closeEditSidepane}
+                      >
+                        Abbrechen
+                      </button>
+                      <button
+                        type="button"
+                        className="bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        Speichern
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
