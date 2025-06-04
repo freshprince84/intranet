@@ -167,6 +167,12 @@ export const API_ENDPOINTS = {
         UPDATE_STATUS: (id: number) => `/monthly-consultation-reports/${id}/status`,
         CHECK_UNBILLED: '/monthly-consultation-reports/check-unbilled',
         PDF: (id: number) => `/monthly-consultation-reports/${id}/pdf`
+    },
+    // Database Management
+    DATABASE: {
+        TABLES: '/database/tables',
+        RESET_TABLE: '/database/reset-table',
+        LOGS: '/database/logs'
     }
 };
 

@@ -11,6 +11,7 @@ import { useTheme } from '../contexts/ThemeContext.tsx';
 import { Cog6ToothIcon, UserCircleIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
 import NotificationSettingsComponent from '../components/NotificationSettings.tsx';
 import MonthlyReportSettingsModal from '../components/MonthlyReportSettingsModal.tsx';
+import DatabaseManagement from '../components/DatabaseManagement.tsx';
 import { API_URL } from '../config/api.ts';
 
 const Settings: React.FC = () => {
@@ -420,6 +421,15 @@ const Settings: React.FC = () => {
                                     </button>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Database Management Section */}
+                        <div className="border-t pt-6">
+                            <h3 className="text-lg font-medium mb-4 dark:text-white">Datenbank-Verwaltung</h3>
+                            <p className="text-gray-600 dark:text-gray-400 mb-6">
+                                Erweiterte Funktionen zur Verwaltung der Datenbank. Nur für Administratoren.
+                            </p>
+                            <DatabaseManagement />
                         </div>
                     </div>
                 )}

@@ -4,7 +4,6 @@ import {
   FunnelIcon,
   ArrowsUpDownIcon,
   DocumentArrowDownIcon,
-  EyeIcon,
   PlusIcon,
   CurrencyDollarIcon,
   ChevronDownIcon,
@@ -248,11 +247,6 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Fehler beim Markieren als bezahlt');
     }
-  };
-
-  const handleShowDetails = (invoiceId: number) => {
-    setSelectedInvoiceId(invoiceId);
-    setIsDetailModalOpen(true);
   };
 
   // Expand/Collapse Handler (nach Tasks & Requests Standard)
@@ -623,15 +617,6 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                               title="PDF herunterladen"
                             >
                               <DocumentArrowDownIcon className="h-5 w-5" />
-                            </button>
-                          )}
-                          {canViewInvoices && (
-                            <button
-                              onClick={() => handleShowDetails(invoice.id)}
-                              className="text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
-                              title="Details anzeigen"
-                            >
-                              <EyeIcon className="h-5 w-5" />
                             </button>
                           )}
                           {canEditInvoices && invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
