@@ -24,6 +24,9 @@ class ClaudeConsoleService {
   private clients: Set<WebSocket> = new Set();
   private logHistory: LogEntry[] = [];
   private logFile: string;
+  private maxLogFileSize: number = 10 * 1024 * 1024; // 10MB
+  private maxLogFiles: number = 5; // Behalte 5 rotierte Dateien
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     // Log-Datei im logs-Verzeichnis erstellen
@@ -32,6 +35,9 @@ class ClaudeConsoleService {
       fs.mkdirSync(logsDir, { recursive: true });
     }
     this.logFile = path.join(logsDir, 'claude-console.log');
+    
+    // Starte Cleanup-Task alle 30 Minuten
+    this.startCleanupTask();
   }
 
   public setupWebSocketServer(server: Server) {
