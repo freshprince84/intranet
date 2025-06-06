@@ -246,5 +246,24 @@ router.get('/console/stream', (req, res) => __awaiter(void 0, void 0, void 0, fu
         res.status(500).json({ error: 'Failed to start console stream' });
     }
 }));
+// Manuelles Log-Housekeeping
+router.post('/console/cleanup', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const consoleService = (0, claudeConsoleService_1.getClaudeConsoleService)();
+        consoleService.cleanup();
+        res.json({
+            success: true,
+            message: 'Log-Housekeeping erfolgreich durchgeführt',
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        console.error('Fehler beim manuellen Log-Housekeeping:', error);
+        res.status(500).json({
+            error: 'Fehler beim Log-Housekeeping',
+            message: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+}));
 exports.default = router;
 //# sourceMappingURL=claudeRoutes.js.map
