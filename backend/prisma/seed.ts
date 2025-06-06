@@ -10,121 +10,157 @@ const AccessLevel = {
   none: 'none' as AccessLevel
 };
 
-// Seiten, die immer sichtbar sein sollen
-const alwaysVisiblePages = ['dashboard', 'settings'];
-
 const prisma = new PrismaClient();
+
+// ========================================
+// VOLLSTÄNDIGE PERMISSION DEFINITIONS
+// ========================================
+
+// ALLE SEITEN IM SYSTEM
+const ALL_PAGES = [
+  'dashboard',
+  'worktracker', 
+  'consultations',
+  'team_worktime_control', // = workcenter
+  'payroll', // = lohnabrechnung
+  'usermanagement', // = benutzerverwaltung
+  'cerebro',
+  'settings',
+  'profile'
+];
+
+// ALLE TABELLEN IM SYSTEM
+const ALL_TABLES = [
+  'requests',           // auf dashboard
+  'tasks',             // auf worktracker
+  'users',             // auf usermanagement
+  'roles',             // auf usermanagement
+  'team_worktime',     // auf team_worktime_control
+  'worktime',          // auf worktracker
+  'clients',           // auf consultations
+  'consultation_invoices', // auf consultations
+  'branches',          // auf settings/system
+  'notifications',     // allgemein
+  'settings',          // auf settings
+  'monthly_reports'    // auf consultations/reports
+];
+
+// ALLE BUTTONS IM SYSTEM
+const ALL_BUTTONS = [
+  // Database Management Buttons (Settings/System)
+  'database_reset_table',
+  'database_logs',
+  
+  // Invoice Functions Buttons
+  'invoice_create',
+  'invoice_download', 
+  'invoice_mark_paid',
+  'invoice_settings',
+  
+  // Todo/Task Buttons (Worktracker)
+  'todo_create',
+  'todo_edit',
+  'todo_delete',
+  'task_create',
+  'task_edit', 
+  'task_delete',
+  
+  // User Management Buttons
+  'user_create',
+  'user_edit',
+  'user_delete',
+  'role_assign',
+  'role_create',
+  'role_edit',
+  'role_delete',
+  
+  // Worktime Buttons
+  'worktime_start',
+  'worktime_stop', 
+  'worktime_edit',
+  'worktime_delete',
+  
+  // General Cerebro Button
+  'cerebro',
+  
+  // Consultation Buttons
+  'consultation_start',
+  'consultation_stop',
+  'consultation_edit',
+  
+  // Client Management Buttons
+  'client_create',
+  'client_edit',
+  'client_delete',
+  
+  // Settings Buttons
+  'settings_system',
+  'settings_notifications',
+  'settings_profile',
+  
+  // Payroll Buttons
+  'payroll_generate',
+  'payroll_export',
+  'payroll_edit'
+];
 
 async function main() {
   try {
-    console.log('Starte Seeding...');
+    console.log('🚀 Starte Seeding...');
 
-    // 1. ROLLEN ERSTELLEN
-    console.log('Erstelle Rollen...');
+    // ========================================
+    // 1. ROLLEN ERSTELLEN/AKTUALISIEREN
+    // ========================================
+    console.log('📋 Erstelle/Aktualisiere Rollen...');
     
     // Admin-Rolle (ID 1)
     const adminRole = await prisma.role.upsert({
       where: { name: 'Admin' },
-      update: {},
+      update: {
+        description: 'Administrator mit allen Rechten'
+      },
       create: {
         id: 1,
         name: 'Admin',
         description: 'Administrator mit allen Rechten',
       },
     });
+    console.log(`✅ Admin-Rolle: ${adminRole.name} (ID: ${adminRole.id})`);
     
     // User-Rolle (ID 2)
     const userRole = await prisma.role.upsert({
       where: { name: 'User' },
-      update: {},
+      update: {
+        description: 'Standardbenutzer mit eingeschränkten Rechten'
+      },
       create: {
         id: 2,
         name: 'User',
-        description: 'Standardbenutzer',
+        description: 'Standardbenutzer mit eingeschränkten Rechten',
       },
     });
+    console.log(`✅ User-Rolle: ${userRole.name} (ID: ${userRole.id})`);
     
     // Hamburger-Rolle (ID 999)
     const hamburgerRole = await prisma.role.upsert({
       where: { name: 'Hamburger' },
-      update: {},
+      update: {
+        description: 'Hamburger-Rolle für neue Benutzer'
+      },
       create: {
         id: 999,
         name: 'Hamburger',
         description: 'Hamburger-Rolle für neue Benutzer',
       },
     });
+    console.log(`✅ Hamburger-Rolle: ${hamburgerRole.name} (ID: ${hamburgerRole.id})`);
     
-    // 2. BERECHTIGUNGEN DEFINIEREN
-    console.log('Definiere Berechtigungen...');
+    // ========================================
+    // 2. HILFSFUNKTIONEN FÜR PERMISSIONS
+    // ========================================
     
-    // Admin-Berechtigungen - ALLE RECHTE
-    const adminPermissions = [
-      // Seiten-Berechtigungen
-      { entity: 'dashboard', entityType: 'page', accessLevel: 'both' },
-      { entity: 'worktracker', entityType: 'page', accessLevel: 'both' },
-      { entity: 'consultations', entityType: 'page', accessLevel: 'both' },
-      { entity: 'usermanagement', entityType: 'page', accessLevel: 'both' },
-      { entity: 'settings', entityType: 'page', accessLevel: 'both' },
-      { entity: 'profile', entityType: 'page', accessLevel: 'both' },
-      { entity: 'cerebro', entityType: 'page', accessLevel: 'both' },
-      { entity: 'cerebro', entityType: 'button', accessLevel: 'both' },
-      { entity: 'team_worktime_control', entityType: 'page', accessLevel: 'both' },
-      { entity: 'payroll', entityType: 'page', accessLevel: 'both' },
-      
-      // Tabellen-Berechtigungen
-      { entity: 'requests', entityType: 'table', accessLevel: 'both' },
-      { entity: 'tasks', entityType: 'table', accessLevel: 'both' },
-      { entity: 'users', entityType: 'table', accessLevel: 'both' },
-      { entity: 'roles', entityType: 'table', accessLevel: 'both' },
-      { entity: 'team_worktime', entityType: 'table', accessLevel: 'both' },
-      { entity: 'clients', entityType: 'table', accessLevel: 'both' },
-      { entity: 'consultation_invoices', entityType: 'table', accessLevel: 'both' },
-      
-      // Button-Berechtigungen für Invoice-Funktionen
-      { entity: 'invoice_create', entityType: 'button', accessLevel: 'both' },
-      { entity: 'invoice_download', entityType: 'button', accessLevel: 'both' },
-      { entity: 'invoice_mark_paid', entityType: 'button', accessLevel: 'both' },
-      { entity: 'invoice_settings', entityType: 'button', accessLevel: 'both' },
-    ];
-    
-    // User-Berechtigungen - EINGESCHRÄNKTE RECHTE
-    const userPermissions = [
-      // Seiten
-      { entity: 'dashboard', entityType: 'page', accessLevel: 'read' },
-      { entity: 'worktracker', entityType: 'page', accessLevel: 'both' },
-      { entity: 'consultations', entityType: 'page', accessLevel: 'both' },
-      { entity: 'settings', entityType: 'page', accessLevel: 'read' },
-      { entity: 'team_worktime_control', entityType: 'page', accessLevel: 'read' },
-      { entity: 'payroll', entityType: 'page', accessLevel: 'both' },
-      
-      // Tabellen
-      { entity: 'requests', entityType: 'table', accessLevel: 'both' },
-      { entity: 'tasks', entityType: 'table', accessLevel: 'both' },
-      { entity: 'clients', entityType: 'table', accessLevel: 'both' },
-      { entity: 'consultation_invoices', entityType: 'table', accessLevel: 'read' },
-      
-      // Button-Berechtigungen für Invoice-Funktionen - LIMITED
-      { entity: 'invoice_create', entityType: 'button', accessLevel: 'write' },
-      { entity: 'invoice_download', entityType: 'button', accessLevel: 'read' },
-      { entity: 'invoice_settings', entityType: 'button', accessLevel: 'write' }, // Eigene Settings
-    ];
-    
-    // Hamburger-Berechtigungen - BASIS-RECHTE
-    const hamburgerPermissions = [
-      { entity: 'dashboard', entityType: 'page', accessLevel: 'both' },
-      { entity: 'settings', entityType: 'page', accessLevel: 'both' },
-      { entity: 'profile', entityType: 'page', accessLevel: 'both' },
-      { entity: 'cerebro', entityType: 'page', accessLevel: 'both' },
-      { entity: 'cerebro', entityType: 'button', accessLevel: 'both' },
-    ];
-    
-    // 3. BERECHTIGUNGEN IN DER DATENBANK ERSTELLEN
-    console.log('Erstelle Berechtigungen in der Datenbank...');
-    
-    // Hilfsfunktion zum Erstellen/Aktualisieren von Berechtigungen
-    async function createOrUpdatePermission(roleId: number, entity: string, entityType: string, accessLevel: string) {
-      // Prüfen, ob die Berechtigung bereits existiert
+    // Hilfsfunktion zum idempotenten Erstellen von Berechtigungen
+    async function ensurePermission(roleId: number, entity: string, entityType: string, accessLevel: string) {
       const existingPermission = await prisma.permission.findFirst({
         where: {
           roleId: roleId,
@@ -134,15 +170,13 @@ async function main() {
       });
       
       if (existingPermission) {
-        // Berechtigung aktualisieren, falls nötig
+        // Nur aktualisieren wenn sich accessLevel geändert hat
         if (existingPermission.accessLevel !== accessLevel) {
           await prisma.permission.update({
             where: { id: existingPermission.id },
             data: { accessLevel: accessLevel }
           });
-          console.log(`Berechtigung aktualisiert: ${entity} ${entityType} für Rolle ${roleId}`);
-        } else {
-          console.log(`Berechtigung bereits vorhanden: ${entity} ${entityType} für Rolle ${roleId}`);
+          console.log(`🔄 Berechtigung aktualisiert: ${entity} (${entityType}) für Rolle ${roleId}: ${existingPermission.accessLevel} → ${accessLevel}`);
         }
       } else {
         // Neue Berechtigung erstellen
@@ -154,42 +188,173 @@ async function main() {
             roleId: roleId
           }
         });
-        console.log(`Neue Berechtigung erstellt: ${entity} ${entityType} für Rolle ${roleId}`);
+        console.log(`➕ Neue Berechtigung erstellt: ${entity} (${entityType}) für Rolle ${roleId}: ${accessLevel}`);
       }
     }
-    
-    // Admin-Berechtigungen erstellen
-    for (const permission of adminPermissions) {
-      await createOrUpdatePermission(
-        adminRole.id,
-        permission.entity,
-        permission.entityType,
-        permission.accessLevel
-      );
+
+    // Hilfsfunktion zum Erstellen aller Permissions für eine Rolle
+    async function ensureAllPermissionsForRole(roleId: number, permissionMap: Record<string, AccessLevel>) {
+      let createdCount = 0;
+      let updatedCount = 0;
+      let skippedCount = 0;
+
+      // Pages
+      for (const page of ALL_PAGES) {
+        const accessLevel = permissionMap[`page_${page}`] || 'none';
+        const existingPermission = await prisma.permission.findFirst({
+          where: { roleId, entity: page, entityType: 'page' }
+        });
+        
+        if (existingPermission) {
+          if (existingPermission.accessLevel !== accessLevel) {
+            await prisma.permission.update({
+              where: { id: existingPermission.id },
+              data: { accessLevel }
+            });
+            updatedCount++;
+          } else {
+            skippedCount++;
+          }
+        } else {
+          await prisma.permission.create({
+            data: { roleId, entity: page, entityType: 'page', accessLevel }
+          });
+          createdCount++;
+        }
+      }
+
+      // Tables  
+      for (const table of ALL_TABLES) {
+        const accessLevel = permissionMap[`table_${table}`] || 'none';
+        const existingPermission = await prisma.permission.findFirst({
+          where: { roleId, entity: table, entityType: 'table' }
+        });
+        
+        if (existingPermission) {
+          if (existingPermission.accessLevel !== accessLevel) {
+            await prisma.permission.update({
+              where: { id: existingPermission.id },
+              data: { accessLevel }
+            });
+            updatedCount++;
+          } else {
+            skippedCount++;
+          }
+        } else {
+          await prisma.permission.create({
+            data: { roleId, entity: table, entityType: 'table', accessLevel }
+          });
+          createdCount++;
+        }
+      }
+
+      // Buttons
+      for (const button of ALL_BUTTONS) {
+        const accessLevel = permissionMap[`button_${button}`] || 'none';
+        const existingPermission = await prisma.permission.findFirst({
+          where: { roleId, entity: button, entityType: 'button' }
+        });
+        
+        if (existingPermission) {
+          if (existingPermission.accessLevel !== accessLevel) {
+            await prisma.permission.update({
+              where: { id: existingPermission.id },
+              data: { accessLevel }
+            });
+            updatedCount++;
+          } else {
+            skippedCount++;
+          }
+        } else {
+          await prisma.permission.create({
+            data: { roleId, entity: button, entityType: 'button', accessLevel }
+          });
+          createdCount++;
+        }
+      }
+
+      console.log(`   📊 Rolle ${roleId}: ${createdCount} erstellt, ${updatedCount} aktualisiert, ${skippedCount} übersprungen`);
     }
+
+    // ========================================
+    // 3. ADMIN-PERMISSIONS (ALLE = BOTH)
+    // ========================================
+    console.log('🔑 Erstelle Admin-Berechtigungen (alle = both)...');
     
-    // User-Berechtigungen erstellen
-    for (const permission of userPermissions) {
-      await createOrUpdatePermission(
-        userRole.id,
-        permission.entity,
-        permission.entityType,
-        permission.accessLevel
-      );
-    }
+    const adminPermissionMap: Record<string, AccessLevel> = {};
     
-    // Hamburger-Berechtigungen erstellen
-    for (const permission of hamburgerPermissions) {
-      await createOrUpdatePermission(
-        hamburgerRole.id,
-        permission.entity,
-        permission.entityType,
-        permission.accessLevel
-      );
-    }
+    // Admin bekommt ALLES mit 'both'
+    ALL_PAGES.forEach(page => adminPermissionMap[`page_${page}`] = 'both');
+    ALL_TABLES.forEach(table => adminPermissionMap[`table_${table}`] = 'both');
+    ALL_BUTTONS.forEach(button => adminPermissionMap[`button_${button}`] = 'both');
+
+    await ensureAllPermissionsForRole(adminRole.id, adminPermissionMap);
+
+    // ========================================
+    // 4. USER-PERMISSIONS (SELEKTIV)
+    // ========================================
+    console.log('👤 Erstelle User-Berechtigungen (selektiv)...');
     
-    // 4. BENUTZER ERSTELLEN
-    console.log('Erstelle Benutzer...');
+    const userPermissionMap: Record<string, AccessLevel> = {};
+    
+    // PAGES: alle AUSSER workcenter & benutzerverwaltung
+    userPermissionMap['page_dashboard'] = 'both';
+    userPermissionMap['page_worktracker'] = 'both';
+    userPermissionMap['page_consultations'] = 'both';
+    userPermissionMap['page_payroll'] = 'both';
+    userPermissionMap['page_cerebro'] = 'both';
+    userPermissionMap['page_settings'] = 'both';
+    userPermissionMap['page_profile'] = 'both';
+    // NICHT: team_worktime_control, usermanagement (bleiben 'none')
+    
+    // TABELLEN: alle AUSSER die auf worktracker, workcenter & benutzerverwaltung
+    userPermissionMap['table_requests'] = 'both';       // dashboard
+    userPermissionMap['table_clients'] = 'both';        // consultations
+    userPermissionMap['table_consultation_invoices'] = 'both'; // consultations
+    userPermissionMap['table_notifications'] = 'both';  // allgemein
+    userPermissionMap['table_monthly_reports'] = 'both'; // consultations
+    // NICHT: tasks, users, roles, team_worktime, worktime, branches (bleiben 'none')
+    
+    // BUTTONS: alle AUSSER in to do's & workcenter, lohnabrechnung, benutzerverwaltung & settings/system
+    userPermissionMap['button_invoice_create'] = 'both';
+    userPermissionMap['button_invoice_download'] = 'both';
+    userPermissionMap['button_cerebro'] = 'both';
+    userPermissionMap['button_consultation_start'] = 'both';
+    userPermissionMap['button_consultation_stop'] = 'both';
+    userPermissionMap['button_consultation_edit'] = 'both';
+    userPermissionMap['button_client_create'] = 'both';
+    userPermissionMap['button_client_edit'] = 'both';
+    userPermissionMap['button_client_delete'] = 'both';
+    userPermissionMap['button_settings_notifications'] = 'both';
+    userPermissionMap['button_settings_profile'] = 'both';
+    userPermissionMap['button_worktime_start'] = 'both';
+    userPermissionMap['button_worktime_stop'] = 'both';
+    // NICHT: todo_*, task_*, user_*, role_*, database_*, settings_system, payroll_*, worktime_edit/delete
+
+    await ensureAllPermissionsForRole(userRole.id, userPermissionMap);
+
+    // ========================================
+    // 5. HAMBURGER-PERMISSIONS (BASIS)
+    // ========================================
+    console.log('🍔 Erstelle Hamburger-Berechtigungen (basis)...');
+    
+    const hamburgerPermissionMap: Record<string, AccessLevel> = {};
+    
+    // Nur Basis-Berechtigungen
+    hamburgerPermissionMap['page_dashboard'] = 'both';
+    hamburgerPermissionMap['page_settings'] = 'both';
+    hamburgerPermissionMap['page_profile'] = 'both';
+    hamburgerPermissionMap['page_cerebro'] = 'both';
+    hamburgerPermissionMap['button_cerebro'] = 'both';
+    hamburgerPermissionMap['button_settings_profile'] = 'both';
+    hamburgerPermissionMap['table_notifications'] = 'both';
+
+    await ensureAllPermissionsForRole(hamburgerRole.id, hamburgerPermissionMap);
+
+    // ========================================
+    // 6. BENUTZER ERSTELLEN
+    // ========================================
+    console.log('👥 Erstelle/Aktualisiere Benutzer...');
     
     // Admin-Benutzer
     const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -221,29 +386,12 @@ async function main() {
         }
       }
     });
-    
-    // 5. ERSTELLE STANDARDEINSTELLUNGEN
-    console.log('Erstelle Standardeinstellungen...');
-    
-    // Tabelleneinstellungen für Admin
-    await prisma.userTableSettings.upsert({
-      where: {
-        userId_tableId: {
-          userId: adminUser.id,
-          tableId: 'worktracker_tasks'
-        }
-      },
-      update: {},
-      create: {
-        userId: adminUser.id,
-        tableId: 'worktracker_tasks',
-        columnOrder: JSON.stringify(['title', 'status', 'responsibleAndQualityControl', 'branch', 'dueDate', 'actions']),
-        hiddenColumns: JSON.stringify([])
-      }
-    });
-    
-    // 6. ERSTELLE NIEDERLASSUNGEN
-    console.log('Erstelle Niederlassungen...');
+    console.log(`✅ Admin-Benutzer: ${adminUser.username}`);
+
+    // ========================================
+    // 7. NIEDERLASSUNGEN ERSTELLEN
+    // ========================================
+    console.log('🏢 Erstelle/Aktualisiere Niederlassungen...');
     
     const branches = ['Hauptsitz', 'Manila', 'Parque Poblado'];
     for (const branchName of branches) {
@@ -254,26 +402,62 @@ async function main() {
           name: branchName
         }
       });
+      console.log(`✅ Niederlassung: ${branch.name}`);
       
-      // Verknüpfe Admin mit jeder Niederlassung
-      await prisma.usersBranches.upsert({
+      // Verknüpfe Admin mit jeder Niederlassung (nur wenn nicht bereits verknüpft)
+      const existingConnection = await prisma.usersBranches.findUnique({
         where: { 
           userId_branchId: { 
             userId: adminUser.id, 
             branchId: branch.id 
           } 
-        },
-        update: {},
-        create: {
-          userId: adminUser.id,
-          branchId: branch.id
         }
       });
+
+      if (!existingConnection) {
+        await prisma.usersBranches.create({
+          data: {
+            userId: adminUser.id,
+            branchId: branch.id
+          }
+        });
+        console.log(`🔗 Admin mit ${branch.name} verknüpft`);
+      }
     }
+
+    // ========================================
+    // 8. STANDARD-EINSTELLUNGEN
+    // ========================================
+    console.log('⚙️ Erstelle Standard-Einstellungen...');
     
-    // Demo-Clients erstellen
-    console.log('Erstelle Demo-Clients...');
-    const clients = [
+    // Tabelleneinstellungen für Admin (nur wenn nicht vorhanden)
+    const existingTableSettings = await prisma.userTableSettings.findUnique({
+      where: {
+        userId_tableId: {
+          userId: adminUser.id,
+          tableId: 'worktracker_tasks'
+        }
+      }
+    });
+
+    if (!existingTableSettings) {
+      await prisma.userTableSettings.create({
+        data: {
+          userId: adminUser.id,
+          tableId: 'worktracker_tasks',
+          columnOrder: JSON.stringify(['title', 'status', 'responsibleAndQualityControl', 'branch', 'dueDate', 'actions']),
+          hiddenColumns: JSON.stringify([])
+        }
+      });
+      console.log('✅ Standard-Tabelleneinstellungen erstellt');
+    }
+
+    // ========================================
+    // 9. DEMO-CLIENTS ERSTELLEN
+    // ========================================
+    console.log('👥 Erstelle Demo-Clients (nur neue)...');
+    
+    const demoClients = [
       {
         name: 'Musterfirma GmbH',
         company: 'Musterfirma GmbH',
@@ -292,226 +476,166 @@ async function main() {
         name: 'Beispiel AG',
         company: 'Beispiel AG',
         email: 'kontakt@beispiel-ag.de',
-        address: 'Beispielweg 42, 54321 Beispielstadt'
+        address: 'Beispielweg 42, 54321 Beispielstadt',
+        notes: 'Großkunde mit regelmäßigen Beratungen'
+      },
+      {
+        name: 'Tech Startup XYZ',
+        company: 'Tech Startup XYZ',
+        email: 'hello@techstartup.com',
+        phone: '+49 555 123456',
+        notes: 'Junges Unternehmen, sehr digital affin'
       }
     ];
 
-    for (const clientData of clients) {
+    let clientsCreated = 0;
+    let clientsSkipped = 0;
+
+    for (const clientData of demoClients) {
+      // Prüfe ob Client bereits existiert (basierend auf Name)
+      const existingClient = await prisma.client.findFirst({
+        where: { name: clientData.name }
+      });
+
+      if (!existingClient) {
       await prisma.client.create({
         data: clientData
       });
+        clientsCreated++;
+        console.log(`✅ Demo-Client erstellt: ${clientData.name}`);
+      } else {
+        clientsSkipped++;
+        console.log(`⏭️ Demo-Client existiert bereits: ${clientData.name}`);
+      }
     }
 
-    console.log('Demo-Clients erstellt');
+    console.log(`📊 Demo-Clients: ${clientsCreated} erstellt, ${clientsSkipped} übersprungen`);
 
-    // Demo-WorkTime-Einträge für Beratungen erstellen
-    console.log('Erstelle Demo-Beratungen...');
+    // ========================================
+    // 10. DEMO-WORKTIME/BERATUNGEN ERSTELLEN
+    // ========================================
+    console.log('🕐 Erstelle Demo-Beratungen (nur neue)...');
     
     const heute = new Date();
     const gestern = new Date(heute);
     gestern.setDate(heute.getDate() - 1);
     const dieseWoche = new Date(heute);
     dieseWoche.setDate(heute.getDate() - 3);
-    const letzteWoche = new Date(heute);
-    letzteWoche.setDate(heute.getDate() - 8);
     
-    // Hole alle erstellten Clients und Branches
+    // Hole alle Clients und Branches
     const allClients = await prisma.client.findMany();
     const allBranches = await prisma.branch.findMany();
-    const firstBranch = allBranches[0];
     
-    // Demo-Beratungen erstellen
+    if (allClients.length > 0 && allBranches.length > 0) {
     const demoConsultations = [
-      // Heute
       {
         userId: adminUser.id,
-        branchId: firstBranch.id,
+          branchId: allBranches[0].id,
         clientId: allClients[0].id,
-        startTime: new Date(heute.getFullYear(), heute.getMonth(), heute.getDate(), 9, 0),
-        endTime: new Date(heute.getFullYear(), heute.getMonth(), heute.getDate(), 10, 30),
-        notes: 'Erstberatung zu IT-Infrastruktur. Kunde möchte Netzwerk modernisieren.'
+          startTime: gestern,
+          endTime: new Date(gestern.getTime() + 2 * 60 * 60 * 1000), // 2 Stunden
+          notes: 'Erste Beratung mit Musterfirma - sehr produktiv',
+          timezone: 'Europe/Berlin'
       },
       {
         userId: adminUser.id,
-        branchId: firstBranch.id,
-        clientId: allClients[1].id,
-        startTime: new Date(heute.getFullYear(), heute.getMonth(), heute.getDate(), 14, 0),
-        endTime: new Date(heute.getFullYear(), heute.getMonth(), heute.getDate(), 15, 15),
-        notes: 'Follow-up Gespräch zur Projektplanung.'
-      },
-      // Gestern
-      {
-        userId: adminUser.id,
-        branchId: firstBranch.id,
-        clientId: allClients[2].id,
-        startTime: new Date(gestern.getFullYear(), gestern.getMonth(), gestern.getDate(), 11, 0),
-        endTime: new Date(gestern.getFullYear(), gestern.getMonth(), gestern.getDate(), 12, 0),
-        notes: 'Technische Beratung zu Cloud-Migration.'
-      },
-      // Diese Woche
-      {
-        userId: adminUser.id,
-        branchId: firstBranch.id,
-        clientId: allClients[0].id,
-        startTime: new Date(dieseWoche.getFullYear(), dieseWoche.getMonth(), dieseWoche.getDate(), 10, 0),
-        endTime: new Date(dieseWoche.getFullYear(), dieseWoche.getMonth(), dieseWoche.getDate(), 11, 30),
-        notes: 'Präsentation der Lösung und Kostenvoranschlag.'
-      },
-      // Letzte Woche
-      {
-        userId: adminUser.id,
-        branchId: firstBranch.id,
-        clientId: allClients[1].id,
-        startTime: new Date(letzteWoche.getFullYear(), letzteWoche.getMonth(), letzteWoche.getDate(), 15, 0),
-        endTime: new Date(letzteWoche.getFullYear(), letzteWoche.getMonth(), letzteWoche.getDate(), 16, 45),
-        notes: 'Projektbesprechung und Zeitplanung. Nächste Schritte definiert.'
-      }
-    ];
+          branchId: allBranches[0].id,
+          clientId: allClients[1] ? allClients[1].id : allClients[0].id,
+          startTime: dieseWoche,
+          endTime: new Date(dieseWoche.getTime() + 1.5 * 60 * 60 * 1000), // 1.5 Stunden
+          notes: 'Beratung zu steuerlichen Fragen',
+          timezone: 'Europe/Berlin'
+        }
+      ];
+
+      let consultationsCreated = 0;
     
     for (const consultation of demoConsultations) {
-      await prisma.workTime.create({
-        data: consultation
-      });
-    }
-    
-    console.log('Demo-Beratungen erstellt');
-    
-    // 7. ERSTELLE CEREBRO MARKDOWN-DATEIEN
-    console.log('Erstelle Cerebro Markdown-Dateien...');
-    
-    // Erstelle einen übergeordneten Ordner für Markdown-Dateien
-    const markdownFolder = await prisma.cerebroCarticle.upsert({
-      where: { slug: 'markdown-folder' },
-      update: {},
-      create: {
-        title: 'Markdown-Dateien',
-        slug: 'markdown-folder',
-        content: 'Sammlung wichtiger Dokumentationsdateien aus dem GitHub Repository.',
-        createdById: adminUser.id,
-        isPublished: true
-      }
-    });
-    
-    // Liste der wichtigen Markdown-Dateien
-    const IMPORTANT_MD_FILES = [
-      { path: 'README.md', title: 'Readme - Überblick', slug: 'readme', position: 1 },
-      { path: 'DOKUMENTATIONSSTANDARDS.md', title: 'Dokumentationsstandards', slug: 'dokumentationsstandards', position: 2 },
-      { path: 'CHANGELOG.md', title: 'Änderungshistorie', slug: 'changelog', position: 3 },
-      
-      // Nutzerorientierte Dokumentation
-      { path: 'BENUTZERHANDBUCH.md', title: 'Benutzerhandbuch', slug: 'benutzerhandbuch', position: 4 },
-      { path: 'ADMINISTRATORHANDBUCH.md', title: 'Administratorhandbuch', slug: 'administratorhandbuch', position: 5 },
-      
-      // Entwicklungsdokumentation
-      { path: 'ENTWICKLUNGSUMGEBUNG.md', title: 'Entwicklungsumgebung', slug: 'entwicklungsumgebung', position: 6 },
-      { path: 'ARCHITEKTUR.md', title: 'Systemarchitektur', slug: 'architektur', position: 7 },
-      { path: 'CODING_STANDARDS.md', title: 'Coding-Standards', slug: 'coding-standards', position: 8 },
-      { path: 'DESIGN_STANDARDS.md', title: 'Design-Standards', slug: 'design-standards', position: 9 },
-      
-      // Technische Spezifikationen
-      { path: 'API_REFERENZ.md', title: 'API-Referenz', slug: 'api-referenz', position: 10 },
-      { path: 'DATENBANKSCHEMA.md', title: 'Datenbankschema', slug: 'datenbankschema', position: 11 },
-      { path: 'BERECHTIGUNGSSYSTEM.md', title: 'Berechtigungssystem', slug: 'berechtigungssystem', position: 12 },
-      { path: 'DEPLOYMENT.md', title: 'Deployment', slug: 'deployment', position: 13 },
-      
-      // Modulspezifische Dokumentation
-      { path: 'MODUL_ZEITERFASSUNG.md', title: 'Modul: Zeiterfassung', slug: 'modul-zeiterfassung', position: 14 },
-      { path: 'MODUL_CEREBRO.md', title: 'Cerebro Wiki-System', slug: 'cerebro-wiki', position: 15 },
-      { path: 'MODUL_TEAMKONTROLLE.md', title: 'Modul: Teamkontrolle', slug: 'modul-teamkontrolle', position: 16 },
-      { path: 'MODUL_ABRECHNUNG.md', title: 'Modul: Abrechnung', slug: 'modul-abrechnung', position: 17 },
-      
-      // Zusätzliche Dateien
-      { path: 'PROJECT_SETUP.md', title: 'Projekt-Einrichtung', slug: 'project-setup', position: 18 },
-      { path: 'API_INTEGRATION.md', title: 'API-Integration', slug: 'api-integration', position: 19 },
-      { path: 'ROLE_SWITCH.md', title: 'Rollenwechsel-Funktionalität', slug: 'role-switch', position: 20 }
-    ];
-    
-    // Erstelle für jede Markdown-Datei einen Eintrag in der Datenbank
-    for (const mdFile of IMPORTANT_MD_FILES) {
-      try {
-        // Versuche zuerst, den Artikel mit githubPath zu erstellen/aktualisieren
-        await prisma.cerebroCarticle.upsert({
-          where: { slug: mdFile.slug },
-          update: {
-            title: mdFile.title,
-            position: mdFile.position,
-            githubPath: mdFile.path 
-          },
-          create: {
-            title: mdFile.title,
-            slug: mdFile.slug,
-            content: `# ${mdFile.title}\n\nDiese Datei wird automatisch aus dem GitHub Repository geladen.`,
-            parentId: markdownFolder.id,
-            createdById: adminUser.id,
-            isPublished: true,
-            position: mdFile.position,
-            githubPath: mdFile.path
-          }
-        });
-      } catch (error) {
-        // Falls ein Fehler auftritt (z.B. weil githubPath nicht existiert),
-        // führe ein Fallback ohne githubPath aus
-        if (error instanceof Error && error.message.includes("githubPath")) {
-          console.log(`Hinweis: githubPath wird nicht unterstützt. Führe Upsert ohne githubPath für ${mdFile.slug} aus.`);
-          await prisma.cerebroCarticle.upsert({
-            where: { slug: mdFile.slug },
-            update: {
-              title: mdFile.title,
-              position: mdFile.position
-            },
-            create: {
-              title: mdFile.title,
-              slug: mdFile.slug,
-              content: `# ${mdFile.title}\n\nDiese Datei wird automatisch aus dem GitHub Repository geladen.`,
-              parentId: markdownFolder.id,
-              createdById: adminUser.id,
-              isPublished: true,
-              position: mdFile.position
-            }
-          });
-        } else {
-          // Falls ein anderer Fehler auftritt, wirf ihn weiter
-          throw error;
-        }
-      }
-      
-      // Erstelle einen GitHub-Link zur Markdown-Datei
-      try {
-        const existingLink = await prisma.cerebroExternalLink.findFirst({
+        // Prüfe ob ähnliche Beratung bereits existiert
+        const existingConsultation = await prisma.workTime.findFirst({
           where: {
-            url: `https://github.com/freshprince84/intranet/blob/main/${mdFile.path}`,
-            carticleId: (await prisma.cerebroCarticle.findUnique({ where: { slug: mdFile.slug } }))!.id
+            userId: consultation.userId,
+            clientId: consultation.clientId,
+            startTime: consultation.startTime
           }
         });
-        
-        if (!existingLink) {
-          await prisma.cerebroExternalLink.create({
+
+        if (!existingConsultation) {
+          await prisma.workTime.create({
+            data: consultation
+          });
+          consultationsCreated++;
+          console.log(`✅ Demo-Beratung erstellt für Client ${consultation.clientId}`);
+        }
+      }
+
+      console.log(`📊 Demo-Beratungen: ${consultationsCreated} erstellt`);
+    }
+
+    // ========================================
+    // 11. STANDARD-FILTER ERSTELLEN
+    // ========================================
+    console.log('🔍 Erstelle Standard-Filter...');
+
+    const { STANDARD_FILTERS } = await import('../src/constants/standardFilters');
+
+    let filtersCreated = 0;
+    let filtersSkipped = 0;
+
+    for (const [tableId, filters] of Object.entries(STANDARD_FILTERS)) {
+      for (const filterData of filters) {
+        const existingFilter = await prisma.savedFilter.findFirst({
+          where: {
+            tableId,
+            name: filterData.name,
+            userId: adminUser.id
+          }
+        });
+
+        if (!existingFilter) {
+          await prisma.savedFilter.create({
             data: {
-              url: `https://github.com/freshprince84/intranet/blob/main/${mdFile.path}`,
-              title: `GitHub: ${mdFile.title}`,
-              type: 'github_markdown',
-              carticleId: (await prisma.cerebroCarticle.findUnique({ where: { slug: mdFile.slug } }))!.id,
-              createdById: adminUser.id
+              tableId,
+              name: filterData.name,
+              conditions: JSON.stringify(filterData.conditions),
+              operators: JSON.stringify(filterData.operators),
+              userId: adminUser.id
             }
           });
+          filtersCreated++;
+          console.log(`✅ Standard-Filter erstellt: ${tableId} -> ${filterData.name}`);
+        } else {
+          filtersSkipped++;
         }
-      } catch (error) {
-        console.error(`Fehler beim Erstellen des Links für ${mdFile.title}:`, error);
       }
     }
-    
-    console.log('Seeding abgeschlossen!');
+
+    console.log(`📊 Standard-Filter: ${filtersCreated} erstellt, ${filtersSkipped} übersprungen`);
+
+    // ========================================
+    // SEEDING ABGESCHLOSSEN
+    // ========================================
+    console.log('\n🎉 Seeding erfolgreich abgeschlossen!');
+    console.log('\n📋 Zusammenfassung:');
+    console.log(`   - ${ALL_PAGES.length} Seiten-Berechtigungen definiert`);
+    console.log(`   - ${ALL_TABLES.length} Tabellen-Berechtigungen definiert`);
+    console.log(`   - ${ALL_BUTTONS.length} Button-Berechtigungen definiert`);
+    console.log(`   - 3 Rollen (Admin, User, Hamburger)`);
+    console.log(`   - Admin-Benutzer mit allen Berechtigungen`);
+    console.log(`   - ${branches.length} Niederlassungen`);
+    console.log(`   - Demo-Clients und Beratungen`);
+    console.log('\n✨ Das System ist bereit für die Nutzung!');
+
   } catch (error) {
-    console.error('Fehler beim Seeding:', error);
+    console.error('❌ Fehler beim Seeding:', error);
     throw error;
+  } finally {
+    await prisma.$disconnect();
   }
 }
 
 main()
   .catch((e) => {
-    console.error('Fehler beim Seeding:', e);
+    console.error('💥 Fataler Fehler:', e);
     process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
   }); 

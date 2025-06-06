@@ -278,6 +278,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
   const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
+    setIsFilterModalOpen(false); // Filter Modal schließen nach Anwenden
   };
 
   const resetFilterConditions = () => {
@@ -486,14 +487,30 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
         />
       </div>
 
+      {/* Filter Modal */}
+      {isFilterModalOpen && (
+        <FilterPane
+          columns={[
+            { id: 'client', label: 'Kunde' },
+            { id: 'status', label: 'Status' },
+            { id: 'total', label: 'Betrag (CHF)' }
+          ]}
+          onApply={applyFilterConditions}
+          onReset={resetFilterConditions}
+          tableId={INVOICES_TABLE_ID}
+          savedConditions={filterConditions}
+          savedOperators={filterLogicalOperators}
+        />
+      )}
+
       {/* Gespeicherte Filter */}
       <SavedFilterTags
         tableId={INVOICES_TABLE_ID}
-        onApplyFilter={(filter) => {
-          const conditions = JSON.parse(filter.conditions);
-          const operators = JSON.parse(filter.operators);
+        onSelectFilter={(conditions, operators) => {
           applyFilterConditions(conditions, operators);
         }}
+        onReset={resetFilterConditions}
+        defaultFilterName="Offen"
       />
 
       {/* Tabelle */}
@@ -767,24 +784,6 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
             </tbody>
           </table>
         </div>
-      )}
-
-      {/* Filter Modal */}
-      {isFilterModalOpen && (
-        <FilterPane
-          isOpen={isFilterModalOpen}
-          onClose={() => setIsFilterModalOpen(false)}
-          onApply={applyFilterConditions}
-          onReset={resetFilterConditions}
-          availableColumns={[
-            { id: 'client', label: 'Kunde' },
-            { id: 'status', label: 'Status' },
-            { id: 'total', label: 'Betrag (CHF)' }
-          ]}
-          tableId={INVOICES_TABLE_ID}
-          initialConditions={filterConditions}
-          initialOperators={filterLogicalOperators}
-        />
       )}
 
       {/* Column Config Modal */}
