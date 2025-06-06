@@ -1642,7 +1642,11 @@ Die Anwendung verwendet zwei Haupttypen von temporären UI-Komponenten für inte
 
 ### 1. Modals (Dialog-Fenster)
 
-Modals werden für wichtige Interaktionen verwendet, bei denen der Benutzer seine Aufmerksamkeit auf eine bestimmte Aufgabe konzentrieren soll:
+Modals werden für wichtige Interaktionen verwendet, bei denen der Benutzer seine Aufmerksamkeit auf eine bestimmte Aufgabe konzentrieren soll.
+
+#### Standard-Modal-Struktur
+
+Für kleinere bis mittlere Inhalte:
 
 ```css
 /* Overlay für Modals */
@@ -1667,57 +1671,93 @@ Modals werden für wichtige Interaktionen verwendet, bei denen der Benutzer sein
   overflow-y: auto;
 }
 
-/* Modal-Header */
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #E5E7EB;
-}
-
-.modal-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-/* Modal-Body */
-.modal-body {
-  padding: 1.5rem;
-  overflow-y: auto;
-}
-
-/* Modal-Footer */
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid #E5E7EB;
-}
-
 /* Dark Mode */
 .dark .modal-container {
   background-color: #1F2937;
 }
+```
 
-.dark .modal-header,
-.dark .modal-footer {
-  border-color: #4B5563;
+#### Modal-Scroll-Struktur für große Inhalte
+
+**⚠️ WICHTIG:** Für Modals mit viel Inhalt (z.B. RoleManagement, InvoiceDetails) muss eine spezielle Scroll-Struktur verwendet werden, damit Buttons immer erreichbar bleiben:
+
+```jsx
+// KORREKTE Scroll-Struktur für große Modals
+<Dialog.Panel className="mx-auto max-w-4xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl modal-scroll-container">
+  {/* Header - immer sichtbar */}
+  <div className="modal-scroll-header">
+    <div className="flex items-center justify-between mb-6">
+      <Dialog.Title className="text-lg font-medium text-gray-900 dark:text-white">
+        Modal Titel
+      </Dialog.Title>
+      <button onClick={onClose} className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+        <XMarkIcon className="h-6 w-6" />
+      </button>
+    </div>
+  </div>
+  
+  {/* Content - scrollbar */}
+  <div className="modal-scroll-content">
+    {/* Langer Inhalt hier */}
+  </div>
+  
+  {/* Footer - immer sichtbar */}
+  <div className="modal-scroll-footer">
+    <div className="flex items-center justify-end space-x-3">
+      <button onClick={onClose}>Abbrechen</button>
+      <button type="submit">Speichern</button>
+    </div>
+  </div>
+</Dialog.Panel>
+```
+
+```css
+/* CSS für Modal-Scroll-Struktur */
+.modal-scroll-container {
+  max-height: calc(100vh - 2rem);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
-.dark .modal-title {
-  color: #F9FAFB;
+.modal-scroll-header {
+  flex-shrink: 0;
+  padding: 1.5rem 1.5rem 0 1.5rem;
+}
+
+.modal-scroll-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+}
+
+.modal-scroll-footer {
+  flex-shrink: 0;
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  border-top: 1px solid theme('colors.gray.200');
+  margin-top: 1rem;
+}
+
+.dark .modal-scroll-footer {
+  border-top-color: theme('colors.gray.700');
+}
+
+/* Mobile-spezifische Korrekturen */
+@media (max-width: 640px) {
+  .modal-scroll-container {
+    max-height: calc(100vh - 1rem);
+}
+
+  .modal-scroll-content {
+    padding-bottom: 2rem; /* Extra Platz für Mobile */}
 }
 ```
 
-#### Dark Mode für Modals mit Tailwind CSS
+#### Standard-Modal mit Tailwind CSS
 
-Für eine korrekte Dark Mode Implementierung sollten folgende Tailwind-Klassen verwendet werden:
+Für kleinere Modals mit wenig Inhalt:
 
 ```jsx
-// Modal Container (Dialog.Panel)
 <Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
   {/* Kopfbereich des Modals */}
   <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
@@ -1774,75 +1814,127 @@ Für eine korrekte Dark Mode Implementierung sollten folgende Tailwind-Klassen v
 
 ### 2. Sidepanes (Seitenleisten)
 
-Sidepanes werden für interaktive Eingaben verwendet, die den Benutzer nicht vollständig unterbrechen sollen. Sie schieben sich von der rechten Seite ein und lassen den Rest der Seite sichtbar:
+Sidepanes werden für interaktive Eingaben verwendet, die den Benutzer nicht vollständig unterbrechen sollen. Sie schieben sich von der rechten Seite ein und lassen den Rest der Seite sichtbar.
+
+#### Korrekte Sidepane-Struktur
+
+**🎯 STANDARD-PATTERN:** Das InvoiceManagementTab implementiert das korrekte Sidepane-Pattern:
+
+```jsx
+// KORREKTES Sidepane-Pattern (InvoiceManagementTab Standard)
+{isEditSidepaneOpen && editingItem && (
+  <div className="fixed inset-0 overflow-hidden z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
+    <div className="absolute inset-0 overflow-hidden">
+      {/* Backdrop - halbtransparent */}
+      <div className="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeSidepane}></div>
+      
+      {/* Panel Container */}
+      <div className="fixed inset-y-0 right-0 pl-10 max-w-full flex">
+        <div className="w-screen max-w-2xl">
+          <div className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-xl overflow-y-scroll">
+            
+            {/* Header - immer sichtbar */}
+            <div className="px-4 py-6 bg-gray-50 dark:bg-gray-700 sm:px-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-medium text-gray-900 dark:text-white" id="slide-over-title">
+                  Sidepane Titel
+                </h2>
+                <div className="ml-3 h-7 flex items-center">
+                  <button
+                    type="button"
+                    className="bg-gray-50 dark:bg-gray-700 rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onClick={closeSidepane}
+                  >
+                    <span className="sr-only">Panel schließen</span>
+                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Content - scrollbar */}
+            <div className="flex-1 px-4 py-6 sm:px-6">
+              {/* Scrollbarer Inhalt hier */}
+            </div>
+            
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+```
+
+#### CSS für Sidepanes
 
 ```css
-/* Sidepane-Overlay (halbtransparent) */
-.sidepane-overlay {
+/* Sidepane-Struktur für korrekten Scroll */
+.sidepane-container {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.1);
+  overflow: hidden;
   z-index: 50;
+}
+
+.sidepane-overlay {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.sidepane-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(107, 114, 128, 0.75);
   transition: opacity 300ms ease-in-out;
 }
 
-/* Sidepane-Container */
-.sidepane-container {
+.sidepane-panel-container {
   position: fixed;
   top: 0;
   right: 0;
   bottom: 0;
-  width: 100%;
-  max-width: 24rem;
+  padding-left: 2.5rem;
+  max-width: 100%;
+  display: flex;
+}
+
+.sidepane-panel {
+  width: 100vw;
+  max-width: 32rem; /* 512px - anpassbar je nach Bedarf */
+}
+
+.sidepane-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   background-color: white;
   box-shadow: -4px 0 15px -3px rgba(0, 0, 0, 0.1);
-  transform: translateX(100%);
-  transition: transform 300ms ease-in-out;
-  z-index: 51;
-  overflow-y: auto;
+  overflow-y: scroll;
 }
 
-.sidepane-container.open {
-  transform: translateX(0);
-}
-
-/* Sidepane-Header */
 .sidepane-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid #E5E7EB;
+  background-color: #F9FAFB;
+  flex-shrink: 0;
 }
 
-.sidepane-title {
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-/* Sidepane-Body */
 .sidepane-body {
-  padding: 1.5rem;
-  overflow-y: auto;
-  max-height: calc(100% - 70px);
+  flex: 1;
+  padding: 1rem 1.5rem;
 }
 
 /* Dark Mode */
-.dark .sidepane-container {
+.dark .sidepane-content {
   background-color: #1F2937;
 }
 
 .dark .sidepane-header {
-  border-color: #4B5563;
+  background-color: #374151;
 }
 
-.dark .sidepane-title {
-  color: #F9FAFB;
-}
-
-.dark .sidepane-overlay {
-  background-color: rgba(0, 0, 0, 0.6);
+.dark .sidepane-backdrop {
+  background-color: rgba(107, 114, 128, 0.75);
 }
 ```
 
@@ -1886,51 +1978,62 @@ Für eine korrekte Dark Mode Implementierung der Sidepanes sollten folgende Tail
 ### Verwendungsrichtlinien
 
 1. **Modals vs. Sidepanes**:
-   - **Modals** werden für kritische Aufgaben verwendet, die die volle Aufmerksamkeit des Benutzers erfordern, wie z.B. Bestätigungsdialoge, Löschvorgänge oder komplexe Formulare mit wenigen Feldern.
-   - **Sidepanes** werden für Aufgabenkontexte verwendet, bei denen der Benutzer weiterhin den Kontext der Hauptansicht benötigt, wie z.B. Formulare zum Erstellen oder Bearbeiten von Einträgen, Suchfilter oder detaillierte Informationsansichten.
+   - **Modals** werden für kritische Aufgaben verwendet, die die volle Aufmerksamkeit des Benutzers erfordern, wie z.B. Bestätigungsdialoge, Löschvorgänge oder einfache Formulare.
+   - **Sidepanes** werden für umfangreiche Bearbeitungsaufgaben verwendet, bei denen der Benutzer den Kontext der Hauptansicht benötigt, wie z.B. komplexe Formulare, Detailansichten oder umfangreiche Konfigurationen.
 
-2. **Filter in Tabellen**:
+2. **Responsive Verhalten - PRÄZISE REGELN**:
+   - **Mobile (<640px)**: ALLE interaktiven Elemente werden als **Modals** dargestellt
+   - **Desktop (≥640px)**: 
+     - **Einfache Aufgaben** (Client erstellen, Bestätigungen) → **Modal**
+     - **Komplexe Aufgaben** (Request/Task bearbeiten, umfangreiche Formulare) → **Sidepane**
+
+3. **Standard-Implementierungen**:
+   
+   **✅ KORREKTE Referenzen:**
+   - **Sidepanes:** `InvoiceManagementTab.tsx` - **DAS IST DER STANDARD!**
+   - **Modals:** `CreateClientModal.tsx`, `ClientSelectModal.tsx`
+   
+   **❌ FALSCHE Implementierungen (zu korrigieren):**
+   - `EditRequestModal.tsx`, `CreateRequestModal.tsx` - falsche Sidepane-Struktur
+   - `EditTaskModal.tsx`, `CreateTaskModal.tsx` - falsche Sidepane-Struktur
+   - `RoleManagementTab.tsx` - Modal-Scroll-Problem
+   - `InvoiceDetailModal.tsx` - Modal-Scroll-Problem
+
+4. **Filter in Tabellen**:
    - Filter für Tabelleninhalte müssen als Pane direkt unter dem Filter-Button erscheinen, NICHT als separates Modal.
    - Das Filter-Pane soll sich ohne die Seite zu blockieren öffnen und den Context der Seite erhalten.
    - Die Requests-Komponente in Dashboard dient als Referenzimplementierung für dieses Verhalten.
    - Alle Tabellenfilter im System müssen diesem Standard folgen.
 
-3. **Responsive Verhalten**:
-   - Auf kleinen Bildschirmen (<640px) werden alle Komponenten standardmäßig als Modals dargestellt.
-   - Ab einer Bildschirmbreite von 640px werden berechtigte Komponenten als Sidepanes dargestellt.
-
-4. **Referenzimplementierung**:
-   Die folgenden Komponenten dienen als Referenzimplementierungen:
-   
-   - **CreateTaskModal & EditTaskModal**: Vollständige Dark Mode Unterstützung für Modals und Sidepanes
-   - **CreateRequestModal & EditRequestModal**: Umfassende Implementierung für alle Formularelemente im Dark Mode
-   
-   Folge ihrer Implementierung für neue Modals und Sidepanes.
-
 5. **Mobile-Layout-Beachtung**:
    - Beachte, dass in der Worktracker-Komponente die To Do's-Box und Zeiterfassung im mobilen Modus die Plätze tauschen.
    - Die To Do's-Box wird oben angezeigt und die Zeiterfassung-Box am unteren Bildschirmrand.
    - Bei Layout-Änderungen ist besondere Vorsicht geboten, um diese Funktionalität nicht zu beeinträchtigen.
-   - Für korrekte Anzeige im Mobile-Layout sollte diese Container-Struktur verwendet werden:
-   
-   ```jsx
-   <div className="w-full mb-4">
-       {/* Auf mobilen Geräten wird diese Reihenfolge angezeigt */}
-       <div className="block sm:hidden w-full">
-           {/* To Do's - oben */}
-           <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
-               {/* Inhalt */}
-           </div>
-           
-           {/* Zeiterfassung - unten fixiert */}
-           <div className="fixed bottom-13 left-0 right-0 w-full bg-white dark:bg-gray-800 z-9 shadow-lg border-t-0 dark:border-t dark:border-gray-700">
-               <WorktimeTracker />
-           </div>
-       </div>
 
-       {/* Auf größeren Geräten bleibt die ursprüngliche Reihenfolge */}
-       <div className="hidden sm:block">
-           {/* Normale Anordnung */}
-       </div>
-   </div>
-   ```
+### Implementierungs-Checkliste
+
+Beim Erstellen neuer Modals/Sidepanes:
+
+**Modal-Checkliste:**
+- [ ] Verwende `Dialog.Panel` mit korrekter max-width
+- [ ] Bei großem Inhalt: Modal-Scroll-Struktur implementieren
+- [ ] Header/Footer fixiert, Content scrollbar
+- [ ] Dark Mode Support für alle Elemente
+- [ ] Mobile: Anpassung der Größe und Abstände
+
+**Sidepane-Checkliste:**
+- [ ] Verwende InvoiceManagementTab Pattern als Basis
+- [ ] `fixed inset-0 overflow-hidden z-50` als Container
+- [ ] Backdrop mit `bg-gray-500 bg-opacity-75`
+- [ ] Panel mit `pl-10` und flexibler max-width
+- [ ] Header mit grauem Hintergrund
+- [ ] Content mit `flex-1` und korrektem Scroll
+- [ ] Dark Mode Support
+- [ ] Mobile: Automatisch als Modal rendern
+
+**Quick-Fix Verbot:**
+- ❌ Keine `max-h-[90vh] overflow-y-auto` Kombinationen
+- ❌ Keine `transform transition` Animationen für Sidepanes  
+- ❌ Keine isolierten Lösungen
+- ✅ Immer Standard-Pattern verwenden
+- ✅ Konsistente Implementierung über alle Komponenten

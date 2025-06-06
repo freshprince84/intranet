@@ -59,25 +59,6 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 ## Claude-spezifische Dokumentation
 - [claude/README.md](claude/README.md) - Übersicht der speziell für Claude optimierten Ressourcen
 
-## Schnellstart
-
-1. Klone das Repository:
-   ```bash
-   git clone https://github.com/freshprince84/intranet.git
-   cd intranet
-   ```
-
-2. Erstelle eine `.env`-Datei im `backend/`-Ordner (siehe `.env.example`)
-
-3. Installiere alle Abhängigkeiten:
-   ```bash
-   npm run install-all
-   ```
-
-4. Starte die Entwicklungsumgebung:
-   ```bash
-   npm run dev
-   ```
 
 ### Standard-Login (nach Seed)
 - Benutzername: `admin`
@@ -87,3 +68,5 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - **Server-Neustart nur nach Absprache** - niemals selbständig Server oder Prisma Studio neustarten
 - Prisma-Schema-Änderungen erfordern Migration
 - Bei Änderungen an Servercode oder Schema muss der Benutzer um Neustart gebeten werden
+- Erstellung eines Planungsdokuments: Keine Mutmassungen, keine Schätzungen, kein Konjunktiv!
+Code jeweils genau untersuchen und in ein Planungsdokument immer nur das reinschreiben, was effektiv gemacht werden soll. Nicht Dinge wie "xy untersuchen". Falls die Anweisung nicht klar ist, beim user nachfragen!

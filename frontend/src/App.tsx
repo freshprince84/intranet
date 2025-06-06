@@ -25,8 +25,15 @@ import Consultations from './pages/Consultations.tsx';
 import { MessageProvider } from './contexts/MessageContext.tsx';
 import { ErrorProvider } from './contexts/ErrorContext.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
+import { initClaudeConsole } from './utils/claudeConsole.ts';
 
 const App: React.FC = () => {
+    // Claude Console initialisieren
+    React.useEffect(() => {
+        initClaudeConsole();
+        console.log('🔍 Claude Console Bridge initialized');
+    }, []);
+
     return (
         <ErrorBoundary>
             <ErrorProvider>

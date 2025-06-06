@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "postgres-intranet": {
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-postgres"
+      ],
+      "env": {
+        "POSTGRES_CONNECTION_STRING": "postgresql://postgres:Postgres123!@localhost:5432/intranet"
+      }
+    }
+  }
+} 

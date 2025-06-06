@@ -26,28 +26,148 @@ interface RoleManagementTabProps {
 // Definiere Seiten, die immer sichtbar sein sollen (ohne Berechtigungsprüfung)
 const alwaysVisiblePages = ['dashboard', 'worktracker', 'cerebro', 'settings', 'profile'];
 
-// Pages, für die Berechtigungen benötigt werden
+// ALLE SEITEN IM SYSTEM (synchron mit Backend)
 const defaultPages = [
   'dashboard',
   'worktracker',
-  'team_worktime_control',
-  'payroll',  // Usermanagement-Seite statt users
-  'usermanagement',  // Usermanagement-Seite statt users
+  'consultations',
+  'team_worktime_control', // = workcenter
+  'payroll', // = lohnabrechnung
+  'usermanagement', // = benutzerverwaltung
   'cerebro',
   'settings',
   'profile'
 ];
 
-// Tabellen, für die wir spezifische Berechtigungen hinzufügen wollen
+// ALLE TABELLEN IM SYSTEM (synchron mit Backend)
 const defaultTables = [
-  'requests', // Gehört zu dashboard
-  'tasks'     // Gehört zu worktracker
+  'requests',           // auf dashboard
+  'tasks',             // auf worktracker
+  'users',             // auf usermanagement
+  'roles',             // auf usermanagement
+  'team_worktime',     // auf team_worktime_control
+  'worktime',          // auf worktracker
+  'clients',           // auf consultations
+  'consultation_invoices', // auf consultations
+  'branches',          // auf settings/system
+  'notifications',     // allgemein
+  'settings',          // auf settings
+  'monthly_reports'    // auf consultations/reports
+];
+
+// ALLE BUTTONS IM SYSTEM (synchron mit Backend)
+const defaultButtons = [
+  // Database Management Buttons (Settings/System)
+  'database_reset_table',
+  'database_logs',
+  
+  // Invoice Functions Buttons
+  'invoice_create',
+  'invoice_download', 
+  'invoice_mark_paid',
+  'invoice_settings',
+  
+  // Todo/Task Buttons (Worktracker)
+  'todo_create',
+  'todo_edit',
+  'todo_delete',
+  'task_create',
+  'task_edit', 
+  'task_delete',
+  
+  // User Management Buttons
+  'user_create',
+  'user_edit',
+  'user_delete',
+  'role_assign',
+  'role_create',
+  'role_edit',
+  'role_delete',
+  
+  // Worktime Buttons
+  'worktime_start',
+  'worktime_stop', 
+  'worktime_edit',
+  'worktime_delete',
+  
+  // General Cerebro Button
+  'cerebro',
+  
+  // Consultation Buttons
+  'consultation_start',
+  'consultation_stop',
+  'consultation_edit',
+  
+  // Client Management Buttons
+  'client_create',
+  'client_edit',
+  'client_delete',
+  
+  // Settings Buttons
+  'settings_system',
+  'settings_notifications',
+  'settings_profile',
+  
+  // Payroll Buttons
+  'payroll_generate',
+  'payroll_export',
+  'payroll_edit'
 ];
 
 // Definiert die Zuordnung von Tabellen zu ihren übergeordneten Seiten
 const tableToPageMapping = {
   'requests': 'dashboard',
-  'tasks': 'worktracker'
+  'tasks': 'worktracker',
+  'users': 'usermanagement',
+  'roles': 'usermanagement', 
+  'team_worktime': 'team_worktime_control',
+  'worktime': 'worktracker',
+  'clients': 'consultations',
+  'consultation_invoices': 'consultations',
+  'branches': 'settings',
+  'notifications': 'general',
+  'settings': 'settings',
+  'monthly_reports': 'consultations'
+};
+
+// Definiert die Zuordnung von Buttons zu ihren übergeordneten Seiten/Bereichen
+const buttonToPageMapping = {
+  'database_reset_table': 'settings',
+  'database_logs': 'settings',
+  'invoice_create': 'consultations',
+  'invoice_download': 'consultations',
+  'invoice_mark_paid': 'consultations',
+  'invoice_settings': 'consultations',
+  'todo_create': 'worktracker',
+  'todo_edit': 'worktracker',
+  'todo_delete': 'worktracker',
+  'task_create': 'worktracker',
+  'task_edit': 'worktracker',
+  'task_delete': 'worktracker',
+  'user_create': 'usermanagement',
+  'user_edit': 'usermanagement',
+  'user_delete': 'usermanagement',
+  'role_assign': 'usermanagement',
+  'role_create': 'usermanagement',
+  'role_edit': 'usermanagement',
+  'role_delete': 'usermanagement',
+  'worktime_start': 'worktracker',
+  'worktime_stop': 'worktracker',
+  'worktime_edit': 'worktracker',
+  'worktime_delete': 'worktracker',
+  'cerebro': 'cerebro',
+  'consultation_start': 'consultations',
+  'consultation_stop': 'consultations',
+  'consultation_edit': 'consultations',
+  'client_create': 'consultations',
+  'client_edit': 'consultations',
+  'client_delete': 'consultations',
+  'settings_system': 'settings',
+  'settings_notifications': 'settings',
+  'settings_profile': 'settings',
+  'payroll_generate': 'payroll',
+  'payroll_export': 'payroll',
+  'payroll_edit': 'payroll'
 };
 
 // TableID für gespeicherte Filter
@@ -164,6 +284,12 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       ...defaultTables.map(table => ({
         entity: table,
         entityType: 'table',
+        accessLevel: 'none' as AccessLevel
+      })),
+      // Button-Berechtigungen
+      ...defaultButtons.map(button => ({
+        entity: button,
+        entityType: 'button',
         accessLevel: 'none' as AccessLevel
       }))
     ]
@@ -523,7 +649,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       return;
     }
     
-    // Alle möglichen Berechtigungen erstellen (Seiten und Tabellen)
+    // Alle möglichen Berechtigungen erstellen (Seiten, Tabellen und Buttons)
     const allPermissions = [
       ...defaultPages.map(page => ({
         entity: page,
@@ -534,6 +660,11 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       ...defaultTables.map(table => ({
         entity: table,
         entityType: 'table',
+        accessLevel: 'none' as AccessLevel
+      })),
+      ...defaultButtons.map(button => ({
+        entity: button,
+        entityType: 'button',
         accessLevel: 'none' as AccessLevel
       }))
     ];
@@ -583,6 +714,12 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           entity: table,
           entityType: 'table',
           accessLevel: 'none' as AccessLevel
+        })),
+        // Button-Berechtigungen
+        ...defaultButtons.map(button => ({
+          entity: button,
+          entityType: 'button',
+          accessLevel: 'none' as AccessLevel
         }))
       ]
     });
@@ -594,6 +731,40 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     
     formData.permissions
       .filter(p => p.entityType === 'page' && !alwaysVisiblePages.includes(p.entity))
+      .forEach(permission => {
+        const permIndex = formData.permissions.indexOf(permission);
+        newPermissions[permIndex] = {
+          ...permission,
+          accessLevel
+        };
+      });
+    
+    setFormData({ ...formData, permissions: newPermissions });
+  };
+
+  // Setzt alle Tabellen-Berechtigungen auf den gleichen Wert
+  const setAllTablePermissions = (accessLevel: AccessLevel) => {
+    const newPermissions = [...formData.permissions];
+    
+    formData.permissions
+      .filter(p => p.entityType === 'table')
+      .forEach(permission => {
+        const permIndex = formData.permissions.indexOf(permission);
+        newPermissions[permIndex] = {
+          ...permission,
+          accessLevel
+        };
+      });
+    
+    setFormData({ ...formData, permissions: newPermissions });
+  };
+
+  // Setzt alle Button-Berechtigungen auf den gleichen Wert
+  const setAllButtonPermissions = (accessLevel: AccessLevel) => {
+    const newPermissions = [...formData.permissions];
+    
+    formData.permissions
+      .filter(p => p.entityType === 'button')
       .forEach(permission => {
         const permIndex = formData.permissions.indexOf(permission);
         newPermissions[permIndex] = {
@@ -1115,12 +1286,14 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       {/* Modal für Rollenerstellung/Bearbeitung */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
             <div className="px-6 py-4 border-b dark:border-gray-700">
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">{editingRole ? 'Rolle bearbeiten' : 'Neue Rolle erstellen'}</h3>
             </div>
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="flex flex-col h-full">
+              <div className="flex-1 overflow-y-auto">
               <div className="p-6 space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
                   <input
@@ -1140,13 +1313,14 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
                   />
                 </div>
-                <div className="mt-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Seiten-Berechtigungen</label>
+                  </div>
                   
-                  {/* Option für alle Seiten außer immer sichtbare */}
-                  <div className="mb-4 pb-3 border-b border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Alle Seiten</span>
+                  {/* Bulk Actions */}
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Schnell-Aktionen</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Alle Seiten</label>
                       <select
                         value=""
                         onChange={(e) => {
@@ -1154,21 +1328,56 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                             setAllPagePermissions(e.target.value as AccessLevel);
                           }
                         }}
-                        className="block w-32 rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                          className="block w-full text-sm rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-600 dark:text-white"
                       >
                         <option value="">Auswählen...</option>
                         <option value="none">Keine</option>
                         <option value="both">Alle aktivieren</option>
                       </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Alle Tabellen</label>
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setAllTablePermissions(e.target.value as AccessLevel);
+                            }
+                          }}
+                          className="block w-full text-sm rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-600 dark:text-white"
+                        >
+                          <option value="">Auswählen...</option>
+                          <option value="none">Keine</option>
+                          <option value="both">Alle aktivieren</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Alle Buttons</label>
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setAllButtonPermissions(e.target.value as AccessLevel);
+                            }
+                          }}
+                          className="block w-full text-sm rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-600 dark:text-white"
+                        >
+                          <option value="">Auswählen...</option>
+                          <option value="none">Keine</option>
+                          <option value="both">Alle aktivieren</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="mt-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Detaillierte Berechtigungen</label>
+                    
+                    <div className="grid grid-cols-1 gap-4 max-h-60 overflow-y-auto border rounded-lg p-4 dark:border-gray-600">
                     {formData.permissions
                       .filter(permission => permission.entityType === 'page')
                       .map((permission, index) => {
                         const permIndex = formData.permissions.indexOf(permission);
-                        // Ist-Zustand des Toggles bestimmen
                         const isActive = permission.accessLevel === 'both';
                         return (
                           <div key={`permission-page-${permission.entity}-${index}`}>
@@ -1233,10 +1442,46 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                 );
                               })
                             }
+                              
+                              {/* Button-Berechtigungen als Unterpunkte */}
+                              {formData.permissions
+                                .filter(buttonPerm => 
+                                  buttonPerm.entityType === 'button' && 
+                                  buttonToPageMapping[buttonPerm.entity] === permission.entity
+                                )
+                                .map((buttonPerm, buttonIndex) => {
+                                  const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
+                                  const isButtonActive = buttonPerm.accessLevel === 'both';
+                                  return (
+                                    <div key={`button-permission-${buttonPerm.entity}-${buttonIndex}`} 
+                                      className="flex items-center justify-between mt-1 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
+                                      <span className="text-xs text-gray-500 dark:text-gray-500">└ 🔘 {buttonPerm.entity}</span>
+                                      <label className="inline-flex items-center cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          className="sr-only peer"
+                                          checked={isButtonActive}
+                                          onChange={() => {
+                                            const newPermissions = [...formData.permissions];
+                                            newPermissions[buttonPermIndex] = {
+                                              ...buttonPerm,
+                                              accessLevel: isButtonActive ? 'none' : 'both'
+                                            };
+                                            setFormData({ ...formData, permissions: newPermissions });
+                                          }}
+                                        />
+                                        <div className="relative w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:start-[1px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
+                                        </div>
+                                      </label>
                           </div>
                         );
                       })
                     }
+                            </div>
+                          );
+                        })
+                      }
+                    </div>
                   </div>
                 </div>
               </div>

@@ -149,6 +149,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
       // Überprüfen welche Tabelle wir filtern (über Columns-Array)
       const isRequestTable = columns.some(col => col.id === 'requestedBy' || col.id === 'createTodo');
       const isTaskTable = columns.some(col => col.id === 'responsible' || col.id === 'qualityControl');
+      const isInvoiceTable = columns.some(col => col.id === 'client') && !columns.some(col => col.id === 'responsible');
       
       if (isRequestTable) {
         // Request-Status-Optionen
@@ -179,6 +180,22 @@ const FilterRow: React.FC<FilterRowProps> = ({
             <option value="improval">Zu verbessern</option>
             <option value="quality_control">Qualitätskontrolle</option>
             <option value="done">Erledigt</option>
+          </select>
+        );
+      } else if (isInvoiceTable) {
+        // Invoice-Status-Optionen
+        return (
+          <select
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            value={value as string || ''}
+            onChange={(e) => onChange(e.target.value)}
+          >
+            <option value="">Bitte wählen</option>
+            <option value="DRAFT">Entwurf</option>
+            <option value="SENT">Gesendet</option>
+            <option value="PAID">Bezahlt</option>
+            <option value="OVERDUE">Überfällig</option>
+            <option value="CANCELLED">Storniert</option>
           </select>
         );
       } else {
