@@ -210,8 +210,8 @@ END $$;
 ## Phase 1: Datenbank-Schema (Backend)
 
 ### Schritt 1.1: Organisation Model hinzufügen
-- [ ] Öffne `backend/prisma/schema.prisma`
-- [ ] Füge folgendes neues Model nach dem User-Model hinzu:
+- [x] Öffne `backend/prisma/schema.prisma`
+- [x] Füge folgendes neues Model nach dem User-Model hinzu:
 
 ```prisma
 model Organization {
@@ -236,7 +236,7 @@ model Organization {
 ```
 
 ### Schritt 1.2: Organisation Join Request Model hinzufügen
-- [ ] Füge folgendes Model nach dem Organization-Model hinzu:
+- [x] Füge folgendes Model nach dem Organization-Model hinzu:
 
 ```prisma
 model OrganizationJoinRequest {
@@ -259,7 +259,7 @@ model OrganizationJoinRequest {
 ```
 
 ### Schritt 1.3: Organisation Invitation Model hinzufügen
-- [ ] Füge folgendes Model hinzu:
+- [x] Füge folgendes Model hinzu:
 
 ```prisma
 model OrganizationInvitation {
@@ -282,14 +282,14 @@ model OrganizationInvitation {
 ```
 
 ### Schritt 1.4: Bestehende Models erweitern
-- [ ] Erweitere das `Role` Model (füge nach `users` hinzu):
+- [x] Erweitere das `Role` Model (füge nach `users` hinzu):
 ```prisma
   organizationId  Int
   organization    Organization  @relation(fields: [organizationId], references: [id])
   invitations     OrganizationInvitation[]
 ```
 
-- [ ] Erweitere das `User` Model (füge nach `monthlyReports` hinzu):
+- [x] Erweitere das `User` Model (füge nach `monthlyReports` hinzu):
 ```prisma
   joinRequestsSent      OrganizationJoinRequest[] @relation("JoinRequester")
   joinRequestsProcessed OrganizationJoinRequest[] @relation("JoinProcessor")
@@ -298,7 +298,7 @@ model OrganizationInvitation {
 ```
 
 ### Schritt 1.5: Neue Enums hinzufügen
-- [ ] Füge folgende Enums am Ende der Datei hinzu:
+- [x] Füge folgende Enums am Ende der Datei hinzu:
 
 ```prisma
 enum JoinRequestStatus {
@@ -317,12 +317,12 @@ enum SubscriptionPlan {
 ```
 
 ### Schritt 1.6: Migration erstellen und ausführen
-- [ ] Terminal öffnen im `backend` Verzeichnis
-- [ ] Führe aus: `npx prisma migrate dev --name add_multi_tenant_support`
-- [ ] Warte bis Migration erfolgreich durchgelaufen ist
+- [x] Terminal öffnen im `backend` Verzeichnis
+- [x] Führe aus: `npx prisma migrate dev --name add_multi_tenant_support`
+- [x] Warte bis Migration erfolgreich durchgelaufen ist
 
 ### Schritt 1.7: 🔧 MCP - Schema-Migration verifizieren
-- [ ] **MCP-Datenbankzugriff nutzen** um neue Multi-Tenant Struktur zu verifizieren:
+- [x] **MCP-Datenbankzugriff nutzen** um neue Multi-Tenant Struktur zu verifizieren:
   ```sql
   -- Prüfe dass neue Tabellen erstellt wurden
   SELECT table_name FROM information_schema.tables 
@@ -348,11 +348,11 @@ enum SubscriptionPlan {
   WHERE tc.constraint_type = 'FOREIGN KEY' 
   AND (tc.table_name LIKE '%Organization%' OR ccu.table_name LIKE '%Organization%');
   ```
-- [ ] **Erwartete Ergebnisse**: 3 neue Tabellen, organizationId in Role, JoinRequestStatus Enum mit 4 Werten
-- [ ] **Falls Probleme**: Migration-Rollback und Korrektur
+- [x] **Erwartete Ergebnisse**: 3 neue Tabellen, organizationId in Role, JoinRequestStatus Enum mit 4 Werten
+- [x] **Falls Probleme**: Migration-Rollback und Korrektur
 
 ### Schritt 1.8: Server neustart
-- [ ] **WICHTIG**: Bitte den Nutzer, den Server neu zu starten
+- [x] **WICHTIG**: Bitte den Nutzer, den Server neu zu starten
 
 ## Phase 2: Daten-Migration und Seeding
 

@@ -57,7 +57,8 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [CONSULTATION_INVOICE_IMPLEMENTATION.md](docs/implementation_plans/CONSULTATION_INVOICE_IMPLEMENTATION.md) - Abrechnungsmodul für Beratungsstunden
 
 ## Claude-spezifische Dokumentation
-- [claude/README.md](claude/README.md) - Übersicht der speziell für Claude optimierten Ressourcen
+- [claude/README.md](docs/claude/README.md) - Übersicht der speziell für Claude optimierten Ressourcen
+- [claude_database_access.md](docs/claude/claude_database_access.md) - Direkter Datenbankzugriff und Frontend-Console-Monitoring für Claude
 
 
 ### Standard-Login (nach Seed)

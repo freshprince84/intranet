@@ -30,6 +30,12 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 - **docs/** - Ergänzende Dokumentation für Claude
 - **memory_anchors.md** - Dokumentation zu speziellen Code-Ankerpunkten
 
+## Claude-spezifische Funktionen
+
+### Datenbankzugriff und Debugging
+- **[claude_database_access.md](claude_database_access.md)** - Vollständige Anleitung für direkten Datenbankzugriff via MCP und REST-API sowie Frontend-Console-Monitoring
+- **[claude_usage_guidelines.md](claude_usage_guidelines.md)** - Richtlinien für die automatische Tool-Nutzung durch Claude
+
 ## Memory Anchors
 
 Im Code werden spezielle Kommentare als "Memory Anchors" verwendet, um auf spezifische Stellen zu verweisen. Diese folgen dem Format:

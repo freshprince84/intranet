@@ -118,10 +118,14 @@ class ClaudeConsole {
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
       ).join(' '),
       args: args.map(arg => {
-        // Serialisiere komplexe Objekte
+        // Serialisiere komplexe Objekte mit zirkulärer Referenz-Behandlung
         try {
-          return JSON.parse(JSON.stringify(arg));
+          return JSON.parse(JSON.stringify(arg, this.getCircularReplacer()));
         } catch {
+          // Fallback für nicht-serialisierbare Objekte
+          if (typeof arg === 'object' && arg !== null) {
+            return { type: typeof arg, constructor: arg.constructor?.name || 'Unknown' };
+          }
           return String(arg);
         }
       }),
@@ -164,6 +168,19 @@ class ClaudeConsole {
       });
       this.logBuffer = [];
     }
+  }
+
+  private getCircularReplacer() {
+    const seen = new WeakSet();
+    return (key: string, value: any) => {
+      if (typeof value === 'object' && value !== null) {
+        if (seen.has(value)) {
+          return '[Circular Reference]';
+        }
+        seen.add(value);
+      }
+      return value;
+    };
   }
 
   private getCurrentUserId(): string | undefined {
