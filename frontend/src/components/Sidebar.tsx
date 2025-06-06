@@ -13,7 +13,7 @@ import {
     BookOpenIcon,
     UsersIcon,
     CurrencyDollarIcon,
-    EllipsisHorizontalIcon
+    EllipsisVerticalIcon
 } from '@heroicons/react/24/outline';
 
 // Definiere die möglichen Seitenbezeichnungen
@@ -194,7 +194,7 @@ const Sidebar: React.FC = () => {
                                 aria-label="Mehr Optionen anzeigen"
                             >
                                 <div className="h-[26px] w-[26px] mb-0.5">
-                                    <EllipsisHorizontalIcon className="h-[26px] w-[26px]" />
+                                    <EllipsisVerticalIcon className="h-[26px] w-[26px]" />
                                 </div>
                                 {/* Text nur auf größeren Mobilgeräten (>=480px) und Tablets anzeigen */}
                                 <span className="mt-0.5 footer-icon-text">Mehr</span>

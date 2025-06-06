@@ -5,6 +5,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
+import { organizationMiddleware, getUserOrganizationFilter } from '../middleware/organization';
 
 const prisma = new PrismaClient();
 
@@ -64,15 +65,26 @@ interface SwitchRoleRequest {
 }
 
 // Alle Benutzer abrufen
-export const getAllUsers = async (_req: Request, res: Response) => {
+export const getAllUsers = async (req: Request, res: Response) => {
     try {
         const users = await prisma.user.findMany({
-            select: {
-                id: true,
-                username: true,
-                firstName: true,
-                lastName: true,
-                email: true
+            where: getUserOrganizationFilter(req),
+            include: {
+                roles: {
+                    where: {
+                        role: {
+                            organizationId: req.organizationId
+                        }
+                    },
+                    include: {
+                        role: true
+                    }
+                },
+                branches: {
+                    include: {
+                        branch: true
+                    }
+                }
             }
         });
         res.json(users);

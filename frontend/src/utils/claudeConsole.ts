@@ -1,5 +1,7 @@
 // Claude Console Bridge - Leitet Frontend-Logs an Backend weiter
 
+import { stringify } from 'flatted';
+
 interface LogEntry {
   timestamp: string;
   level: 'log' | 'warn' | 'error' | 'info' | 'debug';
@@ -115,12 +117,12 @@ class ClaudeConsole {
       timestamp: new Date().toISOString(),
       level,
       message: args.map(arg => 
-        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+        typeof arg === 'object' ? stringify(arg) : String(arg)
       ).join(' '),
       args: args.map(arg => {
         // Serialisiere komplexe Objekte mit zirkulärer Referenz-Behandlung
         try {
-          return JSON.parse(JSON.stringify(arg, this.getCircularReplacer()));
+          return JSON.parse(stringify(arg));
         } catch {
           // Fallback für nicht-serialisierbare Objekte
           if (typeof arg === 'object' && arg !== null) {
@@ -137,7 +139,7 @@ class ClaudeConsole {
 
     if (this.isConnected && this.ws) {
       try {
-        this.ws.send(JSON.stringify({
+        this.ws.send(stringify({
           type: 'console-log',
           data: logEntry
         }));
@@ -158,7 +160,7 @@ class ClaudeConsole {
     if (this.logBuffer.length > 0 && this.isConnected && this.ws) {
       this.logBuffer.forEach(entry => {
         try {
-          this.ws!.send(JSON.stringify({
+          this.ws!.send(stringify({
             type: 'console-log',
             data: entry
           }));
