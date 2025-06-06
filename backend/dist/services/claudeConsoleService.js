@@ -12,12 +12,17 @@ class ClaudeConsoleService {
         this.wss = null;
         this.clients = new Set();
         this.logHistory = [];
+        this.maxLogFileSize = 10 * 1024 * 1024; // 10MB
+        this.maxLogFiles = 5; // Behalte 5 rotierte Dateien
+        this.cleanupInterval = null;
         // Log-Datei im logs-Verzeichnis erstellen
         const logsDir = path_1.default.join(__dirname, '../../logs');
         if (!fs_1.default.existsSync(logsDir)) {
             fs_1.default.mkdirSync(logsDir, { recursive: true });
         }
         this.logFile = path_1.default.join(logsDir, 'claude-console.log');
+        // Starte Cleanup-Task alle 30 Minuten
+        this.startCleanupTask();
     }
     setupWebSocketServer(server) {
         this.wss = new ws_1.WebSocketServer({
@@ -114,15 +119,117 @@ class ClaudeConsoleService {
     writeToFile(logLine, logEntry) {
         try {
             const fullLogEntry = JSON.stringify(Object.assign(Object.assign({}, logEntry), { formattedMessage: logLine })) + '\n';
-            fs_1.default.appendFile(this.logFile, fullLogEntry, (err) => {
-                if (err) {
-                    console.error('Error writing to Claude console log file:', err);
-                }
+            // Prüfe Dateigröße vor dem Schreiben
+            this.checkLogRotation(() => {
+                fs_1.default.appendFile(this.logFile, fullLogEntry, (err) => {
+                    if (err) {
+                        console.error('Error writing to Claude console log file:', err);
+                    }
+                });
             });
         }
         catch (error) {
             console.error('Error serializing log entry:', error);
         }
+    }
+    checkLogRotation(callback) {
+        fs_1.default.stat(this.logFile, (err, stats) => {
+            if (err) {
+                // Datei existiert noch nicht, einfach erstellen
+                callback();
+                return;
+            }
+            if (stats.size >= this.maxLogFileSize) {
+                this.rotateLogFile(() => callback());
+            }
+            else {
+                callback();
+            }
+        });
+    }
+    rotateLogFile(callback) {
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const rotatedFile = this.logFile.replace('.log', `-${timestamp}.log`);
+        // Verschiebe aktuelle Log-Datei
+        fs_1.default.rename(this.logFile, rotatedFile, (err) => {
+            if (err) {
+                console.error('Error rotating log file:', err);
+                callback();
+                return;
+            }
+            console.log(`📦 Claude console log rotated: ${rotatedFile}`);
+            // Bereinige alte Log-Dateien
+            this.cleanupOldLogFiles();
+            callback();
+        });
+    }
+    cleanupOldLogFiles() {
+        const logsDir = path_1.default.dirname(this.logFile);
+        const logBaseName = path_1.default.basename(this.logFile, '.log');
+        fs_1.default.readdir(logsDir, (err, files) => {
+            if (err) {
+                console.error('Error reading logs directory:', err);
+                return;
+            }
+            // Finde alle rotierten Log-Dateien
+            const logFiles = files
+                .filter(file => file.startsWith(logBaseName) && file.endsWith('.log') && file !== path_1.default.basename(this.logFile))
+                .map(file => ({
+                name: file,
+                path: path_1.default.join(logsDir, file),
+                stat: fs_1.default.statSync(path_1.default.join(logsDir, file))
+            }))
+                .sort((a, b) => b.stat.mtime.getTime() - a.stat.mtime.getTime());
+            // Lösche überschüssige Dateien
+            if (logFiles.length > this.maxLogFiles) {
+                const filesToDelete = logFiles.slice(this.maxLogFiles);
+                filesToDelete.forEach(file => {
+                    fs_1.default.unlink(file.path, (err) => {
+                        if (err) {
+                            console.error(`Error deleting old log file ${file.name}:`, err);
+                        }
+                        else {
+                            console.log(`🗑️ Deleted old Claude console log: ${file.name}`);
+                        }
+                    });
+                });
+            }
+        });
+    }
+    startCleanupTask() {
+        // Bereinige alle 30 Minuten
+        this.cleanupInterval = setInterval(() => {
+            this.performMaintenance();
+        }, 30 * 60 * 1000);
+        console.log('🧹 Claude console cleanup task started (every 30 minutes)');
+    }
+    performMaintenance() {
+        console.log('🧹 Performing Claude console maintenance...');
+        // 1. Bereinige Memory-Log-History
+        if (this.logHistory.length > 1000) {
+            const before = this.logHistory.length;
+            this.logHistory = this.logHistory.slice(-500);
+            console.log(`📝 Memory log cleanup: ${before} -> ${this.logHistory.length} entries`);
+        }
+        // 2. Bereinige alte Log-Dateien
+        this.cleanupOldLogFiles();
+        // 3. Bereinige sehr alte Logs (älter als 7 Tage) aus Memory
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const beforeCount = this.logHistory.length;
+        this.logHistory = this.logHistory.filter(entry => new Date(entry.timestamp) > sevenDaysAgo);
+        if (beforeCount !== this.logHistory.length) {
+            console.log(`🗑️ Removed ${beforeCount - this.logHistory.length} old memory logs (>7 days)`);
+        }
+        console.log('✅ Claude console maintenance completed');
+    }
+    cleanup() {
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
+        }
+        this.performMaintenance();
+        console.log('🧹 Claude console service cleaned up');
     }
     sendLogHistory(ws) {
         if (this.logHistory.length > 0) {

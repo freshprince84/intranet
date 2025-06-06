@@ -449,7 +449,7 @@ for (const perm of organizationPermissions) {
 ## Phase 3: Backend API - Organisation Management
 
 ### Schritt 3.1: Organisation Controller erstellen
-- [ ] Erstelle neue Datei: `backend/src/controllers/organizationController.ts`
+- [x] Erstelle neue Datei: `backend/src/controllers/organizationController.ts`
 - [ ] Füge folgenden Code ein:
 
 ```typescript
