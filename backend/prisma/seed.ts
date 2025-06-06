@@ -26,7 +26,9 @@ const ALL_PAGES = [
   'usermanagement', // = benutzerverwaltung
   'cerebro',
   'settings',
-  'profile'
+  'profile',
+  'organization_management', // Multi-Tenant Verwaltung
+  'tenant_invitation'        // Einladungen verwalten
 ];
 
 // ALLE TABELLEN IM SYSTEM
@@ -42,7 +44,10 @@ const ALL_TABLES = [
   'branches',          // auf settings/system
   'notifications',     // allgemein
   'settings',          // auf settings
-  'monthly_reports'    // auf consultations/reports
+  'monthly_reports',   // auf consultations/reports
+  'organizations',     // Multi-Tenant Organisationen
+  'organization_join_requests', // Beitrittsanfragen
+  'organization_invitations'    // Einladungen
 ];
 
 // ALLE BUTTONS IM SYSTEM
@@ -101,12 +106,45 @@ const ALL_BUTTONS = [
   // Payroll Buttons
   'payroll_generate',
   'payroll_export',
-  'payroll_edit'
+  'payroll_edit',
+  
+  // Organization Management Buttons
+  'organization_create',
+  'organization_edit',
+  'organization_delete',
+  'organization_invite_user',
+  'organization_manage_invitations',
+  'organization_approve_join_request',
+  'organization_reject_join_request',
+  'organization_manage_subscriptions'
 ];
 
 async function main() {
   try {
     console.log('🚀 Starte Seeding...');
+
+    // ========================================
+    // 0. STANDARD-ORGANISATION ERSTELLEN/AKTUALISIEREN
+    // ========================================
+    console.log('🏢 Erstelle/Aktualisiere Standard-Organisation...');
+    
+    const defaultOrganization = await prisma.organization.upsert({
+      where: { name: 'default' },
+      update: {
+        displayName: 'Standard Organisation',
+        subscriptionPlan: 'enterprise',
+        maxUsers: 1000
+      },
+      create: {
+        id: 1,
+        name: 'default',
+        displayName: 'Standard Organisation',
+        isActive: true,
+        maxUsers: 1000,
+        subscriptionPlan: 'enterprise'
+      }
+    });
+    console.log(`✅ Standard-Organisation: ${defaultOrganization.displayName} (ID: ${defaultOrganization.id})`);
 
     // ========================================
     // 1. ROLLEN ERSTELLEN/AKTUALISIEREN
@@ -117,12 +155,14 @@ async function main() {
     const adminRole = await prisma.role.upsert({
       where: { name: 'Admin' },
       update: {
-        description: 'Administrator mit allen Rechten'
+        description: 'Administrator mit allen Rechten',
+        organizationId: defaultOrganization.id
       },
       create: {
         id: 1,
         name: 'Admin',
         description: 'Administrator mit allen Rechten',
+        organizationId: defaultOrganization.id
       },
     });
     console.log(`✅ Admin-Rolle: ${adminRole.name} (ID: ${adminRole.id})`);
@@ -131,12 +171,14 @@ async function main() {
     const userRole = await prisma.role.upsert({
       where: { name: 'User' },
       update: {
-        description: 'Standardbenutzer mit eingeschränkten Rechten'
+        description: 'Standardbenutzer mit eingeschränkten Rechten',
+        organizationId: defaultOrganization.id
       },
       create: {
         id: 2,
         name: 'User',
         description: 'Standardbenutzer mit eingeschränkten Rechten',
+        organizationId: defaultOrganization.id
       },
     });
     console.log(`✅ User-Rolle: ${userRole.name} (ID: ${userRole.id})`);
@@ -145,12 +187,14 @@ async function main() {
     const hamburgerRole = await prisma.role.upsert({
       where: { name: 'Hamburger' },
       update: {
-        description: 'Hamburger-Rolle für neue Benutzer'
+        description: 'Hamburger-Rolle für neue Benutzer',
+        organizationId: defaultOrganization.id
       },
       create: {
         id: 999,
         name: 'Hamburger',
         description: 'Hamburger-Rolle für neue Benutzer',
+        organizationId: defaultOrganization.id
       },
     });
     console.log(`✅ Hamburger-Rolle: ${hamburgerRole.name} (ID: ${hamburgerRole.id})`);

@@ -267,4 +267,24 @@ router.get('/console/stream', async (req: Request, res: Response) => {
   }
 });
 
+// Manuelles Log-Housekeeping
+router.post('/console/cleanup', async (req: Request, res: Response) => {
+  try {
+    const consoleService = getClaudeConsoleService();
+    consoleService.cleanup();
+    
+    res.json({
+      success: true,
+      message: 'Log-Housekeeping erfolgreich durchgeführt',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Fehler beim manuellen Log-Housekeeping:', error);
+    res.status(500).json({
+      error: 'Fehler beim Log-Housekeeping',
+      message: error instanceof Error ? error.message : 'Unbekannter Fehler'
+    });
+  }
+});
+
 export default router; 

@@ -357,8 +357,8 @@ enum SubscriptionPlan {
 ## Phase 2: Daten-Migration und Seeding
 
 ### Schritt 2.1: Standard-Organisation erstellen
-- [ ] Öffne `backend/prisma/seed.ts`
-- [ ] Füge nach den bestehenden Imports hinzu:
+- [x] Öffne `backend/prisma/seed.ts`
+- [x] Füge nach den bestehenden Imports hinzu:
 ```typescript
 // Standard-Organisation für bestehende Daten
 const defaultOrganization = await prisma.organization.create({
@@ -375,7 +375,7 @@ console.log('Standard-Organisation erstellt:', defaultOrganization);
 ```
 
 ### Schritt 2.2: Bestehende Rollen zur Standard-Organisation zuordnen
-- [ ] Füge folgenden Code nach der Organisation-Erstellung hinzu:
+- [x] Füge folgenden Code nach der Organisation-Erstellung hinzu:
 ```typescript
 // Alle bestehenden Rollen zur Standard-Organisation zuordnen
 await prisma.role.updateMany({
@@ -388,7 +388,7 @@ console.log('Alle Rollen der Standard-Organisation zugeordnet');
 ```
 
 ### Schritt 2.3: Neue Organisation-Berechtigungen hinzufügen
-- [ ] Erweitere die Permissions-Seeding um Organisation-Berechtigungen:
+- [x] Erweitere die Permissions-Seeding um Organisation-Berechtigungen:
 ```typescript
 // Organisation-Berechtigungen für Admin-Rolle
 const organizationPermissions = [
@@ -412,11 +412,11 @@ for (const perm of organizationPermissions) {
 ```
 
 ### Schritt 2.4: Migration ausführen
-- [ ] Terminal im backend-Verzeichnis öffnen
-- [ ] Ausführen: `npx prisma db seed`
+- [x] Terminal im backend-Verzeichnis öffnen
+- [x] Ausführen: `npx prisma db seed`
 
 ### Schritt 2.5: 🔧 MCP - Seed-Daten verifizieren
-- [ ] **MCP-Datenbankzugriff nutzen** um korrekte Daten-Migration zu verifizieren:
+- [x] **MCP-Datenbankzugriff nutzen** um korrekte Daten-Migration zu verifizieren:
   ```sql
   -- Prüfe Standard-Organisation
   SELECT id, name, displayName, subscriptionPlan, maxUsers, isActive 

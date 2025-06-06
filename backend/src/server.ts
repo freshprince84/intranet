@@ -22,6 +22,7 @@ server.listen(PORT, () => {
 // Graceful Shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM signal empfangen. Server wird heruntergefahren...');
+  claudeConsoleService.cleanup();
   server.close(() => {
     console.log('Server erfolgreich heruntergefahren.');
     process.exit(0);
@@ -30,6 +31,7 @@ process.on('SIGTERM', () => {
 
 process.on('SIGINT', () => {
   console.log('SIGINT signal empfangen. Server wird heruntergefahren...');
+  claudeConsoleService.cleanup();
   server.close(() => {
     console.log('Server erfolgreich heruntergefahren.');
     process.exit(0);
