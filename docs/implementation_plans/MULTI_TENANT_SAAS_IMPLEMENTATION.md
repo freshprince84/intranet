@@ -1002,7 +1002,7 @@ app.use('/api/organizations', organizationRoutes);
 ## Phase 4: Middleware-Erweiterung für Datenisolation
 
 ### Schritt 4.1: Organization Middleware erstellen
-- [ ] Erstelle neue Datei: `backend/src/middleware/organization.ts`
+- [x] Erstelle neue Datei: `backend/src/middleware/organization.ts`
 - [ ] Füge folgenden Code ein:
 
 ```typescript
@@ -1107,8 +1107,8 @@ export const getUserOrganizationFilter = (req: Request): any => {
 ```
 
 ### Schritt 4.2: Bestehende Controller anpassen - User Controller
-- [ ] Öffne `backend/src/controllers/userController.ts`
-- [ ] Füge Organization Middleware Import hinzu:
+- [x] Öffne `backend/src/controllers/userController.ts`
+- [x] Füge Organization Middleware Import hinzu:
 ```typescript
 import { organizationMiddleware, getUserOrganizationFilter } from '../middleware/organization';
 ```
@@ -1146,8 +1146,8 @@ export const getUsers = async (req: Request, res: Response) => {
 ```
 
 ### Schritt 4.3: Bestehende Routes erweitern
-- [ ] Öffne `backend/src/routes/users.ts`
-- [ ] Füge Organization Middleware hinzu:
+- [x] Öffne `backend/src/routes/users.ts`
+- [x] Füge Organization Middleware hinzu:
 ```typescript
 import { organizationMiddleware } from '../middleware/organization';
 
@@ -1156,7 +1156,7 @@ router.use(organizationMiddleware);
 ```
 
 ### Schritt 4.4: 🔧 MCP - Multi-Tenant Datenisolation testen
-- [ ] **MCP-Datenbankzugriff nutzen** um Datenisolation zu verifizieren:
+- [x] **MCP-Datenbankzugriff nutzen** um Datenisolation zu verifizieren:
 
 #### 4.4a: Test-Daten für Isolation-Test vorbereiten
   ```sql

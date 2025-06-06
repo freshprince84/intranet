@@ -15,17 +15,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateInvoiceSettings = exports.updateUserSettings = exports.updateUserRoles = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsers = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
+const organization_1 = require("../middleware/organization");
 const prisma = new client_1.PrismaClient();
 // Alle Benutzer abrufen
-const getAllUsers = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const users = yield prisma.user.findMany({
-            select: {
-                id: true,
-                username: true,
-                firstName: true,
-                lastName: true,
-                email: true
+            where: (0, organization_1.getUserOrganizationFilter)(req),
+            include: {
+                roles: {
+                    where: {
+                        role: {
+                            organizationId: req.organizationId
+                        }
+                    },
+                    include: {
+                        role: true
+                    }
+                },
+                branches: {
+                    include: {
+                        branch: true
+                    }
+                }
             }
         });
         res.json(users);
