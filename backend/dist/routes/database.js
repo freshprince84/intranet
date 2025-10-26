@@ -12,6 +12,7 @@ router.use(auth_1.authMiddleware);
 // Database Management Routes
 router.get('/tables', databaseController_1.getResetableTables);
 router.post('/reset-table', databaseController_1.resetTable);
+router.post('/delete-demo-clients', databaseController_1.deleteDemoClients);
 router.get('/logs', databaseController_1.getDatabaseLogs);
 exports.default = router;
 //# sourceMappingURL=database.js.map

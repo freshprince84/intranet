@@ -317,34 +317,38 @@ model NotificationSettings {
 }
 
 model UserNotificationSettings {
-  id                  Int      @id @default(autoincrement())
-  userId              Int      @unique
-  taskCreate          Boolean?
-  taskUpdate          Boolean?
-  taskDelete          Boolean?
-  taskStatusChange    Boolean?
-  requestCreate       Boolean?
-  requestUpdate       Boolean?
-  requestDelete       Boolean?
-  requestStatusChange Boolean?
-  userCreate          Boolean?
-  userUpdate          Boolean?
-  userDelete          Boolean?
-  roleCreate          Boolean?
-  roleUpdate          Boolean?
-  roleDelete          Boolean?
-  worktimeStart       Boolean?
-  worktimeStop        Boolean?
-  worktimeAutoStop    Boolean? @default(true)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  carticleCreate      Boolean?
-  carticleDelete      Boolean?
-  carticleLink        Boolean?
-  carticleMention     Boolean?
-  carticleUpdate      Boolean?
-  worktimeManagerStop Boolean?
-  user                User     @relation(fields: [userId], references: [id])
+  id                            Int      @id @default(autoincrement())
+  userId                        Int      @unique
+  taskCreate                    Boolean?
+  taskUpdate                    Boolean?
+  taskDelete                    Boolean?
+  taskStatusChange              Boolean?
+  requestCreate                 Boolean?
+  requestUpdate                 Boolean?
+  requestDelete                 Boolean?
+  requestStatusChange           Boolean?
+  userCreate                    Boolean?
+  userUpdate                    Boolean?
+  userDelete                    Boolean?
+  roleCreate                    Boolean?
+  roleUpdate                    Boolean?
+  roleDelete                    Boolean?
+  worktimeStart                 Boolean?
+  worktimeStop                  Boolean?
+  worktimeAutoStop              Boolean? @default(true)
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+  carticleCreate                Boolean?
+  carticleDelete                Boolean?
+  carticleLink                  Boolean?
+  carticleMention               Boolean?
+  carticleUpdate                Boolean?
+  worktimeManagerStop           Boolean?
+  joinRequestReceived           Boolean?
+  joinRequestApproved           Boolean?
+  joinRequestRejected           Boolean?
+  organizationInvitationReceived Boolean?
+  user                          User     @relation(fields: [userId], references: [id])
 }
 
 model EmployeePayroll {
@@ -376,7 +380,7 @@ model CerebroCarticle {
   id            Int                      @id @default(autoincrement())
   title         String
   content       String?
-  slug          String
+  slug          String                   @unique
   parentId      Int?
   createdById   Int
   updatedById   Int?
@@ -667,6 +671,10 @@ enum NotificationType {
   system
   cerebro
   worktime_manager_stop
+  joinRequest
+  joinApproved
+  joinRejected
+  organizationInvitation
 }
 
 enum InvoiceStatus {

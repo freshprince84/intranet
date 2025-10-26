@@ -26,6 +26,7 @@ import { MessageProvider } from './contexts/MessageContext.tsx';
 import { ErrorProvider } from './contexts/ErrorContext.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import { initClaudeConsole } from './utils/claudeConsole.ts';
+import { OrganizationProvider } from './contexts/OrganizationContext.tsx';
 
 const App: React.FC = () => {
     // Claude Console initialisieren
@@ -38,62 +39,64 @@ const App: React.FC = () => {
         <ErrorBoundary>
             <ErrorProvider>
                 <AuthProvider>
-                    <ThemeProvider>
-                        <SidebarProvider>
-                            <WorktimeProvider>
-                                <BranchProvider>
-                                    <MessageProvider>
-                                        <FaviconLoader />
-                                        <Router>
-                                            <Routes>
-                                                {/* Öffentliche Routen */}
-                                                <Route path="/login" element={
-                                                    <PublicRoute>
-                                                        <Login />
-                                                    </PublicRoute>
-                                                } />
-                                                <Route path="/register" element={
-                                                    <PublicRoute>
-                                                        <Register />
-                                                    </PublicRoute>
-                                                } />
-                                                
-                                                {/* Mobile App Landing Page - öffentlich zugänglich */}
-                                                <Route path="/mobile-app" element={<MobileAppLanding />} />
-                                                
-                                                {/* Geschützte Routen */}
-                                                <Route path="/" element={
-                                                    <ProtectedRoute>
-                                                        <Layout />
-                                                    </ProtectedRoute>
-                                                }>
-                                                    <Route index element={<Navigate to="/dashboard" replace />} />
-                                                    <Route path="/dashboard" element={<Dashboard />} />
-                                                    <Route path="/worktracker" element={<Worktracker />} />
-                                                    <Route path="/consultations" element={<ProtectedRoute><Consultations /></ProtectedRoute>} />
-                                                    <Route path="/team-worktime-control" element={
-                                                        <ProtectedRoute entity="team_worktime_control" accessLevel="read">
-                                                            <TeamWorktimeControl />
-                                                        </ProtectedRoute>
+                    <OrganizationProvider>
+                        <ThemeProvider>
+                            <SidebarProvider>
+                                <WorktimeProvider>
+                                    <BranchProvider>
+                                        <MessageProvider>
+                                            <FaviconLoader />
+                                            <Router>
+                                                <Routes>
+                                                    {/* Öffentliche Routen */}
+                                                    <Route path="/login" element={
+                                                        <PublicRoute>
+                                                            <Login />
+                                                        </PublicRoute>
                                                     } />
-                                                    <Route path="/users" element={<UserManagement />} />
-                                                    <Route path="/settings" element={<Settings />} />
-                                                    <Route path="/profile" element={<Profile />} />
-                                                    <Route path="/notifications" element={<NotificationList />} />
-                                                    <Route path="/cerebro/*" element={<Cerebro />} />
-                                                    <Route path="/payroll" element={
-                                                        <ProtectedRoute entity="payroll" accessLevel="read">
-                                                            <Payroll />
-                                                        </ProtectedRoute>
+                                                    <Route path="/register" element={
+                                                        <PublicRoute>
+                                                            <Register />
+                                                        </PublicRoute>
                                                     } />
-                                                </Route>
-                                            </Routes>
-                                        </Router>
-                                    </MessageProvider>
-                                </BranchProvider>
-                            </WorktimeProvider>
-                        </SidebarProvider>
-                    </ThemeProvider>
+                                                    
+                                                    {/* Mobile App Landing Page - öffentlich zugänglich */}
+                                                    <Route path="/mobile-app" element={<MobileAppLanding />} />
+                                                    
+                                                    {/* Geschützte Routen */}
+                                                    <Route path="/" element={
+                                                        <ProtectedRoute>
+                                                            <Layout />
+                                                        </ProtectedRoute>
+                                                    }>
+                                                        <Route index element={<Navigate to="/dashboard" replace />} />
+                                                        <Route path="/dashboard" element={<Dashboard />} />
+                                                        <Route path="/worktracker" element={<Worktracker />} />
+                                                        <Route path="/consultations" element={<ProtectedRoute><Consultations /></ProtectedRoute>} />
+                                                        <Route path="/team-worktime-control" element={
+                                                            <ProtectedRoute entity="team_worktime_control" accessLevel="read">
+                                                                <TeamWorktimeControl />
+                                                            </ProtectedRoute>
+                                                        } />
+                                                        <Route path="/users" element={<UserManagement />} />
+                                                        <Route path="/settings" element={<Settings />} />
+                                                        <Route path="/profile" element={<Profile />} />
+                                                        <Route path="/notifications" element={<NotificationList />} />
+                                                        <Route path="/cerebro/*" element={<Cerebro />} />
+                                                        <Route path="/payroll" element={
+                                                            <ProtectedRoute entity="payroll" accessLevel="read">
+                                                                <Payroll />
+                                                            </ProtectedRoute>
+                                                        } />
+                                                    </Route>
+                                                </Routes>
+                                            </Router>
+                                        </MessageProvider>
+                                    </BranchProvider>
+                                </WorktimeProvider>
+                            </SidebarProvider>
+                        </ThemeProvider>
+                    </OrganizationProvider>
                 </AuthProvider>
             </ErrorProvider>
         </ErrorBoundary>

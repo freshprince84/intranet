@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { notifyOrganizationAdmins, notifyJoinRequestStatus } from './notificationController';
 
 const prisma = new PrismaClient();
 
@@ -57,6 +58,12 @@ export const createJoinRequest = async (req: Request, res: Response) => {
       return res.status(409).json({ message: 'Beitrittsanfrage bereits gestellt' });
     }
 
+    // Hole Requester Info für Benachrichtigung
+    const requester = await prisma.user.findUnique({
+      where: { id: Number(userId) },
+      select: { email: true }
+    });
+
     const joinRequest = await prisma.organizationJoinRequest.create({
       data: {
         organizationId: organization.id,
@@ -83,6 +90,15 @@ export const createJoinRequest = async (req: Request, res: Response) => {
         }
       }
     });
+
+    // 🔔 Benachrichtige Organisation-Admins über neue Beitrittsanfrage
+    if (requester?.email) {
+      await notifyOrganizationAdmins(
+        organization.id,
+        joinRequest.id,
+        requester.email
+      );
+    }
 
     res.status(201).json(joinRequest);
   } catch (error) {
@@ -277,6 +293,14 @@ export const processJoinRequest = async (req: Request, res: Response) => {
 
       return updatedRequest;
     });
+
+    // 🔔 Benachrichtige Requester über Entscheidung
+    await notifyJoinRequestStatus(
+      joinRequest.requesterId,
+      joinRequest.organization.displayName,
+      action === 'approve' ? 'approved' : 'rejected',
+      requestId
+    );
 
     res.json(result);
   } catch (error) {

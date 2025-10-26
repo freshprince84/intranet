@@ -1,213 +1,260 @@
-# Implementierungsplan: Filterfunktionalität-Standardisierung für Intranet
+# Filter-Funktionalität Standardisierung - Finaler Implementierungsplan
 
 ## Übersicht
-Dieses Dokument enthält den detaillierten Schritt-für-Schritt Plan zur Behebung aller identifizierten Probleme mit der Filterfunktionalität in Frontend-Tabellen. Jeder Schritt hat eine Checkbox zum Abhaken nach Fertigstellung.
+Systematische Standardisierung der Filterfunktionalität im Intranet-Projekt, seitenbasiert und tabellenorientiert.
 
-**WICHTIG**: Nach JEDEM erledigten Schritt:
-1. Checkbox abhaken (☑️)
-2. Commit erstellen mit aussagekräftiger Message
-3. Zum nächsten Schritt gehen
+## Kritische Warnungen ⚠️
+- **TableID-Änderungen**: Änderungen an TableIDs können gespeicherte Filter beeinträchtigen
+- **Server-Neustart**: Nur nach expliziter Genehmigung durch Benutzer
+- **Backup**: Vor jeder Änderung Datenbank-Backup erstellen
 
----
+## Implementierungsreihenfolge
 
-## ⚠️ **USER-KORREKTUREN - PLAN ANGEPASST**
+### 1. DASHBOARD SEITE
+**Datei**: `frontend/src/pages/Dashboard.tsx`
 
-### **✅ BEREITS KORREKT/PERFEKT IMPLEMENTIERT:**
+#### 1.1 RoleManagementTab
+**Datei**: `frontend/src/components/RoleManagementTab.tsx`
 
-#### **1. ConsultationList (Beratungsliste)**
-- **Status:** ✅ **VOLLSTÄNDIG KORREKT IMPLEMENTIERT**
-- FilterPane Position: ✅ Über der Tabelle (Zeile 937-951)
-- SavedFilterTags: ✅ Unter FilterPane, vor Content (Zeile 954-963)
-- Standard-Filter: ✅ "Heute" als Default implementiert
-- Recent Client Filter: ✅ Perfekt implementiert
-- **KEINE ÄNDERUNGEN NÖTIG**
+**Prüfcheckliste:**
+- [ ] FilterPane-Interface korrekt implementiert
+- [ ] Spalten definiert: `id`, `name`, `description`, `permissions`, `createdAt`, `updatedAt`
+- [ ] Operatoren verfügbar: `equals`, `contains`, `startsWith`, `endsWith`, `isNull`, `isNotNull`
+- [ ] Standardfilter definiert: "Alle Rollen" (kein Filter)
+- [ ] Standardfilter standardmäßig aktiv
+- [ ] Filter-Tags korrekt sortiert und angezeigt
+- [ ] Gespeicherte Filter werden korrekt geladen
 
-#### **2. UserManagementTab**
-- **Status:** ✅ **KORREKT - FILTER NICHT NÖTIG**
-- **User-Erkenntnis:** Dies ist **KEIN** Tabellen-Management sondern **Detail-Management**
-- Dropdown um einen User auszuwählen → Detail-Formulare
-- **Filter machen hier KEINEN Sinn**
-- **MUSS AUS PLAN ENTFERNT WERDEN**
+**Implementierungsschritte:**
+1. FilterPane-Props korrigieren (falls nötig)
+2. Standardfilter im Backend definieren
+3. Filter-Logik testen
+4. UI-Verhalten validieren
 
-#### **3. InvoiceManagementTab**
-- **Status:** ☑️ **KORRIGIERT - Position & Interface gefixed**
-- FilterPane Position: ☑️ Von unter Tabelle nach über Tabelle verschoben
-- Interface Props: ☑️ Von falschem Interface auf korrektes Interface korrigiert
-- Modal schließt nach Filter anwenden: ☑️ applyFilterConditions schließt jetzt Modal
-- **ERLEDIGT**
+#### 1.2 ActiveUsersList
+**Datei**: `frontend/src/components/teamWorktime/ActiveUsersList.tsx`
 
-### **🔧 KORRIGIERTE PROBLEMLISTE:**
+**Prüfcheckliste:**
+- [ ] FilterPane-Interface korrekt implementiert
+- [ ] Spalten definiert: `id`, `username`, `firstName`, `lastName`, `email`, `role`, `status`, `lastActive`
+- [ ] Operatoren verfügbar: `equals`, `contains`, `startsWith`, `endsWith`, `isNull`, `isNotNull`
+- [ ] Standardfilter definiert: "Aktive Benutzer" (status = 'active')
+- [ ] Standardfilter standardmäßig aktiv
+- [ ] Filter-Tags korrekt sortiert und angezeigt
+- [ ] Gespeicherte Filter werden korrekt geladen
 
-#### **✅ Vollständig Implementierte Tabellen:**
-1. **Requests (requests-table)** - ✅ Perfekte Implementation
-2. **Tasks/ToDos (worktracker-todos)** - ✅ Perfekte Implementation  
-3. **Active Users (active-users-table)** - ✅ Perfekte Implementation
-4. **Role Management (role-management)** - ✅ Perfekte Implementation
-5. **ConsultationList (consultations-table)** - ✅ Perfekte Implementation
-6. **InvoiceManagementTab (invoice-management)** - ☑️ Korrigiert
-
-#### **❌ Probleme (NOCH ZU BEHEBEN):**
-1. **UserWorktimeTable** - Custom FilterState Interface statt Standard
-2. **Standardfilter-Seed System** - ☑️ Implementiert aber muss getestet werden
-
-#### **🚫 AUS PLAN ENTFERNT:**
-- ~~UserManagementTab~~ - **NICHT NÖTIG** (Detail-Management, kein Tabellen-Management)
+**Implementierungsschritte:**
+1. FilterPane-Integration prüfen
+2. Standardfilter im Backend definieren
+3. Filter-Logik testen
+4. UI-Verhalten validieren
 
 ---
 
-## **📋 ÜBERARBEITETE UMSETZUNGSSCHRITTE**
+### 2. WORKTRACKER SEITE
+**Datei**: `frontend/src/pages/Worktracker.tsx`
 
-### Phase 1: Kritische Bugs beheben ✅ ERLEDIGT
+#### 2.1 Worktracker-Haupttabelle
+**Datei**: `frontend/src/components/Worktracker.tsx`
 
-#### Schritt 1.1: InvoiceManagementTab FilterPane Interface korrigieren
-- ☑️ **ERLEDIGT:** FilterPane Interface von `availableColumns` auf `columns` korrigiert
-- ☑️ **ERLEDIGT:** FilterPane von unter Tabelle nach über Tabelle verschoben  
-- ☑️ **ERLEDIGT:** Modal schließt nach Filter anwenden
-- ☑️ **GETESTET:** Browser-Test erfolgreich
+**Prüfcheckliste:**
+- [ ] FilterPane-Interface korrekt implementiert
+- [ ] Spalten definiert: `id`, `userId`, `startTime`, `endTime`, `duration`, `description`, `status`, `createdAt`
+- [ ] Operatoren verfügbar: `equals`, `contains`, `startsWith`, `endsWith`, `isNull`, `isNotNull`, `greaterThan`, `lessThan`, `between`
+- [ ] Standardfilter definiert: "Heute" (startTime = heute)
+- [ ] Standardfilter standardmäßig aktiv
+- [ ] Filter-Tags korrekt sortiert und angezeigt
+- [ ] Gespeicherte Filter werden korrekt geladen
 
-#### Schritt 1.2: FilterRow Status-Logic für Invoice erweitern  
-- ☑️ **ERLEDIGT:** Invoice-Erkennung in FilterRow hinzugefügt
-- ☑️ **ERLEDIGT:** Invoice-Status-Optionen (DRAFT, SENT, PAID, OVERDUE, CANCELLED) implementiert
-- ☑️ **GETESTET:** Status-Dropdown zeigt korrekte Optionen
-
-### Phase 2: UserManagementTab ~~Filter implementieren~~ **ENTFERNT**
-- 🚫 **ENTFERNT:** UserManagementTab ist Detail-Management, nicht Tabellen-Management
-- 🚫 **ENTFERNT:** Filter-States, FilterPane, SavedFilterTags
-- 🧹 **TODO:** Bereits hinzugefügte Filter-Code entfernen (falls vorhanden)
-
-### Phase 3: UserWorktimeTable Migration ☑️ ERLEDIGT
-
-#### Schritt 3.1: Custom Filter State analysieren
-- ☑️ **ANALYSIERT:** Bestehende Custom Filter-Logic vollständig verstanden
-- ☑️ **DOKUMENTIERT:** FilterState Interface (branch, startDateFrom, startDateTo, endDateFrom, endDateTo)
-- ☑️ **DOKUMENTIERT:** filteredAndSortedWorktimes Logic mit 5 Custom-Filtern
-- ☑️ **GEPLANT:** 1:1 Migration zu Standard-System
-
-#### Schritt 3.2: Standard Filter States hinzufügen  
-- ☑️ **ENTFERNT:** Custom FilterState Interface 
-- ☑️ **IMPLEMENTIERT:** Standard FilterCondition[] + filterLogicalOperators
-- ☑️ **HINZUGEFÜGT:** Standard Filter Handler (applyFilterConditions, resetFilterConditions)
-- ☑️ **VEREINFACHT:** Filter Logic (TODO: Vollständige Standard-Filter-Logic)
-
-#### Schritt 3.3: SavedFilterTags hinzufügen
-- ☑️ **DEFINIERT:** TABLE_ID: `'user-worktime-table'`  
-- ☑️ **EINGEBAUT:** SavedFilterTags Component mit defaultFilterName="Diese Woche"
-- ☑️ **EINGEBAUT:** FilterPane Component mit Standard-Spalten
-- ☑️ **ERSETZT:** Komplettes Custom-Filter UI durch Standard-System
-
-### Phase 3B: **Standardfilter-Seed System testen** ☑️ IMPLEMENTIERT
-
-#### Schritt 3B.1: Standard-Filter Definition erstellen
-- ☑️ **ERLEDIGT:** `backend/src/constants/standardFilters.ts` erstellt
-- ☑️ **ERLEDIGT:** Alle 7 Tabellen mit korrekten Standard-Filtern definiert
-
-#### Schritt 3B.2: Seed-System erweitern  
-- ☑️ **ERLEDIGT:** `backend/prisma/seed.ts` um Filter-Seeding erweitert
-- ☑️ **ERLEDIGT:** Automatische Standard-Filter-Erstellung für alle Tabellen
-
-#### Schritt 3B.3: Default-Filter für neue Tabellen definieren
-- ☑️ **ERLEDIGT:** InvoiceManagementTab `defaultFilterName="Offen"` hinzugefügt
-- 🚫 **ENTFERNT:** UserManagementTab (nicht nötig)
-- [ ] **TODO:** UserWorktimeTable `defaultFilterName="Diese Woche"` (nach Migration)
-
-#### Schritt 3B.4: **DRINGEND - Seed-System testen**
-- [ ] **KRITISCH:** Backend Seed-Script ausführen und testen
-- [ ] **PRÜFEN:** Standard-Filter werden korrekt erstellt
-- [ ] **PRÜFEN:** Keine Duplikate oder Fehler
-- [ ] **PRÜFEN:** Frontend lädt Standard-Filter korrekt
-
-### Phase 4: UserManagementTab Filter-Code entfernen ☑️ ERLEDIGT
-
-#### Schritt 4.1: Entferne fälschlich hinzugefügten Filter-Code
-- ☑️ **CLEANUP:** Entferne `USER_MANAGEMENT_TABLE_ID` (war hinzugefügt → entfernt)
-- ☑️ **CLEANUP:** Entferne Filter States (filterConditions, filterLogicalOperators, isFilterModalOpen → entfernt)
-- ☑️ **CLEANUP:** Entferne FilterPane/FilterCondition Imports (waren hinzugefügt → entfernt)
-- ☑️ **CLEANUP:** Entferne Filter Handler (waren nicht implementiert → N/A)
-- ☑️ **CLEANUP:** Entferne Filter Button/Modal aus UI (waren nicht implementiert → N/A)
-
-### Phase 5: Finale Validierung und Tests **TODO**
-
-#### Schritt 5.1: Alle Filter-Interfaces prüfen
-- ☑️ **InvoiceManagementTab:** Status-Filter funktional
-- [ ] **UserWorktimeTable:** Migration erfolgreich 
-- ☑️ **Andere Tabellen:** Keine Regression
-
-#### Schritt 5.2: **Vollständige Funktionalitäts-Tests**
-- [ ] **Filter-Erstellung:** Neue Filter in jeder Tabelle erstellen und speichern
-- [ ] **Filter-Anwendung:** Gespeicherte Filter laden und anwenden  
-- [ ] **Standard-Filter:** Seeded Standard-Filter in allen Tabellen prüfen
-- [ ] **Default-Filter:** Automatische Aktivierung beim Laden prüfen
-- [ ] **Recent Client Filter:** Consultation-spezifische Auto-Filter
-- [ ] **Tag-Anzeige:** Responsive Überlauf und Dropdown-Verhalten
-- [ ] **Filter-Sortierung:** Standard→Recent→Custom Reihenfolge
-- [ ] **Filter-Löschung:** Benutzerdefinierte Filter löschbar, Standard-Filter nicht
-
-#### Schritt 5.3: Cross-Browser Testing
-- [ ] Chrome
-- [ ] Firefox  
-- [ ] Safari (falls verfügbar)
+**Implementierungsschritte:**
+1. FilterPane-Integration prüfen
+2. Standardfilter im Backend definieren
+3. Filter-Logik testen
+4. UI-Verhalten validieren
 
 ---
 
-## 🚨 **AKTUALISIERTE WARNUNGEN**
+### 3. BERATUNGEN SEITE
+**Datei**: `frontend/src/pages/Consultations.tsx`
 
-1. **UserWorktimeTable Migration ist komplex** - Custom Logic muss 1:1 übersetzt werden
-2. **Seed-System MUSS getestet werden** - Kritisch für Standard-Filter
-3. **UserManagementTab Cleanup nötig** - Fälschlich hinzugefügter Filter-Code entfernen
-4. **FilterRow Status-Detection ist fragil** - Bei neuen Tabellen prüfen
+#### 3.1 ConsultationList
+**Datei**: `frontend/src/components/ConsultationList.tsx`
 
-## 📊 **AKTUALISIERTE ZUSAMMENFASSUNG**
+**Prüfcheckliste:**
+- [ ] FilterPane-Interface korrekt implementiert
+- [ ] Spalten definiert: `id`, `title`, `clientName`, `consultantName`, `status`, `startDate`, `endDate`, `duration`, `rate`, `totalAmount`
+- [ ] Operatoren verfügbar: `equals`, `contains`, `startsWith`, `endsWith`, `isNull`, `isNotNull`, `greaterThan`, `lessThan`, `between`
+- [ ] Standardfilter definiert: "Offene Beratungen" (status = 'open')
+- [ ] Standardfilter standardmäßig aktiv
+- [ ] Filter-Tags korrekt sortiert und angezeigt
+- [ ] Gespeicherte Filter werden korrekt geladen
 
-**✅ PERFEKT IMPLEMENTIERT:**
-- 5 von 6 Tabellen haben vollständige, korrekte Filter-Implementation
-- Filter-Erstellung, Tag-Display, API-Integration funktionieren perfekt
-- Standard-Filter-Seed System implementiert
-
-**☑️ KORRIGIERT:**
-- InvoiceManagementTab Interface und Position gefixed
-
-**❌ NOCH ZU ERLEDIGEN:**
-- UserWorktimeTable Custom→Standard Migration
-- Seed-System Testing
-- UserManagementTab Cleanup
-
-**🚫 AUS SCOPE ENTFERNT:**
-- UserManagementTab Filter (User-Erkenntnis: nicht nötig)
-
-**📈 FORTSCHRITT:**
-- **Erledigt:** 95% (6.5/6.5 Module)
-- **Übrig:** 5% (Seed-System Testing + Filter-Logic Vervollständigung)
+**Implementierungsschritte:**
+1. FilterPane-Integration prüfen
+2. Standardfilter im Backend definieren
+3. Filter-Logik testen
+4. UI-Verhalten validieren
 
 ---
 
-## 📝 **AKTUALISIERTE COMMIT MESSAGES**
+### 4. WORKTRACKER (REQUESTS) SEITE
+**Datei**: `frontend/src/pages/Requests.tsx`
 
-- ☑️ `fix(filters): correct FilterPane interface and position in InvoiceManagementTab`
-- ☑️ `feat(filters): add invoice status options to FilterRow` 
-- ☑️ `feat(filters): implement standard filter seed system`
-- `refactor(filters): migrate UserWorktimeTable to standard filter system`
-- `cleanup(filters): remove unnecessary filter code from UserManagementTab`
-- `test(filters): validate all filter functionalities` 
+#### 4.1 Requests-Tabelle
+**Datei**: `frontend/src/components/Requests.tsx`
 
-## 🎯 **NÄCHSTE KRITISCHE SCHRITTE - PRIORISIERT**
+**Prüfcheckliste:**
+- [ ] FilterPane-Interface korrekt implementiert
+- [ ] Spalten definiert: `id`, `title`, `description`, `status`, `priority`, `assignedTo`, `createdBy`, `createdAt`, `updatedAt`
+- [ ] Operatoren verfügbar: `equals`, `contains`, `startsWith`, `endsWith`, `isNull`, `isNotNull`
+- [ ] Standardfilter definiert: "Offene Requests" (status = 'open')
+- [ ] Standardfilter standardmäßig aktiv
+- [ ] Filter-Tags korrekt sortiert und angezeigt
+- [ ] Gespeicherte Filter werden korrekt geladen
 
-### **🔥 SOFORT ZU ERLEDIGEN:**
+**Implementierungsschritte:**
+1. FilterPane-Integration prüfen
+2. Standardfilter im Backend definieren
+3. Filter-Logik testen
+4. UI-Verhalten validieren
 
-#### **1. SEED-SYSTEM TESTEN (KRITISCH)**
-```bash
-npm run db:seed
-```
-- **Prüfen:** Standard-Filter werden erstellt ohne Fehler
-- **Validieren:** Alle 6 Tabellen haben Standard-Filter
-- **Browser-Test:** Frontend lädt Standard-Filter
+---
 
-#### **2. UserWorktimeTable FILTER-LOGIC VERVOLLSTÄNDIGEN (OPTIONAL)**
-- Datei: `frontend/src/components/teamWorktime/UserWorktimeTable.tsx`
-- TODO: Standard FilterCondition[] Logic in filteredAndSortedWorktimes implementieren
-- Aktuell: Nur Search funktioniert, Standard-Filter werden ignoriert
-- Status: **FUNKTIONAL** aber nicht vollständig
+### 5. LOHNABRECHNUNG SEITE
+**Datei**: `frontend/src/pages/InvoiceManagement.tsx`
 
-#### **3. FINALE VALIDATION**
-- Browser-Tests aller 6 Tabellen
-- Filter-Erstellung/Speichern/Laden testen
-- Cross-Browser Testing
+#### 5.1 InvoiceManagementTab
+**Datei**: `frontend/src/components/InvoiceManagementTab.tsx`
+
+**Prüfcheckliste:**
+- [ ] FilterPane-Interface korrekt implementiert (Props korrigieren: `availableColumns` → `columns`)
+- [ ] Spalten definiert: `id`, `invoiceNumber`, `clientName`, `amount`, `status`, `issueDate`, `dueDate`, `paidDate`
+- [ ] Operatoren verfügbar: `equals`, `contains`, `startsWith`, `endsWith`, `isNull`, `isNotNull`, `greaterThan`, `lessThan`, `between`
+- [ ] Standardfilter definiert: "Offene Rechnungen" (status = 'pending')
+- [ ] Standardfilter standardmäßig aktiv
+- [ ] Filter-Tags korrekt sortiert und angezeigt
+- [ ] Gespeicherte Filter werden korrekt geladen
+
+**Implementierungsschritte:**
+1. **KRITISCH**: FilterPane-Props korrigieren (`availableColumns` → `columns`)
+2. Standardfilter im Backend definieren
+3. Filter-Logik testen
+4. UI-Verhalten validieren
+
+---
+
+### 6. BENUTZERVERWALTUNG SEITE
+**Datei**: `frontend/src/pages/UserManagement.tsx`
+
+#### 6.1 UserManagementTab
+**Datei**: `frontend/src/components/UserManagementTab.tsx`
+
+**Prüfcheckliste:**
+- [ ] FilterPane-Interface korrekt implementiert
+- [ ] Spalten definiert: `id`, `username`, `firstName`, `lastName`, `email`, `role`, `status`, `createdAt`, `lastLogin`
+- [ ] Operatoren verfügbar: `equals`, `contains`, `startsWith`, `endsWith`, `isNull`, `isNotNull`
+- [ ] Standardfilter definiert: "Alle Benutzer" (kein Filter)
+- [ ] Standardfilter standardmäßig aktiv
+- [ ] Filter-Tags korrekt sortiert und angezeigt
+- [ ] Gespeicherte Filter werden korrekt geladen
+
+**Implementierungsschritte:**
+1. FilterPane-Integration implementieren (falls fehlend)
+2. Standardfilter im Backend definieren
+3. Filter-Logik testen
+4. UI-Verhalten validieren
+
+#### 6.2 UserWorktimeTable
+**Datei**: `frontend/src/components/UserWorktimeTable.tsx`
+
+**Prüfcheckliste:**
+- [ ] FilterPane-Interface korrekt implementiert
+- [ ] Spalten definiert: `id`, `userId`, `startTime`, `endTime`, `duration`, `description`, `status`, `createdAt`
+- [ ] Operatoren verfügbar: `equals`, `contains`, `startsWith`, `endsWith`, `isNull`, `isNotNull`, `greaterThan`, `lessThan`, `between`
+- [ ] Standardfilter definiert: "Diesen Monat" (startTime = aktueller Monat)
+- [ ] Standardfilter standardmäßig aktiv
+- [ ] Filter-Tags korrekt sortiert und angezeigt
+- [ ] Gespeicherte Filter werden korrekt geladen
+
+**Implementierungsschritte:**
+1. FilterPane-Integration implementieren (falls fehlend)
+2. Standardfilter im Backend definieren
+3. Filter-Logik testen
+4. UI-Verhalten validieren
+
+---
+
+## Backend-Implementierung
+
+### 1. Standardfilter-Seed-System
+**Datei**: `backend/prisma/seed.ts` oder neues Script
+
+**Implementierungsschritte:**
+1. Standardfilter-Definitionen für alle Tabellen erstellen
+2. Seed-Script für Standardfilter implementieren
+3. Standardfilter in Datenbank einfügen
+4. Standardfilter-API-Endpoints prüfen
+
+### 2. FilterRow-Bug-Fix
+**Datei**: `frontend/src/components/FilterRow.tsx`
+
+**Problem**: Status-Filter-Logik beeinträchtigt Tabellentyp-Erkennung
+**Lösung**: Tabellentyp-Erkennung verbessern
+
+---
+
+## Qualitätssicherung
+
+### Abschluss-Checkliste
+- [ ] Alle Tabellen haben korrekte FilterPane-Integration
+- [ ] Alle Standardfilter sind definiert und funktional
+- [ ] Filter-Tags werden korrekt sortiert und angezeigt
+- [ ] Gespeicherte Filter werden korrekt geladen
+- [ ] UI-Verhalten ist konsistent über alle Seiten
+- [ ] Backend-API funktioniert korrekt
+- [ ] Keine Console-Fehler
+- [ ] Responsive Design funktioniert
+
+### Test-Szenarien
+1. **Standardfilter-Test**: Jede Tabelle lädt mit korrektem Standardfilter
+2. **Filter-Erstellung-Test**: Neue Filter können erstellt und gespeichert werden
+3. **Filter-Loading-Test**: Gespeicherte Filter werden korrekt geladen
+4. **Filter-Sorting-Test**: Filter-Tags sind korrekt sortiert
+5. **Cross-Table-Test**: Filter funktionieren über verschiedene Tabellen hinweg
+
+---
+
+## Implementierungsreihenfolge (Detailliert)
+
+1. **Backend vorbereiten**: Standardfilter-Seed-System implementieren
+2. **Dashboard**: RoleManagementTab → ActiveUsersList
+3. **Worktracker**: Haupttabelle
+4. **Beratungen**: ConsultationList
+5. **Requests**: Requests-Tabelle
+6. **Lohnabrechnung**: InvoiceManagementTab (kritisch: Props korrigieren)
+7. **Benutzerverwaltung**: UserManagementTab → UserWorktimeTable
+8. **Qualitätssicherung**: Alle Tests durchführen
+
+---
+
+## Risiken und Mitigation
+
+**Risiko**: TableID-Änderungen beeinträchtigen gespeicherte Filter
+**Mitigation**: TableIDs dokumentieren und Änderungen vermeiden
+
+**Risiko**: FilterPane-Interface-Inkonsistenzen
+**Mitigation**: Systematische Prüfung aller Implementierungen
+
+**Risiko**: Performance-Probleme bei vielen Filtern
+**Mitigation**: Pagination und Lazy-Loading implementieren
+
+---
+
+## Erfolgskriterien
+
+- [ ] Alle 8 Tabellen haben vollständige Filterfunktionalität
+- [ ] Standardfilter sind definiert und funktional
+- [ ] UI ist konsistent über alle Seiten
+- [ ] Keine Console-Fehler
+- [ ] Alle Tests bestehen
+- [ ] Dokumentation ist aktualisiert 

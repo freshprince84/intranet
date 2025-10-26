@@ -5,6 +5,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma, RequestStatus, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
+import { getDataIsolationFilter } from '../middleware/organization';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
@@ -50,9 +51,13 @@ const branchSelect = {
 } as const;
 
 // Alle Requests abrufen
-export const getAllRequests = async (_req: Request, res: Response) => {
+export const getAllRequests = async (req: Request, res: Response) => {
     try {
+        // Datenisolation: Standalone User sehen nur ihre eigenen Requests
+        const isolationFilter = getDataIsolationFilter(req as any, 'request');
+        
         const requests = await prisma.request.findMany({
+            where: isolationFilter,
             include: {
                 requester: {
                     select: userSelect
@@ -96,8 +101,14 @@ export const getRequestById = async (req: Request<{ id: string }>, res: Response
     try {
         const { id } = req.params;
         
-        const request = await prisma.request.findUnique({
-            where: { id: parseInt(id) },
+        // Datenisolation: Prüfe ob User Zugriff auf diesen Request hat
+        const isolationFilter = getDataIsolationFilter(req as any, 'request');
+        
+        const request = await prisma.request.findFirst({
+            where: {
+                id: parseInt(id),
+                ...isolationFilter
+            },
             include: {
                 requester: {
                     select: userSelect

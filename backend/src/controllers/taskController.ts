@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { PrismaClient, Prisma, TaskStatus, NotificationType } from '@prisma/client';
 import { validateTask, TaskData } from '../validation/taskValidation';
 import { createNotificationIfEnabled } from './notificationController';
+import { getDataIsolationFilter } from '../middleware/organization';
 
 const prisma = new PrismaClient();
 
@@ -30,9 +31,13 @@ interface TaskParams {
 }
 
 // Alle Tasks abrufen
-export const getAllTasks = async (_req: Request, res: Response) => {
+export const getAllTasks = async (req: Request, res: Response) => {
     try {
+        // Datenisolation: Standalone User sehen nur ihre eigenen Tasks
+        const isolationFilter = getDataIsolationFilter(req, 'task');
+        
         const tasks = await prisma.task.findMany({
+            where: isolationFilter,
             include: {
                 responsible: {
                     select: userSelect
@@ -66,8 +71,14 @@ export const getTaskById = async (req: Request<TaskParams>, res: Response) => {
             return res.status(400).json({ error: 'Ungültige Task-ID' });
         }
 
-        const task = await prisma.task.findUnique({
-            where: { id: taskId },
+        // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
+        const isolationFilter = getDataIsolationFilter(req as any, 'task');
+        
+        const task = await prisma.task.findFirst({
+            where: {
+                id: taskId,
+                ...isolationFilter
+            },
             include: {
                 responsible: {
                     select: userSelect

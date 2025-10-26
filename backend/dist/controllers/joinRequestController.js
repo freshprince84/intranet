@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.withdrawJoinRequest = exports.processJoinRequest = exports.getMyJoinRequests = exports.getJoinRequestsForOrganization = exports.createJoinRequest = void 0;
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
+const notificationController_1 = require("./notificationController");
 const prisma = new client_1.PrismaClient();
 // Validation Schemas
 const createJoinRequestSchema = zod_1.z.object({
@@ -56,6 +57,11 @@ const createJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (existingRequest && existingRequest.status === 'pending') {
             return res.status(409).json({ message: 'Beitrittsanfrage bereits gestellt' });
         }
+        // Hole Requester Info für Benachrichtigung
+        const requester = yield prisma.user.findUnique({
+            where: { id: Number(userId) },
+            select: { email: true }
+        });
         const joinRequest = yield prisma.organizationJoinRequest.create({
             data: {
                 organizationId: organization.id,
@@ -82,6 +88,10 @@ const createJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 }
             }
         });
+        // 🔔 Benachrichtige Organisation-Admins über neue Beitrittsanfrage
+        if (requester === null || requester === void 0 ? void 0 : requester.email) {
+            yield (0, notificationController_1.notifyOrganizationAdmins)(organization.id, joinRequest.id, requester.email);
+        }
         res.status(201).json(joinRequest);
     }
     catch (error) {
@@ -258,6 +268,8 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
             }
             return updatedRequest;
         }));
+        // 🔔 Benachrichtige Requester über Entscheidung
+        yield (0, notificationController_1.notifyJoinRequestStatus)(joinRequest.requesterId, joinRequest.organization.displayName, action === 'approve' ? 'approved' : 'rejected', requestId);
         res.json(result);
     }
     catch (error) {

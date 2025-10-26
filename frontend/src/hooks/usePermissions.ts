@@ -138,13 +138,55 @@ export const usePermissions = () => {
         return currentRole?.name.toLowerCase() === 'admin';
     };
 
+    // Organisation-spezifische Berechtigungen
+    const canManageOrganization = (): boolean => {
+        return hasPermission('organization_management', 'both', 'page') || hasPermission('organization_management', 'write', 'page');
+    };
+
+    const canViewOrganization = (): boolean => {
+        return hasPermission('organization_management', 'both', 'page') || hasPermission('organization_management', 'read', 'page');
+    };
+
+    const canManageJoinRequests = (): boolean => {
+        return hasPermission('organization_join_requests', 'both', 'table') || hasPermission('organization_join_requests', 'write', 'table');
+    };
+
+    const canViewJoinRequests = (): boolean => {
+        return hasPermission('organization_join_requests', 'both', 'table') || hasPermission('organization_join_requests', 'read', 'table');
+    };
+
+    const canManageOrganizationUsers = (): boolean => {
+        return hasPermission('organization_users', 'write', 'table');
+    };
+
+    const canViewOrganizationUsers = (): boolean => {
+        return hasPermission('organization_users', 'read', 'table');
+    };
+
+    const canManageInvitations = (): boolean => {
+        return hasPermission('organization_invitations', 'write', 'table');
+    };
+
+    const canViewInvitations = (): boolean => {
+        return hasPermission('organization_invitations', 'read', 'table');
+    };
+
     return {
         currentRole,
         permissions,
         loading,
         error,
         hasPermission,
-        isAdmin
+        isAdmin,
+        // Organisation-spezifische Berechtigungen
+        canManageOrganization,
+        canViewOrganization,
+        canManageJoinRequests,
+        canViewJoinRequests,
+        canManageOrganizationUsers,
+        canViewOrganizationUsers,
+        canManageInvitations,
+        canViewInvitations
     };
 };
 

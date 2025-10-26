@@ -210,17 +210,17 @@ const Requests: React.FC = () => {
           console.log('Archiv-Filter für Requests erstellt');
         }
 
-        // Erstelle "Aktuell"-Filter, wenn er noch nicht existiert
-        if (!aktuellFilterExists) {
-          const aktuellFilter = {
-            tableId: REQUESTS_TABLE_ID,
-            name: 'Aktuell',
-            conditions: [
-              { column: 'status', operator: 'equals', value: 'approval' },
-              { column: 'status', operator: 'equals', value: 'to_improve' }
-            ],
-            operators: ['OR']
-          };
+      // Erstelle "Aktuell"-Filter, wenn er noch nicht existiert
+      if (!aktuellFilterExists) {
+        const aktuellFilter = {
+          tableId: REQUESTS_TABLE_ID,
+          name: 'Aktuell',
+          conditions: [
+            { column: 'status', operator: 'notEquals', value: 'approved' },
+            { column: 'status', operator: 'notEquals', value: 'denied' }
+          ],
+          operators: ['AND']
+        };
 
           await axiosInstance.post(
             `${API_ENDPOINTS.SAVED_FILTERS.BASE}`,

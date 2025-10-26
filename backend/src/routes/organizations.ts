@@ -1,35 +1,31 @@
-import { Router } from 'express';
+import express from 'express';
+import { authMiddleware } from '../middleware/auth';
 import { 
-  getAllOrganizations,
-  getOrganizationById,
+  getCurrentOrganization,
   createOrganization,
   updateOrganization,
-  deleteOrganization,
-  getOrganizationStats
+  createJoinRequest,
+  getJoinRequests,
+  processJoinRequest,
+  searchOrganizations
 } from '../controllers/organizationController';
-import { authMiddleware } from '../middleware/auth';
 
-const router = Router();
+const router = express.Router();
 
-// Alle Routen benötigen Authentifizierung
+// Alle Routen erfordern Authentifizierung
 router.use(authMiddleware);
 
-// GET /api/organizations - Alle Organisationen abrufen
-router.get('/', getAllOrganizations);
-
-// GET /api/organizations/:id - Organisation nach ID abrufen
-router.get('/:id', getOrganizationById);
-
-// GET /api/organizations/:id/stats - Organisation-Statistiken abrufen
-router.get('/:id/stats', getOrganizationStats);
-
-// POST /api/organizations - Neue Organisation erstellen
+// Organisation-Routen
+router.get('/current', getCurrentOrganization);
 router.post('/', createOrganization);
+router.put('/current', updateOrganization);
 
-// PUT /api/organizations/:id - Organisation aktualisieren
-router.put('/:id', updateOrganization);
+// Join Request Routen
+router.post('/join-request', createJoinRequest);
+router.get('/join-requests', getJoinRequests);
+router.patch('/join-requests/:id', processJoinRequest);
 
-// DELETE /api/organizations/:id - Organisation löschen
-router.delete('/:id', deleteOrganization);
+// Suche
+router.get('/search', searchOrganizations);
 
 export default router; 

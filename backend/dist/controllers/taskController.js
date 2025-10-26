@@ -16,6 +16,7 @@ exports.unlinkTaskFromCarticle = exports.linkTaskToCarticle = exports.getTaskCar
 const client_1 = require("@prisma/client");
 const taskValidation_1 = require("../validation/taskValidation");
 const notificationController_1 = require("./notificationController");
+const organization_1 = require("../middleware/organization");
 const prisma = new client_1.PrismaClient();
 const userSelect = {
     id: true,
@@ -31,9 +32,12 @@ const branchSelect = {
     name: true
 };
 // Alle Tasks abrufen
-const getAllTasks = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // Datenisolation: Standalone User sehen nur ihre eigenen Tasks
+        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
         const tasks = yield prisma.task.findMany({
+            where: isolationFilter,
             include: {
                 responsible: {
                     select: userSelect
@@ -67,8 +71,10 @@ const getTaskById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         if (isNaN(taskId)) {
             return res.status(400).json({ error: 'Ungültige Task-ID' });
         }
-        const task = yield prisma.task.findUnique({
-            where: { id: taskId },
+        // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
+        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
+        const task = yield prisma.task.findFirst({
+            where: Object.assign({ id: taskId }, isolationFilter),
             include: {
                 responsible: {
                     select: userSelect

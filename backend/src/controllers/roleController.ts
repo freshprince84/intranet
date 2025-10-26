@@ -58,6 +58,7 @@ export const getAllRoles = async (_req: Request, res: Response) => {
 export const getRoleById = async (req: Request<RoleParams>, res: Response) => {
     try {
         const roleId = parseInt(req.params.id, 10);
+        
         if (isNaN(roleId)) {
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
         }
@@ -69,7 +70,13 @@ export const getRoleById = async (req: Request<RoleParams>, res: Response) => {
                 users: {
                     include: {
                         user: {
-                            select: userSelect
+                            select: {
+                                id: true,
+                                username: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true
+                            }
                         }
                     }
                 }
@@ -79,6 +86,7 @@ export const getRoleById = async (req: Request<RoleParams>, res: Response) => {
         if (!role) {
             return res.status(404).json({ message: 'Rolle nicht gefunden' });
         }
+        
         res.json(role);
     } catch (error) {
         console.error('Error in getRoleById:', error);
@@ -121,6 +129,7 @@ export const createRole = async (req: Request<{}, {}, CreateRoleBody>, res: Resp
                 data: {
                     name,
                     description,
+                    organizationId: 1, // Standard-Organisation für jetzt
                     permissions: {
                         create: permissions.map(permission => ({
                             entity: permission.entity,

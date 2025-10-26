@@ -1,22 +1,23 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-const express_1 = require("express");
-const organizationController_1 = require("../controllers/organizationController");
+const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
-const router = (0, express_1.Router)();
-// Alle Routen benötigen Authentifizierung
+const organizationController_1 = require("../controllers/organizationController");
+const router = express_1.default.Router();
+// Alle Routen erfordern Authentifizierung
 router.use(auth_1.authMiddleware);
-// GET /api/organizations - Alle Organisationen abrufen
-router.get('/', organizationController_1.getAllOrganizations);
-// GET /api/organizations/:id - Organisation nach ID abrufen
-router.get('/:id', organizationController_1.getOrganizationById);
-// GET /api/organizations/:id/stats - Organisation-Statistiken abrufen
-router.get('/:id/stats', organizationController_1.getOrganizationStats);
-// POST /api/organizations - Neue Organisation erstellen
+// Organisation-Routen
+router.get('/current', organizationController_1.getCurrentOrganization);
 router.post('/', organizationController_1.createOrganization);
-// PUT /api/organizations/:id - Organisation aktualisieren
-router.put('/:id', organizationController_1.updateOrganization);
-// DELETE /api/organizations/:id - Organisation löschen
-router.delete('/:id', organizationController_1.deleteOrganization);
+router.put('/current', organizationController_1.updateOrganization);
+// Join Request Routen
+router.post('/join-request', organizationController_1.createJoinRequest);
+router.get('/join-requests', organizationController_1.getJoinRequests);
+router.patch('/join-requests/:id', organizationController_1.processJoinRequest);
+// Suche
+router.get('/search', organizationController_1.searchOrganizations);
 exports.default = router;
 //# sourceMappingURL=organizations.js.map

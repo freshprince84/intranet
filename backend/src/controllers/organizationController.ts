@@ -84,7 +84,6 @@ export const getOrganizationById = async (req: Request, res: Response) => {
             requester: {
               select: {
                 id: true,
-                username: true,
                 email: true,
                 firstName: true,
                 lastName: true
@@ -109,7 +108,7 @@ export const getOrganizationById = async (req: Request, res: Response) => {
             inviter: {
               select: {
                 id: true,
-                username: true,
+                email: true,
                 firstName: true,
                 lastName: true
               }
@@ -360,5 +359,258 @@ export const getOrganizationStats = async (req: Request, res: Response) => {
       message: 'Fehler beim Abrufen der Organisations-Statistiken', 
       error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
     });
+  }
+};
+
+// Aktuelle Organisation abrufen (basierend auf User-Kontext)
+export const getCurrentOrganization = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Nicht authentifiziert' });
+    }
+
+    // Hole die aktuelle Rolle des Users
+    const userRole = await prisma.userRole.findFirst({
+      where: { 
+        userId: Number(userId),
+        lastUsed: true 
+      },
+      include: {
+        role: {
+          include: {
+            organization: true
+          }
+        }
+      }
+    });
+
+    if (!userRole?.role.organization) {
+      return res.status(404).json({ message: 'Keine Organisation gefunden' });
+    }
+
+    res.json(userRole.role.organization);
+  } catch (error) {
+    console.error('Fehler beim Abrufen der Organisation:', error);
+    res.status(500).json({ message: 'Interner Serverfehler' });
+  }
+};
+
+// Beitrittsanfrage erstellen
+export const createJoinRequest = async (req: Request, res: Response) => {
+  try {
+    const { organizationName, message } = req.body;
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Nicht authentifiziert' });
+    }
+
+    if (!organizationName) {
+      return res.status(400).json({ message: 'Organisationsname ist erforderlich' });
+    }
+
+    // Finde Organisation
+    const organization = await prisma.organization.findUnique({
+      where: { name: organizationName.toLowerCase() }
+    });
+
+    if (!organization) {
+      return res.status(404).json({ message: 'Organisation nicht gefunden' });
+    }
+
+    // Prüfe ob bereits Anfrage existiert
+    const existingRequest = await prisma.organizationJoinRequest.findUnique({
+      where: {
+        organizationId_requesterId: {
+          organizationId: organization.id,
+          requesterId: Number(userId)
+        }
+      }
+    });
+
+    if (existingRequest) {
+      return res.status(409).json({ message: 'Beitrittsanfrage bereits gestellt' });
+    }
+
+    const joinRequest = await prisma.organizationJoinRequest.create({
+      data: {
+        organizationId: organization.id,
+        requesterId: Number(userId),
+        message: message || null
+      },
+      include: {
+        organization: true,
+        requester: true
+      }
+    });
+
+    res.status(201).json(joinRequest);
+  } catch (error) {
+    console.error('Fehler beim Erstellen der Beitrittsanfrage:', error);
+    res.status(500).json({ message: 'Interner Serverfehler' });
+  }
+};
+
+// Beitrittsanfragen abrufen
+export const getJoinRequests = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Nicht authentifiziert' });
+    }
+
+    // Hole aktuelle Organisation
+    const userRole = await prisma.userRole.findFirst({
+      where: { 
+        userId: Number(userId),
+        lastUsed: true 
+      },
+      include: {
+        role: {
+          include: {
+            organization: true
+          }
+        }
+      }
+    });
+
+    if (!userRole) {
+      return res.status(404).json({ message: 'Keine aktive Rolle gefunden' });
+    }
+
+    const joinRequests = await prisma.organizationJoinRequest.findMany({
+      where: { organizationId: userRole.role.organizationId },
+      include: {
+        requester: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true
+          }
+        },
+        processor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(joinRequests);
+  } catch (error) {
+    console.error('Fehler beim Abrufen der Beitrittsanfragen:', error);
+    res.status(500).json({ message: 'Interner Serverfehler' });
+  }
+};
+
+// Beitrittsanfrage bearbeiten
+export const processJoinRequest = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { action, response, roleId } = req.body; // action: 'approve' | 'reject'
+    const userId = req.userId;
+
+    if (!userId) {
+      return res.status(401).json({ message: 'Nicht authentifiziert' });
+    }
+
+    if (!['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ message: 'Ungültige Aktion' });
+    }
+
+    // Hole Beitrittsanfrage
+    const joinRequest = await prisma.organizationJoinRequest.findUnique({
+      where: { id: Number(id) },
+      include: {
+        organization: true,
+        requester: true
+      }
+    });
+
+    if (!joinRequest) {
+      return res.status(404).json({ message: 'Beitrittsanfrage nicht gefunden' });
+    }
+
+    if (joinRequest.status !== 'pending') {
+      return res.status(400).json({ message: 'Anfrage bereits bearbeitet' });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      // Aktualisiere Beitrittsanfrage
+      const updatedRequest = await tx.organizationJoinRequest.update({
+        where: { id: Number(id) },
+        data: {
+          status: action === 'approve' ? 'approved' : 'rejected',
+          response: response || null,
+          processedBy: Number(userId),
+          processedAt: new Date()
+        }
+      });
+
+      if (action === 'approve') {
+        // Erstelle UserRole-Eintrag
+        if (!roleId) {
+          throw new Error('Rolle ist für Genehmigung erforderlich');
+        }
+
+        await tx.userRole.create({
+          data: {
+            userId: joinRequest.requesterId,
+            roleId: Number(roleId)
+          }
+        });
+      }
+
+      return updatedRequest;
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.error('Fehler beim Bearbeiten der Beitrittsanfrage:', error);
+    res.status(500).json({ message: 'Interner Serverfehler' });
+  }
+};
+
+// Organisationen für Join-Request suchen
+export const searchOrganizations = async (req: Request, res: Response) => {
+  try {
+    const { search } = req.query;
+
+    if (!search || typeof search !== 'string') {
+      return res.status(400).json({ message: 'Suchbegriff ist erforderlich' });
+    }
+
+    const organizations = await prisma.organization.findMany({
+      where: {
+        AND: [
+          { isActive: true },
+          {
+            OR: [
+              { name: { contains: search.toLowerCase() } },
+              { displayName: { contains: search, mode: 'insensitive' } }
+            ]
+          }
+        ]
+      },
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        logo: true
+      },
+      take: 10
+    });
+
+    res.json(organizations);
+  } catch (error) {
+    console.error('Fehler beim Suchen von Organisationen:', error);
+    res.status(500).json({ message: 'Interner Serverfehler' });
   }
 }; 

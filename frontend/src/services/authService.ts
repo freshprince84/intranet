@@ -7,10 +7,9 @@ interface LoginData {
   password: string;
 }
 
-interface RegisterData extends LoginData {
+interface RegisterData {
   email: string;
-  first_name: string;
-  last_name: string;
+  password: string;
 }
 
 interface AuthResponse {

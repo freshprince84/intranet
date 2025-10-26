@@ -69,7 +69,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
         
         try {
           const [usersResponse, branchesResponse] = await Promise.all([
-            axiosInstance.get(API_ENDPOINTS.USERS.BASE),
+            axiosInstance.get(API_ENDPOINTS.USERS.DROPDOWN),
             axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE)
           ]);
 
@@ -150,8 +150,15 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
 
   // Formatiere den Benutzernamen (erstes Wort vom Vornamen + erstes Wort vom Benutzernamen)
   const formatUserName = (user: User) => {
-    const firstName = user.firstName.split(' ')[0];
-    const username = user.username.split(' ')[0];
+    const firstName = user.firstName?.split(' ')[0];
+    const username = user.username?.split(' ')[0];
+    
+    // Wenn kein firstName vorhanden ist, nur username anzeigen
+    if (!firstName) {
+      return username || 'Unbekannt';
+    }
+    
+    // Standard: firstName (username)
     return `${firstName} (${username})`;
   };
 
