@@ -57,7 +57,13 @@ const getRoleById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 users: {
                     include: {
                         user: {
-                            select: userSelect
+                            select: {
+                                id: true,
+                                username: true,
+                                firstName: true,
+                                lastName: true,
+                                email: true
+                            }
                         }
                     }
                 }
@@ -104,6 +110,7 @@ const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 data: {
                     name,
                     description,
+                    organizationId: 1, // Standard-Organisation für jetzt
                     permissions: {
                         create: permissions.map(permission => ({
                             entity: permission.entity,

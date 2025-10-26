@@ -44,6 +44,10 @@ export interface NotificationSettingsUpdateInput {
   worktimeStart?: boolean;
   worktimeStop?: boolean;
   worktimeAutoStop?: boolean;
+  joinRequestReceived?: boolean;
+  joinRequestApproved?: boolean;
+  joinRequestRejected?: boolean;
+  organizationInvitationReceived?: boolean;
 }
 
 export interface UserNotificationSettingsUpdateInput {
@@ -64,5 +68,17 @@ export interface UserNotificationSettingsUpdateInput {
   worktimeStart?: boolean;
   worktimeStop?: boolean;
   worktimeAutoStop?: boolean;
+  joinRequestReceived?: boolean;
+  joinRequestApproved?: boolean;
+  joinRequestRejected?: boolean;
+  organizationInvitationReceived?: boolean;
   userId: number;
+}
+
+export interface OrganizationNotificationInput {
+  organizationId: number;
+  userId: number;
+  type: 'joinRequest' | 'joinApproved' | 'joinRejected' | 'organizationInvitation';
+  relatedEntityId: number;
+  message?: string;
 } 

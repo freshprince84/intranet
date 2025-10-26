@@ -77,6 +77,7 @@ export const API_ENDPOINTS = {
     // Benutzer
     USERS: {
         BASE: '/users',
+        DROPDOWN: '/users/dropdown',
         BY_ID: (id: number) => `/users/${id}`,
         CHANGE_ROLE: (id: number) => `/users/${id}/role`,
         INVOICE_SETTINGS: '/users/invoice-settings'
@@ -172,7 +173,17 @@ export const API_ENDPOINTS = {
     DATABASE: {
         TABLES: '/database/tables',
         RESET_TABLE: '/database/reset-table',
+        DELETE_DEMO_CLIENTS: '/database/delete-demo-clients',
         LOGS: '/database/logs'
+    },
+    // Organisationen
+    ORGANIZATIONS: {
+        BASE: '/organizations',
+        CURRENT: '/organizations/current',
+        SEARCH: '/organizations/search',
+        JOIN_REQUEST: '/organizations/join-request',
+        JOIN_REQUESTS: '/organizations/join-requests',
+        PROCESS_JOIN_REQUEST: (id: number) => `/organizations/join-requests/${id}`
     }
 };
 

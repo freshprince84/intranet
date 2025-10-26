@@ -3,7 +3,8 @@ import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
 import {
   NotificationCreateInput,
   NotificationUpdateInput,
-  NotificationFilter
+  NotificationFilter,
+  OrganizationNotificationInput
 } from '../types/notification';
 import { validateNotification } from '../validation/notificationValidation';
 
@@ -59,6 +60,19 @@ async function isNotificationEnabled(
       break;
     case NotificationType.worktime_manager_stop:
       enabled = userSettings?.worktimeManagerStop ?? systemSettings.worktimeManagerStop;
+      break;
+    // Neue Organisation-spezifische Benachrichtigungen
+    case NotificationType.joinRequest:
+      enabled = userSettings?.joinRequestReceived ?? true; // Default: aktiviert
+      break;
+    case NotificationType.joinApproved:
+      enabled = userSettings?.joinRequestApproved ?? true; // Default: aktiviert
+      break;
+    case NotificationType.joinRejected:
+      enabled = userSettings?.joinRequestRejected ?? true; // Default: aktiviert
+      break;
+    case NotificationType.organizationInvitation:
+      enabled = userSettings?.organizationInvitationReceived ?? true; // Default: aktiviert
       break;
     case NotificationType.system:
       enabled = true; // System-Benachrichtigungen sind immer aktiviert
@@ -544,4 +558,122 @@ export const deleteAllNotifications = async (req: Request, res: Response) => {
   } catch (error) {
     res.status(500).json({ message: 'Interner Server-Fehler' });
   }
-}; 
+};
+
+// Neue Funktion: Organisation-spezifische Benachrichtigung erstellen
+export async function createOrganizationNotification(
+  data: OrganizationNotificationInput
+): Promise<boolean> {
+  try {
+    let title = '';
+    let message = data.message || '';
+
+    // Title und Message basierend auf Typ setzen
+    switch (data.type) {
+      case 'joinRequest':
+        title = 'Neue Beitrittsanfrage';
+        message = message || 'Eine neue Beitrittsanfrage ist eingegangen.';
+        break;
+      case 'joinApproved':
+        title = 'Beitrittsanfrage genehmigt';
+        message = message || 'Ihre Beitrittsanfrage wurde genehmigt.';
+        break;
+      case 'joinRejected':
+        title = 'Beitrittsanfrage abgelehnt';
+        message = message || 'Ihre Beitrittsanfrage wurde abgelehnt.';
+        break;
+      case 'organizationInvitation':
+        title = 'Organisations-Einladung';
+        message = message || 'Sie wurden zu einer Organisation eingeladen.';
+        break;
+      default:
+        return false;
+    }
+
+    // Prüfe ob Benachrichtigungen für diesen Typ aktiviert sind
+    const enabled = await isNotificationEnabled(data.userId, data.type as NotificationType);
+    if (!enabled) {
+      return false;
+    }
+
+    // Erstelle die Benachrichtigung
+    const notification = await prisma.notification.create({
+      data: {
+        userId: data.userId,
+        title,
+        message,
+        type: data.type as NotificationType,
+        relatedEntityId: data.relatedEntityId,
+        relatedEntityType: 'organization'
+      }
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Fehler beim Erstellen der Organisation-Benachrichtigung:', error);
+    return false;
+  }
+}
+
+// Neue Funktion: Beitrittsanfrage-Benachrichtigung an Admin senden
+export async function notifyOrganizationAdmins(
+  organizationId: number,
+  joinRequestId: number,
+  requesterEmail: string
+): Promise<void> {
+  try {
+    // Finde alle Admins der Organisation
+    const orgAdmins = await prisma.user.findMany({
+      where: {
+        roles: {
+          some: {
+            role: {
+              organizationId,
+              name: {
+                in: ['admin', 'organization_admin']
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Sende Benachrichtigung an alle Admins
+    for (const admin of orgAdmins) {
+      await createOrganizationNotification({
+        organizationId,
+        userId: admin.id,
+        type: 'joinRequest',
+        relatedEntityId: joinRequestId,
+        message: `Neue Beitrittsanfrage von ${requesterEmail}`
+      });
+    }
+  } catch (error) {
+    console.error('Fehler beim Benachrichtigen der Organisation-Admins:', error);
+  }
+}
+
+// Neue Funktion: Benachrichtigung über Beitrittsanfrage-Status
+export async function notifyJoinRequestStatus(
+  userId: number,
+  organizationName: string,
+  status: 'approved' | 'rejected',
+  joinRequestId: number
+): Promise<void> {
+  try {
+    const type = status === 'approved' ? 'joinApproved' : 'joinRejected';
+    const message = status === 'approved' 
+      ? `Ihre Beitrittsanfrage für ${organizationName} wurde genehmigt.`
+      : `Ihre Beitrittsanfrage für ${organizationName} wurde abgelehnt.`;
+
+    await createOrganizationNotification({
+      organizationId: 0, // Wird für diese Benachrichtigung nicht benötigt
+      userId,
+      type,
+      relatedEntityId: joinRequestId,
+      message
+    });
+  } catch (error) {
+    console.error('Fehler beim Benachrichtigen über Beitrittsanfrage-Status:', error);
+  }
+} 

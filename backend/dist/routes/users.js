@@ -11,6 +11,7 @@ router.use(auth_1.authMiddleware);
 router.use(organization_1.organizationMiddleware);
 // Benutzer-Routen
 router.get('/', userController_1.getAllUsers);
+router.get('/dropdown', userController_1.getAllUsersForDropdown);
 router.get('/profile', userController_1.getCurrentUser);
 router.put('/profile', userController_1.updateProfile);
 router.put('/settings', userController_1.updateUserSettings);

@@ -97,6 +97,44 @@ export const getAllUsers = async (req: Request, res: Response) => {
     }
 };
 
+// Alle Benutzer für Dropdowns abrufen (ohne Organization-Filter)
+export const getAllUsersForDropdown = async (req: Request, res: Response) => {
+    try {
+        // Für Dropdowns: Alle User ohne Organization-Filter
+        const users = await prisma.user.findMany({
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                roles: {
+                    include: {
+                        role: {
+                            select: {
+                                id: true,
+                                name: true,
+                                description: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: [
+                { firstName: 'asc' },
+                { lastName: 'asc' }
+            ]
+        });
+        res.json(users);
+    } catch (error) {
+        console.error('Error in getAllUsersForDropdown:', error);
+        res.status(500).json({
+            message: 'Fehler beim Abrufen der Benutzer für Dropdown',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+};
+
 // Spezifischen Benutzer abrufen
 export const getUserById = async (req: Request, res: Response) => {
     try {

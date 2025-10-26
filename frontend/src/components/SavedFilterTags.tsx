@@ -251,43 +251,67 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
 
   // Sortiere Filter nach gewünschter Reihenfolge
   const sortedFilters = useMemo(() => {
-    if (tableId !== 'consultations-table') {
-      return savedFilters;
+    // Sortierung für Consultations
+    if (tableId === 'consultations-table') {
+      console.log('🔧 SavedFilterTags: Sorting filters...');
+      console.log('📋 SavedFilterTags: recentClientNames:', recentClientNames);
+      console.log('🗂️ SavedFilterTags: savedFilters:', savedFilters.map(f => f.name));
+
+      const heute = savedFilters.find(f => f.name === 'Heute');
+      const woche = savedFilters.find(f => f.name === 'Woche');
+      const archiv = savedFilters.find(f => f.name === 'Archiv');
+      
+      // Recent Client Filter in der exakten Reihenfolge der Recent Clients API sortieren
+      const sortedRecentClientFilters = recentClientNames
+        .map(clientName => savedFilters.find(f => f.name === clientName))
+        .filter(filter => filter !== undefined) as SavedFilter[];
+      
+      console.log('✅ SavedFilterTags: sortedRecentClientFilters:', sortedRecentClientFilters.map(f => f.name));
+      
+      const customFilters = savedFilters.filter(f => 
+        !['Heute', 'Woche', 'Archiv'].includes(f.name) && 
+        !recentClientNames.includes(f.name)
+      );
+      
+      console.log('🔧 SavedFilterTags: customFilters:', customFilters.map(f => f.name));
+
+      const orderedFilters: SavedFilter[] = [];
+      
+      if (heute) orderedFilters.push(heute);
+      if (woche) orderedFilters.push(woche);
+      orderedFilters.push(...sortedRecentClientFilters);
+      orderedFilters.push(...customFilters);
+      if (archiv) orderedFilters.push(archiv);
+      
+      console.log('🎯 SavedFilterTags: Final filter order:', orderedFilters.map(f => f.name));
+      
+      return orderedFilters;
     }
 
-    console.log('🔧 SavedFilterTags: Sorting filters...');
-    console.log('📋 SavedFilterTags: recentClientNames:', recentClientNames);
-    console.log('🗂️ SavedFilterTags: savedFilters:', savedFilters.map(f => f.name));
+    // Sortierung für Requests/Tasks - Aktuell zuerst, dann Archiv
+    if (tableId === 'requests-table' || tableId === 'worktracker-todos') {
+      const aktuell = savedFilters.find(f => f.name === 'Aktuell');
+      const archiv = savedFilters.find(f => f.name === 'Archiv');
+      
+      // Rest der Filter (außer Aktuell und Archiv)
+      const customFilters = savedFilters.filter(f => 
+        f.name !== 'Aktuell' && f.name !== 'Archiv'
+      );
+      
+      const orderedFilters: SavedFilter[] = [];
+      
+      // Aktuell immer zuerst
+      if (aktuell) orderedFilters.push(aktuell);
+      // Dann custom Filters
+      orderedFilters.push(...customFilters);
+      // Archiv immer zuletzt
+      if (archiv) orderedFilters.push(archiv);
+      
+      return orderedFilters;
+    }
 
-    const heute = savedFilters.find(f => f.name === 'Heute');
-    const woche = savedFilters.find(f => f.name === 'Woche');
-    const archiv = savedFilters.find(f => f.name === 'Archiv');
-    
-    // Recent Client Filter in der exakten Reihenfolge der Recent Clients API sortieren
-    const sortedRecentClientFilters = recentClientNames
-      .map(clientName => savedFilters.find(f => f.name === clientName))
-      .filter(filter => filter !== undefined) as SavedFilter[];
-    
-    console.log('✅ SavedFilterTags: sortedRecentClientFilters:', sortedRecentClientFilters.map(f => f.name));
-    
-    const customFilters = savedFilters.filter(f => 
-      !['Heute', 'Woche', 'Archiv'].includes(f.name) && 
-      !recentClientNames.includes(f.name)
-    );
-    
-    console.log('🔧 SavedFilterTags: customFilters:', customFilters.map(f => f.name));
-
-    const orderedFilters: SavedFilter[] = [];
-    
-    if (heute) orderedFilters.push(heute);
-    if (woche) orderedFilters.push(woche);
-    orderedFilters.push(...sortedRecentClientFilters);
-    orderedFilters.push(...customFilters);
-    if (archiv) orderedFilters.push(archiv);
-    
-    console.log('🎯 SavedFilterTags: Final filter order:', orderedFilters.map(f => f.name));
-    
-    return orderedFilters;
+    // Für alle anderen Tabellen: Keine Sortierung
+    return savedFilters;
   }, [savedFilters, recentClientNames, tableId]);
 
   // Optimistische Filter-Anzeige für bessere UX (MOVED BEFORE EARLY RETURNS)

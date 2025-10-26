@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllUsers, getCurrentUser, updateProfile, getUserById, updateUserRoles, updateUserById, updateUserSettings, updateInvoiceSettings, switchUserRole } from '../controllers/userController';
+import { getAllUsers, getAllUsersForDropdown, getCurrentUser, updateProfile, getUserById, updateUserRoles, updateUserById, updateUserSettings, updateInvoiceSettings, switchUserRole } from '../controllers/userController';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
 
@@ -13,6 +13,7 @@ router.use(organizationMiddleware);
 
 // Benutzer-Routen
 router.get('/', getAllUsers);
+router.get('/dropdown', getAllUsersForDropdown);
 router.get('/profile', getCurrentUser);
 router.put('/profile', updateProfile);
 router.put('/settings', updateUserSettings);

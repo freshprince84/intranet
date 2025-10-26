@@ -12,7 +12,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateInvoiceSettings = exports.updateUserSettings = exports.updateUserRoles = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsers = void 0;
+exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateInvoiceSettings = exports.updateUserSettings = exports.updateUserRoles = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsersForDropdown = exports.getAllUsers = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
 const organization_1 = require("../middleware/organization");
@@ -51,6 +51,45 @@ const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.getAllUsers = getAllUsers;
+// Alle Benutzer für Dropdowns abrufen (ohne Organization-Filter)
+const getAllUsersForDropdown = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Für Dropdowns: Alle User ohne Organization-Filter
+        const users = yield prisma.user.findMany({
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                roles: {
+                    include: {
+                        role: {
+                            select: {
+                                id: true,
+                                name: true,
+                                description: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: [
+                { firstName: 'asc' },
+                { lastName: 'asc' }
+            ]
+        });
+        res.json(users);
+    }
+    catch (error) {
+        console.error('Error in getAllUsersForDropdown:', error);
+        res.status(500).json({
+            message: 'Fehler beim Abrufen der Benutzer für Dropdown',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.getAllUsersForDropdown = getAllUsersForDropdown;
 // Spezifischen Benutzer abrufen
 const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {

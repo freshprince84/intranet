@@ -25,6 +25,7 @@ import consultationInvoicesRoutes from './routes/consultationInvoices';
 import monthlyConsultationReportsRoutes from './routes/monthlyConsultationReports';
 import databaseRoutes from './routes/database';
 import claudeRoutes from './routes/claudeRoutes';
+import organizationRoutes from './routes/organizations';
 import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 import { checkAndGenerateMonthlyReports, triggerMonthlyReportCheck } from './services/monthlyReportScheduler';
@@ -192,6 +193,7 @@ app.use('/api/consultation-invoices', consultationInvoicesRoutes);
 app.use('/api/monthly-consultation-reports', monthlyConsultationReportsRoutes);
 app.use('/api/database', databaseRoutes);
 app.use('/api/claude', claudeRoutes);
+app.use('/api/organizations', organizationRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

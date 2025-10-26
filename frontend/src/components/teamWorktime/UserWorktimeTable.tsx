@@ -13,12 +13,6 @@ import {
 } from '@heroicons/react/24/outline';
 import TableColumnConfig from '../TableColumnConfig.tsx';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
-import FilterPane from '../FilterPane.tsx';
-import SavedFilterTags from '../SavedFilterTags.tsx';
-import { FilterCondition } from '../FilterRow.tsx';
-
-// TABLE_ID für Standard-Filtersystem
-const USER_WORKTIME_TABLE_ID = 'user-worktime-table';
 
 interface UserWorktimeTableProps {
   worktimes: any[];
@@ -43,6 +37,14 @@ interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
+interface FilterState {
+  branch: string;
+  startDateFrom: string;
+  startDateTo: string;
+  endDateFrom: string;
+  endDateTo: string;
+}
+
 const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
   worktimes,
   loading,
@@ -54,24 +56,14 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
   const [savingId, setSavingId] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'startTime', direction: 'asc' });
-  
-  // Standard Filter States
-  const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
-  const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-
-  // Filter Handler für Standard-System
-  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
-    setFilterConditions(conditions);
-    setFilterLogicalOperators(operators);
-    setIsFilterModalOpen(false);
-  };
-
-  const resetFilterConditions = () => {
-    setFilterConditions([]);
-    setFilterLogicalOperators([]);
-  };
-  
+  const [filterState, setFilterState] = useState<FilterState>({
+    branch: '',
+    startDateFrom: '',
+    startDateTo: '',
+    endDateFrom: '',
+    endDateTo: ''
+  });
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isColumnConfigOpen, setIsColumnConfigOpen] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
 
@@ -208,7 +200,7 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
     updateColumnOrder(newColumnOrder);
   };
 
-  // Vereinfachte Filtern und sortieren der Zeiterfassungen (TODO: Standard Filter Logic implementieren)
+  // Filtern und sortieren der Zeiterfassungen
   const filteredAndSortedWorktimes = useMemo(() => {
     return [...worktimes]
       .filter(worktime => {
@@ -217,13 +209,32 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
         const searchLower = searchTerm.toLowerCase();
         const matchesSearch = searchTerm === '' || branchName.includes(searchLower);
         
-        // TODO: Standard Filter Logic implementieren
-        // Erstmal nur Search verwenden
+        // Filter
+        const matchesBranch = !filterState.branch || worktime.branch?.name === filterState.branch;
         
-        return matchesSearch;
+        const startTime = new Date(worktime.startTime);
+        const startDateFrom = filterState.startDateFrom ? new Date(filterState.startDateFrom) : null;
+        const startDateTo = filterState.startDateTo ? new Date(filterState.startDateTo) : null;
+        
+        const matchesStartDate = (
+          (!startDateFrom || startTime >= startDateFrom) &&
+          (!startDateTo || startTime <= startDateTo)
+        );
+        
+        const endTime = worktime.endTime ? new Date(worktime.endTime) : null;
+        const endDateFrom = filterState.endDateFrom ? new Date(filterState.endDateFrom) : null;
+        const endDateTo = filterState.endDateTo ? new Date(filterState.endDateTo) : null;
+        
+        const matchesEndDate = (
+          !worktime.endTime ||
+          (!endDateFrom || (endTime && endTime >= endDateFrom)) &&
+          (!endDateTo || (endTime && endTime <= endDateTo))
+        );
+        
+        return matchesSearch && matchesBranch && matchesStartDate && matchesEndDate;
       })
       .sort((a, b) => {
-        // Sortierung (bleibt gleich)
+        // Sortierung
         const aValue = a[sortConfig.key];
         const bValue = b[sortConfig.key];
         
@@ -257,7 +268,7 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
           ? aValue.toString().localeCompare(bValue.toString())
           : bValue.toString().localeCompare(aValue.toString());
       });
-  }, [worktimes, searchTerm, filterConditions, sortConfig]);
+  }, [worktimes, searchTerm, filterState, sortConfig]);
 
   // Rendere die Kopfzeile mit Sortierbarkeit
   const renderSortableHeader = (columnId: string, label: string) => {
@@ -292,31 +303,6 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
 
   return (
     <div className="relative">
-      {/* FilterPane - Standard Filter System */}
-      {isFilterModalOpen && (
-        <FilterPane
-          columns={[
-            { id: 'startTime', label: 'Startzeit' },
-            { id: 'endTime', label: 'Endzeit' },
-            { id: 'duration', label: 'Dauer' },
-            { id: 'branch', label: 'Niederlassung' }
-          ]}
-          onApply={applyFilterConditions}
-          onReset={resetFilterConditions}
-          tableId={USER_WORKTIME_TABLE_ID}
-          savedConditions={filterConditions}
-          savedOperators={filterLogicalOperators}
-        />
-      )}
-
-      {/* SavedFilterTags - Standard Filter Tags */}
-      <SavedFilterTags
-        tableId={USER_WORKTIME_TABLE_ID}
-        onSelectFilter={applyFilterConditions}
-        onReset={resetFilterConditions}
-        defaultFilterName="Diese Woche"
-      />
-
       {/* Tabellen-Steuerelemente */}
       <div className="mb-4 flex flex-wrap gap-2 justify-between">
         <div className="flex space-x-2">
@@ -336,18 +322,18 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
           
           {/* Filter-Button */}
           <button
-            onClick={() => setIsFilterModalOpen(true)}
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`px-3 py-2 border ${
-              filterConditions.length > 0
+              Object.values(filterState).some(v => v !== '')
                 ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
                 : 'bg-white text-gray-600 border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'
             } rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center`}
           >
             <FunnelIcon className="w-4 h-4 mr-2" />
             Filter
-            {filterConditions.length > 0 && (
+            {Object.values(filterState).some(v => v !== '') && (
               <span className="ml-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs rounded-full px-1.5">
-                {filterConditions.length}
+                {Object.values(filterState).filter(v => v !== '').length}
               </span>
             )}
           </button>
@@ -375,6 +361,102 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
           )}
         </div>
       </div>
+      
+      {/* Filter-Bereich */}
+      {isFilterOpen && (
+        <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md">
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Filter</h3>
+            <button
+              onClick={() => {
+                setFilterState({
+                  branch: '',
+                  startDateFrom: '',
+                  startDateTo: '',
+                  endDateFrom: '',
+                  endDateTo: ''
+                });
+              }}
+              className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+            >
+              Zurücksetzen
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            {/* Niederlassung */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Niederlassung
+              </label>
+              <select
+                value={filterState.branch}
+                onChange={(e) => setFilterState({...filterState, branch: e.target.value})}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              >
+                <option value="">Alle</option>
+                {[...new Set(worktimes.map(w => w.branch?.name))].filter(Boolean).map(branchName => (
+                  <option key={branchName} value={branchName}>
+                    {branchName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Startzeit von */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Startzeit Von
+              </label>
+              <input
+                type="datetime-local"
+                value={filterState.startDateFrom}
+                onChange={(e) => setFilterState({...filterState, startDateFrom: e.target.value})}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            
+            {/* Startzeit bis */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Startzeit Bis
+              </label>
+              <input
+                type="datetime-local"
+                value={filterState.startDateTo}
+                onChange={(e) => setFilterState({...filterState, startDateTo: e.target.value})}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            
+            {/* Endzeit von */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Endzeit Von
+              </label>
+              <input
+                type="datetime-local"
+                value={filterState.endDateFrom}
+                onChange={(e) => setFilterState({...filterState, endDateFrom: e.target.value})}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            
+            {/* Endzeit bis */}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Endzeit Bis
+              </label>
+              <input
+                type="datetime-local"
+                value={filterState.endDateTo}
+                onChange={(e) => setFilterState({...filterState, endDateTo: e.target.value})}
+                className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Tabelle */}
       <div className="overflow-x-auto shadow ring-1 ring-black ring-opacity-5 rounded-lg">

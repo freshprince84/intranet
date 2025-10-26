@@ -10,11 +10,12 @@ import { PrismaClient, Prisma } from '@prisma/client';
 const prisma = new PrismaClient();
 
 interface RegisterRequest {
-    username: string;
     email: string;
     password: string;
-    first_name: string;
-    last_name: string;
+    // Optional fields - werden nicht mehr vom Frontend gesendet
+    username?: string;
+    first_name?: string;
+    last_name?: string;
 }
 
 interface LoginRequest {
@@ -51,8 +52,12 @@ interface AuthenticatedRequest extends Request {
 
 export const register = async (req: Request<{}, {}, RegisterRequest>, res: Response) => {
     try {
-        const { username, email, password, first_name, last_name } = req.body;
-        console.log('Register-Versuch für:', { username, email, first_name, last_name });
+        const { email, password, username, first_name, last_name } = req.body;
+        
+        // Email als Username verwenden wenn kein Username angegeben
+        const finalUsername = username || email;
+        
+        console.log('Register-Versuch für:', { username: finalUsername, email, first_name, last_name });
         
         // Finde die Hamburger-Rolle mit ID 999
         const hamburgerRole = await prisma.role.findUnique({
@@ -68,7 +73,7 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
         const existingUser = await prisma.user.findFirst({
             where: {
                 OR: [
-                    { username },
+                    { username: finalUsername },
                     { email }
                 ]
             }
@@ -84,11 +89,11 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
         // Erstelle den Benutzer
         const user = await prisma.user.create({
             data: {
-                username,
+                username: finalUsername,
                 email,
                 password: hashedPassword,
-                firstName: first_name,
-                lastName: last_name,
+                firstName: first_name || null,
+                lastName: last_name || null,
                 roles: {
                     create: {
                         role: {

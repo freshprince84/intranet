@@ -4,10 +4,12 @@ import { UserGroupIcon, UserIcon, ShieldCheckIcon } from '@heroicons/react/24/ou
 import UserManagementTab from '../components/UserManagementTab.tsx';
 import RoleManagementTab from '../components/RoleManagementTab.tsx';
 import useMessage from '../hooks/useMessage.ts';
+import OrganizationSettings from '../components/organization/OrganizationSettings.tsx';
+import JoinRequestsList from '../components/organization/JoinRequestsList.tsx';
 
 const UserManagement: React.FC = () => {
-  // Tab-Zustand für Navigation zwischen Benutzer- und Rollenverwaltung
-  const [activeTab, setActiveTab] = useState<'users' | 'roles'>('users');
+  // Tab-Zustand für Navigation zwischen Benutzer-, Rollen- und Organisationsverwaltung
+  const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'organization'>('users');
   
   // Gemeinsame States
   const [loading, setLoading] = useState(false);
@@ -17,7 +19,7 @@ const UserManagement: React.FC = () => {
   const { isAdmin } = usePermissions();
 
   // Tab-Wechsel Handler - Fehler beim Wechsel zurücksetzen
-  const handleTabChange = (tab: 'users' | 'roles') => {
+  const handleTabChange = (tab: 'users' | 'roles' | 'organization') => {
     setActiveTab(tab);
     setError(null);
   };
@@ -73,6 +75,20 @@ const UserManagement: React.FC = () => {
                 <ShieldCheckIcon className="h-5 w-5 mr-2" />
                 Rollen
               </button>
+              {/* Organisation Tab nur für Benutzer mit entsprechenden Berechtigungen */}
+              {isAdmin() && (
+                <button
+                  className={`${
+                    activeTab === 'organization'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+                  onClick={() => handleTabChange('organization')}
+                >
+                  <UserGroupIcon className="h-5 w-5 mr-2" />
+                  Organisation
+                </button>
+              )}
             </nav>
           </div>
 
@@ -88,13 +104,18 @@ const UserManagement: React.FC = () => {
           {/* Tab Inhalte */}
           <div className="mt-6">
             {activeTab === 'users' ? (
-              <UserManagementTab
-                onError={handleError}
-              />
+              <UserManagementTab onError={handleError} />
+            ) : activeTab === 'roles' ? (
+              <RoleManagementTab onError={handleError} />
+            ) : activeTab === 'organization' && isAdmin() ? (
+              <div className="space-y-6">
+                <OrganizationSettings />
+                <JoinRequestsList />
+              </div>
             ) : (
-              <RoleManagementTab
-                onError={handleError}
-              />
+              <div className="p-4 text-red-600 dark:text-red-400">
+                Keine Berechtigung für diese Seite.
+              </div>
             )}
           </div>
         </div>

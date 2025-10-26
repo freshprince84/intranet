@@ -129,7 +129,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
 
             console.log('Lade Benutzer für CreateTaskModal...');
             
-            const response = await axiosInstance.get(API_ENDPOINTS.USERS.BASE);
+            const response = await axiosInstance.get(API_ENDPOINTS.USERS.DROPDOWN);
             
             console.log('Benutzer geladen:', response.data.length);
             setUsers(response.data || []);

@@ -18,6 +18,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteRequest = exports.updateRequest = exports.createRequest = exports.getRequestById = exports.getAllRequests = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
+const organization_1 = require("../middleware/organization");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
@@ -33,9 +34,12 @@ const branchSelect = {
     name: true
 };
 // Alle Requests abrufen
-const getAllRequests = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // Datenisolation: Standalone User sehen nur ihre eigenen Requests
+        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
         const requests = yield prisma.request.findMany({
+            where: isolationFilter,
             include: {
                 requester: {
                     select: userSelect
@@ -77,8 +81,10 @@ exports.getAllRequests = getAllRequests;
 const getRequestById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        const request = yield prisma.request.findUnique({
-            where: { id: parseInt(id) },
+        // Datenisolation: Prüfe ob User Zugriff auf diesen Request hat
+        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
+        const request = yield prisma.request.findFirst({
+            where: Object.assign({ id: parseInt(id) }, isolationFilter),
             include: {
                 requester: {
                     select: userSelect

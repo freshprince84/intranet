@@ -236,7 +236,7 @@ export const getArticleBySlug = async (req: Request, res: Response) => {
             updaterFirstName: article.updatedBy?.firstName,
             updaterLastName: article.updatedBy?.lastName,
             parentTitle: article.parent?.title,
-            parentSlug: article.parent?.slug,
+            parentSlug: article.parent?.slug
         };
         
         res.status(200).json(result);

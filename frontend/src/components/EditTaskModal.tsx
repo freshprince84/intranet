@@ -134,7 +134,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                 return;
             }
             
-            const response = await axiosInstance.get(API_ENDPOINTS.USERS.BASE);
+            const response = await axiosInstance.get(API_ENDPOINTS.USERS.DROPDOWN);
             setUsers(response.data || []);
         } catch (err) {
             console.error('Fehler beim Laden der Benutzer:', err);

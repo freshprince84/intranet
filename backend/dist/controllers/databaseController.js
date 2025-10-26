@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDatabaseLogs = exports.getResetableTables = exports.resetTable = void 0;
+exports.getDatabaseLogs = exports.deleteDemoClients = exports.getResetableTables = exports.resetTable = void 0;
 const client_1 = require("@prisma/client");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const child_process_1 = require("child_process");
@@ -204,6 +204,74 @@ function runSeedForTable(tableName) {
         });
     });
 }
+/**
+ * NUR Demo-Clients löschen (ohne Seed-Neuaufbau)
+ */
+const deleteDemoClients = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { adminPassword } = req.body;
+        const userId = req.userId;
+        if (!adminPassword) {
+            return res.status(400).json({
+                message: 'Admin-Passwort ist erforderlich'
+            });
+        }
+        logDatabaseOperation('delete_demo_clients', userId, 'start');
+        // 1. Validiere Admin-Berechtigung
+        const user = yield prisma.user.findFirst({
+            where: {
+                id: Number(userId),
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin'
+                        }
+                    }
+                }
+            }
+        });
+        if (!user) {
+            logDatabaseOperation('delete_demo_clients', userId, 'error', 'Nicht autorisiert');
+            return res.status(403).json({ message: 'Keine Berechtigung für diese Operation' });
+        }
+        // 2. Validiere Admin-Passwort
+        const validPassword = yield bcrypt_1.default.compare(adminPassword, user.password);
+        if (!validPassword) {
+            logDatabaseOperation('delete_demo_clients', userId, 'error', 'Falsches Passwort');
+            return res.status(401).json({ message: 'Falsches Admin-Passwort' });
+        }
+        // 3. Definiere Demo-Client Namen (synchron mit seed.ts)
+        const demoClientNames = [
+            'Musterfirma GmbH',
+            'Max Müller',
+            'Beispiel AG',
+            'Tech Startup XYZ'
+        ];
+        // 4. Lösche nur Demo-Clients
+        const result = yield prisma.client.deleteMany({
+            where: {
+                name: {
+                    in: demoClientNames
+                }
+            }
+        });
+        logDatabaseOperation('delete_demo_clients', userId, 'success');
+        res.json({
+            message: `${result.count} Demo-Clients wurden erfolgreich gelöscht`,
+            count: result.count,
+            timestamp: new Date().toISOString()
+        });
+    }
+    catch (error) {
+        logDatabaseOperation('delete_demo_clients', req.userId, 'error', error instanceof Error ? error.message : 'Unbekannter Fehler');
+        console.error('Fehler beim Löschen der Demo-Clients:', error);
+        res.status(500).json({
+            message: 'Fehler beim Löschen der Demo-Clients',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.deleteDemoClients = deleteDemoClients;
 /**
  * Database-Logs abrufen (für Audit)
  */

@@ -40,6 +40,11 @@ const DatabaseManagement: React.FC = () => {
   const [tablePassword, setTablePassword] = useState('');
   const [showTableConfirm, setShowTableConfirm] = useState(false);
   const [tableCountdown, setTableCountdown] = useState(0);
+  
+  // State für Demo-Clients löschen
+  const [demoPassword, setDemoPassword] = useState('');
+  const [showDemoConfirm, setShowDemoConfirm] = useState(false);
+  const [demoCountdown, setDemoCountdown] = useState(0);
 
   useEffect(() => {
     loadTables();
@@ -53,6 +58,14 @@ const DatabaseManagement: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [tableCountdown]);
+
+  // Countdown-Timer für Demo-Clients löschen
+  useEffect(() => {
+    if (demoCountdown > 0) {
+      const timer = setTimeout(() => setDemoCountdown(demoCountdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [demoCountdown]);
 
   const loadTables = async () => {
     try {
@@ -117,6 +130,49 @@ const DatabaseManagement: React.FC = () => {
     setSelectedTable(null);
     setTablePassword('');
     setTableCountdown(0);
+  };
+
+  const handleDeleteDemoClients = () => {
+    setShowDemoConfirm(true);
+    setDemoCountdown(5); // 5 Sekunden Bedenkzeit
+  };
+
+  const confirmDeleteDemoClients = async () => {
+    if (!demoPassword) {
+      toast.error('Passwort ist erforderlich');
+      return;
+    }
+
+    if (demoCountdown > 0) {
+      toast.error(`Bitte warten Sie noch ${demoCountdown} Sekunden`);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('Calling API:', API_ENDPOINTS.DATABASE.DELETE_DEMO_CLIENTS);
+      const response = await axiosInstance.post(API_ENDPOINTS.DATABASE.DELETE_DEMO_CLIENTS, {
+        adminPassword: demoPassword
+      });
+      console.log('API Response:', response.data);
+      
+      toast.success('Demo-Clients wurden erfolgreich gelöscht');
+      setShowDemoConfirm(false);
+      setDemoPassword('');
+      loadLogs(); // Logs neu laden
+    } catch (error: any) {
+      console.error('Error deleting demo clients:', error);
+      console.error('Error response:', error.response);
+      toast.error(error.response?.data?.message || error.message || 'Fehler beim Löschen der Demo-Clients');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelDeleteDemoClients = () => {
+    setShowDemoConfirm(false);
+    setDemoPassword('');
+    setDemoCountdown(0);
   };
 
   const getDangerColor = (danger: string) => {
@@ -203,13 +259,26 @@ const DatabaseManagement: React.FC = () => {
                 Seed-Daten werden wiederhergestellt
               </div>
               
-              <button
-                onClick={() => handleTableReset(table.name)}
-                disabled={loading}
-                className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
-              >
-                Zurücksetzen & neu befüllen
-              </button>
+              <div className="space-y-2">
+                {/* Spezieller Button für Demo-Clients löschen (nur wenn table.name === 'client') */}
+                {table.name === 'client' && (
+                  <button
+                    onClick={handleDeleteDemoClients}
+                    disabled={loading}
+                    className="w-full px-3 py-2 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 disabled:opacity-50 transition-colors"
+                  >
+                    Demo-Clients entfernen
+                  </button>
+                )}
+                
+                <button
+                  onClick={() => handleTableReset(table.name)}
+                  disabled={loading}
+                  className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                >
+                  Zurücksetzen & neu befüllen
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -313,6 +382,67 @@ const DatabaseManagement: React.FC = () => {
               </button>
               <button
                 onClick={cancelTableReset}
+                disabled={loading}
+                className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+              >
+                Abbrechen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DEMO CLIENTS DELETE MODAL */}
+      {showDemoConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center mb-4">
+              <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 mr-2" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                Demo-Clients entfernen bestätigen
+              </h3>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-gray-700 dark:text-gray-300 mb-2">
+                Sie sind dabei, <strong>nur die Demo-Clients</strong> zu löschen.
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                Die Demo-Clients werden dauerhaft gelöscht und NICHT wiederhergestellt.
+              </p>
+              
+              {demoCountdown > 0 && (
+                <div className="flex items-center text-orange-600 dark:text-orange-400 mb-3">
+                  <ClockIcon className="h-4 w-4 mr-1" />
+                  Bedenkzeit: {demoCountdown} Sekunden
+                </div>
+              )}
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <LockClosedIcon className="h-4 w-4 inline mr-1" />
+                Admin-Passwort zur Bestätigung:
+              </label>
+              <input
+                type="password"
+                value={demoPassword}
+                onChange={(e) => setDemoPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                placeholder="Ihr Admin-Passwort"
+              />
+            </div>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={confirmDeleteDemoClients}
+                disabled={loading || demoCountdown > 0 || !demoPassword}
+                className="flex-1 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50 transition-colors"
+              >
+                {loading ? 'Wird gelöscht...' : 'Bestätigen'}
+              </button>
+              <button
+                onClick={cancelDeleteDemoClients}
                 disabled={loading}
                 className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
               >

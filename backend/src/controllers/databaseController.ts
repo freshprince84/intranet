@@ -209,6 +209,82 @@ async function runSeedForTable(tableName: string): Promise<void> {
 }
 
 /**
+ * NUR Demo-Clients löschen (ohne Seed-Neuaufbau)
+ */
+export const deleteDemoClients = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { adminPassword } = req.body;
+    const userId = req.userId;
+
+    if (!adminPassword) {
+      return res.status(400).json({ 
+        message: 'Admin-Passwort ist erforderlich' 
+      });
+    }
+
+    logDatabaseOperation('delete_demo_clients', userId, 'start');
+
+    // 1. Validiere Admin-Berechtigung
+    const user = await prisma.user.findFirst({
+      where: { 
+        id: Number(userId),
+        roles: {
+          some: {
+            role: {
+              name: 'Admin'
+            }
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      logDatabaseOperation('delete_demo_clients', userId, 'error', 'Nicht autorisiert');
+      return res.status(403).json({ message: 'Keine Berechtigung für diese Operation' });
+    }
+
+    // 2. Validiere Admin-Passwort
+    const validPassword = await bcrypt.compare(adminPassword, user.password);
+    if (!validPassword) {
+      logDatabaseOperation('delete_demo_clients', userId, 'error', 'Falsches Passwort');
+      return res.status(401).json({ message: 'Falsches Admin-Passwort' });
+    }
+
+    // 3. Definiere Demo-Client Namen (synchron mit seed.ts)
+    const demoClientNames = [
+      'Musterfirma GmbH',
+      'Max Müller',
+      'Beispiel AG',
+      'Tech Startup XYZ'
+    ];
+
+    // 4. Lösche nur Demo-Clients
+    const result = await prisma.client.deleteMany({
+      where: {
+        name: {
+          in: demoClientNames
+        }
+      }
+    });
+
+    logDatabaseOperation('delete_demo_clients', userId, 'success');
+    res.json({ 
+      message: `${result.count} Demo-Clients wurden erfolgreich gelöscht`,
+      count: result.count,
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    logDatabaseOperation('delete_demo_clients', req.userId, 'error', error instanceof Error ? error.message : 'Unbekannter Fehler');
+    console.error('Fehler beim Löschen der Demo-Clients:', error);
+    res.status(500).json({ 
+      message: 'Fehler beim Löschen der Demo-Clients',
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+    });
+  }
+};
+
+/**
  * Database-Logs abrufen (für Audit)
  */
 export const getDatabaseLogs = async (req: AuthenticatedRequest, res: Response) => {

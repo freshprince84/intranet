@@ -22,8 +22,10 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { username, email, password, first_name, last_name } = req.body;
-        console.log('Register-Versuch für:', { username, email, first_name, last_name });
+        const { email, password, username, first_name, last_name } = req.body;
+        // Email als Username verwenden wenn kein Username angegeben
+        const finalUsername = username || email;
+        console.log('Register-Versuch für:', { username: finalUsername, email, first_name, last_name });
         // Finde die Hamburger-Rolle mit ID 999
         const hamburgerRole = yield prisma.role.findUnique({
             where: { id: 999 }
@@ -36,7 +38,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const existingUser = yield prisma.user.findFirst({
             where: {
                 OR: [
-                    { username },
+                    { username: finalUsername },
                     { email }
                 ]
             }
@@ -49,11 +51,11 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Erstelle den Benutzer
         const user = yield prisma.user.create({
             data: {
-                username,
+                username: finalUsername,
                 email,
                 password: hashedPassword,
-                firstName: first_name,
-                lastName: last_name,
+                firstName: first_name || null,
+                lastName: last_name || null,
                 roles: {
                     create: {
                         role: {
