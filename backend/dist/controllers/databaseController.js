@@ -247,18 +247,40 @@ const deleteDemoClients = (req, res) => __awaiter(void 0, void 0, void 0, functi
             'Beispiel AG',
             'Tech Startup XYZ'
         ];
-        // 4. Lösche nur Demo-Clients
-        const result = yield prisma.client.deleteMany({
-            where: {
-                name: {
-                    in: demoClientNames
-                }
-            }
+        // 4. Hole zuerst alle Clients, um zu überprüfen, welche Demo-Clients existieren
+        const allClients = yield prisma.client.findMany({
+            select: { id: true, name: true }
         });
+        // Filtere die Demo-Client IDs
+        const demoClientIds = allClients
+            .filter(client => demoClientNames.includes(client.name))
+            .map(client => client.id);
+        console.log(`Gefundene Demo-Clients: ${demoClientIds.length}`, demoClientIds);
+        // 5. Lösche nur Demo-Clients in einer Transaction
+        let deletedCount = 0;
+        if (demoClientIds.length > 0) {
+            yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+                // Lösche jeden Demo-Client
+                for (const clientId of demoClientIds) {
+                    try {
+                        yield tx.client.delete({
+                            where: { id: clientId }
+                        });
+                        deletedCount++;
+                    }
+                    catch (deleteError) {
+                        console.error(`Fehler beim Löschen von Client ID ${clientId}:`, deleteError);
+                        // Weiter mit den anderen Clients in der Transaction
+                    }
+                }
+            }));
+        }
         logDatabaseOperation('delete_demo_clients', userId, 'success');
         res.json({
-            message: `${result.count} Demo-Clients wurden erfolgreich gelöscht`,
-            count: result.count,
+            message: deletedCount > 0
+                ? `${deletedCount} Demo-Clients wurden erfolgreich gelöscht`
+                : 'Keine Demo-Clients gefunden',
+            count: deletedCount,
             timestamp: new Date().toISOString()
         });
     }
