@@ -150,20 +150,16 @@ const DatabaseManagement: React.FC = () => {
 
     try {
       setLoading(true);
-      console.log('Calling API:', API_ENDPOINTS.DATABASE.DELETE_DEMO_CLIENTS);
       const response = await axiosInstance.post(API_ENDPOINTS.DATABASE.DELETE_DEMO_CLIENTS, {
         adminPassword: demoPassword
       });
-      console.log('API Response:', response.data);
       
       toast.success('Demo-Clients wurden erfolgreich gelöscht');
       setShowDemoConfirm(false);
       setDemoPassword('');
       loadLogs(); // Logs neu laden
     } catch (error: any) {
-      console.error('Error deleting demo clients:', error);
-      console.error('Error response:', error.response);
-      toast.error(error.response?.data?.message || error.message || 'Fehler beim Löschen der Demo-Clients');
+      toast.error(error.response?.data?.message || 'Fehler beim Löschen der Demo-Clients');
     } finally {
       setLoading(false);
     }
