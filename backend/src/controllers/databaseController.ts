@@ -258,19 +258,35 @@ export const deleteDemoClients = async (req: AuthenticatedRequest, res: Response
       'Tech Startup XYZ'
     ];
 
-    // 4. Lösche nur Demo-Clients
-    const result = await prisma.client.deleteMany({
-      where: {
-        name: {
-          in: demoClientNames
-        }
-      }
+    // 4. Hole zuerst alle Clients, um zu überprüfen, welche Demo-Clients existieren
+    const allClients = await prisma.client.findMany({
+      select: { id: true, name: true }
     });
+
+    // Filtere die Demo-Client IDs
+    const demoClientIds = allClients
+      .filter(client => demoClientNames.includes(client.name))
+      .map(client => client.id);
+
+    console.log(`Gefundene Demo-Clients: ${demoClientIds.length}`, demoClientIds);
+
+    // 5. Lösche nur Demo-Clients basierend auf IDs
+    let deletedCount = 0;
+    if (demoClientIds.length > 0) {
+      const result = await prisma.client.deleteMany({
+        where: {
+          id: {
+            in: demoClientIds
+          }
+        }
+      });
+      deletedCount = result.count;
+    }
 
     logDatabaseOperation('delete_demo_clients', userId, 'success');
     res.json({ 
-      message: `${result.count} Demo-Clients wurden erfolgreich gelöscht`,
-      count: result.count,
+      message: `${deletedCount} Demo-Clients wurden erfolgreich gelöscht`,
+      count: deletedCount,
       timestamp: new Date().toISOString()
     });
 
