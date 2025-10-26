@@ -102,9 +102,50 @@ export const updateClient = async (req: Request, res: Response) => {
 export const deleteClient = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const clientId = Number(id);
     
+    // 1. Prüfe ob Client existiert
+    const client = await prisma.client.findUnique({
+      where: { id: clientId }
+    });
+    
+    if (!client) {
+      return res.status(404).json({ message: 'Client nicht gefunden' });
+    }
+    
+    // 2. Prüfe Verknüpfungen
+    const [workTimes, consultationInvoices, monthlyReportItems] = await Promise.all([
+      prisma.workTime.findMany({ where: { clientId } }),
+      prisma.consultationInvoice.findMany({ where: { clientId } }),
+      prisma.monthlyConsultationReportItem.findMany({ where: { clientId } })
+    ]);
+    
+    const hasWorkTimes = workTimes.length > 0;
+    const hasInvoices = consultationInvoices.length > 0;
+    const hasReportItems = monthlyReportItems.length > 0;
+    
+    // 3. Wenn Verknüpfungen existieren, blockieren
+    if (hasWorkTimes || hasInvoices || hasReportItems) {
+      const reasons = [];
+      if (hasWorkTimes) reasons.push(`${workTimes.length} Zeiteinträge`);
+      if (hasInvoices) reasons.push(`${consultationInvoices.length} Rechnungen`);
+      if (hasReportItems) reasons.push(`${monthlyReportItems.length} Monatsberichte`);
+      
+      return res.status(409).json({
+        message: 'Client kann nicht gelöscht werden',
+        reason: 'Es existieren Verknüpfungen mit anderen Datensätzen',
+        details: {
+          workTimes: workTimes.length,
+          consultationInvoices: consultationInvoices.length,
+          monthlyReportItems: monthlyReportItems.length
+        },
+        suggestion: 'Sie können den Client deaktivieren statt ihn zu löschen'
+      });
+    }
+    
+    // 4. Client löschen wenn keine Verknüpfungen bestehen
     await prisma.client.delete({
-      where: { id: Number(id) }
+      where: { id: clientId }
     });
     
     res.json({ message: 'Client erfolgreich gelöscht' });

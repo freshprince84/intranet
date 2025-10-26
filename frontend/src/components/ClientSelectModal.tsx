@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
-import { MagnifyingGlassIcon, XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, XMarkIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { Client } from '../types/client.ts';
+import { toast } from 'react-toastify';
+import * as clientApi from '../api/clientApi.ts';
+import EditClientModal from './EditClientModal.tsx';
 
 interface ClientSelectModalProps {
   isOpen: boolean;
@@ -22,6 +25,8 @@ const ClientSelectModal: React.FC<ClientSelectModalProps> = ({
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
+  const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -53,6 +58,41 @@ const ClientSelectModal: React.FC<ClientSelectModalProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleEdit = (client: Client, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingClient(client);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = async (client: Client, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (!window.confirm(`Möchten Sie den Client "${client.name}" wirklich löschen?`)) {
+      return;
+    }
+
+    try {
+      await clientApi.deleteClient(client.id);
+      toast.success('Client erfolgreich gelöscht');
+      loadClients(); // Liste neu laden
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Fehler beim Löschen des Clients');
+    }
+  };
+
+  const handleClientUpdated = (updatedClient: Client) => {
+    // Aktualisiere lokale Liste
+    const index = clients.findIndex(c => c.id === updatedClient.id);
+    if (index !== -1) {
+      const newClients = [...clients];
+      newClients[index] = updatedClient;
+      setClients(newClients);
+      setFilteredClients(newClients);
+    }
+    setIsEditModalOpen(false);
+    setEditingClient(null);
   };
 
   return (
@@ -112,11 +152,11 @@ const ClientSelectModal: React.FC<ClientSelectModalProps> = ({
                 <ul className="divide-y divide-gray-200 dark:divide-gray-700">
                   {filteredClients.map((client) => (
                     <li key={client.id}>
-                      <button
-                        onClick={() => onSelect(client)}
-                        className="w-full px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 text-left transition-colors"
-                      >
-                        <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <button
+                          onClick={() => onSelect(client)}
+                          className="flex-1 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 text-left transition-colors"
+                        >
                           <div>
                             <p className="text-sm font-medium text-gray-900 dark:text-white">
                               {client.name}
@@ -126,14 +166,30 @@ const ClientSelectModal: React.FC<ClientSelectModalProps> = ({
                                 {client.company}
                               </p>
                             )}
+                            {client.email && (
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
+                                {client.email}
+                              </p>
+                            )}
                           </div>
-                          {client.email && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              {client.email}
-                            </p>
-                          )}
+                        </button>
+                        <div className="flex items-center space-x-2 px-2">
+                          <button
+                            onClick={(e) => handleEdit(client, e)}
+                            className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
+                            title="Client bearbeiten"
+                          >
+                            <PencilIcon className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDelete(client, e)}
+                            className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                            title="Client löschen"
+                          >
+                            <TrashIcon className="h-5 w-5" />
+                          </button>
                         </div>
-                      </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -155,6 +211,25 @@ const ClientSelectModal: React.FC<ClientSelectModalProps> = ({
           </div>
         </Dialog.Panel>
       </div>
+
+      {/* Edit Modal */}
+      {editingClient && (
+        <EditClientModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEditingClient(null);
+          }}
+          onClientUpdated={handleClientUpdated}
+          onClientDeleted={(clientId) => {
+            // Lädt Liste neu nach Löschung
+            loadClients();
+            setIsEditModalOpen(false);
+            setEditingClient(null);
+          }}
+          client={editingClient}
+        />
+      )}
     </Dialog>
   );
 };
