@@ -136,6 +136,12 @@ export const getOrganizationById = async (req: Request, res: Response) => {
 // Neue Organisation erstellen
 export const createOrganization = async (req: Request, res: Response) => {
   try {
+    const userId = req.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Nicht authentifiziert' });
+    }
+
     const validatedData = createOrganizationSchema.parse(req.body);
 
     // Prüfe ob Name bereits existiert
@@ -147,27 +153,164 @@ export const createOrganization = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Organisation mit diesem Namen existiert bereits' });
     }
 
-    const organization = await prisma.organization.create({
-      data: {
-        name: validatedData.name,
-        displayName: validatedData.displayName,
-        maxUsers: validatedData.maxUsers,
-        subscriptionPlan: validatedData.subscriptionPlan,
-        isActive: true
-      },
-      select: {
-        id: true,
-        name: true,
-        displayName: true,
-        isActive: true,
-        maxUsers: true,
-        subscriptionPlan: true,
-        createdAt: true,
-        updatedAt: true
+    // Alle verfügbaren Seiten, Tabellen und Buttons (aus seed.ts)
+    const ALL_PAGES = [
+      'dashboard', 'worktracker', 'workcenter', 'benutzerverwaltung', 'requests', 'cerebro', 'settings',
+      'payroll', 'team_worktime_control', 'identification_documents', 'document_recognition',
+      'consultations', 'consultation_invoices', 'monthly_reports'
+    ];
+    
+    const ALL_TABLES = [
+      'users', 'roles', 'branches', 'requests', 'tasks', 'worktime', 'payrolls', 'cerebro_articles',
+      'consultations', 'consultation_invoices', 'identification_documents'
+    ];
+    
+    const ALL_BUTTONS = [
+      // Database Management Buttons (Settings/System)
+      'database_reset_table',
+      'database_logs',
+      // Invoice Functions Buttons
+      'invoice_create',
+      'invoice_download',
+      'invoice_mark_paid',
+      'invoice_settings',
+      // Todo/Task Buttons (Worktracker)
+      'todo_create',
+      'todo_edit',
+      'todo_delete',
+      'task_create',
+      'task_edit',
+      'task_delete',
+      // User Management Buttons
+      'user_create',
+      'user_edit',
+      'user_delete',
+      'role_assign',
+      'role_create',
+      'role_edit',
+      'role_delete',
+      // Worktime Buttons
+      'worktime_start',
+      'worktime_stop',
+      'worktime_edit',
+      'worktime_delete',
+      // General Cerebro Button
+      'cerebro',
+      // Consultation Buttons
+      'consultation_start',
+      'consultation_stop',
+      'consultation_edit',
+      // Client Management Buttons
+      'client_create',
+      'client_edit',
+      'client_delete',
+      // Settings Buttons
+      'settings_system',
+      'settings_notifications',
+      'settings_profile',
+      // Payroll Buttons
+      'payroll_generate',
+      'payroll_export',
+      'payroll_edit'
+    ];
+
+    // Erstelle Organisation und Admin-Rolle in einer Transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Organisation erstellen
+      const organization = await tx.organization.create({
+        data: {
+          name: validatedData.name,
+          displayName: validatedData.displayName,
+          maxUsers: validatedData.maxUsers,
+          subscriptionPlan: validatedData.subscriptionPlan,
+          isActive: true
+        }
+      });
+
+      // 2. Admin-Rolle für die Organisation erstellen
+      const adminRole = await tx.role.create({
+        data: {
+          name: 'Admin',
+          description: 'Administrator der Organisation',
+          organizationId: organization.id
+        }
+      });
+
+      // 3. Alle Berechtigungen für Admin-Rolle erstellen (alles mit 'both')
+      const permissions = [];
+      
+      // Pages
+      for (const page of ALL_PAGES) {
+        permissions.push({
+          entity: page,
+          entityType: 'page',
+          accessLevel: 'both',
+          roleId: adminRole.id
+        });
       }
+      
+      // Tables
+      for (const table of ALL_TABLES) {
+        permissions.push({
+          entity: table,
+          entityType: 'table',
+          accessLevel: 'both',
+          roleId: adminRole.id
+        });
+      }
+      
+      // Buttons
+      for (const button of ALL_BUTTONS) {
+        permissions.push({
+          entity: button,
+          entityType: 'button',
+          accessLevel: 'both',
+          roleId: adminRole.id
+        });
+      }
+      
+      await tx.permission.createMany({
+        data: permissions
+      });
+
+      // 4. Deaktiviere alle anderen Rollen des Users (setze lastUsed auf false)
+      await tx.userRole.updateMany({
+        where: {
+          userId: Number(userId),
+          lastUsed: true
+        },
+        data: {
+          lastUsed: false
+        }
+      });
+
+      // 5. Weise den Ersteller zur Admin-Rolle zu (als lastUsed)
+      await tx.userRole.create({
+        data: {
+          userId: Number(userId),
+          roleId: adminRole.id,
+          lastUsed: true
+        }
+      });
+
+      return {
+        organization: {
+          id: organization.id,
+          name: organization.name,
+          displayName: organization.displayName,
+          isActive: organization.isActive,
+          maxUsers: organization.maxUsers,
+          subscriptionPlan: organization.subscriptionPlan,
+          createdAt: organization.createdAt,
+          updatedAt: organization.updatedAt
+        },
+        adminRoleId: adminRole.id
+      };
     });
 
-    res.status(201).json(organization);
+    console.log(`✅ Organisation "${result.organization.displayName}" erstellt. Ersteller (User ${userId}) ist jetzt Admin.`);
+
+    res.status(201).json(result.organization);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ 

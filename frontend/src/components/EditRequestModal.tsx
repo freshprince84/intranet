@@ -7,10 +7,36 @@ import { Dialog } from '@headlessui/react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
 import MarkdownPreview from './MarkdownPreview.tsx';
 
+interface Request {
+  id: number;
+  title: string;
+  status: 'approval' | 'approved' | 'to_improve' | 'denied';
+  requestedBy: {
+    id: number;
+    username: string;
+    firstName: string;
+    lastName: string;
+  };
+  responsible: {
+    id: number;
+    username: string;
+    firstName: string;
+    lastName: string;
+  };
+  branch: {
+    id: number;
+    name: string;
+  };
+  dueDate: string;
+  createTodo: boolean;
+  description?: string;
+  attachments?: RequestAttachment[];
+}
+
 interface EditRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRequestUpdated: () => void;
+  onRequestUpdated: (updatedRequest: Request) => void;
   request: {
     id: number;
     title: string;
@@ -364,11 +390,14 @@ const EditRequestModal = ({
       // Hochladen der temporären Anhänge
       await uploadTemporaryAttachments();
 
+      // Hole den aktualisierten Request vom Server
+      const updatedResponse = await axiosInstance.get(API_ENDPOINTS.REQUESTS.BY_ID(request.id));
+
       // Erfolgreiches Update - Schließe das Modal
-      // Hier könnte auch eine "Request aktualisiert"-Nachricht angezeigt werden
       onClose();
       if (onRequestUpdated) {
-        onRequestUpdated();
+        // Übergebe den aktualisierten Request an den Callback
+        onRequestUpdated(updatedResponse.data);
       }
     } catch (err) {
       console.error('Fehler beim Aktualisieren des Requests:', err);
@@ -391,7 +420,8 @@ const EditRequestModal = ({
       
       await axiosInstance.delete(API_ENDPOINTS.REQUESTS.BY_ID(request.id));
 
-      onRequestUpdated();
+      // Beim Löschen brauchen wir keinen Request-Update, aber der Callback wird für Konsistenz aufgerufen
+      // Der Parent muss die Liste aktualisieren (wird in Requests.tsx implementiert)
       onClose();
     } catch (err) {
       console.error('Delete Error:', err);

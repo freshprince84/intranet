@@ -301,34 +301,67 @@ Authorization: Bearer {token}
 
 **Endpunkt**: `POST /api/auth/register`
 
-**Beschreibung**: Registriert einen neuen Benutzer (wenn die öffentliche Registrierung aktiviert ist).
+**Beschreibung**: Registriert einen neuen Benutzer. Der Benutzer erhält automatisch eine E-Mail mit seinen Anmeldeinformationen. Bei der Registrierung wird dem Benutzer die Hamburger-Rolle zugewiesen, sodass er keiner Organisation angehört. Nach der Registrierung kann der Benutzer entweder einer bestehenden Organisation beitreten oder eine eigene Organisation erstellen.
 
 **Request-Body**:
 ```json
 {
-  "username": "newuser",
+  "email": "newuser@example.com",
   "password": "password123",
-  "firstName": "New",
-  "lastName": "User",
-  "email": "newuser@example.com"
+  "username": "newuser",
+  "first_name": "New",
+  "last_name": "User"
 }
 ```
+
+**Hinweise**:
+- `username` ist optional. Wenn nicht angegeben, wird die E-Mail-Adresse als Benutzername verwendet.
+- `first_name` und `last_name` sind optional.
 
 **Response**:
 ```json
 {
-  "success": true,
-  "data": {
-    "user": {
-      "id": 123,
-      "username": "newuser",
-      "firstName": "New",
-      "lastName": "User",
-      "email": "newuser@example.com"
-    }
+  "message": "Benutzer erfolgreich erstellt",
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": 123,
+    "username": "newuser",
+    "email": "newuser@example.com",
+    "firstName": "New",
+    "lastName": "User",
+    "roles": [
+      {
+        "role": {
+          "id": 999,
+          "name": "Hamburger",
+          "permissions": [...]
+        },
+        "lastUsed": true
+      }
+    ]
   }
 }
 ```
+
+**E-Mail-Versand**:
+- Nach erfolgreicher Registrierung wird automatisch eine E-Mail an die angegebene E-Mail-Adresse versendet.
+- Die E-Mail enthält:
+  - Willkommensnachricht
+  - Benutzername
+  - E-Mail-Adresse
+  - Passwort (⚠️ Sicherheitshinweis: Bitte ändern Sie das Passwort nach dem ersten Login)
+  - Informationen über die nächsten Schritte (Organisation beitreten/erstellen)
+
+**Konfiguration**:
+Die E-Mail-Funktion erfordert SMTP-Konfiguration in der `.env`-Datei:
+```
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=noreply@example.com
+SMTP_PASS=your-smtp-password
+```
+
+Falls keine SMTP-Konfiguration vorhanden ist, wird eine Warnung geloggt, aber die Registrierung schlägt nicht fehl.
 
 ### Token verifizieren
 

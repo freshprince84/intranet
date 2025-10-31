@@ -244,17 +244,23 @@ const Requests: React.FC = () => {
         return;
       }
 
+      // Optimistisches Update: State sofort aktualisieren
+      setRequests(prevRequests => 
+        prevRequests.map(request => 
+          request.id === requestId ? { ...request, status: newStatus } : request
+        )
+      );
+
       await axiosInstance.put(`/requests/${requestId}`, 
         { 
           status: newStatus,
           create_todo: currentRequest.createTodo
         }
       );
-
-      fetchRequests();
     } catch (err) {
+      // Rollback bei Fehler: Vollständiges Reload
       console.error('Status Update Error:', err);
-      // Einfachere Fehlerbehandlung ohne axios-Import
+      fetchRequests();
       const axiosError = err as any;
       setError(`Fehler beim Aktualisieren des Status: ${axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten'}`);
     }
@@ -469,8 +475,8 @@ const Requests: React.FC = () => {
         copiedRequestData
       );
 
-      // Erfolgreich kopiert, Requests neu laden
-      fetchRequests();
+      // Optimistisches Update: Neuen Request zur Liste hinzufügen statt vollständigem Reload
+      setRequests(prevRequests => [response.data, ...prevRequests]);
       
       // Bearbeitungsmodal für den kopierten Request öffnen
       setSelectedRequest(response.data);
@@ -495,7 +501,12 @@ const Requests: React.FC = () => {
       <CreateRequestModal 
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onRequestCreated={fetchRequests}
+        onRequestCreated={(newRequest) => {
+          // Optimistisches Update: Neuen Request zur Liste hinzufügen statt vollständigem Reload
+          setRequests(prevRequests => [newRequest, ...prevRequests]);
+          setIsEditModalOpen(true);
+          setSelectedRequest(newRequest);
+        }}
       />
       {selectedRequest && (
         <EditRequestModal
@@ -504,7 +515,16 @@ const Requests: React.FC = () => {
             setIsEditModalOpen(false);
             setSelectedRequest(null);
           }}
-          onRequestUpdated={fetchRequests}
+          onRequestUpdated={(updatedRequest) => {
+            // Optimistisches Update: Request in Liste aktualisieren statt vollständigem Reload
+            setRequests(prevRequests => 
+              prevRequests.map(request => 
+                request.id === updatedRequest.id ? updatedRequest : request
+              )
+            );
+            setIsEditModalOpen(false);
+            setSelectedRequest(null);
+          }}
           request={selectedRequest}
         />
       )}

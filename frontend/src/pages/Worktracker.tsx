@@ -244,11 +244,19 @@ const Worktracker: React.FC = () => {
 
     const handleStatusChange = async (taskId: number, newStatus: Task['status']) => {
         try {
+            // Optimistisches Update: State sofort aktualisieren
+            setTasks(prevTasks => 
+                prevTasks.map(task => 
+                    task.id === taskId ? { ...task, status: newStatus } : task
+                )
+            );
+
             await axiosInstance.patch(API_ENDPOINTS.TASKS.BY_ID(taskId), { status: newStatus });
-            // Aktualisiere die Aufgabenliste
-            loadTasks();
+            toast.success('Status erfolgreich aktualisiert');
         } catch (error) {
+            // Rollback bei Fehler: Vollständiges Reload
             console.error('Fehler beim Aktualisieren des Status:', error);
+            loadTasks();
             toast.error('Fehler beim Aktualisieren des Status');
         }
     };
@@ -718,8 +726,8 @@ const Worktracker: React.FC = () => {
                 copiedTaskData
             );
 
-            // Erfolgreich kopiert, Tasks neu laden
-            loadTasks();
+            // Optimistisches Update: Neuen Task zur Liste hinzufügen statt vollständigem Reload
+            setTasks(prevTasks => [response.data, ...prevTasks]);
             
             // Bearbeitungsmodal für den kopierten Task öffnen
             setSelectedTask(response.data);
@@ -735,13 +743,16 @@ const Worktracker: React.FC = () => {
 
     const handleDeleteTask = async (taskId: number) => {
         if (window.confirm('Sind Sie sicher, dass Sie diese Aufgabe löschen möchten?')) {
+            // Optimistisches Update: Task sofort aus Liste entfernen
+            setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+
             try {
                 await axiosInstance.delete(API_ENDPOINTS.TASKS.BY_ID(taskId));
                 toast.success('Aufgabe erfolgreich gelöscht');
-                // Aktualisiere die Aufgabenliste
-                loadTasks();
             } catch (error) {
+                // Rollback bei Fehler: Vollständiges Reload
                 console.error('Fehler beim Löschen der Aufgabe:', error);
+                loadTasks();
                 toast.error('Fehler beim Löschen der Aufgabe');
             }
         }
@@ -1315,7 +1326,12 @@ const Worktracker: React.FC = () => {
             <CreateTaskModal 
                 isOpen={isCreateModalOpen}
                 onClose={() => setIsCreateModalOpen(false)}
-                onTaskCreated={loadTasks}
+                onTaskCreated={(newTask) => {
+                    // Optimistisches Update: Neuen Task zur Liste hinzufügen statt vollständigem Reload
+                    setTasks(prevTasks => [newTask, ...prevTasks]);
+                    setIsEditModalOpen(true);
+                    setSelectedTask(newTask);
+                }}
             />
             
             {selectedTask && (
@@ -1325,7 +1341,17 @@ const Worktracker: React.FC = () => {
                         setIsEditModalOpen(false);
                         setSelectedTask(null);
                     }}
-                    onTaskUpdated={loadTasks}
+                    onTaskUpdated={(updatedTask) => {
+                        // Optimistisches Update: Task in Liste aktualisieren statt vollständigem Reload
+                        setTasks(prevTasks => 
+                            prevTasks.map(task => 
+                                task.id === updatedTask.id ? updatedTask : task
+                            )
+                        );
+                        setIsEditModalOpen(false);
+                        setSelectedTask(null);
+                        toast.success('Aufgabe erfolgreich aktualisiert');
+                    }}
                     task={selectedTask}
                 />
             )}

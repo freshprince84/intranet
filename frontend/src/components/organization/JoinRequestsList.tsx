@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { UserPlusIcon, FunnelIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { organizationService } from '../../services/organizationService.ts';
 import { OrganizationJoinRequest } from '../../types/organization.ts';
@@ -54,35 +54,69 @@ const JoinRequestsList: React.FC = () => {
   
   const { canViewJoinRequests, canManageJoinRequests, loading: permissionsLoading } = usePermissions();
   const { showMessage } = useMessage();
+  const mountedRef = useRef(true);
+  const hasInitialLoadRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     // Warte bis Berechtigungen geladen sind
     if (permissionsLoading) {
       return;
     }
+
+    // Nur einmal beim initialen Load ausführen
+    if (hasInitialLoadRef.current) {
+      return;
+    }
+
+    // Prüfe Berechtigung direkt
+    const hasPermission = canViewJoinRequests();
+    if (!hasPermission) {
+      setError('Keine Berechtigung zum Anzeigen der Beitrittsanfragen');
+      setLoading(false);
+      hasInitialLoadRef.current = true;
+      return;
+    }
+
+    // Markiere als geladen, BEVOR der Request startet
+    hasInitialLoadRef.current = true;
     
     const fetchJoinRequests = async () => {
+      if (!mountedRef.current) return;
+      
       try {
         setLoading(true);
         setError(null);
         const requests = await organizationService.getJoinRequests();
+        
+        if (!mountedRef.current) return;
+        
         setJoinRequests(requests);
       } catch (err: any) {
+        if (!mountedRef.current) return;
+        
         const errorMessage = err.response?.data?.message || 'Fehler beim Laden der Beitrittsanfragen';
         setError(errorMessage);
-        showMessage(errorMessage, 'error');
+        // showMessage nur außerhalb useEffect verwenden, um Re-Renders zu vermeiden
+        // Verwende setTimeout, um es asynchron auszuführen
+        setTimeout(() => {
+          showMessage(errorMessage, 'error');
+        }, 0);
       } finally {
-        setLoading(false);
+        if (mountedRef.current) {
+          setLoading(false);
+        }
       }
     };
 
-    if (canViewJoinRequests()) {
-      fetchJoinRequests();
-    } else {
-      setError('Keine Berechtigung zum Anzeigen der Beitrittsanfragen');
-      setLoading(false);
-    }
-  }, [canViewJoinRequests, permissionsLoading, showMessage]);
+    fetchJoinRequests();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permissionsLoading]);
 
   const handleOpenProcessModal = (request: OrganizationJoinRequest) => {
     if (!canManageJoinRequests()) {
@@ -96,14 +130,22 @@ const JoinRequestsList: React.FC = () => {
   };
 
   const handleProcessSuccess = async () => {
-    // Neulade die Liste
+    // Neulade die Liste nach erfolgreicher Bearbeitung
+    // Reset das Flag, damit neu geladen werden kann
+    hasInitialLoadRef.current = false;
+    
     try {
+      setLoading(true);
       const requests = await organizationService.getJoinRequests();
       setJoinRequests(requests);
       setError(null);
+      hasInitialLoadRef.current = true;
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Fehler beim Laden der Beitrittsanfragen';
       setError(errorMessage);
+      hasInitialLoadRef.current = true;
+    } finally {
+      setLoading(false);
     }
   };
 

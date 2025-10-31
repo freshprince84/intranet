@@ -8,9 +8,22 @@ const Consultations: React.FC = () => {
   const consultationListRef = useRef<ConsultationListRef>(null);
 
   // Callback-Funktion für das Neuladen der Beratungsliste (normale Aktionen)
-  const handleConsultationChange = useCallback(() => {
-    // Triggert ein Neuladen der Beratungsliste ohne Filter-Änderung
-    consultationListRef.current?.refresh();
+  const handleConsultationChange = useCallback((consultation?: any) => {
+    if (consultation && consultation.id) {
+      // Wenn eine Consultation übergeben wurde, verwenden wir den imperativen Handle
+      // um die Consultation zur Liste hinzuzufügen oder zu aktualisieren
+      // Prüfe: Wenn endTime vorhanden, ist es ein Update (Stop), sonst ein Add (Start)
+      if (consultation.endTime) {
+        // Consultation wurde beendet - Update
+        consultationListRef.current?.updateConsultation?.(consultation);
+      } else {
+        // Consultation wurde gestartet - Add
+        consultationListRef.current?.addConsultation?.(consultation);
+      }
+    } else {
+      // Fallback: Vollständiges Reload wenn keine Consultation übergeben
+      consultationListRef.current?.refresh();
+    }
   }, []);
 
   // Callback-Funktion für das Starten einer Beratung (Filter wechseln)

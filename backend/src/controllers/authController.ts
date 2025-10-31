@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { PrismaClient, Prisma } from '@prisma/client';
+import { sendRegistrationEmail } from '../services/emailService';
 
 const prisma = new PrismaClient();
 
@@ -145,6 +146,12 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
                 lastUsed: r.lastUsed
             }))
         };
+
+        // 📧 E-Mail mit Anmeldeinformationen versenden (asynchron, blockiert nicht die Response)
+        sendRegistrationEmail(user.email, finalUsername, password).catch((error) => {
+            console.error('Fehler beim Versenden der Registrierungs-E-Mail:', error);
+            // E-Mail-Fehler blockieren nicht die Registrierung
+        });
 
         res.status(201).json({
             message: 'Benutzer erfolgreich erstellt',
