@@ -182,3 +182,6 @@ export const applyFilters = <T>(
 
 **Geschätzte Code-Reduktion:** ~700 Zeilen
 
+
+
+

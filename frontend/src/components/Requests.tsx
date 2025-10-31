@@ -55,16 +55,6 @@ interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
-interface FilterState {
-  title: string;
-  status: Request['status'] | 'all';
-  requestedBy: string;
-  responsible: string;
-  branch: string;
-  dueDateFrom: string;
-  dueDateTo: string;
-}
-
 // Definition der verfügbaren Spalten
 const availableColumns = [
   { id: 'title', label: 'Titel', shortLabel: 'Titel' },
@@ -86,26 +76,8 @@ const Requests: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterState, setFilterState] = useState<FilterState>({
-    title: '',
-    status: 'all',
-    requestedBy: '',
-    responsible: '',
-    branch: '',
-    dueDateFrom: '',
-    dueDateTo: ''
-  });
-  const [activeFilters, setActiveFilters] = useState<FilterState>({
-    title: '',
-    status: 'all',
-    requestedBy: '',
-    responsible: '',
-    branch: '',
-    dueDateFrom: '',
-    dueDateTo: ''
-  });
   
-  // Neue State-Variablen für erweiterte Filterbedingungen
+  // State-Variablen für erweiterte Filterbedingungen
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
   
@@ -337,80 +309,18 @@ const Requests: React.FC = () => {
     setDragOverColumn(null);
   };
 
-  const resetFilters = () => {
-    setFilterState({
-      title: '',
-      status: 'all',
-      requestedBy: '',
-      responsible: '',
-      branch: '',
-      dueDateFrom: '',
-      dueDateTo: ''
-    });
-  };
-
   const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
-    // Speichere die Bedingungen und Operatoren
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
-    
-    // Aktualisiere auch die alten FilterState für Kompatibilität
-    const newFilterState: FilterState = {
-      title: '',
-      status: 'all',
-      requestedBy: '',
-      responsible: '',
-      branch: '',
-      dueDateFrom: '',
-      dueDateTo: ''
-    };
-    
-    // Versuche, die alten Filter aus den neuen Bedingungen abzuleiten
-    conditions.forEach(condition => {
-      if (condition.column === 'title' && condition.operator === 'contains') {
-        newFilterState.title = condition.value as string || '';
-      } else if (condition.column === 'status' && condition.operator === 'equals') {
-        newFilterState.status = (condition.value as Request['status']) || 'all';
-      } else if (condition.column === 'requestedBy' && condition.operator === 'contains') {
-        newFilterState.requestedBy = condition.value as string || '';
-      } else if (condition.column === 'responsible' && condition.operator === 'contains') {
-        newFilterState.responsible = condition.value as string || '';
-      } else if (condition.column === 'branch' && condition.operator === 'contains') {
-        newFilterState.branch = condition.value as string || '';
-      } else if (condition.column === 'dueDate') {
-        if (condition.operator === 'after' || condition.operator === 'equals') {
-          newFilterState.dueDateFrom = condition.value as string || '';
-        } else if (condition.operator === 'before') {
-          newFilterState.dueDateTo = condition.value as string || '';
-        }
-      }
-    });
-    
-    setActiveFilters(newFilterState);
-    setFilterState(newFilterState);
   };
   
   const resetFilterConditions = () => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
-    resetFilters(); // Alte Filter zurücksetzen
-  };
-
-  const applyFilters = () => {
-    setActiveFilters(filterState);
-    setIsFilterModalOpen(false);
   };
 
   const getActiveFilterCount = () => {
-    let count = 0;
-    if (activeFilters.title) count++;
-    if (activeFilters.status !== 'all') count++;
-    if (activeFilters.requestedBy) count++;
-    if (activeFilters.responsible) count++;
-    if (activeFilters.branch) count++;
-    if (activeFilters.dueDateFrom) count++;
-    if (activeFilters.dueDateTo) count++;
-    return count;
+    return filterConditions.length;
   };
 
   const filteredAndSortedRequests = useMemo(() => {
@@ -509,51 +419,6 @@ const Requests: React.FC = () => {
           }
           
           if (!result) return false;
-          
-        // Wenn keine erweiterten Filterbedingungen, verwende die alten Filterkriterien
-        } else {        
-          // Alte Filterkriterien
-          if (activeFilters.title && !request.title.toLowerCase().includes(activeFilters.title.toLowerCase())) {
-            return false;
-          }
-          
-          if (activeFilters.status !== 'all' && request.status !== activeFilters.status) {
-            return false;
-          }
-          
-          if (activeFilters.requestedBy) {
-            const requestedByName = `${request.requestedBy.firstName} ${request.requestedBy.lastName}`.toLowerCase();
-            if (!requestedByName.includes(activeFilters.requestedBy.toLowerCase())) {
-              return false;
-            }
-          }
-          
-          if (activeFilters.responsible) {
-            const responsibleName = `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase();
-            if (!responsibleName.includes(activeFilters.responsible.toLowerCase())) {
-              return false;
-            }
-          }
-          
-          if (activeFilters.branch && !request.branch.name.toLowerCase().includes(activeFilters.branch.toLowerCase())) {
-            return false;
-          }
-          
-          if (activeFilters.dueDateFrom) {
-            const dueDateFrom = new Date(activeFilters.dueDateFrom);
-            const requestDate = new Date(request.dueDate);
-            if (requestDate < dueDateFrom) {
-              return false;
-            }
-          }
-          
-          if (activeFilters.dueDateTo) {
-            const dueDateTo = new Date(activeFilters.dueDateTo);
-            const requestDate = new Date(request.dueDate);
-            if (requestDate > dueDateTo) {
-              return false;
-            }
-          }
         }
         
         return true;
@@ -578,7 +443,7 @@ const Requests: React.FC = () => {
         if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [requests, searchTerm, activeFilters, sortConfig, filterConditions, filterLogicalOperators]);
+  }, [requests, searchTerm, sortConfig, filterConditions, filterLogicalOperators]);
 
   // Funktion zum Kopieren eines Requests
   const handleCopyRequest = async (request) => {

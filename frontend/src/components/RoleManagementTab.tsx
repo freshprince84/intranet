@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Dialog } from '@headlessui/react';
 import { roleApi } from '../api/apiClient.ts';
 import { Role, AccessLevel } from '../types/interfaces.ts';
 import { PencilIcon, TrashIcon, PlusIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
@@ -170,6 +171,131 @@ const buttonToPageMapping = {
   'payroll_edit': 'payroll'
 };
 
+// Definiert die Zuordnung von Buttons zu ihren zugehörigen Tabellen
+const buttonToTableMapping: Record<string, string | null> = {
+  // Worktime Buttons → worktime Tabelle
+  'worktime_start': 'worktime',
+  'worktime_stop': 'worktime',
+  'worktime_edit': 'worktime',
+  'worktime_delete': 'worktime',
+  // Task/Todo Buttons → tasks Tabelle
+  'task_create': 'tasks',
+  'task_edit': 'tasks',
+  'task_delete': 'tasks',
+  'todo_create': 'tasks',
+  'todo_edit': 'tasks',
+  'todo_delete': 'tasks',
+  // Client Buttons → clients Tabelle
+  'client_create': 'clients',
+  'client_edit': 'clients',
+  'client_delete': 'clients',
+  'consultation_start': 'clients',
+  'consultation_stop': 'clients',
+  'consultation_edit': 'clients',
+  // Invoice Buttons → consultation_invoices Tabelle
+  'invoice_create': 'consultation_invoices',
+  'invoice_download': 'consultation_invoices',
+  'invoice_mark_paid': 'consultation_invoices',
+  'invoice_settings': 'consultation_invoices',
+  // User Management Buttons → users/roles Tabellen
+  'user_create': 'users',
+  'user_edit': 'users',
+  'user_delete': 'users',
+  'role_assign': 'roles',
+  'role_create': 'roles',
+  'role_edit': 'roles',
+  'role_delete': 'roles',
+  // Settings Buttons → settings Tabelle
+  'settings_system': 'settings',
+  'settings_notifications': 'settings',
+  'settings_profile': 'settings',
+  // Buttons ohne direkte Tabelle-Zuordnung
+  'database_reset_table': null,
+  'database_logs': null,
+  'cerebro': null,
+  'payroll_generate': null,
+  'payroll_export': null,
+  'payroll_edit': null
+};
+
+// Display-Name-Mapping für Seiten (DB-Interne Bezeichnung → Frontend-Bezeichnung)
+const pageDisplayNames: Record<string, string> = {
+  'dashboard': 'Dashboard',
+  'worktracker': 'Worktracker',
+  'consultations': 'Beratungen',
+  'team_worktime_control': 'Team Kontrolle',
+  'payroll': 'Lohnabrechnung',
+  'usermanagement': 'Benutzerverwaltung',
+  'cerebro': 'Cerebro',
+  'settings': 'Einstellungen',
+  'profile': 'Profil'
+};
+
+// Display-Name-Mapping für Tabellen (DB-Interne Bezeichnung → Frontend-Bezeichnung)
+const tableDisplayNames: Record<string, string> = {
+  'tasks': "To Do's",
+  'worktime': 'Time Tracker',
+  'users': 'Benutzer',
+  'roles': 'Rollen',
+  'clients': 'Kunden',
+  'consultation_invoices': 'Rechnungen',
+  'requests': 'Anfragen',
+  'team_worktime': 'Team Arbeitszeiten',
+  'settings': 'Einstellungen',
+  'notifications': 'Benachrichtigungen',
+  'branches': 'Filialen',
+  'monthly_reports': 'Monatsberichte'
+};
+
+// Display-Name-Mapping für Buttons (DB-Interne Bezeichnung → Frontend-Bezeichnung)
+const buttonDisplayNames: Record<string, string> = {
+  // Worktime Buttons
+  'worktime_start': 'Start',
+  'worktime_stop': 'Stop',
+  'worktime_edit': 'Bearbeiten',
+  'worktime_delete': 'Löschen',
+  // Task/Todo Buttons (beide sind dasselbe - To Do's)
+  'task_create': 'Erstellen',
+  'task_edit': 'Bearbeiten',
+  'task_delete': 'Löschen',
+  'todo_create': 'Erstellen',
+  'todo_edit': 'Bearbeiten',
+  'todo_delete': 'Löschen',
+  // Client Buttons
+  'client_create': 'Erstellen',
+  'client_edit': 'Kunde bearbeiten',
+  'client_delete': 'Löschen',
+  'consultation_start': 'Start',
+  'consultation_stop': 'Stop',
+  'consultation_edit': 'Beratung bearbeiten',
+  // Invoice Buttons
+  'invoice_create': 'Erstellen',
+  'invoice_download': 'Herunterladen',
+  'invoice_mark_paid': 'Als bezahlt markieren',
+  'invoice_settings': 'Einstellungen',
+  // User Management Buttons
+  'user_create': 'Erstellen',
+  'user_edit': 'Bearbeiten',
+  'user_delete': 'Löschen',
+  'role_assign': 'Zuweisen',
+  'role_create': 'Erstellen',
+  'role_edit': 'Bearbeiten',
+  'role_delete': 'Löschen',
+  // Settings Buttons
+  'settings_system': 'System',
+  'settings_notifications': 'Benachrichtigungen',
+  'settings_profile': 'Profil',
+  // Database Buttons
+  'database_reset_table': 'Tabelle zurücksetzen',
+  'database_logs': 'Logs',
+  // Payroll Buttons
+  'payroll_generate': 'Generieren',
+  'payroll_export': 'Exportieren',
+  'payroll_edit': 'Bearbeiten',
+  // General
+  'cerebro': 'Cerebro'
+};
+
 // TableID für gespeicherte Filter
 const ROLES_TABLE_ID = 'roles-table';
 
@@ -193,11 +319,6 @@ const availableColumns = [
 
 // Standardreihenfolge der Spalten
 const defaultColumnOrder = ['name', 'description', 'permissions', 'actions'];
-
-interface FilterState {
-  name: string;
-  description: string;
-}
 
 // RoleCard-Komponente für mobile Ansicht
 const RoleCard: React.FC<{
@@ -303,22 +424,14 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
-  const [filterState, setFilterState] = useState<FilterState>({
-    name: '',
-    description: ''
-  });
-  const [activeFilters, setActiveFilters] = useState<FilterState>({
-    name: '',
-    description: ''
-  });
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   
   // Neue State-Variablen für erweiterte Filterbedingungen
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
   
-  // Responsiveness Hook
-  const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 768);
+  // Responsiveness Hook (640px wie Standard)
+  const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 640);
   
   // Neue Fehlerbehandlung hinzufügen
   const { handleError, handleValidationError } = useError();
@@ -331,7 +444,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   // Überwache Bildschirmgröße
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
+      setIsMobile(window.innerWidth < 640);
     };
     
     window.addEventListener('resize', handleResize);
@@ -830,22 +943,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
 
   // Funktion zum Zählen der aktiven Filter
   const getActiveFilterCount = () => {
-    let count = 0;
-    if (activeFilters.name) count++;
-    if (activeFilters.description) count++;
-    return count;
-  };
-
-  const resetFilters = () => {
-    setFilterState({
-      name: '',
-      description: ''
-    });
-  };
-
-  const applyFilters = () => {
-    setActiveFilters(filterState);
-    setIsFilterModalOpen(false);
+    return filterConditions.length;
   };
 
   // Filtern und sortieren der Rollen
@@ -921,25 +1019,13 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           
           if (!result) return false;
         }
-        // Wenn keine erweiterten Filterbedingungen, verwende die alten Filterkriterien
-        else if (activeFilters.name || activeFilters.description) {
-          // Erweiterte Filterkriterien
-          if (activeFilters.name && !role.name.toLowerCase().includes(activeFilters.name.toLowerCase())) {
-            return false;
-          }
-          
-          if (activeFilters.description && role.description && 
-            !role.description.toLowerCase().includes(activeFilters.description.toLowerCase())) {
-            return false;
-          }
-        }
         
         return true;
       })
       .sort((a, b) => {
         return a.name.localeCompare(b.name);
       });
-  }, [roles, searchTerm, activeFilters, filterConditions, filterLogicalOperators]);
+  }, [roles, searchTerm, filterConditions, filterLogicalOperators]);
 
   // Mobile Ansicht renderRoles-Funktion
   const renderRoles = () => {
@@ -982,122 +1068,20 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         </>
       );
     } else {
-      // Tabellen-Ansicht für größere Bildschirme
+      // Card-Ansicht für größere Bildschirme
       return (
         <>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-700">
-                <tr>
-                  {visibleColumnIds.map(columnId => {
-                    const column = availableColumns.find(col => col.id === columnId);
-                    if (!column) return null;
-                    
-                    return (
-                      <th 
-                        key={columnId}
-                        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider relative ${columnId !== 'actions' ? 'cursor-move' : ''}`}
-                        draggable={columnId !== 'actions'}
-                        onDragStart={columnId !== 'actions' ? (e) => handleDragStart(e, columnId) : undefined}
-                        onDragOver={columnId !== 'actions' ? (e) => handleDragOver(e, columnId) : undefined}
-                        onDrop={columnId !== 'actions' ? (e) => handleDrop(e, columnId) : undefined}
-                        onDragEnd={columnId !== 'actions' ? handleDragEnd : undefined}
-                      >
-                        <div className={`flex items-center ${dragOverColumn === columnId ? 'border-l-2 pl-1 border-blue-500' : ''} ${draggedColumn === columnId ? 'opacity-50' : ''}`}>
-                          {columnId !== 'actions' && <ArrowsUpDownIcon className="h-3 w-3 mr-1 text-gray-400" />}
-                          {column.label}
-                        </div>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                {filteredAndSortedRoles.slice(0, displayLimit).map((role) => (
-                  <tr key={role.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                    {visibleColumnIds.map((columnId) => {
-                      if (columnId === 'name') {
-                        return (
-                          <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{role.name}</div>
-                          </td>
-                        );
-                      }
-                      
-                      if (columnId === 'description') {
-                        return (
-                          <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-500 dark:text-gray-400">{role.description || '-'}</div>
-                          </td>
-                        );
-                      }
-                      
-                      if (columnId === 'permissions') {
-                        // Zähle die Berechtigungen nach Typ
-                        const permissionCount = {
-                          read: role.permissions.filter(p => p.accessLevel === 'read').length,
-                          write: role.permissions.filter(p => p.accessLevel === 'write').length,
-                          both: role.permissions.filter(p => p.accessLevel === 'both').length,
-                          none: role.permissions.filter(p => p.accessLevel === 'none').length
-                        };
-                        
-                        return (
-                          <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex space-x-2">
-                              {permissionCount.read > 0 && (
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                                  {permissionCount.read} Lesen
-                                </span>
-                              )}
-                              {permissionCount.write > 0 && (
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                  {permissionCount.write} Schreiben
-                                </span>
-                              )}
-                              {permissionCount.both > 0 && (
-                                <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
-                                  {permissionCount.both} Beide
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      }
-                      
-                      if (columnId === 'actions') {
-                        return (
-                          <td key={`${role.id}-${columnId}`} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div className="flex justify-end space-x-2">
-                              {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
-                                <button 
-                                  onClick={() => prepareRoleForEditing(role)}
-                                  className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                                  title="Rolle bearbeiten"
-                                >
-                                  <PencilIcon className="h-5 w-5" />
-                                </button>
-                              )}
-                              
-                              {!readOnly && role.id !== 1 && role.id !== 2 && role.id !== 999 && (
-                                <button 
-                                  onClick={() => handleDelete(role.id)}
-                                  className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                                  title="Rolle löschen"
-                                >
-                                  <TrashIcon className="h-5 w-5" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      }
-                      
-                      return null;
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-4">
+            {filteredAndSortedRoles.slice(0, displayLimit).map((role) => (
+              <RoleCard 
+                key={role.id} 
+                role={role} 
+                onEdit={prepareRoleForEditing}
+                onDelete={handleDelete}
+                canEdit={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
+                canDelete={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
+              />
+            ))}
           </div>
           
           {/* "Mehr anzeigen" Button - Desktop */}
@@ -1162,33 +1146,12 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
-    
-    // Aktualisiere auch die alten FilterState für Kompatibilität
-    const newFilterState: FilterState = {
-      name: '',
-      description: ''
-    };
-    
-    // Versuche, die alten Filter aus den neuen Bedingungen abzuleiten
-    conditions.forEach(condition => {
-      if (condition.column === 'name' && condition.operator === 'contains') {
-        newFilterState.name = condition.value as string || '';
-      } else if (condition.column === 'description' && condition.operator === 'contains') {
-        newFilterState.description = condition.value as string || '';
-      }
-    });
-    
-    setActiveFilters(newFilterState);
   };
   
   // Funktion zum Zurücksetzen der Filter
   const resetFilterConditions = () => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
-    setActiveFilters({
-      name: '',
-      description: ''
-    });
   };
 
   return (
@@ -1283,16 +1246,36 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         )}
       </div>
 
-      {/* Modal für Rollenerstellung/Bearbeitung */}
+      {/* Modal/Sidepane für Rollenerstellung/Bearbeitung */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 dark:bg-gray-900 dark:bg-opacity-60 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] overflow-hidden">
-            <div className="px-6 py-4 border-b dark:border-gray-700">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">{editingRole ? 'Rolle bearbeiten' : 'Neue Rolle erstellen'}</h3>
-            </div>
-            <form onSubmit={handleSubmit} className="flex flex-col h-full">
-              <div className="flex-1 overflow-y-auto">
-              <div className="p-6 space-y-5">
+        <>
+          {/* Mobile (unter 640px) - Modal */}
+          {isMobile ? (
+            <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} className="relative z-50">
+              <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+              
+              <div className="fixed inset-0 flex items-center justify-center p-4">
+                <Dialog.Panel className="mx-auto max-w-4xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl max-h-[calc(100vh-2rem)] flex flex-col overflow-hidden">
+                  {/* Header */}
+                  <div className="px-6 py-4 border-b dark:border-gray-700 flex-shrink-0">
+                    <div className="flex items-center justify-between">
+                      <Dialog.Title className="text-lg font-semibold dark:text-white">
+                        {editingRole ? 'Rolle bearbeiten' : 'Neue Rolle erstellen'}
+                      </Dialog.Title>
+                      <button
+                        onClick={() => setIsModalOpen(false)}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                      >
+                        <XMarkIcon className="h-6 w-6" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Form */}
+                  <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+                    {/* Content - scrollbarer Bereich */}
+                    <div className="flex-1 overflow-y-auto min-h-0">
+                      <div className="p-6 space-y-5">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
@@ -1315,65 +1298,63 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                 </div>
                   </div>
                   
-                  {/* Bulk Actions */}
-                  <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Schnell-Aktionen</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Alle Seiten</label>
-                      <select
-                        value=""
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            setAllPagePermissions(e.target.value as AccessLevel);
-                          }
-                        }}
-                          className="block w-full text-sm rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-600 dark:text-white"
-                      >
-                        <option value="">Auswählen...</option>
-                        <option value="none">Keine</option>
-                        <option value="both">Alle aktivieren</option>
-                      </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Alle Tabellen</label>
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setAllTablePermissions(e.target.value as AccessLevel);
-                            }
-                          }}
-                          className="block w-full text-sm rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-600 dark:text-white"
+                  <div className="mt-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Detaillierte Berechtigungen</label>
+                      {/* Bulk Actions - kompakt integriert */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setAllPagePermissions('both')}
+                          className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                          title="Alle Seiten aktivieren"
                         >
-                          <option value="">Auswählen...</option>
-                          <option value="none">Keine</option>
-                          <option value="both">Alle aktivieren</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Alle Buttons</label>
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            if (e.target.value) {
-                              setAllButtonPermissions(e.target.value as AccessLevel);
-                            }
-                          }}
-                          className="block w-full text-sm rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:bg-gray-600 dark:text-white"
+                          Seiten ✓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAllPagePermissions('none')}
+                          className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                          title="Alle Seiten deaktivieren"
                         >
-                          <option value="">Auswählen...</option>
-                          <option value="none">Keine</option>
-                          <option value="both">Alle aktivieren</option>
-                        </select>
+                          Seiten ✗
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAllTablePermissions('both')}
+                          className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800"
+                          title="Alle Tabellen aktivieren"
+                        >
+                          Tabellen ✓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAllTablePermissions('none')}
+                          className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                          title="Alle Tabellen deaktivieren"
+                        >
+                          Tabellen ✗
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAllButtonPermissions('both')}
+                          className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800"
+                          title="Alle Buttons aktivieren"
+                        >
+                          Buttons ✓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setAllButtonPermissions('none')}
+                          className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                          title="Alle Buttons deaktivieren"
+                        >
+                          Buttons ✗
+                        </button>
                       </div>
                     </div>
-                  </div>
-                  
-                  <div className="mt-2">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">Detaillierte Berechtigungen</label>
                     
-                    <div className="grid grid-cols-1 gap-4 max-h-60 overflow-y-auto border rounded-lg p-4 dark:border-gray-600">
+                    <div className="grid grid-cols-1 gap-4 overflow-y-auto border rounded-lg p-4 dark:border-gray-600">
                     {formData.permissions
                       .filter(permission => permission.entityType === 'page')
                       .map((permission, index) => {
@@ -1382,7 +1363,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                         return (
                           <div key={`permission-page-${permission.entity}-${index}`}>
                             <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-700 dark:text-gray-300">{permission.entity}</span>
+                              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{pageDisplayNames[permission.entity] || permission.entity}</span>
                               <label className={`inline-flex items-center ${alwaysVisiblePages.includes(permission.entity) ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}>
                                 <input
                                   type="checkbox"
@@ -1408,54 +1389,124 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                               </label>
                             </div>
                             
-                            {/* Tabellen-Berechtigungen als Unterpunkte */}
+                            {/* Tabellen-Berechtigungen mit zugehörigen Buttons gruppiert */}
                             {formData.permissions
                               .filter(tablePerm => 
                                 tablePerm.entityType === 'table' && 
                                 tableToPageMapping[tablePerm.entity] === permission.entity
                               )
+                              .sort((a, b) => {
+                                const aName = tableDisplayNames[a.entity] || a.entity;
+                                const bName = tableDisplayNames[b.entity] || b.entity;
+                                return aName.localeCompare(bName);
+                              })
                               .map((tablePerm, tableIndex) => {
                                 const tablePermIndex = formData.permissions.indexOf(tablePerm);
                                 const isTableActive = tablePerm.accessLevel === 'both';
+                                const tableEntity = tablePerm.entity;
+                                const tableDisplayName = tableDisplayNames[tableEntity] || tableEntity;
+                                
+                                // Finde alle Buttons, die zu dieser Tabelle gehören
+                                // Filtere Duplikate: task_* und todo_* sind dasselbe, nur task_* behalten
+                                const relatedButtons = formData.permissions
+                                  .filter(buttonPerm => 
+                                    buttonPerm.entityType === 'button' && 
+                                    buttonToPageMapping[buttonPerm.entity] === permission.entity &&
+                                    buttonToTableMapping[buttonPerm.entity] === tableEntity &&
+                                    // Entferne todo_* Buttons wenn task_* existiert (sind dasselbe)
+                                    !(tableEntity === 'tasks' && buttonPerm.entity.startsWith('todo_'))
+                                  )
+                                  .sort((a, b) => {
+                                    const aName = buttonDisplayNames[a.entity] || a.entity;
+                                    const bName = buttonDisplayNames[b.entity] || b.entity;
+                                    // Logische Reihenfolge: Start, Stop, Erstellen, Bearbeiten, Löschen, dann alphabetisch
+                                    const order = ['Start', 'Stop', 'Erstellen', 'Bearbeiten', 'Löschen'];
+                                    const aIndex = order.indexOf(aName);
+                                    const bIndex = order.indexOf(bName);
+                                    if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+                                    if (aIndex !== -1) return -1;
+                                    if (bIndex !== -1) return 1;
+                                    return aName.localeCompare(bName);
+                                  });
+                                
                                 return (
-                                  <div key={`table-permission-${tablePerm.entity}-${tableIndex}`} 
-                                    className="flex items-center justify-between mt-2 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">└ {tablePerm.entity}</span>
-                                    <label className="inline-flex items-center cursor-pointer">
-                                      <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={isTableActive}
-                                        onChange={() => {
-                                          const newPermissions = [...formData.permissions];
-                                          newPermissions[tablePermIndex] = {
-                                            ...tablePerm,
-                                            accessLevel: isTableActive ? 'none' : 'both'
-                                          };
-                                          setFormData({ ...formData, permissions: newPermissions });
-                                        }}
-                                      />
-                                      <div className="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
-                                      </div>
-                                    </label>
+                                  <div key={`table-permission-${tableEntity}-${tableIndex}`} className="mt-3">
+                                    {/* Tabelle selbst */}
+                                    <div className="flex items-center justify-between pl-6 border-l-2 border-blue-300 dark:border-blue-600">
+                                      <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">└ {tableDisplayName}</span>
+                                      <label className="inline-flex items-center cursor-pointer">
+                                        <input
+                                          type="checkbox"
+                                          className="sr-only peer"
+                                          checked={isTableActive}
+                                          onChange={() => {
+                                            const newPermissions = [...formData.permissions];
+                                            newPermissions[tablePermIndex] = {
+                                              ...tablePerm,
+                                              accessLevel: isTableActive ? 'none' : 'both'
+                                            };
+                                            setFormData({ ...formData, permissions: newPermissions });
+                                          }}
+                                        />
+                                        <div className="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
+                                        </div>
+                                      </label>
+                                    </div>
+                                    
+                                    {/* Zu dieser Tabelle gehörige Buttons */}
+                                    {relatedButtons.map((buttonPerm, buttonIndex) => {
+                                      const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
+                                      const isButtonActive = buttonPerm.accessLevel === 'both';
+                                      const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
+                                      return (
+                                        <div key={`button-permission-${buttonPerm.entity}-${buttonIndex}`} 
+                                          className="flex items-center justify-between mt-2 pl-12 border-l-2 border-gray-300 dark:border-gray-600">
+                                          <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
+                                          <label className="inline-flex items-center cursor-pointer">
+                                            <input
+                                              type="checkbox"
+                                              className="sr-only peer"
+                                              checked={isButtonActive}
+                                              onChange={() => {
+                                                const newPermissions = [...formData.permissions];
+                                                newPermissions[buttonPermIndex] = {
+                                                  ...buttonPerm,
+                                                  accessLevel: isButtonActive ? 'none' : 'both'
+                                                };
+                                                setFormData({ ...formData, permissions: newPermissions });
+                                              }}
+                                            />
+                                            <div className="relative w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:start-[1px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
+                                            </div>
+                                          </label>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 );
                               })
                             }
                               
-                              {/* Button-Berechtigungen als Unterpunkte */}
+                              {/* Button-Berechtigungen ohne Tabelle-Zuordnung (am Ende) */}
                               {formData.permissions
                                 .filter(buttonPerm => 
                                   buttonPerm.entityType === 'button' && 
-                                  buttonToPageMapping[buttonPerm.entity] === permission.entity
+                                  buttonToPageMapping[buttonPerm.entity] === permission.entity &&
+                                  !buttonToTableMapping[buttonPerm.entity]
                                 )
+                                .sort((a, b) => {
+                                  const aName = buttonDisplayNames[a.entity] || a.entity;
+                                  const bName = buttonDisplayNames[b.entity] || b.entity;
+                                  return aName.localeCompare(bName);
+                                })
                                 .map((buttonPerm, buttonIndex) => {
                                   const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
                                   const isButtonActive = buttonPerm.accessLevel === 'both';
+                                  const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
                                   return (
                                     <div key={`button-permission-${buttonPerm.entity}-${buttonIndex}`} 
-                                      className="flex items-center justify-between mt-1 pl-6 border-l-2 border-gray-200 dark:border-gray-700">
-                                      <span className="text-xs text-gray-500 dark:text-gray-500">└ 🔘 {buttonPerm.entity}</span>
+                                      className="flex items-center justify-between mt-2 pl-6 border-l-2 border-gray-300 dark:border-gray-600">
+                                      <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
                                       <label className="inline-flex items-center cursor-pointer">
                                         <input
                                           type="checkbox"
@@ -1483,26 +1534,335 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                       }
                     </div>
                   </div>
+                    </div>
+                  </div>
+                  
+                  {/* Footer */}
+                  <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 flex justify-end gap-2 border-t dark:border-gray-600 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                    >
+                      Abbrechen
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800"
+                    >
+                      {editingRole ? 'Aktualisieren' : 'Erstellen'}
+                    </button>
+                  </div>
+                </form>
+              </Dialog.Panel>
+            </div>
+          </Dialog>
+          ) : (
+            /* Desktop (ab 640px) - Sidepane */
+            <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} className="relative z-50">
+              {/* Semi-transparenter Hintergrund */}
+              <div 
+                className="fixed inset-0 bg-black/10 transition-opacity" 
+                aria-hidden="true" 
+                onClick={() => setIsModalOpen(false)}
+              />
+              
+              {/* Sidepane von rechts einfahren */}
+              <div 
+                className={`fixed inset-y-0 right-0 max-w-2xl w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isModalOpen ? 'translate-x-0' : 'translate-x-full'}`}
+              >
+                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+                  <Dialog.Title className="text-lg font-semibold dark:text-white">
+                    {editingRole ? 'Rolle bearbeiten' : 'Neue Rolle erstellen'}
+                  </Dialog.Title>
+                  <button
+                    onClick={() => setIsModalOpen(false)}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  >
+                    <XMarkIcon className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <div className="p-4 overflow-y-auto h-full">
+                  <form onSubmit={handleSubmit} className="space-y-5">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                        <input
+                          type="text"
+                          value={formData.name}
+                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Beschreibung</label>
+                        <input
+                          type="text"
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="mt-2">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Detaillierte Berechtigungen</label>
+                        {/* Bulk Actions */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setAllPagePermissions('both')}
+                            className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                            title="Alle Seiten aktivieren"
+                          >
+                            Seiten ✓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAllPagePermissions('none')}
+                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            title="Alle Seiten deaktivieren"
+                          >
+                            Seiten ✗
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAllTablePermissions('both')}
+                            className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800"
+                            title="Alle Tabellen aktivieren"
+                          >
+                            Tabellen ✓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAllTablePermissions('none')}
+                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            title="Alle Tabellen deaktivieren"
+                          >
+                            Tabellen ✗
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAllButtonPermissions('both')}
+                            className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800"
+                            title="Alle Buttons aktivieren"
+                          >
+                            Buttons ✓
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAllButtonPermissions('none')}
+                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            title="Alle Buttons deaktivieren"
+                          >
+                            Buttons ✗
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 gap-4 overflow-y-auto border rounded-lg p-4 dark:border-gray-600 max-h-[60vh]">
+                        {formData.permissions
+                          .filter(permission => permission.entityType === 'page')
+                          .map((permission, index) => {
+                            const permIndex = formData.permissions.indexOf(permission);
+                            const isActive = permission.accessLevel === 'both';
+                            return (
+                              <div key={`permission-page-desktop-${permission.entity}-${index}`}>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">{pageDisplayNames[permission.entity] || permission.entity}</span>
+                                  <label className={`inline-flex items-center ${alwaysVisiblePages.includes(permission.entity) ? 'cursor-not-allowed opacity-80' : 'cursor-pointer'}`}>
+                                    <input
+                                      type="checkbox"
+                                      className="sr-only peer"
+                                      checked={isActive}
+                                      disabled={alwaysVisiblePages.includes(permission.entity)}
+                                      onChange={() => {
+                                        const newPermissions = [...formData.permissions];
+                                        newPermissions[permIndex] = {
+                                          ...permission,
+                                          accessLevel: isActive ? 'none' : 'both'
+                                        };
+                                        setFormData({ ...formData, permissions: newPermissions });
+                                      }}
+                                    />
+                                    <div className={`relative w-11 h-6 ${alwaysVisiblePages.includes(permission.entity) ? 'bg-blue-600 dark:bg-blue-700' : 'bg-gray-200 dark:bg-gray-700'} peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700`}>
+                                      {alwaysVisiblePages.includes(permission.entity) && (
+                                        <span className="absolute inset-0 flex items-center justify-center text-xs text-white font-medium">
+                                          Fix
+                                        </span>
+                                      )}
+                                    </div>
+                                  </label>
+                                </div>
+                                
+                                {/* Tabellen-Berechtigungen mit zugehörigen Buttons gruppiert */}
+                                {formData.permissions
+                                  .filter(tablePerm => 
+                                    tablePerm.entityType === 'table' && 
+                                    tableToPageMapping[tablePerm.entity] === permission.entity
+                                  )
+                                  .sort((a, b) => {
+                                    const aName = tableDisplayNames[a.entity] || a.entity;
+                                    const bName = tableDisplayNames[b.entity] || b.entity;
+                                    return aName.localeCompare(bName);
+                                  })
+                                  .map((tablePerm, tableIndex) => {
+                                    const tablePermIndex = formData.permissions.indexOf(tablePerm);
+                                    const isTableActive = tablePerm.accessLevel === 'both';
+                                    const tableEntity = tablePerm.entity;
+                                    const tableDisplayName = tableDisplayNames[tableEntity] || tableEntity;
+                                    
+                                    // Finde alle Buttons, die zu dieser Tabelle gehören
+                                    const relatedButtons = formData.permissions
+                                      .filter(buttonPerm => 
+                                        buttonPerm.entityType === 'button' && 
+                                        buttonToPageMapping[buttonPerm.entity] === permission.entity &&
+                                        buttonToTableMapping[buttonPerm.entity] === tableEntity &&
+                                        !(tableEntity === 'tasks' && buttonPerm.entity.startsWith('todo_'))
+                                      )
+                                      .sort((a, b) => {
+                                        const aName = buttonDisplayNames[a.entity] || a.entity;
+                                        const bName = buttonDisplayNames[b.entity] || b.entity;
+                                        const order = ['Start', 'Stop', 'Erstellen', 'Bearbeiten', 'Löschen'];
+                                        const aIndex = order.indexOf(aName);
+                                        const bIndex = order.indexOf(bName);
+                                        if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+                                        if (aIndex !== -1) return -1;
+                                        if (bIndex !== -1) return 1;
+                                        return aName.localeCompare(bName);
+                                      });
+                                    
+                                    return (
+                                      <div key={`table-permission-desktop-${tableEntity}-${tableIndex}`} className="mt-3">
+                                        {/* Tabelle selbst */}
+                                        <div className="flex items-center justify-between pl-6 border-l-2 border-blue-300 dark:border-blue-600">
+                                          <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">└ {tableDisplayName}</span>
+                                          <label className="inline-flex items-center cursor-pointer">
+                                            <input
+                                              type="checkbox"
+                                              className="sr-only peer"
+                                              checked={isTableActive}
+                                              onChange={() => {
+                                                const newPermissions = [...formData.permissions];
+                                                newPermissions[tablePermIndex] = {
+                                                  ...tablePerm,
+                                                  accessLevel: isTableActive ? 'none' : 'both'
+                                                };
+                                                setFormData({ ...formData, permissions: newPermissions });
+                                              }}
+                                            />
+                                            <div className="relative w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
+                                            </div>
+                                          </label>
+                                        </div>
+                                        
+                                        {/* Zu dieser Tabelle gehörige Buttons */}
+                                        {relatedButtons.map((buttonPerm, buttonIndex) => {
+                                          const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
+                                          const isButtonActive = buttonPerm.accessLevel === 'both';
+                                          const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
+                                          return (
+                                            <div key={`button-permission-desktop-${buttonPerm.entity}-${buttonIndex}`} 
+                                              className="flex items-center justify-between mt-2 pl-12 border-l-2 border-gray-300 dark:border-gray-600">
+                                              <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
+                                              <label className="inline-flex items-center cursor-pointer">
+                                                <input
+                                                  type="checkbox"
+                                                  className="sr-only peer"
+                                                  checked={isButtonActive}
+                                                  onChange={() => {
+                                                    const newPermissions = [...formData.permissions];
+                                                    newPermissions[buttonPermIndex] = {
+                                                      ...buttonPerm,
+                                                      accessLevel: isButtonActive ? 'none' : 'both'
+                                                    };
+                                                    setFormData({ ...formData, permissions: newPermissions });
+                                                  }}
+                                                />
+                                                <div className="relative w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:start-[1px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
+                                                </div>
+                                              </label>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    );
+                                  })
+                                }
+                                  
+                                {/* Button-Berechtigungen ohne Tabelle-Zuordnung (am Ende) */}
+                                {formData.permissions
+                                  .filter(buttonPerm => 
+                                    buttonPerm.entityType === 'button' && 
+                                    buttonToPageMapping[buttonPerm.entity] === permission.entity &&
+                                    !buttonToTableMapping[buttonPerm.entity]
+                                  )
+                                  .sort((a, b) => {
+                                    const aName = buttonDisplayNames[a.entity] || a.entity;
+                                    const bName = buttonDisplayNames[b.entity] || b.entity;
+                                    return aName.localeCompare(bName);
+                                  })
+                                  .map((buttonPerm, buttonIndex) => {
+                                    const buttonPermIndex = formData.permissions.indexOf(buttonPerm);
+                                    const isButtonActive = buttonPerm.accessLevel === 'both';
+                                    const buttonDisplayName = buttonDisplayNames[buttonPerm.entity] || buttonPerm.entity;
+                                    return (
+                                      <div key={`button-permission-desktop-${buttonPerm.entity}-${buttonIndex}`} 
+                                        className="flex items-center justify-between mt-2 pl-6 border-l-2 border-gray-300 dark:border-gray-600">
+                                        <span className="text-xs text-gray-600 dark:text-gray-400">└ {buttonDisplayName}</span>
+                                        <label className="inline-flex items-center cursor-pointer">
+                                          <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={isButtonActive}
+                                            onChange={() => {
+                                              const newPermissions = [...formData.permissions];
+                                              newPermissions[buttonPermIndex] = {
+                                                ...buttonPerm,
+                                                accessLevel: isButtonActive ? 'none' : 'both'
+                                              };
+                                              setFormData({ ...formData, permissions: newPermissions });
+                                            }}
+                                          />
+                                          <div className="relative w-9 h-5 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:start-[1px] after:bg-white after:border-gray-300 dark:after:border-gray-600 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-700">
+                                          </div>
+                                        </label>
+                                      </div>
+                                    );
+                                  })
+                                }
+                              </div>
+                            );
+                          })
+                        }
+                      </div>
+                    </div>
+
+                    {/* Buttons */}
+                    <div className="flex justify-end pt-4 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsModalOpen(false)}
+                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                      >
+                        Abbrechen
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800"
+                      >
+                        {editingRole ? 'Aktualisieren' : 'Erstellen'}
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
-              <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 flex justify-end space-x-2 rounded-b-lg">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 focus:outline-none"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none"
-                >
-                  {editingRole ? 'Aktualisieren' : 'Erstellen'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </Dialog>
+          )}
+        </>
       )}
     </div>
   );

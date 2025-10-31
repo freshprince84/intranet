@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, subDays, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { StopIcon, ArrowPathIcon, MagnifyingGlassIcon, Bars3Icon, ChevronUpIcon, ChevronDownIcon, ArrowsUpDownIcon, CalendarIcon, PencilIcon, FunnelIcon } from '@heroicons/react/24/outline';
 import StopWorktimeModal from './StopWorktimeModal.tsx';
@@ -43,11 +43,6 @@ interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
-interface FilterState {
-  name: string;
-  branch: string;
-}
-
 interface WorktimeGroup {
   user: {
     id: number;
@@ -86,10 +81,6 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'startTime', direction: 'asc' });
-  const [filterState, setFilterState] = useState<FilterState>({
-    name: '',
-    branch: ''
-  });
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
   const [isColumnConfigOpen, setIsColumnConfigOpen] = useState(false);
@@ -339,18 +330,6 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         }
         
         if (!result) return false;
-        
-      // Wenn keine erweiterten Filterbedingungen, verwende die alten Filterkriterien
-      } else {
-        const matchesNameFilter = !filterState.name || 
-                                fullName.includes(filterState.name.toLowerCase());
-        
-        const matchesBranchFilter = !filterState.branch || 
-                                  branch.includes(filterState.branch.toLowerCase());
-        
-        if (!matchesNameFilter || !matchesBranchFilter) {
-          return false;
-        }
       }
       
       return true;
@@ -389,7 +368,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     }
     
     return filtered;
-  }, [allWorktimes, activeUsers, searchTerm, sortConfig, filterState, selectedDate, filterConditions, filterLogicalOperators]);
+  }, [allWorktimes, activeUsers, searchTerm, sortConfig, selectedDate, filterConditions, filterLogicalOperators]);
 
   // Render-Methode für Spaltenheader
   const renderSortableHeader = (columnId: string, label: string) => {
@@ -561,41 +540,61 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
-    
-    // Aktualisiere auch die alten FilterState für Kompatibilität
-    const newFilterState: FilterState = {
-      name: '',
-      branch: ''
-    };
-    
-    // Versuche, die alten Filter aus den neuen Bedingungen abzuleiten
-    conditions.forEach(condition => {
-      if (condition.column === 'name' && condition.operator === 'contains') {
-        newFilterState.name = condition.value as string || '';
-      } else if (condition.column === 'branch' && condition.operator === 'contains') {
-        newFilterState.branch = condition.value as string || '';
-      }
-    });
-    
-    setFilterState(newFilterState);
   };
   
   // Funktion zum Zurücksetzen der Filter
   const resetFilterConditions = () => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
-    setFilterState({
-      name: '',
-      branch: ''
-    });
   };
+
+  // Datum zu vorherigem Tag ändern
+  const handlePreviousDay = () => {
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const selected = new Date(year, month - 1, day);
+    const previousDate = subDays(selected, 1);
+    onDateChange(format(previousDate, 'yyyy-MM-dd'));
+  };
+
+  // Datum zu nächstem Tag ändern
+  const handleNextDay = () => {
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const selected = new Date(year, month - 1, day);
+    const nextDate = addDays(selected, 1);
+    onDateChange(format(nextDate, 'yyyy-MM-dd'));
+  };
+
+  // Prüfen ob selectedDate kleiner als heute ist (dynamisch bei Änderung)
+  const isDateBeforeToday = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const [year, month, day] = selectedDate.split('-').map(Number);
+    const selected = new Date(year, month - 1, day);
+    selected.setHours(0, 0, 0, 0);
+    
+    return selected.getTime() < today.getTime();
+  }, [selectedDate]);
 
   return (
     <div>
       {/* Header mit Datumsauswahl, Suche und Buttons */}
       <div className="flex items-center justify-between mb-4">
-        {/* Datumsauswahl - linksbündig */}
-        <div>
+        {/* Datumsauswahl mit Pfeilen - linksbündig */}
+        <div className="flex items-center gap-0.5">
+          {/* Links-Pfeil (zurück) */}
+          <button
+            type="button"
+            onClick={handlePreviousDay}
+            className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            title="Vorheriger Tag"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+
+          {/* Datumsfeld */}
           <div className="relative w-[180px]">
             <input
               type="date"
@@ -605,6 +604,20 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
               onChange={(e) => onDateChange(e.target.value)}
             />
           </div>
+
+          {/* Rechts-Pfeil (vorwärts) - nur wenn Datum < heute */}
+          {isDateBeforeToday && (
+            <button
+              type="button"
+              onClick={handleNextDay}
+              className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              title="Nächster Tag"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Suche und Buttons - rechtsbündig */}

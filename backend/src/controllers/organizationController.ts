@@ -308,10 +308,10 @@ export const deleteOrganization = async (req: Request, res: Response) => {
 // Organisation-Statistiken abrufen
 export const getOrganizationStats = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const organizationId = parseInt(id);
+    // Verwende organizationId aus Middleware (für /current/stats) oder aus params (für /:id/stats)
+    const organizationId = req.organizationId || (req.params.id ? parseInt(req.params.id) : null);
 
-    if (isNaN(organizationId)) {
+    if (!organizationId || isNaN(organizationId)) {
       return res.status(400).json({ message: 'Ungültige Organisations-ID' });
     }
 
