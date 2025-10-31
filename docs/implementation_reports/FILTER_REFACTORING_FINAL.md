@@ -127,3 +127,6 @@ const getActiveFilterCount = () => {
 - Keine Performance-Optimierung
 - Keine UX-Änderungen
 
+
+
+

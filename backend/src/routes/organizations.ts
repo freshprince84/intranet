@@ -1,5 +1,6 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { organizationMiddleware } from '../middleware/organization';
 import { 
   getCurrentOrganization,
   createOrganization,
@@ -7,16 +8,19 @@ import {
   createJoinRequest,
   getJoinRequests,
   processJoinRequest,
-  searchOrganizations
+  searchOrganizations,
+  getOrganizationStats
 } from '../controllers/organizationController';
 
 const router = express.Router();
 
 // Alle Routen erfordern Authentifizierung
 router.use(authMiddleware);
+router.use(organizationMiddleware);
 
 // Organisation-Routen
 router.get('/current', getCurrentOrganization);
+router.get('/current/stats', getOrganizationStats);
 router.post('/', createOrganization);
 router.put('/current', updateOrganization);
 

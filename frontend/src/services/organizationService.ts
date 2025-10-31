@@ -55,5 +55,11 @@ export const organizationService = {
       data
     );
     return response.data;
+  },
+
+  // Organisation-Statistiken abrufen
+  getOrganizationStats: async (): Promise<any> => {
+    const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATIONS.STATS);
+    return response.data;
   }
 }; 

@@ -180,6 +180,7 @@ export const API_ENDPOINTS = {
     ORGANIZATIONS: {
         BASE: '/organizations',
         CURRENT: '/organizations/current',
+        STATS: '/organizations/current/stats',
         SEARCH: '/organizations/search',
         JOIN_REQUEST: '/organizations/join-request',
         JOIN_REQUESTS: '/organizations/join-requests',

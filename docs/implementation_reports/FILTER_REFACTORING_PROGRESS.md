@@ -174,3 +174,6 @@ Vor der Implementierung der Phase 1 brauche ich deine Bestätigung zu:
 
 [Pause - warte auf Anweisung]
 
+
+
+

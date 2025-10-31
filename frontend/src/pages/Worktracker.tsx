@@ -51,16 +51,6 @@ interface SortConfig {
     direction: 'asc' | 'desc';
 }
 
-interface FilterState {
-    title: string;
-    status: Task['status'] | 'all';
-    responsible: string;
-    qualityControl: string;
-    branch: string;
-    dueDateFrom: string;
-    dueDateTo: string;
-}
-
 // Definiere die verfügbaren Spalten für die Tabelle
 const availableColumns = [
     { id: 'title', label: 'Titel', shortLabel: 'Titel' },
@@ -93,29 +83,9 @@ const Worktracker: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<Task['status'] | 'all'>('all');
     
-    // Neuer State für erweiterte Filterbedingungen
+    // State für erweiterte Filterbedingungen
     const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
     const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-    
-    // Behalte den alten FilterState für die Kompatibilität bei
-    const [filterState, setFilterState] = useState<FilterState>({
-        title: '',
-        status: 'all',
-        responsible: '',
-        qualityControl: '',
-        branch: '',
-        dueDateFrom: '',
-        dueDateTo: ''
-    });
-    const [activeFilters, setActiveFilters] = useState<FilterState>({
-        title: '',
-        status: 'all',
-        responsible: '',
-        qualityControl: '',
-        branch: '',
-        dueDateFrom: '',
-        dueDateTo: ''
-    });
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -393,81 +363,17 @@ const Worktracker: React.FC = () => {
     };
 
     const getActiveFilterCount = () => {
-        let count = 0;
-        if (activeFilters.title) count++;
-        if (activeFilters.status !== 'all') count++;
-        if (activeFilters.responsible) count++;
-        if (activeFilters.qualityControl) count++;
-        if (activeFilters.branch) count++;
-        if (activeFilters.dueDateFrom) count++;
-        if (activeFilters.dueDateTo) count++;
-        return count;
-    };
-
-    const resetFilters = () => {
-        setFilterState({
-            title: '',
-            status: 'all',
-            responsible: '',
-            qualityControl: '',
-            branch: '',
-            dueDateFrom: '',
-            dueDateTo: ''
-        });
+        return filterConditions.length;
     };
 
     const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
-        // Speichere die Bedingungen und Operatoren
         setFilterConditions(conditions);
         setFilterLogicalOperators(operators);
-        
-        // Hier könnten wir die alten Filterstate für Kompatibilität aktualisieren
-        // Diese Funktion wird auch automatisch nach dem Speichern der neuen Bedingungen ausgeführt
-        const newFilterState: FilterState = {
-            title: '',
-            status: 'all',
-            responsible: '',
-            qualityControl: '',
-            branch: '',
-            dueDateFrom: '',
-            dueDateTo: ''
-        };
-        
-        // Versuche, die alten Filter aus den neuen Bedingungen abzuleiten
-        conditions.forEach(condition => {
-            if (condition.column === 'title' && condition.operator === 'contains') {
-                newFilterState.title = condition.value as string || '';
-            } else if (condition.column === 'status' && condition.operator === 'equals') {
-                newFilterState.status = (condition.value as Task['status']) || 'all';
-            } else if (condition.column === 'responsible' && condition.operator === 'contains') {
-                newFilterState.responsible = condition.value as string || '';
-            } else if (condition.column === 'qualityControl' && condition.operator === 'contains') {
-                newFilterState.qualityControl = condition.value as string || '';
-            } else if (condition.column === 'branch' && condition.operator === 'contains') {
-                newFilterState.branch = condition.value as string || '';
-            } else if (condition.column === 'dueDate') {
-                if (condition.operator === 'after' || condition.operator === 'equals') {
-                    newFilterState.dueDateFrom = condition.value as string || '';
-                } else if (condition.operator === 'before') {
-                    newFilterState.dueDateTo = condition.value as string || '';
-                }
-            }
-        });
-        
-        setActiveFilters(newFilterState);
-        setFilterState(newFilterState);
     };
     
     const resetFilterConditions = () => {
         setFilterConditions([]);
         setFilterLogicalOperators([]);
-        resetFilters(); // Alte Filter zurücksetzen
-    };
-
-    const applyFilters = () => {
-        setActiveFilters(filterState);
-        setStatusFilter(filterState.status); // Aktualisiere auch die statusFilter-Variable für die Kompatibilität
-        setIsFilterModalOpen(false);
     };
 
     const getStatusPriority = (status: Task['status']): number => {
@@ -673,60 +579,6 @@ const Worktracker: React.FC = () => {
                     }
                     
                     if (!result) return false;
-                    
-                    // Wenn alle erweiterten Filterbedingungen erfüllt sind, fahre mit den alten Filtern fort
-                } else {
-                    // Alte Filterkriterien für Abwärtskompatibilität
-                    if (activeFilters.title && !task.title.toLowerCase().includes(activeFilters.title.toLowerCase())) {
-                        return false;
-                    }
-                    
-                    if (activeFilters.status !== 'all' && task.status !== activeFilters.status) {
-                        return false;
-                    }
-                    
-                    if (activeFilters.responsible) {
-                        if (task.responsible) {
-                            const responsibleName = `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase();
-                            if (!responsibleName.includes(activeFilters.responsible.toLowerCase())) {
-                                return false;
-                            }
-                        } else if (task.role) {
-                            const roleName = task.role.name.toLowerCase();
-                            if (!roleName.includes(activeFilters.responsible.toLowerCase())) {
-                                return false;
-                            }
-                        } else {
-                            return false;
-                        }
-                    }
-                    
-                    if (activeFilters.qualityControl && task.qualityControl) {
-                        const qualityControlName = `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase();
-                        if (!qualityControlName.includes(activeFilters.qualityControl.toLowerCase())) {
-                            return false;
-                        }
-                    }
-                    
-                    if (activeFilters.branch && !task.branch.name.toLowerCase().includes(activeFilters.branch.toLowerCase())) {
-                        return false;
-                    }
-                    
-                    if (activeFilters.dueDateFrom && task.dueDate) {
-                        const dueDateFrom = new Date(activeFilters.dueDateFrom);
-                        const taskDate = new Date(task.dueDate);
-                        if (taskDate < dueDateFrom) {
-                            return false;
-                        }
-                    }
-                    
-                    if (activeFilters.dueDateTo && task.dueDate) {
-                        const dueDateTo = new Date(activeFilters.dueDateTo);
-                        const taskDate = new Date(task.dueDate);
-                        if (taskDate > dueDateTo) {
-                            return false;
-                        }
-                    }
                 }
                 
                 return true;
@@ -795,7 +647,7 @@ const Worktracker: React.FC = () => {
                 // Tertiäre Sortierung nach Titel
                 return a.title.localeCompare(b.title);
             });
-    }, [tasks, searchTerm, activeFilters, sortConfig, getStatusPriority, filterConditions, filterLogicalOperators]);
+    }, [tasks, searchTerm, sortConfig, getStatusPriority, filterConditions, filterLogicalOperators]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {

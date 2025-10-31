@@ -75,7 +75,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
     fetchUsers();
   }, []);
 
-  // Benutzerdaten laden
+  // Benutzerdaten laden - Verwende gefilterten Endpoint, damit nur Benutzer der eigenen Organisation angezeigt werden
   const fetchUsers = async () => {
     try {
       const response = await userApi.getAll();

@@ -1818,52 +1818,84 @@ Sidepanes werden für interaktive Eingaben verwendet, die den Benutzer nicht vol
 
 #### Korrekte Sidepane-Struktur
 
-**🎯 STANDARD-PATTERN:** Das InvoiceManagementTab implementiert das korrekte Sidepane-Pattern:
+**🎯 STANDARD-PATTERN für Create/Edit-Komponenten:** CreateTaskModal, CreateRequestModal, EditTaskModal und EditRequestModal implementieren das Standard-Sidepane-Pattern:
 
 ```jsx
-// KORREKTES Sidepane-Pattern (InvoiceManagementTab Standard)
-{isEditSidepaneOpen && editingItem && (
-  <div className="fixed inset-0 overflow-hidden z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
-    <div className="absolute inset-0 overflow-hidden">
-      {/* Backdrop - halbtransparent */}
-      <div className="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeSidepane}></div>
-      
-      {/* Panel Container */}
-      <div className="fixed inset-y-0 right-0 pl-10 max-w-full flex">
-        <div className="w-screen max-w-2xl">
-          <div className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-xl overflow-y-scroll">
-            
-            {/* Header - immer sichtbar */}
-            <div className="px-4 py-6 bg-gray-50 dark:bg-gray-700 sm:px-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-medium text-gray-900 dark:text-white" id="slide-over-title">
-                  Sidepane Titel
-                </h2>
-                <div className="ml-3 h-7 flex items-center">
-                  <button
-                    type="button"
-                    className="bg-gray-50 dark:bg-gray-700 rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    onClick={closeSidepane}
-                  >
-                    <span className="sr-only">Panel schließen</span>
-                    <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                  </button>
-                </div>
-              </div>
-            </div>
+// KORREKTES Sidepane-Pattern (Standard für Create/Edit)
+// Für Desktop (ab 640px) - Sidepane
+return (
+  <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+    {/* Semi-transparenter Hintergrund für den Rest der Seite */}
+    <div 
+      className="fixed inset-0 bg-black/10 transition-opacity" 
+      aria-hidden="true" 
+      onClick={onClose}
+    />
+    
+    {/* Sidepane von rechts einfahren */}
+    <div 
+      className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+    >
+      <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+        <Dialog.Title className="text-lg font-semibold dark:text-white">
+          Sidepane Titel
+        </Dialog.Title>
+        <button
+          onClick={onClose}
+          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+        >
+          <XMarkIcon className="h-6 w-6" />
+        </button>
+      </div>
 
-            {/* Content - scrollbar */}
-            <div className="flex-1 px-4 py-6 sm:px-6">
-              {/* Scrollbarer Inhalt hier */}
-            </div>
-            
-          </div>
-        </div>
+      <div className="p-4 overflow-y-auto h-full">
+        {/* Formular-Inhalt hier */}
       </div>
     </div>
-  </div>
-)}
+  </Dialog>
+);
 ```
+
+**Mobile (unter 640px) - Modal:**
+```jsx
+// Für Mobile (unter 640px) - klassisches Modal
+if (isMobile) {
+  return (
+    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+      <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+      
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+          <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+            <Dialog.Title className="text-lg font-semibold dark:text-white">
+              Modal Titel
+            </Dialog.Title>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            >
+              <XMarkIcon className="h-6 w-6" />
+            </button>
+          </div>
+
+          <div className="p-4">
+            {/* Formular-Inhalt hier */}
+          </div>
+        </Dialog.Panel>
+      </div>
+    </Dialog>
+  );
+}
+```
+
+**✅ Standard-Referenzen:**
+- `CreateTaskModal.tsx` - Desktop Sidepane Pattern (Zeilen 538-605)
+- `CreateRequestModal.tsx` - Desktop Sidepane Pattern (Zeilen 608-781)
+- `EditTaskModal.tsx` - Desktop Sidepane Pattern (Zeilen 1008-1045)
+- `EditRequestModal.tsx` - Desktop Sidepane Pattern (Zeilen 801-838)
+
+**⚠️ Alternative Sidepane-Struktur (für komplexere Bearbeitungen):**
+Die `InvoiceManagementTab.tsx` verwendet eine alternative, komplexere Struktur für sehr umfangreiche Bearbeitungsformen mit separatem Header-Bereich. Diese sollte NUR für spezielle Fälle verwendet werden, NICHT als Standard.
 
 #### CSS für Sidepanes
 
@@ -1938,41 +1970,29 @@ Sidepanes werden für interaktive Eingaben verwendet, die den Benutzer nicht vol
 }
 ```
 
-#### Dark Mode für Sidepanes mit Tailwind CSS
+#### Responsive Verhalten
 
-Für eine korrekte Dark Mode Implementierung der Sidepanes sollten folgende Tailwind-Klassen verwendet werden:
+**Wichtig:** Alle Sidepane-Komponenten müssen responsive sein:
 
+1. **Mobile (<640px)**: Werden automatisch als Modals dargestellt (siehe Mobile-Modal-Pattern oben)
+2. **Desktop (≥640px)**: Werden als Sidepanes von rechts eingeschoben
+
+**Implementierung der Responsive-Erkennung:**
 ```jsx
-// Dialog-Container
-<Dialog open={isOpen} onClose={onClose} className="relative z-50">
-  {/* Semi-transparenter Hintergrund */}
-  <div 
-    className="fixed inset-0 bg-black/10 transition-opacity" 
-    aria-hidden="true" 
-    onClick={onClose}
-  />
-  
-  {/* Sidepane von rechts einfahren */}
-  <div 
-    className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
-  >
-    <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-      <Dialog.Title className="text-lg font-semibold dark:text-white">
-        Sidepane-Titel
-      </Dialog.Title>
-      <button
-        onClick={onClose}
-        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-      >
-        <XMarkIcon className="h-6 w-6" />
-      </button>
-    </div>
+const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
-    <div className="p-4 overflow-y-auto h-full">
-      {/* Formularelemente wie beim Modal */}
-    </div>
-  </div>
-</Dialog>
+useEffect(() => {
+  const checkScreenSize = () => {
+    setIsMobile(window.innerWidth < 640);
+  };
+  
+  checkScreenSize();
+  window.addEventListener('resize', checkScreenSize);
+  
+  return () => {
+    window.removeEventListener('resize', checkScreenSize);
+  };
+}, []);
 ```
 
 ### Verwendungsrichtlinien
@@ -1982,22 +2002,23 @@ Für eine korrekte Dark Mode Implementierung der Sidepanes sollten folgende Tail
    - **Sidepanes** werden für umfangreiche Bearbeitungsaufgaben verwendet, bei denen der Benutzer den Kontext der Hauptansicht benötigt, wie z.B. komplexe Formulare, Detailansichten oder umfangreiche Konfigurationen.
 
 2. **Responsive Verhalten - PRÄZISE REGELN**:
-   - **Mobile (<640px)**: ALLE interaktiven Elemente werden als **Modals** dargestellt
+   - **Mobile (<640px)**: ALLE Create/Edit-Komponenten werden als **Modals** dargestellt
    - **Desktop (≥640px)**: 
-     - **Einfache Aufgaben** (Client erstellen, Bestätigungen) → **Modal**
-     - **Komplexe Aufgaben** (Request/Task bearbeiten, umfangreiche Formulare) → **Sidepane**
+     - **Create/Edit-Komponenten** (Task, Request, Client erstellen/bearbeiten) → **Sidepane**
+     - **Bestätigungsdialoge/Löschvorgänge** → **Modal**
 
 3. **Standard-Implementierungen**:
    
-   **✅ KORREKTE Referenzen:**
-   - **Sidepanes:** `InvoiceManagementTab.tsx` - **DAS IST DER STANDARD!**
-   - **Modals:** `CreateClientModal.tsx`, `ClientSelectModal.tsx`
+   **✅ KORREKTE Referenzen (Standard-Pattern):**
+   - **Sidepanes für Create/Edit:** `CreateTaskModal.tsx`, `CreateRequestModal.tsx`, `EditTaskModal.tsx`, `EditRequestModal.tsx`
+   - **Modals für Bestätigungen:** `ClientSelectModal.tsx` (wenn als Bestätigung verwendet)
    
-   **❌ FALSCHE Implementierungen (zu korrigieren):**
-   - `EditRequestModal.tsx`, `CreateRequestModal.tsx` - falsche Sidepane-Struktur
-   - `EditTaskModal.tsx`, `CreateTaskModal.tsx` - falsche Sidepane-Struktur
-   - `RoleManagementTab.tsx` - Modal-Scroll-Problem
-   - `InvoiceDetailModal.tsx` - Modal-Scroll-Problem
+   **⚠️ Alternative Implementierung (für sehr komplexe Fälle):**
+   - `InvoiceManagementTab.tsx` - verwendet alternative Sidepane-Struktur mit separatem Header-Bereich (NUR für spezielle Fälle)
+   
+   **❌ Zu korrigieren:**
+   - `CreateClientModal.tsx` - sollte Sidepane sein, nicht Modal (auf Standard-Pattern umstellen)
+   - `CreateOrganizationModal.tsx` - sollte Sidepane sein und HeadlessUI verwenden
 
 4. **Filter in Tabellen**:
    - Filter für Tabelleninhalte müssen als Pane direkt unter dem Filter-Button erscheinen, NICHT als separates Modal.
@@ -2021,19 +2042,21 @@ Beim Erstellen neuer Modals/Sidepanes:
 - [ ] Dark Mode Support für alle Elemente
 - [ ] Mobile: Anpassung der Größe und Abstände
 
-**Sidepane-Checkliste:**
-- [ ] Verwende InvoiceManagementTab Pattern als Basis
-- [ ] `fixed inset-0 overflow-hidden z-50` als Container
-- [ ] Backdrop mit `bg-gray-500 bg-opacity-75`
-- [ ] Panel mit `pl-10` und flexibler max-width
-- [ ] Header mit grauem Hintergrund
-- [ ] Content mit `flex-1` und korrektem Scroll
-- [ ] Dark Mode Support
-- [ ] Mobile: Automatisch als Modal rendern
+**Sidepane-Checkliste (Standard-Pattern für Create/Edit):**
+- [ ] Verwende CreateTaskModal/CreateRequestModal Pattern als Basis
+- [ ] Dialog mit `relative z-50`
+- [ ] Backdrop mit `fixed inset-0 bg-black/10 transition-opacity`
+- [ ] Sidepane Panel: `fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl`
+- [ ] Transform-Animation: `transform transition-transform duration-300 ease-in-out`
+- [ ] Zustand: `${isOpen ? 'translate-x-0' : 'translate-x-full'}`
+- [ ] Header: `flex items-center justify-between p-4 border-b dark:border-gray-700`
+- [ ] Content: `p-4 overflow-y-auto h-full`
+- [ ] Dark Mode Support für alle Elemente
+- [ ] Mobile: Automatisch als Modal rendern (siehe Mobile-Pattern oben)
 
-**Quick-Fix Verbot:**
-- ❌ Keine `max-h-[90vh] overflow-y-auto` Kombinationen
-- ❌ Keine `transform transition` Animationen für Sidepanes  
-- ❌ Keine isolierten Lösungen
-- ✅ Immer Standard-Pattern verwenden
-- ✅ Konsistente Implementierung über alle Komponenten
+**Wichtig:**
+- ✅ **Standard-Pattern verwenden:** CreateTaskModal/CreateRequestModal Pattern für alle Create/Edit-Komponenten
+- ✅ **Konsistente Implementierung:** Alle neuen Create/Edit-Komponenten müssen dem gleichen Pattern folgen
+- ✅ **Transform-Animation:** Der Standard verwendet `transform transition-transform duration-300 ease-in-out` für Sidepanes
+- ❌ **Keine isolierten Lösungen:** Nicht eigene Patterns erfinden, immer Standard verwenden
+- ❌ **Keine inkonsistenten Abweichungen:** Abweichungen nur mit ausdrücklicher Begründung

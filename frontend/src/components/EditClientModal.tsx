@@ -34,6 +34,7 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
 
   // Lade Client-Daten wenn Modal geöffnet wird
   useEffect(() => {
@@ -51,6 +52,20 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
       setErrors({});
     }
   }, [isOpen, client]);
+
+  // Überprüfung der Bildschirmgröße
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    
+    return () => {
+      window.removeEventListener('resize', checkScreenSize);
+    };
+  }, []);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -148,151 +163,353 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
     }
   };
 
+  const handleClose = () => {
+    setConfirmDelete(false);
+    setErrors({});
+    onClose();
+  };
+
   if (!client) return null;
 
-  return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-      <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-      
-      <div className="fixed inset-0 flex items-center justify-center p-4">
-        <Dialog.Panel className="mx-auto max-w-lg w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-          <form onSubmit={handleSubmit} className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <Dialog.Title className="text-lg font-medium text-gray-900 dark:text-white">
+  // Für Mobile (unter 640px) - klassisches Modal
+  if (isMobile) {
+    return (
+      <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <Dialog.Title className="text-lg font-semibold dark:text-white">
                 Client bearbeiten
               </Dialog.Title>
               <button
-                type="button"
-                onClick={onClose}
-                className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300"
+                onClick={handleClose}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
               >
                 <XMarkIcon className="h-6 w-6" />
               </button>
             </div>
 
-            <div className="space-y-4">
-              {/* Name */}
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Name *
-                </label>
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
-                    errors.name 
-                      ? 'border-red-300 dark:border-red-600' 
-                      : 'border-gray-300 dark:border-gray-600'
-                  }`}
-                />
-                {errors.name && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>
-                )}
+            <form onSubmit={handleSubmit} className="p-4">
+              <div className="space-y-4">
+                {/* Name */}
+                <div>
+                  <label htmlFor="name_mobile" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Name *
+                  </label>
+                  <input
+                    type="text"
+                    id="name_mobile"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    className={`mt-1 block w-full rounded-md border shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+                      errors.name 
+                        ? 'border-red-300 dark:border-red-600' 
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                  />
+                  {errors.name && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>
+                  )}
+                </div>
+
+                {/* Firma */}
+                <div>
+                  <label htmlFor="company_mobile" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Firma
+                  </label>
+                  <input
+                    type="text"
+                    id="company_mobile"
+                    name="company"
+                    value={formData.company}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+
+                {/* E-Mail */}
+                <div>
+                  <label htmlFor="email_mobile" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    E-Mail
+                  </label>
+                  <input
+                    type="email"
+                    id="email_mobile"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className={`mt-1 block w-full rounded-md border shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+                      errors.email 
+                        ? 'border-red-300 dark:border-red-600' 
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                  />
+                  {errors.email && (
+                    <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>
+                  )}
+                </div>
+
+                {/* Telefon */}
+                <div>
+                  <label htmlFor="phone_mobile" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Telefon
+                  </label>
+                  <input
+                    type="tel"
+                    id="phone_mobile"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+
+                {/* Adresse */}
+                <div>
+                  <label htmlFor="address_mobile" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Adresse
+                  </label>
+                  <input
+                    type="text"
+                    id="address_mobile"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+
+                {/* Notizen */}
+                <div>
+                  <label htmlFor="notes_mobile" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Notizen
+                  </label>
+                  <textarea
+                    id="notes_mobile"
+                    name="notes"
+                    rows={3}
+                    value={formData.notes}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+                  />
+                </div>
+
+                {/* Aktiv-Status */}
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="isActive_mobile"
+                    name="isActive"
+                    checked={formData.isActive}
+                    onChange={handleChange}
+                    className="rounded border-gray-300 text-blue-600 dark:bg-gray-700 dark:text-gray-300"
+                  />
+                  <label htmlFor="isActive_mobile" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                    Aktiv
+                  </label>
+                </div>
               </div>
 
-              {/* Firma */}
-              <div>
-                <label htmlFor="company" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Firma
-                </label>
-                <input
-                  type="text"
-                  id="company"
-                  name="company"
-                  value={formData.company}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                />
-              </div>
+              {/* Buttons */}
+              <div className="mt-6 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={loading}
+                  className={`inline-flex items-center px-4 py-2 border ${
+                    confirmDelete
+                      ? 'border-red-300 text-red-700 bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-red-900/20'
+                      : 'border-red-300 text-red-700 bg-white hover:bg-red-50 dark:border-red-600 dark:text-red-400 dark:bg-gray-700 dark:hover:bg-gray-600'
+                  } text-sm font-medium rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <TrashIcon className="h-5 w-5 mr-2" />
+                  {confirmDelete ? 'Wirklich löschen?' : 'Löschen'}
+                </button>
 
-              {/* E-Mail */}
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  E-Mail
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
-                    errors.email 
-                      ? 'border-red-300 dark:border-red-600' 
-                      : 'border-gray-300 dark:border-gray-600'
-                  }`}
-                />
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>
-                )}
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={handleClose}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? 'Speichere...' : 'Speichern'}
+                  </button>
+                </div>
               </div>
+            </form>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+    );
+  }
 
-              {/* Telefon */}
-              <div>
-                <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Telefon
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                />
-              </div>
+  // Für Desktop (ab 640px) - Sidepane
+  return (
+    <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
+      {/* Semi-transparenter Hintergrund für den Rest der Seite */}
+      <div 
+        className="fixed inset-0 bg-black/10 transition-opacity" 
+        aria-hidden="true" 
+        onClick={handleClose}
+      />
+      
+      {/* Sidepane von rechts einfahren */}
+      <div 
+        className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+      >
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+          <Dialog.Title className="text-lg font-semibold dark:text-white">
+            Client bearbeiten
+          </Dialog.Title>
+          <button
+            onClick={handleClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          >
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+        </div>
 
-              {/* Adresse */}
-              <div>
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  id="address"
-                  name="address"
-                  value={formData.address}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                />
-              </div>
+        <div className="p-4 overflow-y-auto h-full">
+          {Object.keys(errors).length > 0 && (
+            <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
+              {Object.values(errors).map((error, idx) => (
+                <p key={idx}>{error}</p>
+              ))}
+            </div>
+          )}
 
-              {/* Notizen */}
-              <div>
-                <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Notizen
-                </label>
-                <textarea
-                  id="notes"
-                  name="notes"
-                  rows={3}
-                  value={formData.notes}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
-                />
-              </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Name */}
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Name *
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className={`mt-1 block w-full rounded-md border shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+                  errors.name 
+                    ? 'border-red-300 dark:border-red-600' 
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
+              />
+              {errors.name && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>
+              )}
+            </div>
 
-              {/* Aktiv-Status */}
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="isActive"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleChange}
-                  className="rounded border-gray-300 text-blue-600 dark:bg-gray-700 dark:text-gray-300"
-                />
-                <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                  Aktiv
-                </label>
-              </div>
+            {/* Firma */}
+            <div>
+              <label htmlFor="company" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Firma
+              </label>
+              <input
+                type="text"
+                id="company"
+                name="company"
+                value={formData.company}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
+            {/* E-Mail */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                E-Mail
+              </label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className={`mt-1 block w-full rounded-md border shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white ${
+                  errors.email 
+                    ? 'border-red-300 dark:border-red-600' 
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
+              />
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.email}</p>
+              )}
+            </div>
+
+            {/* Telefon */}
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Telefon
+              </label>
+              <input
+                type="tel"
+                id="phone"
+                name="phone"
+                value={formData.phone}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
+            {/* Adresse */}
+            <div>
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Adresse
+              </label>
+              <input
+                type="text"
+                id="address"
+                name="address"
+                value={formData.address}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
+            {/* Notizen */}
+            <div>
+              <label htmlFor="notes" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                Notizen
+              </label>
+              <textarea
+                id="notes"
+                name="notes"
+                rows={3}
+                value={formData.notes}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+
+            {/* Aktiv-Status */}
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="isActive"
+                name="isActive"
+                checked={formData.isActive}
+                onChange={handleChange}
+                className="rounded border-gray-300 text-blue-600 dark:bg-gray-700 dark:text-gray-300"
+              />
+              <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                Aktiv
+              </label>
             </div>
 
             {/* Buttons */}
-            <div className="mt-6 flex items-center justify-between">
+            <div className="flex items-center justify-between pt-4">
               <button
                 type="button"
                 onClick={handleDelete}
@@ -307,25 +524,25 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
                 {confirmDelete ? 'Wirklich löschen?' : 'Löschen'}
               </button>
 
-              <div className="flex space-x-3">
+              <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  onClick={handleClose}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
                 >
                   Abbrechen
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Speichere...' : 'Speichern'}
                 </button>
               </div>
             </div>
           </form>
-        </Dialog.Panel>
+        </div>
       </div>
     </Dialog>
   );
