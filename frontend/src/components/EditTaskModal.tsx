@@ -58,10 +58,39 @@ interface CerebroArticle {
     content?: string;
 }
 
+interface Task {
+    id: number;
+    title: string;
+    description: string | null;
+    status: 'open' | 'in_progress' | 'improval' | 'quality_control' | 'done';
+    responsible: {
+        id: number;
+        firstName: string;
+        lastName: string;
+    } | null;
+    responsibleId: number | null;
+    role: {
+        id: number;
+        name: string;
+    } | null;
+    roleId: number | null;
+    qualityControl: {
+        id: number;
+        firstName: string;
+        lastName: string;
+    } | null;
+    branch: {
+        id: number;
+        name: string;
+    };
+    dueDate: string | null;
+    requestId: number | null;
+}
+
 interface EditTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onTaskUpdated: () => void;
+    onTaskUpdated: (updatedTask: Task) => void;
     task: Task;
 }
 
@@ -382,7 +411,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             const response = await axiosInstance.put(`${API_ENDPOINTS.TASKS.BASE}/${task.id}`, taskData);
 
             console.log('Task aktualisiert:', response.data);
-            onTaskUpdated();
+            // Übergebe den aktualisierten Task an den Callback
+            onTaskUpdated(response.data);
             onClose();
         } catch (err) {
             console.error('Fehler beim Aktualisieren des Tasks:', err);

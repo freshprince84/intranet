@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -11,6 +11,10 @@ interface SidebarContextType {
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
+// Breakpoints für automatische Anpassung
+const BREAKPOINT_SMALL = 768; // Unter dieser Breite: Mobile-Footer (keine automatische Anpassung)
+const BREAKPOINT_LARGE = 1070; // Ab dieser Breite: automatisch ausklappen
+
 export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const { user } = useAuth();
     const [isCollapsed, setIsCollapsed] = useState(() => {
@@ -18,18 +22,35 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const savedState = localStorage.getItem('sidebar_collapsed');
         return savedState ? JSON.parse(savedState) : false;
     });
+    
+    // Ref um zu tracken, ob der Benutzer die Sidebar manuell getoggelt hat
+    // true = Benutzer hat aktiv eingeklappt, false = Benutzer hat aktiv ausgeklappt, null = keine manuelle Präferenz
+    const userPreferenceRef = useRef<boolean | null>(null);
+    
+    // Ref um zu verhindern, dass der resize-Handler direkt nach einem manuellen Toggle ausgelöst wird
+    const isManualToggleRef = useRef<boolean>(false);
+    
+    // Ref um den aktuellen isCollapsed-Wert im resize-Handler zu verwenden (verhindert Closure-Probleme)
+    const isCollapsedRef = useRef<boolean>(isCollapsed);
+
+    // Synchronisiere Ref mit State
+    useEffect(() => {
+        isCollapsedRef.current = isCollapsed;
+    }, [isCollapsed]);
 
     // Wenn Benutzer lädt, Einstellungen vom Server übernehmen
     useEffect(() => {
         if (user?.settings?.sidebarCollapsed !== undefined) {
-            setIsCollapsed(user.settings.sidebarCollapsed);
+            const savedPreference = user.settings.sidebarCollapsed;
+            setIsCollapsed(savedPreference);
+            isCollapsedRef.current = savedPreference;
+            // Beim Laden setzen wir keine manuelle Präferenz, damit die automatische Anpassung funktioniert
+            // Die gespeicherte Präferenz wird als Ausgangszustand verwendet
         }
     }, [user]);
 
-    const toggleCollapsed = () => {
-        const newState = !isCollapsed;
-        setIsCollapsed(newState);
-        
+    // Funktion zum Speichern des Sidebar-Status (lokal und auf Server)
+    const saveSidebarState = useCallback((newState: boolean) => {
         // Im localStorage speichern für schnellen Zugriff
         localStorage.setItem('sidebar_collapsed', JSON.stringify(newState));
         
@@ -41,6 +62,75 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ child
                 console.error('Fehler beim Speichern der Seitenleisteneinstellung:', error);
             });
         }
+    }, [user]);
+
+    // Automatische Anpassung basierend auf Bildschirmgröße
+    useEffect(() => {
+        const handleResize = () => {
+            // Kurze Verzögerung, um zu verhindern dass direkt nach manuellem Toggle angepasst wird
+            if (isManualToggleRef.current) {
+                isManualToggleRef.current = false;
+                return;
+            }
+            
+            const width = window.innerWidth;
+            const currentCollapsed = isCollapsedRef.current;
+            
+            // Nur bei Desktop (>= 768px) automatische Anpassung, bei Mobile ist Footer
+            if (width >= BREAKPOINT_SMALL) {
+                // Bei kleineren Bildschirmen (768-1069px): automatisch einklappen
+                if (width < BREAKPOINT_LARGE) {
+                    // Nur einklappen, wenn Benutzer nicht aktiv ausgeklappt hat
+                    // Wenn userPreferenceRef.current === false, hat Benutzer aktiv ausgeklappt -> nicht einklappen
+                    if (userPreferenceRef.current !== false) {
+                        if (!currentCollapsed) {
+                            setIsCollapsed(true);
+                            saveSidebarState(true);
+                        }
+                    }
+                } 
+                // Bei größeren Bildschirmen (>= 1070px): automatisch ausklappen
+                else {
+                    // Nur ausklappen, wenn Benutzer nicht aktiv eingeklappt hat
+                    // Wenn userPreferenceRef.current === true, hat Benutzer aktiv eingeklappt -> nicht ausklappen
+                    if (userPreferenceRef.current !== true) {
+                        if (currentCollapsed) {
+                            setIsCollapsed(false);
+                            saveSidebarState(false);
+                        }
+                    }
+                }
+            }
+        };
+
+        // Debounce für bessere Performance
+        let timeoutId: NodeJS.Timeout;
+        const debouncedResize = () => {
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(handleResize, 150);
+        };
+
+        window.addEventListener('resize', debouncedResize);
+        handleResize(); // Initial ausführen
+        return () => {
+            window.removeEventListener('resize', debouncedResize);
+            clearTimeout(timeoutId);
+        };
+    }, [user, saveSidebarState]); // saveSidebarState mit useCallback memoisiert
+
+    const toggleCollapsed = () => {
+        const newState = !isCollapsed;
+        setIsCollapsed(newState);
+        
+        // Markiere dass dies ein manueller Toggle ist
+        isManualToggleRef.current = true;
+        
+        // Benutzerpräferenz setzen - Benutzer hat aktiv getoggelt
+        // true = Benutzer hat aktiv eingeklappt, false = Benutzer hat aktiv ausgeklappt
+        userPreferenceRef.current = newState;
+        
+        // Status speichern
+        saveSidebarState(newState);
     };
 
     return (

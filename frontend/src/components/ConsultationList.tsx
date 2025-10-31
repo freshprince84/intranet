@@ -43,6 +43,9 @@ interface ConsultationListProps {
 // Ref-Interface für imperatives Handle
 export interface ConsultationListRef {
   refresh: () => void;
+  addConsultation?: (consultation: Consultation) => void;
+  updateConsultation?: (consultation: Consultation) => void;
+  removeConsultation?: (consultationId: number) => void;
   activateClientFilter?: (clientName: string) => void;
 }
 
@@ -98,6 +101,20 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
   // Imperatives Handle für Ref-basierte Refresh-Funktion
   useImperativeHandle(ref, () => ({
     refresh: loadConsultations,
+    addConsultation: (consultation: Consultation) => {
+      // Optimistisches Update: Füge Consultation zur Liste hinzu
+      setConsultations(prev => [consultation, ...prev]);
+    },
+    updateConsultation: (consultation: Consultation) => {
+      // Optimistisches Update: Aktualisiere Consultation in der Liste
+      setConsultations(prev => 
+        prev.map(c => c.id === consultation.id ? consultation : c)
+      );
+    },
+    removeConsultation: (consultationId: number) => {
+      // Optimistisches Update: Entferne Consultation aus der Liste
+      setConsultations(prev => prev.filter(c => c.id !== consultationId));
+    },
     activateClientFilter: createAndActivateClientFilter
   }));
 
@@ -554,7 +571,9 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
     setLinkTaskModalOpen(true);
   };
 
-  const handleTaskLinked = () => {
+  const handleTaskLinked = (consultationId: number) => {
+    // Nach Task-Link: Lade nur die betroffene Consultation neu
+    // Für jetzt: Reload der betroffenen Consultation (später könnte optimiert werden)
     loadConsultations();
     onConsultationChange?.();
   };
@@ -1329,7 +1348,9 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
           consultations={filteredConsultations}
           onInvoiceCreated={(invoiceId) => {
             setShowCreateInvoiceModal(false);
-            loadConsultations(); // Refresh list
+            // Nach Rechnungserstellung: Markiere betroffene Consultations als abgerechnet
+            // Für jetzt: Reload der Liste (später könnte optimiert werden)
+            loadConsultations();
             toast.success(`Rechnung erstellt! PDF kann in der Rechnungsverwaltung heruntergeladen werden.`);
           }}
         />

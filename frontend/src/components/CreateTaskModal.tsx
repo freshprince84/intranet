@@ -43,7 +43,36 @@ interface TaskAttachment {
 interface CreateTaskModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onTaskCreated: () => void;
+    onTaskCreated: (newTask: Task) => void;
+}
+
+interface Task {
+    id: number;
+    title: string;
+    description: string | null;
+    status: 'open' | 'in_progress' | 'improval' | 'quality_control' | 'done';
+    responsible: {
+        id: number;
+        firstName: string;
+        lastName: string;
+    } | null;
+    responsibleId: number | null;
+    role: {
+        id: number;
+        name: string;
+    } | null;
+    roleId: number | null;
+    qualityControl: {
+        id: number;
+        firstName: string;
+        lastName: string;
+    } | null;
+    branch: {
+        id: number;
+        name: string;
+    };
+    dueDate: string | null;
+    requestId: number | null;
 }
 
 const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProps) => {
@@ -436,7 +465,8 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             await uploadTemporaryAttachments(newTaskId);
             
             console.log('Task erfolgreich erstellt:', response.data);
-            onTaskCreated();
+            // Übergebe den neuen Task an den Callback
+            onTaskCreated(response.data);
             handleClose();
         } catch (err) {
             console.error('Fehler beim Erstellen des Tasks:', err);

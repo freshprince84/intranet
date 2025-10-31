@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { BuildingOfficeIcon, PlusIcon, UserPlusIcon, UserGroupIcon, ShieldCheckIcon, EnvelopeIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 import { organizationService } from '../../services/organizationService.ts';
 import { Organization, UpdateOrganizationRequest } from '../../types/organization.ts';
@@ -59,11 +59,15 @@ const OrganizationSettings: React.FC = () => {
     } catch (err: any) {
       const errorMessage = err.response?.data?.message || 'Fehler beim Laden der Organisation';
       setError(errorMessage);
+      // showMessage wird hier verwendet, aber nicht in Dependencies
       showMessage(errorMessage, 'error');
     } finally {
       setLoading(false);
     }
-  }, [showMessage]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const hasInitialLoadRef = useRef(false);
 
   useEffect(() => {
     // Warte bis Berechtigungen geladen sind
@@ -71,13 +75,22 @@ const OrganizationSettings: React.FC = () => {
       return;
     }
 
-    if (canViewOrganization()) {
+    // Nur einmal beim initialen Load ausführen
+    if (hasInitialLoadRef.current) {
+      return;
+    }
+
+    const hasPermission = canViewOrganization();
+    if (hasPermission) {
+      hasInitialLoadRef.current = true;
       fetchOrganization();
     } else {
       setError('Keine Berechtigung zum Anzeigen der Organisation');
       setLoading(false);
+      hasInitialLoadRef.current = true;
     }
-  }, [canViewOrganization, permissionsLoading, fetchOrganization]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [permissionsLoading]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;

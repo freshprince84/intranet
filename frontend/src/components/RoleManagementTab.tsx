@@ -2,13 +2,11 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Dialog } from '@headlessui/react';
 import { roleApi } from '../api/apiClient.ts';
 import { Role, AccessLevel } from '../types/interfaces.ts';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import { useTableSettings } from '../hooks/useTableSettings.ts';
-import TableColumnConfig from '../components/TableColumnConfig.tsx';
 import FilterPane from '../components/FilterPane.tsx';
 import SavedFilterTags from '../components/SavedFilterTags.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
@@ -309,16 +307,6 @@ interface RoleFormData {
   }[];
 }
 
-// Definition der verfügbaren Spalten
-const availableColumns = [
-  { id: 'name', label: 'Name' },
-  { id: 'description', label: 'Beschreibung' },
-  { id: 'permissions', label: 'Berechtigungen' },
-  { id: 'actions', label: 'Aktionen' }
-];
-
-// Standardreihenfolge der Spalten
-const defaultColumnOrder = ['name', 'description', 'permissions', 'actions'];
 
 // RoleCard-Komponente für mobile Ansicht
 const RoleCard: React.FC<{
@@ -417,12 +405,6 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   });
   const [error, setError] = useState<string | null>(null);
   const { hasPermission } = usePermissions();
-  const { settings, isLoading: isLoadingSettings, updateColumnOrder, updateHiddenColumns, toggleColumnVisibility, isColumnVisible } = useTableSettings('role_management', {
-    defaultColumnOrder,
-    defaultHiddenColumns: []
-  });
-  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
-  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   
@@ -889,58 +871,6 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     setFormData({ ...formData, permissions: newPermissions });
   };
 
-  // Handler für das Verschieben von Spalten per Drag & Drop
-  const handleMoveColumn = useCallback((dragIndex: number, hoverIndex: number) => {
-    // Erstelle eine neue Kopie der Spaltenreihenfolge
-    const newColumnOrder = [...settings.columnOrder];
-    
-    // Ermittle die zu verschiebenden Spalten
-    const movingColumn = newColumnOrder[dragIndex];
-    
-    // Entferne die Spalte an der alten Position
-    newColumnOrder.splice(dragIndex, 1);
-    
-    // Füge die Spalte an der neuen Position ein
-    newColumnOrder.splice(hoverIndex, 0, movingColumn);
-    
-    // Aktualisiere die Spaltenreihenfolge
-    updateColumnOrder(newColumnOrder);
-  }, [settings.columnOrder, updateColumnOrder]);
-
-  // Handler für Drag & Drop direkt in der Tabelle
-  const handleDragStart = (e: React.DragEvent, columnId: string) => {
-    setDraggedColumn(columnId);
-  };
-
-  const handleDragOver = (e: React.DragEvent, columnId: string) => {
-    e.preventDefault();
-    if (draggedColumn && draggedColumn !== columnId) {
-      setDragOverColumn(columnId);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent, columnId: string) => {
-    e.preventDefault();
-    if (draggedColumn && draggedColumn !== columnId) {
-      const dragIndex = settings.columnOrder.indexOf(draggedColumn);
-      const hoverIndex = settings.columnOrder.indexOf(columnId);
-      
-      if (dragIndex > -1 && hoverIndex > -1) {
-        handleMoveColumn(dragIndex, hoverIndex);
-      }
-    }
-    setDraggedColumn(null);
-    setDragOverColumn(null);
-  };
-
-  const handleDragEnd = () => {
-    setDraggedColumn(null);
-    setDragOverColumn(null);
-  };
-
-  // Filtern und sortieren der Spalten gemäß den Benutzereinstellungen
-  const visibleColumnIds = settings.columnOrder.filter(id => isColumnVisible(id));
-
   // Funktion zum Zählen der aktiven Filter
   const getActiveFilterCount = () => {
     return filterConditions.length;
@@ -1200,16 +1130,6 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                 )}
               </div>
             </button>
-            <div className="ml-1">
-              <TableColumnConfig
-                columns={availableColumns}
-                visibleColumns={visibleColumnIds}
-                columnOrder={settings.columnOrder}
-                onToggleColumnVisibility={toggleColumnVisibility}
-                onMoveColumn={handleMoveColumn}
-                onClose={() => {}}
-              />
-            </div>
           </div>
         </div>
 

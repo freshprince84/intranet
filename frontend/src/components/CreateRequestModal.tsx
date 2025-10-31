@@ -28,10 +28,35 @@ interface RequestAttachment {
   file?: File; // Für temporäre Anhänge vor dem Hochladen
 }
 
+interface Request {
+  id: number;
+  title: string;
+  status: 'approval' | 'approved' | 'to_improve' | 'denied';
+  requestedBy: {
+    id: number;
+    username: string;
+    firstName: string;
+    lastName: string;
+  };
+  responsible: {
+    id: number;
+    username: string;
+    firstName: string;
+    lastName: string;
+  };
+  branch: {
+    id: number;
+    name: string;
+  };
+  dueDate: string;
+  createTodo: boolean;
+  description?: string;
+}
+
 interface CreateRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRequestCreated: () => void;
+  onRequestCreated: (newRequest: Request) => void;
 }
 
 const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequestModalProps) => {
@@ -371,7 +396,8 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
       // Lade temporäre Anhänge hoch, falls vorhanden
       await uploadTemporaryAttachments(response.data.id);
 
-      onRequestCreated();
+      // Übergebe den neuen Request an den Callback
+      onRequestCreated(response.data);
       onClose();
       setFormData({
         title: '',

@@ -120,8 +120,8 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       // Lade Recent Clients neu vom Server (Backend liefert bereits richtige Sortierung)
       loadRecentClients();
       
-      // Callback für Parent-Komponente
-      onConsultationChange();
+      // Callback für Parent-Komponente - übergebe die neue Consultation
+      onConsultationChange?.(consultation);
       
       // Callback für Filter-Wechsel (wenn Client-Name verfügbar)
       if (onConsultationStarted && consultation.client?.name) {
@@ -141,7 +141,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
     try {
       const correctedEndTime = new Date(new Date().getTime() - new Date().getTimezoneOffset() * 60000);
       
-      await consultationApi.stopConsultation({
+      const stoppedConsultation = await consultationApi.stopConsultation({
         endTime: correctedEndTime.toISOString(),
         notes: notes || undefined
       });
@@ -150,8 +150,8 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       toast.success('Beratung beendet');
       // Recent Clients nach dem Stoppen aktualisieren
       loadRecentClients();
-      // Beratungsliste aktualisieren
-      onConsultationChange();
+      // Beratungsliste aktualisieren - übergebe die aktualisierte Consultation
+      onConsultationChange?.(stoppedConsultation);
       // Sende Event für SavedFilterTags Aktualisierung
       console.log('🛑 ConsultationTracker: Sending consultationChanged event (stop)');
       window.dispatchEvent(new CustomEvent('consultationChanged'));
@@ -237,7 +237,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       });
       
       // Beende sie sofort mit der korrigierten Endzeit
-      await consultationApi.stopConsultation({
+      const stoppedConsultation = await consultationApi.stopConsultation({
         endTime: correctedEndTime.toISOString(),      // ✅ Konsistent mit normaler Beratung
         notes: notes || ''
       });
@@ -259,8 +259,8 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       // Lade Recent Clients neu
       loadRecentClients();
       
-      // Callback für Parent-Komponente
-      onConsultationChange();
+      // Callback für Parent-Komponente - übergebe die beendete Consultation
+      onConsultationChange?.(stoppedConsultation);
       
       // Callback für Filter-Wechsel
       if (onConsultationStarted && selectedClient.name) {
