@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { UserGroupIcon, UserIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 import UserManagementTab from '../components/UserManagementTab.tsx';
@@ -8,6 +9,7 @@ import OrganizationSettings from '../components/organization/OrganizationSetting
 import JoinRequestsList from '../components/organization/JoinRequestsList.tsx';
 
 const UserManagement: React.FC = () => {
+  const { t } = useTranslation();
   // Tab-Zustand für Navigation zwischen Benutzer-, Rollen- und Organisationsverwaltung
   const [activeTab, setActiveTab] = useState<'users' | 'roles' | 'organization'>('users');
   
@@ -26,7 +28,7 @@ const UserManagement: React.FC = () => {
 
   // Gemeinsame Fehlerbehandlung
   const handleError = (err: any) => {
-    let message = 'Ein Fehler ist aufgetreten';
+    let message = t('errors.unknownError');
     if (err.response?.data?.message) {
       message = err.response.data.message;
     } else if (err instanceof Error) {
@@ -37,7 +39,7 @@ const UserManagement: React.FC = () => {
   };
 
   if (!isAdmin()) {
-    return <div className="p-4 text-red-600 dark:text-red-400">Nur Administratoren haben Zugriff auf diese Seite.</div>;
+    return <div className="p-4 text-red-600 dark:text-red-400">{t('userManagement.noPermission')}</div>;
   }
 
   return (
@@ -47,7 +49,7 @@ const UserManagement: React.FC = () => {
           {/* Header mit Icon */}
           <div className="flex items-center mb-6">
             <UserGroupIcon className="h-6 w-6 mr-2 dark:text-white" />
-            <h2 className="text-xl font-semibold dark:text-white">Benutzerverwaltung</h2>
+            <h2 className="text-xl font-semibold dark:text-white">{t('userManagement.title')}</h2>
           </div>
 
           {/* Tabs für Navigation */}
@@ -62,7 +64,7 @@ const UserManagement: React.FC = () => {
                 onClick={() => handleTabChange('users')}
               >
                 <UserIcon className="h-5 w-5 mr-2" />
-                Benutzer
+                {t('userManagement.tabs.users')}
               </button>
               <button
                 className={`${
@@ -73,7 +75,7 @@ const UserManagement: React.FC = () => {
                 onClick={() => handleTabChange('roles')}
               >
                 <ShieldCheckIcon className="h-5 w-5 mr-2" />
-                Rollen
+                {t('userManagement.tabs.roles')}
               </button>
               {/* Organisation Tab nur für Benutzer mit entsprechenden Berechtigungen */}
               {isAdmin() && (
@@ -86,7 +88,7 @@ const UserManagement: React.FC = () => {
                   onClick={() => handleTabChange('organization')}
                 >
                   <UserGroupIcon className="h-5 w-5 mr-2" />
-                  Organisation
+                  {t('userManagement.tabs.organization')}
                 </button>
               )}
             </nav>
@@ -94,12 +96,12 @@ const UserManagement: React.FC = () => {
 
           {error && (
             <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
-              <p className="font-bold">Fehler:</p>
+              <p className="font-bold">{t('userManagement.error')}</p>
               <p>{error}</p>
             </div>
           )}
 
-          {loading && <div className="p-4 dark:text-gray-300">Lädt...</div>}
+          {loading && <div className="p-4 dark:text-gray-300">{t('userManagement.loading')}</div>}
 
           {/* Tab Inhalte */}
           <div className="mt-6">
@@ -114,7 +116,7 @@ const UserManagement: React.FC = () => {
               </div>
             ) : (
               <div className="p-4 text-red-600 dark:text-red-400">
-                Keine Berechtigung für diese Seite.
+                {t('userManagement.noPermissionForPage')}
               </div>
             )}
           </div>

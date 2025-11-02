@@ -1,12 +1,14 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import CerebroArticleSelector from './CerebroArticleSelector.tsx';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, TrashIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../hooks/useAuth.tsx';
 import MarkdownPreview from './MarkdownPreview.tsx';
+import { useSidepane } from '../contexts/SidepaneContext.tsx';
 
 interface User {
     id: number;
@@ -22,23 +24,6 @@ interface Role {
 interface Branch {
     id: number;
     name: string;
-}
-
-interface Task {
-    id: number;
-    title: string;
-    description: string | null;
-    status: 'open' | 'in_progress' | 'improval' | 'quality_control' | 'done';
-    responsibleId?: number | null;
-    roleId?: number | null;
-    responsible?: User | null;
-    role?: Role | null;
-    qualityControl?: User | null;
-    qualityControlId?: number | null;
-    branch?: Branch | null;
-    branchId?: number | null;
-    dueDate: string | null;
-    attachments?: TaskAttachment[];
 }
 
 interface TaskAttachment {
@@ -85,6 +70,7 @@ interface Task {
     };
     dueDate: string | null;
     requestId: number | null;
+    attachments?: TaskAttachment[];
 }
 
 interface EditTaskModalProps {
@@ -95,8 +81,11 @@ interface EditTaskModalProps {
 }
 
 const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUpdated, task }) => {
+    const { t } = useTranslation();
     const { hasPermission } = usePermissions();
     const { user } = useAuth();
+    const { openSidepane, closeSidepane } = useSidepane();
+    const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
     
     const [title, setTitle] = useState(task.title || '');
     const [description, setDescription] = useState(task.description || '');
@@ -104,8 +93,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
     const [assigneeType, setAssigneeType] = useState<'user' | 'role'>(task.roleId ? 'role' : 'user');
     const [responsibleId, setResponsibleId] = useState<number | null>(task.responsibleId || null);
     const [roleId, setRoleId] = useState<number | null>(task.roleId || null);
-    const [qualityControlId, setQualityControlId] = useState<number | null>(task.qualityControlId || null);
-    const [branchId, setBranchId] = useState<number>(task.branchId || 0);
+    const [qualityControlId, setQualityControlId] = useState<number | null>(task.qualityControl?.id || null);
+    const [branchId, setBranchId] = useState<number>(task.branch?.id || 0);
     const [attachments, setAttachments] = useState<TaskAttachment[]>(task.attachments || []);
     const [temporaryAttachments, setTemporaryAttachments] = useState<TaskAttachment[]>([]);
     const [uploading, setUploading] = useState(false);
@@ -139,10 +128,26 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
 
     // Responsive Design: Überwache Fensterbreite
     useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth < 640);
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 640);
+            setIsLargeScreen(window.innerWidth > 1070);
+        };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Sidepane-Status verwalten
+    useEffect(() => {
+        if (isOpen) {
+            openSidepane();
+        } else {
+            closeSidepane();
+        }
+        
+        return () => {
+            closeSidepane();
+        };
+    }, [isOpen, openSidepane, closeSidepane]);
 
     useEffect(() => {
         if (isOpen) {
@@ -171,9 +176,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             // Einfachere Fehlerbehandlung ohne axios-Import
             const axiosError = err as any;
             if (axiosError.code === 'ERR_NETWORK') {
-                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+                setError(t('tasks.editTask.errors.connectionError'));
             } else {
-                setError(`Fehler beim Laden der Benutzer: ${axiosError.response?.data?.message || axiosError.message}`);
+                setError(`${t('tasks.editTask.errors.loadUsersError')}: ${axiosError.response?.data?.message || axiosError.message}`);
             }
         }
     };
@@ -195,9 +200,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             // Einfachere Fehlerbehandlung ohne axios-Import
             const axiosError = err as any;
             if (axiosError.code === 'ERR_NETWORK') {
-                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+                setError(t('tasks.editTask.errors.connectionError'));
             } else {
-                setError(`Fehler beim Laden der Rollen: ${axiosError.response?.data?.message || axiosError.message}`);
+                setError(`${t('tasks.editTask.errors.loadRolesError')}: ${axiosError.response?.data?.message || axiosError.message}`);
             }
         }
     };
@@ -219,9 +224,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             // Einfachere Fehlerbehandlung ohne axios-Import
             const axiosError = err as any;
             if (axiosError.code === 'ERR_NETWORK') {
-                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+                setError(t('tasks.editTask.errors.connectionError'));
             } else {
-                setError(`Fehler beim Laden der Niederlassungen: ${axiosError.response?.data?.message || axiosError.message}`);
+                setError(`${t('tasks.editTask.errors.loadBranchesError')}: ${axiosError.response?.data?.message || axiosError.message}`);
             }
         }
     };
@@ -371,20 +376,20 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
         try {
             // Validierung
             if (!title || !status || !branchId) {
-                setError('Bitte füllen Sie alle erforderlichen Felder aus');
+                setError(t('tasks.editTask.errors.fillAllFields'));
                 setLoading(false);
                 return;
             }
 
             // Überprüfen, ob entweder Benutzer oder Rolle ausgewählt wurde
             if (assigneeType === 'user' && !responsibleId) {
-                setError('Bitte wählen Sie einen verantwortlichen Benutzer aus');
+                setError(t('tasks.editTask.form.chooseUser'));
                 setLoading(false);
                 return;
             }
             
             if (assigneeType === 'role' && !roleId) {
-                setError('Bitte wählen Sie eine verantwortliche Rolle aus');
+                setError(t('tasks.editTask.form.chooseRole'));
                 setLoading(false);
                 return;
             }
@@ -440,7 +445,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
 
             await axiosInstance.delete(API_ENDPOINTS.TASKS.BY_ID(task.id));
 
-            onTaskUpdated();
+            // Beim Löschen wird kein Task zurückgegeben, daher undefined übergeben
+            onTaskUpdated(undefined as any);
             onClose();
         } catch (err) {
             console.error('Delete Error:', err);
@@ -565,8 +571,9 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             if (attachmentToRemove.fileName) {
                 // Suche nach Bild- und Link-Markdown mit dem Dateinamen
                 const escapedFileName = attachmentToRemove.fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const imagePattern = new RegExp(`!\\[${escapedFileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
-                const linkPattern = new RegExp(`\\[${escapedFileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
+                const uploadText = t('tasks.editTask.form.uploadAfterCreate');
+                const imagePattern = new RegExp(`!\\[${escapedFileName}\\]\\(${uploadText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g');
+                const linkPattern = new RegExp(`\\[${escapedFileName}\\]\\(${uploadText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g');
                 
                 // Bereinige die Beschreibung
                 const newDescription = description
@@ -615,7 +622,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                 <>
                     <div>
                         <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Titel
+                            {t('tasks.editTask.form.title')}
                         </label>
                         <input
                             type="text"
@@ -629,7 +636,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
 
                     <div>
                         <label htmlFor="description_edit" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Beschreibung
+                            {t('tasks.editTask.form.description')}
                         </label>
                         <div className="relative">
                             <textarea
@@ -642,13 +649,13 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                 onPaste={handlePaste}
                                 onDrop={handleDrop}
                                 onDragOver={handleDragOver}
-                                placeholder="Text, Bilder oder Dateien hier einfügen..."
+                                placeholder={t('tasks.editTask.form.descriptionPlaceholder')}
                             />
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
                                 className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
-                                title="Datei hinzufügen"
+                                title={t('tasks.editTask.form.fileUpload')}
                             >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -662,25 +669,19 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                             />
                             {uploading && (
                                 <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70">
-                                    <span className="text-sm text-gray-600 dark:text-gray-300">Wird hochgeladen...</span>
+                                    <span className="text-sm text-gray-600 dark:text-gray-300">{t('tasks.editTask.form.uploading')}</span>
                                 </div>
                             )}
                         </div>
                         {renderAttachments()}
                         {renderTemporaryAttachments()}
-                        {description && (
-                            <div className="mt-3">
-                                <MarkdownPreview 
-                                    content={description}
-                                    temporaryAttachments={temporaryAttachments}
-                                />
-                            </div>
-                        )}
+                        {/* MarkdownPreview entfernt: Bei Edit-Modals werden Anhänge bereits durch renderAttachments() 
+                            und renderTemporaryAttachments() angezeigt, Beschreibung nur im Textarea */}
                     </div>
 
                     <div>
                         <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Status
+                            {t('tasks.editTask.form.status')}
                         </label>
                         <select
                             id="status"
@@ -688,17 +689,17 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                             onChange={(e) => setStatus(e.target.value as Task['status'])}
                             className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         >
-                            <option value="open">Offen</option>
-                            <option value="in_progress">In Bearbeitung</option>
-                            <option value="improval">Nachbesserung</option>
-                            <option value="quality_control">Qualitätskontrolle</option>
-                            <option value="done">Erledigt</option>
+                            <option value="open">{t('tasks.status.open')}</option>
+                            <option value="in_progress">{t('tasks.status.in_progress')}</option>
+                            <option value="improval">{t('tasks.status.improval')}</option>
+                            <option value="quality_control">{t('tasks.status.quality_control')}</option>
+                            <option value="done">{t('tasks.status.done')}</option>
                         </select>
                     </div>
 
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Verantwortlich für *
+                            {t('tasks.editTask.form.responsibleFor')} *
                         </label>
                         <div className="flex space-x-4">
                             <label className="inline-flex items-center">
@@ -713,7 +714,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                         setRoleId(null);
                                     }}
                                 />
-                                <span className="ml-2 dark:text-gray-300">Benutzer</span>
+                                <span className="ml-2 dark:text-gray-300">{t('tasks.editTask.form.user')}</span>
                             </label>
                             <label className="inline-flex items-center">
                                 <input
@@ -727,7 +728,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                         setResponsibleId(null);
                                     }}
                                 />
-                                <span className="ml-2 dark:text-gray-300">Rolle</span>
+                                <span className="ml-2 dark:text-gray-300">{t('tasks.editTask.form.role')}</span>
                             </label>
                         </div>
                     </div>
@@ -735,7 +736,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     {assigneeType === 'user' ? (
                         <div>
                             <label htmlFor="responsible" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Verantwortlicher Benutzer *
+                                {t('tasks.editTask.form.responsibleUser')} *
                             </label>
                             <select
                                 id="responsible"
@@ -744,7 +745,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 required={assigneeType === 'user'}
                             >
-                                <option value="">Bitte wählen</option>
+                                <option value="">{t('tasks.editTask.form.pleaseSelect')}</option>
                                 {Array.isArray(users) && users.map(user => (
                                     <option key={user.id} value={user.id}>
                                         {user.firstName} {user.lastName}
@@ -755,7 +756,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     ) : (
                         <div>
                             <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Verantwortliche Rolle *
+                                {t('tasks.editTask.form.responsibleRole')} *
                             </label>
                             <select
                                 id="role"
@@ -764,7 +765,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 required={assigneeType === 'role'}
                             >
-                                <option value="">Bitte wählen</option>
+                                <option value="">{t('tasks.editTask.form.pleaseSelect')}</option>
                                 {Array.isArray(roles) && roles.map(role => (
                                     <option key={role.id} value={role.id}>
                                         {role.name}
@@ -776,7 +777,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
 
                     <div>
                         <label htmlFor="qualityControl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Qualitätskontrolle
+                            {t('tasks.editTask.form.qualityControl')}
                         </label>
                         <select
                             id="qualityControl"
@@ -784,7 +785,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                             onChange={(e) => setQualityControlId(e.target.value ? Number(e.target.value) : null)}
                             className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         >
-                            <option value="">Keine Qualitätskontrolle</option>
+                            <option value="">{t('tasks.editTask.form.noQualityControl')}</option>
                             {Array.isArray(users) && users.map(user => (
                                 <option key={user.id} value={user.id}>
                                     {user.firstName} {user.lastName}
@@ -795,7 +796,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
 
                     <div>
                         <label htmlFor="branch" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Niederlassung
+                            {t('tasks.editTask.form.branch')}
                         </label>
                         <select
                             id="branch"
@@ -815,7 +816,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
 
                     <div>
                         <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Fälligkeitsdatum
+                            {t('tasks.editTask.form.dueDate')}
                         </label>
                         <input
                             type="date"
@@ -841,7 +842,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                 <div>
                     {linkedArticles.length > 0 && (
                         <div className="mb-4">
-                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Verknüpfte Cerebro-Artikel</h3>
+                            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('tasks.editTask.form.linkedCerebroArticles')}</h3>
                             <ul className="space-y-2">
                                 {linkedArticles.map(article => (
                                     <li key={article.id} className="flex items-center justify-between bg-gray-50 dark:bg-gray-700 p-2 rounded">
@@ -858,7 +859,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                             onClick={() => handleRemoveArticle(article.id)}
                                             className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
                                         >
-                                            Entfernen
+                                            {t('tasks.editTask.form.remove')}
                                         </button>
                                     </li>
                                 ))}
@@ -880,28 +881,40 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     <button
                         type="button"
                         onClick={handleDelete}
-                        className={`px-4 py-2 rounded-md ${
+                        className={`p-2 rounded-md ${
                             confirmDelete
-                                ? 'bg-red-600 text-white dark:bg-red-700 dark:text-white'
-                                : 'bg-white text-red-600 border border-red-300 dark:bg-gray-800 dark:text-red-400 dark:border-red-700'
+                                ? 'bg-red-600 text-white dark:bg-red-700 dark:text-white hover:bg-red-700 dark:hover:bg-red-600'
+                                : 'text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300'
                         }`}
+                        title={confirmDelete ? t('tasks.editTask.form.confirmDelete') : t('tasks.editTask.form.delete')}
                     >
-                        {confirmDelete ? 'Bestätigen' : 'Löschen'}
+                        {confirmDelete ? (
+                            <CheckIcon className="h-5 w-5" />
+                        ) : (
+                            <TrashIcon className="h-5 w-5" />
+                        )}
                     </button>
                 )}
-                <div className="flex space-x-2">
+                <div className="flex gap-2">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700"
+                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                        title={t('tasks.editTask.form.cancel')}
                     >
-                        Abbrechen
+                        <XMarkIcon className="h-5 w-5" />
                     </button>
                     <button
                         type="submit"
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
+                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        title={loading ? t('tasks.editTask.form.saving') : t('tasks.editTask.form.save')}
+                        disabled={loading}
                     >
-                        {loading ? 'Wird gespeichert...' : 'Speichern'}
+                        {loading ? (
+                            <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                        ) : (
+                            <CheckIcon className="h-5 w-5" />
+                        )}
                     </button>
                 </div>
             </div>
@@ -924,7 +937,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                                     type="button"
                                     onClick={() => handleDownloadAttachment(attachment)}
                                     className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 mr-1"
-                                    title="Herunterladen"
+                                    title={t('tasks.editTask.form.download')}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -1010,7 +1023,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     <Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
                         <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
                             <Dialog.Title className="text-lg font-semibold dark:text-white">
-                                Aufgabe bearbeiten
+                                {t('tasks.editTask.title')}
                             </Dialog.Title>
                             <button
                                 onClick={onClose}
@@ -1036,23 +1049,37 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
     }
 
     // Für Desktop (ab 640px) - Sidepane
+    // WICHTIG: Sidepane muss IMMER gerendert bleiben für Transition
     return (
-        <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-            {/* Semi-transparenter Hintergrund für den Rest der Seite */}
-            <div 
-                className="fixed inset-0 bg-black/10 transition-opacity" 
-                aria-hidden="true" 
-                onClick={onClose}
-            />
+        <>
+            {/* Backdrop - nur wenn offen und <= 1070px */}
+            {isOpen && !isLargeScreen && (
+                <div 
+                    className="fixed inset-0 bg-black/10 transition-opacity sidepane-overlay sidepane-backdrop z-40" 
+                    aria-hidden="true" 
+                    onClick={onClose}
+                    style={{
+                        opacity: isOpen ? 1 : 0,
+                        transition: 'opacity 300ms ease-out'
+                    }}
+                />
+            )}
             
-            {/* Sidepane von rechts einfahren */}
+            {/* Sidepane - IMMER gerendert, Position wird via Transform geändert */}
             <div 
-                className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                style={{
+                    transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    pointerEvents: isOpen ? 'auto' : 'none'
+                }}
+                aria-hidden={!isOpen}
+                role="dialog"
+                aria-modal={isOpen}
             >
-                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-                    <Dialog.Title className="text-lg font-semibold dark:text-white">
-                        Aufgabe bearbeiten
-                    </Dialog.Title>
+                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+                    <h2 className="text-lg font-semibold dark:text-white">
+                            {t('tasks.editTask.title')}
+                    </h2>
                     <button
                         onClick={onClose}
                         className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
@@ -1061,7 +1088,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     </button>
                 </div>
 
-                <div className="p-4 overflow-y-auto h-full">
+                <div className="p-4 overflow-y-auto flex-1 min-h-0">
                     {error && (
                         <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
                             {error}
@@ -1071,7 +1098,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                     {renderForm()}
                 </div>
             </div>
-        </Dialog>
+        </>
     );
 };
 

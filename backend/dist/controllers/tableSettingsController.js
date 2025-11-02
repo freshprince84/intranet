@@ -41,12 +41,16 @@ const getUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fun
             });
         }
         // Einstellungen zurückgeben (JSON-Strings in Arrays konvertieren)
-        res.json({
+        const response = {
             id: settings.id,
             tableId: settings.tableId,
             columnOrder: JSON.parse(settings.columnOrder),
             hiddenColumns: JSON.parse(settings.hiddenColumns)
-        });
+        };
+        if (settings.viewMode) {
+            response.viewMode = settings.viewMode;
+        }
+        res.json(response);
     }
     catch (error) {
         console.error('Error in getUserTableSettings:', error);
@@ -61,7 +65,7 @@ exports.getUserTableSettings = getUserTableSettings;
 const saveUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.userId, 10);
-        const { tableId, columnOrder, hiddenColumns } = req.body;
+        const { tableId, columnOrder, hiddenColumns, viewMode } = req.body;
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
@@ -92,7 +96,8 @@ const saveUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fu
                 },
                 data: {
                     columnOrder: columnOrderJson,
-                    hiddenColumns: hiddenColumnsJson
+                    hiddenColumns: hiddenColumnsJson,
+                    viewMode: viewMode || null
                 }
             });
         }
@@ -103,17 +108,22 @@ const saveUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fu
                     userId,
                     tableId,
                     columnOrder: columnOrderJson,
-                    hiddenColumns: hiddenColumnsJson
+                    hiddenColumns: hiddenColumnsJson,
+                    viewMode: viewMode || null
                 }
             });
         }
         // Aktualisierte Einstellungen zurückgeben (JSON-Strings in Arrays konvertieren)
-        res.json({
+        const response = {
             id: settings.id,
             tableId: settings.tableId,
             columnOrder: JSON.parse(settings.columnOrder),
             hiddenColumns: JSON.parse(settings.hiddenColumns)
-        });
+        };
+        if (settings.viewMode) {
+            response.viewMode = settings.viewMode;
+        }
+        res.json(response);
     }
     catch (error) {
         console.error('Error in saveUserTableSettings:', error);

@@ -4,6 +4,7 @@
 
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
+import bcrypt from 'bcrypt';
 import { createNotificationIfEnabled } from './notificationController';
 import { organizationMiddleware, getUserOrganizationFilter } from '../middleware/organization';
 
@@ -653,6 +654,74 @@ export const updateUserSettings = async (req: AuthenticatedRequest & { body: Upd
     }
 };
 
+// Aktive Sprache für User bestimmen
+export const getUserActiveLanguage = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const userId = parseInt(req.userId, 10);
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+
+        // 1. Prüfe User.language (falls gesetzt)
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                language: true,
+                roles: {
+                    where: {
+                        lastUsed: true
+                    },
+                    include: {
+                        role: {
+                            include: {
+                                organization: {
+                                    select: {
+                                        settings: true
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    take: 1
+                }
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+
+        let activeLanguage: string | null = null;
+
+        // Priorität 1: User-Sprache (falls gesetzt und nicht leer)
+        if (user.language && user.language.trim() !== '') {
+            activeLanguage = user.language;
+        } else {
+            // Priorität 2: Organisation-Sprache (falls vorhanden)
+            const userRole = user.roles[0];
+            if (userRole?.role?.organization) {
+                const orgSettings = userRole.role.organization.settings as any;
+                if (orgSettings?.language) {
+                    activeLanguage = orgSettings.language;
+                }
+            }
+        }
+
+        // Priorität 3: Fallback
+        if (!activeLanguage) {
+            activeLanguage = 'de'; // Standard-Fallback
+        }
+
+        res.json({ language: activeLanguage });
+    } catch (error) {
+        console.error('Error in getUserActiveLanguage:', error);
+        res.status(500).json({ 
+            message: 'Fehler beim Bestimmen der aktiven Sprache', 
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+};
+
 export const updateInvoiceSettings = async (req: AuthenticatedRequest & { body: UpdateInvoiceSettingsRequest }, res: Response) => {
     try {
         console.log('DEBUG updateInvoiceSettings:', {
@@ -822,14 +891,59 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
 // Neuen Benutzer erstellen (für Admin-Bereich)
 export const createUser = async (req: Request, res: Response) => {
     try {
-        const { username, email, password, firstName, lastName, roleIds, branchIds } = req.body;
+        const userId = req.userId;
+        const organizationId = req.organizationId;
 
-        // Validiere erforderliche Felder
-        if (!username || !email || !password || !firstName || !lastName) {
+        if (!userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+
+        if (!organizationId) {
+            return res.status(403).json({ message: 'Nur Administratoren einer Organisation können Benutzer erstellen' });
+        }
+
+        // Prüfe ob der aktuelle Benutzer Admin der Organisation ist
+        const currentUser = await prisma.user.findUnique({
+            where: { id: Number(userId) },
+            include: {
+                roles: {
+                    where: {
+                        lastUsed: true
+                    },
+                    include: {
+                        role: true
+                    }
+                }
+            }
+        });
+
+        if (!currentUser) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+
+        const activeRole = currentUser.roles.find(r => r.lastUsed);
+        if (!activeRole || activeRole.role.name !== 'Admin' || activeRole.role.organizationId !== organizationId) {
+            return res.status(403).json({ message: 'Nur Administratoren einer Organisation können Benutzer erstellen' });
+        }
+
+        const { email, password, firstName, lastName } = req.body;
+
+        // Validiere erforderliche Felder (nur die minimalen)
+        if (!email || !password || !firstName || !lastName) {
             return res.status(400).json({
-                message: 'Alle Pflichtfelder müssen ausgefüllt sein'
+                message: 'Email, Passwort, Vorname und Nachname sind erforderlich'
             });
         }
+
+        // Validiere E-Mail-Format
+        if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+            return res.status(400).json({
+                message: 'Ungültiges E-Mail-Format'
+            });
+        }
+
+        // Email als Username verwenden
+        const username = email;
 
         // Überprüfe, ob Benutzername oder E-Mail bereits existieren
         const existingUser = await prisma.user.findFirst({
@@ -847,27 +961,48 @@ export const createUser = async (req: Request, res: Response) => {
             });
         }
 
+        // Hash das Passwort
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Finde die "User"-Rolle der Organisation (oder erstes verfügbare Rolle)
+        const userRole = await prisma.role.findFirst({
+            where: {
+                organizationId: organizationId,
+                name: 'User'
+            }
+        });
+
+        // Falls keine "User"-Rolle existiert, nehme die erste verfügbare Rolle der Organisation
+        let roleToAssign = userRole;
+        if (!roleToAssign) {
+            roleToAssign = await prisma.role.findFirst({
+                where: {
+                    organizationId: organizationId
+                }
+            });
+        }
+
+        if (!roleToAssign) {
+            return res.status(500).json({
+                message: 'Keine Rolle für die Organisation gefunden'
+            });
+        }
+
         // Erstelle den Benutzer
         const user = await prisma.user.create({
             data: {
                 username,
                 email,
-                password, // In der Praxis sollte das Passwort gehasht werden
+                password: hashedPassword,
                 firstName,
                 lastName,
                 roles: {
-                    create: (roleIds || [999]).map(roleId => ({
+                    create: {
                         role: {
-                            connect: { id: Number(roleId) }
-                        }
-                    }))
-                },
-                branches: {
-                    create: (branchIds || []).map(branchId => ({
-                        branch: {
-                            connect: { id: Number(branchId) }
-                        }
-                    }))
+                            connect: { id: roleToAssign.id }
+                        },
+                        lastUsed: true
+                    }
                 },
                 settings: {
                     create: {
@@ -880,22 +1015,18 @@ export const createUser = async (req: Request, res: Response) => {
                     include: {
                         role: true
                     }
-                },
-                branches: {
-                    include: {
-                        branch: true
-                    }
                 }
             }
         });
 
-        // Benachrichtigung für Administratoren senden
+        // Benachrichtigung für Administratoren der Organisation senden
         const admins = await prisma.user.findMany({
             where: {
                 roles: {
                     some: {
                         role: {
-                            name: 'Admin'
+                            name: 'Admin',
+                            organizationId: organizationId
                         }
                     }
                 }
@@ -906,14 +1037,20 @@ export const createUser = async (req: Request, res: Response) => {
             await createNotificationIfEnabled({
                 userId: admin.id,
                 title: 'Neuer Benutzer erstellt',
-                message: `Ein neuer Benutzer "${firstName} ${lastName}" (${username}) wurde erstellt.`,
+                message: `Ein neuer Benutzer "${firstName} ${lastName}" (${email}) wurde erstellt.`,
                 type: NotificationType.user,
                 relatedEntityId: user.id,
                 relatedEntityType: 'create'
             });
         }
 
-        res.status(201).json(user);
+        // Entferne Passwort aus der Response
+        const userResponse = {
+            ...user,
+            password: undefined
+        };
+
+        res.status(201).json(userResponse);
     } catch (error) {
         console.error('Error in createUser:', error);
         res.status(500).json({
@@ -1056,6 +1193,17 @@ export const deleteUser = async (req: Request, res: Response) => {
 
         // Lösche alle verknüpften Daten
         await prisma.$transaction([
+            // Organisation-bezogene Abhängigkeiten löschen
+            prisma.organizationJoinRequest.deleteMany({
+                where: { requesterId: userId }
+            }),
+            // processedBy wird automatisch auf NULL gesetzt (ON DELETE SET NULL)
+            prisma.organizationInvitation.deleteMany({
+                where: { invitedBy: userId }
+            }),
+            // acceptedBy wird automatisch auf NULL gesetzt (ON DELETE SET NULL)
+            
+            // Standard-Abhängigkeiten löschen
             prisma.userRole.deleteMany({
                 where: { userId }
             }),

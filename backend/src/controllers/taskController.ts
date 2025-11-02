@@ -284,6 +284,21 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
         
         // Benachrichtigung bei Statusänderung
         if (updateData.status && updateData.status !== currentTask.status) {
+            // Status-History speichern
+            const userId = req.userId;
+            if (userId) {
+                await prisma.taskStatusHistory.create({
+                    data: {
+                        taskId: task.id,
+                        userId: Number(userId),
+                        oldStatus: currentTask.status,
+                        newStatus: updateData.status,
+                        branchId: task.branchId,
+                        changedAt: new Date()
+                    }
+                });
+            }
+            
             // Benachrichtigung für den Verantwortlichen, nur wenn ein Benutzer zugewiesen ist
             if (task.responsibleId) {
                 await createNotificationIfEnabled({

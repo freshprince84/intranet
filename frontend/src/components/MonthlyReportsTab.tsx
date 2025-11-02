@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { 
@@ -13,19 +14,98 @@ import {
   PencilIcon,
   CheckIcon,
   XMarkIcon,
-  CalendarIcon
+  CalendarIcon,
+  Squares2X2Icon,
+  TableCellsIcon,
+  BuildingOfficeIcon,
+  UserIcon
 } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { toast } from 'react-toastify';
 import { MonthlyConsultationReport, UnbilledConsultationsCheck } from '../types/monthlyConsultationReport.ts';
 import { calculateDuration } from '../utils/dateUtils.ts';
+import { useSidepane } from '../contexts/SidepaneContext.tsx';
+import { useTableSettings } from '../hooks/useTableSettings.ts';
+import DataCard, { MetadataItem } from './shared/DataCard.tsx';
+import CardGrid from './shared/CardGrid.tsx';
 
 interface MonthlyReportsTabProps {
   selectedReportId?: number | null;
 }
 
+// Standardreihenfolge der Spalten (IDs)
+const defaultColumnOrder = ['expand', 'reportNumber', 'period', 'recipient', 'totalHours', 'status', 'actions'];
+const MONTHLY_REPORTS_TABLE_ID = 'monthly-reports-table';
+
+// Card-Einstellungen Standardwerte
+const defaultCardMetadata = ['reportNumber', 'period', 'recipient', 'totalHours', 'status'];
+const defaultCardColumnOrder = ['reportNumber', 'period', 'recipient', 'totalHours', 'status'];
+const defaultCardSortDirections: Record<string, 'asc' | 'desc'> = {
+  reportNumber: 'asc',
+  period: 'desc',
+  recipient: 'asc',
+  totalHours: 'desc',
+  status: 'asc'
+};
+
+// Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
+const tableToCardMapping: Record<string, string[]> = {
+  'expand': [], // Keine Card-Entsprechung
+  'reportNumber': ['reportNumber'],
+  'period': ['period'],
+  'recipient': ['recipient'],
+  'totalHours': ['totalHours'],
+  'status': ['status'],
+  'actions': [] // Keine Card-Entsprechung
+};
+
+// Reverse Mapping: Card-Metadaten -> Tabellen-Spalten
+const cardToTableMapping: Record<string, string> = {
+  'reportNumber': 'reportNumber',
+  'period': 'period',
+  'recipient': 'recipient',
+  'totalHours': 'totalHours',
+  'status': 'status'
+};
+
+// Helfer-Funktion: Tabellen-Spalte ausgeblendet -> Card-Metadaten ausblenden
+const getHiddenCardMetadata = (hiddenTableColumns: string[]): Set<string> => {
+  const hiddenCardMetadata = new Set<string>();
+  hiddenTableColumns.forEach(tableCol => {
+    const cardMetadata = tableToCardMapping[tableCol] || [];
+    cardMetadata.forEach(cardMeta => hiddenCardMetadata.add(cardMeta));
+  });
+  return hiddenCardMetadata;
+};
+
+// Helfer-Funktion: Card-Metadaten zu Tabellen-Spalten konvertieren
+const getCardMetadataFromColumnOrder = (columnOrder: string[]): string[] => {
+  const cardMetadata: string[] = [];
+  columnOrder.forEach(tableCol => {
+    const cardMeta = tableToCardMapping[tableCol];
+    if (cardMeta && cardMeta.length > 0) {
+      cardMetadata.push(...cardMeta);
+    }
+  });
+  return cardMetadata;
+};
+
 const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId }) => {
+  const { t } = useTranslation();
+  const { openSidepane, closeSidepane } = useSidepane();
+  
+  // Definition der verfügbaren Spalten (dynamisch aus Übersetzungen)
+  const availableColumns = useMemo(() => [
+    { id: 'expand', label: '', shortLabel: '' }, // Expand-Button Spalte
+    { id: 'reportNumber', label: t('analytics.monthlyReports.columns.reportNumber'), shortLabel: t('analytics.monthlyReports.shortLabels.reportNumber') },
+    { id: 'period', label: t('analytics.monthlyReports.columns.period'), shortLabel: t('analytics.monthlyReports.shortLabels.period') },
+    { id: 'recipient', label: t('analytics.monthlyReports.columns.recipient'), shortLabel: t('analytics.monthlyReports.shortLabels.recipient') },
+    { id: 'totalHours', label: t('analytics.monthlyReports.columns.totalHours'), shortLabel: t('analytics.monthlyReports.shortLabels.totalHours') },
+    { id: 'status', label: t('analytics.monthlyReports.columns.status'), shortLabel: t('analytics.monthlyReports.shortLabels.status') },
+    { id: 'actions', label: t('analytics.monthlyReports.columns.actions'), shortLabel: t('analytics.monthlyReports.shortLabels.actions') }
+  ], [t]);
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const [reports, setReports] = useState<MonthlyConsultationReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -34,6 +114,118 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
   
   // Expand/Collapse States (nach Tasks & Requests Standard)
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+  // Table Settings
+  const {
+    settings,
+    isLoading: isLoadingSettings,
+    updateColumnOrder,
+    updateHiddenColumns,
+    toggleColumnVisibility,
+    isColumnVisible,
+    updateViewMode
+  } = useTableSettings(MONTHLY_REPORTS_TABLE_ID, {
+    defaultColumnOrder,
+    defaultHiddenColumns: [],
+    defaultViewMode: 'cards'
+  });
+
+  // View-Mode aus Settings laden
+  const viewMode = settings.viewMode || 'cards';
+  
+  // Lokale Sortierrichtungen für Cards (nicht persistiert)
+  const [cardSortDirections, setCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
+    return defaultCardSortDirections;
+  });
+
+  // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
+  const cardMetadataOrder = React.useMemo(() => {
+    return getCardMetadataFromColumnOrder(settings.columnOrder || defaultColumnOrder);
+  }, [settings.columnOrder]);
+
+  // Versteckte Card-Metadaten aus hiddenColumns ableiten
+  const hiddenCardMetadata = React.useMemo(() => {
+    return getHiddenCardMetadata(settings.hiddenColumns || []);
+  }, [settings.hiddenColumns]);
+
+  // Sichtbare Card-Metadaten (alle Card-Metadaten minus versteckte)
+  const visibleCardMetadata = React.useMemo(() => {
+    return new Set(cardMetadataOrder.filter(meta => !hiddenCardMetadata.has(meta)));
+  }, [cardMetadataOrder, hiddenCardMetadata]);
+
+  // CSS-Klasse für Container-Box setzen (für CSS-basierte Schattierungs-Entfernung)
+  useEffect(() => {
+    const wrapper = document.querySelector('.dashboard-monthly-reports-wrapper');
+    if (wrapper) {
+      if (viewMode === 'cards') {
+        wrapper.classList.add('cards-mode');
+      } else {
+        wrapper.classList.remove('cards-mode');
+      }
+    }
+  }, [viewMode]);
+
+  // Sortierte Reports für Cards-Mode
+  const sortedReports = React.useMemo(() => {
+    if (viewMode === 'cards') {
+      const sorted = [...reports];
+      const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
+      
+      sorted.sort((a, b) => {
+        for (const columnId of sortableColumns) {
+          const direction = cardSortDirections[columnId] || 'asc';
+          let valueA: any, valueB: any;
+          
+          switch (columnId) {
+            case 'reportNumber':
+              valueA = a.reportNumber.toLowerCase();
+              valueB = b.reportNumber.toLowerCase();
+              break;
+            case 'period':
+              valueA = new Date(a.periodStart).getTime();
+              valueB = new Date(b.periodStart).getTime();
+              break;
+            case 'recipient':
+              valueA = a.recipient.toLowerCase();
+              valueB = b.recipient.toLowerCase();
+              break;
+            case 'totalHours':
+              valueA = Number(a.totalHours);
+              valueB = Number(b.totalHours);
+              break;
+            case 'status':
+              valueA = a.status.toLowerCase();
+              valueB = b.status.toLowerCase();
+              break;
+            default:
+              continue; // Überspringe unbekannte Spalten
+          }
+          
+          // Vergleich basierend auf Typ
+          let comparison = 0;
+          if (typeof valueA === 'number' && typeof valueB === 'number') {
+            comparison = valueA - valueB;
+          } else {
+            comparison = String(valueA).localeCompare(String(valueB));
+          }
+          
+          // Sortierrichtung anwenden
+          if (direction === 'desc') {
+            comparison = -comparison;
+          }
+          
+          // Wenn unterschiedlich, gebe Vergleich zurück
+          if (comparison !== 0) {
+            return comparison;
+          }
+        }
+        return 0; // Alle Spalten identisch
+      });
+      
+      return sorted;
+    }
+    return reports;
+  }, [reports, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
   
   // Sidepane States - Ersetzt durch Client-Beratungen-Sidepane
   const [isClientConsultationsSidepaneOpen, setIsClientConsultationsSidepaneOpen] = useState(false);
@@ -46,6 +238,29 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
     loadReports();
     checkUnbilledConsultations();
   }, []);
+
+  // Überwache Bildschirmgröße
+  useEffect(() => {
+    const handleResize = () => {
+      setIsLargeScreen(window.innerWidth > 1070);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Sidepane-Status verwalten
+  useEffect(() => {
+    if (isClientConsultationsSidepaneOpen) {
+      openSidepane();
+    } else {
+      closeSidepane();
+    }
+    
+    return () => {
+      closeSidepane();
+    };
+  }, [isClientConsultationsSidepaneOpen, openSidepane, closeSidepane]);
 
   // Auto-scroll to selected report
   useEffect(() => {
@@ -261,7 +476,9 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
       )}
 
       {/* Reports List */}
-      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+      {viewMode === 'table' ? (
+        /* Tabellen-Ansicht */
+        <div className="dashboard-monthly-reports-wrapper bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
@@ -418,16 +635,171 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
           </tbody>
         </table>
       </div>
+      ) : (
+        /* Card-Ansicht */
+        <div className="dashboard-monthly-reports-wrapper">
+          {sortedReports.length === 0 ? (
+            <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
+              Keine Monatsberichte gefunden
+            </div>
+          ) : (
+            <CardGrid gap="md">
+              {sortedReports.map((report) => {
+                const isExpanded = expandedRows.has(report.id);
+
+                // Metadaten für Card aufbauen
+                const metadata: MetadataItem[] = [];
+
+                if (visibleCardMetadata.has('reportNumber')) {
+                  metadata.push({
+                    label: 'Berichtsnummer',
+                    value: report.reportNumber,
+                    icon: <DocumentArrowDownIcon className="h-4 w-4" />
+                  });
+                }
+
+                if (visibleCardMetadata.has('period')) {
+                  metadata.push({
+                    label: 'Zeitraum',
+                    value: `${format(new Date(report.periodStart), 'dd.MM.yyyy', { locale: de })} - ${format(new Date(report.periodEnd), 'dd.MM.yyyy', { locale: de })}`,
+                    icon: <CalendarIcon className="h-4 w-4" />
+                  });
+                }
+
+                if (visibleCardMetadata.has('recipient')) {
+                  metadata.push({
+                    label: 'Empfänger',
+                    value: report.recipient,
+                    icon: <BuildingOfficeIcon className="h-4 w-4" />
+                  });
+                }
+
+                if (visibleCardMetadata.has('totalHours')) {
+                  metadata.push({
+                    label: 'Stunden',
+                    value: `${Number(report.totalHours).toFixed(2)} h`,
+                    icon: <ClockIcon className="h-4 w-4" />
+                  });
+                }
+
+                // Status-Konfiguration
+                const statusConfig = {
+                  GENERATED: { label: 'Erstellt', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' },
+                  SENT: { label: 'Versendet', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
+                  ARCHIVED: { label: 'Archiviert', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }
+                };
+                const reportStatus = statusConfig[report.status];
+
+                // Action-Buttons
+                const actions = (
+                  <div className="flex items-center justify-end space-x-2">
+                    <button
+                      onClick={() => downloadPDF(report)}
+                      className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                      title="PDF herunterladen"
+                    >
+                      <DocumentArrowDownIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                );
+
+                // Expandable Content für Details
+                const expandableContent = (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <h5 className="text-md font-medium text-gray-900 dark:text-white mb-4">
+                      Abrechnungspositionen ({report.items?.length || 0})
+                    </h5>
+                    
+                    {report.items && report.items.length > 0 ? (
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                          <thead className="bg-gray-100 dark:bg-gray-700">
+                            <tr>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Client
+                              </th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Anzahl Beratungen
+                              </th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Stunden
+                              </th>
+                              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                Aktionen
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                            {report.items.map((item) => (
+                              <tr key={item.id}>
+                                <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">
+                                  {item.clientName}
+                                </td>
+                                <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">
+                                  {item.consultationCount}
+                                </td>
+                                <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-200 font-semibold">
+                                  {Number(item.totalHours).toFixed(2)} h
+                                </td>
+                                <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">
+                                  <button
+                                    onClick={() => openClientConsultationsSidepane(item.clientId, item.clientName, report.id)}
+                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                    title="Beratungen bearbeiten"
+                                  >
+                                    <PencilIcon className="h-4 w-4" />
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="text-center text-gray-500 dark:text-gray-400 py-4">
+                        Keine Abrechnungspositionen vorhanden
+                      </div>
+                    )}
+                  </div>
+                );
+
+                return (
+                  <DataCard
+                    key={report.id}
+                    title={report.reportNumber}
+                    subtitle={format(new Date(report.generatedAt), 'dd.MM.yyyy HH:mm', { locale: de })}
+                    status={{
+                      label: reportStatus.label,
+                      color: reportStatus.color
+                    }}
+                    metadata={metadata}
+                    actions={actions}
+                    expandable={{
+                      isExpanded: isExpanded,
+                      content: expandableContent,
+                      onToggle: () => toggleExpanded(report.id)
+                    }}
+                  />
+                );
+              })}
+            </CardGrid>
+          )}
+        </div>
+      )}
 
       {/* Client Consultations Sidepane (Ersetzt das alte Edit Sidepane) */}
       {isClientConsultationsSidepaneOpen && editingClientId && (
         <div className="fixed inset-0 overflow-hidden z-50" aria-labelledby="slide-over-title" role="dialog" aria-modal="true">
           <div className="absolute inset-0 overflow-hidden">
-            {/* Backdrop */}
-            <div className="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={closeClientConsultationsSidepane}></div>
+            {/* Backdrop - nur bei <= 1070px */}
+            {!isLargeScreen && (
+              <div className="absolute inset-0 bg-gray-500 bg-opacity-75 transition-opacity sidepane-overlay sidepane-backdrop" onClick={closeClientConsultationsSidepane}></div>
+            )}
             
-            {/* Panel */}
-            <div className="fixed inset-y-0 right-0 pl-10 max-w-full flex">
+            {/* Panel - beginnt unter der Topbar */}
+            <div className="fixed top-16 bottom-0 right-0 pl-10 max-w-full flex sidepane-panel sidepane-panel-container" style={{
+              transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+            }}>
               <div className="w-screen max-w-3xl">
                 <div className="h-full flex flex-col bg-white dark:bg-gray-800 shadow-xl overflow-y-scroll">
                   {/* Header */}

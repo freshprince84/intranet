@@ -63,35 +63,27 @@ const getOrganizationFilter = (req) => {
 exports.getOrganizationFilter = getOrganizationFilter;
 // Hilfsfunktion für indirekte Organisation-Filter (über User → Role → Organization)
 const getUserOrganizationFilter = (req) => {
+    // Konvertiere userId von String zu Integer
+    const userId = Number(req.userId);
+    if (isNaN(userId)) {
+        console.error('Invalid userId in getUserOrganizationFilter:', req.userId);
+        return {}; // Leerer Filter als Fallback
+    }
     // Für standalone User (ohne Organisation) - nur eigene Daten
     if (!req.organizationId) {
         return {
-            id: req.userId // Nur eigene User-Daten
+            id: userId // Nur eigene User-Daten
         };
     }
+    // Für User mit Organisation: Alle User zurückgeben, die mindestens eine Rolle in dieser Organisation haben
     return {
-        OR: [
-            {
-                roles: {
-                    some: {
-                        role: {
-                            organizationId: req.organizationId
-                        }
-                    }
-                }
-            },
-            // Fallback: User hat keine Rollen in aktueller Organisation
-            {
-                id: req.userId,
-                roles: {
-                    some: {
-                        role: {
-                            organizationId: req.organizationId
-                        }
-                    }
+        roles: {
+            some: {
+                role: {
+                    organizationId: req.organizationId
                 }
             }
-        ]
+        }
     };
 };
 exports.getUserOrganizationFilter = getUserOrganizationFilter;

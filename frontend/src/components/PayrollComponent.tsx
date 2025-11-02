@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { format } from 'date-fns';
 import { CalculatorIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
@@ -21,6 +23,7 @@ const formatCurrency = (amount: number): string => {
 };
 
 const PayrollComponent: React.FC = () => {
+  const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const [payrollData, setPayrollData] = useState<PayrollData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -43,18 +46,26 @@ const PayrollComponent: React.FC = () => {
       setLoading(true);
       // Temporäre Mock-Daten bis zur Umstrukturierung
       setTimeout(() => {
+        const now = new Date();
+        const monthNames = [
+          t('months.january'), t('months.february'), t('months.march'),
+          t('months.april'), t('months.may'), t('months.june'),
+          t('months.july'), t('months.august'), t('months.september'),
+          t('months.october'), t('months.november'), t('months.december')
+        ];
+        const monthName = monthNames[now.getMonth()];
         setPayrollData({
           totalHours: 160,
           totalEarnings: 8000,
           deductions: 1200,
           netPay: 6800,
-          period: 'Oktober 2024'
+          period: `${monthName} ${now.getFullYear()}`
         });
         setLoading(false);
       }, 500);
     } catch (error: any) {
       console.error('Fehler beim Laden der Lohndaten:', error);
-      setError('Fehler beim Laden der Lohndaten');
+      setError(t('payroll.payrollComponent.loadError'));
       setLoading(false);
     }
   };
@@ -63,7 +74,7 @@ const PayrollComponent: React.FC = () => {
     return (
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
         <p className="text-red-800 dark:text-red-200">
-          Sie haben keine Berechtigung, Lohnabrechnungen einzusehen.
+          {t('payroll.payrollComponent.noPermission')}
         </p>
       </div>
     );
@@ -92,12 +103,10 @@ const PayrollComponent: React.FC = () => {
           <InformationCircleIcon className="h-6 w-6 text-blue-600 dark:text-blue-400 flex-shrink-0" />
           <div className="ml-3">
             <h3 className="text-sm font-medium text-blue-800 dark:text-blue-200">
-              Hinweis zur zukünftigen Entwicklung
+              {t('payroll.payrollComponent.futureDevelopment')}
             </h3>
             <p className="mt-1 text-sm text-blue-700 dark:text-blue-300">
-              Dieses Modul wird in Zukunft umgebaut. Es soll dann die Daten aus den 
-              Monatsabrechnungen übernehmen und daraus Lohnabrechnungen mit Geldbeträgen erstellen.
-              Derzeit zeigt es noch Mock-Daten zur Demonstration.
+              {t('payroll.payrollComponent.futureDevelopmentDescription')}
             </p>
           </div>
         </div>
@@ -108,7 +117,7 @@ const PayrollComponent: React.FC = () => {
         <div className="flex items-center mb-6">
           <CalculatorIcon className="h-8 w-8 mr-3 text-blue-600 dark:text-blue-400" />
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Lohnabrechnung
+            {t('payroll.payrollComponent.title')}
           </h2>
         </div>
 
@@ -120,7 +129,7 @@ const PayrollComponent: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Arbeitsstunden
+                {t('payroll.payrollComponent.totalHours')}
               </h3>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {payrollData.totalHours}h
@@ -129,7 +138,7 @@ const PayrollComponent: React.FC = () => {
 
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Bruttolohn
+                {t('payroll.payrollComponent.grossPay')}
               </h3>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 {formatCurrency(payrollData.totalEarnings)}
@@ -138,7 +147,7 @@ const PayrollComponent: React.FC = () => {
 
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Abzüge
+                {t('payroll.payrollComponent.deductions')}
               </h3>
               <p className="text-2xl font-bold text-red-600 dark:text-red-400">
                 -{formatCurrency(payrollData.deductions)}
@@ -147,7 +156,7 @@ const PayrollComponent: React.FC = () => {
 
             <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">
-                Nettolohn
+                {t('payroll.payrollComponent.netPay')}
               </h3>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {formatCurrency(payrollData.netPay)}
@@ -156,7 +165,7 @@ const PayrollComponent: React.FC = () => {
           </div>
         ) : (
           <div className="text-center text-gray-500 dark:text-gray-400">
-            Keine Lohndaten für den aktuellen Zeitraum verfügbar.
+            {t('payroll.payrollComponent.noData')}
           </div>
         )}
       </div>

@@ -23,7 +23,7 @@ const ALL_PAGES = [
   'consultations',
   'team_worktime_control', // = workcenter
   'payroll', // = lohnabrechnung
-  'usermanagement', // = benutzerverwaltung
+  'usermanagement', // = organisation
   'cerebro',
   'settings',
   'profile'
@@ -115,8 +115,9 @@ async function main() {
     
     // Admin-Rolle (ID 1)
     const adminRole = await prisma.role.upsert({
-      where: { name: 'Admin' },
+      where: { id: 1 },
       update: {
+        name: 'Admin',
         description: 'Administrator mit allen Rechten'
       },
       create: {
@@ -129,8 +130,9 @@ async function main() {
     
     // User-Rolle (ID 2)
     const userRole = await prisma.role.upsert({
-      where: { name: 'User' },
+      where: { id: 2 },
       update: {
+        name: 'User',
         description: 'Standardbenutzer mit eingeschränkten Rechten'
       },
       create: {
@@ -143,8 +145,9 @@ async function main() {
     
     // Hamburger-Rolle (ID 999)
     const hamburgerRole = await prisma.role.upsert({
-      where: { name: 'Hamburger' },
+      where: { id: 999 },
       update: {
+        name: 'Hamburger',
         description: 'Hamburger-Rolle für neue Benutzer'
       },
       create: {
@@ -297,7 +300,7 @@ async function main() {
     
     const userPermissionMap: Record<string, AccessLevel> = {};
     
-    // PAGES: alle AUSSER workcenter & benutzerverwaltung
+    // PAGES: alle AUSSER workcenter & organisation
     userPermissionMap['page_dashboard'] = 'both';
     userPermissionMap['page_worktracker'] = 'both';
     userPermissionMap['page_consultations'] = 'both';
@@ -307,7 +310,7 @@ async function main() {
     userPermissionMap['page_profile'] = 'both';
     // NICHT: team_worktime_control, usermanagement (bleiben 'none')
     
-    // TABELLEN: alle AUSSER die auf worktracker, workcenter & benutzerverwaltung
+    // TABELLEN: alle AUSSER die auf worktracker, workcenter & organisation
     userPermissionMap['table_requests'] = 'both';       // dashboard
     userPermissionMap['table_clients'] = 'both';        // consultations
     userPermissionMap['table_consultation_invoices'] = 'both'; // consultations
@@ -315,7 +318,7 @@ async function main() {
     userPermissionMap['table_monthly_reports'] = 'both'; // consultations
     // NICHT: tasks, users, roles, team_worktime, worktime, branches (bleiben 'none')
     
-    // BUTTONS: alle AUSSER in to do's & workcenter, lohnabrechnung, benutzerverwaltung & settings/system
+    // BUTTONS: alle AUSSER in to do's & workcenter, lohnabrechnung, organisation & settings/system
     userPermissionMap['button_invoice_create'] = 'both';
     userPermissionMap['button_invoice_download'] = 'both';
     userPermissionMap['button_cerebro'] = 'both';

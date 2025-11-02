@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Requests from '../components/Requests.tsx';
@@ -15,6 +16,7 @@ interface User {
 }
 
 const Dashboard: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,7 +46,7 @@ const Dashboard: React.FC = () => {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen text-gray-700 dark:text-gray-300">Laden...</div>;
+    return <div className="flex items-center justify-center min-h-screen text-gray-700 dark:text-gray-300">{t('common.loading')}</div>;
   }
 
   return (
@@ -56,7 +58,7 @@ const Dashboard: React.FC = () => {
 
         <div className="mt-2 sm:mt-4 md:mt-6 grid grid-cols-1 gap-4">
           {/* Anfragen-Bereich */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full shadow-sm">
+          <div className="dashboard-requests-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full shadow-sm">
             <div>
               <Requests />
             </div>

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { ClockIcon, ListBulletIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
@@ -36,6 +37,7 @@ interface WorktimeModalProps {
 
 const WorktimeTracker: React.FC = () => {
     /* CLAUDE-ANCHOR: a7c238f1-9d6a-42e5-8af1-6d8b2e9a4f18 - WORKTIME_TRACKER_COMPONENT */
+    const { t } = useTranslation();
     const [isTracking, setIsTracking] = useState(false);
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [elapsedTime, setElapsedTime] = useState<string>('00:00:00');
@@ -61,7 +63,7 @@ const WorktimeTracker: React.FC = () => {
             
             if (!token) {
                 console.error('Kein Authentifizierungstoken gefunden');
-                setStatusError('Nicht authentifiziert');
+                setStatusError(t('worktime.tracker.notAuthenticated'));
                 setIsLoading(false);
                 return;
             }
@@ -77,13 +79,6 @@ const WorktimeTracker: React.FC = () => {
                 
                 if (data && data.active === true) {
                     console.log('Aktive Zeiterfassung gefunden:', data.id);
-                    setActiveWorktime(data);
-                    setIsTracking(true);
-                    setSelectedBranch(data.branchId);
-                    
-                    // Aktualisiere den globalen Tracking-Status
-                    updateTrackingStatus(true);
-                    
                     // Startzeit setzen und Timer initialisieren
                     // Entferne das 'Z' am Ende des Strings, damit JS den Zeitstempel nicht als UTC interpretiert
                     const startISOString = data.startTime.endsWith('Z') 
@@ -91,24 +86,34 @@ const WorktimeTracker: React.FC = () => {
                         : data.startTime;
                     
                     const startTimeDate = new Date(startISOString);
-                    setStartTime(startTimeDate);
                     
                     // Initial berechnete Zeit anzeigen
                     const now = new Date();
                     const diff = now.getTime() - startTimeDate.getTime();
-                    
-                    // Berechnung mit Millisekunden, um negative Werte zu vermeiden
                     const totalSeconds = Math.floor(diff / 1000);
                     const hours = Math.floor(totalSeconds / 3600);
                     const minutes = Math.floor((totalSeconds % 3600) / 60);
                     const seconds = totalSeconds % 60;
                     
+                    // Alle State-Updates in einem Batch zusammenfassen, um nur einen Re-Render zu verursachen
+                    setActiveWorktime(data);
+                    setStartTime(startTimeDate);
                     setElapsedTime(
                         `${hours.toString().padStart(2, '0')}:${minutes
                             .toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
                     );
+                    setIsTracking(true);
+                    
+                    // Nur Branch setzen, wenn es sich geändert hat (vermeidet unnötigen Re-Render)
+                    if (selectedBranch !== data.branchId) {
+                        setSelectedBranch(data.branchId);
+                    }
+                    
+                    // Aktualisiere den globalen Tracking-Status
+                    updateTrackingStatus(true);
                 } else {
                     console.log('Keine aktive Zeiterfassung vorhanden');
+                    // Alle State-Updates in einem Batch zusammenfassen
                     setIsTracking(false);
                     setActiveWorktime(null);
                     setStartTime(null);
@@ -123,15 +128,15 @@ const WorktimeTracker: React.FC = () => {
                 // Einfachere Fehlerbehandlung ohne axios-Import
                 const axiosError = error as any;
                 if (axiosError.code === 'ERR_NETWORK') {
-                    setStatusError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+                    setStatusError(t('worktime.tracker.connectionError'));
                 } else {
-                    setStatusError(`Fehler beim Abrufen der aktiven Zeiterfassung: ${axiosError.response?.data?.message || axiosError.message}`);
+                    setStatusError(`${t('worktime.tracker.errorFetch')}: ${axiosError.response?.data?.message || axiosError.message}`);
                 }
             }
         } finally {
             setIsLoading(false);
         }
-    }, [user?.id, updateTrackingStatus]);
+    }, [user?.id, updateTrackingStatus, selectedBranch]);
     
     // Initiale Prüfung, ob bereits eine aktive Zeiterfassung läuft
     useEffect(() => {
@@ -184,7 +189,7 @@ const WorktimeTracker: React.FC = () => {
 
     const handleStartTracking = async () => {
         if (!selectedBranch) {
-            alert('Bitte wählen Sie eine Niederlassung aus');
+            alert(t('worktime.tracker.selectBranch'));
             return;
         }
 
@@ -192,7 +197,7 @@ const WorktimeTracker: React.FC = () => {
             const token = localStorage.getItem('token');
             if (!token) {
                 console.error('Kein Authentifizierungstoken gefunden');
-                alert('Nicht authentifiziert. Bitte melden Sie sich erneut an.');
+                alert(t('worktime.tracker.notAuthenticatedMessage'));
                 return;
             }
             
@@ -215,8 +220,6 @@ const WorktimeTracker: React.FC = () => {
             );
 
             const data = response.data;
-            setActiveWorktime(data);
-            setIsTracking(true);
             
             // Erstelle ein Date-Objekt ohne Zeitzonenumrechnung
             // Entferne das 'Z' am Ende des Strings, damit JS den Zeitstempel nicht als UTC interpretiert
@@ -225,7 +228,13 @@ const WorktimeTracker: React.FC = () => {
                 : data.startTime;
             
             const startTimeDate = new Date(startISOString);
+            
+            // Initial berechnete Zeit anzeigen (0:00:00 beim Start)
+            // Alle State-Updates in einem Batch zusammenfassen, um nur einen Re-Render zu verursachen
+            setActiveWorktime(data);
             setStartTime(startTimeDate);
+            setElapsedTime('00:00:00');
+            setIsTracking(true);
             
             // Aktualisiere den globalen Tracking-Status
             updateTrackingStatus(true);
@@ -233,7 +242,7 @@ const WorktimeTracker: React.FC = () => {
             console.error('Fehler:', error);
             
             // Detaillierte Fehlerbehandlung
-            let errorMessage = 'Fehler beim Starten der Zeiterfassung';
+            let errorMessage = t('worktime.tracker.errorStart');
             if (error.response) {
                 errorMessage = error.response.data?.message || `Fehler (Status: ${error.response.status})`;
             }
@@ -247,7 +256,7 @@ const WorktimeTracker: React.FC = () => {
             const token = localStorage.getItem('token');
             if (!token) {
                 console.error('Kein Authentifizierungstoken gefunden');
-                alert('Nicht authentifiziert. Bitte melden Sie sich erneut an.');
+                alert(t('worktime.tracker.notAuthenticatedMessage'));
                 return;
             }
             
@@ -266,10 +275,11 @@ const WorktimeTracker: React.FC = () => {
                 }
             );
 
+            // Alle State-Updates in einem Batch zusammenfassen, um nur einen Re-Render zu verursachen
             setIsTracking(false);
+            setActiveWorktime(null);
             setStartTime(null);
             setElapsedTime('00:00:00');
-            setActiveWorktime(null);
             
             // Aktualisiere den globalen Tracking-Status
             updateTrackingStatus(false);
@@ -277,7 +287,7 @@ const WorktimeTracker: React.FC = () => {
             console.error('Fehler:', error);
             
             // Detaillierte Fehlerbehandlung
-            let errorMessage = 'Fehler beim Stoppen der Zeiterfassung';
+            let errorMessage = t('worktime.tracker.errorStop');
             if (error.response) {
                 errorMessage = error.response.data?.message || `Fehler (Status: ${error.response.status})`;
             }
@@ -294,6 +304,12 @@ const WorktimeTracker: React.FC = () => {
         setShowWorkTimeModal(false);
     };
 
+    // Branch-Name memoized berechnen (vermeidet unnötige Re-Berechnungen)
+    const branchName = useMemo(() => {
+        if (!activeWorktime) return null;
+        return branches.find(b => b.id === activeWorktime.branchId)?.name || t('worktime.tracker.unknown');
+    }, [branches, activeWorktime]);
+
     // Manuelle Statusaktualisierung
     const handleRefreshStatus = () => {
         checkActiveWorktime();
@@ -301,7 +317,7 @@ const WorktimeTracker: React.FC = () => {
 
     // Manuelle Zeiterfassung forciert stoppen (für Notfälle)
     const handleForceStop = async () => {
-        if (!window.confirm('Möchten Sie die Zeiterfassung wirklich erzwungen stoppen?')) {
+        if (!window.confirm(t('worktime.tracker.forceStopConfirm'))) {
             return;
         }
         
@@ -309,7 +325,7 @@ const WorktimeTracker: React.FC = () => {
             const token = localStorage.getItem('token');
             if (!token) {
                 console.error('Kein Authentifizierungstoken gefunden');
-                alert('Nicht authentifiziert. Bitte melden Sie sich erneut an.');
+                alert(t('worktime.tracker.notAuthenticatedMessage'));
                 return;
             }
             
@@ -334,14 +350,14 @@ const WorktimeTracker: React.FC = () => {
             setElapsedTime('00:00:00');
             setActiveWorktime(null);
             setStatusError(null);
-            alert('Zeiterfassung wurde erfolgreich gestoppt.');
+            alert(t('worktime.tracker.forceStopSuccess'));
             
             // Aktualisiere den globalen Tracking-Status
             updateTrackingStatus(false);
         } catch (error) {
             console.error('Fehler:', error);
             setStatusError(`Fehler beim Stoppen: ${error.response?.status || 'Netzwerkfehler'}`);
-            alert('Fehler beim Stoppen der Zeiterfassung.');
+            alert(t('worktime.tracker.forceStopError'));
         }
     };
 
@@ -383,19 +399,19 @@ const WorktimeTracker: React.FC = () => {
             <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold flex items-center dark:text-white">
                     <ClockIcon className="h-6 w-6 mr-2" />
-                    Zeiterfassung
+                    {t('worktime.tracker.title')}
                 </h2>
             </div>
             
             {statusError && (
                 <div className="mb-4 p-2 bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-700 rounded-md flex justify-between items-center">
                     <span>{statusError}</span>
-                    {statusError !== 'Keine aktive Zeiterfassung gefunden' && (
+                    {statusError !== t('worktime.tracker.noActiveTracking') && (
                         <button 
                             onClick={handleForceStop}
                             className="text-sm bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-800 dark:hover:bg-red-700 dark:text-red-300 px-2 py-1 rounded-md"
                         >
-                            Zeiterfassung forciert stoppen
+                            {t('worktime.tracker.stop')} {t('common.force', 'Erzwingen')}
                         </button>
                     )}
                 </div>
@@ -428,8 +444,8 @@ const WorktimeTracker: React.FC = () => {
                     </label>
                     <span className="mt-2 text-sm font-medium">
                         {isTracking 
-                            ? <span className="text-green-600 dark:text-green-400 font-bold">Läuft</span> 
-                            : <span className="text-gray-600 dark:text-gray-400">Start</span>
+                            ? <span className="text-green-600 dark:text-green-400 font-bold">{t('worktime.tracker.running')}</span> 
+                            : <span className="text-gray-600 dark:text-gray-400">{t('worktime.tracker.start')}</span>
                         }
                     </span>
                 </div>
@@ -438,7 +454,7 @@ const WorktimeTracker: React.FC = () => {
                 <button 
                     onClick={openWorkTimeModal}
                     className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-2 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-blue-700 shadow-sm flex items-center justify-center ml-8 mt-1"
-                    title="Zeiten anzeigen"
+                    title={t('worktime.tracker.showTimes')}
                 >
                     <ListBulletIcon className="h-6 w-6" />
                 </button>
@@ -448,9 +464,9 @@ const WorktimeTracker: React.FC = () => {
             <div className={`p-2 my-2 rounded-md text-sm ${isTracking && activeWorktime ? 'bg-green-50 dark:bg-green-900/20 dark:text-green-200' : 'bg-gray-50 dark:bg-gray-700 dark:text-gray-300'}`}>
                 {isTracking && activeWorktime ? (
                     <>
-                        <p><strong>Aktive Zeiterfassung:</strong> {elapsedTime}</p>
-                        <p><strong>Gestartet:</strong> {formatStartDate(startTime || Date.now())}</p>
-                        <p><strong>Niederlassung:</strong> {branches.find(b => b.id === activeWorktime.branchId)?.name || 'Unbekannt'}</p>
+                        <p><strong>{t('worktime.tracker.activeTracking')}</strong> {elapsedTime}</p>
+                        <p><strong>{t('worktime.tracker.started')}</strong> {formatStartDate(startTime || Date.now())}</p>
+                        <p><strong>{t('worktime.tracker.selectBranchLabel')}:</strong> {branchName || t('worktime.tracker.unknown')}</p>
                     </>
                 ) : (
                     <>

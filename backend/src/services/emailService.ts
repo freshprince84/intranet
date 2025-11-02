@@ -4,14 +4,45 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// SMTP-Konfiguration aus Umgebungsvariablen
-const createTransporter = () => {
-  const smtpHost = process.env.SMTP_HOST;
-  const smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
+// SMTP-Konfiguration aus Umgebungsvariablen oder Organisation-Settings
+const createTransporter = async (organizationId?: number) => {
+  let smtpHost: string | undefined;
+  let smtpPort: number = 587;
+  let smtpUser: string | undefined;
+  let smtpPass: string | undefined;
 
-  // Wenn keine SMTP-Konfiguration vorhanden, gibt es keinen Transporter
+  // Wenn organizationId vorhanden, versuche Organisation-spezifische SMTP-Einstellungen zu laden
+  if (organizationId) {
+    try {
+      const organization = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { settings: true }
+      });
+
+      if (organization?.settings && typeof organization.settings === 'object') {
+        const orgSettings = organization.settings as any;
+        if (orgSettings.smtpHost && orgSettings.smtpUser && orgSettings.smtpPass) {
+          smtpHost = orgSettings.smtpHost;
+          smtpPort = orgSettings.smtpPort ? parseInt(orgSettings.smtpPort) : 587;
+          smtpUser = orgSettings.smtpUser;
+          smtpPass = orgSettings.smtpPass;
+          console.log(`📧 Nutze Organisation-spezifische SMTP-Einstellungen für Org ${organizationId}`);
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Fehler beim Laden der Organisation-SMTP-Einstellungen:', error);
+    }
+  }
+
+  // Fallback zu globalen Umgebungsvariablen
+  if (!smtpHost || !smtpUser || !smtpPass) {
+    smtpHost = process.env.SMTP_HOST;
+    smtpPort = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
+    smtpUser = process.env.SMTP_USER;
+    smtpPass = process.env.SMTP_PASS;
+  }
+
+  // Wenn immer noch keine SMTP-Konfiguration vorhanden, gibt es keinen Transporter
   if (!smtpHost || !smtpUser || !smtpPass) {
     console.warn('⚠️ SMTP-Konfiguration fehlt. E-Mails können nicht versendet werden.');
     return null;
@@ -175,25 +206,55 @@ Bei Fragen stehen wir Ihnen gerne zur Verfügung.
 Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.
     `;
 
-    const response = await axios.post(
-      `https://sandbox.api.mailtrap.io/api/send/${mailtrapTestInboxId}`,
-      {
-        from: { email: 'noreply@intranet.local', name: 'Intranet' },
-        to: [{ email }],
-        subject: 'Willkommen im Intranet - Ihre Anmeldeinformationen',
-        html: htmlContent,
-        text: textContent,
-        category: 'Registration'
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${mailtrapApiToken}`,
-          'Content-Type': 'application/json'
+    // Versuche zuerst Transactional Email API (versendet echte E-Mails)
+    // Falls Transactional Email Token vorhanden ist, nutze das
+    const mailtrapTransactionalToken = process.env.MAILTRAP_TRANSACTIONAL_TOKEN || mailtrapApiToken;
+    
+    // Versuche Transactional Email API (versendet an echte E-Mail-Adressen)
+    let response;
+    try {
+      response = await axios.post(
+        'https://send.api.mailtrap.io/api/send',
+        {
+          from: { email: 'noreply@intranet.local', name: 'Intranet' },
+          to: [{ email }],
+          subject: 'Willkommen im Intranet - Ihre Anmeldeinformationen',
+          html: htmlContent,
+          text: textContent,
+          category: 'Registration'
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${mailtrapTransactionalToken}`,
+            'Content-Type': 'application/json'
+          }
         }
+      );
+    } catch (transactionalError: any) {
+      // Falls Transactional Email nicht funktioniert, nutze Sandbox (nur für Tests)
+      if (transactionalError.response?.status === 401 || transactionalError.response?.status === 403) {
+        response = await axios.post(
+          `https://sandbox.api.mailtrap.io/api/send/${mailtrapTestInboxId}`,
+          {
+            from: { email: 'noreply@intranet.local', name: 'Intranet' },
+            to: [{ email }],
+            subject: 'Willkommen im Intranet - Ihre Anmeldeinformationen',
+            html: htmlContent,
+            text: textContent,
+            category: 'Registration'
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${mailtrapApiToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      } else {
+        throw transactionalError;
       }
-    );
+    }
 
-    console.log('✅ Registrierungs-E-Mail über Mailtrap API versendet:', response.data);
     return true;
   } catch (error) {
     console.error('❌ Fehler beim Versenden über Mailtrap API:', error);
@@ -203,11 +264,16 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
 
 /**
  * Sendet eine Willkommens-E-Mail mit Anmeldeinformationen nach der Registrierung
+ * @param email E-Mail-Adresse des neuen Benutzers
+ * @param username Benutzername
+ * @param password Passwort (wird nur in der E-Mail angezeigt)
+ * @param organizationId Optional: ID der Organisation (für org-spezifische SMTP-Einstellungen)
  */
 export const sendRegistrationEmail = async (
   email: string,
   username: string,
-  password: string // Das Original-Passwort (wird nur in der E-Mail angezeigt)
+  password: string, // Das Original-Passwort (wird nur in der E-Mail angezeigt)
+  organizationId?: number // Optional: für org-spezifische SMTP-Einstellungen
 ): Promise<boolean> => {
   // Versuche zuerst Mailtrap API (falls konfiguriert)
   const apiSuccess = await sendViaMailtrapAPI(email, username, password);
@@ -217,7 +283,7 @@ export const sendRegistrationEmail = async (
 
   // Fallback zu SMTP
   try {
-    const transporter = createTransporter();
+    const transporter = await createTransporter(organizationId);
     
     if (!transporter) {
       console.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');

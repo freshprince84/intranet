@@ -6,7 +6,8 @@ import {
   LinkIcon,
   TrashIcon,
   DocumentTextIcon,
-  ChartBarIcon
+  ChartBarIcon,
+  CheckIcon
 } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -951,10 +952,10 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
             {canCreateInvoice() && (
               <button
                 onClick={handleCreateInvoice}
-                className="px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors ml-2"
+                className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors ml-2"
                 title="Rechnung aus gefilterten Beratungen erstellen"
               >
-                Rechnung erstellen
+                <DocumentTextIcon className="h-5 w-5" />
               </button>
             )}
           </div>
@@ -1286,15 +1287,17 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                               <div className="flex justify-end space-x-2">
                                 <button
                                   onClick={handleNotesCancel}
-                                  className="px-2 py-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                                  className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                                  title="Abbrechen"
                                 >
-                                  Abbrechen
+                                  <XMarkIcon className="h-4 w-4" />
                                 </button>
                                 <button
                                   onClick={() => handleNotesSave(consultation.id)}
-                                  className="px-2 py-1 text-xs text-white bg-blue-600 hover:bg-blue-700 rounded"
+                                  className="p-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-md"
+                                  title="Speichern"
                                 >
-                                  Speichern
+                                  <CheckIcon className="h-4 w-4" />
                                 </button>
                               </div>
                             </div>

@@ -428,7 +428,8 @@ exports.getNotificationSettings = getNotificationSettings;
 const getUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        // Unterstütze sowohl req.user?.id als auch req.userId für Kompatibilität
+        const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || (req.userId ? parseInt(req.userId.toString(), 10) : null);
         if (!userId) {
             return res.status(401).json({ message: 'Nicht autorisiert' });
         }
@@ -474,7 +475,8 @@ exports.getUserNotifications = getUserNotifications;
 const countUnreadNotifications = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        // Unterstütze sowohl req.user?.id als auch req.userId für Kompatibilität
+        const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || (req.userId ? parseInt(req.userId.toString(), 10) : null);
         if (!userId) {
             return res.status(401).json({ message: 'Nicht autorisiert' });
         }
@@ -496,7 +498,8 @@ const markNotificationAsRead = (req, res) => __awaiter(void 0, void 0, void 0, f
     var _a;
     try {
         const { id } = req.params;
-        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
+        // Unterstütze sowohl req.user?.id als auch req.userId für Kompatibilität
+        const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || (req.userId ? parseInt(req.userId.toString(), 10) : null);
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }

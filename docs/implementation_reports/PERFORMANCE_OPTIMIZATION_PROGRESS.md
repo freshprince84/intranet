@@ -59,6 +59,17 @@ Ziel: Reduzierung unnötiger Reloads durch optimistisches Update und selektive S
 - [x] Start/Stop von Consultations: Werden jetzt direkt zur Liste hinzugefügt/aktualisiert
 - [ ] Getestet
 
+### Phase 4: UserManagementTab.tsx - ✅ ABGESCHLOSSEN
+
+#### ✅ 4.1 User-Erstellung optimieren
+- [x] handleCreateUser angepasst - User wird direkt zur Liste hinzugefügt ohne Reload
+- [ ] Getestet
+
+#### ✅ 4.2 User-Update optimieren
+- [x] handleUserSubmit angepasst - User wird in Liste aktualisiert ohne Reload
+- [x] Fehlerbehandlung: Rollback durch vollständiges Reload bei Fehlern
+- [ ] Getestet
+
 ## Änderungen
 
 ### 2024-12-XX - Phase 1 abgeschlossen
@@ -175,6 +186,23 @@ Ziel: Reduzierung unnötiger Reloads durch optimistisches Update und selektive S
 **6. ConsultationList.tsx - handleDeleteConsultation:**
 - Bereits optimiert: Entfernt Consultation direkt aus der Liste (keine Änderung nötig)
 
+### 2024-12-XX - Phase 4 abgeschlossen
+
+#### Geänderte Dateien:
+- `frontend/src/components/UserManagementTab.tsx`
+
+#### Änderungen Details:
+
+**1. UserManagementTab.tsx - handleCreateUser:**
+- Statt `await fetchUsers()`: User wird direkt zur Liste hinzugefügt
+- `setUsers(prevUsers => [response.data, ...prevUsers])`
+- Bei Fehler: Rollback durch vollständiges Reload
+
+**2. UserManagementTab.tsx - handleUserSubmit:**
+- Statt `fetchUsers()`: User wird in Liste aktualisiert
+- `setUsers(prevUsers => prevUsers.map(user => user.id === updatedData.id ? updatedData : user))`
+- Bei Fehler: Rollback durch vollständiges Reload
+
 ## Tests
 
 ### Manuelle Tests
@@ -184,13 +212,88 @@ Ziel: Reduzierung unnötiger Reloads durch optimistisches Update und selektive S
 - [ ] Task löschen: Task löschen und prüfen dass er aus Liste entfernt wird ohne Reload
 - [ ] Task kopieren: Task kopieren und prüfen dass Kopie hinzugefügt wird ohne Reload
 - [ ] Fehlerbehandlung: Prüfen dass bei Fehlern korrekt gerollbackt wird
+- [ ] User erstellen: Neuen User erstellen und prüfen dass er zur Liste hinzugefügt wird ohne Reload
+- [ ] User aktualisieren: User bearbeiten und prüfen dass Update ohne Reload funktioniert
+- [ ] User Fehlerbehandlung: Prüfen dass bei Fehlern korrekt gerollbackt wird
 
 ### Browser DevTools Prüfung
 - [ ] Netzwerk-Tab: Prüfen dass weniger API-Calls gemacht werden
 - [ ] Keine unnötigen GET /api/tasks Calls nach Update-Operationen
+- [ ] Keine unnötigen GET /api/users Calls nach Create/Update-Operationen
 
 ## Bekannte Probleme
-(TBD)
+
+### Problem: To-Do Liste wird beim Start/Stop der Zeiterfassung neu geladen
+**Status:** ✅ BEHOBEN
+
+**Ursache:**
+- React.StrictMode führt in Development-Mode useEffect mit leerer Dependency-Liste zweimal aus
+- Dies führte dazu, dass `loadTasks()` zweimal aufgerufen wurde
+
+**Lösung:**
+- `useRef` hinzugefügt um sicherzustellen, dass `loadTasks()` nur einmal beim Mount aufgerufen wird
+- `hasLoadedRef` verhindert doppelte Ausführung auch bei React.StrictMode
+
+**Technische Details:**
+```typescript
+const hasLoadedRef = useRef(false);
+
+useEffect(() => {
+    if (!hasLoadedRef.current) {
+        hasLoadedRef.current = true;
+        loadTasks();
+    }
+}, []);
+```
+
+**Hinweis:** 
+- Die Zeiterfassung verwendet bereits axios (AJAX) für API-Calls
+- Start/Stop der Zeiterfassung sollte sich nicht auf die Task-Liste auswirken
+- Mit dieser Änderung wird die Liste nur einmal beim ersten Laden geladen, nicht bei jedem Tracking-Start/Stop
+
+### Problem: Zeiterfassungsbox "zuckt" beim Start/Stop
+**Status:** ✅ BEHOBEN
+
+**Ursache:**
+- Mehrere sequenzielle State-Updates führten zu mehreren Re-Renders
+- `setSelectedBranch` wurde immer aufgerufen, auch wenn sich der Wert nicht geändert hatte
+- `branches.find()` wurde bei jedem Render neu berechnet
+
+**Lösung:**
+1. **State-Updates gebatcht**: Alle State-Updates werden zusammen ausgeführt, um nur einen Re-Render zu verursachen
+2. **Bedingte Branch-Updates**: `setSelectedBranch` wird nur aufgerufen, wenn sich der Wert tatsächlich ändert
+3. **Memoization**: `branches.find()` wird mit `useMemo` gecached, um unnötige Berechnungen zu vermeiden
+
+**Technische Details:**
+```typescript
+// Vorher: Mehrere sequenzielle State-Updates
+setActiveWorktime(data);
+setIsTracking(true);
+setStartTime(startTimeDate);
+setSelectedBranch(data.branchId); // Immer, auch wenn unverändert
+
+// Nachher: Gebatchte Updates + bedingte Updates
+setActiveWorktime(data);
+setStartTime(startTimeDate);
+setElapsedTime('00:00:00');
+setIsTracking(true);
+
+// Nur wenn sich geändert hat
+if (selectedBranch !== data.branchId) {
+    setSelectedBranch(data.branchId);
+}
+
+// Memoization für Branch-Name
+const branchName = useMemo(() => {
+    if (!activeWorktime) return null;
+    return branches.find(b => b.id === activeWorktime.branchId)?.name || 'Unbekannt';
+}, [branches, activeWorktime]);
+```
+
+**Erwartetes Verhalten:**
+- Beim Start/Stop nur ein einziger Re-Render statt mehreren
+- Box "zuckt" nicht mehr
+- Nur notwendige State-Updates werden ausgeführt
 
 ## Zusammenfassung
 
@@ -198,10 +301,12 @@ Ziel: Reduzierung unnötiger Reloads durch optimistisches Update und selektive S
 - ✅ Phase 1: Worktracker.tsx - Alle Optimierungen implementiert
 - ✅ Phase 2: Requests.tsx - Alle Optimierungen implementiert
 - ✅ Phase 3: ConsultationList.tsx - Optimierungen implementiert
+- ✅ Phase 4: UserManagementTab.tsx - Optimierungen implementiert
 
 ### Erwartete Verbesserungen:
 - ~80% weniger API-Calls bei Task-Operationen
 - ~80% weniger API-Calls bei Request-Operationen
+- ~80% weniger API-Calls bei User-Operationen
 - Sofortiges UI-Feedback ohne Ladezeiten
 - Funktionalität bleibt vollständig erhalten
 
@@ -209,8 +314,9 @@ Ziel: Reduzierung unnötiger Reloads durch optimistisches Update und selektive S
 1. ✅ Phase 1 abgeschlossen (Worktracker.tsx)
 2. ✅ Phase 2 abgeschlossen (Requests.tsx)
 3. ✅ Phase 3 abgeschlossen (ConsultationList.tsx)
-4. Manuelle Tests durchführen
-5. Optional: Weitere Listen-Komponenten optimieren (UserManagementTab, etc.)
+4. ✅ Phase 4 abgeschlossen (UserManagementTab.tsx)
+5. Manuelle Tests durchführen
+6. Optional: Weitere Listen-Komponenten optimieren (falls vorhanden)
 
 ## Zusammenfassung der Optimierungen
 
@@ -234,6 +340,10 @@ Ziel: Reduzierung unnötiger Reloads durch optimistisches Update und selektive S
 - Consultation-Stop: Direkte Aktualisierung in Liste
 - Consultation-Löschung: Bereits optimiert (keine Änderung nötig)
 - Manuelle Erfassung: Direktes Hinzufügen zur Liste
+
+**Phase 4: UserManagementTab.tsx**
+- User-Erstellung: Direktes Hinzufügen zur Liste
+- User-Update: Direkte Aktualisierung in Liste
 
 ### Technische Details:
 

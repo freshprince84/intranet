@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import axiosInstance from '../config/axios.ts'; // Importiere die konfigurierte axios-Instanz
 import { useAuth } from '../hooks/useAuth.tsx';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ArrowPathIcon, CheckIcon } from '@heroicons/react/24/outline';
 import MarkdownPreview from './MarkdownPreview.tsx';
+import { useSidepane } from '../contexts/SidepaneContext.tsx';
 
 interface User {
   id: number;
@@ -60,7 +62,10 @@ interface CreateRequestModalProps {
 }
 
 const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequestModalProps) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
+  const { openSidepane, closeSidepane } = useSidepane();
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const [users, setUsers] = useState<User[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [formData, setFormData] = useState({
@@ -86,7 +91,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
         setError(null);
         const token = localStorage.getItem('token');
         if (!token) {
-          setError('Nicht authentifiziert');
+          setError(t('createRequest.errors.notAuthenticated'));
           return;
         }
 
@@ -159,6 +164,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
   useEffect(() => {
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth < 640);
+      setIsLargeScreen(window.innerWidth > 1070);
     };
     
     // Initial prüfen
@@ -173,6 +179,19 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
     };
   }, []);
 
+  // Sidepane-Status verwalten
+  useEffect(() => {
+    if (isOpen) {
+      openSidepane();
+    } else {
+      closeSidepane();
+    }
+    
+    return () => {
+      closeSidepane();
+    };
+  }, [isOpen, openSidepane, closeSidepane]);
+
   // Formatiere den Benutzernamen (erstes Wort vom Vornamen + erstes Wort vom Benutzernamen)
   const formatUserName = (user: User) => {
     const firstName = user.firstName?.split(' ')[0];
@@ -180,7 +199,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
     
     // Wenn kein firstName vorhanden ist, nur username anzeigen
     if (!firstName) {
-      return username || 'Unbekannt';
+      return username || t('createRequest.errors.unknownUser');
     }
     
     // Standard: firstName (username)
@@ -241,10 +260,10 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
       if (file.type.startsWith('image/')) {
         // Hinweis: Wir verwenden hier den Platzhalter, da die Datei erst nach dem Erstellen hochgeladen wird
         // Die tatsächliche URL wird nach dem erfolgreichen Upload im Backend gesetzt
-        insertText = `\n![${file.name}](wird nach dem Erstellen hochgeladen)\n`;
+        insertText = `\n![${file.name}](${t('createRequest.form.uploadAfterCreate')})\n`;
       } else {
         // Für andere Dateien einen temporären Platzhalter
-        insertText = `\n[${file.name}](wird nach dem Erstellen hochgeladen)\n`;
+        insertText = `\n[${file.name}](${t('createRequest.form.uploadAfterCreate')})\n`;
       }
       
       // Füge den Link an der aktuellen Cursorposition ein
@@ -277,7 +296,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
       console.error('Fehler beim Verarbeiten der Datei:', err);
       // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
-      setError(axiosError.response?.data?.message || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
+      setError(axiosError.response?.data?.message || axiosError.message || t('createRequest.errors.unknownError'));
     } finally {
       setUploading(false);
     }
@@ -307,8 +326,9 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
       // Entferne auch den Anhang aus der Beschreibung
       if (attachmentToRemove.fileName) {
         // Je nach Dateityp können verschiedene Markdown-Formate in der Beschreibung sein
-        const imagePattern = new RegExp(`!\\[${attachmentToRemove.fileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
-        const linkPattern = new RegExp(`\\[${attachmentToRemove.fileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
+        const uploadAfterCreateText = t('createRequest.form.uploadAfterCreate');
+        const imagePattern = new RegExp(`!\\[${attachmentToRemove.fileName}\\]\\(${uploadAfterCreateText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g');
+        const linkPattern = new RegExp(`\\[${attachmentToRemove.fileName}\\]\\(${uploadAfterCreateText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g');
         
         // Ersetze alle Vorkommen durch leeren Text
         const newDescription = formData.description
@@ -349,7 +369,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
         );
       }
       
-      console.log(`${temporaryAttachments.length} Anhänge erfolgreich hochgeladen.`);
+      console.log(t('createRequest.messages.attachmentsUploaded', { count: temporaryAttachments.length }));
     } catch (err) {
       console.error('Fehler beim Hochladen der Anhänge:', err);
       // Wir zeigen hier keinen Fehler, da der Request bereits erstellt wurde
@@ -365,15 +385,15 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
 
     try {
       const token = localStorage.getItem('token');
-      if (!token) throw new Error('Nicht authentifiziert');
-      if (!user?.id) throw new Error('Benutzer-ID nicht gefunden');
+      if (!token) throw new Error(t('createRequest.errors.notAuthenticated'));
+      if (!user?.id) throw new Error(t('createRequest.errors.unknownUser'));
 
       // Validiere die IDs
       const responsibleId = parseInt(formData.responsible_id);
       const branchId = parseInt(formData.branch_id);
 
       if (isNaN(responsibleId) || isNaN(branchId)) {
-        throw new Error('Ungültige ID-Werte für Verantwortlichen oder Niederlassung');
+        throw new Error(t('createRequest.errors.invalidIds'));
       }
 
       const response = await axiosInstance.post(API_ENDPOINTS.REQUESTS.BASE, 
@@ -390,7 +410,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
       );
 
       if (response.status !== 201) {
-        throw new Error('Fehler beim Erstellen des Requests');
+        throw new Error(t('createRequest.errors.createError'));
       }
 
       // Lade temporäre Anhänge hoch, falls vorhanden
@@ -412,7 +432,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
       console.error('Create Request Error:', err);
       // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
-      setError(axiosError.response?.data?.message || axiosError.message || 'Fehler beim Erstellen des Requests');
+      setError(axiosError.response?.data?.message || axiosError.message || t('createRequest.errors.createError'));
     } finally {
       setLoading(false);
     }
@@ -434,7 +454,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                   type="button"
                   onClick={() => handleRemoveTemporaryAttachment(index)}
                   className="text-red-600 hover:text-red-900 ml-1"
-                  title="Entfernen"
+                  title={t('createRequest.form.remove')}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -470,7 +490,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
           <Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
               <Dialog.Title className="text-lg font-semibold dark:text-white">
-                Neuer Request
+                {t('createRequest.title')}
               </Dialog.Title>
               <button
                 onClick={onClose}
@@ -489,7 +509,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Titel</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.title')}</label>
                   <input
                     type="text"
                     required
@@ -501,7 +521,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
 
                 <div>
                   <label htmlFor="description_request_create" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                    Beschreibung
+                    {t('createRequest.form.description')}
                   </label>
                   <div className="relative">
                     <textarea
@@ -514,14 +534,14 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                       onPaste={handlePaste}
                       onDrop={handleDrop}
                       onDragOver={handleDragOver}
-                      placeholder="Text, Bilder oder Dateien hier einfügen..."
+                      placeholder={t('createRequest.form.descriptionPlaceholder')}
                     />
                     {/* Heftklammer-Icon zum Hinzufügen von Dateien */}
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
                       className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
-                      title="Datei hinzufügen"
+                      title={t('createRequest.form.addFile')}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -535,7 +555,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                     />
                     {uploading && (
                       <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70">
-                        <span className="text-sm text-gray-600 dark:text-gray-300">Wird hochgeladen...</span>
+                        <span className="text-sm text-gray-600 dark:text-gray-300">{t('createRequest.form.uploading')}</span>
                       </div>
                     )}
                   </div>
@@ -551,14 +571,14 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Verantwortlicher</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.responsible')}</label>
                   <select
                     required
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
                     value={formData.responsible_id}
                     onChange={(e) => setFormData({ ...formData, responsible_id: e.target.value })}
                   >
-                    <option value="">Bitte wählen...</option>
+                    <option value="">{t('createRequest.form.select')}</option>
                     {Array.isArray(users) && users.map(user => (
                       <option key={user.id} value={user.id}>
                         {formatUserName(user)}
@@ -568,14 +588,14 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Niederlassung</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.branch')}</label>
                   <select
                     required
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
                     value={formData.branch_id}
                     onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
                   >
-                    <option value="">Bitte wählen...</option>
+                    <option value="">{t('createRequest.form.select')}</option>
                     {Array.isArray(branches) && branches.map(branch => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name}
@@ -585,7 +605,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Fälligkeitsdatum</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.dueDate')}</label>
                   <input
                     type="date"
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
@@ -603,24 +623,30 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                     onChange={(e) => setFormData({ ...formData, create_todo: e.target.checked })}
                   />
                   <label htmlFor="create_todo" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                    Todo automatisch erstellen
+                    {t('createRequest.form.createTodo')}
                   </label>
                 </div>
 
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end pt-4 gap-2">
                   <button
                     type="button"
                     onClick={onClose}
-                    className="mr-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800"
+                    className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                    title={t('createRequest.form.cancel')}
                   >
-                    Abbrechen
+                    <XMarkIcon className="h-5 w-5" />
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-800 rounded-md hover:bg-blue-700 dark:hover:bg-blue-900"
+                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={loading ? t('createRequest.form.creating') : t('createRequest.form.create')}
                     disabled={loading}
                   >
-                    {loading ? 'Wird erstellt...' : 'Erstellen'}
+                    {loading ? (
+                      <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <CheckIcon className="h-5 w-5" />
+                    )}
                   </button>
                 </div>
               </form>
@@ -632,23 +658,37 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
   }
 
   // Für Desktop (ab 640px) - Sidepane
+  // WICHTIG: Sidepane muss IMMER gerendert bleiben für Transition
   return (
-    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-      {/* Semi-transparenter Hintergrund für den Rest der Seite */}
-      <div 
-        className="fixed inset-0 bg-black/10 transition-opacity" 
-        aria-hidden="true" 
-        onClick={onClose}
-      />
+    <>
+      {/* Backdrop - nur wenn offen und <= 1070px */}
+      {/* Hinweis: onClick entfernt, da Backdrop pointer-events: none hat, damit Hauptinhalt interaktiv bleibt */}
+      {isOpen && !isLargeScreen && (
+        <div 
+          className="fixed inset-0 bg-black/10 transition-opacity sidepane-overlay sidepane-backdrop z-40" 
+          aria-hidden="true" 
+          style={{
+            opacity: isOpen ? 1 : 0,
+            transition: 'opacity 300ms ease-out'
+          }}
+        />
+      )}
       
-      {/* Sidepane von rechts einfahren */}
+      {/* Sidepane - IMMER gerendert, Position wird via Transform geändert */}
       <div 
-        className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{
+          transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          pointerEvents: isOpen ? 'auto' : 'none'
+        }}
+        aria-hidden={!isOpen}
+        role="dialog"
+        aria-modal={isOpen}
       >
-        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-          <Dialog.Title className="text-lg font-semibold dark:text-white">
-            Neuer Request
-          </Dialog.Title>
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+          <h2 className="text-lg font-semibold dark:text-white">
+            {t('createRequest.title')}
+          </h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
@@ -657,7 +697,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
           </button>
         </div>
 
-        <div className="p-4 overflow-y-auto h-full">
+        <div className="p-4 overflow-y-auto flex-1 min-h-0">
           {error && (
             <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
               {error}
@@ -666,7 +706,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Titel</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.title')}</label>
               <input
                 type="text"
                 required
@@ -678,7 +718,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
 
             <div>
               <label htmlFor="description_request_create" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Beschreibung
+                {t('createRequest.form.description')}
               </label>
               <div className="relative">
                 <textarea
@@ -691,14 +731,14 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                   onPaste={handlePaste}
                   onDrop={handleDrop}
                   onDragOver={handleDragOver}
-                  placeholder="Text, Bilder oder Dateien hier einfügen..."
+                  placeholder={t('createRequest.form.descriptionPlaceholder')}
                 />
                 {/* Heftklammer-Icon zum Hinzufügen von Dateien */}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
-                  title="Datei hinzufügen"
+                  title={t('createRequest.form.addFile')}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -712,7 +752,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 />
                 {uploading && (
                   <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">Wird hochgeladen...</span>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{t('createRequest.form.uploading')}</span>
                   </div>
                 )}
               </div>
@@ -728,14 +768,14 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Verantwortlicher</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.responsible')}</label>
               <select
                 required
                 className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
                 value={formData.responsible_id}
                 onChange={(e) => setFormData({ ...formData, responsible_id: e.target.value })}
               >
-                <option value="">Bitte wählen...</option>
+                <option value="">{t('createRequest.form.select')}</option>
                 {Array.isArray(users) && users.map(user => (
                   <option key={user.id} value={user.id}>
                     {formatUserName(user)}
@@ -745,14 +785,14 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Niederlassung</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.branch')}</label>
               <select
                 required
                 className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
                 value={formData.branch_id}
                 onChange={(e) => setFormData({ ...formData, branch_id: e.target.value })}
               >
-                <option value="">Bitte wählen...</option>
+                <option value="">{t('createRequest.form.select')}</option>
                 {Array.isArray(branches) && branches.map(branch => (
                   <option key={branch.id} value={branch.id}>
                     {branch.name}
@@ -762,7 +802,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Fälligkeitsdatum</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.dueDate')}</label>
               <input
                 type="date"
                 className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
@@ -780,30 +820,36 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 onChange={(e) => setFormData({ ...formData, create_todo: e.target.checked })}
               />
               <label htmlFor="create_todo_sidepane" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
-                Todo automatisch erstellen
+                {t('createRequest.form.createTodo')}
               </label>
             </div>
 
-            <div className="flex justify-end pt-4">
+            <div className="flex justify-end pt-4 gap-2">
               <button
                 type="button"
                 onClick={onClose}
-                className="mr-2 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-800"
+                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                title={t('createRequest.form.cancel')}
               >
-                Abbrechen
+                <XMarkIcon className="h-5 w-5" />
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-800 rounded-md hover:bg-blue-700 dark:hover:bg-blue-900"
+                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={loading ? t('createRequest.form.creating') : t('createRequest.form.create')}
                 disabled={loading}
               >
-                {loading ? 'Wird erstellt...' : 'Erstellen'}
+                {loading ? (
+                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                ) : (
+                  <CheckIcon className="h-5 w-5" />
+                )}
               </button>
             </div>
           </form>
         </div>
       </div>
-    </Dialog>
+    </>
   );
 };
 

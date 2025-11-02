@@ -13,11 +13,13 @@ router.use(organization_1.organizationMiddleware);
 router.get('/', userController_1.getAllUsers);
 router.get('/dropdown', userController_1.getAllUsersForDropdown);
 router.get('/profile', userController_1.getCurrentUser);
+router.get('/active-language', userController_1.getUserActiveLanguage);
 router.put('/profile', userController_1.updateProfile);
 router.put('/settings', userController_1.updateUserSettings);
 router.put('/invoice-settings', userController_1.updateInvoiceSettings);
 router.put('/switch-role', userController_1.switchUserRole);
-// Neue Routen für Benutzerverwaltung
+// Neue Routen für Organisation
+router.post('/', userController_1.createUser); // Neue Benutzer erstellen (nur für Admins einer Organisation)
 router.get('/:id', userController_1.getUserById);
 router.put('/:id', userController_1.updateUserById);
 router.put('/:id/roles', userController_1.updateUserRoles);

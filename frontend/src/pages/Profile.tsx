@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth.tsx';
-import { UserCircleIcon, PencilIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon, PencilIcon, DocumentTextIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { API_URL } from '../config/api.ts';
 import useMessage from '../hooks/useMessage.ts';
 import IdentificationDocumentList from '../components/IdentificationDocumentList.tsx';
@@ -27,20 +28,8 @@ interface UserProfile {
   identificationIssuingCountry: string | null;
 }
 
-// Länder für die Auswahl
-const COUNTRIES = [
-  { code: 'CO', name: 'Kolumbien' },
-  { code: 'CH', name: 'Schweiz' },
-  { code: 'DE', name: 'Deutschland' },
-  { code: 'AT', name: 'Österreich' }
-];
-
-// Sprachen für die Auswahl
-const LANGUAGES = [
-  { code: 'es', name: 'Spanisch' },
-  { code: 'de', name: 'Deutsch' },
-  { code: 'en', name: 'Englisch' }
-];
+// Länder für die Auswahl - werden dynamisch aus Übersetzungen geladen
+// Sprachen für die Auswahl - werden dynamisch aus Übersetzungen geladen
 
 // Identifikationstypen
 const ID_TYPES = [
@@ -56,10 +45,26 @@ const ID_TYPES = [
 const Profile: React.FC = () => {
   const { user: authUser } = useAuth();
   const { showMessage } = useMessage();
+  const { t } = useTranslation();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
   const [activeTab, setActiveTab] = useState<'profile' | 'documents'>('profile');
+
+  // Länder für die Auswahl (dynamisch aus Übersetzungen)
+  const COUNTRIES = [
+    { code: 'CO', name: t('countries.CO') },
+    { code: 'CH', name: t('countries.CH') },
+    { code: 'DE', name: t('countries.DE') },
+    { code: 'AT', name: t('countries.AT') }
+  ];
+
+  // Sprachen für die Auswahl (dynamisch aus Übersetzungen)
+  const LANGUAGES = [
+    { code: 'es', name: t('languages.es') },
+    { code: 'de', name: t('languages.de') },
+    { code: 'en', name: t('languages.en') }
+  ];
 
   useEffect(() => {
     if (authUser) {
@@ -67,8 +72,8 @@ const Profile: React.FC = () => {
         id: authUser.id,
         username: authUser.username,
         email: authUser.email,
-        firstName: authUser.firstName,
-        lastName: authUser.lastName,
+        firstName: authUser.firstName || '',
+        lastName: authUser.lastName || '',
         birthday: null,
         bankDetails: null,
         contract: null,
@@ -193,8 +198,31 @@ const Profile: React.FC = () => {
     setIsEditing(true);
   };
 
+  // Prüfe ob Profil unvollständig ist
+  const isProfileIncomplete = () => {
+    return !user.birthday || !user.bankDetails || !user.contract || !user.salary || !user.normalWorkingHours;
+  };
+
   return (
     <div className="container mx-auto py-4">
+      {/* Warnung wenn Profil unvollständig */}
+      {isProfileIncomplete() && (
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                <strong>{t('profile.profileIncomplete')}</strong> {t('profile.completeProfile')}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex -mb-px">
@@ -207,7 +235,7 @@ const Profile: React.FC = () => {
               }`}
             >
               <UserCircleIcon className="h-5 w-5 inline mr-2" />
-              Profil
+              {t('profile.title')}
             </button>
             <button
               onClick={() => setActiveTab('documents')}
@@ -218,7 +246,7 @@ const Profile: React.FC = () => {
               }`}
             >
               <DocumentTextIcon className="h-5 w-5 inline mr-2" />
-              Identifikationsdokumente
+              {t('profile.documents')}
             </button>
           </nav>
         </div>
@@ -229,7 +257,7 @@ const Profile: React.FC = () => {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold flex items-center dark:text-white">
               <UserCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
-              Benutzerprofil
+              {t('profile.userProfile')}
             </h2>
             {!isEditing && (
               <button
@@ -245,7 +273,7 @@ const Profile: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Benutzername
+                  {t('profile.username')}
                 </label>
                 <input
                   type="text"
@@ -259,7 +287,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  E-Mail
+                  {t('profile.email')}
                 </label>
                 <input
                   type="email"
@@ -273,7 +301,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Vorname
+                  {t('profile.firstName')}
                 </label>
                 <input
                   type="text"
@@ -287,7 +315,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Nachname
+                  {t('profile.lastName')}
                 </label>
                 <input
                   type="text"
@@ -301,7 +329,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Geburtsdatum
+                  {t('profile.birthday')}
                 </label>
                 <input
                   type="date"
@@ -315,7 +343,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Bank Details
+                  {t('profile.bankDetails')}
                 </label>
                 <input
                   type="text"
@@ -329,7 +357,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Vertrag
+                  {t('profile.contract')}
                 </label>
                 <input
                   type="text"
@@ -343,7 +371,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Gehalt
+                  {t('profile.salary')}
                 </label>
                 <input
                   type="number"
@@ -357,7 +385,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Normal Working Hours
+                  {t('profile.normalWorkingHours')}
                 </label>
                 <input
                   type="number"
@@ -371,7 +399,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Country
+                  {t('profile.country')}
                 </label>
                 <select
                   name="country"
@@ -380,7 +408,7 @@ const Profile: React.FC = () => {
                   disabled={!isEditing}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="">Select a country</option>
+                  <option value="">{t('profile.selectCountry')}</option>
                   {COUNTRIES.map((country) => (
                     <option key={country.code} value={country.code}>
                       {country.name}
@@ -391,7 +419,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Language
+                  {t('profile.language')}
                 </label>
                 <select
                   name="language"
@@ -400,7 +428,7 @@ const Profile: React.FC = () => {
                   disabled={!isEditing}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="">Select a language</option>
+                  <option value="">{t('profile.selectLanguage')}</option>
                   {LANGUAGES.map((language) => (
                     <option key={language.code} value={language.code}>
                       {language.name}
@@ -412,7 +440,7 @@ const Profile: React.FC = () => {
               {/* Neue Felder für Identifikationsdokumente */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Identifikationstyp
+                  {t('profile.identificationType')}
                 </label>
                 <select
                   name="identificationType"
@@ -421,7 +449,7 @@ const Profile: React.FC = () => {
                   disabled={!isEditing}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="">Bitte auswählen</option>
+                  <option value="">{t('common.select')}</option>
                   {ID_TYPES.map((type) => (
                     <option key={type.value} value={type.value}>
                       {type.label}
@@ -432,7 +460,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Identifikationsnummer
+                  {t('profile.identificationNumber')}
                 </label>
                 <input
                   type="text"
@@ -446,7 +474,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Ausstellendes Land
+                  {t('profile.identificationIssuingCountry')}
                 </label>
                 <select
                   name="identificationIssuingCountry"
@@ -455,7 +483,7 @@ const Profile: React.FC = () => {
                   disabled={!isEditing}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="">Bitte auswählen</option>
+                  <option value="">{t('common.select')}</option>
                   {COUNTRIES.map((country) => (
                     <option key={country.code} value={country.code}>
                       {country.name}
@@ -466,7 +494,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Ablaufdatum
+                  {t('profile.identificationExpiryDate')}
                 </label>
                 <input
                   type="date"
@@ -483,16 +511,18 @@ const Profile: React.FC = () => {
               <div className="flex mt-6 space-x-3">
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                  className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600"
+                  title={t('common.save')}
                 >
-                  Speichern
+                  <CheckIcon className="h-5 w-5" />
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsEditing(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"
+                  className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                  title={t('common.cancel')}
                 >
-                  Abbrechen
+                  <XMarkIcon className="h-5 w-5" />
                 </button>
               </div>
             )}

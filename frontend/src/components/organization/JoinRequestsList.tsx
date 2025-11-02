@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { UserPlusIcon, FunnelIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { organizationService } from '../../services/organizationService.ts';
 import { OrganizationJoinRequest } from '../../types/organization.ts';
@@ -24,16 +25,16 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const getStatusText = (status: string) => {
+const getStatusText = (status: string, t: any) => {
   switch (status) {
     case 'pending':
-      return 'Ausstehend';
+      return t('joinRequestsList.status.pending');
     case 'approved':
-      return 'Genehmigt';
+      return t('joinRequestsList.status.approved');
     case 'rejected':
-      return 'Abgelehnt';
+      return t('joinRequestsList.status.rejected');
     case 'withdrawn':
-      return 'Zurückgezogen';
+      return t('joinRequestsList.status.withdrawn');
     default:
       return status;
   }
@@ -42,6 +43,7 @@ const getStatusText = (status: string) => {
 const JOIN_REQUESTS_TABLE_ID = 'join-requests-table';
 
 const JoinRequestsList: React.FC = () => {
+  const { t } = useTranslation();
   const [joinRequests, setJoinRequests] = useState<OrganizationJoinRequest[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +79,7 @@ const JoinRequestsList: React.FC = () => {
     // Prüfe Berechtigung direkt
     const hasPermission = canViewJoinRequests();
     if (!hasPermission) {
-      setError('Keine Berechtigung zum Anzeigen der Beitrittsanfragen');
+      setError(t('joinRequestsList.noPermission'));
       setLoading(false);
       hasInitialLoadRef.current = true;
       return;
@@ -100,7 +102,7 @@ const JoinRequestsList: React.FC = () => {
       } catch (err: any) {
         if (!mountedRef.current) return;
         
-        const errorMessage = err.response?.data?.message || 'Fehler beim Laden der Beitrittsanfragen';
+        const errorMessage = err.response?.data?.message || t('joinRequestsList.loadError');
         setError(errorMessage);
         // showMessage nur außerhalb useEffect verwenden, um Re-Renders zu vermeiden
         // Verwende setTimeout, um es asynchron auszuführen
@@ -120,7 +122,7 @@ const JoinRequestsList: React.FC = () => {
 
   const handleOpenProcessModal = (request: OrganizationJoinRequest) => {
     if (!canManageJoinRequests()) {
-      const errorMessage = 'Keine Berechtigung zum Bearbeiten der Beitrittsanfragen';
+      const errorMessage = t('joinRequestsList.noPermissionEdit');
       setError(errorMessage);
       showMessage(errorMessage, 'error');
       return;
@@ -223,7 +225,7 @@ const JoinRequestsList: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 shadow p-6 mb-6">
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-700 dark:text-gray-300">Lade Berechtigungen...</span>
+          <span className="ml-3 text-gray-700 dark:text-gray-300">{t('joinRequestsList.loadingPermissions')}</span>
         </div>
       </div>
     );
@@ -233,7 +235,7 @@ const JoinRequestsList: React.FC = () => {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 shadow p-6 mb-6">
       <div className="p-4 text-red-600 dark:text-red-400">
-        Keine Berechtigung zum Anzeigen der Beitrittsanfragen.
+        {t('joinRequestsList.noPermission')}
         </div>
       </div>
     );
@@ -245,7 +247,7 @@ const JoinRequestsList: React.FC = () => {
       <div className="flex items-center justify-between mb-4 sm:mb-4">
         <h2 className="text-xl sm:text-xl font-semibold flex items-center dark:text-white">
           <UserPlusIcon className="h-6 w-6 sm:h-6 sm:w-6 mr-2 sm:mr-2" />
-          Beitrittsanfragen
+          {t('joinRequestsList.title')}
         </h2>
         
         <div className="flex items-center gap-2">
@@ -255,11 +257,11 @@ const JoinRequestsList: React.FC = () => {
             onChange={(e) => setStatusFilter(e.target.value)}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">Alle Status</option>
-            <option value="pending">Ausstehend</option>
-            <option value="approved">Genehmigt</option>
-            <option value="rejected">Abgelehnt</option>
-            <option value="withdrawn">Zurückgezogen</option>
+            <option value="all">{t('joinRequestsList.allStatus')}</option>
+            <option value="pending">{t('joinRequestsList.status.pending')}</option>
+            <option value="approved">{t('joinRequestsList.status.approved')}</option>
+            <option value="rejected">{t('joinRequestsList.status.rejected')}</option>
+            <option value="withdrawn">{t('joinRequestsList.status.withdrawn')}</option>
           </select>
 
           {/* Filter-Button */}
@@ -287,8 +289,8 @@ const JoinRequestsList: React.FC = () => {
         <div className="mb-4">
           <FilterPane
             columns={[
-              { id: 'requester', label: 'Antragsteller' },
-              { id: 'message', label: 'Nachricht' }
+              { id: 'requester', label: t('joinRequestsList.filter.requester') },
+              { id: 'message', label: t('joinRequestsList.filter.message') }
             ]}
             onApply={applyFilterConditions}
             onReset={resetFilterConditions}
@@ -310,13 +312,13 @@ const JoinRequestsList: React.FC = () => {
       {loading ? (
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-700 dark:text-gray-300">Lade Beitrittsanfragen...</span>
+          <span className="ml-3 text-gray-700 dark:text-gray-300">{t('joinRequestsList.loading')}</span>
         </div>
       ) : filteredJoinRequests.length === 0 ? (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
           {joinRequests.length === 0 
-            ? 'Keine Beitrittsanfragen vorhanden.'
-            : 'Keine Beitrittsanfragen entsprechen den Filterkriterien.'}
+            ? t('joinRequestsList.noRequests')
+            : t('joinRequestsList.noMatching')}
         </div>
       ) : (
         /* Cards für Join-Requests */
@@ -338,14 +340,14 @@ const JoinRequestsList: React.FC = () => {
               </p>
                     </div>
                     <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)}`}>
-                      {getStatusText(request.status)}
+                      {getStatusText(request.status, t)}
                     </span>
                   </div>
 
                   {request.message && (
                     <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
                       <p className="text-sm text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Nachricht:</span> {request.message}
+                        <span className="font-medium">{t('joinRequestsList.filter.message')}:</span> {request.message}
                       </p>
                     </div>
                   )}
@@ -353,7 +355,7 @@ const JoinRequestsList: React.FC = () => {
                   {request.response && (
                     <div className="mt-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-700">
                       <p className="text-sm text-blue-700 dark:text-blue-300">
-                        <span className="font-medium">Antwort:</span> {request.response}
+                        <span className="font-medium">{t('joinRequestsList.response')}:</span> {request.response}
                       </p>
                     </div>
                   )}
@@ -365,7 +367,7 @@ const JoinRequestsList: React.FC = () => {
                         className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center"
                       >
                         <PencilIcon className="h-4 w-4 mr-1" />
-                        Bearbeiten
+                        {t('joinRequestsList.edit')}
                   </button>
                 </div>
               )}

@@ -266,7 +266,7 @@ Das System informiert Sie über wichtige Ereignisse.
 Das System sendet Benachrichtigungen für:
 - Task-Änderungen (Erstellung, Updates, Statusänderungen)
 - Request-Änderungen (Erstellung, Updates, Statusänderungen)
-- Benutzerverwaltung (wenn Sie betroffen sind)
+- Organisation (wenn Sie betroffen sind)
 - Zeiterfassung (Start/Stop)
 
 ## System-Meldungen

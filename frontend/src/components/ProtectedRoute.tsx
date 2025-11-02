@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { AccessLevel } from '../types/interfaces.ts';
+import LoadingScreen from './LoadingScreen.tsx';
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
@@ -19,13 +20,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     entityType = 'page',
     organizationRequired = false 
 }) => {
-    const { user } = useAuth();
+    const { user, isLoading } = useAuth();
     const { hasPermission, canViewOrganization, loading } = usePermissions();
     const location = useLocation();
     
-    // Warten auf Berechtigungen
-    if (loading) {
-        return <div className="p-4 dark:text-gray-300">Laden...</div>;
+    // Kombinierter Loading-Check (Auth + Permissions)
+    if (isLoading || loading) {
+        return <LoadingScreen />;
     }
     
     // Authentifizierung prüfen

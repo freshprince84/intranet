@@ -88,7 +88,7 @@ Das System besteht aus folgenden Hauptkomponenten:
 - **Worktracker**: Zeiterfassung und -verwaltung
 - **Task-Management**: Aufgabenverwaltung und Workflow
 - **Request-Management**: Anfrageverwaltung
-- **User-Management**: Benutzerverwaltung für Administratoren
+- **User-Management**: Organisation für Administratoren
 - **Profile**: Benutzerprofilverwaltung
 - **Notifications**: Systembenachrichtigungen
 - **Workcenter**: Team-Zeiterfassungsüberwachung

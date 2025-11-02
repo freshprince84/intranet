@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Box, 
   Typography, 
@@ -43,6 +44,7 @@ const categorySettings = {
 type CategoryType = keyof typeof categorySettings;
 
 const NotificationSettingsComponent: React.FC = () => {
+  const { t } = useTranslation();
   const [settings, setSettings] = useState<NotificationSettings>(defaultSettings);
   
   const [loading, setLoading] = useState(true);
@@ -71,7 +73,7 @@ const NotificationSettingsComponent: React.FC = () => {
     } catch (error) {
       console.error('Fehler beim Laden der Benachrichtigungseinstellungen:', error);
       setSettings(defaultSettings);
-      showMessage('Einstellungen konnten nicht geladen werden. Standardeinstellungen werden verwendet.', 'error');
+      showMessage(t('notifications.loadError'), 'error');
     } finally {
       setLoading(false);
     }
@@ -90,10 +92,10 @@ const NotificationSettingsComponent: React.FC = () => {
     try {
       setSaving(true);
       await notificationSettingsApi.updateUserSettings(updatedSettings);
-      showMessage('Einstellungen wurden erfolgreich gespeichert.', 'success');
+      showMessage(t('notifications.saveSuccess'), 'success');
     } catch (error) {
       console.error('Fehler beim Speichern der Einstellungen:', error);
-      showMessage('Einstellungen konnten nicht gespeichert werden', 'error');
+      showMessage(t('notifications.saveError'), 'error');
       
       setSettings(settings);
     } finally {
@@ -115,10 +117,10 @@ const NotificationSettingsComponent: React.FC = () => {
     try {
       setSaving(true);
       await notificationSettingsApi.updateUserSettings(updatedSettings);
-      showMessage('Einstellungen wurden erfolgreich gespeichert.', 'success');
+      showMessage(t('notifications.saveSuccess'), 'success');
     } catch (error) {
       console.error('Fehler beim Speichern der Einstellungen:', error);
-      showMessage('Einstellungen konnten nicht gespeichert werden', 'error');
+      showMessage(t('notifications.saveError'), 'error');
       setSettings(settings);
     } finally {
       setSaving(false);
@@ -136,10 +138,10 @@ const NotificationSettingsComponent: React.FC = () => {
     try {
       setSaving(true);
       await notificationSettingsApi.updateUserSettings(updatedSettings);
-      showMessage('Einstellungen wurden erfolgreich gespeichert.', 'success');
+      showMessage(t('notifications.saveSuccess'), 'success');
     } catch (error) {
       console.error('Fehler beim Speichern der Einstellungen:', error);
-      showMessage('Einstellungen konnten nicht gespeichert werden', 'error');
+      showMessage(t('notifications.saveError'), 'error');
       
       setSettings(settings);
     } finally {
@@ -200,7 +202,7 @@ const NotificationSettingsComponent: React.FC = () => {
           checked={isAllCheckedInCategory(title)}
           onChange={(e) => toggleAllInCategory(title, e.target.checked)}
           name={`${title.toLowerCase()}All`}
-          label="Alle"
+          label={t('notifications.all')}
         />
       </div>
       <div className="space-y-4">
@@ -219,7 +221,7 @@ const NotificationSettingsComponent: React.FC = () => {
   );
 
   if (loading) {
-    return <Typography>Lade Einstellungen...</Typography>;
+    return <Typography>{t('notifications.loading')}</Typography>;
   }
 
   return (
@@ -228,16 +230,16 @@ const NotificationSettingsComponent: React.FC = () => {
         variant="body2" 
         className="text-gray-600 dark:text-gray-400 mb-6"
       >
-        Wählen Sie aus, für welche Ereignisse Sie Benachrichtigungen erhalten möchten.
+        {t('notifications.description')}
       </Typography>
       
       <div className="mb-8 mt-2">
         <div className="flex items-center justify-between mb-4">
           <div className="group relative">
-            <h3 className="text-lg font-medium dark:text-white">Alle Benachrichtigungen</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400">Aktivieren oder deaktivieren Sie alle Benachrichtigungen</p>
+            <h3 className="text-lg font-medium dark:text-white">{t('notifications.allNotifications')}</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">{t('notifications.allNotificationsDescription')}</p>
             <div className="absolute left-0 bottom-[calc(100%+0.5rem)] px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-normal max-w-xs pointer-events-none z-50">
-              Aktivieren oder deaktivieren Sie alle Benachrichtigungen
+              {t('notifications.allNotificationsDescription')}
             </div>
           </div>
           <CustomToggle
@@ -251,38 +253,38 @@ const NotificationSettingsComponent: React.FC = () => {
       
       <Divider className="my-8" />
       
-      {renderToggleSection('Aufgaben', [
-        { name: 'taskCreate', label: 'Neue Aufgaben', description: 'Benachrichtigung wenn eine neue Aufgabe erstellt wird' },
-        { name: 'taskUpdate', label: 'Aufgaben-Aktualisierungen', description: 'Benachrichtigung wenn eine Aufgabe aktualisiert wird' },
-        { name: 'taskDelete', label: 'Gelöschte Aufgaben', description: 'Benachrichtigung wenn eine Aufgabe gelöscht wird' },
-        { name: 'taskStatusChange', label: 'Status-Änderungen', description: 'Benachrichtigung wenn sich der Status einer Aufgabe ändert' }
+      {renderToggleSection(t('notifications.categories.tasks'), [
+        { name: 'taskCreate', label: t('notifications.events.taskCreate'), description: t('notifications.events.taskCreateDescription') },
+        { name: 'taskUpdate', label: t('notifications.events.taskUpdate'), description: t('notifications.events.taskUpdateDescription') },
+        { name: 'taskDelete', label: t('notifications.events.taskDelete'), description: t('notifications.events.taskDeleteDescription') },
+        { name: 'taskStatusChange', label: t('notifications.events.taskStatusChange'), description: t('notifications.events.taskStatusChangeDescription') }
       ])}
       
       <Divider className="my-8" />
       
-      {renderToggleSection('Anfragen', [
-        { name: 'requestCreate', label: 'Neue Anfragen', description: 'Benachrichtigung wenn eine neue Anfrage erstellt wird' },
-        { name: 'requestUpdate', label: 'Anfragen-Aktualisierungen', description: 'Benachrichtigung wenn eine Anfrage aktualisiert wird' },
-        { name: 'requestDelete', label: 'Gelöschte Anfragen', description: 'Benachrichtigung wenn eine Anfrage gelöscht wird' },
-        { name: 'requestStatusChange', label: 'Status-Änderungen', description: 'Benachrichtigung wenn sich der Status einer Anfrage ändert' }
+      {renderToggleSection(t('notifications.categories.requests'), [
+        { name: 'requestCreate', label: t('notifications.events.requestCreate'), description: t('notifications.events.requestCreateDescription') },
+        { name: 'requestUpdate', label: t('notifications.events.requestUpdate'), description: t('notifications.events.requestUpdateDescription') },
+        { name: 'requestDelete', label: t('notifications.events.requestDelete'), description: t('notifications.events.requestDeleteDescription') },
+        { name: 'requestStatusChange', label: t('notifications.events.requestStatusChange'), description: t('notifications.events.requestStatusChangeDescription') }
       ])}
       
       <Divider className="my-8" />
       
-      {renderToggleSection('Benutzer & Rollen', [
-        { name: 'userCreate', label: 'Neue Benutzer', description: 'Benachrichtigung wenn ein neuer Benutzer erstellt wird' },
-        { name: 'userUpdate', label: 'Benutzer-Aktualisierungen', description: 'Benachrichtigung wenn ein Benutzer aktualisiert wird' },
-        { name: 'userDelete', label: 'Gelöschte Benutzer', description: 'Benachrichtigung wenn ein Benutzer gelöscht wird' },
-        { name: 'roleCreate', label: 'Neue Rollen', description: 'Benachrichtigung wenn eine neue Rolle erstellt wird' },
-        { name: 'roleUpdate', label: 'Rollen-Aktualisierungen', description: 'Benachrichtigung wenn eine Rolle aktualisiert wird' },
-        { name: 'roleDelete', label: 'Gelöschte Rollen', description: 'Benachrichtigung wenn eine Rolle gelöscht wird' }
+      {renderToggleSection(t('notifications.categories.usersAndRoles'), [
+        { name: 'userCreate', label: t('notifications.events.userCreate'), description: t('notifications.events.userCreateDescription') },
+        { name: 'userUpdate', label: t('notifications.events.userUpdate'), description: t('notifications.events.userUpdateDescription') },
+        { name: 'userDelete', label: t('notifications.events.userDelete'), description: t('notifications.events.userDeleteDescription') },
+        { name: 'roleCreate', label: t('notifications.events.roleCreate'), description: t('notifications.events.roleCreateDescription') },
+        { name: 'roleUpdate', label: t('notifications.events.roleUpdate'), description: t('notifications.events.roleUpdateDescription') },
+        { name: 'roleDelete', label: t('notifications.events.roleDelete'), description: t('notifications.events.roleDeleteDescription') }
       ])}
       
       <Divider className="my-8" />
       
-      {renderToggleSection('Zeiterfassung', [
-        { name: 'worktimeStart', label: 'Zeiterfassung Start', description: 'Benachrichtigung wenn eine Zeiterfassung gestartet wird' },
-        { name: 'worktimeStop', label: 'Zeiterfassung Stop', description: 'Benachrichtigung wenn eine Zeiterfassung gestoppt wird' }
+      {renderToggleSection(t('notifications.categories.worktime'), [
+        { name: 'worktimeStart', label: t('notifications.events.worktimeStart'), description: t('notifications.events.worktimeStartDescription') },
+        { name: 'worktimeStop', label: t('notifications.events.worktimeStop'), description: t('notifications.events.worktimeStopDescription') }
       ])}
     </Box>
   );

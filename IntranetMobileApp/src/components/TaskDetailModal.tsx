@@ -13,7 +13,7 @@ interface TaskDetailModalProps {
   visible: boolean;
   onDismiss: () => void;
   taskId?: number | null;
-  onTaskUpdated?: () => void;
+  onTaskUpdated?: (task: Task | null, deletedTaskId?: number) => void;
   mode: ModalMode;
 }
 
@@ -265,11 +265,13 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     
     try {
       if (taskId) {
-        await taskApi.updateStatus(taskId, newStatus);
+        // updateStatus gibt bereits vollständige Task-Daten zurück (ruft intern getById auf)
+        const updatedTask = await taskApi.updateStatus(taskId, newStatus);
         dispatch({ type: 'SET_FIELD', field: 'status', value: newStatus });
         
-        if (onTaskUpdated) {
-          onTaskUpdated();
+        // Übergebe den aktualisierten Task an den Callback
+        if (onTaskUpdated && updatedTask) {
+          onTaskUpdated(updatedTask);
         }
         
         Alert.alert('Erfolg', 'Der Status wurde erfolgreich aktualisiert.');
@@ -381,9 +383,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
         throw new Error('Ungültige Antwort vom Server nach dem Speichern');
       }
 
-      // Task Liste aktualisieren
-      if (onTaskUpdated) {
-        onTaskUpdated();
+      // Task Liste aktualisieren - übergebe den gespeicherten Task
+      if (onTaskUpdated && savedTask) {
+        onTaskUpdated(savedTask);
       }
 
       Alert.alert('Erfolg', successMessage);
@@ -425,8 +427,9 @@ const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
       await taskApi.delete(taskId);
       Alert.alert('Erfolg', 'Die Aufgabe wurde erfolgreich gelöscht.');
       
+      // Beim Löschen: übergebe null und die gelöschte taskId
       if (onTaskUpdated) {
-        onTaskUpdated();
+        onTaskUpdated(null, taskId);
       }
       
       onDismiss();

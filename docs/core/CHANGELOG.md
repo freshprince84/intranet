@@ -51,7 +51,7 @@
   - Automatisches Stoppen der Zeiterfassung bei Erreichen der täglichen Arbeitszeit
   - Benachrichtigung des Benutzers bei automatischem Stopp
   - Sperrung der Zeiterfassung bis zum nächsten Tag nach Erreichen der täglichen Arbeitszeit
-  - Konfiguration der normalen Arbeitszeit im Benutzerprofil und in der Benutzerverwaltung
+  - Konfiguration der normalen Arbeitszeit im Benutzerprofil und in der Organisation
   - Regelmäßige Überprüfung (alle 5 Minuten) aller aktiven Zeiterfassungen
 - Verbesserte Rollenauswahl:
   - Beim Login wird die zuletzt genutzte Rolle (`lastUsed=true`) für den Benutzer aktiviert

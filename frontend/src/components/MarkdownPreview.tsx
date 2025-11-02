@@ -140,8 +140,17 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
 
   // Für Worktracker-Tooltips den gesamten Inhalt rendern
   if (showImagePreview) {
+    const style: React.CSSProperties = {};
+    if (maxHeight === "none") {
+      // Keine maxHeight und kein Overflow wenn maxHeight="none"
+      style.overflowY = 'visible';
+    } else {
+      style.maxHeight = maxHeight !== "150px" ? maxHeight : "100%";
+      style.overflowY = 'auto';
+    }
+    
     return (
-      <div className={`markdown-preview ${className} dark:text-gray-200`} style={{ maxHeight: maxHeight !== "150px" ? maxHeight : "100%", overflowY: 'auto' }}>
+      <div className={`markdown-preview ${className} dark:text-gray-200`} style={style}>
         <div dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br/>') }} />
       </div>
     );

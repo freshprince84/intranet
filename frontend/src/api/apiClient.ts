@@ -53,6 +53,23 @@ apiClient.interceptors.response.use(
 export const userApi = {
   getAll: () => apiClient.get('/users'),
   getById: (id: number) => apiClient.get(`/users/${id}`),
+  create: (data: any) => {
+    console.log('DEBUGAUSGABE API-Client: userApi.create wird aufgerufen mit Daten:', data);
+    try {
+      return apiClient.post('/users', data)
+        .then(response => {
+          console.log('DEBUGAUSGABE API-Client: userApi.create Antwort:', response);
+          return response;
+        })
+        .catch(error => {
+          console.error('DEBUGAUSGABE API-Client: userApi.create Fehler:', error.response || error);
+          throw error;
+        });
+    } catch (initError) {
+      console.error('DEBUGAUSGABE API-Client: Fehler vor dem API-Aufruf in userApi.create:', initError);
+      throw initError;
+    }
+  },
   update: (id: number, data: any) => apiClient.put(`/users/${id}`, data),
   updateRoles: (id: number, roleIds: number[]) => apiClient.put(`/users/${id}/roles`, { roleIds })
 };

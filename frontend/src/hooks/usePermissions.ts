@@ -57,15 +57,21 @@ function ensureRoleFormat(role: any): Role {
 }
 
 export const usePermissions = () => {
-    const { user } = useAuth();
+    const { user, isLoading } = useAuth();
     const [currentRole, setCurrentRole] = useState<Role | null>(null);
     const [permissions, setPermissions] = useState<Permission[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        // Warten auf Auth-Completion, bevor Berechtigungen geladen werden
+        if (isLoading) {
+            setLoading(true);
+            return;
+        }
+        
         loadPermissions();
-    }, [user]);
+    }, [user, isLoading]);
 
     const loadPermissions = () => {
         try {

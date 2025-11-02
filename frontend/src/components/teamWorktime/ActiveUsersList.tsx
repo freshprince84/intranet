@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { format, formatDistanceToNow, subDays, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { StopIcon, ArrowPathIcon, MagnifyingGlassIcon, Bars3Icon, ChevronUpIcon, ChevronDownIcon, ArrowsUpDownIcon, CalendarIcon, PencilIcon, FunnelIcon } from '@heroicons/react/24/outline';
+import { useTranslation } from 'react-i18next';
+import { StopIcon, ArrowPathIcon, MagnifyingGlassIcon, Bars3Icon, ChevronUpIcon, ChevronDownIcon, ArrowsUpDownIcon, CalendarIcon, PencilIcon, FunnelIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, ClockIcon } from '@heroicons/react/24/outline';
 import StopWorktimeModal from './StopWorktimeModal.tsx';
 import EditWorktimeModal from './EditWorktimeModal.tsx';
 import FilterPane from '../FilterPane.tsx';
@@ -14,6 +15,8 @@ import * as worktimeApi from '../../api/worktimeApi.ts';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import axiosInstance from '../../config/axios.ts';
 import TableColumnConfig from '../TableColumnConfig.tsx';
+import DataCard, { MetadataItem } from '../shared/DataCard.tsx';
+import CardGrid from '../shared/CardGrid.tsx';
 
 interface ActiveUsersListProps {
   activeUsers: any[];
@@ -23,20 +26,67 @@ interface ActiveUsersListProps {
   onDateChange: (date: string) => void;
   onStopWorktime: (userId: number, endTime: string) => Promise<void>;
   onRefresh: () => void;
+  showTodos?: boolean;
+  showRequests?: boolean;
 }
 
-// Definition der verfügbaren Spalten
-const availableColumns = [
-  { id: 'name', label: 'Name' },
-  { id: 'startTime', label: 'Startzeit' },
-  { id: 'duration', label: 'Arbeitszeit' },
-  { id: 'pauseTime', label: 'Pausen' },
-  { id: 'branch', label: 'Niederlassung' },
-  { id: 'actions', label: 'Aktionen' }
-];
+// Definition der verfügbaren Spalten wird jetzt dynamisch mit useTranslation gemacht
 
 // Standardreihenfolge der Spalten
 const defaultColumnOrder = ['name', 'startTime', 'duration', 'pauseTime', 'branch', 'actions'];
+
+// Card-Einstellungen Standardwerte
+const defaultCardMetadata = ['name', 'startTime', 'duration', 'pauseTime', 'branch'];
+const defaultCardColumnOrder = ['name', 'startTime', 'duration', 'pauseTime', 'branch'];
+const defaultCardSortDirections: Record<string, 'asc' | 'desc'> = {
+  name: 'asc',
+  startTime: 'asc',
+  duration: 'asc',
+  pauseTime: 'asc',
+  branch: 'asc'
+};
+
+// Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
+// Tabellen-Spalte -> Card-Metadaten (kann Array sein für 1:N Mapping)
+const tableToCardMapping: Record<string, string[]> = {
+  'name': ['name'],
+  'startTime': ['startTime'],
+  'duration': ['duration'],
+  'pauseTime': ['pauseTime'],
+  'branch': ['branch'],
+  'actions': [] // Keine Card-Entsprechung
+};
+
+// Reverse Mapping: Card-Metadaten -> Tabellen-Spalten
+const cardToTableMapping: Record<string, string> = {
+  'name': 'name',
+  'startTime': 'startTime',
+  'duration': 'duration',
+  'pauseTime': 'pauseTime',
+  'branch': 'branch'
+};
+
+// Helfer-Funktion: Tabellen-Spalte ausgeblendet -> Card-Metadaten ausblenden
+const getHiddenCardMetadata = (hiddenTableColumns: string[]): Set<string> => {
+  const hiddenCardMetadata = new Set<string>();
+  hiddenTableColumns.forEach(tableCol => {
+    const cardMetadata = tableToCardMapping[tableCol] || [];
+    cardMetadata.forEach(cardMeta => hiddenCardMetadata.add(cardMeta));
+  });
+  return hiddenCardMetadata;
+};
+
+// Helfer-Funktion: Card-Metadaten zu Tabellen-Spalten konvertieren
+const getCardMetadataFromColumnOrder = (columnOrder: string[]): string[] => {
+  const cardMetadata: string[] = [];
+  columnOrder.forEach(tableCol => {
+    const cardMeta = tableToCardMapping[tableCol];
+    if (cardMeta && cardMeta.length > 0) {
+      cardMetadata.push(...cardMeta);
+    }
+  });
+  return cardMetadata;
+};
 
 interface SortConfig {
   key: string;
@@ -74,8 +124,22 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   selectedDate,
   onDateChange,
   onStopWorktime,
-  onRefresh
+  onRefresh,
+  showTodos = false,
+  showRequests = false
 }) => {
+  const { t } = useTranslation();
+  
+  // Definition der verfügbaren Spalten (dynamisch aus Übersetzungen)
+  const availableColumns = useMemo(() => [
+    { id: 'name', label: t('teamWorktime.columns.name') },
+    { id: 'startTime', label: t('teamWorktime.columns.startTime') },
+    { id: 'duration', label: t('teamWorktime.columns.duration') },
+    { id: 'pauseTime', label: t('teamWorktime.columns.pauseTime') },
+    { id: 'branch', label: t('teamWorktime.columns.branch') },
+    { id: 'actions', label: t('teamWorktime.columns.actions') }
+  ], [t]);
+  
   const [showStopModal, setShowStopModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
@@ -90,22 +154,141 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
   
+  // Filter State Management (Controlled Mode)
+  const [activeFilterName, setActiveFilterName] = useState<string>(t('teamWorktime.filters.active'));
+  const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
+  
+  // State für To-Dos und Requests pro User
+  const [userTodos, setUserTodos] = useState<Record<number, any>>({});
+  const [userRequests, setUserRequests] = useState<Record<number, any>>({});
+  const [expandedUsers, setExpandedUsers] = useState<Set<number>>(new Set());
+  const [loadingTodos, setLoadingTodos] = useState<boolean>(false);
+  const [loadingRequests, setLoadingRequests] = useState<boolean>(false);
+  
   const { hasPermission } = usePermissions();
+
+  // Lade To-Dos für User (wenn showTodos aktiv)
+  useEffect(() => {
+    const loadUserTodos = async () => {
+      if (!showTodos || !selectedDate) return;
+      
+      try {
+        setLoadingTodos(true);
+        const response = await axiosInstance.get(API_ENDPOINTS.TEAM_WORKTIME.ANALYTICS.TODOS_BY_USER, {
+          params: {
+            date: selectedDate
+          }
+        });
+        
+        // Konvertiere Array zu Record mit userId als Key
+        const todosMap: Record<number, any> = {};
+        response.data.forEach((item: any) => {
+          todosMap[item.userId] = item.todos;
+        });
+        setUserTodos(todosMap);
+      } catch (error) {
+        console.error('Fehler beim Laden der To-Dos:', error);
+      } finally {
+        setLoadingTodos(false);
+      }
+    };
+    
+    loadUserTodos();
+  }, [showTodos, selectedDate]);
+
+  // Lade Requests für User (wenn showRequests aktiv)
+  useEffect(() => {
+    const loadUserRequests = async () => {
+      if (!showRequests || !selectedDate) return;
+      
+      try {
+        setLoadingRequests(true);
+        const response = await axiosInstance.get(API_ENDPOINTS.TEAM_WORKTIME.ANALYTICS.REQUESTS_BY_USER, {
+          params: {
+            date: selectedDate
+          }
+        });
+        
+        // Konvertiere Array zu Record mit userId als Key
+        const requestsMap: Record<number, any> = {};
+        response.data.forEach((item: any) => {
+          requestsMap[item.userId] = item.requests;
+        });
+        setUserRequests(requestsMap);
+      } catch (error) {
+        console.error('Fehler beim Laden der Requests:', error);
+      } finally {
+        setLoadingRequests(false);
+      }
+    };
+    
+    loadUserRequests();
+  }, [showRequests, selectedDate]);
+
+  const toggleExpand = (userId: number) => {
+    setExpandedUsers(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) {
+        next.delete(userId);
+      } else {
+        next.add(userId);
+      }
+      return next;
+    });
+  };
 
   // Spalten-Konfiguration mit Hook
   const { 
     settings,
     updateColumnOrder,
     updateHiddenColumns,
-    isColumnVisible
+    isColumnVisible,
+    updateViewMode
   } = useTableSettings('team_worktime_active', {
     defaultColumnOrder: defaultColumnOrder,
-    defaultHiddenColumns: []
+    defaultHiddenColumns: [],
+    defaultViewMode: 'cards'
   });
 
   // Benutze die vom Hook zurückgegebenen Werte
   const columnOrder = settings.columnOrder;
   const hiddenColumns = settings.hiddenColumns;
+
+  // View-Mode aus Settings laden
+  const viewMode = settings.viewMode || 'cards';
+  
+  // Lokale Sortierrichtungen für Cards (nicht persistiert)
+  const [cardSortDirections, setCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
+    return defaultCardSortDirections;
+  });
+
+  // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
+  // Card-Metadaten-Reihenfolge aus columnOrder ableiten
+  const cardMetadataOrder = useMemo(() => {
+    return getCardMetadataFromColumnOrder(settings.columnOrder || defaultColumnOrder);
+  }, [settings.columnOrder]);
+
+  // Versteckte Card-Metadaten aus hiddenColumns ableiten
+  const hiddenCardMetadata = useMemo(() => {
+    return getHiddenCardMetadata(settings.hiddenColumns || []);
+  }, [settings.hiddenColumns]);
+
+  // Sichtbare Card-Metadaten (alle Card-Metadaten minus versteckte)
+  const visibleCardMetadata = useMemo(() => {
+    return new Set(cardMetadataOrder.filter(meta => !hiddenCardMetadata.has(meta)));
+  }, [cardMetadataOrder, hiddenCardMetadata]);
+
+  // CSS-Klasse für Container-Box setzen (für CSS-basierte Schattierungs-Entfernung)
+  useEffect(() => {
+    const wrappers = document.querySelectorAll('.dashboard-workcenter-wrapper');
+    wrappers.forEach(wrapper => {
+      if (viewMode === 'cards') {
+        wrapper.classList.add('cards-mode');
+      } else {
+        wrapper.classList.remove('cards-mode');
+      }
+    });
+  }, [viewMode]);
 
   // Öffne das Modal zum Stoppen der Zeiterfassung
   const handleOpenStopModal = (user: any) => {
@@ -186,6 +369,11 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
 
   const handleDragEnd = () => {
     setDraggedColumn(null);
+  };
+
+  // Funktion zum Zählen aktiver Filter
+  const getActiveFilterCount = () => {
+    return filterConditions.length;
   };
 
   // Filtern und sortieren der Benutzer
@@ -336,6 +524,64 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     });
 
     // Sortieren nach Konfiguration
+    if (viewMode === 'cards') {
+      // Multi-Sortierung für Cards-Mode
+      const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
+      
+      filtered.sort((a: any, b: any) => {
+        for (const columnId of sortableColumns) {
+          const direction = cardSortDirections[columnId] || 'asc';
+          let valueA: any, valueB: any;
+          
+          switch (columnId) {
+            case 'name':
+              valueA = `${a.user.firstName} ${a.user.lastName}`.toLowerCase();
+              valueB = `${b.user.firstName} ${b.user.lastName}`.toLowerCase();
+              break;
+            case 'startTime':
+              valueA = a.startTime.getTime();
+              valueB = b.startTime.getTime();
+              break;
+            case 'duration':
+              valueA = a.totalDuration;
+              valueB = b.totalDuration;
+              break;
+            case 'pauseTime':
+              const pauseTimeA = a.endTime ? (a.endTime.getTime() - a.startTime.getTime()) - a.totalDuration : 0;
+              const pauseTimeB = b.endTime ? (b.endTime.getTime() - b.startTime.getTime()) - b.totalDuration : 0;
+              valueA = pauseTimeA;
+              valueB = pauseTimeB;
+              break;
+            case 'branch':
+              valueA = a.branch.name.toLowerCase();
+              valueB = b.branch.name.toLowerCase();
+              break;
+            default:
+              continue; // Überspringe unbekannte Spalten
+          }
+          
+          // Vergleich basierend auf Typ
+          let comparison = 0;
+          if (typeof valueA === 'number' && typeof valueB === 'number') {
+            comparison = valueA - valueB;
+          } else {
+            comparison = String(valueA).localeCompare(String(valueB));
+          }
+          
+          // Sortierrichtung anwenden
+          if (direction === 'desc') {
+            comparison = -comparison;
+          }
+          
+          // Wenn unterschiedlich, gebe Vergleich zurück
+          if (comparison !== 0) {
+            return comparison;
+          }
+        }
+        return 0; // Alle Spalten identisch
+      });
+    } else {
+      // Tabellen-Mode: Einzel-Sortierung wie bisher
     if (sortConfig.key) {
       filtered.sort((a: any, b: any) => {
         let valueA, valueB;
@@ -365,10 +611,11 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         }
         return 0;
       });
+      }
     }
     
     return filtered;
-  }, [allWorktimes, activeUsers, searchTerm, sortConfig, selectedDate, filterConditions, filterLogicalOperators]);
+  }, [allWorktimes, activeUsers, searchTerm, sortConfig, selectedDate, filterConditions, filterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
 
   // Render-Methode für Spaltenheader
   const renderSortableHeader = (columnId: string, label: string) => {
@@ -399,18 +646,58 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
 
   // Handler für die TableColumnConfig-Komponente
   const handleToggleColumnVisibility = (columnId: string) => {
+    if (viewMode === 'cards') {
+      // Für Cards: Mapping zurück zu Tabellen-Spalten
+      const tableColumn = cardToTableMapping[columnId];
+      if (tableColumn) {
+        const newHiddenColumns = hiddenColumns.includes(tableColumn)
+          ? hiddenColumns.filter(id => id !== tableColumn)
+          : [...hiddenColumns, tableColumn];
+        updateHiddenColumns(newHiddenColumns);
+      }
+    } else {
     const newHiddenColumns = hiddenColumns.includes(columnId)
       ? hiddenColumns.filter(id => id !== columnId)
       : [...hiddenColumns, columnId];
     updateHiddenColumns(newHiddenColumns);
+    }
   };
 
   const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
+    if (viewMode === 'cards') {
+      // Für Cards: Card-Metadaten-Reihenfolge ändern
+      const newCardOrder = [...cardMetadataOrder];
+      const dragged = newCardOrder[dragIndex];
+      newCardOrder.splice(dragIndex, 1);
+      newCardOrder.splice(hoverIndex, 0, dragged);
+      
+      // Konvertiere zurück zu Tabellen-Spalten-Reihenfolge
+      const newTableOrder: string[] = [];
+      const usedTableColumns = new Set<string>();
+      
+      newCardOrder.forEach(cardMeta => {
+        const tableCol = cardToTableMapping[cardMeta];
+        if (tableCol && !usedTableColumns.has(tableCol)) {
+          usedTableColumns.add(tableCol);
+          newTableOrder.push(tableCol);
+        }
+      });
+      
+      // Füge fehlende Tabellen-Spalten hinzu
+      availableColumns.forEach(col => {
+        if (!newTableOrder.includes(col.id) && col.id !== 'actions') {
+          newTableOrder.push(col.id);
+        }
+      });
+      
+      updateColumnOrder(newTableOrder);
+    } else {
     const newColumnOrder = [...columnOrder];
     const draggedItem = newColumnOrder[dragIndex];
     newColumnOrder.splice(dragIndex, 1);
     newColumnOrder.splice(hoverIndex, 0, draggedItem);
     updateColumnOrder(newColumnOrder);
+    }
   };
 
   // Speichere die bearbeiteten Zeiterfassungen
@@ -423,7 +710,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       onRefresh();
       
       // Zeige Erfolgsmeldung
-      alert("Die Zeiterfassungen wurden erfolgreich gespeichert.");
+      alert(t('teamWorktime.messages.saveSuccess'));
       
       // Schließe das Modal
       handleCloseEditModal();
@@ -431,30 +718,30 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       console.error('Fehler beim Aktualisieren der Zeiterfassungen:', error);
       
       // Zeige eine benutzerfreundliche Fehlermeldung
-      let errorMessage = "Ein unbekannter Fehler ist aufgetreten.";
+      let errorMessage = t('teamWorktime.messages.unknownError');
       
       if (error.response) {
         // Server antwortet mit Fehlerstatus
         if (error.response.status === 401) {
-          errorMessage = "Sie sind nicht berechtigt, diese Aktion durchzuführen.";
+          errorMessage = t('teamWorktime.messages.unauthorized');
         } else if (error.response.status === 403) {
-          errorMessage = "Sie haben keine Berechtigung, diese Zeiterfassungen zu bearbeiten.";
+          errorMessage = t('teamWorktime.messages.forbidden');
         } else if (error.response.status === 404) {
-          errorMessage = "Eine oder mehrere Zeiterfassungen wurden nicht gefunden.";
+          errorMessage = t('teamWorktime.messages.notFound');
         } else if (error.response.status === 500) {
-          errorMessage = "Es ist ein Serverfehler aufgetreten. Bitte versuchen Sie es später noch einmal.";
+          errorMessage = t('teamWorktime.messages.serverError');
         } else if (error.response.data && error.response.data.message) {
           errorMessage = error.response.data.message;
         }
       } else if (error.request) {
         // Keine Antwort vom Server
-        errorMessage = "Keine Antwort vom Server. Bitte überprüfen Sie Ihre Internetverbindung.";
+        errorMessage = t('teamWorktime.messages.noResponse');
       } else {
         // Fehler bei der Anfrage
-        errorMessage = error.message || "Ein Fehler ist aufgetreten.";
+        errorMessage = error.message || t('teamWorktime.messages.error');
       }
       
-      alert("Fehler beim Speichern der Zeiterfassungen: " + errorMessage);
+      alert(t('teamWorktime.messages.saveError') + ' ' + errorMessage);
     }
   };
 
@@ -480,14 +767,19 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         );
 
         const existingFilters = existingFiltersResponse.data || [];
-        const aktiveFilterExists = existingFilters.some(filter => filter.name === 'Aktive');
-        const alleFilterExists = existingFilters.some(filter => filter.name === 'Alle');
+        // Prüfe auf Filter mit verschiedenen möglichen Namen (Deutsch, Spanisch, Englisch)
+        const aktiveFilterExists = existingFilters.some(filter => 
+          filter.name === 'Aktive' || filter.name === t('teamWorktime.filters.active') || filter.name === 'Active' || filter.name === 'Activo'
+        );
+        const alleFilterExists = existingFilters.some(filter => 
+          filter.name === 'Alle' || filter.name === t('teamWorktime.filters.all') || filter.name === 'All' || filter.name === 'Todos'
+        );
 
         // Erstelle "Aktive"-Filter, wenn er noch nicht existiert
         if (!aktiveFilterExists) {
           const aktiveFilter = {
             tableId: WORKCENTER_TABLE_ID,
-            name: 'Aktive',
+            name: t('teamWorktime.filters.active'),
             conditions: [
               { column: 'hasActiveWorktime', operator: 'equals', value: 'true' }
             ],
@@ -511,7 +803,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         if (!alleFilterExists) {
           const alleFilter = {
             tableId: WORKCENTER_TABLE_ID,
-            name: 'Alle',
+            name: t('teamWorktime.filters.all'),
             conditions: [],
             operators: []
           };
@@ -534,7 +826,34 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     };
 
     createStandardFilters();
-  }, []);
+  }, [t]);
+
+  // Initialer Default-Filter setzen (Controlled Mode)
+  React.useEffect(() => {
+    const setInitialFilter = async () => {
+      try {
+        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(WORKCENTER_TABLE_ID));
+        const filters = response.data;
+        
+        // Suche nach Filter mit aktuellem Namen oder alten Namen (für Migration)
+        const aktiveFilter = filters.find((filter: any) => 
+          filter.name === t('teamWorktime.filters.active') || 
+          filter.name === 'Aktive' || 
+          filter.name === 'Active' || 
+          filter.name === 'Activo'
+        );
+        if (aktiveFilter) {
+          setActiveFilterName(t('teamWorktime.filters.active'));
+          setSelectedFilterId(aktiveFilter.id);
+          applyFilterConditions(aktiveFilter.conditions, aktiveFilter.operators);
+        }
+      } catch (error) {
+        console.error('Fehler beim Setzen des initialen Filters:', error);
+      }
+    };
+
+    setInitialFilter();
+  }, [t]);
 
   // Funktion zum Anwenden von Filterbedingungen
   const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
@@ -546,6 +865,15 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   const resetFilterConditions = () => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
+    setActiveFilterName('');
+    setSelectedFilterId(null);
+  };
+  
+  // Filter Change Handler (Controlled Mode)
+  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    setActiveFilterName(name);
+    setSelectedFilterId(id);
+    applyFilterConditions(conditions, operators);
   };
 
   // Datum zu vorherigem Tag ändern
@@ -587,7 +915,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
             type="button"
             onClick={handlePreviousDay}
             className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            title="Vorheriger Tag"
+            title={t('common.previousDay')}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -611,7 +939,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
               type="button"
               onClick={handleNextDay}
               className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title="Nächster Tag"
+              title={t('common.nextDay')}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -625,27 +953,74 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
           <input
             type="text"
             className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            placeholder="Suchen..."
+            placeholder={t('common.searchPlaceholder')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           
+          {/* View-Mode Toggle */}
           <button
             type="button"
-            className="inline-flex items-center justify-center p-2 rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800 ml-1"
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            title="Filter anzeigen"
+            className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ml-1 ${
+              viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+            }`}
+            onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
+            title={viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
           >
-            <FunnelIcon className="h-5 w-5" />
+            {viewMode === 'table' ? (
+              <Squares2X2Icon className="h-5 w-5" />
+            ) : (
+              <TableCellsIcon className="h-5 w-5" />
+            )}
           </button>
           
+          {/* Filter-Button */}
+          <button
+            type="button"
+            className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            title={t('common.showFilter')}
+          >
+            <FunnelIcon className="h-5 w-5" />
+            {getActiveFilterCount() > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center z-10" style={{ position: 'absolute', top: '-0.25rem', right: '-0.25rem' }}>
+                {getActiveFilterCount()}
+              </span>
+            )}
+          </button>
+          
+          {/* Spalten-Konfiguration */}
           <div className="ml-1">
             <TableColumnConfig
-              columns={availableColumns}
-              visibleColumns={columnOrder.filter(id => !hiddenColumns.includes(id))}
-              columnOrder={columnOrder}
+              columns={viewMode === 'cards'
+                ? [
+                    { id: 'name', label: t('teamWorktime.columns.name') },
+                    { id: 'startTime', label: t('teamWorktime.columns.startTime') },
+                    { id: 'duration', label: t('teamWorktime.columns.duration') },
+                    { id: 'pauseTime', label: t('teamWorktime.columns.pauseTime') },
+                    { id: 'branch', label: t('teamWorktime.columns.branch') }
+                  ]
+                : availableColumns}
+              visibleColumns={viewMode === 'cards'
+                ? Array.from(visibleCardMetadata)
+                : columnOrder.filter(id => !hiddenColumns.includes(id))}
+              columnOrder={viewMode === 'cards'
+                ? cardMetadataOrder
+                : columnOrder}
               onToggleColumnVisibility={handleToggleColumnVisibility}
               onMoveColumn={handleMoveColumn}
+              sortDirections={viewMode === 'cards' ? cardSortDirections : undefined}
+              onSortDirectionChange={viewMode === 'cards'
+                ? (columnId: string, direction: 'asc' | 'desc') => {
+                    setCardSortDirections(prev => ({
+                      ...prev,
+                      [columnId]: direction
+                    }));
+                  }
+                : undefined}
+              showSortDirection={viewMode === 'cards'}
+              buttonTitle={viewMode === 'cards' ? t('teamWorktime.sortAndDisplay') : t('teamWorktime.configureColumns')}
+              modalTitle={viewMode === 'cards' ? t('teamWorktime.sortAndDisplay') : t('teamWorktime.configureColumns')}
               onClose={() => {}}
             />
           </div>
@@ -656,10 +1031,10 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       {isFilterOpen && (
         <FilterPane
           columns={[
-            { id: 'name', label: 'Name' },
-            { id: 'branch', label: 'Niederlassung' },
-            { id: 'hasActiveWorktime', label: 'Aktive Zeiterfassung' },
-            { id: 'duration', label: 'Arbeitszeit (Stunden)' }
+            { id: 'name', label: t('teamWorktime.columns.name') },
+            { id: 'branch', label: t('teamWorktime.columns.branch') },
+            { id: 'hasActiveWorktime', label: t('worktime.active') },
+            { id: 'duration', label: t('teamWorktime.columns.duration') }
           ]}
           onApply={applyFilterConditions}
           onReset={resetFilterConditions}
@@ -674,11 +1049,16 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         tableId={WORKCENTER_TABLE_ID}
         onSelectFilter={applyFilterConditions}
         onReset={resetFilterConditions}
-        defaultFilterName="Aktive"
+        activeFilterName={activeFilterName}
+        selectedFilterId={selectedFilterId}
+        onFilterChange={handleFilterChange}
+          defaultFilterName={t('teamWorktime.filters.active')}
       />
       
-      {/* Tabelle mit aktiven Benutzern */}
-      <div className="border-0 rounded-lg overflow-hidden shadow-sm">
+      {/* Tabelle oder Cards */}
+      {viewMode === 'table' ? (
+        /* Tabellen-Ansicht */
+        <div className="dashboard-workcenter-wrapper border-0 rounded-lg overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
@@ -723,25 +1103,32 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                   ? (group.endTime.getTime() - group.startTime.getTime()) - group.totalDuration
                   : 0;
 
+                const userTodosData = userTodos[group.user.id] || null;
+                const userRequestsData = userRequests[group.user.id] || null;
+                const isExpanded = expandedUsers.has(group.user.id);
+                const hasActivities = (showTodos && userTodosData && userTodosData.total > 0) || 
+                                    (showRequests && userRequestsData && userRequestsData.total > 0);
+
                 return (
-                  <tr key={group.user.id}>
-                    {columnOrder
-                      .filter(columnId => !hiddenColumns.includes(columnId))
-                      .map(columnId => {
-                        if (columnId === 'name') {
-                          return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center">
-                                <div>
-                                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                                    {group.user.firstName} {group.user.lastName}
+                  <React.Fragment key={group.user.id}>
+                    <tr>
+                      {columnOrder
+                        .filter(columnId => !hiddenColumns.includes(columnId))
+                        .map(columnId => {
+                          if (columnId === 'name') {
+                            return (
+                              <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                      {group.user.firstName} {group.user.lastName}
+                                    </div>
+                                    <div className="text-sm text-gray-500 dark:text-gray-400">{group.user.username}</div>
                                   </div>
-                                  <div className="text-sm text-gray-500 dark:text-gray-400">{group.user.username}</div>
                                 </div>
-                              </div>
-                            </td>
-                          );
-                        }
+                              </td>
+                            );
+                          }
                         
                         if (columnId === 'startTime') {
                           return (
@@ -815,13 +1202,290 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                         
                         return null;
                       })}
-                  </tr>
+                    </tr>
+                    {/* To-Dos und Requests für User */}
+                    {(showTodos || showRequests) && hasActivities && (
+                      <tr className="bg-gray-50 dark:bg-gray-800/50">
+                        <td colSpan={columnOrder.filter(id => !hiddenColumns.includes(id)).length} className="px-6 py-3">
+                          <div className="ml-4 border-l-2 border-blue-200 dark:border-blue-700 pl-4">
+                            {/* To-Dos */}
+                            {showTodos && userTodosData && userTodosData.total > 0 && (
+                              <div className="mb-3">
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    To-Dos ({selectedDate}): {userTodosData.completed} erledigt | {userTodosData.open} offen | {userTodosData.inProgress} in Bearbeitung
+                                  </h4>
+                                  <button
+                                    onClick={() => toggleExpand(group.user.id)}
+                                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                  >
+                                    {isExpanded ? 'Weniger anzeigen ▲' : 'Details anzeigen ▼'}
+                                  </button>
+                                </div>
+                                {isExpanded && userTodosData.details && userTodosData.details.length > 0 && (
+                                  <div className="mt-2 space-y-1">
+                                    {userTodosData.details.map((todo: any) => (
+                                      <div key={todo.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                        <span className={todo.status === 'done' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}>
+                                          {todo.status === 'done' ? '✓' : '○'}
+                                        </span>
+                                        <span className="font-medium">{todo.title}</span>
+                                        <span className="text-gray-400">({todo.status})</span>
+                                        <span className="text-gray-400">
+                                          - {format(new Date(todo.updatedAt), 'HH:mm')}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {/* Requests */}
+                            {showRequests && userRequestsData && userRequestsData.total > 0 && (
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Requests ({selectedDate}): {userRequestsData.approved} genehmigt | {userRequestsData.pending} offen
+                                  </h4>
+                                  {!showTodos && (
+                                    <button
+                                      onClick={() => toggleExpand(group.user.id)}
+                                      className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                                    >
+                                      {isExpanded ? 'Weniger anzeigen ▲' : 'Details anzeigen ▼'}
+                                    </button>
+                                  )}
+                                </div>
+                                {isExpanded && userRequestsData.details && userRequestsData.details.length > 0 && (
+                                  <div className="mt-2 space-y-1">
+                                    {userRequestsData.details.map((request: any) => (
+                                      <div key={request.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                        <span className={request.status === 'approved' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}>
+                                          {request.status === 'approved' ? '✓' : '○'}
+                                        </span>
+                                        <span className="font-medium">{request.title}</span>
+                                        <span className="text-gray-400">({request.status})</span>
+                                        <span className="text-gray-400">
+                                          - {format(new Date(request.createdAt), 'HH:mm')}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 );
               })
             )}
           </tbody>
         </table>
       </div>
+      ) : (
+        /* Card-Ansicht */
+        <div className="dashboard-workcenter-wrapper">
+          {filteredAndSortedUsers.length === 0 ? (
+            <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
+              Keine Zeiterfassungen gefunden
+            </div>
+          ) : (
+            <CardGrid gap="md">
+              {filteredAndSortedUsers.slice(0, displayLimit).map((group) => {
+                const totalPauseTime = group.endTime 
+                  ? (group.endTime.getTime() - group.startTime.getTime()) - group.totalDuration
+                  : 0;
+
+                const userTodosData = userTodos[group.user.id] || null;
+                const userRequestsData = userRequests[group.user.id] || null;
+                const isExpanded = expandedUsers.has(group.user.id);
+                const hasActivities = (showTodos && userTodosData && userTodosData.total > 0) || 
+                                    (showRequests && userRequestsData && userRequestsData.total > 0);
+
+                // Metadaten für Card aufbauen - Hauptinfos strukturiert
+                const metadata: MetadataItem[] = [];
+                const firstRowMetadata: MetadataItem[] = [];
+                const secondRowMetadata: MetadataItem[] = [];
+
+                // Erste Zeile: Name, Startzeit (nebeneinander)
+                if (visibleCardMetadata.has('name')) {
+                  firstRowMetadata.push({
+                    label: 'Name',
+                    value: `${group.user.firstName} ${group.user.lastName} (${group.user.username})`,
+                    icon: <UserIcon className="h-4 w-4" />
+                  });
+                }
+
+                if (visibleCardMetadata.has('startTime')) {
+                  firstRowMetadata.push({
+                    label: 'Startzeit',
+                    value: `${format(group.startTime, 'dd.MM.yyyy')} ${format(group.startTime, 'HH:mm:ss')}`,
+                    icon: <ClockIcon className="h-4 w-4" />
+                  });
+                }
+
+                // Zweite Zeile: Arbeitszeit, Pausen (vertikal untereinander, linksbündig)
+                if (visibleCardMetadata.has('duration')) {
+                  secondRowMetadata.push({
+                    label: 'Arbeitszeit',
+                    value: formatDistanceToNow(new Date(Date.now() - group.totalDuration), { locale: de, addSuffix: false }),
+                    icon: <ClockIcon className="h-4 w-4" />
+                  });
+                }
+
+                if (visibleCardMetadata.has('pauseTime')) {
+                  secondRowMetadata.push({
+                    label: 'Pausen',
+                    value: totalPauseTime > 0 
+                      ? formatDistanceToNow(new Date(Date.now() - totalPauseTime), { locale: de, addSuffix: false })
+                      : '-',
+                    icon: <ClockIcon className="h-4 w-4" />
+                  });
+                }
+
+                // Niederlassung (falls angezeigt)
+                if (visibleCardMetadata.has('branch')) {
+                  metadata.push({
+                    label: 'Niederlassung',
+                    value: group.branch.name,
+                    icon: <BuildingOfficeIcon className="h-4 w-4" />
+                  });
+                }
+
+                // Action-Buttons
+                const actions = (
+                  <div className="flex flex-row space-x-2 justify-end items-center">
+                    {group.hasActiveWorktime && (
+                      <button
+                        onClick={() => handleOpenStopModal(group)}
+                        className="p-1 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+                        title="Zeiterfassung stoppen"
+                      >
+                        <StopIcon className="h-5 w-5 text-white fill-white" />
+                      </button>
+                    )}
+                    {hasPermission('team_worktime_control', 'both', 'page') && hasPermission('team_worktime', 'both', 'table') && (
+                      <button
+                        onClick={() => handleOpenEditModal(group)}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                        title="Zeiterfassungen bearbeiten"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                    )}
+                  </div>
+                );
+
+                // Expandable Content für To-Dos und Requests
+                const expandableContent = hasActivities ? (
+                  <div>
+                    {/* To-Dos */}
+                    {showTodos && userTodosData && userTodosData.total > 0 && (
+                      <div className="mb-3">
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          To-Dos ({selectedDate}): {userTodosData.completed} erledigt | {userTodosData.open} offen | {userTodosData.inProgress} in Bearbeitung
+                        </h4>
+                        {userTodosData.details && userTodosData.details.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {userTodosData.details.map((todo: any) => (
+                              <div key={todo.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                <span className={todo.status === 'done' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}>
+                                  {todo.status === 'done' ? '✓' : '○'}
+                                </span>
+                                <span className="font-medium">{todo.title}</span>
+                                <span className="text-gray-400">({todo.status})</span>
+                                <span className="text-gray-400">
+                                  - {format(new Date(todo.updatedAt), 'HH:mm')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {/* Requests */}
+                    {showRequests && userRequestsData && userRequestsData.total > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Requests ({selectedDate}): {userRequestsData.approved} genehmigt | {userRequestsData.pending} offen
+                        </h4>
+                        {userRequestsData.details && userRequestsData.details.length > 0 && (
+                          <div className="mt-2 space-y-1">
+                            {userRequestsData.details.map((request: any) => (
+                              <div key={request.id} className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                                <span className={request.status === 'approved' ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}>
+                                  {request.status === 'approved' ? '✓' : '○'}
+                                </span>
+                                <span className="font-medium">{request.title}</span>
+                                <span className="text-gray-400">({request.status})</span>
+                                <span className="text-gray-400">
+                                  - {format(new Date(request.createdAt), 'HH:mm')}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : null;
+
+                return (
+                  <DataCard
+                    key={group.user.id}
+                    title={`${group.user.firstName} ${group.user.lastName}`}
+                    metadata={metadata}
+                    actions={actions}
+                    expandable={expandableContent ? {
+                      isExpanded: isExpanded,
+                      content: expandableContent,
+                      onToggle: () => toggleExpand(group.user.id)
+                    } : undefined}
+                  >
+                    {/* Hauptinfos: Erste Zeile (Name, Startzeit) nebeneinander */}
+                    {firstRowMetadata.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+                        {firstRowMetadata.map((item, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400"
+                          >
+                            {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                            <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>
+                            <span className={item.className || 'text-gray-900 dark:text-white'}>
+                              {typeof item.value === 'string' ? item.value : item.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* Zweite Zeile: Arbeitszeit, Pausen (vertikal untereinander, linksbündig) */}
+                    {secondRowMetadata.length > 0 && (
+                      <div className="flex flex-col gap-2 mb-3 sm:mb-4">
+                        {secondRowMetadata.map((item, index) => (
+                          <div
+                            key={index}
+                            className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400"
+                          >
+                            {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                            <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>
+                            <span className={item.className || 'text-gray-900 dark:text-white'}>
+                              {typeof item.value === 'string' ? item.value : item.value}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </DataCard>
+                );
+              })}
+            </CardGrid>
+          )}
+        </div>
+      )}
 
       {/* "Mehr anzeigen" Button */}
       {filteredAndSortedUsers.length > displayLimit && (

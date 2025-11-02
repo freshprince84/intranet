@@ -9,15 +9,16 @@ Dieses Dokument definiert die verbindlichen Design-Standards für das Intranet-P
 3. [Typografie](#typografie)
 4. [Box-Design](#box-design)
 5. [Tabellen-Design](#tabellen-design)
-6. [Page-Design](#page-design)
-7. [Formulare und Eingabefelder](#formulare-und-eingabefelder)
-8. [Buttons und Aktionselemente](#buttons-und-aktionselemente)
-9. [Berechtigungsbasierte UI-Anpassung](#berechtigungsbasierte-ui-anpassung)
-10. [Notification-Komponenten](#notification-komponenten)
-11. [Header-Message-Komponenten](#header-message-komponenten)
-12. [Scrollbars-Design](#scrollbars-design)
-13. [Responsive Design](#responsive-design)
-14. [Modals und Sidepanes](#modals-und-sidepanes)
+6. [Card-Design](#card-design)
+7. [Page-Design](#page-design)
+8. [Formulare und Eingabefelder](#formulare-und-eingabefelder)
+9. [Buttons und Aktionselemente](#buttons-und-aktionselemente)
+10. [Berechtigungsbasierte UI-Anpassung](#berechtigungsbasierte-ui-anpassung)
+11. [Notification-Komponenten](#notification-komponenten)
+12. [Header-Message-Komponenten](#header-message-komponenten)
+13. [Scrollbars-Design](#scrollbars-design)
+14. [Responsive Design](#responsive-design)
+15. [Modals und Sidepanes](#modals-und-sidepanes)
 
 ## Allgemeine Designprinzipien
 
@@ -544,11 +545,14 @@ Alle Tabellen mit Filterfunktionalität müssen dem folgenden Standard entsprech
     />
 )}
 
-{/* Gespeicherte Filter */}
+{/* Gespeicherte Filter (Controlled Mode) */}
 <SavedFilterTags
     tableId={TABLE_ID}
     onSelectFilter={applyFilterConditions}
     onReset={resetFilterConditions}
+    activeFilterName={activeFilterName}
+    selectedFilterId={selectedFilterId}
+    onFilterChange={handleFilterChange}
 />
 ```
 
@@ -569,9 +573,67 @@ Das Filtersystem besteht aus drei Hauptkomponenten:
 3. **SavedFilterTags.tsx**: Gespeicherte Filter anzeigen
    - Zeigt gespeicherte Filter als interaktive Tags
    - Ermöglicht das Löschen von Filtern
-   - Visuelles Feedback für aktiv ausgewählte Filter
+   - **Controlled Mode:** Visuelles Feedback für aktiv ausgewählte Filter (blaue Markierung)
+   - **WICHTIG:** Alle Komponenten müssen den Controlled Mode verwenden (mit `activeFilterName`, `selectedFilterId`, `onFilterChange` Props)
 
-##### 3. Filterdaten-Struktur
+##### 3. Filter State Management (Controlled Mode)
+
+**WICHTIG:** Alle Komponenten müssen den Controlled Mode verwenden für visuelle Markierung des aktiven Filters.
+
+```typescript
+// 1. State-Variablen in der Parent-Komponente
+const [activeFilterName, setActiveFilterName] = useState<string>('Aktuell'); // oder 'Heute', 'Alle', etc.
+const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
+
+// 2. Filter Change Handler
+const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  setActiveFilterName(name);
+  setSelectedFilterId(id);
+  applyFilterConditions(conditions, operators);
+};
+
+// 3. Reset-Funktion erweitern
+const resetFilterConditions = () => {
+  setFilterConditions([]);
+  setFilterLogicalOperators([]);
+  setActiveFilterName('');
+  setSelectedFilterId(null);
+};
+
+// 4. Initialen Default-Filter setzen
+useEffect(() => {
+  const setInitialFilter = async () => {
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(TABLE_ID));
+      const filters = response.data;
+      
+      const defaultFilter = filters.find((filter: any) => filter.name === 'Aktuell'); // oder 'Heute', 'Alle', etc.
+      if (defaultFilter) {
+        setActiveFilterName('Aktuell');
+        setSelectedFilterId(defaultFilter.id);
+        applyFilterConditions(defaultFilter.conditions, defaultFilter.operators);
+      }
+    } catch (error) {
+      console.error('Fehler beim Setzen des initialen Filters:', error);
+    }
+  };
+
+  setInitialFilter();
+}, []);
+
+// 5. SavedFilterTags mit allen Props verwenden
+<SavedFilterTags
+  tableId={TABLE_ID}
+  onSelectFilter={applyFilterConditions}
+  onReset={resetFilterConditions}
+  activeFilterName={activeFilterName}      // ✅ Erforderlich für Controlled Mode
+  selectedFilterId={selectedFilterId}      // ✅ Erforderlich für Controlled Mode
+  onFilterChange={handleFilterChange}      // ✅ Erforderlich für Controlled Mode
+  defaultFilterName="Aktuell"              // Optional: Standard-Filter-Name
+/>
+```
+
+##### 4. Filterdaten-Struktur
 
 ```typescript
 // Filterbedingung
@@ -594,12 +656,13 @@ interface SavedFilter {
 }
 ```
 
-##### 4. Typsicherheit und Konsistenz
+##### 5. Typsicherheit und Konsistenz
 
 - Alle Filterbedingungen werden typisiert gespeichert
 - Filter werden tabellenspezifisch durch tableId zugeordnet 
 - Operatoren sind auf 'AND' | 'OR' beschränkt
 - Eingabefelder passen sich dem Datentyp der Spalte an
+- **Controlled Mode:** Alle Komponenten verwenden `activeFilterName`, `selectedFilterId`, `onFilterChange` für konsistente visuelle Markierung
 
 #### Drag & Drop für Tabellenspalten
 
@@ -864,6 +927,226 @@ const getStatusText = (status: string, processType?: 'task' | 'request' | 'defau
     return status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
 };
 ```
+
+## Card-Design
+
+Alle Card-basierten Darstellungen müssen dem folgenden Design entsprechen. Die Card-Ansicht bietet eine alternative Darstellung zu Tabellen und ist insbesondere für mobile Geräte und übersichtlichere Datenpräsentation optimiert.
+
+### Card-Komponenten
+
+Die Card-Ansicht verwendet wiederverwendbare Komponenten:
+
+1. **DataCard** (`frontend/src/components/shared/DataCard.tsx`)
+   - Standardisierte Card-Komponente für alle Daten-Cards
+   - Unterstützt Header, Metadaten, Actions, expandable Content
+
+2. **CardGrid** (`frontend/src/components/shared/CardGrid.tsx`)
+   - Responsive Grid-Wrapper für Card-Layouts
+   - Aktuell: Immer 1 Spalte (volle Breite pro Card)
+
+### Basis-Card-Struktur
+
+```css
+/* Standard-Card */
+.data-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  border: 1px solid #E5E7EB;
+  padding: 1rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s;
+}
+
+.data-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Dark Mode */
+.dark .data-card {
+  background-color: #1F2937;
+  border-color: #4B5563;
+}
+```
+
+### Card-Design-Standards
+
+#### Layout
+
+- **Breite**: Immer volle Breite (1 Card pro Zeile für bessere Übersichtlichkeit)
+- **Padding**: Responsive: `p-3 sm:p-4 md:p-5 lg:p-6`
+- **Border-Radius**: `0.5rem` (8px)
+- **Border**: `1px solid #E5E7EB` (Light) / `#4B5563` (Dark)
+- **Abstand zwischen Cards**: `margin-top: 0.5rem !important` zwischen benachbarten Cards (definiert in `index.css`)
+- **Overflow**: `overflow-hidden` auf der Card, um sicherzustellen, dass Inhalt innerhalb der Card bleibt
+
+#### Header-Layout (Grid-System)
+
+Der Card-Header verwendet ein **CSS Grid-Layout mit fixen Spaltenbreiten**, um cardübergreifende Bündigkeit zu gewährleisten:
+
+```css
+grid-template-columns: '200px 180px auto'
+```
+
+- **Spalte 1 (Titel)**: Fixe Breite `200px` - Titel wird bei Bedarf mit `truncate` abgeschnitten
+- **Spalte 2 (Mitte)**: Fixe Breite `180px` - Für "Angefragt von" und "Verantwortlicher" (cardübergreifend bündig)
+- **Spalte 3 (Rechts)**: `auto` - Für Datum und Status-Badge (passt sich dem Inhalt an, bleibt an ursprünglicher Position)
+
+**Wichtig**: Die fixen Spaltenbreiten für Titel und Mitte stellen sicher, dass die Position von "Angefragt von" und "Verantwortlicher" unabhängig von der Titel-Länge ist, ähnlich einer unsichtbaren Tabelle. Datum & Status bleiben rechts an ihrer ursprünglichen Position.
+
+#### Box-Shadows
+
+**Card-Schatten** (rundherum):
+- **Normal**: `shadow-sm` ≈ `0 1px 2px 0 rgba(0, 0, 0, 0.05)`
+- **Hover**: `shadow-md` ≈ `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)`
+
+**Container-Box-Schatten** (bei Cards-Mode):
+- **Gar kein Schatten** (da nur oben/unten technisch nicht möglich ist)
+- Hintergrund wird transparent
+- Padding wird entfernt
+
+**Wichtig**: Die Container-Box (Wrapper) hat keinen Schatten in Cards-Mode, nur die Cards selbst haben Schatten.
+
+#### Card-Struktur
+
+Jede Card enthält folgende Bereiche:
+
+1. **Header-Bereich**:
+   - Titel (text-base bis text-xl, font-semibold)
+   - Status-Badge (rechts oben)
+   - Optional: Subtitle
+
+2. **Metadaten-Bereich**:
+   - Strukturiert nach Positionen: `left`, `main`, `right`, `full`
+   - Icons optional (h-4 w-4)
+   - Schriftgröße: text-xs bis text-base
+   - Grid-Layout für Metadaten: 1/2/4 Spalten je nach Bildschirmgröße
+
+3. **Action-Bereich**:
+   - Buttons am unteren Rand
+   - Trennlinie oben (border-top)
+   - Rechtsbündige Ausrichtung
+
+4. **Optional: Expandable Content**:
+   - Für längere Inhalte (z.B. Beschreibungen)
+   - Toggle-Button zum Ein-/Ausklappen
+
+### Metadaten-Layout
+
+Metadaten können in verschiedenen Bereichen platziert werden:
+
+- **`left`**: Links im Header-Bereich (z.B. Niederlassung) - meist ausgeblendet
+- **`main`**: Haupt-Metadaten-Bereich im Grid Header (z.B. "Angefragt von", erste Zeile)
+  - **`main-second`**: Zweite Zeile im Grid Header (z.B. "Verantwortlicher")
+  - Beide in der fixen mittleren Spalte (180px) für cardübergreifende Bündigkeit
+  - **WICHTIG**: Metadaten mit `section: 'main'` und `section: 'main-second'` werden **NUR im Header** angezeigt, **NIEMALS** im unteren Metadaten-Bereich!
+- **`right-inline`**: Rechts im Grid Header, inline mit Status (z.B. Datum) - **VERWENDEN für Datum/Fälligkeit neben Status**
+- **`right`**: Rechts unter dem Header, bündig mit Status (z.B. Fälligkeit als Badge unter Status)
+- **`full`**: Volle Breite (z.B. Beschreibung mit expandierbarem Inhalt)
+
+**Kritische Implementierungsregeln**:
+1. **`main` und `main-second` Metadaten**: Werden **NUR im Header** gerendert (DataCard.tsx Zeile 262-304). Die untere Metadaten-Sektion (Zeile 418-451) filtert diese explizit aus.
+2. **Datum/Fälligkeit**: Sollte **immer `section: 'right-inline'`** verwenden (nicht `right`), um inline neben Status angezeigt zu werden, wie bei Requests implementiert.
+3. **Box Shadow**: `shadow-sm` Klasse muss **aus dem HTML entfernt werden** bei Container-Wrappern. Die CSS-Regeln übernehmen die Entfernung in Cards-Mode automatisch.
+
+#### Beschreibung mit expandierbarem Inhalt
+
+Beschreibungen mit `descriptionContent` werden speziell behandelt:
+
+1. **Erste Zeile**: Wird immer angezeigt, auf eine Zeile begrenzt (`line-clamp-1`)
+2. **Expand/Collapse Pfeil**: 
+   - Eingeklappt: `<` (text-base lg:text-lg xl:text-xl)
+   - Ausgeklappt: `↓` (ChevronDownIcon, h-4 w-4 lg:h-5 lg:w-5 xl:h-6 xl:w-6)
+   - Position: Ganz rechts, bündig mit anderen Elementen
+3. **Einrückung der Folgelinien**: 
+   - Berechnet dynamisch basierend auf der Label-Breite
+   - Bündig mit dem **Inhalt** der ersten Zeile (nicht mit dem Label)
+   - Formel: `marginLeft = labelWidth + 8px` (dynamisch via `offsetWidth`)
+
+### Typografie
+
+- **Titel**: 
+  - Responsive Schriftgröße: `clamp(0.9375rem, 1.2vw + 0.5rem, 1.25rem)` (font-semibold)
+  - Maximale Breite: `200px` (wird bei Bedarf mit `truncate` abgeschnitten)
+- **Metadaten-Labels**: `text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl`, font-medium
+- **Metadaten-Werte**: `text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl`, normal weight
+- **Subtitle**: `text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl`, text-gray-500
+
+**Wichtig**: Alle Text-Elemente (außer Titel) skalieren über alle Breakpoints bis `2xl:text-2xl` für größere Bildschirme.
+
+### Responsive Design
+
+- **Mobile (<640px)**:
+  - Padding: p-3
+  - Metadaten: 1 Spalte
+  - Schriftgrößen: text-sm (Titel), text-xs (Metadaten)
+
+- **Tablet (640px-1024px)**:
+  - Padding: p-4
+  - Metadaten: 2 Spalten
+  - Schriftgrößen: text-base (Titel), text-sm (Metadaten)
+
+- **Desktop (>1024px)**:
+  - Padding: p-5 bis p-6
+  - Metadaten: 4 Spalten
+  - Schriftgrößen: text-lg bis text-xl (Titel), text-base lg:text-lg xl:text-xl 2xl:text-2xl (Metadaten)
+- **Large Desktop (≥1536px)**:
+  - Schriftgrößen skalieren weiter bis `2xl:text-2xl` für Metadaten
+
+#### Status-Badge im Header
+
+- **Position**: Rechts im Grid Header, in der dritten Spalte (`1fr`)
+- **Overflow-Protection**: 
+  - Status-Container hat `flex-shrink-0 min-w-0`
+  - Card hat `overflow-hidden`
+  - Status-Badge hat `whitespace-nowrap flex-shrink-0`
+  - Buttons haben kompakte Padding (`p-0.5 sm:p-1 md:p-1.5`)
+- **Schriftgröße**: Skaliert mit Metadaten (`text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl`)
+
+### View-Mode Toggle
+
+Alle Komponenten mit Card-Ansicht müssen einen Toggle-Button zwischen Tabellen- und Card-Ansicht bieten:
+
+```jsx
+<button
+  className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+    viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+  }`}
+  onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
+  title={viewMode === 'table' ? 'Als Cards anzeigen' : 'Als Tabelle anzeigen'}
+>
+  {viewMode === 'table' ? (
+    <Squares2X2Icon className="h-5 w-5" />
+  ) : (
+    <TableCellsIcon className="h-5 w-5" />
+  )}
+</button>
+```
+
+### Status-Badges in Cards
+
+Status-Badges in Cards entsprechen denselben Standards wie in Tabellen (siehe [Status-Badges in Tabellen](#status-badges-in-tabellen)).
+
+### Container-Box Design (bei Cards-Mode)
+
+Wenn die Card-Ansicht aktiv ist, muss die Container-Box (Wrapper) folgende Eigenschaften haben:
+
+- **Schatten**: Gar kein Schatten (`box-shadow: none`)
+- **Border**: Entfernt (`border: none`)
+- **Hintergrund**: Transparent (`background: transparent`)
+- **Padding**: Entfernt (`padding: 0`)
+- **Margin**: Entfernt (`margin: 0`)
+
+**CSS-Klasse**: Container-Box muss eine CSS-Klasse mit `-wrapper` Suffix haben (z.B. `dashboard-requests-wrapper`) und die Klasse `cards-mode` erhalten, wenn Card-Ansicht aktiv ist.
+
+### Implementierungsanleitung
+
+Für detaillierte Anleitung zur Implementierung der Card-Ansicht siehe:
+- **[Card-Ansicht Implementierungsanleitung](../implementation_guides/CARD_VIEW_IMPLEMENTATION_GUIDE.md)**
+
+### Beispiel-Implementierung
+
+Die Requests-Komponente dient als Referenz-Implementierung:
+- `frontend/src/components/Requests.tsx`
 
 ## Page-Design
 
@@ -1816,44 +2099,81 @@ Für kleinere Modals mit wenig Inhalt:
 
 Sidepanes werden für interaktive Eingaben verwendet, die den Benutzer nicht vollständig unterbrechen sollen. Sie schieben sich von der rechten Seite ein und lassen den Rest der Seite sichtbar.
 
+**✨ NEUE FEATURES:**
+- **Sanfte Animation:** Verbesserte Animation mit cubic-bezier Timing (350ms)
+- **Topbar-Kompatibilität:** Sidepanes beginnen unter der Topbar (top-16) und überdecken diese nicht
+- **Responsive Verhalten bei > 1070px:** Sidepane schiebt sich neben den Hauptinhalt statt ihn zu überlagern
+
 #### Korrekte Sidepane-Struktur
 
-**🎯 STANDARD-PATTERN für Create/Edit-Komponenten:** CreateTaskModal, CreateRequestModal, EditTaskModal und EditRequestModal implementieren das Standard-Sidepane-Pattern:
+**🎯 STANDARD-PATTERN für Create/Edit-Komponenten:** Alle Create/Edit-Komponenten implementieren das Standard-Sidepane-Pattern:
 
 ```jsx
+import { useSidepane } from '../contexts/SidepaneContext.tsx';
+
 // KORREKTES Sidepane-Pattern (Standard für Create/Edit)
 // Für Desktop (ab 640px) - Sidepane
-return (
-  <Dialog open={isOpen} onClose={onClose} className="relative z-50">
-    {/* Semi-transparenter Hintergrund für den Rest der Seite */}
-    <div 
-      className="fixed inset-0 bg-black/10 transition-opacity" 
-      aria-hidden="true" 
-      onClick={onClose}
-    />
-    
-    {/* Sidepane von rechts einfahren */}
-    <div 
-      className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
-    >
-      <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-        <Dialog.Title className="text-lg font-semibold dark:text-white">
-          Sidepane Titel
-        </Dialog.Title>
-        <button
-          onClick={onClose}
-          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-        >
-          <XMarkIcon className="h-6 w-6" />
-        </button>
-      </div>
+const MyComponent = ({ isOpen, onClose }) => {
+  const { openSidepane, closeSidepane } = useSidepane();
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
 
-      <div className="p-4 overflow-y-auto h-full">
-        {/* Formular-Inhalt hier */}
+  // Überwache Bildschirmgröße
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsLargeScreen(window.innerWidth > 1070);
+    };
+    checkScreenSize();
+    window.addEventListener('resize', checkScreenSize);
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  // Sidepane-Status verwalten
+  useEffect(() => {
+    if (isOpen) {
+      openSidepane();
+    } else {
+      closeSidepane();
+    }
+    return () => closeSidepane();
+  }, [isOpen, openSidepane, closeSidepane]);
+
+  return (
+    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+      {/* Semi-transparenter Hintergrund - nur bei <= 1070px */}
+      {!isLargeScreen && (
+        <div 
+          className="fixed inset-0 bg-black/10 transition-opacity sidepane-overlay sidepane-backdrop" 
+          aria-hidden="true" 
+          onClick={onClose}
+        />
+      )}
+      
+      {/* Sidepane von rechts einfahren mit verbesserter Animation - beginnt unter der Topbar */}
+      <div 
+        className={`fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform transition-transform duration-350 ease-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{
+          transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'
+        }}
+      >
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+          <Dialog.Title className="text-lg font-semibold dark:text-white">
+            Sidepane Titel
+          </Dialog.Title>
+          <button
+            onClick={onClose}
+            className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          >
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+        </div>
+
+        <div className="p-4 overflow-y-auto h-full">
+          {/* Formular-Inhalt hier */}
+        </div>
       </div>
-    </div>
-  </Dialog>
-);
+    </Dialog>
+  );
+};
 ```
 
 **Mobile (unter 640px) - Modal:**
@@ -1888,14 +2208,23 @@ if (isMobile) {
 }
 ```
 
-**✅ Standard-Referenzen:**
-- `CreateTaskModal.tsx` - Desktop Sidepane Pattern (Zeilen 538-605)
-- `CreateRequestModal.tsx` - Desktop Sidepane Pattern (Zeilen 608-781)
-- `EditTaskModal.tsx` - Desktop Sidepane Pattern (Zeilen 1008-1045)
-- `EditRequestModal.tsx` - Desktop Sidepane Pattern (Zeilen 801-838)
+**✅ Alle Sidepane-Komponenten (Standard-Pattern):**
+- `CreateTaskModal.tsx` - Standard Sidepane Pattern
+- `CreateRequestModal.tsx` - Standard Sidepane Pattern
+- `EditTaskModal.tsx` - Standard Sidepane Pattern
+- `EditRequestModal.tsx` - Standard Sidepane Pattern
+- `CreateClientModal.tsx` - Standard Sidepane Pattern
+- `EditClientModal.tsx` - Standard Sidepane Pattern
+- `UserManagementTab.tsx` - Standard Sidepane Pattern (Benutzererstellung)
+- `RoleManagementTab.tsx` - Standard Sidepane Pattern (Rollenerstellung/Bearbeitung)
+- `CreateOrganizationModal.tsx` - Standard Sidepane Pattern
+- `JoinOrganizationModal.tsx` - Standard Sidepane Pattern
+- `ProcessJoinRequestModal.tsx` - Standard Sidepane Pattern
 
 **⚠️ Alternative Sidepane-Struktur (für komplexere Bearbeitungen):**
-Die `InvoiceManagementTab.tsx` verwendet eine alternative, komplexere Struktur für sehr umfangreiche Bearbeitungsformen mit separatem Header-Bereich. Diese sollte NUR für spezielle Fälle verwendet werden, NICHT als Standard.
+Die folgenden Komponenten verwenden eine alternative, komplexere Struktur für sehr umfangreiche Bearbeitungsformen mit separatem Header-Bereich. Diese sollte NUR für spezielle Fälle verwendet werden, NICHT als Standard:
+- `InvoiceManagementTab.tsx` - Alternative Sidepane-Struktur (Rechnungsbearbeitung)
+- `MonthlyReportsTab.tsx` - Alternative Sidepane-Struktur (Client-Beratungen Sidepane)
 
 #### CSS für Sidepanes
 
@@ -1975,15 +2304,18 @@ Die `InvoiceManagementTab.tsx` verwendet eine alternative, komplexere Struktur f
 **Wichtig:** Alle Sidepane-Komponenten müssen responsive sein:
 
 1. **Mobile (<640px)**: Werden automatisch als Modals dargestellt (siehe Mobile-Modal-Pattern oben)
-2. **Desktop (≥640px)**: Werden als Sidepanes von rechts eingeschoben
+2. **Desktop (≥640px, ≤1070px)**: Werden als Sidepanes von rechts eingeschoben MIT Overlay (überlagern den Hauptinhalt)
+3. **Large Desktop (>1070px)**: Werden als Sidepanes von rechts eingeschoben OHNE Overlay (schieben sich neben den Hauptinhalt)
 
 **Implementierung der Responsive-Erkennung:**
 ```jsx
 const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
 
 useEffect(() => {
   const checkScreenSize = () => {
     setIsMobile(window.innerWidth < 640);
+    setIsLargeScreen(window.innerWidth > 1070);
   };
   
   checkScreenSize();
@@ -1994,6 +2326,13 @@ useEffect(() => {
   };
 }, []);
 ```
+
+**Verhalten bei > 1070px:**
+- Kein Overlay/Backdrop
+- Sidepane beginnt unter der Topbar (top-16)
+- Hauptinhalt verschiebt sich nach links (margin-right: 24rem)
+- Hauptinhalt bleibt scrollbar und aktiv
+- Hauptinhalt und Sidepane sind gleichzeitig sichtbar und nutzbar
 
 ### Verwendungsrichtlinien
 
@@ -2043,14 +2382,17 @@ Beim Erstellen neuer Modals/Sidepanes:
 - [ ] Mobile: Anpassung der Größe und Abstände
 
 **Sidepane-Checkliste (Standard-Pattern für Create/Edit):**
+- [ ] Importiere `useSidepane` aus `../contexts/SidepaneContext.tsx`
 - [ ] Verwende CreateTaskModal/CreateRequestModal Pattern als Basis
 - [ ] Dialog mit `relative z-50`
-- [ ] Backdrop mit `fixed inset-0 bg-black/10 transition-opacity`
-- [ ] Sidepane Panel: `fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl`
-- [ ] Transform-Animation: `transform transition-transform duration-300 ease-in-out`
+- [ ] Backdrop: Nur bei <= 1070px anzeigen (`{!isLargeScreen && <div className="sidepane-overlay sidepane-backdrop" ... />}`)
+- [ ] Sidepane Panel: `fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container`
+- [ ] Transform-Animation: `transform transition-transform duration-350 ease-out` mit inline style: `transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)'`
 - [ ] Zustand: `${isOpen ? 'translate-x-0' : 'translate-x-full'}`
 - [ ] Header: `flex items-center justify-between p-4 border-b dark:border-gray-700`
 - [ ] Content: `p-4 overflow-y-auto h-full`
+- [ ] Sidepane-Status verwalten: `useEffect` mit `openSidepane()` und `closeSidepane()`
+- [ ] Bildschirmgröße überwachen: `isLargeScreen` State für > 1070px
 - [ ] Dark Mode Support für alle Elemente
 - [ ] Mobile: Automatisch als Modal rendern (siehe Mobile-Pattern oben)
 

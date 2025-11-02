@@ -11,8 +11,10 @@ import {
 
 export const organizationService = {
   // Aktuelle Organisation abrufen
-  getCurrentOrganization: async (): Promise<Organization> => {
-    const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATIONS.CURRENT);
+  getCurrentOrganization: async (signal?: AbortSignal): Promise<Organization> => {
+    const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATIONS.CURRENT, {
+      signal
+    });
     return response.data;
   },
 
@@ -25,6 +27,18 @@ export const organizationService = {
   // Organisation aktualisieren
   updateOrganization: async (data: UpdateOrganizationRequest): Promise<Organization> => {
     const response = await axiosInstance.put(API_ENDPOINTS.ORGANIZATIONS.CURRENT, data);
+    return response.data;
+  },
+
+  // Organisation-Sprache abrufen
+  getOrganizationLanguage: async (): Promise<{ language: string | null }> => {
+    const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATIONS.LANGUAGE);
+    return response.data;
+  },
+
+  // Organisation-Sprache aktualisieren
+  updateOrganizationLanguage: async (language: string): Promise<{ language: string; organization: Organization }> => {
+    const response = await axiosInstance.put(API_ENDPOINTS.ORGANIZATIONS.LANGUAGE, { language });
     return response.data;
   },
 

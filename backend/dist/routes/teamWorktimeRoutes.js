@@ -7,6 +7,7 @@ const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const isTeamManager_1 = require("../middleware/isTeamManager");
 const teamWorktimeController_1 = require("../controllers/teamWorktimeController");
+const analyticsController_1 = require("../controllers/analyticsController");
 const router = express_1.default.Router();
 // Alle Routen erfordern Authentifizierung und Team-Manager-Berechtigung
 router.use(auth_1.authenticateToken);
@@ -21,5 +22,18 @@ router.get('/user-day', teamWorktimeController_1.getUserWorktimesByDay);
 router.put('/update', teamWorktimeController_1.updateUserWorktime);
 // Bewilligte Überstunden aktualisieren
 router.put('/overtime', teamWorktimeController_1.updateApprovedOvertimeHours);
+// Analytics-Endpunkte
+// To-Dos pro User für ein Datum (Tab 1)
+router.get('/analytics/todos-by-user', analyticsController_1.getTodosByUserForDate);
+// Requests pro User für ein Datum (Tab 1)
+router.get('/analytics/requests-by-user', analyticsController_1.getRequestsByUserForDate);
+// Alle To-Dos chronologisch für ein Datum (Tab 2)
+router.get('/analytics/todos-chronological', analyticsController_1.getTodosChronological);
+// Alle Requests chronologisch für ein Datum (Tab 3)
+router.get('/analytics/requests-chronological', analyticsController_1.getRequestsChronological);
+// Häufigkeitsanalyse für To-Dos (Tab 2)
+router.get('/analytics/todos-frequency', analyticsController_1.getTodosFrequencyAnalysis);
+// Schicht-basierte Analysen für To-Dos (Tab 2)
+router.get('/analytics/todos-shifts', analyticsController_1.getTodosShiftAnalysis);
 exports.default = router;
 //# sourceMappingURL=teamWorktimeRoutes.js.map

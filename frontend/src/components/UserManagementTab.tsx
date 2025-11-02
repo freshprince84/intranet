@@ -1,43 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Dialog } from '@headlessui/react';
 import { userApi, roleApi } from '../api/apiClient.ts';
 import { User, Role } from '../types/interfaces.ts';
-import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, ShieldCheckIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import useMessage from '../hooks/useMessage.ts';
+import { usePermissions } from '../hooks/usePermissions.ts';
 import IdentificationDocumentList from './IdentificationDocumentList.tsx';
+import { useSidepane } from '../contexts/SidepaneContext.tsx';
 
 interface UserManagementTabProps {
   onError: (error: string) => void;
 }
 
-// Länder für die Auswahl
-const COUNTRIES = [
-  { code: 'CO', name: 'Kolumbien' },
-  { code: 'CH', name: 'Schweiz' },
-  { code: 'DE', name: 'Deutschland' },
-  { code: 'AT', name: 'Österreich' }
-];
-
-// Länder für die Payroll-Auswahl
-const PAYROLL_COUNTRIES = [
-  { code: 'CH', name: 'Schweiz' },
-  { code: 'CO', name: 'Kolumbien' }
-];
-
-// Vertragsarten für Kolumbien
-const CONTRACT_TYPES = [
-  { code: 'tiempo_completo', name: 'Tiempo Completo (>21 Tage/Monat)' },
-  { code: 'tiempo_parcial_7', name: 'Tiempo Parcial (≤7 Tage/Monat)' },
-  { code: 'tiempo_parcial_14', name: 'Tiempo Parcial (≤14 Tage/Monat)' },
-  { code: 'tiempo_parcial_21', name: 'Tiempo Parcial (≤21 Tage/Monat)' },
-  { code: 'servicios_externos', name: 'Servicios Externos (Stundenbasiert)' }
-];
-
-// Sprachen für die Auswahl
-const LANGUAGES = [
-  { code: 'es', name: 'Spanisch' },
-  { code: 'de', name: 'Deutsch' },
-  { code: 'en', name: 'Englisch' }
-];
+// Länder und Sprachen werden dynamisch aus Übersetzungen geladen
 
 // Definiere Rollen, die immer vorhanden sein sollten (z.B. Admin-Rolle)
 const fixedRoles = [1, 2, 999]; // Admin (1), User (2) und Hamburger (999) sind fixe Rollen
@@ -53,6 +29,29 @@ const RoleDebugInfo = ({ title, data }: { title: string, data: any }) => (
 );
 
 const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => {
+  const { t } = useTranslation();
+  
+  // Länder für die Auswahl (dynamisch aus Übersetzungen)
+  const COUNTRIES = [
+    { code: 'CO', name: t('countries.CO') },
+    { code: 'CH', name: t('countries.CH') },
+    { code: 'DE', name: t('countries.DE') },
+    { code: 'AT', name: t('countries.AT') }
+  ];
+
+  // Länder für die Payroll-Auswahl (dynamisch aus Übersetzungen)
+  const PAYROLL_COUNTRIES = [
+    { code: 'CH', name: t('countries.CH') },
+    { code: 'CO', name: t('countries.CO') }
+  ];
+
+  // Sprachen für die Auswahl (dynamisch aus Übersetzungen)
+  const LANGUAGES = [
+    { code: 'es', name: t('languages.es') },
+    { code: 'de', name: t('languages.de') },
+    { code: 'en', name: t('languages.en') }
+  ];
+  
   // Benutzer-States
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -62,6 +61,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [roleWarning, setRoleWarning] = useState<string | null>(null);
   const { showMessage } = useMessage();
+  const { isAdmin } = usePermissions();
   
   // Neuer State für Rollen
   const [roles, setRoles] = useState<Role[]>([]);
@@ -69,6 +69,42 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   
   // Neuer State für die aktive Unterseite
   const [activeUserTab, setActiveUserTab] = useState<'details' | 'documents' | 'roles'>('details');
+  
+  // State für Benutzererstellung
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 640);
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
+  const { openSidepane, closeSidepane } = useSidepane();
+  const [newUserFormData, setNewUserFormData] = useState({
+    email: '',
+    password: '',
+    firstName: '',
+    lastName: ''
+  });
+
+  // Responsive Erkennung
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+      setIsLargeScreen(window.innerWidth > 1070);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Sidepane-Status verwalten
+  useEffect(() => {
+    if (isCreateModalOpen) {
+      openSidepane();
+    } else {
+      closeSidepane();
+    }
+    
+    return () => {
+      closeSidepane();
+    };
+  }, [isCreateModalOpen, openSidepane, closeSidepane]);
 
   // Initialisierung - Laden von Benutzern
   useEffect(() => {
@@ -224,6 +260,18 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
     }
     
     setUserFormData({ ...userFormData, [name]: finalValue });
+    setIsEditingUser(true); // Aktiviere Edit-Modus sobald etwas geändert wird
+  };
+
+  // Abbrechen der Bearbeitung
+  const handleCancelEdit = () => {
+    if (selectedUser) {
+      setUserFormData({
+        ...selectedUser,
+        birthday: selectedUser.birthday ? new Date(selectedUser.birthday).toISOString().split('T')[0] : null
+      });
+    }
+    setIsEditingUser(false);
   };
 
   // Speichern der Benutzerdaten
@@ -281,13 +329,26 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
           birthday: response.data.birthday ? new Date(response.data.birthday).toISOString().split('T')[0] : null
         };
         setSelectedUser(updatedData);
-        setUserFormData(updatedData);
+        setUserFormData({
+          ...updatedData,
+          birthday: updatedData.birthday ? new Date(updatedData.birthday).toISOString().split('T')[0] : null
+        });
+        
+        // Optimistisches Update: User in Liste aktualisieren statt vollständigem Reload
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === updatedData.id ? updatedData : user
+          )
+        );
+        
         showMessage('Benutzerprofil erfolgreich aktualisiert', 'success');
         setIsEditingUser(false);
-        fetchUsers();
+        // fetchUsers() entfernt - kein vollständiger Reload mehr
       }
     } catch (err) {
       console.error('Fehler beim Speichern der Benutzerdaten:', err);
+      // Bei Fehler: Rollback durch vollständiges Reload
+      fetchUsers();
       if (err.response?.status === 400) {
         const errorMsg = `Validierungsfehler: ${err.response?.data?.message || 'Bitte überprüfe die eingegebenen Daten'}`;
         onError(errorMsg);
@@ -351,10 +412,63 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
     }
   };
 
-  // Bearbeitung des Benutzerprofils starten
-  const startEditingUser = () => {
-    setUserFormData(selectedUser || {});
-    setIsEditingUser(true);
+  // Initialisiere FormData wenn Benutzer ausgewählt wird
+  useEffect(() => {
+    if (selectedUser) {
+      setUserFormData({
+        ...selectedUser,
+        birthday: selectedUser.birthday ? new Date(selectedUser.birthday).toISOString().split('T')[0] : null
+      });
+      setIsEditingUser(false); // Starte im Read-Only Modus
+    }
+  }, [selectedUser]);
+
+  // Handler für neue Benutzer-Formular
+  const handleNewUserInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setNewUserFormData({ ...newUserFormData, [name]: value });
+  };
+
+  // Neuen Benutzer erstellen
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    // Validierung
+    if (!newUserFormData.email || !newUserFormData.password || !newUserFormData.firstName || !newUserFormData.lastName) {
+      showMessage('Bitte füllen Sie alle Felder aus', 'error');
+      return;
+    }
+
+    // E-Mail-Format validieren
+    if (!newUserFormData.email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+      showMessage('Ungültiges E-Mail-Format', 'error');
+      return;
+    }
+
+    try {
+      const response = await userApi.create(newUserFormData);
+      
+      // Optimistisches Update: User zur Liste hinzufügen statt vollständigem Reload
+      if (response.data) {
+        setUsers(prevUsers => [response.data, ...prevUsers]);
+      }
+      
+      showMessage('Benutzer erfolgreich erstellt', 'success');
+      setIsCreateModalOpen(false);
+      setNewUserFormData({
+        email: '',
+        password: '',
+        firstName: '',
+        lastName: ''
+      });
+      // fetchUsers() entfernt - kein vollständiger Reload mehr
+    } catch (err: any) {
+      // Bei Fehler: Rollback durch vollständiges Reload
+      fetchUsers();
+      const errorMessage = err.response?.data?.message || 'Fehler beim Erstellen des Benutzers';
+      showMessage(errorMessage, 'error');
+      onError(errorMessage);
+    }
   };
 
   return (
@@ -366,40 +480,51 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
         </div>
       )} */}
 
-      {/* Benutzer-Dropdown */}
+      {/* Titelzeile: Button links, Dropdown rechts */}
       <div className="mb-6">
-        <label htmlFor="userSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          Benutzer auswählen
-        </label>
-        <select
-          id="userSelect"
-          onChange={handleUserSelect}
-          className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
-        >
-          <option value="">-- Benutzer auswählen --</option>
-          {users.map(user => (
-            <option key={user.id} value={user.id}>
-              {user.firstName} {user.lastName} ({user.username})
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-4">
+          {/* Linke Seite: "Neuer Benutzer"-Button */}
+          <div className="flex items-center">
+            {isAdmin() && (
+              <button
+                onClick={() => setIsCreateModalOpen(true)}
+                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                style={{ width: '30.19px', height: '30.19px' }}
+                title={t('users.create')}
+                aria-label={t('users.create')}
+              >
+                <PlusIcon className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          
+          {/* Rechts: Benutzer-Dropdown */}
+          <div className="flex-1">
+            <label htmlFor="userSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              {t('users.title')}
+            </label>
+            <select
+              id="userSelect"
+              onChange={handleUserSelect}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
+            >
+              <option value="">-- {t('users.title')} {t('common.select')} --</option>
+              {users.map(user => (
+                <option key={user.id} value={user.id}>
+                  {user.firstName} {user.lastName} ({user.username})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {selectedUser && (
         <div>
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold dark:text-white">
-              Benutzer: {selectedUser.firstName} {selectedUser.lastName}
+              {t('users.title')}: {selectedUser.firstName} {selectedUser.lastName}
             </h2>
-            {!isEditingUser && (
-              <button
-                onClick={startEditingUser}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md"
-              >
-                <PencilIcon className="h-4 w-4 inline mr-1" />
-                Bearbeiten
-              </button>
-            )}
           </div>
 
           {/* Tabs für Benutzerdetails, Dokumente und Rollen */}
@@ -415,7 +540,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   }`}
                 >
                   <UserCircleIcon className="h-5 w-5 inline mr-2" />
-                  Benutzerdetails
+                  {t('users.title')}
                 </button>
                 <button
                   onClick={() => setActiveUserTab('documents')}
@@ -426,7 +551,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   }`}
                 >
                   <DocumentTextIcon className="h-5 w-5 inline mr-2" />
-                  Identifikationsdokumente
+                  {t('profile.documents')}
                 </button>
                 <button
                   onClick={() => setActiveUserTab('roles')}
@@ -437,7 +562,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   }`}
                 >
                   <ShieldCheckIcon className="h-5 w-5 inline mr-2" />
-                  Rollen
+                  {t('roles.title')}
                 </button>
               </nav>
             </div>
@@ -450,140 +575,130 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Benutzername
+                    {t('users.form.username')}
                   </label>
                   <input
                     type="text"
                     name="username"
-                    value={isEditingUser ? userFormData.username || '' : selectedUser.username || ''}
+                    value={userFormData.username || ''}
                     onChange={handleUserInputChange}
-                    disabled={!isEditingUser}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    E-Mail
+                    {t('users.form.email')}
                   </label>
                   <input
                     type="email"
                     name="email"
-                    value={isEditingUser ? userFormData.email || '' : selectedUser.email || ''}
+                    value={userFormData.email || ''}
                     onChange={handleUserInputChange}
-                    disabled={!isEditingUser}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Vorname
+                    {t('users.form.firstName')}
                   </label>
                   <input
                     type="text"
                     name="firstName"
-                    value={isEditingUser ? userFormData.firstName || '' : selectedUser.firstName || ''}
+                    value={userFormData.firstName || ''}
                     onChange={handleUserInputChange}
-                    disabled={!isEditingUser}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Nachname
+                    {t('users.form.lastName')}
                   </label>
                   <input
                     type="text"
                     name="lastName"
-                    value={isEditingUser ? userFormData.lastName || '' : selectedUser.lastName || ''}
+                    value={userFormData.lastName || ''}
                     onChange={handleUserInputChange}
-                    disabled={!isEditingUser}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Geburtsdatum
+                    {t('profile.birthday')}
                   </label>
                   <input
                     type="date"
                     name="birthday"
-                    value={isEditingUser ? userFormData.birthday || '' : selectedUser.birthday || ''}
+                    value={userFormData.birthday || ''}
                     onChange={handleUserInputChange}
-                    disabled={!isEditingUser}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Bankdaten
+                    {t('profile.bankDetails')}
                   </label>
                   <input
                     type="text"
                     name="bankDetails"
-                    value={isEditingUser ? userFormData.bankDetails || '' : selectedUser.bankDetails || ''}
+                    value={userFormData.bankDetails || ''}
                     onChange={handleUserInputChange}
-                    disabled={!isEditingUser}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Vertrags-ID
+                    {t('profile.contract')}
                   </label>
                   <input
                     type="text"
                     name="contract"
-                    value={isEditingUser ? userFormData.contract || '' : selectedUser.contract || ''}
+                    value={userFormData.contract || ''}
                     onChange={handleUserInputChange}
-                    disabled={!isEditingUser}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Gehalt
+                    {t('profile.salary')}
                   </label>
                   <input
                     type="number"
                     name="salary"
-                    value={isEditingUser ? (userFormData.salary === null ? '' : userFormData.salary) : (selectedUser.salary === null ? '' : selectedUser.salary)}
+                    value={userFormData.salary === null || userFormData.salary === undefined ? '' : userFormData.salary}
                     onChange={handleUserInputChange}
-                    disabled={!isEditingUser}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Normale Arbeitszeit (Stunden)
+                    {t('users.form.normalWorkingHours')}
                   </label>
                   <input
                     type="number"
                     step="0.1"
                     name="normalWorkingHours"
-                    value={isEditingUser ? (userFormData.normalWorkingHours === null ? '7.6' : userFormData.normalWorkingHours) : (selectedUser.normalWorkingHours === null ? '7.6' : selectedUser.normalWorkingHours)}
+                    value={userFormData.normalWorkingHours === null || userFormData.normalWorkingHours === undefined ? '7.6' : userFormData.normalWorkingHours}
                     onChange={handleUserInputChange}
-                    disabled={!isEditingUser}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Land
+                    {t('profile.country')}
                   </label>
                   <select
                     name="country"
-                    value={isEditingUser ? userFormData.country || 'CO' : selectedUser.country || 'CO'}
+                    value={userFormData.country || 'CO'}
                     onChange={handleUserInputChange}
-                    disabled={!isEditingUser}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   >
                     {COUNTRIES.map((country) => (
@@ -596,13 +711,12 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Sprache
+                    {t('profile.language')}
                   </label>
                   <select
                     name="language"
-                    value={isEditingUser ? userFormData.language || 'es' : selectedUser.language || 'es'}
+                    value={userFormData.language || 'es'}
                     onChange={handleUserInputChange}
-                    disabled={!isEditingUser}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   >
                     {LANGUAGES.map((language) => (
@@ -616,18 +730,17 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
 
               {/* Lohnabrechnung-Einstellungen */}
               <div className="mt-4 border-t pt-4">
-                <h3 className="text-lg font-semibold mb-4 dark:text-white">Lohnabrechnung-Einstellungen</h3>
+                <h3 className="text-lg font-semibold mb-4 dark:text-white">{t('users.form.payrollSettings')}</h3>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Abrechnungsland
+                      {t('users.form.payrollCountry')}
                     </label>
                     <select
                       name="payrollCountry"
-                      value={isEditingUser ? userFormData.payrollCountry || (selectedUser.payrollCountry || 'CH') : (selectedUser.payrollCountry || 'CH')}
+                      value={userFormData.payrollCountry || selectedUser.payrollCountry || 'CH'}
                       onChange={handleUserInputChange}
-                      disabled={!isEditingUser}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                     >
                       {PAYROLL_COUNTRIES.map(country => (
@@ -642,13 +755,12 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     (selectedUser.payrollCountry === 'CO' && !userFormData.payrollCountry)) && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Vertragsart
+                        {t('users.form.contractType')}
                       </label>
                       <select
                         name="contractType"
-                        value={isEditingUser ? userFormData.contractType || '' : selectedUser.contractType || ''}
+                        value={userFormData.contractType || ''}
                         onChange={handleUserInputChange}
-                        disabled={!isEditingUser}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                       >
                         <option value="">Bitte auswählen</option>
@@ -665,18 +777,15 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Stundensatz ({(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? 'CHF' : 'COP'})
+                      {t('users.form.hourlyRate')} ({(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? 'CHF' : 'COP'})
                     </label>
                     <input
                       type="number"
                       name="hourlyRate"
                       min="0"
                       step={(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? '0.05' : '1'}
-                      value={isEditingUser 
-                        ? (userFormData.hourlyRate === null || userFormData.hourlyRate === undefined ? '' : userFormData.hourlyRate) 
-                        : (selectedUser.hourlyRate === null || selectedUser.hourlyRate === undefined ? '' : selectedUser.hourlyRate)}
+                      value={userFormData.hourlyRate === null || userFormData.hourlyRate === undefined ? '' : userFormData.hourlyRate}
                       onChange={handleUserInputChange}
-                      disabled={!isEditingUser}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                       placeholder={(userFormData.payrollCountry || selectedUser.payrollCountry) === 'CH' ? 'z.B. 45.00' : 'z.B. 50000'}
                     />
@@ -687,18 +796,15 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     (userFormData.contractType || selectedUser.contractType)) && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Monatliches Gehalt (COP)
+                        {t('users.form.monthlySalary')} (COP)
                       </label>
                       <input
                         type="number"
                         name="monthlySalary"
                         min="0"
                         step="1000"
-                        value={isEditingUser 
-                          ? (userFormData.monthlySalary === null || userFormData.monthlySalary === undefined ? '' : userFormData.monthlySalary) 
-                          : (selectedUser.monthlySalary === null || selectedUser.monthlySalary === undefined ? '' : selectedUser.monthlySalary)}
+                        value={userFormData.monthlySalary === null || userFormData.monthlySalary === undefined ? '' : userFormData.monthlySalary}
                         onChange={handleUserInputChange}
-                        disabled={!isEditingUser}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                         placeholder="z.B. 3500000"
                       />
@@ -708,19 +814,21 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
               </div>
 
               {isEditingUser && (
-                <div className="mt-4 flex justify-end">
+                <div className="mt-4 flex justify-end gap-3">
                   <button
                     type="button"
-                    onClick={() => setIsEditingUser(false)}
-                    className="bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500 text-gray-800 dark:text-gray-200 px-4 py-2 rounded mr-2"
+                    onClick={handleCancelEdit}
+                    className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                    title={t('common.cancel')}
                   >
-                    Abbrechen
+                    <XMarkIcon className="h-5 w-5" />
                   </button>
                   <button
                     type="submit"
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
+                    title={t('common.save')}
                   >
-                    Speichern
+                    <CheckIcon className="h-5 w-5" />
                   </button>
                 </div>
               )}
@@ -863,6 +971,239 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
             </div>
           )}
         </div>
+      )}
+
+      {/* Sidepane/Modal für Benutzererstellung */}
+      {isCreateModalOpen && (
+        <>
+          {/* Für Mobile (unter 640px) - klassisches Modal */}
+          {isMobile ? (
+            <Dialog open={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} className="relative z-50">
+              <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+              
+              <div className="fixed inset-0 flex items-center justify-center p-4">
+                <Dialog.Panel className="mx-auto max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+                  {/* Header */}
+                  <div className="px-6 py-4 border-b dark:border-gray-700">
+                    <div className="flex items-center justify-between">
+                      <Dialog.Title className="text-lg font-semibold dark:text-white">
+                        Neuen Benutzer erstellen
+                      </Dialog.Title>
+                      <button
+                        onClick={() => setIsCreateModalOpen(false)}
+                        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                      >
+                        <XMarkIcon className="h-6 w-6" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Form */}
+                  <form onSubmit={handleCreateUser} className="p-6">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          E-Mail *
+                        </label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={newUserFormData.email}
+                          onChange={handleNewUserInputChange}
+                          className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Passwort *
+                        </label>
+                        <input
+                          type="password"
+                          name="password"
+                          value={newUserFormData.password}
+                          onChange={handleNewUserInputChange}
+                          className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Vorname *
+                        </label>
+                        <input
+                          type="text"
+                          name="firstName"
+                          value={newUserFormData.firstName}
+                          onChange={handleNewUserInputChange}
+                          className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
+                          required
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          Nachname *
+                        </label>
+                        <input
+                          type="text"
+                          name="lastName"
+                          value={newUserFormData.lastName}
+                          onChange={handleNewUserInputChange}
+                          className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
+                          required
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Footer */}
+                    <div className="mt-6 flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsCreateModalOpen(false)}
+                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                        title="Abbrechen"
+                      >
+                        <XMarkIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="submit"
+                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
+                        title="Erstellen"
+                      >
+                        <CheckIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </form>
+                </Dialog.Panel>
+              </div>
+            </Dialog>
+          ) : (
+            // Für Desktop (ab 640px) - Sidepane
+            // WICHTIG: Sidepane muss IMMER gerendert bleiben für Transition
+            <>
+              {/* Backdrop - nur wenn offen und <= 1070px */}
+              {/* Hinweis: onClick entfernt, da Backdrop pointer-events: none hat, damit Hauptinhalt interaktiv bleibt */}
+              {isCreateModalOpen && !isLargeScreen && (
+                <div 
+                  className="fixed inset-0 bg-black/10 transition-opacity sidepane-overlay sidepane-backdrop z-40" 
+                  aria-hidden="true" 
+                  style={{
+                    opacity: isCreateModalOpen ? 1 : 0,
+                    transition: 'opacity 300ms ease-out'
+                  }}
+                />
+              )}
+              
+              {/* Sidepane - IMMER gerendert, Position wird via Transform geändert */}
+              <div 
+                className={`fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isCreateModalOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                style={{
+                  transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                  pointerEvents: isCreateModalOpen ? 'auto' : 'none'
+                }}
+                aria-hidden={!isCreateModalOpen}
+                role="dialog"
+                aria-modal={isCreateModalOpen}
+              >
+                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+                  <h2 className="text-lg font-semibold dark:text-white">
+                    Neuen Benutzer erstellen
+                  </h2>
+                  <button
+                    onClick={() => setIsCreateModalOpen(false)}
+                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  >
+                    <XMarkIcon className="h-6 w-6" />
+                  </button>
+                </div>
+
+                <div className="flex flex-col flex-1 min-h-0">
+                  <form onSubmit={handleCreateUser} className="flex flex-col flex-1 min-h-0">
+                    <div className="p-4 overflow-y-auto flex-1 min-h-0 space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                          E-Mail *
+                        </label>
+                      <input
+                        type="email"
+                        name="email"
+                        value={newUserFormData.email}
+                        onChange={handleNewUserInputChange}
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Passwort *
+                      </label>
+                      <input
+                        type="password"
+                        name="password"
+                        value={newUserFormData.password}
+                        onChange={handleNewUserInputChange}
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Vorname *
+                      </label>
+                      <input
+                        type="text"
+                        name="firstName"
+                        value={newUserFormData.firstName}
+                        onChange={handleNewUserInputChange}
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Nachname *
+                      </label>
+                      <input
+                        type="text"
+                        name="lastName"
+                        value={newUserFormData.lastName}
+                        onChange={handleNewUserInputChange}
+                        className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
+                        required
+                      />
+                      </div>
+                    </div>
+                    
+                    {/* Footer */}
+                    <div className="flex justify-end gap-3 border-t dark:border-gray-700 pt-4 px-4 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setIsCreateModalOpen(false)}
+                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                        title="Abbrechen"
+                      >
+                        <XMarkIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        type="submit"
+                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
+                        title="Erstellen"
+                      >
+                        <CheckIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </>
+          )}
+        </>
       )}
     </div>
   );

@@ -29,6 +29,9 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [DESIGN_STANDARDS.md](docs/core/DESIGN_STANDARDS.md) - UI/UX-Designrichtlinien und Komponenten
 - [FRONTEND_TECHNOLOGIEN.md](docs/technical/FRONTEND_TECHNOLOGIEN.md) - Frontend-Technologien und Best Practices
 
+### Implementierungsanleitungen
+- [CARD_VIEW_IMPLEMENTATION_GUIDE.md](docs/implementation_guides/CARD_VIEW_IMPLEMENTATION_GUIDE.md) - Vollständige Anleitung zur Implementierung der Card-Ansicht
+
 ### Technische Spezifikationen
 - [API_REFERENZ.md](docs/technical/API_REFERENZ.md) - Vollständige API-Dokumentation
 - [DATENBANKSCHEMA.md](docs/technical/DATENBANKSCHEMA.md) - Datenbankschema und -struktur

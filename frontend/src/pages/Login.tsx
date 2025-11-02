@@ -12,11 +12,20 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Prüfe ob Profil unvollständig ist
+  const isProfileIncomplete = (user: any) => {
+    return !user.birthday || !user.bankDetails || !user.contract || !user.salary || !user.normalWorkingHours;
+  };
+
   // Überprüfe, ob der Benutzer bereits eingeloggt ist
   useEffect(() => {
     if (user) {
-      console.log('Benutzer bereits eingeloggt, leite weiter zum Dashboard');
-      navigate('/dashboard');
+      console.log('Benutzer bereits eingeloggt, prüfe Profilvollständigkeit');
+      if (isProfileIncomplete(user)) {
+        navigate('/profile');
+      } else {
+        navigate('/dashboard');
+      }
     }
   }, [user, navigate]);
 
@@ -33,12 +42,13 @@ const Login: React.FC = () => {
     setLoading(true);
     try {
       await login(formData.username, formData.password);
-      console.log('Login erfolgreich, leite weiter zum Dashboard');
-      navigate('/dashboard');
-    } catch (err) {
+      // Navigation wird im useEffect behandelt, sobald user state aktualisiert ist
+    } catch (err: any) {
       console.error('Login-Fehler:', err);
-      setError('Login fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldedaten.');
-    } finally {
+      
+      // Detaillierte Fehlermeldung anzeigen
+      const errorMessage = err.response?.data?.message || err.message || 'Login fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldedaten.';
+      setError(errorMessage);
       setLoading(false);
     }
   };

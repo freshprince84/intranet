@@ -16,21 +16,45 @@ export const OrganizationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchOrganization = async () => {
+  const fetchOrganization = async (signal?: AbortSignal) => {
     try {
       setLoading(true);
-      const org = await organizationService.getCurrentOrganization();
+      const org = await organizationService.getCurrentOrganization(signal);
+      
+      // Prüfe ob Request abgebrochen wurde
+      if (signal?.aborted) {
+        return;
+      }
+      
       setOrganization(org);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
+      // Ignoriere Abort-Errors
+      if (err.name === 'AbortError' || err.name === 'CanceledError') {
+        return;
+      }
+      
+      // Prüfe ob Request abgebrochen wurde
+      if (signal?.aborted) {
+        return;
+      }
+      
       setError('Fehler beim Laden der Organisation');
     } finally {
-      setLoading(false);
+      // Nur loading setzen wenn nicht abgebrochen
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchOrganization();
+    const abortController = new AbortController();
+    fetchOrganization(abortController.signal);
+    
+    return () => {
+      abortController.abort();
+    };
   }, []);
 
   return (

@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CogIcon, UserIcon, BellIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
+import { useLanguage } from '../hooks/useLanguage.ts';
 import useMessage from '../hooks/useMessage.ts';
 import { MonthlyReportSettings } from '../types/monthlyConsultationReport.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { toast } from 'react-toastify';
 import { useTheme } from '../contexts/ThemeContext.tsx';
-import { Cog6ToothIcon, UserCircleIcon, ComputerDesktopIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, UserCircleIcon, ComputerDesktopIcon, DocumentArrowUpIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import NotificationSettingsComponent from '../components/NotificationSettings.tsx';
 import MonthlyReportSettingsModal from '../components/MonthlyReportSettingsModal.tsx';
 import DatabaseManagement from '../components/DatabaseManagement.tsx';
@@ -19,10 +21,16 @@ const Settings: React.FC = () => {
     const { isAdmin } = usePermissions();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const { showMessage } = useMessage();
+    const { t } = useTranslation();
+    const { activeLanguage, organizationLanguage, setUserLanguage, isLoading: languageLoading } = useLanguage();
+    const [selectedLanguage, setSelectedLanguage] = useState<string>('');
+    const [savingLanguage, setSavingLanguage] = useState<boolean>(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isSaving, setIsSaving] = useState(false);
     // Tab-Zustand für Navigation zwischen den Einstellungen
     const [activeTab, setActiveTab] = useState<'personal' | 'notifications' | 'system'>('personal');
     
@@ -58,7 +66,7 @@ const Settings: React.FC = () => {
                 });
             } catch (error) {
                 console.error('Fehler beim Laden der Monatsabrechnungs-Einstellungen:', error);
-                showMessage('Fehler beim Laden der Einstellungen', 'error');
+                showMessage(t('errors.loadSettingsError'), 'error');
             } finally {
                 setIsLoadingSettings(false);
             }
@@ -97,11 +105,11 @@ const Settings: React.FC = () => {
             
             // Erfolg-Toast (nur bei Deaktivierung, bei Aktivierung macht das Modal den Toast)
             if (!settings.monthlyReportEnabled) {
-                toast.success('Automatische Monatsabrechnung deaktiviert');
+                toast.success(t('settings.monthlyReportDisabled'));
             }
-        } catch (error) {
-            console.error('Fehler beim Speichern der Monatsabrechnungs-Einstellungen:', error);
-            toast.error('Fehler beim Speichern der Einstellungen');
+            } catch (error) {
+                console.error('Fehler beim Speichern der Monatsabrechnungs-Einstellungen:', error);
+                toast.error(t('errors.saveMonthlyReportSettingsError'));
             throw error; // Für Modal error handling
         }
     };
@@ -110,13 +118,13 @@ const Settings: React.FC = () => {
         const file = event.target.files?.[0];
         if (file) {
             if (file.type !== 'image/png' && file.type !== 'image/jpeg') {
-                setError('Bitte nur PNG oder JPEG Dateien hochladen.');
-                showMessage('Bitte nur PNG oder JPEG Dateien hochladen.', 'error');
+                setError(t('settings.fileUploadError'));
+                showMessage(t('settings.fileUploadError'), 'error');
                 return;
             }
             if (file.size > 5 * 1024 * 1024) { // 5MB
-                setError('Die Datei ist zu groß (maximal 5MB erlaubt).');
-                showMessage('Die Datei ist zu groß (maximal 5MB erlaubt).', 'error');
+                setError(t('settings.fileSizeError'));
+                showMessage(t('settings.fileSizeError'), 'error');
                 return;
             }
             setSelectedFile(file);
@@ -160,13 +168,13 @@ const Settings: React.FC = () => {
             console.log('Response Text:', responseText);
 
             if (!response.ok) {
-                throw new Error(responseText || 'Upload fehlgeschlagen');
+                throw new Error(responseText || t('errors.uploadFailed'));
             }
 
             try {
                 const responseData = JSON.parse(responseText);
                 console.log('Response Data:', responseData);
-                showMessage('Logo erfolgreich hochgeladen', 'success');
+                showMessage(t('settings.logoUploadSuccess'), 'success');
                 
                 // Favicon nach Upload aktualisieren
                 const faviconLink = document.getElementById('favicon') as HTMLLinkElement;
@@ -185,7 +193,7 @@ const Settings: React.FC = () => {
                 }
             } catch (parseError) {
                 console.error('Fehler beim Parsen der Antwort:', parseError);
-                throw new Error('Ungültiges Antwortformat vom Server');
+                throw new Error(t('errors.invalidResponseFormat'));
             }
             
             // Preview zurücksetzen
@@ -193,9 +201,9 @@ const Settings: React.FC = () => {
             setPreviewUrl(null);
         } catch (err) {
             console.error('Upload error:', err);
-            const errorMessage = 'Fehler beim Upload: ' + (err instanceof Error ? err.message : 'Unbekannter Fehler');
-            setError(errorMessage);
-            showMessage(errorMessage, 'error');
+                const errorMessage = t('settings.logoUploadError') + ': ' + (err instanceof Error ? err.message : t('errors.unknownError'));
+                setError(errorMessage);
+                showMessage(errorMessage, 'error');
         } finally {
             setIsUploading(false);
         }
@@ -209,7 +217,7 @@ const Settings: React.FC = () => {
 
     // Wenn kein Benutzer oder Berechtigungen geladen werden
     if (!user) {
-        return <div>Laden...</div>;
+        return <div>{t('common.loading')}</div>;
     }
 
     return (
@@ -218,7 +226,7 @@ const Settings: React.FC = () => {
                 {/* Header mit Icon */}
                 <div className="flex items-center mb-6">
                     <Cog6ToothIcon className="h-6 w-6 mr-2" />
-                    <h2 className="text-xl font-semibold">Einstellungen</h2>
+                    <h2 className="text-xl font-semibold">{t('settings.title')}</h2>
                 </div>
                 
                 {/* Tabs für Navigation */}
@@ -233,7 +241,7 @@ const Settings: React.FC = () => {
                             onClick={() => handleTabChange('personal')}
                         >
                             <UserCircleIcon className="h-4 w-4 mr-2" />
-                            Persönlich
+                            {t('settings.personal')}
                         </button>
                         <button
                             className={`${
@@ -244,7 +252,7 @@ const Settings: React.FC = () => {
                             onClick={() => handleTabChange('notifications')}
                         >
                             <BellIcon className="h-4 w-4 mr-2" />
-                            Benachrichtigungen
+                            {t('settings.notifications')}
                         </button>
                         <button
                             className={`${
@@ -255,7 +263,7 @@ const Settings: React.FC = () => {
                             onClick={() => handleTabChange('system')}
                         >
                             <ComputerDesktopIcon className="h-4 w-4 mr-2" />
-                            System
+                            {t('settings.system')}
                         </button>
                     </nav>
                 </div>
@@ -263,11 +271,52 @@ const Settings: React.FC = () => {
                 {/* Tab-Inhalte */}
                 {activeTab === 'personal' && (
                     <div className="space-y-6">
+                        {/* Sprache */}
+                        <div className="flex items-center justify-between border-b pb-6">
+                            <div className="flex-1">
+                                <h3 className="text-lg font-medium dark:text-white">{t('settings.language')}</h3>
+                                <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                                    {t('settings.userLanguage')}
+                                    {organizationLanguage && (
+                                        <span className="block mt-1 text-xs">
+                                            {t('settings.organizationLanguage')}: {organizationLanguage === 'de' ? t('worktime.language.german') : organizationLanguage === 'es' ? t('worktime.language.spanish') : t('worktime.language.english')}
+                                        </span>
+                                    )}
+                                </p>
+                            </div>
+                            <select
+                                value={selectedLanguage || activeLanguage || (user?.language || '') || ''}
+                                onChange={async (e) => {
+                                    const newLanguage = e.target.value;
+                                    setSelectedLanguage(newLanguage);
+                                    if (newLanguage && newLanguage !== activeLanguage) {
+                                        setSavingLanguage(true);
+                                        try {
+                                            await setUserLanguage(newLanguage);
+                                            showMessage(t('common.save'), 'success');
+                                        } catch (error) {
+                                            console.error('Fehler beim Speichern der Sprache:', error);
+                                            showMessage(t('errors.saveLanguageError'), 'error');
+                                        } finally {
+                                            setSavingLanguage(false);
+                                        }
+                                    }
+                                }}
+                                disabled={savingLanguage || languageLoading}
+                                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white ml-4"
+                            >
+                                <option value="">{t('settings.useOrganizationLanguage')}</option>
+                                <option value="de">{t('worktime.language.german')}</option>
+                                <option value="es">{t('worktime.language.spanish')}</option>
+                                <option value="en">{t('worktime.language.english')}</option>
+                            </select>
+                        </div>
+
                         {/* Dark Mode */}
                         <div className="flex items-center justify-between">
                             <div>
-                                <h3 className="text-lg font-medium dark:text-white">Dark Mode</h3>
-                                <p className="text-gray-600 dark:text-gray-400">Dunkles Erscheinungsbild aktivieren</p>
+                                <h3 className="text-lg font-medium dark:text-white">{t('settings.darkMode')}</h3>
+                                <p className="text-gray-600 dark:text-gray-400">{t('settings.darkModeDescription')}</p>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input
@@ -283,18 +332,18 @@ const Settings: React.FC = () => {
                         {/* Monatsabrechnungs-Einstellungen */}
                         <div className="border-t pt-6">
                             {isLoadingSettings ? (
-                                <div className="text-gray-500 dark:text-gray-400">Einstellungen werden geladen...</div>
+                                <div className="text-gray-500 dark:text-gray-400">{t('settings.loadingSettings')}</div>
                             ) : (
                                 <div className="space-y-4">
                                     {/* Toggle für Monthly Report (wie Dark Mode) */}
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <h3 className="text-lg font-medium dark:text-white">Automatische Monatsabrechnung</h3>
+                                            <h3 className="text-lg font-medium dark:text-white">{t('settings.monthlyReport')}</h3>
                                             <p className="text-gray-600 dark:text-gray-400">
-                                                Monatliche Berichte automatisch generieren und versenden
+                                                {t('settings.monthlyReportDescription')}
                                                 {monthlyReportSettings.monthlyReportEnabled && monthlyReportSettings.monthlyReportRecipient && (
                                                     <span className="block text-sm text-green-600 dark:text-green-400 mt-1">
-                                                        ✓ Aktiviert - Berichte gehen an: {monthlyReportSettings.monthlyReportRecipient.split('\n')[0]}
+                                                        ✓ {t('settings.monthlyReportEnabled')} {monthlyReportSettings.monthlyReportRecipient.split('\n')[0]}
                                                     </span>
                                                 )}
                                             </p>
@@ -327,35 +376,31 @@ const Settings: React.FC = () => {
                     <div className="space-y-8">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h3 className="text-lg font-medium mb-2 dark:text-white">Logo hochladen</h3>
-                                <p className="text-gray-600 dark:text-gray-400">Laden Sie ein Logo für Ihr Unternehmen hoch</p>
+                                <h3 className="text-lg font-medium mb-2 dark:text-white">{t('settings.logoUpload')}</h3>
+                                <p className="text-gray-600 dark:text-gray-400">{t('settings.logoUploadDescription')}</p>
                             </div>
-                            <div>
-                                <div className="group relative">
-                                    <input
-                                        type="file"
-                                        accept="image/png,image/jpeg"
-                                        onChange={handleFileSelect}
-                                        className={`block text-sm text-gray-500 dark:text-gray-400
-                                            file:mr-4 file:py-2 file:px-4
-                                            file:rounded-full file:border-0
-                                            file:text-sm file:font-semibold
-                                            file:bg-blue-50 file:text-blue-700
-                                            dark:file:bg-blue-900 dark:file:text-blue-300
-                                            hover:file:bg-blue-100 dark:hover:file:bg-blue-800
-                                            ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        disabled={isUploading}
-                                    />
-                                    <div className="absolute left-0 bottom-[calc(100%+0.5rem)] px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-normal max-w-xs pointer-events-none z-50">
-                                        <p>Erlaubte Dateitypen: PNG, JPEG</p>
-                                        <p>Maximale Dateigröße: 5MB</p>
-                                    </div>
-                                </div>
-                                {isUploading && (
-                                    <div className="text-blue-600 dark:text-blue-400 text-sm">
-                                        Wird hochgeladen...
-                                    </div>
-                                )}
+                            <div className="flex items-center gap-2">
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/png,image/jpeg"
+                                    onChange={handleFileSelect}
+                                    className="hidden"
+                                    disabled={isUploading}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isUploading}
+                                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                    title={isUploading ? t('settings.logoUploading') : t('settings.logoUploadButton')}
+                                >
+                                    {isUploading ? (
+                                        <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                                    ) : (
+                                        <DocumentArrowUpIcon className="h-5 w-5" />
+                                    )}
+                                </button>
                             </div>
                         </div>
 
@@ -367,7 +412,7 @@ const Settings: React.FC = () => {
 
                         {previewUrl && (
                             <div className="mt-4">
-                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Vorschau:</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{t('settings.logoPreview')}</p>
                                 <img
                                     src={previewUrl}
                                     alt="Logo Vorschau"
@@ -377,47 +422,70 @@ const Settings: React.FC = () => {
                         )}
 
                         <div className="border-t pt-6">
-                            <h3 className="text-lg font-medium mb-4 dark:text-white">Upload-Verzeichnisse</h3>
+                            <h3 className="text-lg font-medium mb-4 dark:text-white">{t('settings.uploadDirectories')}</h3>
                             
                             <div className="space-y-4">
                                 <div>
                                     <label htmlFor="taskAttachmentsPath" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Verzeichnis für Task-Anhänge
+                                        {t('settings.taskAttachmentsPath')}
                                     </label>
                                     <input
                                         type="text"
                                         id="taskAttachmentsPath"
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                                         defaultValue="uploads/task-attachments"
-                                        placeholder="z.B. uploads/task-attachments"
+                                        placeholder={t('settings.taskAttachmentsPathPlaceholder')}
                                     />
                                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                        Relativer Pfad zum Speichern von Task-Anhängen
+                                        {t('settings.taskAttachmentsPathDescription')}
                                     </p>
                                 </div>
 
                                 <div>
                                     <label htmlFor="requestAttachmentsPath" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                        Verzeichnis für Request-Anhänge
+                                        {t('settings.requestAttachmentsPath')}
                                     </label>
                                     <input
                                         type="text"
                                         id="requestAttachmentsPath"
                                         className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
                                         defaultValue="uploads/request-attachments"
-                                        placeholder="z.B. uploads/request-attachments"
+                                        placeholder={t('settings.requestAttachmentsPathPlaceholder')}
                                     />
                                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                        Relativer Pfad zum Speichern von Request-Anhängen
+                                        {t('settings.requestAttachmentsPathDescription')}
                                     </p>
                                 </div>
 
                                 <div className="mt-4">
                                     <button
                                         type="button"
-                                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
+                                        onClick={async () => {
+                                            setIsSaving(true);
+                                            try {
+                                                const taskPath = (document.getElementById('taskAttachmentsPath') as HTMLInputElement)?.value;
+                                                const requestPath = (document.getElementById('requestAttachmentsPath') as HTMLInputElement)?.value;
+                                                
+                                                // TODO: API-Call zum Speichern der Pfade implementieren
+                                                await new Promise(resolve => setTimeout(resolve, 500)); // Placeholder
+                                                
+                                                toast.success(t('settings.saveDirectoriesSuccess'));
+                                            } catch (error) {
+                                                console.error('Fehler beim Speichern der Upload-Verzeichnisse:', error);
+                                                toast.error(t('errors.saveUploadDirectoriesError'));
+                                            } finally {
+                                                setIsSaving(false);
+                                            }
+                                        }}
+                                        disabled={isSaving}
+                                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        title={isSaving ? t('settings.savingDirectories') : t('settings.saveDirectories')}
                                     >
-                                        Speichern
+                                        {isSaving ? (
+                                            <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                                        ) : (
+                                            <CheckIcon className="h-5 w-5" />
+                                        )}
                                     </button>
                                 </div>
                             </div>
@@ -425,9 +493,9 @@ const Settings: React.FC = () => {
 
                         {/* Database Management Section */}
                         <div className="border-t pt-6">
-                            <h3 className="text-lg font-medium mb-4 dark:text-white">Datenbank-Verwaltung</h3>
+                            <h3 className="text-lg font-medium mb-4 dark:text-white">{t('settings.databaseManagement')}</h3>
                             <p className="text-gray-600 dark:text-gray-400 mb-6">
-                                Erweiterte Funktionen zur Verwaltung der Datenbank. Nur für Administratoren.
+                                {t('settings.databaseManagementDescription')}
                             </p>
                             <DatabaseManagement />
                         </div>

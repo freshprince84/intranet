@@ -9,7 +9,9 @@ import {
   getJoinRequests,
   processJoinRequest,
   searchOrganizations,
-  getOrganizationStats
+  getOrganizationStats,
+  getOrganizationLanguage,
+  updateOrganizationLanguage
 } from '../controllers/organizationController';
 
 const router = express.Router();
@@ -21,6 +23,8 @@ router.use(organizationMiddleware);
 // Organisation-Routen
 router.get('/current', getCurrentOrganization);
 router.get('/current/stats', getOrganizationStats);
+router.get('/current/language', getOrganizationLanguage);
+router.put('/current/language', updateOrganizationLanguage);
 router.post('/', createOrganization);
 router.put('/current', updateOrganization);
 

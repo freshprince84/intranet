@@ -12,6 +12,7 @@ interface TableSettingsRequest {
     tableId: string;
     columnOrder: string[];
     hiddenColumns: string[];
+    viewMode?: 'table' | 'cards';
 }
 
 // Funktion zum Abrufen der Tabelleneinstellungen eines Benutzers für eine bestimmte Tabelle
@@ -48,12 +49,18 @@ export const getUserTableSettings = async (req: AuthenticatedRequest, res: Respo
         }
 
         // Einstellungen zurückgeben (JSON-Strings in Arrays konvertieren)
-        res.json({
+        const response: any = {
             id: settings.id,
             tableId: settings.tableId,
             columnOrder: JSON.parse(settings.columnOrder),
             hiddenColumns: JSON.parse(settings.hiddenColumns)
-        });
+        };
+
+        if (settings.viewMode) {
+            response.viewMode = settings.viewMode;
+        }
+
+        res.json(response);
     } catch (error) {
         console.error('Error in getUserTableSettings:', error);
         res.status(500).json({ 
@@ -67,7 +74,7 @@ export const getUserTableSettings = async (req: AuthenticatedRequest, res: Respo
 export const saveUserTableSettings = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const userId = parseInt(req.userId, 10);
-        const { tableId, columnOrder, hiddenColumns } = req.body as TableSettingsRequest;
+        const { tableId, columnOrder, hiddenColumns, viewMode } = req.body as TableSettingsRequest;
 
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
@@ -104,7 +111,8 @@ export const saveUserTableSettings = async (req: AuthenticatedRequest, res: Resp
                 },
                 data: {
                     columnOrder: columnOrderJson,
-                    hiddenColumns: hiddenColumnsJson
+                    hiddenColumns: hiddenColumnsJson,
+                    viewMode: viewMode || null
                 }
             });
         } else {
@@ -114,18 +122,25 @@ export const saveUserTableSettings = async (req: AuthenticatedRequest, res: Resp
                     userId,
                     tableId,
                     columnOrder: columnOrderJson,
-                    hiddenColumns: hiddenColumnsJson
+                    hiddenColumns: hiddenColumnsJson,
+                    viewMode: viewMode || null
                 }
             });
         }
 
         // Aktualisierte Einstellungen zurückgeben (JSON-Strings in Arrays konvertieren)
-        res.json({
+        const response: any = {
             id: settings.id,
             tableId: settings.tableId,
             columnOrder: JSON.parse(settings.columnOrder),
             hiddenColumns: JSON.parse(settings.hiddenColumns)
-        });
+        };
+
+        if (settings.viewMode) {
+            response.viewMode = settings.viewMode;
+        }
+
+        res.json(response);
     } catch (error) {
         console.error('Error in saveUserTableSettings:', error);
         res.status(500).json({ 

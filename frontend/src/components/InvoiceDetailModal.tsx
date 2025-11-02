@@ -8,6 +8,7 @@ import {
   UserIcon,
   BuildingOfficeIcon,
   ClockIcon,
+  ArrowPathIcon,
   LinkIcon
 } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
@@ -479,37 +480,33 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
                 <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                   <button
                     onClick={handleDownloadPdf}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    className="p-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 rounded-md"
+                    title="PDF herunterladen"
                   >
-                    <DocumentArrowDownIcon className="h-5 w-5 mr-2" />
-                    PDF herunterladen
+                    <DocumentArrowDownIcon className="h-5 w-5" />
                   </button>
                   
                   {invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && getRemainingAmount() > 0 && (
                     <button
                       onClick={handleMarkAsPaid}
                       disabled={isMarkingAsPaid}
-                      className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 dark:bg-green-700 dark:hover:bg-green-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={isMarkingAsPaid ? 'Verarbeitung...' : 'Als bezahlt markieren'}
                     >
                       {isMarkingAsPaid ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                          Verarbeitung...
-                        </>
+                        <ArrowPathIcon className="h-5 w-5 animate-spin" />
                       ) : (
-                        <>
-                          <CurrencyDollarIcon className="h-5 w-5 mr-2" />
-                          Als bezahlt markieren
-                        </>
+                        <CurrencyDollarIcon className="h-5 w-5" />
                       )}
                     </button>
                   )}
                   
                   <button
                     onClick={onClose}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
+                    title="Schließen"
                   >
-                    Schließen
+                    <XMarkIcon className="h-5 w-5" />
                   </button>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { FilterCondition } from './FilterRow.tsx';
 import axiosInstance from '../config/axios.ts';
@@ -32,6 +33,21 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   onFilterChange,
   defaultFilterName = 'Heute'
 }) => {
+  const { t } = useTranslation();
+  
+  // Übersetze Filter-Namen beim Anzeigen
+  const translateFilterName = (name: string): string => {
+    // Standard-Filter übersetzen
+    if (name === 'Archiv') return t('requests.filters.archiv');
+    if (name === 'Aktuell') return t('requests.filters.aktuell');
+    if (name === 'Heute') return t('common.today', 'Heute');
+    if (name === 'Woche') return t('common.week', 'Woche');
+    if (name === 'Aktive') return t('common.active', 'Aktive');
+    if (name === 'Alle') return t('common.all', 'Alle');
+    // Für alle anderen Namen, gib sie unverändert zurück (z.B. Client-Namen)
+    return name;
+  };
+  
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -425,7 +441,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   };
   
   if (loading) {
-    return <div className="flex justify-center items-center py-2">Lade Filter...</div>;
+    return <div className="flex justify-center items-center py-2">{t('common.loadingFilters')}</div>;
   }
   
   if (error) {
@@ -451,13 +467,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                   ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
             } ${!filter.isPlaceholder && isStandardFilter(filter.name) ? 'font-bold' : ''}`}
-            title={filter.isPlaceholder ? 'Lädt...' : filter.name}
+            title={filter.isPlaceholder ? t('common.loading') : translateFilterName(filter.name)}
           >
             <span className="truncate max-w-[100px]">
               {filter.isPlaceholder && filter.name === '████████' ? (
                 <span className="inline-block w-16 h-4 bg-gray-300 dark:bg-gray-500 rounded animate-pulse"></span>
               ) : (
-                filter.name
+                translateFilterName(filter.name)
               )}
             </span>
             {!filter.isPlaceholder && !isStandardFilter(filter.name) && (
@@ -499,9 +515,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                     } ${isStandardFilter(filter.name) ? 'font-bold' : ''}`}
-                    title={filter.name}
+                    title={translateFilterName(filter.name)}
                   >
-                    <span className="truncate flex-1">{filter.name}</span>
+                    <span className="truncate flex-1">{translateFilterName(filter.name)}</span>
                     {!isStandardFilter(filter.name) && (
                       <button
                         onClick={(e) => {

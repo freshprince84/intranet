@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { IdentificationDocument } from '../types/interfaces.ts';
 import * as idDocApi from '../api/identificationDocumentApi.ts';
 import useMessage from '../hooks/useMessage.ts';
@@ -11,6 +12,7 @@ interface IdentificationDocumentListProps {
 }
 
 const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({ userId, isAdmin = false }) => {
+  const { t } = useTranslation();
   const [documents, setDocuments] = useState<IdentificationDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,8 +30,8 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
       setDocuments(docs);
       setError(null);
     } catch (err: any) {
-      setError(err.message || 'Fehler beim Laden der Dokumente');
-      showMessage('Fehler beim Laden der Dokumente', 'error');
+      setError(err.message || t('identificationDocuments.loadError'));
+      showMessage(t('identificationDocuments.loadError'), 'error');
     } finally {
       setLoading(false);
     }
@@ -42,13 +44,13 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
 
   // Dokument löschen
   const handleDeleteDocument = async (docId: number) => {
-    if (window.confirm('Sind Sie sicher, dass Sie dieses Dokument löschen möchten?')) {
+    if (window.confirm(t('identificationDocuments.deleteConfirm'))) {
       try {
         await idDocApi.deleteDocument(docId);
-        showMessage('Dokument erfolgreich gelöscht', 'success');
+        showMessage(t('identificationDocuments.deleteSuccess'), 'success');
         loadDocuments();
       } catch (err: any) {
-        showMessage(`Fehler beim Löschen: ${err.message || 'Unbekannter Fehler'}`, 'error');
+        showMessage(`${t('identificationDocuments.deleteError')}: ${err.message || 'Unbekannter Fehler'}`, 'error');
       }
     }
   };
@@ -56,16 +58,16 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
   // Dokument verifizieren (nur für Admins)
   const handleVerifyDocument = async (docId: number) => {
     if (!currentUser) {
-      showMessage('Benutzer nicht authentifiziert', 'error');
+      showMessage(t('identificationDocuments.notAuthenticated'), 'error');
       return;
     }
     
     try {
       await idDocApi.verifyDocument(docId, currentUser.id);
-      showMessage('Dokument erfolgreich verifiziert', 'success');
+      showMessage(t('identificationDocuments.verifySuccess'), 'success');
       loadDocuments();
     } catch (err: any) {
-      showMessage(`Fehler bei der Verifizierung: ${err.message || 'Unbekannter Fehler'}`, 'error');
+      showMessage(`${t('identificationDocuments.verifyError')}: ${err.message || 'Unbekannter Fehler'}`, 'error');
     }
   };
 
@@ -77,7 +79,7 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
       // Öffnen des Links in einem neuen Tab
       window.open(url, '_blank');
     } catch (err: any) {
-      showMessage(`Fehler beim Herunterladen: ${err.message || 'Unbekannter Fehler'}`, 'error');
+      showMessage(`${t('identificationDocuments.downloadError')}: ${err.message || 'Unbekannter Fehler'}`, 'error');
     } finally {
       setIsDownloading(null);
     }
@@ -86,13 +88,13 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
   // Dokumenttyp formatieren
   const formatDocumentType = (type: string): string => {
     const typeMap: Record<string, string> = {
-      passport: 'Reisepass',
-      national_id: 'Personalausweis',
-      driving_license: 'Führerschein',
-      residence_permit: 'Aufenthaltserlaubnis',
-      work_permit: 'Arbeitserlaubnis',
-      tax_id: 'Steuer-ID',
-      social_security: 'Sozialversicherungsausweis',
+      passport: t('identificationDocuments.types.passport'),
+      national_id: t('identificationDocuments.types.national_id'),
+      driving_license: t('identificationDocuments.types.driving_license'),
+      residence_permit: t('identificationDocuments.types.residence_permit'),
+      work_permit: t('identificationDocuments.types.work_permit'),
+      tax_id: t('identificationDocuments.types.tax_id'),
+      social_security: t('identificationDocuments.types.social_security'),
     };
     
     return typeMap[type] || type;
@@ -111,7 +113,7 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
   if (showAddForm) {
     return (
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
-        <h3 className="text-lg font-medium mb-4">Neues Dokument hinzufügen</h3>
+        <h3 className="text-lg font-medium mb-4">{t('identificationDocuments.addDocument')}</h3>
         <IdentificationDocumentForm
           userId={userId}
           onDocumentSaved={() => {
@@ -127,7 +129,7 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
   if (editingDocument) {
     return (
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
-        <h3 className="text-lg font-medium mb-4">Dokument bearbeiten</h3>
+        <h3 className="text-lg font-medium mb-4">{t('identificationDocuments.editDocument')}</h3>
         <IdentificationDocumentForm
           userId={userId}
           document={editingDocument}
@@ -144,12 +146,12 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
   return (
     <div className="bg-white dark:bg-gray-800 shadow rounded-lg p-4">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium">Identifikationsdokumente</h3>
+        <h3 className="text-lg font-medium">{t('identificationDocuments.title')}</h3>
         <button
           onClick={() => setShowAddForm(true)}
           className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700"
         >
-          Neues Dokument
+          {t('identificationDocuments.newDocument')}
         </button>
       </div>
 
@@ -161,7 +163,7 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
         <div className="text-red-600 p-4">{error}</div>
       ) : documents.length === 0 ? (
         <div className="text-gray-500 dark:text-gray-400 p-4">
-          Keine Dokumente vorhanden. Fügen Sie ein neues Dokument hinzu.
+          {t('identificationDocuments.noDocuments')}
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -169,25 +171,25 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Typ
+                  {t('identificationDocuments.columns.type')}
                 </th>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Nummer
+                  {t('identificationDocuments.columns.number')}
                 </th>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Land
+                  {t('identificationDocuments.columns.country')}
                 </th>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Gültig von
+                  {t('identificationDocuments.columns.validFrom')}
                 </th>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Gültig bis
+                  {t('identificationDocuments.columns.validTo')}
                 </th>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Status
+                  {t('identificationDocuments.columns.status')}
                 </th>
                 <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Aktionen
+                  {t('identificationDocuments.columns.actions')}
                 </th>
               </tr>
             </thead>
@@ -212,11 +214,11 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
                   <td className="px-3 py-2 whitespace-nowrap text-sm">
                     {doc.isVerified ? (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-700 dark:text-green-100">
-                        Verifiziert
+                        {t('identificationDocuments.status.verified')}
                       </span>
                     ) : (
                       <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800 dark:bg-yellow-700 dark:text-yellow-100">
-                        Ausstehend
+                        {t('identificationDocuments.status.pending')}
                       </span>
                     )}
                   </td>
@@ -227,26 +229,26 @@ const IdentificationDocumentList: React.FC<IdentificationDocumentListProps> = ({
                         className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
                         disabled={isDownloading === doc.id}
                       >
-                        {isDownloading === doc.id ? 'Lädt...' : 'Anzeigen'}
+                        {isDownloading === doc.id ? t('identificationDocuments.actions.downloading') : t('identificationDocuments.actions.view')}
                       </button>
                       <button
                         onClick={() => setEditingDocument(doc)}
                         className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300"
                       >
-                        Bearbeiten
+                        {t('identificationDocuments.actions.edit')}
                       </button>
                       <button
                         onClick={() => handleDeleteDocument(doc.id)}
                         className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
                       >
-                        Löschen
+                        {t('identificationDocuments.actions.delete')}
                       </button>
                       {isAdmin && !doc.isVerified && (
                         <button
                           onClick={() => handleVerifyDocument(doc.id)}
                           className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
                         >
-                          Verifizieren
+                          {t('identificationDocuments.actions.verify')}
                         </button>
                       )}
                     </div>

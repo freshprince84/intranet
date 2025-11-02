@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
@@ -9,6 +10,8 @@ import TableColumnConfig from './TableColumnConfig.tsx';
 import FilterPane from './FilterPane.tsx';
 import SavedFilterTags from './SavedFilterTags.tsx';
 import { FilterCondition } from './FilterRow.tsx';
+import { applyFilters, evaluateDateCondition } from '../utils/filterLogic.ts';
+import { getStatusColor, getStatusText } from '../utils/statusUtils.tsx';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { 
   PlusIcon,
@@ -21,9 +24,21 @@ import {
   FunnelIcon,
   DocumentTextIcon,
   DocumentDuplicateIcon,
-  InformationCircleIcon
+  InformationCircleIcon,
+  Squares2X2Icon,
+  TableCellsIcon,
+  UserIcon,
+  BuildingOfficeIcon,
+  CalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 import MarkdownPreview from './MarkdownPreview.tsx';
+import DataCard, { MetadataItem } from './shared/DataCard.tsx';
+import CardGrid from './shared/CardGrid.tsx';
+import { getExpiryStatus, getExpiryColorClasses, createDueDateMetadataItem } from '../utils/expiryUtils.ts';
 
 interface Request {
   id: number;
@@ -55,15 +70,7 @@ interface SortConfig {
   direction: 'asc' | 'desc';
 }
 
-// Definition der verfügbaren Spalten
-const availableColumns = [
-  { id: 'title', label: 'Titel', shortLabel: 'Titel' },
-  { id: 'status', label: 'Status', shortLabel: 'Status' },
-  { id: 'requestedByResponsible', label: 'Angefragt von / Verantwortlicher', shortLabel: 'Angefr. / Ver.' },
-  { id: 'branch', label: 'Niederlassung', shortLabel: 'Niedr.' },
-  { id: 'dueDate', label: 'Fälligkeit', shortLabel: 'Fällig' },
-  { id: 'actions', label: 'Aktionen', shortLabel: 'Akt.' }
-];
+// Definition der verfügbaren Spalten - werden dynamisch aus Übersetzungen geladen
 
 // Standardreihenfolge der Spalten
 const defaultColumnOrder = ['title', 'requestedByResponsible', 'status', 'dueDate', 'branch', 'actions'];
@@ -71,7 +78,57 @@ const defaultColumnOrder = ['title', 'requestedByResponsible', 'status', 'dueDat
 // TableID für gespeicherte Filter
 const REQUESTS_TABLE_ID = 'requests-table';
 
+// Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
+// Tabellen-Spalte -> Card-Metadaten (kann Array sein für 1:N Mapping)
+const tableToCardMapping: Record<string, string[]> = {
+  'title': ['title'],
+  'status': ['status'],
+  'requestedByResponsible': ['requestedBy', 'responsible'], // 1 Tabelle-Spalte -> 2 Card-Metadaten
+  'branch': ['branch'],
+  'dueDate': ['dueDate'],
+  'actions': [], // Keine Card-Entsprechung
+  'description': ['description'] // Nur in Cards verfügbar
+};
+
+// Reverse Mapping: Card-Metadaten -> Tabellen-Spalten
+const cardToTableMapping: Record<string, string> = {
+  'title': 'title',
+  'status': 'status',
+  'requestedBy': 'requestedByResponsible',
+  'responsible': 'requestedByResponsible',
+  'branch': 'branch',
+  'dueDate': 'dueDate',
+  'description': 'description'
+};
+
+// Helfer-Funktion: Tabellen-Spalte ausgeblendet -> Card-Metadaten ausblenden
+const getHiddenCardMetadata = (hiddenTableColumns: string[]): Set<string> => {
+  const hiddenCardMetadata = new Set<string>();
+  hiddenTableColumns.forEach(tableCol => {
+    const cardMetadata = tableToCardMapping[tableCol] || [];
+    cardMetadata.forEach(cardMeta => hiddenCardMetadata.add(cardMeta));
+  });
+  return hiddenCardMetadata;
+};
+
+// Helfer-Funktion: Card-Metadaten zu Tabellen-Spalten konvertieren
+const getCardMetadataFromColumnOrder = (columnOrder: string[]): string[] => {
+  const cardMetadata: string[] = [];
+  columnOrder.forEach(tableCol => {
+    const cardMeta = tableToCardMapping[tableCol];
+    if (cardMeta && cardMeta.length > 0) {
+      cardMetadata.push(...cardMeta);
+    }
+  });
+  // Beschreibung hinzufügen, wenn nicht schon vorhanden
+  if (!cardMetadata.includes('description')) {
+    cardMetadata.push('description');
+  }
+  return cardMetadata;
+};
+
 const Requests: React.FC = () => {
+  const { t } = useTranslation();
   const [requests, setRequests] = useState<Request[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +138,10 @@ const Requests: React.FC = () => {
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
   
+  // Filter State Management (Controlled Mode)
+  const [activeFilterName, setActiveFilterName] = useState<string>('');
+  const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
+  
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -89,6 +150,22 @@ const Requests: React.FC = () => {
   const { user } = useAuth();
   const { hasPermission } = usePermissions();
   
+  // Status-Funktionen (verwende zentrale Utils mit Übersetzungsunterstützung)
+  // WICHTIG: Funktionalität bleibt identisch - nur Code-Duplikation entfernt!
+  const getStatusLabel = (status: string): string => {
+    return getStatusText(status, 'request', t);
+  };
+  
+  // Definition der verfügbaren Spalten (dynamisch aus Übersetzungen)
+  const availableColumns = useMemo(() => [
+    { id: 'title', label: t('requests.columns.title'), shortLabel: t('requests.columns.title') },
+    { id: 'status', label: t('requests.columns.status'), shortLabel: t('requests.columns.status') },
+    { id: 'requestedByResponsible', label: t('requests.columns.requestedByResponsible'), shortLabel: t('requests.columns.requestedByResponsible').split('/')[0] },
+    { id: 'branch', label: t('requests.columns.branch'), shortLabel: t('requests.columns.branch').substring(0, 5) },
+    { id: 'dueDate', label: t('requests.columns.dueDate'), shortLabel: t('requests.columns.dueDate').substring(0, 5) },
+    { id: 'actions', label: t('requests.columns.actions'), shortLabel: t('common.actions').substring(0, 3) }
+  ], [t]);
+  
   // Tabellen-Einstellungen laden
   const {
     settings,
@@ -96,10 +173,12 @@ const Requests: React.FC = () => {
     updateColumnOrder,
     updateHiddenColumns,
     toggleColumnVisibility,
-    isColumnVisible
+    isColumnVisible,
+    updateViewMode
   } = useTableSettings('dashboard_requests', {
     defaultColumnOrder,
-    defaultHiddenColumns: []
+    defaultHiddenColumns: [],
+    defaultViewMode: 'cards'
   });
 
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
@@ -107,6 +186,51 @@ const Requests: React.FC = () => {
 
   // State für Paginierung
   const [displayLimit, setDisplayLimit] = useState<number>(10);
+
+  // View-Mode aus Settings laden
+  const viewMode = settings.viewMode || 'cards';
+  
+  // Lokale Sortierrichtungen für Cards (nicht persistiert)
+  const [cardSortDirections, setCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
+    const defaults: Record<string, 'asc' | 'desc'> = {
+      title: 'asc',
+      status: 'asc',
+      requestedBy: 'asc',
+      responsible: 'asc',
+      branch: 'asc',
+      dueDate: 'asc',
+      description: 'asc'
+    };
+    return defaults;
+  });
+
+  // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
+  // Card-Metadaten-Reihenfolge aus columnOrder ableiten
+  const cardMetadataOrder = useMemo(() => {
+    return getCardMetadataFromColumnOrder(settings.columnOrder || defaultColumnOrder);
+  }, [settings.columnOrder]);
+
+  // Versteckte Card-Metadaten aus hiddenColumns ableiten
+  const hiddenCardMetadata = useMemo(() => {
+    return getHiddenCardMetadata(settings.hiddenColumns || []);
+  }, [settings.hiddenColumns]);
+
+  // Sichtbare Card-Metadaten (alle Card-Metadaten minus versteckte)
+  const visibleCardMetadata = useMemo(() => {
+    return new Set(cardMetadataOrder.filter(meta => !hiddenCardMetadata.has(meta)));
+  }, [cardMetadataOrder, hiddenCardMetadata]);
+
+  // CSS-Klasse für Dashboard-Box setzen (für CSS-basierte Schattierungs-Entfernung)
+  useEffect(() => {
+    const wrapper = document.querySelector('.dashboard-requests-wrapper');
+    if (wrapper) {
+      if (viewMode === 'cards') {
+        wrapper.classList.add('cards-mode');
+      } else {
+        wrapper.classList.remove('cards-mode');
+      }
+    }
+  }, [viewMode]);
 
   const fetchRequests = async () => {
     try {
@@ -154,14 +278,23 @@ const Requests: React.FC = () => {
         );
 
         const existingFilters = existingFiltersResponse.data || [];
-        const archivFilterExists = existingFilters.some(filter => filter.name === 'Archiv');
-        const aktuellFilterExists = existingFilters.some(filter => filter.name === 'Aktuell');
+        // Suche nach Filtern mit deutschen oder übersetzten Namen (für Rückwärtskompatibilität)
+        const archivFilterExists = existingFilters.some(filter => 
+          filter.name === 'Archiv' || 
+          filter.name === t('requests.filters.archiv') ||
+          filter.name === 'Archivo'
+        );
+        const aktuellFilterExists = existingFilters.some(filter => 
+          filter.name === 'Aktuell' || 
+          filter.name === t('requests.filters.aktuell') ||
+          filter.name === 'Actual'
+        );
 
         // Erstelle "Archiv"-Filter, wenn er noch nicht existiert
         if (!archivFilterExists) {
           const archivFilter = {
             tableId: REQUESTS_TABLE_ID,
-            name: 'Archiv',
+            name: 'Archiv', // Immer auf Deutsch speichern, wird beim Anzeigen übersetzt
             conditions: [
               { column: 'status', operator: 'equals', value: 'approved' },
               { column: 'status', operator: 'equals', value: 'denied' }
@@ -182,11 +315,11 @@ const Requests: React.FC = () => {
           console.log('Archiv-Filter für Requests erstellt');
         }
 
-      // Erstelle "Aktuell"-Filter, wenn er noch nicht existiert
+      // Erstelle "Aktuell"-Filter, wenn er noch nicht existiert (immer mit deutschem Namen für Konsistenz)
       if (!aktuellFilterExists) {
         const aktuellFilter = {
           tableId: REQUESTS_TABLE_ID,
-          name: 'Aktuell',
+          name: 'Aktuell', // Immer auf Deutsch speichern, wird beim Anzeigen übersetzt
           conditions: [
             { column: 'status', operator: 'notEquals', value: 'approved' },
             { column: 'status', operator: 'notEquals', value: 'denied' }
@@ -214,18 +347,52 @@ const Requests: React.FC = () => {
     createStandardFilters();
   }, []);
 
-  const getStatusColor = (status: Request['status']) => {
+  // Initialer Default-Filter setzen (Controlled Mode)
+  useEffect(() => {
+    const setInitialFilter = async () => {
+      try {
+        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(REQUESTS_TABLE_ID));
+        const filters = response.data;
+        
+        // Suche nach "Aktuell" Filter (kann auch "Actual" sein für Rückwärtskompatibilität)
+        const aktuellFilter = filters.find((filter: any) => 
+          filter.name === 'Aktuell' || filter.name === 'Actual'
+        );
+        if (aktuellFilter) {
+          setActiveFilterName('Aktuell'); // Speichere deutschen Namen, wird beim Anzeigen übersetzt
+          setSelectedFilterId(aktuellFilter.id);
+          applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators);
+        }
+      } catch (error) {
+        console.error('Fehler beim Setzen des initialen Filters:', error);
+      }
+    };
+
+    setInitialFilter();
+  }, []);
+
+  // getStatusText wird jetzt direkt von statusUtils verwendet (siehe getStatusLabel oben)
+
+  // Status-Workflow: vorheriger/nächster Status für Shift-Buttons
+  const getPreviousStatus = (status: Request['status']): Request['status'] | null => {
+    switch (status) {
+      case 'to_improve':
+      case 'approved':
+      case 'denied':
+        return 'approval';
+      default:
+        return null;
+    }
+  };
+
+  const getNextStatuses = (status: Request['status']): Request['status'][] => {
     switch (status) {
       case 'approval':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'approved':
-        return 'bg-green-100 text-green-800';
+        return ['approved', 'to_improve', 'denied'];
       case 'to_improve':
-        return 'bg-orange-100 text-orange-800';
-      case 'denied':
-        return 'bg-red-100 text-red-800';
+        return ['denied'];
       default:
-        return 'bg-gray-100 text-gray-800';
+        return [];
     }
   };
 
@@ -323,6 +490,15 @@ const Requests: React.FC = () => {
   const resetFilterConditions = () => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
+    setActiveFilterName('');
+    setSelectedFilterId(null);
+  };
+  
+  // Filter Change Handler (Controlled Mode)
+  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    setActiveFilterName(name);
+    setSelectedFilterId(id);
+    applyFilterConditions(conditions, operators);
   };
 
   const getActiveFilterCount = () => {
@@ -345,111 +521,158 @@ const Requests: React.FC = () => {
         }
         
         // Wenn erweiterte Filterbedingungen definiert sind, wende diese an
+        // WICHTIG: Verwende zentrale Filter-Logik - Funktionalität bleibt identisch!
         if (filterConditions.length > 0) {
-          // Implementiere die logische Verknüpfung der Bedingungen (UND/ODER)
-          let result = filterConditions.length > 0;
-          
-          for (let i = 0; i < filterConditions.length; i++) {
-            const condition = filterConditions[i];
-            let conditionMet = false;
-            
-            switch (condition.column) {
-              case 'title':
-                if (condition.operator === 'equals') {
-                  conditionMet = request.title === condition.value;
-                } else if (condition.operator === 'contains') {
-                  conditionMet = request.title.toLowerCase().includes((condition.value as string || '').toLowerCase());
-                } else if (condition.operator === 'startsWith') {
-                  conditionMet = request.title.toLowerCase().startsWith((condition.value as string || '').toLowerCase());
-                } else if (condition.operator === 'endsWith') {
-                  conditionMet = request.title.toLowerCase().endsWith((condition.value as string || '').toLowerCase());
-                }
-                break;
-              
-              case 'status':
-                if (condition.operator === 'equals') {
-                  conditionMet = request.status === condition.value;
-                } else if (condition.operator === 'notEquals') {
-                  conditionMet = request.status !== condition.value;
-                }
-                break;
-              
-              case 'requestedBy':
-                const requestedByName = `${request.requestedBy.firstName} ${request.requestedBy.lastName}`.toLowerCase();
-                if (condition.operator === 'contains') {
-                  conditionMet = requestedByName.includes((condition.value as string || '').toLowerCase());
-                } else if (condition.operator === 'equals') {
-                  conditionMet = requestedByName === (condition.value as string || '').toLowerCase();
-                }
-                break;
-              
-              case 'responsible':
-                const responsibleName = `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase();
-                if (condition.operator === 'contains') {
-                  conditionMet = responsibleName.includes((condition.value as string || '').toLowerCase());
-                } else if (condition.operator === 'equals') {
-                  conditionMet = responsibleName === (condition.value as string || '').toLowerCase();
-                }
-                break;
-              
-              case 'branch':
-                if (condition.operator === 'contains') {
-                  conditionMet = request.branch.name.toLowerCase().includes((condition.value as string || '').toLowerCase());
-                } else if (condition.operator === 'equals') {
-                  conditionMet = request.branch.name.toLowerCase() === (condition.value as string || '').toLowerCase();
-                }
-                break;
-              
-              case 'dueDate':
-                const requestDate = new Date(request.dueDate);
-                if (condition.operator === 'equals') {
-                  const valueDate = new Date(condition.value as string);
-                  conditionMet = requestDate.toDateString() === valueDate.toDateString();
-                } else if (condition.operator === 'before') {
-                  const valueDate = new Date(condition.value as string);
-                  conditionMet = requestDate < valueDate;
-                } else if (condition.operator === 'after') {
-                  const valueDate = new Date(condition.value as string);
-                  conditionMet = requestDate > valueDate;
-                }
-                break;
+          // Column-Evaluatoren für Requests (exakt gleiche Logik wie vorher)
+          const columnEvaluators: any = {
+            'title': (req: Request, cond: FilterCondition) => {
+              const value = (cond.value as string || '').toLowerCase();
+              const title = req.title.toLowerCase();
+              if (cond.operator === 'equals') return req.title === cond.value;
+              if (cond.operator === 'contains') return title.includes(value);
+              if (cond.operator === 'startsWith') return title.startsWith(value);
+              if (cond.operator === 'endsWith') return title.endsWith(value);
+              return null;
+            },
+            'status': (req: Request, cond: FilterCondition) => {
+              if (cond.operator === 'equals') return req.status === cond.value;
+              if (cond.operator === 'notEquals') return req.status !== cond.value;
+              return null;
+            },
+            'requestedBy': (req: Request, cond: FilterCondition) => {
+              const requestedByName = `${req.requestedBy.firstName} ${req.requestedBy.lastName}`.toLowerCase();
+              const value = (cond.value as string || '').toLowerCase();
+              if (cond.operator === 'contains') return requestedByName.includes(value);
+              if (cond.operator === 'equals') return requestedByName === value;
+              return null;
+            },
+            'responsible': (req: Request, cond: FilterCondition) => {
+              const responsibleName = `${req.responsible.firstName} ${req.responsible.lastName}`.toLowerCase();
+              const value = (cond.value as string || '').toLowerCase();
+              if (cond.operator === 'contains') return responsibleName.includes(value);
+              if (cond.operator === 'equals') return responsibleName === value;
+              return null;
+            },
+            'branch': (req: Request, cond: FilterCondition) => {
+              const branchName = req.branch.name.toLowerCase();
+              const value = (cond.value as string || '').toLowerCase();
+              if (cond.operator === 'contains') return branchName.includes(value);
+              if (cond.operator === 'equals') return branchName === value;
+              return null;
+            },
+            'dueDate': (req: Request, cond: FilterCondition) => {
+              return evaluateDateCondition(req.dueDate, cond);
             }
-            
-            // Verknüpfe das Ergebnis dieser Bedingung mit dem Gesamtergebnis
-            if (i === 0) {
-              result = conditionMet;
-            } else {
-              const operator = filterLogicalOperators[i - 1];
-              result = operator === 'AND' ? (result && conditionMet) : (result || conditionMet);
+          };
+
+          const getFieldValue = (req: Request, columnId: string): any => {
+            switch (columnId) {
+              case 'title': return req.title;
+              case 'status': return req.status;
+              case 'requestedBy': return `${req.requestedBy.firstName} ${req.requestedBy.lastName}`;
+              case 'responsible': return `${req.responsible.firstName} ${req.responsible.lastName}`;
+              case 'branch': return req.branch.name;
+              case 'dueDate': return req.dueDate;
+              default: return (req as any)[columnId];
             }
-          }
+          };
+
+          // Wende Filter mit zentraler Logik an (nur für dieses einzelne Item)
+          const filtered = applyFilters(
+            [request],
+            filterConditions,
+            filterLogicalOperators,
+            getFieldValue,
+            columnEvaluators
+          );
           
-          if (!result) return false;
+          if (filtered.length === 0) return false;
         }
         
         return true;
       })
       .sort((a, b) => {
-        let aValue: any = a[sortConfig.key as keyof Request];
-        let bValue: any = b[sortConfig.key as keyof Request];
+        // Bei Cards-Mode: Multi-Sortierung basierend auf Spaltenreihenfolge
+        if (viewMode === 'cards') {
+          // Sortiere nach sichtbaren Spalten in der definierten Reihenfolge
+          const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
+          
+          for (const columnId of sortableColumns) {
+            let aValue: any;
+            let bValue: any;
+            
+            // Hole Werte basierend auf Spalten-ID
+            switch (columnId) {
+              case 'title':
+                aValue = a.title.toLowerCase();
+                bValue = b.title.toLowerCase();
+                break;
+              case 'status':
+                // Status-Priorität für Sortierung: approval < to_improve < approved < denied
+                const statusOrder: Record<string, number> = {
+                  'approval': 0,
+                  'to_improve': 1,
+                  'approved': 2,
+                  'denied': 3
+                };
+                aValue = statusOrder[a.status] ?? 999;
+                bValue = statusOrder[b.status] ?? 999;
+                break;
+              case 'requestedBy':
+                aValue = `${a.requestedBy.firstName} ${a.requestedBy.lastName}`.toLowerCase();
+                bValue = `${b.requestedBy.firstName} ${b.requestedBy.lastName}`.toLowerCase();
+                break;
+              case 'responsible':
+                aValue = `${a.responsible.firstName} ${a.responsible.lastName}`.toLowerCase();
+                bValue = `${b.responsible.firstName} ${b.responsible.lastName}`.toLowerCase();
+                break;
+              case 'branch':
+                aValue = a.branch.name.toLowerCase();
+                bValue = b.branch.name.toLowerCase();
+                break;
+              case 'dueDate':
+                aValue = new Date(a.dueDate).getTime();
+                bValue = new Date(b.dueDate).getTime();
+                break;
+              case 'description':
+                aValue = (a.description || '').toLowerCase();
+                bValue = (b.description || '').toLowerCase();
+                break;
+              default:
+                continue;
+            }
+            
+            // Vergleiche Werte (berücksichtige Sortierrichtung pro Spalte)
+            const direction = cardSortDirections[columnId] || 'asc';
+            if (aValue < bValue) return direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return direction === 'asc' ? 1 : -1;
+            // Bei Gleichheit: Weiter zur nächsten Spalte
+          }
+          
+          return 0; // Alle Spalten identisch
+        } else {
+          // Tabellen-Mode: Normale Einzel-Sortierung
+          let aValue: any = a[sortConfig.key as keyof Request];
+          let bValue: any = b[sortConfig.key as keyof Request];
 
-        // Handle nested properties
-        if (sortConfig.key === 'requestedBy.firstName') {
-          aValue = a.requestedBy.firstName;
-          bValue = b.requestedBy.firstName;
-        } else if (sortConfig.key === 'responsible.firstName') {
-          aValue = a.responsible.firstName;
-          bValue = b.responsible.firstName;
-        } else if (sortConfig.key === 'branch.name') {
-          aValue = a.branch.name;
-          bValue = b.branch.name;
+          // Handle nested properties
+          if (sortConfig.key === 'requestedBy.firstName') {
+            aValue = a.requestedBy.firstName;
+            bValue = b.requestedBy.firstName;
+          } else if (sortConfig.key === 'responsible.firstName') {
+            aValue = a.responsible.firstName;
+            bValue = b.responsible.firstName;
+          } else if (sortConfig.key === 'branch.name') {
+            aValue = a.branch.name;
+            bValue = b.branch.name;
+          }
+
+          if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+          return 0;
         }
-
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
-        return 0;
       });
-  }, [requests, searchTerm, sortConfig, filterConditions, filterLogicalOperators]);
+  }, [requests, searchTerm, sortConfig, filterConditions, filterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
 
   // Funktion zum Kopieren eines Requests
   const handleCopyRequest = async (request) => {
@@ -529,9 +752,12 @@ const Requests: React.FC = () => {
         />
       )}
 
-      <div className="border-0 rounded-lg">
+      <div 
+        className={viewMode === 'cards' ? '' : 'border-0 rounded-lg'}
+        data-view-mode={viewMode}
+      >
         {/* Neu angeordnete UI-Elemente in einer Zeile */}
-        <div className="flex items-center mb-4 justify-between">
+        <div className={`flex items-center mb-4 justify-between ${viewMode === 'cards' ? '-mx-6 px-6' : ''}`}>
           {/* Linke Seite: "Neuer Request"-Button */}
           <div className="flex items-center">
             {hasPermission('requests', 'write', 'table') && (
@@ -539,8 +765,8 @@ const Requests: React.FC = () => {
                 onClick={() => setIsCreateModalOpen(true)}
                 className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
                 style={{ width: '30.19px', height: '30.19px' }}
-                title="Neuen Request erstellen"
-                aria-label="Neuen Request erstellen"
+                title={t('requests.createRequest')}
+                aria-label={t('requests.createRequest')}
               >
                 <PlusIcon className="h-4 w-4" />
               </button>
@@ -550,42 +776,148 @@ const Requests: React.FC = () => {
           {/* Mitte: Titel mit Icon */}
           <div className="flex items-center">
             <DocumentTextIcon className="h-6 w-6 mr-2 dark:text-white" />
-            <h2 className="text-xl font-semibold dark:text-white">Requests</h2>
+            <h2 className="text-xl font-semibold dark:text-white">{t('requests.title')}</h2>
           </div>
           
-          {/* Rechte Seite: Suchfeld, Filter und Spalten */}
+          {/* Rechte Seite: Suchfeld, Filter, View-Toggle und Spalten */}
           <div className="flex items-center gap-1.5">
             <input
               type="text"
-              placeholder="Suchen..."
+              placeholder={t('common.search') + '...'}
               className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             
+            {/* View-Mode Toggle */}
+            <button
+              className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+              }`}
+              onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
+              title={viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
+            >
+              {viewMode === 'table' ? (
+                <Squares2X2Icon className="h-5 w-5" />
+              ) : (
+                <TableCellsIcon className="h-5 w-5" />
+              )}
+            </button>
+            
             {/* Filter-Button */}
             <button
-              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1`}
+              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
               onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-              title="Filter"
+              title={t('common.filter')}
+              style={{ position: 'relative' }}
             >
               <FunnelIcon className="h-5 w-5" />
               {getActiveFilterCount() > 0 && (
-                <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center z-10" style={{ position: 'absolute', top: '-0.25rem', right: '-0.25rem' }}>
                   {getActiveFilterCount()}
                 </span>
               )}
             </button>
             
-            {/* Spalten-Konfiguration */}
+            {/* Anzeige anpassen - bei beiden Ansichten */}
             <div className="ml-1">
               <TableColumnConfig
-                columns={availableColumns}
-                visibleColumns={visibleColumnIds}
-                columnOrder={settings.columnOrder}
-                onToggleColumnVisibility={toggleColumnVisibility}
-                onMoveColumn={handleMoveColumn}
+                columns={viewMode === 'cards'
+                  ? [
+                      { id: 'title', label: t('requests.columns.title') },
+                      { id: 'status', label: t('requests.columns.status') },
+                      { id: 'requestedBy', label: t('requests.columns.requestedBy') },
+                      { id: 'responsible', label: t('requests.columns.responsible') },
+                      { id: 'branch', label: t('requests.columns.branch') },
+                      { id: 'dueDate', label: t('requests.columns.dueDate') },
+                      { id: 'description', label: t('common.description') }
+                    ]
+                  : availableColumns}
+                visibleColumns={viewMode === 'cards'
+                  ? Array.from(visibleCardMetadata)
+                  : visibleColumnIds}
+                columnOrder={viewMode === 'cards'
+                  ? cardMetadataOrder
+                  : settings.columnOrder}
+                onToggleColumnVisibility={(columnId) => {
+                  if (viewMode === 'cards') {
+                    // Card-Metadaten-ID -> Tabellen-Spalten-ID
+                    const tableColumnId = cardToTableMapping[columnId];
+                    if (tableColumnId) {
+                      // Wenn requestedBy oder responsible ausgeblendet wird, verstecke requestedByResponsible
+                      // Wenn beide requestedBy und responsible ausgeblendet werden, verstecke requestedByResponsible
+                      if (tableColumnId === 'requestedByResponsible') {
+                        // Prüfe ob beide bereits ausgeblendet sind
+                        const otherCardMeta = columnId === 'requestedBy' ? 'responsible' : 'requestedBy';
+                        const otherHidden = hiddenCardMetadata.has(otherCardMeta);
+                        const currentlyHidden = settings.hiddenColumns.includes(tableColumnId);
+                        
+                        if (currentlyHidden && !otherHidden) {
+                          // Eine der beiden wird wieder angezeigt, also requestedByResponsible wieder anzeigen
+                          toggleColumnVisibility(tableColumnId);
+                        } else if (!currentlyHidden && otherHidden) {
+                          // Die andere ist bereits ausgeblendet, also requestedByResponsible ausblenden
+                          toggleColumnVisibility(tableColumnId);
+                        } else if (!currentlyHidden) {
+                          // Erste wird ausgeblendet, noch nicht requestedByResponsible ausblenden
+                          // (wird erst ausgeblendet wenn beide ausgeblendet sind)
+                          // Für jetzt: einfach requestedByResponsible ausblenden wenn eine ausgeblendet wird
+                          toggleColumnVisibility(tableColumnId);
+                        }
+                      } else {
+                        // Normale Spalte: direkt ein/ausblenden
+                        toggleColumnVisibility(tableColumnId);
+                      }
+                    }
+                  } else {
+                    toggleColumnVisibility(columnId);
+                  }
+                }}
+                onMoveColumn={viewMode === 'cards' 
+                  ? (dragIndex: number, hoverIndex: number) => {
+                      // Card-Metadaten-Reihenfolge ändern = Tabellen-Spalten-Reihenfolge ändern
+                      const newCardOrder = [...cardMetadataOrder];
+                      const movingCardMeta = newCardOrder[dragIndex];
+                      newCardOrder.splice(dragIndex, 1);
+                      newCardOrder.splice(hoverIndex, 0, movingCardMeta);
+                      
+                      // Konvertiere Card-Metadaten-Reihenfolge zurück zu Tabellen-Spalten-Reihenfolge
+                      // Finde die ursprüngliche Tabellen-Spalte für jedes Card-Metadatum
+                      const newTableOrder: string[] = [];
+                      const processedTableCols = new Set<string>();
+                      
+                      newCardOrder.forEach(cardMeta => {
+                        const tableCol = cardToTableMapping[cardMeta];
+                        if (tableCol && !processedTableCols.has(tableCol)) {
+                          newTableOrder.push(tableCol);
+                          processedTableCols.add(tableCol);
+                        }
+                      });
+                      
+                      // Fehlende Tabellen-Spalten hinzufügen (actions, etc.)
+                      settings.columnOrder.forEach(tableCol => {
+                        if (!newTableOrder.includes(tableCol)) {
+                          newTableOrder.push(tableCol);
+                        }
+                      });
+                      
+                      updateColumnOrder(newTableOrder);
+                    }
+                  : handleMoveColumn}
                 onClose={() => {}}
+                buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
+                modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
+                sortDirections={viewMode === 'cards' ? cardSortDirections : undefined}
+                onSortDirectionChange={viewMode === 'cards' 
+                  ? (columnId: string, direction: 'asc' | 'desc') => {
+                      // Lokale Sortierrichtung aktualisieren (nicht persistiert)
+                      setCardSortDirections(prev => ({
+                        ...prev,
+                        [columnId]: direction
+                      }));
+                    }
+                  : undefined}
+                showSortDirection={viewMode === 'cards'}
               />
             </div>
           </div>
@@ -593,33 +925,42 @@ const Requests: React.FC = () => {
 
         {/* Filter-Pane */}
         {isFilterModalOpen && (
-          <FilterPane
+          <div className={viewMode === 'cards' ? '-mx-6 px-6' : ''}>
+            <FilterPane
             columns={[
-              { id: 'title', label: 'Titel' },
-              { id: 'status', label: 'Status' },
-              { id: 'requestedBy', label: 'Angefragt von' },
-              { id: 'responsible', label: 'Verantwortlich' },
-              { id: 'branch', label: 'Niederlassung' },
-              { id: 'dueDate', label: 'Fälligkeit' }
+              { id: 'title', label: t('requests.columns.title') },
+              { id: 'status', label: t('requests.columns.status') },
+              { id: 'requestedBy', label: t('requests.columns.requestedBy') },
+              { id: 'responsible', label: t('requests.columns.responsible') },
+              { id: 'branch', label: t('requests.columns.branch') },
+              { id: 'dueDate', label: t('requests.columns.dueDate') }
             ]}
             onApply={applyFilterConditions}
             onReset={resetFilterConditions}
             savedConditions={filterConditions}
             savedOperators={filterLogicalOperators}
             tableId={REQUESTS_TABLE_ID}
-          />
+            />
+          </div>
         )}
         
         {/* Gespeicherte Filter als Tags anzeigen */}
-        <SavedFilterTags
+        <div className={viewMode === 'cards' ? '-mx-6 px-6' : ''}>
+          <SavedFilterTags
           tableId={REQUESTS_TABLE_ID}
           onSelectFilter={applyFilterConditions}
           onReset={resetFilterConditions}
+          activeFilterName={activeFilterName}
+          selectedFilterId={selectedFilterId}
+          onFilterChange={handleFilterChange}
           defaultFilterName="Aktuell"
-        />
+          />
+        </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        {/* Conditional Rendering: Table oder Cards */}
+        {viewMode === 'table' ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 {/* Dynamisch generierte Spaltenüberschriften basierend auf den sichtbaren Spalten */}
@@ -689,10 +1030,19 @@ const Requests: React.FC = () => {
                 </tr>
               ) : (
                 <>
-                  {filteredAndSortedRequests.slice(0, displayLimit).map(request => (
-                    <tr key={request.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                      {/* Dynamisch generierte Zellen basierend auf den sichtbaren Spalten */}
-                      {visibleColumnIds.map(columnId => {
+                  {filteredAndSortedRequests.slice(0, displayLimit).map(request => {
+                    const expiryStatus = getExpiryStatus(request.dueDate, 'request');
+                    const expiryColors = getExpiryColorClasses(expiryStatus);
+                    
+                    return (
+                      <tr 
+                        key={request.id} 
+                        className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                          expiryStatus !== 'none' ? `${expiryColors.bgClass} ${expiryColors.borderClass} border-l-4` : ''
+                        }`}
+                      >
+                        {/* Dynamisch generierte Zellen basierend auf den sichtbaren Spalten */}
+                        {visibleColumnIds.map(columnId => {
                         switch (columnId) {
                           case 'title':
                             return (
@@ -703,7 +1053,7 @@ const Requests: React.FC = () => {
                                     <div className="ml-2 relative group">
                                       <button 
                                         className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                                        title="Beschreibung anzeigen"
+                                        title={t('common.description')}
                                       >
                                         <InformationCircleIcon className="h-5 w-5" />
                                       </button>
@@ -718,8 +1068,8 @@ const Requests: React.FC = () => {
                           case 'status':
                             return (
                               <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status)} dark:bg-opacity-30 status-col`}>
-                                  {request.status}
+                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status, 'request')} dark:bg-opacity-30 status-col`}>
+                                  {getStatusLabel(request.status)}
                                 </span>
                               </td>
                             );
@@ -728,13 +1078,13 @@ const Requests: React.FC = () => {
                               <td key={columnId} className="px-6 py-4 whitespace-nowrap">
                                 <div className="flex flex-col">
                                   <div className="text-sm text-gray-900 dark:text-gray-200">
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Angefragt von:</span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">Angefr. v.:</span><br />
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('requests.columns.requestedBy')}:</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">{t('requests.columns.requestedBy').substring(0, 5)}:</span><br />
                                     {`${request.requestedBy.firstName} ${request.requestedBy.lastName}`}
                                   </div>
                                   <div className="text-sm text-gray-900 dark:text-gray-200 mt-1">
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Verantwortlich:</span>
-                                    <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">Ver.:</span><br />
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('requests.columns.responsible')}:</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">{t('requests.columns.responsible').substring(0, 4)}:</span><br />
                                     {`${request.responsible.firstName} ${request.responsible.lastName}`}
                                   </div>
                                 </div>
@@ -747,10 +1097,15 @@ const Requests: React.FC = () => {
                               </td>
                             );
                           case 'dueDate':
+                            const expiryStatusForDate = getExpiryStatus(request.dueDate, 'request');
+                            const expiryColorsForDate = getExpiryColorClasses(expiryStatusForDate);
                             return (
                               <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                                <div className="text-sm text-gray-900 dark:text-gray-200">
+                                <div className={`text-sm ${expiryStatusForDate !== 'none' ? expiryColorsForDate.textClass : 'text-gray-900 dark:text-gray-200'}`}>
                                   {new Date(request.dueDate).toLocaleDateString()}
+                                  {expiryStatusForDate !== 'none' && (
+                                    <span className="ml-2 text-xs">⚠</span>
+                                  )}
                                 </div>
                               </td>
                             );
@@ -764,21 +1119,21 @@ const Requests: React.FC = () => {
                                       <button
                                         onClick={() => handleStatusChange(request.id, 'approved')}
                                         className="p-1 bg-green-600 dark:bg-green-500 text-white rounded hover:bg-green-700 dark:hover:bg-green-600"
-                                        title="Genehmigen"
+                                        title={t('requests.actions.approve')}
                                       >
                                         <CheckIcon className="h-5 w-5" />
                                       </button>
                                       <button
                                         onClick={() => handleStatusChange(request.id, 'to_improve')}
                                         className="p-1 bg-orange-600 dark:bg-orange-500 text-white rounded hover:bg-orange-700 dark:hover:bg-orange-600"
-                                        title="Verbessern"
+                                        title={t('requests.actions.improve')}
                                       >
                                         <ExclamationTriangleIcon className="h-5 w-5" />
                                       </button>
                                       <button
                                         onClick={() => handleStatusChange(request.id, 'denied')}
                                         className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
-                                        title="Ablehnen"
+                                        title={t('requests.actions.deny')}
                                       >
                                         <XMarkIcon className="h-5 w-5" />
                                       </button>
@@ -789,14 +1144,14 @@ const Requests: React.FC = () => {
                                       <button
                                         onClick={() => handleStatusChange(request.id, 'approval')}
                                         className="p-1 bg-yellow-600 dark:bg-yellow-500 text-white rounded hover:bg-yellow-700 dark:hover:bg-yellow-600"
-                                        title="Erneut prüfen"
+                                        title={t('requests.actions.recheck')}
                                       >
                                         <ArrowPathIcon className="h-5 w-5" />
                                       </button>
                                       <button
                                         onClick={() => handleStatusChange(request.id, 'denied')}
                                         className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
-                                        title="Ablehnen"
+                                        title={t('requests.actions.deny')}
                                       >
                                         <XMarkIcon className="h-5 w-5" />
                                       </button>
@@ -806,7 +1161,7 @@ const Requests: React.FC = () => {
                                     <button
                                       onClick={() => handleStatusChange(request.id, 'approval')}
                                       className="p-1 bg-yellow-600 dark:bg-yellow-500 text-white rounded hover:bg-yellow-700 dark:hover:bg-yellow-600"
-                                      title="Erneut prüfen"
+                                      title={t('requests.actions.recheck')}
                                     >
                                       <ArrowPathIcon className="h-5 w-5" />
                                     </button>
@@ -827,7 +1182,7 @@ const Requests: React.FC = () => {
                                     <button
                                       onClick={() => handleCopyRequest(request)}
                                       className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 copy-button ml-0.5"
-                                      title="Request kopieren"
+                                      title={t('requests.actions.copy')}
                                     >
                                       <DocumentDuplicateIcon className="h-5 w-5" />
                                     </button>
@@ -838,14 +1193,217 @@ const Requests: React.FC = () => {
                           default:
                             return null;
                         }
-                      })}
-                    </tr>
-                  ))}
+                        })}
+                      </tr>
+                    );
+                  })}
                 </>
               )}
             </tbody>
           </table>
         </div>
+        ) : (
+          /* Card-Ansicht - ohne Box-Schattierung, Cards auf voller Breite */
+          <div className="-mx-6">
+            {filteredAndSortedRequests.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+                <DocumentTextIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />
+                <div className="text-sm">{t('requests.createRequest.noRequestsFound')}</div>
+              </div>
+            ) : (
+              <CardGrid>
+                {filteredAndSortedRequests.slice(0, displayLimit).map(request => {
+                  // Metadaten basierend auf sichtbaren Einstellungen - strukturiert nach Position
+                  const metadata: MetadataItem[] = [];
+                  
+                  // Links: Niederlassung (meist ausgeblendet)
+                  if (visibleCardMetadata.has('branch')) {
+                    metadata.push({
+                      icon: <BuildingOfficeIcon className="h-4 w-4" />,
+                      label: t('requests.columns.branch'),
+                      value: request.branch.name,
+                      section: 'left'
+                    });
+                  }
+                  
+                  // Haupt-Metadaten: Ersteller (erste Zeile in der Mitte)
+                  if (visibleCardMetadata.has('requestedBy')) {
+                    metadata.push({
+                      icon: <UserIcon className="h-4 w-4" />,
+                      label: t('requests.columns.requestedBy'),
+                      value: `${request.requestedBy.firstName} ${request.requestedBy.lastName}`,
+                      section: 'main'
+                    });
+                  }
+                  
+                  // Verantwortlicher (zweite Zeile in der Mitte)
+                  if (visibleCardMetadata.has('responsible')) {
+                    metadata.push({
+                      icon: <UserIcon className="h-4 w-4" />,
+                      label: t('requests.columns.responsible'),
+                      value: `${request.responsible.firstName} ${request.responsible.lastName}`,
+                      section: 'main-second' // Neue Section für zweite Zeile
+                    });
+                  }
+                  
+                  // Rechts: Fälligkeit (erste Zeile rechts, neben Status)
+                  if (visibleCardMetadata.has('dueDate')) {
+                    const dueDateItem = createDueDateMetadataItem(
+                      request.dueDate,
+                      'request',
+                      undefined,
+                      undefined,
+                      <CalendarIcon className="h-4 w-4" />,
+                      t('requests.columns.dueDate'),
+                      (date) => format(date, 'dd.MM.yyyy', { locale: de }),
+                      false // Keine Badge-Art, nur Text
+                    );
+                    metadata.push({
+                      ...dueDateItem,
+                      section: 'right-inline' // Neue Section für inline rechts (neben Status)
+                    });
+                  }
+                  
+                  // Full-Width: Beschreibung
+                  if (visibleCardMetadata.has('description') && request.description) {
+                    metadata.push({
+                      label: t('common.description'),
+                      value: '', // Nicht verwendet bei descriptionContent
+                      descriptionContent: request.description, // Für expandierbare Beschreibung
+                      section: 'full'
+                    });
+                  }
+
+                  // Action-Buttons zusammenstellen
+                  const actionButtons = (
+                    <div className="flex items-center space-x-2">
+                      {/* Status-Buttons */}
+                      {request.status === 'approval' && hasPermission('requests', 'write', 'table') && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(request.id, 'approved');
+                            }}
+                            className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700"
+                            title={t('requests.actions.approve')}
+                          >
+                            <CheckIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(request.id, 'to_improve');
+                            }}
+                            className="p-1.5 bg-orange-600 text-white rounded hover:bg-orange-700"
+                            title={t('requests.actions.improve')}
+                          >
+                            <ExclamationTriangleIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(request.id, 'denied');
+                            }}
+                            className="p-1.5 bg-red-600 text-white rounded hover:bg-red-700"
+                            title={t('requests.actions.deny')}
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+                      {request.status === 'to_improve' && hasPermission('requests', 'write', 'table') && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(request.id, 'approval');
+                            }}
+                            className="p-1.5 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                            title={t('requests.actions.recheck')}
+                          >
+                            <ArrowPathIcon className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleStatusChange(request.id, 'denied');
+                            }}
+                            className="p-1.5 bg-red-600 text-white rounded hover:bg-red-700"
+                            title={t('requests.actions.deny')}
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+                      {(request.status === 'approved' || request.status === 'denied') && hasPermission('requests', 'write', 'table') && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStatusChange(request.id, 'approval');
+                          }}
+                          className="p-1.5 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                          title={t('requests.actions.recheck')}
+                        >
+                          <ArrowPathIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                      {hasPermission('requests', 'write', 'table') && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedRequest(request);
+                            setIsEditModalOpen(true);
+                          }}
+                          className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                          title={t('common.edit')}
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                      {hasPermission('requests', 'both', 'table') && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCopyRequest(request);
+                          }}
+                          className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                          title={t('requests.actions.copy')}
+                        >
+                          <DocumentDuplicateIcon className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  );
+
+                  // Status-Workflow bestimmen für Shift-Buttons
+                  const previousStatus = getPreviousStatus(request.status);
+                  const nextStatuses = getNextStatuses(request.status);
+                  const firstNextStatus = nextStatuses.length > 0 ? nextStatuses[0] : null;
+
+                  return (
+                    <DataCard
+                      key={request.id}
+                      title={request.title}
+                      status={{
+                        label: getStatusText(request.status, 'request', t),
+                        color: getStatusColor(request.status, 'request'),
+                        onPreviousClick: previousStatus && hasPermission('requests', 'write', 'table')
+                          ? () => handleStatusChange(request.id, previousStatus)
+                          : undefined,
+                        onNextClick: firstNextStatus && hasPermission('requests', 'write', 'table')
+                          ? () => handleStatusChange(request.id, firstNextStatus)
+                          : undefined
+                      }}
+                      metadata={metadata}
+                      actions={actionButtons}
+                    />
+                  );
+                })}
+              </CardGrid>
+            )}
+          </div>
+        )}
         
         {/* "Mehr anzeigen" Button */}
         {filteredAndSortedRequests.length > displayLimit && (
@@ -854,7 +1412,7 @@ const Requests: React.FC = () => {
               className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
               onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
             >
-              Mehr anzeigen ({filteredAndSortedRequests.length - displayLimit} verbleibend)
+              {t('common.showMore')} ({filteredAndSortedRequests.length - displayLimit} {t('common.remaining')})
             </button>
           </div>
         )}

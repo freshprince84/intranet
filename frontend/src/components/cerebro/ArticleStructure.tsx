@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, Outlet, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { cerebroApi, CerebroArticleStructure } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { 
@@ -129,6 +130,7 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
   
   const { slug } = useParams<{ slug: string }>();
   const { hasPermission } = usePermissions();
+  const { t } = useTranslation();
   
   // Berechtigungsprüfung für den Neuer Artikel-Button
   useEffect(() => {
@@ -274,13 +276,13 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
                 <button
                   className="p-2 rounded-full text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900"
                   onClick={() => navigate('/cerebro/create')}
-                  aria-label="Neuen Artikel erstellen"
+                  aria-label={t('cerebro.actions.createArticle')}
                 >
                   <HPlusIcon className="h-5 w-5" />
                 </button>
                 {/* Tooltip */}
                 <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 dark:bg-gray-700 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
-                  Neuen Artikel erstellen
+                  {t('cerebro.actions.createArticle')}
                 </div>
               </div>
             )}

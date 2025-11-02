@@ -41,6 +41,10 @@ model User {
   invoiceSettings          InvoiceSettings?
   monthlyReports           MonthlyConsultationReport[]
   notifications            Notification[]
+  invitationsAccepted      OrganizationInvitation[]    @relation("InvitationAcceptor")
+  invitationsSent          OrganizationInvitation[]    @relation("Inviter")
+  joinRequestsProcessed    OrganizationJoinRequest[]   @relation("JoinProcessor")
+  joinRequestsSent         OrganizationJoinRequest[]   @relation("JoinRequester")
   requestsRequester        Request[]                   @relation("requester")
   requestsResponsible      Request[]                   @relation("responsible")
   savedFilters             SavedFilter[]
@@ -52,78 +56,75 @@ model User {
   tableSettings            UserTableSettings[]
   branches                 UsersBranches[]
   workTimes                WorkTime[]
-  joinRequestsSent         OrganizationJoinRequest[] @relation("JoinRequester")
-  joinRequestsProcessed    OrganizationJoinRequest[] @relation("JoinProcessor")
-  invitationsSent          OrganizationInvitation[]  @relation("Inviter") 
-  invitationsAccepted      OrganizationInvitation[]  @relation("InvitationAcceptor")
+  taskStatusChanges        TaskStatusHistory[]         @relation("task_status_changes")
 }
 
 model Organization {
-  id              Int        @id @default(autoincrement())
-  name            String     @unique
-  displayName     String
-  domain          String?    @unique    // Optionale Domain für automatische Zuordnung
-  logo            String?
-  isActive        Boolean    @default(true)
-  maxUsers        Int        @default(50)        // Limit für Benutzeranzahl
-  subscriptionPlan String    @default("basic")   // basic, pro, enterprise
-  subscriptionEnd DateTime?                      // Ablaufdatum Abonnement
-  settings        Json?                          // Organisation-spezifische Einstellungen
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  
-  // Beziehungen
-  roles           Role[]
-  joinRequests    OrganizationJoinRequest[]
-  invitations     OrganizationInvitation[]
+  id               Int                       @id @default(autoincrement())
+  name             String                    @unique
+  displayName      String
+  domain           String?                   @unique
+  logo             String?
+  isActive         Boolean                   @default(true)
+  maxUsers         Int                       @default(50)
+  subscriptionPlan String                    @default("basic")
+  subscriptionEnd  DateTime?
+  settings         Json?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  invitations      OrganizationInvitation[]
+  joinRequests     OrganizationJoinRequest[]
+  roles            Role[]
 }
 
 model OrganizationJoinRequest {
-  id              Int           @id @default(autoincrement())
-  organizationId  Int
-  organization    Organization  @relation(fields: [organizationId], references: [id])
-  requesterId     Int
-  requester       User          @relation("JoinRequester", fields: [requesterId], references: [id])
-  status          JoinRequestStatus @default(pending)
-  message         String?       // Nachricht des Antragstellers
-  response        String?       // Antwort der Organisation
-  processedBy     Int?
-  processor       User?         @relation("JoinProcessor", fields: [processedBy], references: [id])
-  processedAt     DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
+  id             Int               @id @default(autoincrement())
+  organizationId Int
+  requesterId    Int
+  status         JoinRequestStatus @default(pending)
+  message        String?
+  response       String?
+  processedBy    Int?
+  processedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  organization   Organization      @relation(fields: [organizationId], references: [id])
+  processor      User?             @relation("JoinProcessor", fields: [processedBy], references: [id])
+  requester      User              @relation("JoinRequester", fields: [requesterId], references: [id])
+
   @@unique([organizationId, requesterId])
 }
 
 model OrganizationInvitation {
-  id              Int           @id @default(autoincrement())
-  organizationId  Int
-  organization    Organization  @relation(fields: [organizationId], references: [id])
-  email           String
-  roleId          Int
-  role            Role          @relation(fields: [roleId], references: [id])
-  invitedBy       Int
-  inviter         User          @relation("Inviter", fields: [invitedBy], references: [id])
-  token           String        @unique    // Einladungstoken
-  expiresAt       DateTime
-  acceptedAt      DateTime?
-  acceptedBy      Int?
-  acceptor        User?         @relation("InvitationAcceptor", fields: [acceptedBy], references: [id])
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  email          String
+  roleId         Int
+  invitedBy      Int
+  token          String       @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  acceptedBy     Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  acceptor       User?        @relation("InvitationAcceptor", fields: [acceptedBy], references: [id])
+  inviter        User         @relation("Inviter", fields: [invitedBy], references: [id])
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  role           Role         @relation(fields: [roleId], references: [id])
 }
 
 model Role {
-  id          Int          @id @default(autoincrement())
-  name        String       @unique
-  description String?
-  organizationId  Int
-  organization    Organization  @relation(fields: [organizationId], references: [id])
-  permissions Permission[]
-  tasks       Task[]
-  users       UserRole[]
-  invitations OrganizationInvitation[]
+  id             Int                      @id @default(autoincrement())
+  name           String
+  description    String?
+  organizationId Int?
+  invitations    OrganizationInvitation[]
+  permissions    Permission[]
+  organization   Organization?            @relation(fields: [organizationId], references: [id])
+  tasks          Task[]
+  users          UserRole[]
+
+  @@unique([name, organizationId])
 }
 
 model UserRole {
@@ -151,14 +152,15 @@ model Permission {
 }
 
 model Branch {
-  id        Int             @id @default(autoincrement())
-  name      String          @unique
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
-  requests  Request[]
-  tasks     Task[]
-  users     UsersBranches[]
-  workTimes WorkTime[]
+  id                Int                 @id @default(autoincrement())
+  name              String              @unique
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  requests          Request[]
+  tasks             Task[]
+  users             UsersBranches[]
+  workTimes         WorkTime[]
+  taskStatusChanges TaskStatusHistory[]
 }
 
 model UsersBranches {
@@ -212,6 +214,7 @@ model Task {
   attachments      TaskAttachment[]
   carticles        TaskCerebroCarticle[]
   workTimeLinks    WorkTimeTask[]
+  statusHistory    TaskStatusHistory[]
 }
 
 model Request {
@@ -250,6 +253,7 @@ model UserTableSettings {
   tableId       String
   columnOrder   String
   hiddenColumns String
+  viewMode      String? // 'table' oder 'cards'
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   user          User     @relation(fields: [userId], references: [id])
@@ -317,38 +321,38 @@ model NotificationSettings {
 }
 
 model UserNotificationSettings {
-  id                            Int      @id @default(autoincrement())
-  userId                        Int      @unique
-  taskCreate                    Boolean?
-  taskUpdate                    Boolean?
-  taskDelete                    Boolean?
-  taskStatusChange              Boolean?
-  requestCreate                 Boolean?
-  requestUpdate                 Boolean?
-  requestDelete                 Boolean?
-  requestStatusChange           Boolean?
-  userCreate                    Boolean?
-  userUpdate                    Boolean?
-  userDelete                    Boolean?
-  roleCreate                    Boolean?
-  roleUpdate                    Boolean?
-  roleDelete                    Boolean?
-  worktimeStart                 Boolean?
-  worktimeStop                  Boolean?
-  worktimeAutoStop              Boolean? @default(true)
-  createdAt                     DateTime @default(now())
-  updatedAt                     DateTime @updatedAt
-  carticleCreate                Boolean?
-  carticleDelete                Boolean?
-  carticleLink                  Boolean?
-  carticleMention               Boolean?
-  carticleUpdate                Boolean?
-  worktimeManagerStop           Boolean?
-  joinRequestReceived           Boolean?
-  joinRequestApproved           Boolean?
-  joinRequestRejected           Boolean?
+  id                             Int      @id @default(autoincrement())
+  userId                         Int      @unique
+  taskCreate                     Boolean?
+  taskUpdate                     Boolean?
+  taskDelete                     Boolean?
+  taskStatusChange               Boolean?
+  requestCreate                  Boolean?
+  requestUpdate                  Boolean?
+  requestDelete                  Boolean?
+  requestStatusChange            Boolean?
+  userCreate                     Boolean?
+  userUpdate                     Boolean?
+  userDelete                     Boolean?
+  roleCreate                     Boolean?
+  roleUpdate                     Boolean?
+  roleDelete                     Boolean?
+  worktimeStart                  Boolean?
+  worktimeStop                   Boolean?
+  worktimeAutoStop               Boolean? @default(true)
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
+  carticleCreate                 Boolean?
+  carticleDelete                 Boolean?
+  carticleLink                   Boolean?
+  carticleMention                Boolean?
+  carticleUpdate                 Boolean?
+  worktimeManagerStop            Boolean?
+  joinRequestApproved            Boolean?
+  joinRequestReceived            Boolean?
+  joinRequestRejected            Boolean?
   organizationInvitationReceived Boolean?
-  user                          User     @relation(fields: [userId], references: [id])
+  user                           User     @relation(fields: [userId], references: [id])
 }
 
 model EmployeePayroll {
@@ -638,6 +642,24 @@ model WorkTimeTask {
   workTime   WorkTime @relation(fields: [workTimeId], references: [id])
 
   @@unique([workTimeId, taskId])
+}
+
+model TaskStatusHistory {
+  id        Int         @id @default(autoincrement())
+  taskId    Int
+  userId    Int
+  oldStatus TaskStatus?
+  newStatus TaskStatus
+  changedAt DateTime    @default(now())
+  branchId  Int
+  task      Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User        @relation("task_status_changes", fields: [userId], references: [id])
+  branch    Branch      @relation(fields: [branchId], references: [id])
+
+  @@index([taskId])
+  @@index([userId])
+  @@index([changedAt])
+  @@index([branchId])
 }
 
 enum TaskStatus {
