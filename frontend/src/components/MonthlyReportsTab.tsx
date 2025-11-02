@@ -284,7 +284,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
       setReports(response.data);
     } catch (error: any) {
       console.error('Fehler beim Laden der Monatsberichte:', error);
-      toast.error('Fehler beim Laden der Monatsberichte');
+      toast.error(t('analytics.monthlyReports.loadError'));
     } finally {
       setLoading(false);
     }
@@ -305,7 +305,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
       const response = await axiosInstance.post(API_ENDPOINTS.MONTHLY_CONSULTATION_REPORTS.GENERATE_AUTOMATIC);
       console.log('DEBUG: API response:', response);
       await loadReports();
-      toast.success('Monatsbericht erfolgreich erstellt');
+      toast.success(t('analytics.monthlyReports.generateSuccess'));
     } catch (error: any) {
       console.error('DEBUG: Error generating report:', error);
       console.log('DEBUG: Error details:', {
@@ -313,7 +313,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
         data: error.response?.data,
         message: error.message
       });
-      toast.error(error.response?.data?.message || 'Fehler beim Erstellen des Monatsberichts');
+      toast.error(error.response?.data?.message || t('analytics.monthlyReports.generateError'));
     }
   };
 
@@ -334,22 +334,22 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      toast.error('Fehler beim Download des PDFs');
+      toast.error(t('analytics.monthlyReports.downloadError'));
     }
   };
 
   const deleteReport = async (reportId: number) => {
-    if (!window.confirm('Möchten Sie diesen Monatsbericht wirklich löschen?')) {
+    if (!window.confirm(t('analytics.monthlyReports.confirmDelete'))) {
       return;
     }
 
     try {
       await axiosInstance.delete(API_ENDPOINTS.MONTHLY_CONSULTATION_REPORTS.BY_ID(reportId));
       setReports(prev => prev.filter(r => r.id !== reportId));
-      toast.success('Monatsbericht gelöscht');
+      toast.success(t('analytics.monthlyReports.deleteSuccess'));
       checkUnbilledConsultations();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Löschen des Monatsberichts');
+      toast.error(error.response?.data?.message || t('analytics.monthlyReports.deleteError'));
     }
   };
 
@@ -394,7 +394,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
       setClientConsultations(response.data);
     } catch (error) {
       console.error('Fehler beim Laden der Client-Beratungen:', error);
-      toast.error('Fehler beim Laden der Beratungen');
+      toast.error(t('analytics.monthlyReports.consultationsLoadError'));
     } finally {
       setLoadingConsultations(false);
     }
@@ -416,11 +416,11 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
   const getStatusText = (status: string) => {
     switch (status) {
       case 'GENERATED':
-        return 'Erstellt';
+        return t('analytics.monthlyReports.status.generated');
       case 'SENT':
-        return 'Versendet';
+        return t('analytics.monthlyReports.status.sent');
       case 'ARCHIVED':
-        return 'Archiviert';
+        return t('analytics.monthlyReports.status.archived');
       default:
         return status;
     }
@@ -445,7 +445,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          Monatsabrechnungen
+          {t('analytics.monthlyReports.title')}
         </h2>
       </div>
 
@@ -456,11 +456,10 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
             <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5 mr-3" />
             <div className="flex-1">
               <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                Nicht-abgerechnete Beratungen gefunden
+                {t('analytics.monthlyReports.unbilledWarning.title')}
               </h3>
               <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                Sie haben {unbilledCheck.count} nicht-abgerechnete Beratungen. 
-                Erstellen Sie einen Monatsbericht für diese Zeiträume.
+                {t('analytics.monthlyReports.unbilledWarning.message', { count: unbilledCheck.count })}
               </p>
               <button
                 onClick={handleGenerateReport}
@@ -468,7 +467,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                 className="mt-3 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-yellow-800 dark:text-yellow-200 bg-yellow-100 dark:bg-yellow-800 hover:bg-yellow-200 dark:hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500 disabled:opacity-50"
               >
                 <PlusIcon className="h-4 w-4 mr-2" />
-                {generating ? 'Erstelle...' : 'Monatsbericht erstellen'}
+                {generating ? t('analytics.monthlyReports.unbilledWarning.creating') : t('analytics.monthlyReports.unbilledWarning.createButton')}
               </button>
             </div>
           </div>
@@ -486,22 +485,22 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                 {/* Expand-Button Spalte */}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Berichtsnummer
+                {t('analytics.monthlyReports.columns.reportNumber')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Zeitraum
+                {t('analytics.monthlyReports.columns.period')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Empfänger
+                {t('analytics.monthlyReports.columns.recipient')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Stunden
+                {t('analytics.monthlyReports.columns.totalHours')}
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Status
+                {t('analytics.monthlyReports.columns.status')}
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Aktionen
+                {t('analytics.monthlyReports.columns.actions')}
               </th>
             </tr>
           </thead>
@@ -516,7 +515,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                     <button
                       onClick={() => toggleExpanded(report.id)}
                       className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                      title={expandedRows.has(report.id) ? 'Einklappen' : 'Ausklappen'}
+                      title={expandedRows.has(report.id) ? t('common.collapse') : t('common.expand')}
                     >
                       <ChevronDownIcon 
                         className={`h-4 w-4 transition-transform ${
@@ -556,7 +555,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                       <button
                         onClick={() => downloadPDF(report)}
                         className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                        title="PDF herunterladen"
+                        title={t('analytics.monthlyReports.downloadTitle')}
                       >
                         <DocumentArrowDownIcon className="h-5 w-5" />
                       </button>
@@ -572,7 +571,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                         {/* Abrechnungspositionen - Ohne Detail-Informationen darüber */}
                         <div>
                           <h5 className="text-md font-medium text-gray-900 dark:text-white mb-4">
-                            Abrechnungspositionen ({report.items?.length || 0})
+                            {t('analytics.monthlyReports.billingPositions', { count: report.items?.length || 0 })}
                           </h5>
                           
                           {report.items && report.items.length > 0 ? (
@@ -581,16 +580,16 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                                 <thead className="bg-gray-100 dark:bg-gray-700">
                                   <tr>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                      Client
+                                      {t('analytics.monthlyReports.client')}
                                     </th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                      Anzahl Beratungen
+                                      {t('analytics.monthlyReports.consultationCount')}
                                     </th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                      Stunden
+                                      {t('analytics.monthlyReports.columns.totalHours')}
                                     </th>
                                     <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                      Aktionen
+                                      {t('analytics.monthlyReports.actions')}
                                     </th>
                                   </tr>
                                 </thead>
@@ -610,7 +609,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                                         <button
                                           onClick={() => openClientConsultationsSidepane(item.clientId, item.clientName, report.id)}
                                           className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                          title="Beratungen bearbeiten"
+                                          title={t('analytics.monthlyReports.editConsultationsTitle')}
                                         >
                                           <PencilIcon className="h-4 w-4" />
                                         </button>
@@ -622,7 +621,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                             </div>
                           ) : (
                             <div className="text-center text-gray-500 dark:text-gray-400 py-4">
-                              Keine Abrechnungspositionen vorhanden
+                              {t('analytics.monthlyReports.noPositions')}
                             </div>
                           )}
                         </div>
@@ -640,7 +639,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
         <div className="dashboard-monthly-reports-wrapper">
           {sortedReports.length === 0 ? (
             <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
-              Keine Monatsberichte gefunden
+              {t('analytics.monthlyReports.noReports')}
             </div>
           ) : (
             <CardGrid gap="md">
@@ -652,7 +651,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
 
                 if (visibleCardMetadata.has('reportNumber')) {
                   metadata.push({
-                    label: 'Berichtsnummer',
+                    label: t('analytics.monthlyReports.metadata.reportNumber'),
                     value: report.reportNumber,
                     icon: <DocumentArrowDownIcon className="h-4 w-4" />
                   });
@@ -660,7 +659,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
 
                 if (visibleCardMetadata.has('period')) {
                   metadata.push({
-                    label: 'Zeitraum',
+                    label: t('analytics.monthlyReports.metadata.period'),
                     value: `${format(new Date(report.periodStart), 'dd.MM.yyyy', { locale: de })} - ${format(new Date(report.periodEnd), 'dd.MM.yyyy', { locale: de })}`,
                     icon: <CalendarIcon className="h-4 w-4" />
                   });
@@ -668,7 +667,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
 
                 if (visibleCardMetadata.has('recipient')) {
                   metadata.push({
-                    label: 'Empfänger',
+                    label: t('analytics.monthlyReports.metadata.recipient'),
                     value: report.recipient,
                     icon: <BuildingOfficeIcon className="h-4 w-4" />
                   });
@@ -676,7 +675,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
 
                 if (visibleCardMetadata.has('totalHours')) {
                   metadata.push({
-                    label: 'Stunden',
+                    label: t('analytics.monthlyReports.metadata.totalHours'),
                     value: `${Number(report.totalHours).toFixed(2)} h`,
                     icon: <ClockIcon className="h-4 w-4" />
                   });
@@ -684,9 +683,9 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
 
                 // Status-Konfiguration
                 const statusConfig = {
-                  GENERATED: { label: 'Erstellt', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' },
-                  SENT: { label: 'Versendet', color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
-                  ARCHIVED: { label: 'Archiviert', color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }
+                  GENERATED: { label: t('analytics.monthlyReports.status.generated'), color: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300' },
+                  SENT: { label: t('analytics.monthlyReports.status.sent'), color: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' },
+                  ARCHIVED: { label: t('analytics.monthlyReports.status.archived'), color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300' }
                 };
                 const reportStatus = statusConfig[report.status];
 
@@ -745,7 +744,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                                   <button
                                     onClick={() => openClientConsultationsSidepane(item.clientId, item.clientName, report.id)}
                                     className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                    title="Beratungen bearbeiten"
+                                    title={t('analytics.monthlyReports.editConsultationsTitle')}
                                   >
                                     <PencilIcon className="h-4 w-4" />
                                   </button>
@@ -806,7 +805,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                   <div className="px-4 py-6 bg-gray-50 dark:bg-gray-700 sm:px-6">
                     <div className="flex items-center justify-between">
                       <h2 className="text-lg font-medium text-gray-900 dark:text-white" id="slide-over-title">
-                        Beratungen bearbeiten: {editingClientName}
+                        {t('analytics.monthlyReports.editConsultations', { clientName: editingClientName })}
                       </h2>
                       <div className="ml-3 h-7 flex items-center">
                         <button
@@ -814,7 +813,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                           className="bg-gray-50 dark:bg-gray-700 rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           onClick={closeClientConsultationsSidepane}
                         >
-                          <span className="sr-only">Panel schließen</span>
+                          <span className="sr-only">{t('analytics.monthlyReports.closePanel')}</span>
                           <XMarkIcon className="h-6 w-6" aria-hidden="true" />
                         </button>
                       </div>
@@ -828,21 +827,21 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                       {/* Info */}
                       <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
                         <p className="text-sm text-blue-700 dark:text-blue-300">
-                          Hier können Sie die einzelnen Beratungen für <strong>{editingClientName}</strong> bearbeiten, löschen oder neue hinzufügen.
+                          <span dangerouslySetInnerHTML={{ __html: t('analytics.monthlyReports.info', { clientName: editingClientName }) }} />
                         </p>
                       </div>
 
                       {/* Action Buttons */}
                       <div className="flex justify-between items-center">
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                          Beratungen ({clientConsultations.length})
+                          {t('analytics.monthlyReports.consultationsCount', { count: clientConsultations.length })}
                         </h3>
                         <button
                           type="button"
                           className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         >
                           <PlusIcon className="h-4 w-4 mr-2" />
-                          Beratung hinzufügen
+                          {t('analytics.monthlyReports.addConsultation')}
                         </button>
                       </div>
 
@@ -850,7 +849,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                       {loadingConsultations ? (
                         <div className="text-center py-4">
                           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Lade Beratungen...</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">{t('analytics.monthlyReports.loadingConsultations')}</p>
                         </div>
                       ) : clientConsultations.length > 0 ? (
                         <div className="space-y-3">
@@ -861,7 +860,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                                   <div className="flex items-center space-x-4">
                                     <div>
                                       <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                        Startzeit
+                                        {t('analytics.monthlyReports.startTime')}
                                       </label>
                                       <input
                                         type="datetime-local"
@@ -871,7 +870,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                                     </div>
                                     <div>
                                       <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                        Endzeit
+                                        {t('analytics.monthlyReports.endTime')}
                                       </label>
                                       <input
                                         type="datetime-local"
@@ -881,32 +880,32 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                                     </div>
                                     <div className="flex-1">
                                       <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                        Notizen
+                                        {t('analytics.monthlyReports.notes')}
                                       </label>
                                       <input
                                         type="text"
                                         value={consultation.notes || ''}
                                         className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                                        placeholder="Beratungsnotizen..."
+                                        placeholder={t('consultations.notesPlaceholder')}
                                       />
                                     </div>
                                   </div>
                                   <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                                    Dauer: {consultation.endTime ? calculateDuration(consultation.startTime, consultation.endTime) : 'Läuft...'}
+                                    {t('consultations.duration')}: {consultation.endTime ? calculateDuration(consultation.startTime, consultation.endTime) : t('worktime.running')}
                                   </div>
                                 </div>
                                 <div className="flex items-center space-x-2 ml-4">
                                   <button
                                     type="button"
                                     className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                                    title="Speichern"
+                                    title={t('common.save')}
                                   >
                                     <CheckIcon className="h-4 w-4" />
                                   </button>
                                   <button
                                     type="button"
                                     className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                    title="Löschen"
+                                    title={t('common.delete')}
                                   >
                                     <TrashIcon className="h-4 w-4" />
                                   </button>
@@ -918,7 +917,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                       ) : (
                         <div className="text-center text-gray-500 dark:text-gray-400 py-8">
                           <ClockIcon className="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
-                          <p>Keine Beratungen für diesen Client gefunden</p>
+                          <p>{t('consultations.noConsultationsFound')}</p>
                         </div>
                       )}
                     </div>
@@ -932,13 +931,13 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                         className="bg-white dark:bg-gray-600 py-2 px-4 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                         onClick={closeClientConsultationsSidepane}
                       >
-                        Schließen
+                        {t('common.close')}
                       </button>
                       <button
                         type="button"
                         className="bg-blue-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                       >
-                        Alle Änderungen speichern
+                        {t('settings.saveAllChanges')}
                       </button>
                     </div>
                   </div>

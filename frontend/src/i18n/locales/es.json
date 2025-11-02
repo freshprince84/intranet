@@ -73,7 +73,91 @@
     "requestAttachmentsPath": "Directorio para adjuntos de solicitudes",
     "databaseManagement": "Gestión de base de datos",
     "monthlyReport": "Informe mensual automático",
-    "monthlyReportDescription": "Generar y enviar informes mensuales automáticamente"
+    "monthlyReportDescription": "Generar y enviar informes mensuales automáticamente",
+    "saveAllChanges": "Guardar todos los cambios"
+  },
+  "consultations": {
+    "duration": "Duración",
+    "notesPlaceholder": "Notas de consulta...",
+    "noConsultationsFound": "No se encontraron consultas para este cliente",
+    "noPermission": "Sin permiso",
+    "noPermissionMessage": "No tiene permiso para ver consultas.",
+    "loadError": "Error al cargar las consultas",
+    "filters": {
+      "today": "Hoy",
+      "week": "Semana",
+      "unbilled": "No facturado"
+    },
+    "notesUpdated": "Notas actualizadas",
+    "notesUpdateError": "Error al actualizar las notas",
+    "timeUpdated": "Tiempo actualizado",
+    "timeUpdateError": "Error al actualizar el tiempo",
+    "invoice": "Factura individual",
+    "monthlyReport": "Informe mensual",
+    "confirmDelete": "¿Está seguro de que desea eliminar esta consulta? Esta acción no se puede deshacer.",
+    "deleteSuccess": "Consulta eliminada con éxito",
+    "deleteError": "Error al eliminar la consulta",
+    "invoiceCreated": "¡Factura creada! El PDF se puede descargar en la gestión de facturas.",
+    "listTitle": "Lista de consultas",
+    "count": "{{count}} consulta",
+    "count_plural": "{{count}} consultas",
+    "total": "Total: {{totalDuration}}",
+    "advancedFilters": "Filtros avanzados",
+    "createInvoiceFromFiltered": "Crear factura de consultas filtradas",
+    "columns": {
+      "client": "Cliente",
+      "branch": "Sucursal",
+      "notes": "Notas",
+      "date": "Fecha",
+      "duration": "Duración (horas)",
+      "durationHours": "Duración (horas)",
+      "invoiceStatus": "Estado de facturación",
+      "time": "Tiempo",
+      "startTime": "Hora de inicio",
+      "endTime": "Hora de finalización"
+    },
+    "tryOtherFilters": "Pruebe otros términos de búsqueda o filtros.",
+    "noConsultationsYet": "Aún no se han realizado consultas.",
+    "midday": "Mediodía",
+    "active": "Activo",
+    "tasks": "Tareas ({{count}})",
+    "moreTasks": "+{{count}} más",
+    "linkTask": {
+      "title": "Vincular tarea",
+      "searchPlaceholder": "Buscar tarea...",
+      "loadError": "Error al cargar las tareas",
+      "selectTask": "Por favor seleccione una tarea",
+      "success": "Tarea vinculada exitosamente",
+      "error": "Error al vincular la tarea",
+      "noTasksFound": "No se encontraron tareas coincidentes",
+      "link": "Vincular"
+    },
+    "addNotes": "Agregar notas...",
+    "selectBranch": "Por favor seleccione una sucursal",
+    "started": "Consulta iniciada",
+    "startError": "Error al iniciar la consulta",
+    "stopped": "Consulta finalizada",
+    "stopError": "Error al finalizar la consulta",
+    "manualSaveSuccess": "Consulta registrada con éxito",
+    "manualSaveError": "Error al registrar la consulta",
+    "trackerTitle": "Rastreador de consultas",
+    "activeWith": "Consulta activa con",
+    "startedAt": "Iniciado",
+    "notesForConsultation": "Notas para la consulta",
+    "stop": "Finalizar consulta",
+    "recentAndPlanned": "Consultas recientes y planificadas:",
+    "recent": "Recientemente consultado:",
+    "createClient": "Crear nuevo cliente",
+    "plannedWith": "Consulta planificada con {{clientName}} el {{date}}",
+    "startWith": "Iniciar consulta con {{clientName}} (consultado por última vez{{date}})",
+    "start": "Iniciar consulta",
+    "plan": "Planificar",
+    "planConsultation": "Planificar consulta",
+    "change": "Cambiar",
+    "selectClientPlaceholder": "Seleccionar cliente...",
+    "optionalNotes": "Notas opcionales...",
+    "saveConsultation": "Guardar consulta",
+    "delete": "Eliminar consulta"
   },
   "profile": {
     "title": "Perfil",
@@ -238,7 +322,8 @@
         "cancel": "Cancelar",
         "create": "Crear",
         "creating": "Creando...",
-        "uploadAfterCreate": "se subirá después de crear"
+        "uploadAfterCreate": "se subirá después de crear",
+        "noArticlesLinked": "No hay artículos vinculados"
       },
       "errors": {
         "connectionError": "No se pudo establecer conexión con el servidor. Por favor asegúrese de que el servidor esté en ejecución.",
@@ -468,6 +553,26 @@
       "running": "En curso",
       "start": "Iniciar",
       "unknown": "Desconocido"
+    },
+    "list": {
+      "title": "Entradas de tiempo",
+      "loadError": "Error al cargar los registros de tiempo",
+      "deleteConfirm": "¿Realmente desea eliminar esta entrada de tiempo?",
+      "deleteError": "Error al eliminar la entrada de tiempo",
+      "columns": {
+        "start": "Inicio",
+        "end": "Fin",
+        "duration": "Duración",
+        "branch": "Sucursal",
+        "branchShort": "Suc.",
+        "actionsShort": "Acc."
+      }
+    },
+    "modal": {
+      "title": "Entradas de tiempo para {{date}}",
+      "noEntries": "No se encontraron entradas de tiempo para este día.",
+      "running": "en curso",
+      "totalDuration": "Duración total del día"
     },
     "messages": {
       "taskDeleted": "Tarea eliminada exitosamente",
@@ -953,7 +1058,32 @@
     },
     "actions": {
       "showTimes": "Mostrar tiempos",
-      "hideTimes": "Ocultar tiempos"
+      "hideTimes": "Ocultar tiempos",
+      "stopTracking": "Detener registro de tiempo",
+      "editWorktimes": "Editar registros de tiempo"
+    },
+    "modal": {
+      "stopTracking": {
+        "title": "Detener registro de tiempo",
+        "description": "Está a punto de detener el registro de tiempo de <strong>{{userName}}</strong>. Por favor indique la hora de finalización.",
+        "date": "Fecha",
+        "time": "Hora",
+        "stopping": "Deteniendo...",
+        "stop": "Detener registro de tiempo"
+      },
+      "editWorktimes": {
+        "title": "Editar registros de tiempo",
+        "description": "Edite los registros de tiempo de <strong>{{userName}}</strong> para el <strong>{{date}}</strong>.",
+        "saveError": "Ocurrió un error al guardar los registros de tiempo.",
+        "noEntries": "No hay registros de tiempo para este día.",
+        "restore": "Restaurar",
+        "markForDelete": "Marcar para eliminar",
+        "columns": {
+          "number": "Núm.",
+          "startTime": "Hora de inicio",
+          "endTime": "Hora de finalización"
+        }
+      }
     }
   },
   "errors": {
@@ -1225,7 +1355,23 @@
     "editPositions": "Editar posiciones",
     "noPositions": "No hay posiciones de factura disponibles",
     "downloadPdf": "Descargar PDF",
+    "downloadPDF": "Descargar PDF",
     "markAsPaid": "Marcar como pagado",
-    "noInvoicesFound": "No se encontraron facturas"
+    "noInvoicesFound": "No se encontraron facturas",
+    "detailsAndPositions": "Detalles de factura y posiciones",
+    "consultant": "Consultor",
+    "paymentTerms": "Términos de pago",
+    "subtotal": "Subtotal",
+    "vat": "IVA",
+    "noVat": "Sin IVA",
+    "notes": "Notas",
+    "items": "Posiciones de factura ({{count}})",
+    "editItems": "Editar posiciones",
+    "itemDescription": "Descripción",
+    "itemQuantity": "Cantidad/Horas",
+    "itemUnitPrice": "Tarifa por hora",
+    "itemAmount": "Monto",
+    "noItems": "No hay posiciones de factura disponibles",
+    "deletePosition": "Eliminar posición"
   }
 }

@@ -73,7 +73,91 @@
     "requestAttachmentsPath": "Directory for request attachments",
     "databaseManagement": "Database management",
     "monthlyReport": "Automatic monthly report",
-    "monthlyReportDescription": "Automatically generate and send monthly reports"
+    "monthlyReportDescription": "Automatically generate and send monthly reports",
+    "saveAllChanges": "Save all changes"
+  },
+  "consultations": {
+    "duration": "Duration",
+    "notesPlaceholder": "Consultation notes...",
+    "noConsultationsFound": "No consultations found for this client",
+    "noPermission": "No permission",
+    "noPermissionMessage": "You do not have permission to view consultations.",
+    "loadError": "Error loading consultations",
+    "filters": {
+      "today": "Today",
+      "week": "Week",
+      "unbilled": "Unbilled"
+    },
+    "notesUpdated": "Notes updated",
+    "notesUpdateError": "Error updating notes",
+    "timeUpdated": "Time updated",
+    "timeUpdateError": "Error updating time",
+    "invoice": "Individual invoice",
+    "monthlyReport": "Monthly report",
+    "confirmDelete": "Are you sure you want to delete this consultation? This action cannot be undone.",
+    "deleteSuccess": "Consultation deleted successfully",
+    "deleteError": "Error deleting consultation",
+    "invoiceCreated": "Invoice created! PDF can be downloaded in invoice management.",
+    "listTitle": "Consultation list",
+    "count": "{{count}} consultation",
+    "count_plural": "{{count}} consultations",
+    "total": "Total: {{totalDuration}}",
+    "advancedFilters": "Advanced filters",
+    "createInvoiceFromFiltered": "Create invoice from filtered consultations",
+    "columns": {
+      "client": "Client",
+      "branch": "Branch",
+      "notes": "Notes",
+      "date": "Date",
+      "duration": "Duration (hours)",
+      "durationHours": "Duration (hours)",
+      "invoiceStatus": "Billing status",
+      "time": "Time",
+      "startTime": "Start time",
+      "endTime": "End time"
+    },
+    "tryOtherFilters": "Try other search terms or filters.",
+    "noConsultationsYet": "No consultations have been conducted yet.",
+    "midday": "Midday",
+    "active": "Active",
+    "tasks": "Tasks ({{count}})",
+    "moreTasks": "+{{count}} more",
+    "linkTask": {
+      "title": "Link task",
+      "searchPlaceholder": "Search task...",
+      "loadError": "Error loading tasks",
+      "selectTask": "Please select a task",
+      "success": "Task linked successfully",
+      "error": "Error linking task",
+      "noTasksFound": "No matching tasks found",
+      "link": "Link"
+    },
+    "addNotes": "Add notes...",
+    "selectBranch": "Please select a branch",
+    "started": "Consultation started",
+    "startError": "Error starting consultation",
+    "stopped": "Consultation stopped",
+    "stopError": "Error stopping consultation",
+    "manualSaveSuccess": "Consultation recorded successfully",
+    "manualSaveError": "Error recording consultation",
+    "trackerTitle": "Consultation Tracker",
+    "activeWith": "Active consultation with",
+    "startedAt": "Started",
+    "notesForConsultation": "Notes for consultation",
+    "stop": "Stop consultation",
+    "recentAndPlanned": "Recently consulted & planned consultations:",
+    "recent": "Recently consulted:",
+    "createClient": "Create new client",
+    "plannedWith": "Planned consultation with {{clientName}} on {{date}}",
+    "startWith": "Start consultation with {{clientName}} (last consulted{{date}})",
+    "start": "Start consultation",
+    "plan": "Plan",
+    "planConsultation": "Plan consultation",
+    "change": "Change",
+    "selectClientPlaceholder": "Select client...",
+    "optionalNotes": "Optional notes...",
+    "saveConsultation": "Save consultation",
+    "delete": "Delete consultation"
   },
   "profile": {
     "title": "Profile",
@@ -237,7 +321,8 @@
         "cancel": "Cancel",
         "create": "Create",
         "creating": "Creating...",
-        "uploadAfterCreate": "will be uploaded after creation"
+        "uploadAfterCreate": "will be uploaded after creation",
+        "noArticlesLinked": "No articles linked"
       },
       "errors": {
         "connectionError": "Could not establish connection to server. Please make sure the server is running.",
@@ -467,6 +552,26 @@
       "running": "Running",
       "start": "Start",
       "unknown": "Unknown"
+    },
+    "list": {
+      "title": "Time Entries",
+      "loadError": "Error loading work times",
+      "deleteConfirm": "Do you really want to delete this time entry?",
+      "deleteError": "Error deleting time entry",
+      "columns": {
+        "start": "Start",
+        "end": "End",
+        "duration": "Duration",
+        "branch": "Branch",
+        "branchShort": "Br.",
+        "actionsShort": "Act."
+      }
+    },
+    "modal": {
+      "title": "Time entries for {{date}}",
+      "noEntries": "No time entries found for this day.",
+      "running": "running",
+      "totalDuration": "Total duration of the day"
     },
     "messages": {
       "taskDeleted": "Task deleted successfully",
@@ -952,7 +1057,32 @@
     },
     "actions": {
       "showTimes": "Show times",
-      "hideTimes": "Hide times"
+      "hideTimes": "Hide times",
+      "stopTracking": "Stop time tracking",
+      "editWorktimes": "Edit work times"
+    },
+    "modal": {
+      "stopTracking": {
+        "title": "Stop time tracking",
+        "description": "You are about to stop the time tracking of <strong>{{userName}}</strong>. Please specify the end time.",
+        "date": "Date",
+        "time": "Time",
+        "stopping": "Stopping...",
+        "stop": "Stop time tracking"
+      },
+      "editWorktimes": {
+        "title": "Edit work times",
+        "description": "Edit the work times of <strong>{{userName}}</strong> for <strong>{{date}}</strong>.",
+        "saveError": "An error occurred while saving the work times.",
+        "noEntries": "No work times available for this day.",
+        "restore": "Restore",
+        "markForDelete": "Mark for deletion",
+        "columns": {
+          "number": "No.",
+          "startTime": "Start time",
+          "endTime": "End time"
+        }
+      }
     }
   },
   "errors": {
@@ -1224,7 +1354,23 @@
     "editPositions": "Edit positions",
     "noPositions": "No invoice positions available",
     "downloadPdf": "Download PDF",
+    "downloadPDF": "Download PDF",
     "markAsPaid": "Mark as paid",
-    "noInvoicesFound": "No invoices found"
+    "noInvoicesFound": "No invoices found",
+    "detailsAndPositions": "Invoice details & positions",
+    "consultant": "Consultant",
+    "paymentTerms": "Payment terms",
+    "subtotal": "Subtotal",
+    "vat": "VAT",
+    "noVat": "No VAT",
+    "notes": "Notes",
+    "items": "Invoice positions ({{count}})",
+    "editItems": "Edit positions",
+    "itemDescription": "Description",
+    "itemQuantity": "Quantity/Hours",
+    "itemUnitPrice": "Hourly rate",
+    "itemAmount": "Amount",
+    "noItems": "No invoice positions available",
+    "deletePosition": "Delete position"
   }
 }

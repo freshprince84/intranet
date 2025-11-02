@@ -1,9 +1,11 @@
 import React, { useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import ConsultationTracker from '../components/ConsultationTracker.tsx';
 import ConsultationList, { ConsultationListRef } from '../components/ConsultationList.tsx';
 
 const Consultations: React.FC = () => {
+  const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const consultationListRef = useRef<ConsultationListRef>(null);
 
@@ -41,10 +43,10 @@ const Consultations: React.FC = () => {
           <div className="flex">
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-                Keine Berechtigung
+                {t('consultations.noPermission')}
               </h3>
               <div className="mt-2 text-sm text-red-700 dark:text-red-300">
-                <p>Sie haben keine Berechtigung, Beratungen anzuzeigen.</p>
+                <p>{t('consultations.noPermissionMessage')}</p>
               </div>
             </div>
           </div>

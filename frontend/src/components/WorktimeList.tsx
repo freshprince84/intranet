@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -27,6 +28,7 @@ interface SortConfig {
 }
 
 const WorktimeList: React.FC = () => {
+    const { t } = useTranslation();
     const [worktimes, setWorktimes] = useState<WorkTime[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -44,7 +46,7 @@ const WorktimeList: React.FC = () => {
             
             const token = localStorage.getItem('token');
             if (!token) {
-                setError('Nicht authentifiziert');
+                setError(t('worktime.tracker.notAuthenticated'));
                 setLoading(false);
                 return;
             }
@@ -55,7 +57,7 @@ const WorktimeList: React.FC = () => {
             setLoading(false);
         } catch (error) {
             console.error('Fehler beim Laden der Zeiterfassungen:', error);
-            setError('Fehler beim Laden der Zeiterfassungen');
+            setError(t('worktime.list.loadError'));
             setLoading(false);
         }
     };
@@ -68,14 +70,14 @@ const WorktimeList: React.FC = () => {
     };
 
     const handleDelete = async (id: number) => {
-        if (!window.confirm('Möchten Sie diesen Zeiteintrag wirklich löschen?')) return;
+        if (!window.confirm(t('worktime.list.deleteConfirm'))) return;
         
         try {
             setLoading(true);
             
             const token = localStorage.getItem('token');
             if (!token) {
-                setError('Nicht authentifiziert');
+                setError(t('worktime.tracker.notAuthenticated'));
                 setLoading(false);
                 return;
             }
@@ -85,7 +87,7 @@ const WorktimeList: React.FC = () => {
             fetchWorktimes(); // Lade die Daten neu
         } catch (error) {
             console.error('Fehler beim Löschen des Zeiteintrags:', error);
-            setError('Fehler beim Löschen des Zeiteintrags');
+            setError(t('worktime.list.deleteError'));
             setLoading(false);
         }
     };
@@ -107,14 +109,14 @@ const WorktimeList: React.FC = () => {
         return 0;
     });
 
-    if (loading) return <div className="p-4 dark:text-gray-200">Lädt...</div>;
+    if (loading) return <div className="p-4 dark:text-gray-200">{t('common.loading')}</div>;
     if (error) return <div className="p-4 text-red-600 dark:text-red-400">{error}</div>;
 
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700">
             <div className="p-4 border-b dark:border-gray-700">
                 <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-semibold dark:text-white">Zeiteinträge</h2>
+                    <h2 className="text-xl font-semibold dark:text-white">{t('worktime.list.title')}</h2>
                     <div className="relative">
                         <input
                             type="date"
@@ -134,37 +136,37 @@ const WorktimeList: React.FC = () => {
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('startTime')}
                             >
-                                <span className="hidden sm:inline">Start</span>
-                                <span className="inline sm:hidden">Start</span>
+                                <span className="hidden sm:inline">{t('worktime.list.columns.start')}</span>
+                                <span className="inline sm:hidden">{t('worktime.list.columns.start')}</span>
                                 {sortConfig.key === 'startTime' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('endTime')}
                             >
-                                <span className="hidden sm:inline">Ende</span>
-                                <span className="inline sm:hidden">Ende</span>
+                                <span className="hidden sm:inline">{t('worktime.list.columns.end')}</span>
+                                <span className="inline sm:hidden">{t('worktime.list.columns.end')}</span>
                                 {sortConfig.key === 'endTime' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('duration')}
                             >
-                                <span className="hidden sm:inline">Dauer</span>
-                                <span className="inline sm:hidden">Dauer</span>
+                                <span className="hidden sm:inline">{t('worktime.list.columns.duration')}</span>
+                                <span className="inline sm:hidden">{t('worktime.list.columns.duration')}</span>
                                 {sortConfig.key === 'duration' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th 
                                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
                                 onClick={() => handleSort('branch.name')}
                             >
-                                <span className="hidden sm:inline">Niederlassung</span>
-                                <span className="inline sm:hidden">Niedr.</span>
+                                <span className="hidden sm:inline">{t('worktime.list.columns.branch')}</span>
+                                <span className="inline sm:hidden">{t('worktime.list.columns.branchShort')}</span>
                                 {sortConfig.key === 'branch.name' && (sortConfig.direction === 'asc' ? '↑' : '↓')}
                             </th>
                             <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                <span className="hidden sm:inline">Aktionen</span>
-                                <span className="inline sm:hidden">Akt.</span>
+                                <span className="hidden sm:inline">{t('common.actions')}</span>
+                                <span className="inline sm:hidden">{t('worktime.list.columns.actionsShort')}</span>
                             </th>
                         </tr>
                     </thead>

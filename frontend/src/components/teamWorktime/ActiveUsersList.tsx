@@ -1181,7 +1181,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                                   <button
                                     onClick={() => handleOpenStopModal(group)}
                                     className="p-1 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-                                    title="Zeiterfassung stoppen"
+                                    title={t('teamWorktime.actions.stopTracking')}
                                   >
                                     <StopIcon className="h-5 w-5 text-white fill-white" />
                                   </button>
@@ -1190,7 +1190,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                                   <button
                                     onClick={() => handleOpenEditModal(group)}
                                     className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 edit-button"
-                                    title="Zeiterfassungen bearbeiten"
+                                    title={t('teamWorktime.actions.editWorktimes')}
                                   >
                                     <PencilIcon className="h-5 w-5" />
                                   </button>

@@ -73,7 +73,91 @@
     "requestAttachmentsPath": "Verzeichnis für Request-Anhänge",
     "databaseManagement": "Datenbank-Verwaltung",
     "monthlyReport": "Automatische Monatsabrechnung",
-    "monthlyReportDescription": "Monatliche Berichte automatisch generieren und versenden"
+    "monthlyReportDescription": "Monatliche Berichte automatisch generieren und versenden",
+    "saveAllChanges": "Alle Änderungen speichern"
+  },
+  "consultations": {
+    "duration": "Dauer",
+    "notesPlaceholder": "Beratungsnotizen...",
+    "noConsultationsFound": "Keine Beratungen für diesen Client gefunden",
+    "noPermission": "Keine Berechtigung",
+    "noPermissionMessage": "Sie haben keine Berechtigung, Beratungen anzuzeigen.",
+    "loadError": "Fehler beim Laden der Beratungen",
+    "filters": {
+      "today": "Heute",
+      "week": "Woche",
+      "unbilled": "Nicht abgerechnet"
+    },
+    "notesUpdated": "Notizen aktualisiert",
+    "notesUpdateError": "Fehler beim Aktualisieren der Notizen",
+    "timeUpdated": "Zeit aktualisiert",
+    "timeUpdateError": "Fehler beim Aktualisieren der Zeit",
+    "invoice": "Einzelrechnung",
+    "monthlyReport": "Monatsbericht",
+    "confirmDelete": "Sind Sie sicher, dass Sie diese Beratung löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "deleteSuccess": "Beratung erfolgreich gelöscht",
+    "deleteError": "Fehler beim Löschen der Beratung",
+    "invoiceCreated": "Rechnung erstellt! PDF kann in der Rechnungsverwaltung heruntergeladen werden.",
+    "listTitle": "Beratungsliste",
+    "count": "{{count}} Beratung",
+    "count_plural": "{{count}} Beratungen",
+    "total": "Total: {{totalDuration}}",
+    "advancedFilters": "Erweiterte Filter",
+    "createInvoiceFromFiltered": "Rechnung aus gefilterten Beratungen erstellen",
+    "columns": {
+      "client": "Client",
+      "branch": "Niederlassung",
+      "notes": "Notizen",
+      "date": "Datum",
+      "duration": "Dauer (Stunden)",
+      "durationHours": "Dauer (Stunden)",
+      "invoiceStatus": "Abrechnungsstatus",
+      "time": "Zeit",
+      "startTime": "Startzeit",
+      "endTime": "Endzeit"
+    },
+    "tryOtherFilters": "Versuchen Sie andere Suchbegriffe oder Filter.",
+    "noConsultationsYet": "Es wurden noch keine Beratungen durchgeführt.",
+    "midday": "Mittag",
+    "active": "Aktiv",
+    "tasks": "Tasks ({{count}})",
+    "moreTasks": "+{{count}} weitere",
+    "linkTask": {
+      "title": "Task verknüpfen",
+      "searchPlaceholder": "Task suchen...",
+      "loadError": "Fehler beim Laden der Tasks",
+      "selectTask": "Bitte wählen Sie einen Task aus",
+      "success": "Task erfolgreich verknüpft",
+      "error": "Fehler beim Verknüpfen des Tasks",
+      "noTasksFound": "Keine passenden Tasks gefunden",
+      "link": "Verknüpfen"
+    },
+    "addNotes": "Notizen hinzufügen...",
+    "selectBranch": "Bitte wählen Sie eine Niederlassung aus",
+    "started": "Beratung gestartet",
+    "startError": "Fehler beim Starten der Beratung",
+    "stopped": "Beratung beendet",
+    "stopError": "Fehler beim Beenden der Beratung",
+    "manualSaveSuccess": "Beratung erfolgreich erfasst",
+    "manualSaveError": "Fehler beim Erfassen der Beratung",
+    "trackerTitle": "Beratungs-Tracker",
+    "activeWith": "Aktive Beratung mit",
+    "startedAt": "Gestartet",
+    "notesForConsultation": "Notizen zur Beratung",
+    "stop": "Beratung beenden",
+    "recentAndPlanned": "Zuletzt beraten & geplante Beratungen:",
+    "recent": "Zuletzt beraten:",
+    "createClient": "Neuen Client anlegen",
+    "plannedWith": "Geplante Beratung mit {{clientName}} am {{date}}",
+    "startWith": "Beratung mit {{clientName}} starten (zuletzt beraten{{date}})",
+    "start": "Beratung starten",
+    "plan": "Planen",
+    "planConsultation": "Beratung planen",
+    "change": "Ändern",
+    "selectClientPlaceholder": "Client auswählen...",
+    "optionalNotes": "Optionale Notizen...",
+    "saveConsultation": "Beratung speichern",
+    "delete": "Beratung löschen"
   },
   "profile": {
     "title": "Profil",
@@ -241,7 +325,8 @@
         "cancel": "Abbrechen",
         "create": "Erstellen",
         "creating": "Wird erstellt...",
-        "uploadAfterCreate": "wird nach dem Erstellen hochgeladen"
+        "uploadAfterCreate": "wird nach dem Erstellen hochgeladen",
+        "noArticlesLinked": "Keine Artikel verknüpft"
       },
       "errors": {
         "connectionError": "Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.",
@@ -471,6 +556,26 @@
       "running": "Läuft",
       "start": "Start",
       "unknown": "Unbekannt"
+    },
+    "list": {
+      "title": "Zeiteinträge",
+      "loadError": "Fehler beim Laden der Zeiterfassungen",
+      "deleteConfirm": "Möchten Sie diesen Zeiteintrag wirklich löschen?",
+      "deleteError": "Fehler beim Löschen des Zeiteintrags",
+      "columns": {
+        "start": "Start",
+        "end": "Ende",
+        "duration": "Dauer",
+        "branch": "Niederlassung",
+        "branchShort": "Niedr.",
+        "actionsShort": "Akt."
+      }
+    },
+    "modal": {
+      "title": "Zeiteinträge für {{date}}",
+      "noEntries": "Keine Zeiteinträge für diesen Tag gefunden.",
+      "running": "läuft",
+      "totalDuration": "Gesamtdauer des Tages"
     },
     "messages": {
       "taskDeleted": "Aufgabe erfolgreich gelöscht",
@@ -939,7 +1044,32 @@
     },
     "actions": {
       "showTimes": "Zeiten anzeigen",
-      "hideTimes": "Zeiten ausblenden"
+      "hideTimes": "Zeiten ausblenden",
+      "stopTracking": "Zeiterfassung stoppen",
+      "editWorktimes": "Zeiterfassungen bearbeiten"
+    },
+    "modal": {
+      "stopTracking": {
+        "title": "Zeiterfassung stoppen",
+        "description": "Sie sind dabei, die Zeiterfassung von <strong>{{userName}}</strong> zu stoppen. Bitte geben Sie die Endzeit an.",
+        "date": "Datum",
+        "time": "Zeit",
+        "stopping": "Wird gestoppt...",
+        "stop": "Zeiterfassung stoppen"
+      },
+      "editWorktimes": {
+        "title": "Zeiterfassungen bearbeiten",
+        "description": "Bearbeiten Sie die Zeiterfassungen von <strong>{{userName}}</strong> für den <strong>{{date}}</strong>.",
+        "saveError": "Beim Speichern der Zeiterfassungen ist ein Fehler aufgetreten.",
+        "noEntries": "Keine Zeiterfassungen für diesen Tag vorhanden.",
+        "restore": "Wiederherstellen",
+        "markForDelete": "Zum Löschen markieren",
+        "columns": {
+          "number": "Nr.",
+          "startTime": "Startzeit",
+          "endTime": "Endzeit"
+        }
+      }
     }
   },
   "errors": {
@@ -1211,7 +1341,23 @@
     "editPositions": "Positionen bearbeiten",
     "noPositions": "Keine Rechnungspositionen vorhanden",
     "downloadPdf": "PDF herunterladen",
+    "downloadPDF": "PDF herunterladen",
     "markAsPaid": "Als bezahlt markieren",
-    "noInvoicesFound": "Keine Rechnungen gefunden"
+    "noInvoicesFound": "Keine Rechnungen gefunden",
+    "detailsAndPositions": "Rechnungsdetails & Positionen",
+    "consultant": "Berater",
+    "paymentTerms": "Zahlungsbedingungen",
+    "subtotal": "Untertotal",
+    "vat": "MwSt.",
+    "noVat": "Keine MwSt.",
+    "notes": "Notizen",
+    "items": "Rechnungspositionen ({{count}})",
+    "editItems": "Positionen bearbeiten",
+    "itemDescription": "Beschreibung",
+    "itemQuantity": "Menge/Stunden",
+    "itemUnitPrice": "Stundensatz",
+    "itemAmount": "Betrag",
+    "noItems": "Keine Rechnungspositionen vorhanden",
+    "deletePosition": "Position löschen"
   }
 }

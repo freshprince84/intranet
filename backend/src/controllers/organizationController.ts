@@ -157,14 +157,15 @@ export const createOrganization = async (req: Request, res: Response) => {
 
     // Alle verfügbaren Seiten, Tabellen und Buttons (aus seed.ts)
     const ALL_PAGES = [
-      'dashboard', 'worktracker', 'workcenter', 'organization', 'requests', 'cerebro', 'settings',
+      'dashboard', 'worktracker', 'workcenter', 'organization', 'organization_management', 'requests', 'cerebro', 'settings',
       'payroll', 'team_worktime_control', 'identification_documents', 'document_recognition',
       'consultations', 'consultation_invoices', 'monthly_reports'
     ];
     
     const ALL_TABLES = [
       'users', 'roles', 'branches', 'requests', 'tasks', 'worktime', 'payrolls', 'cerebro_articles',
-      'consultations', 'consultation_invoices', 'identification_documents'
+      'consultations', 'consultation_invoices', 'identification_documents',
+      'organization_join_requests', 'organization_users'
     ];
     
     const ALL_BUTTONS = [

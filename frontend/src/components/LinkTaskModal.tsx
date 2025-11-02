@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -28,6 +29,7 @@ const LinkTaskModal: React.FC<LinkTaskModalProps> = ({
   consultationId,
   onTaskLinked
 }) => {
+  const { t } = useTranslation();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [filteredTasks, setFilteredTasks] = useState<Task[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -62,7 +64,7 @@ const LinkTaskModal: React.FC<LinkTaskModalProps> = ({
       setTasks(activeTasks);
       setFilteredTasks(activeTasks);
     } catch (error) {
-      toast.error('Fehler beim Laden der Tasks');
+      toast.error(t('consultations.linkTask.loadError'));
     } finally {
       setLoading(false);
     }
@@ -70,7 +72,7 @@ const LinkTaskModal: React.FC<LinkTaskModalProps> = ({
 
   const handleLinkTask = async () => {
     if (!selectedTaskId) {
-      toast.error('Bitte wählen Sie einen Task aus');
+      toast.error(t('consultations.linkTask.selectTask'));
       return;
     }
 
@@ -80,11 +82,11 @@ const LinkTaskModal: React.FC<LinkTaskModalProps> = ({
         { taskId: selectedTaskId }
       );
       
-      toast.success('Task erfolgreich verknüpft');
+      toast.success(t('consultations.linkTask.success'));
       onTaskLinked();
       onClose();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Verknüpfen des Tasks');
+      toast.error(error.response?.data?.message || t('consultations.linkTask.error'));
     }
   };
 
@@ -97,7 +99,7 @@ const LinkTaskModal: React.FC<LinkTaskModalProps> = ({
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <Dialog.Title className="text-lg font-medium text-gray-900 dark:text-white">
-                Task verknüpfen
+                {t('consultations.linkTask.title')}
               </Dialog.Title>
               <button
                 onClick={onClose}
@@ -117,7 +119,7 @@ const LinkTaskModal: React.FC<LinkTaskModalProps> = ({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="Task suchen..."
+                placeholder={t('consultations.linkTask.searchPlaceholder')}
                 autoFocus
               />
             </div>
@@ -126,11 +128,11 @@ const LinkTaskModal: React.FC<LinkTaskModalProps> = ({
             <div className="max-h-96 overflow-y-auto">
               {loading ? (
                 <div className="text-center py-4 text-gray-500 dark:text-gray-400">
-                  Lade Tasks...
+                  {t('common.loading')}
                 </div>
               ) : filteredTasks.length === 0 ? (
                 <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                  Keine passenden Tasks gefunden
+                  {t('consultations.linkTask.noTasksFound')}
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -153,7 +155,7 @@ const LinkTaskModal: React.FC<LinkTaskModalProps> = ({
                         </p>
                         {task.responsible && (
                           <p className="text-sm text-gray-500 dark:text-gray-400">
-                            Verantwortlich: {task.responsible.firstName} {task.responsible.lastName}
+                            {t('tasks.columns.responsible')}: {task.responsible.firstName} {task.responsible.lastName}
                           </p>
                         )}
                       </div>
@@ -162,7 +164,7 @@ const LinkTaskModal: React.FC<LinkTaskModalProps> = ({
                           ? 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
                           : 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300'
                       }`}>
-                        {task.status === 'open' ? 'Offen' : 'In Bearbeitung'}
+                        {task.status === 'open' ? t('tasks.status.open') : t('tasks.status.in_progress')}
                       </span>
                     </label>
                   ))}
@@ -177,14 +179,14 @@ const LinkTaskModal: React.FC<LinkTaskModalProps> = ({
                 onClick={onClose}
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
               >
-                Abbrechen
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleLinkTask}
                 disabled={!selectedTaskId}
                 className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Verknüpfen
+                {t('consultations.linkTask.link')}
               </button>
             </div>
           </div>

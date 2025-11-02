@@ -284,7 +284,7 @@ const Worktracker: React.FC = () => {
                 
                 const aktuellFilter = filters.find((filter: any) => filter.name === 'Aktuell');
                 if (aktuellFilter) {
-                    setActiveFilterName('Aktuell');
+                    setActiveFilterName(t('tasks.filters.current'));
                     setSelectedFilterId(aktuellFilter.id);
                     applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators);
                 }
@@ -325,7 +325,7 @@ const Worktracker: React.FC = () => {
                 if (!archivFilterExists) {
                     const archivFilter = {
                         tableId: TODOS_TABLE_ID,
-                        name: 'Archiv',
+                        name: t('tasks.filters.archive'),
                         conditions: [
                             { column: 'status', operator: 'equals', value: 'done' }
                         ],
@@ -347,7 +347,7 @@ const Worktracker: React.FC = () => {
                 if (!aktuellFilterExists) {
                     const aktuellFilter = {
                         tableId: TODOS_TABLE_ID,
-                        name: 'Aktuell',
+                        name: t('tasks.filters.current'),
                         conditions: [
                             { column: 'status', operator: 'notEquals', value: 'done' }
                         ],
@@ -1151,7 +1151,7 @@ const Worktracker: React.FC = () => {
                                 activeFilterName={activeFilterName}
                                 selectedFilterId={selectedFilterId}
                                 onFilterChange={handleFilterChange}
-                                defaultFilterName="Aktuell"
+                                defaultFilterName={t('tasks.filters.current')}
                             />
                             
                             {/* Tabelle oder Cards */}
@@ -1265,8 +1265,8 @@ const Worktracker: React.FC = () => {
                                                                     <td key={columnId} className="px-6 py-4 whitespace-nowrap">
                                                                         <div className="flex flex-col">
                                                                             <div className="text-sm text-gray-900 dark:text-gray-200">
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Verantwortlich:</span>
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">Ver.:</span><br />
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('tasks.columns.responsible')}:</span>
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">{t('tasks.columns.responsible').substring(0, 3)}:</span><br />
                                                                                 {task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : task.role ? task.role.name : '-'}
                                                                             </div>
                                                                             <div className="text-sm text-gray-900 dark:text-gray-200 mt-1">
@@ -1659,7 +1659,7 @@ const Worktracker: React.FC = () => {
                                 activeFilterName={activeFilterName}
                                 selectedFilterId={selectedFilterId}
                                 onFilterChange={handleFilterChange}
-                                defaultFilterName="Aktuell"
+                                defaultFilterName={t('tasks.filters.current')}
                             />
 
                             {/* Tabelle oder Cards */}
@@ -1773,8 +1773,8 @@ const Worktracker: React.FC = () => {
                                                                     <td key={columnId} className="px-6 py-4 whitespace-nowrap">
                                                                         <div className="flex flex-col">
                                                                             <div className="text-sm text-gray-900 dark:text-gray-200">
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Verantwortlich:</span>
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">Ver.:</span><br />
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('tasks.columns.responsible')}:</span>
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">{t('tasks.columns.responsible').substring(0, 3)}:</span><br />
                                                                                 {task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : task.role ? task.role.name : '-'}
                                                                             </div>
                                                                             <div className="text-sm text-gray-900 dark:text-gray-200 mt-1">
