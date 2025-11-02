@@ -443,25 +443,50 @@ async function main() {
     console.log('⚙️ Erstelle Standard-Einstellungen...');
     
     // Tabelleneinstellungen für Admin (nur wenn nicht vorhanden)
-    const existingTableSettings = await prisma.userTableSettings.findUnique({
-      where: {
-        userId_tableId: {
-          userId: adminUser.id,
-          tableId: 'worktracker_tasks'
-        }
-      }
-    });
-
-    if (!existingTableSettings) {
-      await prisma.userTableSettings.create({
-        data: {
-          userId: adminUser.id,
-          tableId: 'worktracker_tasks',
-          columnOrder: JSON.stringify(['title', 'status', 'responsibleAndQualityControl', 'branch', 'dueDate', 'actions']),
-          hiddenColumns: JSON.stringify([])
+    // Prüfe erst ob die Spalte viewMode existiert
+    try {
+      const existingTableSettings = await prisma.userTableSettings.findUnique({
+        where: {
+          userId_tableId: {
+            userId: adminUser.id,
+            tableId: 'worktracker_tasks'
+          }
         }
       });
-      console.log('✅ Standard-Tabelleneinstellungen erstellt');
+
+      if (!existingTableSettings) {
+        await prisma.userTableSettings.create({
+          data: {
+            userId: adminUser.id,
+            tableId: 'worktracker_tasks',
+            columnOrder: JSON.stringify(['title', 'status', 'responsibleAndQualityControl', 'branch', 'dueDate', 'actions']),
+            hiddenColumns: JSON.stringify([]),
+            // viewMode ist optional, kann null sein wenn Spalte nicht existiert
+            viewMode: null
+          }
+        });
+        console.log('✅ Standard-Tabelleneinstellungen erstellt');
+      }
+    } catch (error: any) {
+      // Falls viewMode Spalte nicht existiert, erstelle ohne sie
+      if (error.code === 'P2022' && error.meta?.column === 'UserTableSettings.viewMode') {
+        console.log('⚠️ viewMode Spalte existiert nicht, erstelle Einstellungen ohne sie...');
+        // Versuche mit raw SQL (falls Prisma das nicht unterstützt)
+        await prisma.$executeRaw`
+          INSERT INTO "UserTableSettings" ("userId", "tableId", "columnOrder", "hiddenColumns", "createdAt", "updatedAt")
+          SELECT ${adminUser.id}, 'worktracker_tasks', 
+                 ${JSON.stringify(['title', 'status', 'responsibleAndQualityControl', 'branch', 'dueDate', 'actions'])}, 
+                 ${JSON.stringify([])},
+                 NOW(), NOW()
+          WHERE NOT EXISTS (
+            SELECT 1 FROM "UserTableSettings" 
+            WHERE "userId" = ${adminUser.id} AND "tableId" = 'worktracker_tasks'
+          )
+        `;
+        console.log('✅ Standard-Tabelleneinstellungen erstellt (ohne viewMode)');
+      } else {
+        throw error;
+      }
     }
 
     // ========================================
