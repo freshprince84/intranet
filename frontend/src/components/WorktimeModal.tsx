@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { format, parseISO } from 'date-fns';
@@ -12,6 +13,7 @@ export interface WorktimeModalProps {
 }
 
 export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, selectedDate: initialSelectedDate }) => {
+    const { t } = useTranslation();
     // Initialisiere das selectedDate mit dem übergebenen Datum oder dem heutigen Datum
     const today = new Date();
     const defaultDate = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, '0')}-${today.getDate().toString().padStart(2, '0')}`;
@@ -46,7 +48,7 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
             
             const token = localStorage.getItem('token');
             if (!token) {
-                setError('Nicht authentifiziert');
+                setError(t('worktime.tracker.notAuthenticated'));
                 setLoading(false);
                 return;
             }
@@ -73,10 +75,10 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
             setLoading(false);
         } catch (error) {
             console.error('Fehler beim Laden der Zeiterfassungen:', error);
-            setError('Fehler beim Laden der Zeiterfassungen');
+            setError(t('worktime.list.loadError'));
             setLoading(false);
         }
-    }, [selectedDate]);
+    }, [selectedDate, t]);
 
     useEffect(() => {
         if (isOpen) {
@@ -158,7 +160,7 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
         const hours = Math.floor(totalMinutes / 60);
         const minutes = totalMinutes % 60;
         
-        return `${hours}h ${minutes}m (läuft)`;
+        return `${hours}h ${minutes}m (${t('worktime.modal.running')})`;
     };
 
     return (
@@ -166,7 +168,7 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full max-w-4xl max-h-[90vh] flex flex-col">
                 <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
                     <h2 className="text-xl font-semibold dark:text-white">
-                        Zeiteinträge für {formatDate(selectedDate)}
+                        {t('worktime.modal.title', { date: formatDate(selectedDate) })}
                     </h2>
                     <div className="flex items-center space-x-2">
                         <input
@@ -193,23 +195,23 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                         </div>
                     ) : worktimes.filter(worktime => isWorktimeRelevantForSelectedDate(worktime, selectedDate) && (worktime.endTime !== null || isActiveWorktimeRelevant())).length === 0 ? (
                         <div className="p-4 text-center text-gray-500 dark:text-gray-400">
-                            Keine Zeiteinträge für diesen Tag gefunden.
+                            {t('worktime.modal.noEntries')}
                         </div>
                     ) : (
                         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead className="bg-gray-50 dark:bg-gray-700">
                                 <tr>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Start
+                                        {t('worktime.list.columns.start')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Ende
+                                        {t('worktime.list.columns.end')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Dauer
+                                        {t('worktime.list.columns.duration')}
                                     </th>
                                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                        Niederlassung
+                                        {t('worktime.list.columns.branch')}
                                     </th>
                                 </tr>
                             </thead>
@@ -242,13 +244,13 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                                             {formatTime(activeWorktime.startTime)}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                                            <span className="italic">Aktiv</span>
+                                            <span className="italic">{t('worktime.active')}</span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200 font-medium text-green-600 dark:text-green-400">
                                             {calculateActiveDuration()}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">
-                                            {activeWorktime.branch?.name || 'Unbekannt'}
+                                            {activeWorktime.branch?.name || t('common.unknown')}
                                         </td>
                                     </tr>
                                 )}
@@ -258,7 +260,7 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
                             <tfoot className="bg-gray-100 dark:bg-gray-700">
                                 <tr>
                                     <td colSpan={2} className="px-6 py-3 text-right text-sm font-medium text-gray-700 dark:text-gray-300">
-                                        Gesamtdauer des Tages:
+                                        {t('worktime.modal.totalDuration')}:
                                     </td>
                                     <td className="px-6 py-3 text-left text-sm font-bold text-gray-900 dark:text-white">
                                         {totalDuration}

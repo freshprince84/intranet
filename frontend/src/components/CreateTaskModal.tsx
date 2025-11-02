@@ -1037,13 +1037,13 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                             onClick={() => onArticleRemove(article.id)}
                                             className="text-red-600 hover:text-red-800"
                                         >
-                                            Entfernen
+                                            {t('tasks.createTask.form.remove')}
                                         </button>
                                     </li>
                                 ))}
                             </ul>
                         ) : (
-                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Keine Artikel verknüpft</p>
+                            <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">{t('tasks.createTask.form.noArticlesLinked')}</p>
                         )}
                     </div>
                     

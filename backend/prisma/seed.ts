@@ -24,6 +24,7 @@ const ALL_PAGES = [
   'team_worktime_control', // = workcenter
   'payroll', // = lohnabrechnung
   'usermanagement', // = organisation
+  'organization_management', // = organisation tab auf usermanagement
   'cerebro',
   'settings',
   'profile'
@@ -42,7 +43,9 @@ const ALL_TABLES = [
   'branches',          // auf settings/system
   'notifications',     // allgemein
   'settings',          // auf settings
-  'monthly_reports'    // auf consultations/reports
+  'monthly_reports',    // auf consultations/reports
+  'organization_join_requests', // auf usermanagement/organisation
+  'organization_users'  // auf usermanagement/organisation
 ];
 
 // ALLE BUTTONS IM SYSTEM

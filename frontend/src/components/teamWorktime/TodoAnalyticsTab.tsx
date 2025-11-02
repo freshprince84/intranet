@@ -716,13 +716,13 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                   </div>
                 </div>
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
-                  <div className="text-sm text-yellow-600 dark:text-yellow-400">Ø Dauer</div>
+                  <div className="text-sm text-yellow-600 dark:text-yellow-400">{t('analytics.todo.shift.averageDuration')}</div>
                   <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">
                     {shiftData.summary.averageDurationHours || '-'}h
                   </div>
                 </div>
                 <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-200 dark:border-indigo-800">
-                  <div className="text-sm text-indigo-600 dark:text-indigo-400">Ø To-Dos/Schicht</div>
+                  <div className="text-sm text-indigo-600 dark:text-indigo-400">{t('analytics.todo.shift.averageTodosPerShift')}</div>
                   <div className="text-2xl font-bold text-indigo-700 dark:text-indigo-300">
                     {shiftData.summary.totalShifts > 0 
                       ? (shiftData.summary.totalTasksInShifts / shiftData.summary.totalShifts).toFixed(1)
@@ -735,25 +735,25 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
               {/* Schichten-Liste */}
               {shiftData.shifts && shiftData.shifts.length > 0 && (
                 <div>
-                  <h4 className="text-base font-medium text-gray-900 dark:text-white mb-3">Schichten mit To-Dos</h4>
+                  <h4 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t('analytics.todo.shift.shiftsWithTodos')}</h4>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            User
+                            {t('analytics.todo.frequency.user')}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Niederlassung
+                            {t('analytics.todo.columns.branch')}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Zeit
+                            {t('analytics.todo.shift.time')}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Dauer
+                            {t('analytics.todo.shift.duration')}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            To-Dos
+                            {t('analytics.todo.columns.title')}
                           </th>
                         </tr>
                       </thead>
@@ -774,7 +774,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                                   {shift.endTime && ` - ${format(new Date(shift.endTime), 'HH:mm')}`}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                                  {shift.durationHours ? `${shift.durationHours}h` : 'Läuft'}
+                                  {shift.durationHours ? `${shift.durationHours}h` : t('worktime.running')}
                                 </td>
                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   <div className="flex items-center gap-2">
@@ -783,7 +783,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                                       <button
                                         onClick={() => toggleShiftExpand(shift.workTimeId)}
                                         className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                        title="To-Dos anzeigen"
+                                        title={t('analytics.todo.shift.showTodos')}
                                       >
                                         {isExpanded ? (
                                           <ChevronUpIcon className="h-4 w-4" />
@@ -799,7 +799,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                                 <tr className="bg-gray-50 dark:bg-gray-800/50">
                                   <td colSpan={5} className="px-6 py-4">
                                     <div className="ml-4 border-l-2 border-blue-200 dark:border-blue-700 pl-4">
-                                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Verknüpfte To-Dos:</h5>
+                                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('analytics.todo.shift.linkedTasks')}</h5>
                                       <div className="space-y-2">
                                         {shift.linkedTasks.map((task: any) => (
                                           <div key={task.id} className="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
@@ -831,22 +831,22 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
               {/* To-Dos mit Schicht-Verteilung */}
               {shiftData.tasksWithShifts && shiftData.tasksWithShifts.length > 0 && (
                 <div>
-                  <h4 className="text-base font-medium text-gray-900 dark:text-white mb-3">To-Dos mit Schicht-Verteilung</h4>
+                  <h4 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t('analytics.todo.shift.tasksWithShiftDistribution')}</h4>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            To-Do
+                            {t('analytics.todo.columns.title')}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Status
+                            {t('analytics.todo.columns.status')}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Schichten
+                            {t('analytics.todo.shift.totalShifts')}
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                            Gesamt Zeit
+                            {t('analytics.todo.shift.totalTime')}
                           </th>
                         </tr>
                       </thead>
@@ -877,7 +877,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
             </div>
           ) : (
             <div className="text-gray-500 dark:text-gray-400 text-center py-8">
-              Keine Schicht-Daten verfügbar
+              {t('analytics.todo.noShiftData')}
             </div>
           )}
         </div>
@@ -886,27 +886,27 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
       {/* Statistiken */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-          <div className="text-sm text-gray-500 dark:text-gray-400">Gesamt</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('analytics.todo.stats.total')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
         </div>
         <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-          <div className="text-sm text-green-600 dark:text-green-400">Erledigt</div>
+          <div className="text-sm text-green-600 dark:text-green-400">{t('analytics.todo.frequency.completed')}</div>
           <div className="text-2xl font-bold text-green-700 dark:text-green-300">{stats.done}</div>
         </div>
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-          <div className="text-sm text-blue-600 dark:text-blue-400">In Bearbeitung</div>
+          <div className="text-sm text-blue-600 dark:text-blue-400">{t('analytics.todo.stats.inProgress')}</div>
           <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">{stats.inProgress}</div>
         </div>
         <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-200 dark:border-purple-800">
-          <div className="text-sm text-purple-600 dark:text-purple-400">Qualitätskontrolle</div>
+          <div className="text-sm text-purple-600 dark:text-purple-400">{t('analytics.todo.stats.qualityControl')}</div>
           <div className="text-2xl font-bold text-purple-700 dark:text-purple-300">{stats.qualityControl}</div>
         </div>
         <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
-          <div className="text-sm text-yellow-600 dark:text-yellow-400">Offen</div>
+          <div className="text-sm text-yellow-600 dark:text-yellow-400">{t('tasks.status.open')}</div>
           <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{stats.open}</div>
         </div>
         <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-          <div className="text-sm text-red-600 dark:text-red-400">Nachbesserung</div>
+          <div className="text-sm text-red-600 dark:text-red-400">{t('tasks.status.improval')}</div>
           <div className="text-2xl font-bold text-red-700 dark:text-red-300">{stats.improval}</div>
         </div>
       </div>
@@ -916,7 +916,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
         <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <ChartBarIcon className="h-5 w-5" />
-            Status-Verteilung (chronologische To-Dos)
+            {t('analytics.todo.statusDistribution')}
           </h3>
           <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
             <div className="relative" style={{ height: '200px' }}>
@@ -947,9 +947,9 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                       height: `${stats.total > 0 ? (stats.done / stats.total) * 100 : 0}%`,
                       minHeight: stats.done > 0 ? '4px' : '0px'
                     }}
-                    title={`Erledigt: ${stats.done}`}
+                    title={`${t('analytics.todo.frequency.completed')}: ${stats.done}`}
                   ></div>
-                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">Erledigt</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">{t('analytics.todo.frequency.completed')}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-500">{stats.done}</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 flex-1">
@@ -959,9 +959,9 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                       height: `${stats.total > 0 ? (stats.inProgress / stats.total) * 100 : 0}%`,
                       minHeight: stats.inProgress > 0 ? '4px' : '0px'
                     }}
-                    title={`In Bearbeitung: ${stats.inProgress}`}
+                    title={`${t('analytics.todo.stats.inProgress')}: ${stats.inProgress}`}
                   ></div>
-                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">In Bearbeitung</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">{t('analytics.todo.stats.inProgress')}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-500">{stats.inProgress}</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 flex-1">
@@ -971,9 +971,9 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                       height: `${stats.total > 0 ? (stats.qualityControl / stats.total) * 100 : 0}%`,
                       minHeight: stats.qualityControl > 0 ? '4px' : '0px'
                     }}
-                    title={`Qualitätskontrolle: ${stats.qualityControl}`}
+                    title={`${t('analytics.todo.stats.qualityControl')}: ${stats.qualityControl}`}
                   ></div>
-                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">QK</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">{t('analytics.todo.columns.qualityControl')}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-500">{stats.qualityControl}</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 flex-1">
@@ -983,9 +983,9 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                       height: `${stats.total > 0 ? (stats.open / stats.total) * 100 : 0}%`,
                       minHeight: stats.open > 0 ? '4px' : '0px'
                     }}
-                    title={`Offen: ${stats.open}`}
+                    title={`${t('tasks.status.open')}: ${stats.open}`}
                   ></div>
-                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">Offen</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">{t('tasks.status.open')}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-500">{stats.open}</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 flex-1">
@@ -995,9 +995,9 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                       height: `${stats.total > 0 ? (stats.improval / stats.total) * 100 : 0}%`,
                       minHeight: stats.improval > 0 ? '4px' : '0px'
                     }}
-                    title={`Nachbesserung: ${stats.improval}`}
+                    title={`${t('tasks.status.improval')}: ${stats.improval}`}
                   ></div>
-                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">Nachbesserung</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">{t('tasks.status.improval')}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-500">{stats.improval}</span>
                 </div>
               </div>
@@ -1009,7 +1009,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
       {/* Content: Tabelle oder Cards */}
       {loading ? (
         <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500 dark:text-gray-400">Lade To-Dos...</div>
+          <div className="text-gray-500 dark:text-gray-400">{t('common.loading')}</div>
         </div>
       ) : viewMode === 'table' ? (
         /* Tabellen-Ansicht */
@@ -1265,4 +1265,4 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
   );
 };
 
-export de
+export default TodoAnalyticsTab;

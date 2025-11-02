@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { XMarkIcon, TrashIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
@@ -43,6 +44,7 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
   entries,
   selectedDate
 }) => {
+  const { t } = useTranslation();
   const [editedEntries, setEditedEntries] = useState<EditableEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -181,7 +183,7 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
       onClose();
     } catch (error) {
       console.error('Fehler beim Speichern der Zeiterfassungen:', error);
-      setError('Beim Speichern der Zeiterfassungen ist ein Fehler aufgetreten.');
+      setError(t('teamWorktime.modal.editWorktimes.saveError'));
     } finally {
       setLoading(false);
     }
@@ -225,21 +227,24 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
                     as="h3"
                     className="text-lg font-medium leading-6 text-gray-900 dark:text-white"
                   >
-                    Zeiterfassungen bearbeiten
+                    {t('teamWorktime.modal.editWorktimes.title')}
                   </Dialog.Title>
                   <button
                     type="button"
                     className="bg-white dark:bg-gray-800 rounded-md text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     onClick={onClose}
                   >
-                    <span className="sr-only">Schließen</span>
+                    <span className="sr-only">{t('common.close')}</span>
                     <XMarkIcon className="h-6 w-6" aria-hidden="true" />
                   </button>
                 </div>
 
                 <div className="mt-2">
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Bearbeiten Sie die Zeiterfassungen von <strong className="dark:text-gray-300">{userName}</strong> für den <strong className="dark:text-gray-300">{selectedDate.split('-').reverse().join('.')}</strong>.
+                    {t('teamWorktime.modal.editWorktimes.description', { 
+                      userName, 
+                      date: selectedDate.split('-').reverse().join('.') 
+                    })}
                   </p>
                 </div>
 
@@ -254,17 +259,17 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Nr.</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Startzeit</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Endzeit</th>
-                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Aktion</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.number')}</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.startTime')}</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('teamWorktime.modal.editWorktimes.columns.endTime')}</th>
+                          <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">{t('common.actions')}</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {editedEntries.length === 0 ? (
                           <tr>
                             <td colSpan={4} className="px-4 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
-                              Keine Zeiterfassungen für diesen Tag vorhanden.
+                              {t('teamWorktime.modal.editWorktimes.noEntries')}
                             </td>
                           </tr>
                         ) : (
@@ -301,7 +306,7 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
                                   type="button"
                                   onClick={() => handleToggleDelete(index)}
                                   className={`p-1 rounded ${entry.isDeleted ? 'text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300' : 'text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300'}`}
-                                  title={entry.isDeleted ? 'Wiederherstellen' : 'Zum Löschen markieren'}
+                                  title={entry.isDeleted ? t('teamWorktime.modal.editWorktimes.restore') : t('teamWorktime.modal.editWorktimes.markForDelete')}
                                 >
                                   <TrashIcon className="h-5 w-5" />
                                 </button>
@@ -320,7 +325,7 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
                     className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={onClose}
                     disabled={loading}
-                    title="Abbrechen"
+                    title={t('common.cancel')}
                   >
                     <XMarkIcon className="h-5 w-5" />
                   </button>
@@ -329,7 +334,7 @@ const EditWorktimeModal: React.FC<EditWorktimeModalProps> = ({
                     className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleSave}
                     disabled={loading || Boolean(error)}
-                    title={loading ? 'Wird gespeichert...' : 'Speichern'}
+                    title={loading ? t('common.saving') : t('common.save')}
                   >
                     {loading ? (
                       <ArrowPathIcon className="h-5 w-5 animate-spin" />

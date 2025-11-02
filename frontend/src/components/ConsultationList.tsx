@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useImperativeHandle, forwardRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   ClockIcon, 
   FunnelIcon,
@@ -51,6 +52,7 @@ export interface ConsultationListRef {
 }
 
 const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(({ onConsultationChange }, ref) => {
+  const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
   const [consultations, setConsultations] = useState<Consultation[]>([]);
@@ -70,7 +72,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
   const [selectedConsultationId, setSelectedConsultationId] = useState<number | null>(null);
 
   // Filter State Management
-  const [activeFilterName, setActiveFilterName] = useState<string>('Heute');
+  const [activeFilterName, setActiveFilterName] = useState<string>(t('consultations.filters.today'));
   const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
 
   // Invoice Creation State
@@ -84,7 +86,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
       setError(null);
     } catch (error) {
       console.error('Fehler beim Laden der Beratungen:', error);
-      setError('Fehler beim Laden der Beratungen');
+      setError(t('consultations.loadError'));
     } finally {
       setLoading(false);
     }
@@ -134,7 +136,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
         
         const heuteFilter = filters.find((filter: any) => filter.name === 'Heute');
         if (heuteFilter) {
-          setActiveFilterName('Heute');
+          setActiveFilterName(t('consultations.filters.today'));
           setSelectedFilterId(heuteFilter.id);
           applyFilterConditions(heuteFilter.conditions, heuteFilter.operators);
         }
@@ -252,7 +254,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
         if (!heuteFilterExists) {
           const heuteFilter = {
             tableId: CONSULTATIONS_TABLE_ID,
-            name: 'Heute',
+            name: t('consultations.filters.today'),
             conditions: [
               { column: 'startTime', operator: 'equals', value: '__TODAY__' }
             ],
@@ -269,7 +271,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
         if (!wocheFilterExists) {
           const wocheFilter = {
             tableId: CONSULTATIONS_TABLE_ID,
-            name: 'Woche',
+            name: t('consultations.filters.week'),
             conditions: [
               { column: 'startTime', operator: 'after', value: '__TODAY__' },
               { column: 'startTime', operator: 'before', value: '__WEEK_FROM_TODAY__' }
@@ -287,7 +289,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
         if (!nichtAbgerechnetFilterExists) {
           const nichtAbgerechnetFilter = {
             tableId: CONSULTATIONS_TABLE_ID,
-            name: 'Nicht abgerechnet',
+            name: t('consultations.filters.unbilled'),
             conditions: [
               { column: 'invoiceStatus', operator: 'equals', value: 'nicht abgerechnet' }
             ],
@@ -323,7 +325,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
             console.log('Aktualisiere Heute-Filter mit dynamischem Marker...');
             await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, {
               tableId: CONSULTATIONS_TABLE_ID,
-              name: 'Heute',
+              name: t('consultations.filters.today'),
               conditions: [
                 { column: 'startTime', operator: 'equals', value: '__TODAY__' }
               ],
@@ -349,7 +351,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
             console.log('Aktualisiere Woche-Filter mit dynamischen Markern...');
             await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.BASE, {
               tableId: CONSULTATIONS_TABLE_ID,
-              name: 'Woche',
+              name: t('consultations.filters.week'),
               conditions: [
                 { column: 'startTime', operator: 'after', value: '__TODAY__' },
                 { column: 'startTime', operator: 'before', value: '__WEEK_FROM_TODAY__' }
@@ -386,7 +388,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
 
         // Finde alle bestehenden Client-Filter (alle Filter außer den Standard-Filtern)
         const existingClientFilters = existingFilters.filter((filter: any) => 
-          !['Archiv', 'Heute', 'Woche'].includes(filter.name)
+          ![t('consultations.filters.archive'), t('consultations.filters.today'), t('consultations.filters.week')].includes(filter.name)
         );
         
         // Aktuelle Recent Client Namen
@@ -459,10 +461,10 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
             : consultation
         )
       );
-      toast.success('Notizen aktualisiert');
+      toast.success(t('consultations.notesUpdated'));
     } catch (error) {
       console.error('Fehler beim Aktualisieren der Notizen:', error);
-      toast.error('Fehler beim Aktualisieren der Notizen');
+      toast.error(t('consultations.notesUpdateError'));
     }
   };
 
@@ -551,13 +553,13 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
         )
       );
       
-      toast.success('Zeit aktualisiert');
+      toast.success(t('consultations.timeUpdated'));
       setEditingTimeId(null);
       setEditingTimeType(null);
       setEditingTimeValue('');
     } catch (error: any) {
       console.error('Fehler beim Aktualisieren der Zeit:', error);
-      toast.error(`Fehler beim Aktualisieren der Zeit: ${error.response?.data?.message || error.message}`);
+      toast.error(`${t('consultations.timeUpdateError')}: ${error.response?.data?.message || error.message}`);
     }
   };
 
@@ -609,7 +611,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
 
   const handleDeleteConsultation = async (consultationId: number) => {
     // Bestätigungsdialog
-    if (!window.confirm('Sind Sie sicher, dass Sie diese Beratung löschen möchten? Diese Aktion kann nicht rückgängig gemacht werden.')) {
+    if (!window.confirm(t('consultations.confirmDelete'))) {
       return;
     }
 
@@ -619,13 +621,13 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
       // Entferne die Beratung aus der lokalen Liste
       setConsultations(prev => prev.filter(consultation => consultation.id !== consultationId));
       
-      toast.success('Beratung erfolgreich gelöscht');
+      toast.success(t('consultations.deleteSuccess'));
       
       // Informiere die übergeordnete Komponente über die Änderung
       onConsultationChange?.();
     } catch (error: any) {
       console.error('Fehler beim Löschen der Beratung:', error);
-      const errorMessage = error.response?.data?.message || 'Fehler beim Löschen der Beratung';
+      const errorMessage = error.response?.data?.message || t('consultations.deleteError');
       toast.error(errorMessage);
     }
   };
@@ -827,7 +829,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
             id: `midday-${currentDay}`,
             type: 'midday',
             date: currentDay,
-            label: 'Mittag',
+            label: t('consultations.midday'),
             position: index
           });
         }
@@ -873,14 +875,14 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
       const invoiceInfo = getConsultationInvoiceInfo(consultation);
       return {
         type: 'invoice' as const,
-        status: 'Einzelrechnung',
+        status: t('consultations.invoice'),
         info: invoiceInfo
       };
     } else if (isInMonthlyReport) {
       const monthlyReportInfo = getConsultationMonthlyReportInfo(consultation);
       return {
         type: 'monthly' as const,
-        status: 'Monatsbericht',
+        status: t('consultations.monthlyReport'),
         info: monthlyReportInfo
       };
     }
@@ -907,7 +909,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
     navigate(`/worktracker?editTask=${taskId}`);
   };
 
-  if (loading) return <div className="p-4">Lädt...</div>;
+  if (loading) return <div className="p-4">{t('common.loading')}</div>;
   if (error) return <div className="p-4 text-red-600">{error}</div>;
 
   return (
@@ -918,10 +920,10 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
           <div className="flex items-center">
             <ClockIcon className="h-6 w-6 mr-2 dark:text-white" />
             <div>
-              <h2 className="text-xl font-semibold dark:text-white">Beratungsliste</h2>
+              <h2 className="text-xl font-semibold dark:text-white">{t('consultations.listTitle')}</h2>
               {/* Total-Anzeige */}
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                {filteredConsultations.length} Beratung{filteredConsultations.length !== 1 ? 'en' : ''} - Total: {totalDuration}
+                {t('consultations.count', { count: filteredConsultations.length })} - {t('consultations.total')}: {totalDuration}
               </p>
             </div>
           </div>
@@ -929,7 +931,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
           <div className="flex items-center gap-1.5">
             <input
               type="text"
-              placeholder="Suchen..."
+              placeholder={t('common.searchPlaceholder')}
               className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -938,7 +940,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
             <button
               className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
               onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-              title="Erweiterte Filter"
+              title={t('consultations.advancedFilters')}
             >
               <FunnelIcon className="h-5 w-5" />
               {getActiveFilterCount() > 0 && (
@@ -953,7 +955,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
               <button
                 onClick={handleCreateInvoice}
                 className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors ml-2"
-                title="Rechnung aus gefilterten Beratungen erstellen"
+                title={t('consultations.createInvoiceFromFiltered')}
               >
                 <DocumentTextIcon className="h-5 w-5" />
               </button>
@@ -966,12 +968,12 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
           <div className="px-2 sm:px-0">
             <FilterPane
               columns={[
-                { id: 'client', label: 'Client' },
-                { id: 'branch', label: 'Niederlassung' },
-                { id: 'notes', label: 'Notizen' },
-                { id: 'startTime', label: 'Datum' },
-                { id: 'duration', label: 'Dauer (Stunden)' },
-                { id: 'invoiceStatus', label: 'Abrechnungsstatus' }
+                { id: 'client', label: t('consultations.columns.client') },
+                { id: 'branch', label: t('consultations.columns.branch') },
+                { id: 'notes', label: t('consultations.columns.notes') },
+                { id: 'startTime', label: t('consultations.columns.date') },
+                { id: 'duration', label: t('consultations.columns.durationHours') },
+                { id: 'invoiceStatus', label: t('consultations.columns.invoiceStatus') }
               ]}
               onApply={applyFilterConditions}
               onReset={resetFilterConditions}
@@ -1000,11 +1002,11 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
             <div className="text-center py-12 px-2 sm:px-0">
               <ClockIcon className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
               <div>
-                <p className="font-medium text-gray-900 dark:text-white">Keine Beratungen gefunden</p>
+                <p className="font-medium text-gray-900 dark:text-white">{t('consultations.noConsultationsFound')}</p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                   {searchTerm || filterConditions.length > 0
-                    ? 'Versuchen Sie andere Suchbegriffe oder Filter.' 
-                    : 'Es wurden noch keine Beratungen durchgeführt.'}
+                    ? t('consultations.tryOtherFilters')
+                    : t('consultations.noConsultationsYet')}
                 </p>
               </div>
             </div>
@@ -1077,7 +1079,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                         onClick={() => navigateToInvoices(billingStatus.info?.id)}
                                         className="text-xs text-green-700 dark:text-green-400 font-medium hover:underline cursor-pointer"
                                       >
-                                        Einzelrechnung
+                                        {t('consultations.invoice')}
                                       </button>
                                     </div>
                                     {billingStatus.info && 'invoiceNumber' in billingStatus.info && (
@@ -1103,7 +1105,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                         onClick={() => navigateToMonthlyReports(billingStatus.info?.id)}
                                         className="text-xs text-green-700 dark:text-green-400 font-medium hover:underline cursor-pointer"
                                       >
-                                        Monatsbericht
+                                        {t('consultations.monthlyReport')}
                                       </button>
                                     </div>
                                     {billingStatus.info && 'reportNumber' in billingStatus.info && (
@@ -1113,8 +1115,8 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                           className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 hover:opacity-80 cursor-pointer"
                                           title={`Monatsbericht ${billingStatus.info.reportNumber}`}
                                         >
-                                          {billingStatus.info.status === 'GENERATED' ? 'Erstellt' : 
-                                           billingStatus.info.status === 'SENT' ? 'Gesendet' : 'Archiviert'}
+                                          {billingStatus.info.status === 'GENERATED' ? t('analytics.monthlyReports.status.generated') : 
+                                           billingStatus.info.status === 'SENT' ? t('analytics.monthlyReports.status.sent') : t('analytics.monthlyReports.status.archived')}
                                         </button>
                                       </div>
                                     )}
@@ -1128,7 +1130,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
 
                           {/* Time Range - Single compact field */}
                           <div>
-                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Zeit</p>
+                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{t('consultations.columns.time')}</p>
                             <div className="text-sm font-medium text-gray-900 dark:text-white">
                               {editingTimeId === consultation.id && editingTimeType === 'startTime' ? (
                                 <div className="flex items-center space-x-1">
@@ -1141,7 +1143,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                   <button
                                     onClick={() => handleTimeSave(consultation.id)}
                                     className="p-0.5 text-green-600 hover:text-green-700"
-                                    title="Speichern"
+                                    title={t('common.save')}
                                   >
                                     <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1150,7 +1152,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                   <button
                                     onClick={handleTimeCancel}
                                     className="p-0.5 text-red-600 hover:text-red-700"
-                                    title="Abbrechen"
+                                    title={t('common.cancel')}
                                   >
                                     <XMarkIcon className="h-3 w-3" />
                                   </button>
@@ -1166,7 +1168,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                   <button
                                     onClick={() => handleTimeSave(consultation.id)}
                                     className="p-0.5 text-green-600 hover:text-green-700"
-                                    title="Speichern"
+                                    title={t('common.save')}
                                   >
                                     <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -1175,7 +1177,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                   <button
                                     onClick={handleTimeCancel}
                                     className="p-0.5 text-red-600 hover:text-red-700"
-                                    title="Abbrechen"
+                                    title={t('common.cancel')}
                                   >
                                     <XMarkIcon className="h-3 w-3" />
                                   </button>
@@ -1199,7 +1201,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                   ) : (
                                     <div className="flex items-center">
                                       <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-1 animate-pulse"></div>
-                                      <span className="text-green-600 dark:text-green-400 text-xs">Aktiv</span>
+                                      <span className="text-green-600 dark:text-green-400 text-xs">{t('consultations.active')}</span>
                                     </div>
                                   )}
                                 </div>
@@ -1209,7 +1211,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
 
                           {/* Duration */}
                           <div>
-                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Dauer</p>
+                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">{t('consultations.columns.duration')}</p>
                             <p className="text-sm font-medium text-gray-900 dark:text-white">
                               {calculateDuration(consultation.startTime, consultation.endTime)}
                             </p>
@@ -1219,7 +1221,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                           {consultation.taskLinks && consultation.taskLinks.length > 0 && (
                             <div>
                               <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                                Tasks ({consultation.taskLinks.length})
+                                {t('consultations.tasks', { count: consultation.taskLinks.length })}
                               </p>
                               <div className="space-y-1">
                                 {consultation.taskLinks.slice(0, 2).map((taskLink) => (
@@ -1242,7 +1244,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                     }}
                                     className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer"
                                   >
-                                    +{consultation.taskLinks.length - 2} weitere
+                                    {t('consultations.moreTasks', { count: consultation.taskLinks.length - 2 })}
                                   </button>
                                 )}
                               </div>
@@ -1258,7 +1260,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                               <button
                                 onClick={() => handleLinkTask(consultation.id)}
                                 className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded"
-                                title="Task verknüpfen"
+                                title={t('consultations.linkTask')}
                               >
                                 <LinkIcon className="h-4 w-4" />
                               </button>
@@ -1267,14 +1269,14 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                               <button
                                 onClick={() => handleDeleteConsultation(consultation.id)}
                                 className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded"
-                                title="Beratung löschen"
+                                title={t('consultations.delete')}
                               >
                                 <TrashIcon className="h-4 w-4" />
                               </button>
                             )}
                           </div>
                           
-                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Notizen</p>
+                          <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t('consultations.columns.notes')}</p>
                           {editingNotesId === consultation.id ? (
                             <div className="space-y-2">
                               <textarea
@@ -1282,20 +1284,20 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                 onChange={(e) => setEditingNotes(e.target.value)}
                                 className="w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm resize-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                                 rows={3}
-                                placeholder="Notizen zur Beratung..."
+                                placeholder={t('consultations.notesPlaceholder')}
                               />
                               <div className="flex justify-end space-x-2">
                                 <button
                                   onClick={handleNotesCancel}
                                   className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                                  title="Abbrechen"
+                                  title={t('common.cancel')}
                                 >
                                   <XMarkIcon className="h-4 w-4" />
                                 </button>
                                 <button
                                   onClick={() => handleNotesSave(consultation.id)}
                                   className="p-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-md"
-                                  title="Speichern"
+                                  title={t('common.save')}
                                 >
                                   <CheckIcon className="h-4 w-4" />
                                 </button>
@@ -1313,7 +1315,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                               ) : (
                                 <div className="flex items-center justify-center h-full text-center">
                                   <span className="text-xs text-gray-400 dark:text-gray-500">
-                                    Notizen hinzufügen...
+                                    {t('consultations.addNotes')}
                                   </span>
                                 </div>
                               )}
@@ -1354,7 +1356,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
             // Nach Rechnungserstellung: Markiere betroffene Consultations als abgerechnet
             // Für jetzt: Reload der Liste (später könnte optimiert werden)
             loadConsultations();
-            toast.success(`Rechnung erstellt! PDF kann in der Rechnungsverwaltung heruntergeladen werden.`);
+            toast.success(t('consultations.invoiceCreated'));
           }}
         />
       )}

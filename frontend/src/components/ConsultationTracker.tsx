@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PlayIcon, StopIcon, PlusIcon, ClockIcon, UserGroupIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
@@ -32,6 +33,7 @@ interface ConsultationTrackerProps {
 }
 
 const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultationChange, onConsultationStarted }) => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { selectedBranch } = useBranch();
   const [activeConsultation, setActiveConsultation] = useState<Consultation | null>(null);
@@ -88,7 +90,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
 
   const handleStartConsultation = async (clientId: number, notes?: string) => {
     if (!selectedBranch) {
-      toast.error('Bitte wählen Sie eine Niederlassung aus');
+      toast.error(t('consultations.selectBranch'));
       return;
     }
 
@@ -128,10 +130,10 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
         onConsultationStarted(consultation.client.name);
       }
       
-      toast.success('Beratung gestartet');
+      toast.success(t('consultations.started'));
     } catch (error) {
       console.error('Fehler beim Starten der Beratung:', error);
-      toast.error('Fehler beim Starten der Beratung');
+      toast.error(t('consultations.startError'));
     } finally {
       setIsStarting(false);
     }
@@ -147,7 +149,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       });
       setActiveConsultation(null);
       setNotes('');
-      toast.success('Beratung beendet');
+      toast.success(t('consultations.stopped'));
       // Recent Clients nach dem Stoppen aktualisieren
       loadRecentClients();
       // Beratungsliste aktualisieren - übergebe die aktualisierte Consultation
@@ -156,7 +158,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       console.log('🛑 ConsultationTracker: Sending consultationChanged event (stop)');
       window.dispatchEvent(new CustomEvent('consultationChanged'));
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Beenden der Beratung');
+      toast.error(error.response?.data?.message || t('consultations.stopError'));
     }
   };
 
@@ -197,7 +199,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
       return;
     }
     if (!selectedBranch) {
-      toast.error('Bitte wählen Sie eine Niederlassung aus');
+      toast.error(t('consultations.selectBranch'));
       return;
     }
 
@@ -267,10 +269,10 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
         onConsultationStarted(selectedClient.name);
       }
       
-      toast.success('Beratung erfolgreich erfasst');
+      toast.success(t('consultations.manualSaveSuccess'));
     } catch (error) {
       console.error('Fehler beim Erfassen der Beratung:', error);
-      toast.error('Fehler beim Erfassen der Beratung');
+      toast.error(t('consultations.manualSaveError'));
     } finally {
       setIsStarting(false);
     }
@@ -433,7 +435,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center pl-2 sm:pl-0">
             <UserGroupIcon className="h-6 w-6 mr-2 sm:h-6 sm:w-6 sm:mr-2" />
-            Beratungs-Tracker
+            {t('consultations.trackerTitle')}
           </h2>
           {activeConsultation && (
             <div className="flex items-center text-green-600 dark:text-green-400">
@@ -449,19 +451,19 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
         {activeConsultation ? (
           <div className="space-y-4">
             <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Aktive Beratung mit</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">{t('consultations.activeWith')}</p>
               <p className="text-lg font-semibold text-gray-900 dark:text-white">
                 {activeConsultation.client?.name}
               </p>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Gestartet: {formatTime(activeConsultation.startTime)}
+                {t('consultations.startedAt')}: {formatTime(activeConsultation.startTime)}
               </p>
             </div>
 
             {/* Notizen-Bereich */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Notizen zur Beratung
+                {t('consultations.notesForConsultation')}
               </label>
               <textarea
                 value={notes}
@@ -469,7 +471,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                 onBlur={updateNotes}
                 className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 rows={3}
-                placeholder="Notizen hier eingeben..."
+                placeholder={t('consultations.notesPlaceholder')}
               />
             </div>
 
@@ -478,7 +480,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
               className="w-full flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
             >
               <StopIcon className="h-5 w-5 mr-2" />
-              Beratung beenden
+              {t('consultations.stop')}
             </button>
           </div>
         ) : (
@@ -488,8 +490,8 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
               <div>
                 <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   {sortedDisplayTags.some(c => !isPlaceholder(c) && c.status === 'planned') ? 
-                    'Zuletzt beraten & geplante Beratungen:' : 
-                    'Zuletzt beraten:'
+                    t('consultations.recentAndPlanned') : 
+                    t('consultations.recent')
                   }
                 </p>
                 <div ref={containerRef} className="flex items-center gap-0.5 md:gap-6">
@@ -499,8 +501,8 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                     disabled={showOptimisticTags}
                     className={`bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center flex-shrink-0 ${showOptimisticTags ? 'opacity-50 cursor-not-allowed' : ''}`}
                     style={{ width: '30.19px', height: '30.19px' }}
-                    title="Neuen Client anlegen"
-                    aria-label="Neuen Client anlegen"
+                    title={t('consultations.createClient')}
+                    aria-label={t('consultations.createClient')}
                   >
                     <PlusIcon className="h-4 w-4" />
                   </button>
@@ -525,10 +527,16 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                           }`}
                           title={
                             isPlaceholder(client) 
-                              ? 'Lädt...' 
+                              ? t('common.loading')
                               : isPlanned
-                                ? `Geplante Beratung mit ${client.name} am ${client.lastConsultationDate ? new Date(client.lastConsultationDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''}`
-                                : `Beratung mit ${client.name} starten (zuletzt beraten${client.lastConsultationDate ? ` am ${new Date(client.lastConsultationDate).toLocaleDateString('de-DE')}` : ''})`
+                                ? t('consultations.plannedWith', { 
+                                    clientName: client.name, 
+                                    date: client.lastConsultationDate ? new Date(client.lastConsultationDate).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : ''
+                                  })
+                                : t('consultations.startWith', { 
+                                    clientName: client.name,
+                                    date: client.lastConsultationDate ? new Date(client.lastConsultationDate).toLocaleDateString('de-DE') : ''
+                                  })
                           }
                         >
                           {isPlanned && !isPlaceholder(client) && (
@@ -556,7 +564,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
               <button
                 onClick={() => setIsClientSelectModalOpen(true)}
                 className="w-2/3 flex items-center justify-center px-4 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                title="Beratung starten"
+                title={t('consultations.start')}
               >
                 <PlayIcon className="h-5 w-5" />
               </button>
@@ -574,7 +582,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                     ? 'border-blue-500 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
                     : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600'
                 }`}
-                title="Planen"
+                title={t('consultations.plan')}
               >
                 <ClockIcon className="h-5 w-5" />
               </button>
@@ -584,13 +592,13 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
             {isManualEntry && (
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-3">
                 <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
-                  Beratung planen
+                  {t('consultations.planConsultation')}
                 </h3>
                 
                 {/* Client-Auswahl */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Client
+                    {t('consultations.columns.client')}
                   </label>
                   {selectedClient ? (
                     <div className="flex items-center justify-between bg-white dark:bg-gray-800 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2">
@@ -599,7 +607,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                         onClick={() => setIsClientSelectModalOpen(true)}
                         className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                       >
-                        Ändern
+                        {t('consultations.change')}
                       </button>
                     </div>
                   ) : (
@@ -607,7 +615,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                       onClick={() => setIsClientSelectModalOpen(true)}
                       className="w-full text-left bg-white dark:bg-gray-800 rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                      Client auswählen...
+                      {t('consultations.selectClientPlaceholder')}
                     </button>
                   )}
                 </div>
@@ -616,7 +624,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Startzeit
+                      {t('consultations.columns.startTime')}
                     </label>
                     <input
                       type="datetime-local"
@@ -627,7 +635,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Endzeit
+                      {t('consultations.columns.endTime')}
                     </label>
                     <input
                       type="datetime-local"
@@ -641,14 +649,14 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                 {/* Notizen */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Notizen
+                    {t('consultations.columns.notes')}
                   </label>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     className="w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white"
                     rows={2}
-                    placeholder="Optionale Notizen..."
+                    placeholder={t('consultations.optionalNotes')}
                   />
                 </div>
 
@@ -659,7 +667,7 @@ const ConsultationTracker: React.FC<ConsultationTrackerProps> = ({ onConsultatio
                     disabled={!selectedClient || !manualStartTime || !manualEndTime}
                     className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Beratung speichern
+                    {t('consultations.saveConsultation')}
                   </button>
                 </div>
               </div>

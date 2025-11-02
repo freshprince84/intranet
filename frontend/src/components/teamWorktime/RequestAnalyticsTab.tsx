@@ -266,14 +266,14 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
         {/* Linke Seite: Titel mit Icon */}
         <div className="flex items-center">
           <DocumentTextIcon className="h-6 w-6 mr-2 dark:text-white" />
-          <h2 className="text-xl font-semibold dark:text-white">Request-Auswertungen</h2>
+          <h2 className="text-xl font-semibold dark:text-white">{t('analytics.request.title')}</h2>
         </div>
         
         {/* Rechte Seite: Suchfeld, View-Mode Toggle, Filter-Button */}
         <div className="flex items-center gap-1.5">
           <input
             type="text"
-            placeholder="Suchen..."
+            placeholder={t('common.searchPlaceholder')}
             className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -291,7 +291,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                 updateViewMode(newMode);
               }
             }}
-            title={viewMode === 'table' ? 'Als Cards anzeigen' : 'Als Tabelle anzeigen'}
+            title={viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
           >
             {viewMode === 'table' ? (
               <Squares2X2Icon className="h-5 w-5" />
@@ -304,7 +304,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
           <button
             className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
             onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-            title="Filter"
+            title={t('common.filter')}
             style={{ position: 'relative' }}
           >
             <FunnelIcon className="h-5 w-5" />
@@ -337,29 +337,29 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
         activeFilterName={activeFilterName}
         selectedFilterId={selectedFilterId}
         onFilterChange={handleFilterChange}
-        defaultFilterName="Alle"
+        defaultFilterName={t('teamWorktime.filters.all')}
       />
 
       {/* Statistiken */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
         <div className="bg-white dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
-          <div className="text-sm text-gray-500 dark:text-gray-400">Gesamt</div>
+          <div className="text-sm text-gray-500 dark:text-gray-400">{t('analytics.request.stats.total')}</div>
           <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</div>
         </div>
         <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-          <div className="text-sm text-green-600 dark:text-green-400">Genehmigt</div>
+          <div className="text-sm text-green-600 dark:text-green-400">{t('analytics.request.status.approved')}</div>
           <div className="text-2xl font-bold text-green-700 dark:text-green-300">{stats.approved}</div>
         </div>
         <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
-          <div className="text-sm text-yellow-600 dark:text-yellow-400">Offen</div>
+          <div className="text-sm text-yellow-600 dark:text-yellow-400">{t('analytics.request.status.approval')}</div>
           <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-300">{stats.pending}</div>
         </div>
         <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4 border border-red-200 dark:border-red-800">
-          <div className="text-sm text-red-600 dark:text-red-400">Abgelehnt</div>
+          <div className="text-sm text-red-600 dark:text-red-400">{t('analytics.request.status.denied')}</div>
           <div className="text-2xl font-bold text-red-700 dark:text-red-300">{stats.denied}</div>
         </div>
         <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-4 border border-orange-200 dark:border-orange-800">
-          <div className="text-sm text-orange-600 dark:text-orange-400">Nachbesserung</div>
+          <div className="text-sm text-orange-600 dark:text-orange-400">{t('analytics.request.status.to_improve')}</div>
           <div className="text-2xl font-bold text-orange-700 dark:text-orange-300">{stats.toImprove}</div>
         </div>
       </div>
@@ -367,7 +367,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
       {/* Content: Tabelle oder Cards */}
       {loading ? (
         <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500 dark:text-gray-400">Lade Requests...</div>
+          <div className="text-gray-500 dark:text-gray-400">{t('analytics.request.loading')}</div>
         </div>
       ) : viewMode === 'table' ? (
         /* Tabellen-Ansicht */
@@ -392,7 +392,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
               {filteredRequests.length === 0 ? (
                 <tr>
                   <td colSpan={columnOrder.filter(id => visibleColumnIds.includes(id)).length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                    Keine Requests für dieses Datum gefunden
+                    {t('analytics.request.noRequestsForDate')}
                   </td>
                 </tr>
               ) : (
@@ -454,7 +454,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
           {filteredRequests.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
               <DocumentTextIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />
-              <div className="text-sm">Keine Requests gefunden</div>
+              <div className="text-sm">{t('analytics.request.noRequests')}</div>
             </div>
           ) : (
             <CardGrid>
@@ -465,7 +465,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                 if (visibleColumnIds.includes('branch')) {
                   metadata.push({
                     icon: <BuildingOfficeIcon className="h-4 w-4" />,
-                    label: 'Niederlassung',
+                    label: t('analytics.request.metadata.branch'),
                     value: request.branch.name,
                     section: 'left'
                   });
@@ -475,7 +475,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                 if (visibleColumnIds.includes('requester')) {
                   metadata.push({
                     icon: <UserIcon className="h-4 w-4" />,
-                    label: 'Antragsteller',
+                    label: t('analytics.request.metadata.requester'),
                     value: `${request.requester.firstName} ${request.requester.lastName}`,
                     section: 'main'
                   });
@@ -484,7 +484,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                 if (visibleColumnIds.includes('responsible')) {
                   metadata.push({
                     icon: <UserIcon className="h-4 w-4" />,
-                    label: 'Verantwortlich',
+                    label: t('analytics.request.metadata.responsible'),
                     value: `${request.responsible.firstName} ${request.responsible.lastName}`,
                     section: 'main'
                   });
@@ -494,7 +494,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                 if (visibleColumnIds.includes('time')) {
                   metadata.push({
                     icon: <ClockIcon className="h-4 w-4" />,
-                    label: 'Zeit',
+                    label: t('analytics.request.metadata.time'),
                     value: format(new Date(request.createdAt), 'HH:mm'),
                     section: 'right'
                   });
