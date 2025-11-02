@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckIcon, ArrowPathIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
@@ -359,16 +359,22 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                  className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                  title="Abbrechen"
                 >
-                  Abbrechen
+                  <XMarkIcon className="h-5 w-5" />
                 </button>
                 <button
                   type="submit"
                   disabled={loading || !settings || totalHours === 0}
-                  className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={loading ? 'Erstelle Rechnung...' : 'Rechnung erstellen'}
                 >
-                  {loading ? 'Erstelle Rechnung...' : 'Rechnung erstellen'}
+                  {loading ? (
+                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <DocumentTextIcon className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </form>

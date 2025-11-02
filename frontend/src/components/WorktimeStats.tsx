@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, getWeek, getYear, parse, addDays } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { ChartBarIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
@@ -29,6 +30,7 @@ interface WorktimeStats {
 }
 
 const WorktimeStats: React.FC = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const [stats, setStats] = useState<WorktimeStats | null>(null);
     const [loading, setLoading] = useState(true);
@@ -74,14 +76,23 @@ const WorktimeStats: React.FC = () => {
             if (data && data.weeklyData) {
                 // Benutze direkt das selectedWeekDate als Start der Woche (Montag)
                 // Behalte das originale Mapping (1-basiert)
-                const weekdayMapping = {
+                // Übersetze deutsche Wochentage vom Backend zu englischen Keys
+                const weekdayMapping: Record<string, number> = {
                     "Montag": 1,
                     "Dienstag": 2,
                     "Mittwoch": 3,
                     "Donnerstag": 4,
                     "Freitag": 5,
                     "Samstag": 6,
-                    "Sonntag": 7
+                    "Sonntag": 7,
+                    // Fallback für andere Sprachen (wenn Backend später mehrsprachig wird)
+                    [t('worktime.days.monday')]: 1,
+                    [t('worktime.days.tuesday')]: 2,
+                    [t('worktime.days.wednesday')]: 3,
+                    [t('worktime.days.thursday')]: 4,
+                    [t('worktime.days.friday')]: 5,
+                    [t('worktime.days.saturday')]: 6,
+                    [t('worktime.days.sunday')]: 7
                 };
                 
                 // Berechne die Tagesdaten basierend auf selectedWeekDate
@@ -143,14 +154,14 @@ const WorktimeStats: React.FC = () => {
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Arbeitszeitstatistik_KW${selectedWeekInput.split('W')[1]}.xlsx`;
+            a.download = t('worktime.stats.exportFilename', { week: selectedWeekInput.split('W')[1] });
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
             document.body.removeChild(a);
         } catch (error) {
             console.error('Fehler beim Exportieren:', error);
-            setError('Die Statistiken konnten nicht exportiert werden.');
+            setError(t('worktime.stats.export') + ': ' + t('common.error'));
         }
     };
 
@@ -204,7 +215,7 @@ const WorktimeStats: React.FC = () => {
         }
     }, [loading, stats]);
 
-    if (loading) return <div className="p-4">Lädt...</div>;
+    if (loading) return <div className="p-4">{t('common.loading')}</div>;
     if (error) return <div className="p-4 text-red-600">{error}</div>;
     if (!stats) return null;
 
@@ -222,7 +233,7 @@ const WorktimeStats: React.FC = () => {
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center pl-2 sm:pl-0">
                     <ChartBarIcon className="h-6 w-6 mr-2 dark:text-white" />
-                    <h2 className="text-xl font-semibold dark:text-white">Arbeitszeitstatistik</h2>
+                    <h2 className="text-xl font-semibold dark:text-white">{t('worktime.stats.title')}</h2>
                 </div>
                 <div className="flex items-center space-x-4">
                     <input
@@ -235,8 +246,8 @@ const WorktimeStats: React.FC = () => {
                     <button
                         onClick={handleExport}
                         className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center min-w-8 min-h-8 w-8 h-8"
-                        title="Exportieren"
-                        aria-label="Arbeitszeiten exportieren"
+                        title={t('worktime.stats.export')}
+                        aria-label={t('worktime.stats.exportTitle')}
                         style={{ marginTop: '1px', marginBottom: '1px' }}
                     >
                         <DocumentArrowDownIcon className="h-4 w-4" />
@@ -246,21 +257,21 @@ const WorktimeStats: React.FC = () => {
 
             <div className="flex flex-row gap-2 mb-8 overflow-x-auto">
                 <div className="bg-blue-50 dark:bg-blue-900/30 p-4 rounded-lg flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-blue-900 dark:text-blue-100 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg text-center">Gesamtstunden</h3>
-                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap text-center">{stats.totalHours}h</p>
+                    <h3 className="text-lg font-medium text-blue-900 dark:text-blue-100 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg text-center">{t('worktime.stats.totalHours')}</h3>
+                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-blue-600 dark:text-blue-400 whitespace-nowrap text-center">{stats.totalHours}{t('worktime.stats.hourShort')}</p>
                 </div>
                 <div className="bg-green-50 dark:bg-green-900/30 p-4 rounded-lg flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-green-900 dark:text-green-100 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg text-center">Durchschnitt/Tag</h3>
-                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600 dark:text-green-400 whitespace-nowrap text-center">{stats.averageHoursPerDay}h</p>
+                    <h3 className="text-lg font-medium text-green-900 dark:text-green-100 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg text-center">{t('worktime.stats.averagePerDay')}</h3>
+                    <p className="text-xl sm:text-2xl md:text-3xl font-bold text-green-600 dark:text-green-400 whitespace-nowrap text-center">{stats.averageHoursPerDay}{t('worktime.stats.hourShort')}</p>
                 </div>
                 <div className="bg-purple-50 dark:bg-purple-900/30 p-4 rounded-lg flex-1 min-w-0">
-                    <h3 className="text-lg font-medium text-purple-900 dark:text-purple-100 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg text-center">Arbeitstage</h3>
+                    <h3 className="text-lg font-medium text-purple-900 dark:text-purple-100 mb-2 whitespace-nowrap text-sm sm:text-base md:text-lg text-center">{t('worktime.stats.workDays')}</h3>
                     <p className="text-xl sm:text-2xl md:text-3xl font-bold text-purple-600 dark:text-purple-400 whitespace-nowrap text-center">{stats.daysWorked}</p>
                 </div>
             </div>
 
             <div className="mt-8">
-                <h3 className="text-lg font-medium mb-4 dark:text-white">Wochenverlauf</h3>
+                <h3 className="text-lg font-medium mb-4 dark:text-white">{t('worktime.stats.weeklyProgress')}</h3>
                 
                 {/* Chart Container */}
                 <div className="relative" style={{ height: '200px' }}>
@@ -291,7 +302,7 @@ const WorktimeStats: React.FC = () => {
                         }}
                     >
                         <span className="absolute -top-3 right-8 text-xs text-red-600 dark:text-red-500 font-medium">
-                            Soll: {targetWorkHours}h
+                            {t('worktime.stats.target')}: {targetWorkHours}{t('worktime.stats.hourShort')}
                         </span>
                     </div>
                     
@@ -299,11 +310,11 @@ const WorktimeStats: React.FC = () => {
                     <div className="absolute top-0 left-0 text-xs flex items-center gap-2">
                         <div className="flex items-center">
                             <div className="w-3 h-3 bg-blue-100 dark:bg-blue-900/50 border-2 border-blue-600 dark:border-blue-400 rounded-sm mr-1"></div>
-                            <span className="text-blue-600 dark:text-blue-400">≤ {targetWorkHours}h</span>
+                            <span className="text-blue-600 dark:text-blue-400">{t('worktime.stats.belowTarget', { target: targetWorkHours })}</span>
                         </div>
                         <div className="flex items-center">
                             <div className="w-3 h-3 bg-red-100 dark:bg-red-900/50 border-2 border-red-600 dark:border-red-400 rounded-sm mr-1"></div>
-                            <span className="text-red-600 dark:text-red-400">{'>'} {targetWorkHours}h</span>
+                            <span className="text-red-600 dark:text-red-400">{t('worktime.stats.aboveTarget', { target: targetWorkHours })}</span>
                         </div>
                     </div>
                     
@@ -330,7 +341,7 @@ const WorktimeStats: React.FC = () => {
                                         <div 
                                             className="relative w-5/12 h-full flex flex-col justify-end cursor-pointer" 
                                             onClick={() => openWorkTimeModal(formattedDate)}
-                                            title="Klicken, um Zeiteinträge für diesen Tag anzuzeigen"
+                                            title={t('worktime.stats.clickToView')}
                                         >
                                             {/* Teil über der Sollarbeitszeit (rot) */}
                                             {overTargetHeight > 0 && (
@@ -372,10 +383,21 @@ const WorktimeStats: React.FC = () => {
                         {stats.weeklyData.map((dayData, index) => (
                             <div key={index} className="flex flex-col items-center" style={{ width: '13%' }}>
                                 <div className="text-sm text-gray-600 dark:text-gray-400">
-                                    {dayData.day.substring(0, 2)}
+                                    {(() => {
+                                        // Übersetze deutschen Wochentag vom Backend
+                                        const dayLower = dayData.day.toLowerCase();
+                                        if (dayLower.includes('montag') || dayLower.includes('mo')) return t('worktime.days.monday');
+                                        if (dayLower.includes('dienstag') || dayLower.includes('di')) return t('worktime.days.tuesday');
+                                        if (dayLower.includes('mittwoch') || dayLower.includes('mi')) return t('worktime.days.wednesday');
+                                        if (dayLower.includes('donnerstag') || dayLower.includes('do')) return t('worktime.days.thursday');
+                                        if (dayLower.includes('freitag') || dayLower.includes('fr')) return t('worktime.days.friday');
+                                        if (dayLower.includes('samstag') || dayLower.includes('sa')) return t('worktime.days.saturday');
+                                        if (dayLower.includes('sonntag') || dayLower.includes('so')) return t('worktime.days.sunday');
+                                        return dayData.day.substring(0, 2);
+                                    })()}
                                 </div>
                                 <div className="text-sm font-medium dark:text-gray-300">
-                                    {dayData.hours.toFixed(1)}h
+                                    {dayData.hours.toFixed(1)}{t('worktime.stats.hourShort')}
                                 </div>
                             </div>
                         ))}

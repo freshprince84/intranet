@@ -58,15 +58,13 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
         // Email als Username verwenden wenn kein Username angegeben
         const finalUsername = username || email;
         
-        console.log('Register-Versuch für:', { username: finalUsername, email, first_name, last_name });
-        
         // Finde die Hamburger-Rolle mit ID 999
         const hamburgerRole = await prisma.role.findUnique({
             where: { id: 999 }
         });
 
         if (!hamburgerRole) {
-            console.log('Hamburger-Rolle nicht gefunden');
+            console.error('Hamburger-Rolle nicht gefunden');
             return res.status(500).json({ message: 'Hamburger-Rolle nicht gefunden' });
         }
         
@@ -119,8 +117,6 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
             }
         });
 
-        console.log('Benutzer erstellt:', { id: user.id, username: user.username });
-
         // Erstelle Token
         const token = jwt.sign(
             { 
@@ -169,8 +165,11 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
 
 export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) => {
     try {
-        const { username, password } = req.body;
-        console.log(`[LOGIN] Login-Versuch für: ${username}`);
+        let { username, password } = req.body;
+        
+        // Whitespace entfernen
+        username = username?.trim();
+        password = password?.trim();
         
         // Finde den Benutzer mit Rollen
         const user = await prisma.user.findFirst({
@@ -194,43 +193,25 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
         });
         
         if (!user) {
-            console.log('[LOGIN] Benutzer nicht gefunden');
             return res.status(401).json({ message: 'Authentifizierung fehlgeschlagen' });
         }
-
-        console.log(`[LOGIN] Benutzer gefunden: ID=${user.id}, Username=${user.username}`);
-        console.log(`[LOGIN] Anzahl zugewiesener Rollen: ${user.roles.length}`);
-        user.roles.forEach((role, index) => {
-            console.log(`[LOGIN] Rolle ${index+1}: ID=${role.roleId}, Name=${role.role.name}, lastUsed=${role.lastUsed}`);
-        });
 
         // Überprüfe das Passwort
         const isValid = await bcrypt.compare(password, user.password);
         
         if (!isValid) {
-            console.log('[LOGIN] Passwort ungültig');
             return res.status(401).json({ message: 'Authentifizierung fehlgeschlagen' });
         }
-
-        console.log('[LOGIN] Passwort korrekt');
         
         // Finde die aktive Rolle
         let activeRole = user.roles.find(r => r.lastUsed === true);
         
-        if (activeRole) {
-            console.log(`[LOGIN] Aktive Rolle gefunden: ID=${activeRole.roleId}, Name=${activeRole.role.name}`);
-        } else {
-            console.log('[LOGIN] Keine aktive Rolle (lastUsed=true) gefunden');
-            
+        if (!activeRole) {
             // Wenn keine aktive Rolle gefunden wurde, aber der Benutzer hat Rollen
             if (user.roles.length > 0) {
-                console.log('[LOGIN] Benutzer hat Rollen, aber keine ist aktiv. Wähle Rolle mit niedrigster ID.');
-                
                 // Sortiere die Rollen nach ID aufsteigend (niedrigste ID zuerst)
                 const sortedRoles = [...user.roles].sort((a, b) => a.roleId - b.roleId);
                 const roleToActivate = sortedRoles[0];  // Rolle mit der niedrigsten ID
-                
-                console.log(`[LOGIN] Aktiviere Rolle mit niedrigster ID: ID=${roleToActivate.roleId}, Name=${roleToActivate.role.name}`);
                 
                 try {
                     // Aktualisiere den UserRole-Eintrag in der Datenbank
@@ -239,7 +220,6 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
                         data: { lastUsed: true }
                     });
                     
-                    console.log(`[LOGIN] Rolle ID=${roleToActivate.roleId} wurde auf lastUsed=true gesetzt`);
                     activeRole = { ...roleToActivate, lastUsed: true };
                 } catch (error) {
                     console.error('[LOGIN] Fehler beim Aktualisieren des UserRole-Eintrags:', error);
@@ -259,9 +239,6 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
             });
         }
         
-        // Wenn wir hier ankommen, haben wir eine aktive Rolle
-        console.log(`[LOGIN] Aktive Rolle für Token: ID=${activeRole.roleId}, Name=${activeRole.role.name}`);
-        
         // Erstelle den JWT-Token mit Benutzer-ID und Rollen-ID
         const token = jwt.sign(
             { 
@@ -271,8 +248,6 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
             process.env.JWT_SECRET || 'your-secret-key',
             { expiresIn: '24h' }
         );
-        
-        console.log(`[LOGIN] JWT-Token erstellt für Benutzer ID=${user.id} mit Rolle ID=${activeRole.roleId}`);
         
         // Bereite die Benutzerinformationen für die Antwort vor
         const userResponse = {
@@ -291,16 +266,6 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
             }))
         };
         
-        console.log('[LOGIN] Prüfe Berechtigungsformat im userResponse:');
-        userResponse.roles.forEach((roleData, idx) => {
-            console.log(`[LOGIN] Rolle ${idx+1}: ${roleData.role.name}`);
-            roleData.role.permissions.forEach((perm, permIdx) => {
-                console.log(`[LOGIN] Permission ${permIdx+1}:`, JSON.stringify(perm));
-            });
-        });
-        
-        console.log('[LOGIN] Login erfolgreich');
-        
         // Sende die Antwort an den Client
         res.json({
             message: 'Login erfolgreich',
@@ -318,7 +283,6 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
 
 export const logout = async (_req: Request, res: Response) => {
     try {
-        console.log('Logout-Anfrage erhalten');
         return res.status(200).json({ message: 'Logout erfolgreich' });
     } catch (error) {
         console.error('Logout-Fehler:', error);
@@ -335,8 +299,6 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        
-        console.log('getCurrentUser für ID:', userId);
         
         const user = await prisma.user.findUnique({
             where: { id: userId },
@@ -372,14 +334,6 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                 lastUsed: r.lastUsed
             }))
         };
-
-        console.log('[getCurrentUser] Prüfe Berechtigungsformat im userResponse:');
-        userResponse.roles.forEach((roleData, idx) => {
-            console.log(`[getCurrentUser] Rolle ${idx+1}: ${roleData.role.name}`);
-            roleData.role.permissions.forEach((perm, permIdx) => {
-                console.log(`[getCurrentUser] Permission ${permIdx+1}:`, JSON.stringify(perm));
-            });
-        });
 
         res.json({ user: userResponse });
     } catch (error) {

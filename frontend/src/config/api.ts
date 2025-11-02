@@ -88,7 +88,16 @@ export const API_ENDPOINTS = {
         STOP_USER: '/team-worktime/stop-user',
         USER_DAY: '/team-worktime/user-day',
         UPDATE: '/team-worktime/update',
-        OVERTIME: '/team-worktime/overtime'
+        OVERTIME: '/team-worktime/overtime',
+        // Analytics-Endpunkte
+        ANALYTICS: {
+            TODOS_BY_USER: '/team-worktime/analytics/todos-by-user',
+            REQUESTS_BY_USER: '/team-worktime/analytics/requests-by-user',
+            TODOS_CHRONOLOGICAL: '/team-worktime/analytics/todos-chronological',
+            REQUESTS_CHRONOLOGICAL: '/team-worktime/analytics/requests-chronological',
+            TODOS_FREQUENCY: '/team-worktime/analytics/todos-frequency',
+            TODOS_SHIFTS: '/team-worktime/analytics/todos-shifts'
+        }
     },
     // Cerebro Wiki-System
     CEREBRO: {
@@ -181,10 +190,15 @@ export const API_ENDPOINTS = {
         BASE: '/organizations',
         CURRENT: '/organizations/current',
         STATS: '/organizations/current/stats',
+        LANGUAGE: '/organizations/current/language',
         SEARCH: '/organizations/search',
         JOIN_REQUEST: '/organizations/join-request',
         JOIN_REQUESTS: '/organizations/join-requests',
         PROCESS_JOIN_REQUEST: (id: number) => `/organizations/join-requests/${id}`
+    },
+    // Sprache
+    LANGUAGE: {
+        ACTIVE: '/users/active-language'
     }
 };
 

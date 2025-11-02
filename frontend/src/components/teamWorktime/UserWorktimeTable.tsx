@@ -327,12 +327,12 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
               Object.values(filterState).some(v => v !== '')
                 ? 'bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400 dark:border-blue-800'
                 : 'bg-white text-gray-600 border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'
-            } rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center`}
+            } rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-gray-600 flex items-center relative`}
           >
             <FunnelIcon className="w-4 h-4 mr-2" />
             Filter
             {Object.values(filterState).some(v => v !== '') && (
-              <span className="ml-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-200 text-xs rounded-full px-1.5">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
                 {Object.values(filterState).filter(v => v !== '').length}
               </span>
             )}

@@ -73,11 +73,11 @@ Beispiele für Berechtigungscodes:
 
 | Code | Beschreibung | Module |
 |------|--------------|--------|
-| USER_VIEW | Benutzer anzeigen | Benutzerverwaltung |
-| USER_CREATE | Benutzer erstellen | Benutzerverwaltung |
-| USER_EDIT | Benutzer bearbeiten | Benutzerverwaltung |
-| USER_DELETE | Benutzer löschen | Benutzerverwaltung |
-| ROLE_MANAGE | Rollen verwalten | Benutzerverwaltung |
+| USER_VIEW | Benutzer anzeigen | Organisation |
+| USER_CREATE | Benutzer erstellen | Organisation |
+| USER_EDIT | Benutzer bearbeiten | Organisation |
+| USER_DELETE | Benutzer löschen | Organisation |
+| ROLE_MANAGE | Rollen verwalten | Organisation |
 | WORKTIME_VIEW_OWN | Eigene Arbeitszeit anzeigen | Zeiterfassung |
 | WORKTIME_VIEW_ALL | Alle Arbeitszeiten anzeigen | Zeiterfassung |
 | WORKTIME_EDIT_OWN | Eigene Arbeitszeit bearbeiten | Zeiterfassung |
@@ -423,7 +423,7 @@ import PermissionGuard from '../components/PermissionGuard';
 const UserManagementPage = () => {
   return (
     <div>
-      <h1>Benutzerverwaltung</h1>
+      <h1>Organisation</h1>
       
       <PermissionGuard permission="USER_VIEW">
         <UserList />

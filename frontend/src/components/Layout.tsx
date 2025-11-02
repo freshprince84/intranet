@@ -37,7 +37,7 @@ const Layout: React.FC = () => {
         <Sidebar />
         <main className={`flex-1 ${isMobile ? 'overflow-y-container' : 'overflow-y-auto'} ${
           isMobile ? 'px-4 pt-2 pb-4' : 'px-5 pt-3 pb-5'
-        }`}>
+        } transition-all duration-300 ease-in-out sidepane-content-main`}>
           <Outlet />
         </main>
       </div>

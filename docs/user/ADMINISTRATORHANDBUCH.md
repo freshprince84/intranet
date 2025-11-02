@@ -5,7 +5,7 @@ Dieses Handbuch bietet eine umfassende Anleitung zur Administration und Konfigur
 ## Inhaltsverzeichnis
 
 1. [Systemadministration](#systemadministration)
-2. [Benutzerverwaltung](#benutzerverwaltung)
+2. [Organisation](#organisation)
 3. [Rollenverwaltung](#rollenverwaltung)
 4. [Berechtigungssystem](#berechtigungssystem)
 5. [Systemeinstellungen](#systemeinstellungen)
@@ -35,7 +35,7 @@ Das Admin-Dashboard bietet:
 - Schnellzugriff auf administrative Funktionen
 - Systembenachrichtigungen
 
-## Benutzerverwaltung
+## Organisation
 
 ### Benutzer anlegen
 
@@ -86,7 +86,7 @@ Als Administrator sind Sie für die Überprüfung und Verifizierung von Benutzer
 
 #### Zugriff auf Ausweisdokumente
 
-1. Navigieren Sie zu **Benutzerverwaltung**
+1. Navigieren Sie zu **Organisation**
 2. Wählen Sie einen Benutzer aus
 3. Öffnen Sie den Tab **Dokumente**
 
@@ -115,7 +115,7 @@ Wenn ein Dokument nicht korrekt oder verdächtig erscheint:
 
 Für die effiziente Verwaltung mehrerer Dokumente:
 
-1. Navigieren Sie zu **Benutzerverwaltung** → **Dokumente**
+1. Navigieren Sie zu **Organisation** → **Dokumente**
 2. Verwenden Sie die Filter, um nicht verifizierte Dokumente anzuzeigen
 3. Überprüfen Sie die Dokumente einzeln
 4. Verwenden Sie die Checkbox-Auswahl für Massenverwaltung
@@ -184,7 +184,7 @@ Dies würde vollen Zugriff auf die Team-Worktime-Control-Seite gewähren.
 - **worktime** (entityType: 'page'): Zugriff auf die Zeiterfassungsseite
 - **worktime_edit** (entityType: 'table'): Berechtigung zum Bearbeiten von Zeiteinträgen
 - **team_worktime** (entityType: 'page'): Zugriff auf die Team-Zeiterfassungsseite
-- **user_management** (entityType: 'page'): Zugriff auf die Benutzerverwaltung
+- **user_management** (entityType: 'page'): Zugriff auf die Organisation
 - **role_management** (entityType: 'page'): Zugriff auf die Rollenverwaltung
 - **cerebro_admin** (entityType: 'page'): Zugriff auf die Cerebro-Wiki-Administration
 

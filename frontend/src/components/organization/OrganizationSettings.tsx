@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { BuildingOfficeIcon, PlusIcon, UserPlusIcon, UserGroupIcon, ShieldCheckIcon, EnvelopeIcon, ChartBarIcon } from '@heroicons/react/24/outline';
+import { BuildingOfficeIcon, PlusIcon, UserPlusIcon, UserGroupIcon, ShieldCheckIcon, EnvelopeIcon, ChartBarIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { useTranslation } from 'react-i18next';
 import { organizationService } from '../../services/organizationService.ts';
 import { Organization, UpdateOrganizationRequest } from '../../types/organization.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
+import { useLanguage } from '../../hooks/useLanguage.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import CreateOrganizationModal from './CreateOrganizationModal.tsx';
 import JoinOrganizationModal from './JoinOrganizationModal.tsx';
@@ -31,6 +33,10 @@ const OrganizationSettings: React.FC = () => {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState<boolean>(false);
   const { canViewOrganization, canManageOrganization, loading: permissionsLoading } = usePermissions();
   const { showMessage } = useMessage();
+  const { t } = useTranslation();
+  const { organizationLanguage, setOrganizationLanguage } = useLanguage();
+  const [selectedOrgLanguage, setSelectedOrgLanguage] = useState<string>('');
+  const [savingOrgLanguage, setSavingOrgLanguage] = useState<boolean>(false);
 
   const fetchOrganization = useCallback(async () => {
     try {
@@ -45,6 +51,14 @@ const OrganizationSettings: React.FC = () => {
         settings: org.settings
       });
       
+      // Lade Organisation-Sprache
+      try {
+        const langResponse = await organizationService.getOrganizationLanguage();
+        setSelectedOrgLanguage(langResponse.language || '');
+      } catch (langError) {
+        console.error('Fehler beim Laden der Organisation-Sprache:', langError);
+      }
+      
       // Statistiken laden
       try {
         setLoadingStats(true);
@@ -57,7 +71,7 @@ const OrganizationSettings: React.FC = () => {
         setLoadingStats(false);
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Fehler beim Laden der Organisation';
+      const errorMessage = err.response?.data?.message || t('organization.loadError');
       setError(errorMessage);
       // showMessage wird hier verwendet, aber nicht in Dependencies
       showMessage(errorMessage, 'error');
@@ -85,7 +99,7 @@ const OrganizationSettings: React.FC = () => {
       hasInitialLoadRef.current = true;
       fetchOrganization();
     } else {
-      setError('Keine Berechtigung zum Anzeigen der Organisation');
+      setError(t('organization.noPermission'));
       setLoading(false);
       hasInitialLoadRef.current = true;
     }
@@ -105,7 +119,7 @@ const OrganizationSettings: React.FC = () => {
     e.preventDefault();
     
     if (!canManageOrganization()) {
-      const errorMessage = 'Keine Berechtigung zum Bearbeiten der Organisation';
+      const errorMessage = t('organization.noPermissionEdit');
       setError(errorMessage);
       showMessage(errorMessage, 'error');
       return;
@@ -116,9 +130,9 @@ const OrganizationSettings: React.FC = () => {
       setError(null);
       const updatedOrg = await organizationService.updateOrganization(formData);
       setOrganization(updatedOrg);
-      showMessage('Organisation erfolgreich aktualisiert', 'success');
+      showMessage(t('organization.updateSuccess'), 'success');
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Fehler beim Aktualisieren der Organisation';
+      const errorMessage = err.response?.data?.message || t('organization.updateError');
       setError(errorMessage);
       showMessage(errorMessage, 'error');
     } finally {
@@ -131,7 +145,7 @@ const OrganizationSettings: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 shadow p-6 mb-6">
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-700 dark:text-gray-300">Lade Berechtigungen...</span>
+          <span className="ml-3 text-gray-700 dark:text-gray-300">{t('common.loadingPermissions')}</span>
         </div>
       </div>
     );
@@ -140,8 +154,8 @@ const OrganizationSettings: React.FC = () => {
   if (!canViewOrganization()) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 shadow p-6 mb-6">
-        <div className="p-4 text-red-600 dark:text-red-400">
-          Keine Berechtigung zum Anzeigen der Organisationseinstellungen.
+          <div className="p-4 text-red-600 dark:text-red-400">
+          {t('organization.noPermission')}
         </div>
       </div>
     );
@@ -163,29 +177,27 @@ const OrganizationSettings: React.FC = () => {
         <div className="flex items-center justify-between mb-4 sm:mb-4">
           <h2 className="text-xl sm:text-xl font-semibold flex items-center dark:text-white">
             <BuildingOfficeIcon className="h-6 w-6 sm:h-6 sm:w-6 mr-2 sm:mr-2" />
-            Organisationseinstellungen
+            {t('organization.settings')}
           </h2>
           
           <div className="flex items-center gap-2">
             {/* Button: Organisation beitreten */}
             <button
               onClick={() => setIsJoinModalOpen(true)}
-              className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center"
-              title="Organisation beitreten"
+              className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              title={t('organization.joinOrganization')}
             >
-              <UserPlusIcon className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">Beitreten</span>
+              <UserPlusIcon className="h-5 w-5" />
             </button>
             
             {/* Button: Neue Organisation erstellen */}
             {canManageOrganization() && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md dark:bg-green-700 dark:hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 flex items-center"
-                title="Neue Organisation erstellen"
+                className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-md dark:bg-green-700 dark:hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                title={t('organization.createOrganization')}
               >
-                <PlusIcon className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Neu</span>
+                <PlusIcon className="h-5 w-5" />
               </button>
             )}
           </div>
@@ -195,7 +207,7 @@ const OrganizationSettings: React.FC = () => {
       {loading ? (
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="ml-3 text-gray-700 dark:text-gray-300">Lade Organisation...</span>
+          <span className="ml-3 text-gray-700 dark:text-gray-300">{t('common.loadingOrganization')}</span>
         </div>
       ) : (
         <>
@@ -213,7 +225,7 @@ const OrganizationSettings: React.FC = () => {
                 htmlFor="displayName" 
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                Anzeigename
+                {t('organization.displayName')}
               </label>
               <input
                 type="text"
@@ -231,7 +243,7 @@ const OrganizationSettings: React.FC = () => {
                 htmlFor="domain" 
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                Domain
+                {t('organization.domain')}
               </label>
               <input
                 type="text"
@@ -249,7 +261,7 @@ const OrganizationSettings: React.FC = () => {
                 htmlFor="logo" 
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                Logo URL
+                {t('organization.logoUrl')}
               </label>
               <input
                 type="text"
@@ -262,20 +274,60 @@ const OrganizationSettings: React.FC = () => {
               />
             </div>
 
+            {/* Organisation-Sprache */}
+            {canManageOrganization() && (
+              <div className="border-t pt-4">
+                <label 
+                  htmlFor="organizationLanguage" 
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  {t('organization.language')}
+                </label>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  {t('organization.languageDescription')}
+                </p>
+                <select
+                  id="organizationLanguage"
+                  value={selectedOrgLanguage || organizationLanguage || ''}
+                  onChange={async (e) => {
+                    const newLanguage = e.target.value;
+                    setSelectedOrgLanguage(newLanguage);
+                    if (newLanguage && newLanguage !== organizationLanguage) {
+                      setSavingOrgLanguage(true);
+                      try {
+                        await setOrganizationLanguage(newLanguage);
+                        showMessage(t('common.save'), 'success');
+                      } catch (error) {
+                        console.error('Fehler beim Speichern der Organisation-Sprache:', error);
+                        showMessage(t('worktime.messages.orgLanguageError'), 'error');
+                      } finally {
+                        setSavingOrgLanguage(false);
+                      }
+                    }
+                  }}
+                  disabled={!canManageOrganization() || savingOrgLanguage || saving}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
+                >
+                  <option value="">{t('settings.useOrganizationLanguage')} ({t('worktime.language.fallback')}: {t('worktime.language.german')})</option>
+                  <option value="de">{t('worktime.language.german')}</option>
+                  <option value="es">{t('worktime.language.spanish')}</option>
+                  <option value="en">{t('worktime.language.english')}</option>
+                </select>
+              </div>
+            )}
+
             {canManageOrganization() && (
               <div className="flex items-center justify-end space-x-3 pt-4">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={saving ? t('organization.saving') : t('common.save')}
                 >
                   {saving ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Speichern...
-                    </>
+                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
                   ) : (
-                    'Speichern'
+                    <CheckIcon className="h-5 w-5" />
                   )}
                 </button>
               </div>
@@ -285,11 +337,11 @@ const OrganizationSettings: React.FC = () => {
           {/* Statistik-Cards */}
           {stats && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Statistiken</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('organization.statistics')}</h3>
               {loadingStats ? (
                 <div className="flex items-center justify-center py-4">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-2"></div>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">Lade Statistiken...</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">{t('common.loadingStatistics')}</span>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -300,13 +352,13 @@ const OrganizationSettings: React.FC = () => {
                         <UserGroupIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                       </div>
                       <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Benutzer</p>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('organization.users')}</p>
                         <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                           {stats.currentUsers} / {stats.maxUsers}
                         </p>
-                        {stats.utilizationPercent !== undefined && (
+                            {stats.utilizationPercent !== undefined && (
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {stats.utilizationPercent}% Auslastung
+                            {stats.utilizationPercent}% {t('organization.utilizationPercent')}
                           </p>
                         )}
                       </div>
@@ -320,7 +372,7 @@ const OrganizationSettings: React.FC = () => {
                         <ShieldCheckIcon className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                       </div>
                       <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Rollen</p>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('organization.roles')}</p>
                         <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                           {stats._count.roles}
                         </p>
@@ -335,7 +387,7 @@ const OrganizationSettings: React.FC = () => {
                         <EnvelopeIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
                       </div>
                       <div className="ml-4">
-                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Beitrittsanfragen</p>
+                        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('organization.joinRequests')}</p>
                         <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                           {stats._count.joinRequests}
                         </p>
@@ -351,7 +403,7 @@ const OrganizationSettings: React.FC = () => {
                           <EnvelopeIcon className="h-6 w-6 text-green-600 dark:text-green-400" />
                         </div>
                         <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Einladungen</p>
+                          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('organization.invitations')}</p>
                           <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                             {stats._count.invitations}
                           </p>
@@ -368,12 +420,12 @@ const OrganizationSettings: React.FC = () => {
                           <ChartBarIcon className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
                         </div>
                         <div className="ml-4">
-                          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Auslastung</p>
+                          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{t('organization.utilization')}</p>
                           <p className="text-2xl font-semibold text-gray-900 dark:text-white">
                             {stats.utilizationPercent}%
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {stats.availableSlots} Plätze verfügbar
+                            {stats.availableSlots} {t('organization.availableSlots')}
                           </p>
                         </div>
                       </div>
@@ -389,12 +441,12 @@ const OrganizationSettings: React.FC = () => {
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-600 dark:text-gray-400">Organisationsname:</span>
+                  <span className="text-gray-600 dark:text-gray-400">{t('organization.organizationName')}:</span>
                   <span className="ml-2 font-medium text-gray-900 dark:text-white">{organization.name}</span>
                 </div>
                 {organization.subscriptionPlan && (
                   <div>
-                    <span className="text-gray-600 dark:text-gray-400">Abonnement-Plan:</span>
+                    <span className="text-gray-600 dark:text-gray-400">{t('organization.subscriptionPlan')}:</span>
                     <span className="ml-2 font-medium text-gray-900 dark:text-white capitalize">
                       {organization.subscriptionPlan}
                     </span>

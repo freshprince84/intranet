@@ -37,7 +37,7 @@
 .bg-white.rounded-lg.border.border-gray-300 + .bg-white.rounded-lg.border.border-gray-300,
 .bg-white.dark\:bg-gray-800.rounded-lg.border + .bg-white.rounded-lg.border,
 div[class*="bg-white"][class*="rounded-lg"][class*="border"] + div[class*="bg-white"][class*="rounded-lg"][class*="border"] {
-  margin-top: 1.5rem !important; /* Einheitlicher Abstand zwischen Boxen */
+  margin-top: 0.5rem !important; /* Einheitlicher Abstand zwischen Boxen - reduziert für Cards */
 }
 
 /* Spezifische Regel für Consultation Cards auf Mobile/Tablet */
@@ -117,7 +117,7 @@ code {
     margin-bottom: 170px !important; /* Erhöht von 150px auf 170px - mehr Platz für die fixierte Zeiterfassung-Box und den Footer */
   }
   
-  /* Ausnahme für Profil und Benutzerverwaltung - Formularfelder behalten Desktop-Design */
+  /* Ausnahme für Profil und Organisation - Formularfelder behalten Desktop-Design */
   .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 input,
   .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 select,
   .bg-white.dark\:bg-gray-800.rounded-lg.shadow.p-6 textarea,
@@ -590,6 +590,162 @@ code {
     box-sizing: border-box !important;
   }
 
+  /* Dashboard-Box bei Cards-Mode: Schattierung und Border entfernen */
+  /* Container-Box soll keinen Schatten haben (nur oben/unten ist technisch nicht möglich) */
+  .dashboard-requests-wrapper.cards-mode,
+  .dashboard-tasks-wrapper.cards-mode,
+  .dashboard-workcenter-wrapper.cards-mode,
+  .dashboard-invoices-wrapper.cards-mode,
+  .dashboard-monthly-reports-wrapper.cards-mode {
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  
+  /* Entferne alle Schatten von der Container-Box in Cards-Mode (inkl. aller Varianten) */
+  .dashboard-requests-wrapper.cards-mode.bg-white,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.border,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700,
+  .dashboard-requests-wrapper.cards-mode.bg-white.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.border.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.dark\:border-gray-700,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.dark\:border-gray-700.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.bg-white,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.border,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.border.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.dark\:border-gray-700,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.dark\:border-gray-700.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.border,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.border.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.dark\:border-gray-700,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.dark\:border-gray-700.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.bg-white,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.border,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.border.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.dark\:border-gray-700,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.dark\:border-gray-700.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.border,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.border.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.dark\:border-gray-700.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.dark\:border-gray-700,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.dark\:border-gray-700.shadow-sm {
+    box-shadow: none !important;
+    border: none !important;
+  }
+  
+  /* Cards-Container: Keine seitlichen Ränder */
+  .dashboard-requests-wrapper.cards-mode > div,
+  .dashboard-tasks-wrapper.cards-mode > div,
+  .dashboard-workcenter-wrapper.cards-mode > div,
+  .dashboard-invoices-wrapper.cards-mode > div,
+  .dashboard-monthly-reports-wrapper.cards-mode > div {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  /* Cards selbst: Eigene Schattierung BEHALTEN (rundherum) */
+  /* WICHTIG: Cards sollen ihre eigene Schattierung haben, nicht entfernen! */
+  .dashboard-requests-wrapper.cards-mode [class*="bg-white"].rounded-lg[class*="shadow"],
+  .dashboard-requests-wrapper.cards-mode [class*="dark:bg-gray-800"].rounded-lg[class*="shadow"],
+  .dashboard-tasks-wrapper.cards-mode [class*="bg-white"].rounded-lg[class*="shadow"],
+  .dashboard-tasks-wrapper.cards-mode [class*="dark:bg-gray-800"].rounded-lg[class*="shadow"],
+  .dashboard-workcenter-wrapper.cards-mode [class*="bg-white"].rounded-lg[class*="shadow"],
+  .dashboard-workcenter-wrapper.cards-mode [class*="dark:bg-gray-800"].rounded-lg[class*="shadow"],
+  .dashboard-invoices-wrapper.cards-mode [class*="bg-white"].rounded-lg[class*="shadow"],
+  .dashboard-invoices-wrapper.cards-mode [class*="dark:bg-gray-800"].rounded-lg[class*="shadow"],
+  .dashboard-monthly-reports-wrapper.cards-mode [class*="bg-white"].rounded-lg[class*="shadow"],
+  .dashboard-monthly-reports-wrapper.cards-mode [class*="dark:bg-gray-800"].rounded-lg[class*="shadow"] {
+    /* Cards behalten ihre Schatten - nichts entfernen */
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100% !important;
+  }
+  
+  /* Line-clamp Utility für Text-Truncation */
+  .line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
   /* Mobilansicht - Spezifische Änderungen für den WorktimeTracker und Footer */
   @media (max-width: 640px) {
     /* Footer-Navigation direkt an der Worktracker-Box platzieren */
@@ -851,17 +1007,33 @@ code {
     width: 100% !important;
   }
   
-  /* Kleinere Buttons in Tabellen */
-  .action-buttons button,
-  .status-buttons button {
+  /* Kleinere Buttons in Tabellen (NICHT in Cards!) */
+  .dashboard-requests-wrapper:not(.cards-mode) .action-buttons button,
+  .dashboard-requests-wrapper:not(.cards-mode) .status-buttons button,
+  .dashboard-tasks-wrapper:not(.cards-mode) .action-buttons button,
+  .dashboard-tasks-wrapper:not(.cards-mode) .status-buttons button,
+  .dashboard-workcenter-wrapper:not(.cards-mode) .action-buttons button,
+  .dashboard-workcenter-wrapper:not(.cards-mode) .status-buttons button,
+  .dashboard-invoices-wrapper:not(.cards-mode) .action-buttons button,
+  .dashboard-invoices-wrapper:not(.cards-mode) .status-buttons button,
+  .dashboard-monthly-reports-wrapper:not(.cards-mode) .action-buttons button,
+  .dashboard-monthly-reports-wrapper:not(.cards-mode) .status-buttons button {
     padding: 0.15rem !important;
     width: auto !important;
     height: auto !important;
   }
   
-  /* Kleinere Icons in Buttons */
-  .action-buttons button svg,
-  .status-buttons button svg {
+  /* Kleinere Icons in Buttons (NICHT in Cards!) */
+  .dashboard-requests-wrapper:not(.cards-mode) .action-buttons button svg,
+  .dashboard-requests-wrapper:not(.cards-mode) .status-buttons button svg,
+  .dashboard-tasks-wrapper:not(.cards-mode) .action-buttons button svg,
+  .dashboard-tasks-wrapper:not(.cards-mode) .status-buttons button svg,
+  .dashboard-workcenter-wrapper:not(.cards-mode) .action-buttons button svg,
+  .dashboard-workcenter-wrapper:not(.cards-mode) .status-buttons button svg,
+  .dashboard-invoices-wrapper:not(.cards-mode) .action-buttons button svg,
+  .dashboard-invoices-wrapper:not(.cards-mode) .status-buttons button svg,
+  .dashboard-monthly-reports-wrapper:not(.cards-mode) .action-buttons button svg,
+  .dashboard-monthly-reports-wrapper:not(.cards-mode) .status-buttons button svg {
     width: 0.9rem !important;
     height: 0.9rem !important;
   }
@@ -963,6 +1135,91 @@ code {
   .bg-white.rounded-lg.border {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     border: none !important;
+  }
+  
+  /* Container-Box bei Cards-Mode: Gar kein Schatten */
+  /* (Nur oben/unten Schatten ist technisch nicht möglich, daher komplett entfernen) */
+  .dashboard-requests-wrapper.cards-mode.bg-white,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.border,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300,
+  .dashboard-requests-wrapper.cards-mode.bg-white.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.border.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.shadow-sm,
+  .dashboard-requests-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.bg-white,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.border,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.border.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.shadow-sm,
+  .dashboard-tasks-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.border,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.border.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.shadow-sm,
+  .dashboard-workcenter-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.bg-white,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.border,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.border.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.shadow-sm,
+  .dashboard-invoices-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.border,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.border.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.bg-white.rounded-lg.border.border-gray-300.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.shadow-sm,
+  .dashboard-monthly-reports-wrapper.cards-mode.dark\:bg-gray-800.rounded-lg.border.border-gray-300.shadow-sm {
+    box-shadow: none !important;
   }
 }
 
@@ -1203,7 +1460,7 @@ div.grid.grid-cols-1.sm\:grid-cols-2.gap-4 textarea {
 
 /* Spezielle Anpassungen für bestimmte Formularfelder im Desktop-Modus */
 @media (min-width: 641px) {
-  /* Für alle Felder in Profil und Benutzerverwaltung */
+  /* Für alle Felder in Profil und Organisation */
   input[type="text"],
   input[type="email"],
   input[type="password"],
@@ -1289,5 +1546,151 @@ div.grid.grid-cols-1.sm\:grid-cols-2.gap-4 textarea {
   /* Reduzierter Abstand zwischen Label-Gruppen */
   .grid > div {
     margin-bottom: 0.25rem !important;
+  }
+}
+
+/* ============================================
+   SIDEPANE VERBESSERUNGEN
+   ============================================ */
+
+/* Verbesserte Animation für Sidepanes - sanftes Hereinfahren von rechts */
+/* Initial-Position: Sidepane startet außerhalb des Bildschirms - GILT IMMER */
+.sidepane-panel-container {
+  transition: transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94) !important;
+}
+
+.sidepane-panel-container[class*="translate-x-full"],
+div[class*="sidepane-panel-container"][class*="translate-x-full"] {
+  transform: translateX(100%) !important;
+}
+
+.sidepane-panel-container[class*="translate-x-0"],
+div[class*="sidepane-panel-container"][class*="translate-x-0"] {
+  transform: translateX(0) !important;
+}
+
+/* Gilt für alle Bildschirmgrößen ab 640px (Desktop und größer) */
+@media (min-width: 641px) {
+  /* Sidepane Panel mit verbesserter Animation - gilt für ALLE Bildschirmgrößen >= 640px */
+  /* Höhere Spezifität, um Tailwind-Klassen zu überschreiben */
+  .sidepane-panel-container.fixed,
+  .sidepane-panel-container[class*="transform"],
+  div.fixed.sidepane-panel-container,
+  .sidepane-panel {
+    transition: transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                opacity 300ms ease-out !important;
+    will-change: transform, opacity;
+  }
+  
+  /* Sanftes Einfahren mit leichtem Scale-Effekt */
+  .sidepane-panel-entering {
+    animation: slideInFromRight 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+  
+  .sidepane-panel-exiting {
+    animation: slideOutToRight 300ms cubic-bezier(0.4, 0.0, 0.2, 1) forwards;
+  }
+}
+
+/* Sidepane Position: Berücksichtigt grünen Schatten bei laufender Zeiterfassung */
+/* Der grüne Schatten hat einen blur von 15px + spread von 5px = max. 20px Ausdehnung */
+/* Header ist 4rem (64px), daher beginnt Sidepane bei 4rem + Schatten-Buffer */
+/* Um sicherzugehen, dass der Schatten vollständig unter der Sidepane liegt, verwenden wir top: 4.25rem (68px) */
+.sidepane-panel-container[class*="top-16"],
+.sidepane-panel-container.fixed.top-16,
+div.fixed.top-16.bottom-0.right-0.sidepane-panel-container {
+  top: 4.25rem !important; /* 68px - Header (64px) + 4px Buffer für Schatten */
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOutToRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeInOut {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-out {
+  animation: fadeInOut 2s ease-in-out infinite;
+}
+
+/* Responsive Verhalten: Bei > 1070px - Sidepane schiebt sich neben Hauptinhalt */
+@media (min-width: 1071px) {
+  /* Hauptinhalt verschiebt sich nach links, wenn Sidepane offen ist */
+  body.sidepane-open .sidepane-content-main {
+    margin-right: 24rem; /* Platz für Sidepane (max-w-sm = 24rem) */
+    transition: margin-right 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  
+  /* Sidepane bei > 1070px: kein Overlay, sondern neben Hauptinhalt */
+  body.sidepane-open .sidepane-overlay {
+    display: none !important;
+  }
+  
+  /* Sidepane-Panel soll bei > 1070px keinen Backdrop haben */
+  body.sidepane-open .sidepane-panel-container {
+    box-shadow: -4px 0 15px -3px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Keine Pointer-Events auf Backdrop bei > 1070px */
+  body.sidepane-open .sidepane-backdrop {
+    pointer-events: none !important;
+    opacity: 0 !important;
+  }
+}
+
+/* Bei <= 1070px: Standard-Verhalten mit Overlay - aber mit sanfter Animation */
+@media (max-width: 1070px) {
+  /* Sidepane überlagert den Hauptinhalt */
+  .sidepane-content-main {
+    margin-right: 0 !important;
+  }
+  
+  /* Overlay sichtbar */
+  .sidepane-overlay {
+    display: block !important;
+  }
+  
+  /* Backdrop blockiert keine Interaktionen mehr - Hauptinhalt bleibt scrollbar und klickbar */
+  .sidepane-backdrop {
+    pointer-events: none !important;
+  }
+  
+  /* Hauptinhalt bleibt auch bei offenem Sidepane interaktiv */
+  .sidepane-content-main {
+    pointer-events: auto !important;
+  }
+  
+  /* Sicherstellen, dass die Animation auch hier funktioniert - höhere Spezifität */
+  .sidepane-panel-container.fixed,
+  .sidepane-panel-container[class*="transform"],
+  div.fixed.sidepane-panel-container,
+  .sidepane-panel {
+    transition: transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94), 
+                opacity 300ms ease-out !important;
+    will-change: transform, opacity;
   }
 }

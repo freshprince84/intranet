@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { Client } from '../types/client.ts';
 import { toast } from 'react-toastify';
+import { useSidepane } from '../contexts/SidepaneContext.tsx';
 
 interface CreateClientModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
   onClose,
   onSave
 }) => {
+  const { openSidepane, closeSidepane } = useSidepane();
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -83,6 +86,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
   useEffect(() => {
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth < 640);
+      setIsLargeScreen(window.innerWidth > 1070);
     };
     
     // Initial prüfen
@@ -96,6 +100,19 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
       window.removeEventListener('resize', checkScreenSize);
     };
   }, []);
+
+  // Sidepane-Status verwalten
+  useEffect(() => {
+    if (isOpen) {
+      openSidepane();
+    } else {
+      closeSidepane();
+    }
+    
+    return () => {
+      closeSidepane();
+    };
+  }, [isOpen, openSidepane, closeSidepane]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -252,16 +269,22 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                  className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                  title="Abbrechen"
                 >
-                  Abbrechen
+                  <XMarkIcon className="h-5 w-5" />
                 </button>
                 <button
                   type="submit"
                   disabled={loading}
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={loading ? 'Speichere...' : 'Speichern'}
                 >
-                  {loading ? 'Speichere...' : 'Speichern'}
+                  {loading ? (
+                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <CheckIcon className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </form>
@@ -272,23 +295,37 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
   }
 
   // Für Desktop (ab 640px) - Sidepane
+  // WICHTIG: Sidepane muss IMMER gerendert bleiben für Transition
   return (
-    <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
-      {/* Semi-transparenter Hintergrund für den Rest der Seite */}
-      <div 
-        className="fixed inset-0 bg-black/10 transition-opacity" 
-        aria-hidden="true" 
-        onClick={handleClose}
-      />
+    <>
+      {/* Backdrop - nur wenn offen und <= 1070px */}
+      {isOpen && !isLargeScreen && (
+        <div 
+          className="fixed inset-0 bg-black/10 transition-opacity sidepane-overlay sidepane-backdrop z-40" 
+          aria-hidden="true" 
+          onClick={handleClose}
+          style={{
+            opacity: isOpen ? 1 : 0,
+            transition: 'opacity 300ms ease-out'
+          }}
+        />
+      )}
       
-      {/* Sidepane von rechts einfahren */}
+      {/* Sidepane - IMMER gerendert, Position wird via Transform geändert */}
       <div 
-        className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{
+          transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          pointerEvents: isOpen ? 'auto' : 'none'
+        }}
+        aria-hidden={!isOpen}
+        role="dialog"
+        aria-modal={isOpen}
       >
-        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-          <Dialog.Title className="text-lg font-semibold dark:text-white">
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+          <h2 className="text-lg font-semibold dark:text-white">
             Neuen Client anlegen
-          </Dialog.Title>
+          </h2>
           <button
             onClick={handleClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
@@ -297,7 +334,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
           </button>
         </div>
 
-        <div className="p-4 overflow-y-auto h-full">
+        <div className="p-4 overflow-y-auto flex-1 min-h-0">
           {Object.keys(errors).length > 0 && (
             <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
               {Object.values(errors).map((error, idx) => (
@@ -416,22 +453,28 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                title="Abbrechen"
               >
-                Abbrechen
+                <XMarkIcon className="h-5 w-5" />
               </button>
               <button
                 type="submit"
                 disabled={loading}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={loading ? 'Speichere...' : 'Speichern'}
               >
-                {loading ? 'Speichere...' : 'Speichern'}
+                {loading ? (
+                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                ) : (
+                  <CheckIcon className="h-5 w-5" />
+                )}
               </button>
             </div>
           </form>
         </div>
       </div>
-    </Dialog>
+    </>
   );
 };
 

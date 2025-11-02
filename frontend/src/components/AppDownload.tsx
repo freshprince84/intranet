@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { DevicePhoneMobileIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 
@@ -16,6 +17,8 @@ const APP_CONFIG = {
 };
 
 const AppDownload: React.FC = () => {
+  const { t } = useTranslation();
+  
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 shadow-sm">
       <div className="flex flex-col md:flex-row items-center justify-between">
@@ -24,9 +27,9 @@ const AppDownload: React.FC = () => {
             <DevicePhoneMobileIcon className="h-6 w-6 text-blue-600 dark:text-blue-400" />
           </div>
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white">Intranet Mobile App</h3>
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white">{t('appDownload.title')}</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Greife auch unterwegs auf deine Arbeitszeiten und Anfragen zu
+              {t('appDownload.description')}
             </p>
           </div>
         </div>
@@ -35,7 +38,7 @@ const AppDownload: React.FC = () => {
           to="/mobile-app" 
           className="inline-flex items-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
         >
-          App herunterladen
+          {t('appDownload.download')}
           <ArrowRightIcon className="ml-2 -mr-1 h-4 w-4" />
         </Link>
       </div>

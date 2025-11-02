@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import axiosInstance from '../config/axios.ts';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ArrowPathIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import CerebroArticleSelector from './CerebroArticleSelector.tsx';
 import MarkdownPreview from './MarkdownPreview.tsx';
+import { useSidepane } from '../contexts/SidepaneContext.tsx';
 
 interface User {
     id: number;
@@ -76,7 +78,10 @@ interface Task {
 }
 
 const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProps) => {
+    const { t } = useTranslation();
     const { user } = useAuth();
+    const { openSidepane, closeSidepane } = useSidepane();
+    const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
     
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -133,6 +138,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
         // Prüfen der Bildschirmgröße beim Mounten
         const checkScreenSize = () => {
             setIsMobile(window.innerWidth < 640);
+            setIsLargeScreen(window.innerWidth > 1070);
         };
         
         // Initial prüfen
@@ -146,6 +152,19 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             window.removeEventListener('resize', checkScreenSize);
         };
     }, []);
+
+    // Sidepane-Status verwalten
+    useEffect(() => {
+        if (isOpen) {
+            openSidepane();
+        } else {
+            closeSidepane();
+        }
+        
+        return () => {
+            closeSidepane();
+        };
+    }, [isOpen, openSidepane, closeSidepane]);
 
     const fetchUsers = async () => {
         try {
@@ -168,9 +187,9 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             // Einfachere Fehlerbehandlung ohne axios-Import
             const axiosError = err as any;
             if (axiosError.code === 'ERR_NETWORK') {
-                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+                setError(t('tasks.createTask.errors.connectionError'));
             } else {
-                setError(`Fehler beim Laden der Benutzer: ${axiosError.response?.data?.message || axiosError.message}`);
+                setError(`${t('tasks.createTask.errors.loadUsersError')}: ${axiosError.response?.data?.message || axiosError.message}`);
             }
         }
     };
@@ -192,9 +211,9 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             // Einfachere Fehlerbehandlung ohne axios-Import
             const axiosError = err as any;
             if (axiosError.code === 'ERR_NETWORK') {
-                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+                setError(t('tasks.createTask.errors.connectionError'));
             } else {
-                setError(`Fehler beim Laden der Rollen: ${axiosError.response?.data?.message || axiosError.message}`);
+                setError(`${t('tasks.createTask.errors.loadRolesError')}: ${axiosError.response?.data?.message || axiosError.message}`);
             }
         }
     };
@@ -220,9 +239,9 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             // Einfachere Fehlerbehandlung ohne axios-Import
             const axiosError = err as any;
             if (axiosError.code === 'ERR_NETWORK') {
-                setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+                setError(t('tasks.createTask.errors.connectionError'));
             } else {
-                setError(`Fehler beim Laden der Niederlassungen: ${axiosError.response?.data?.message || axiosError.message}`);
+                setError(`${t('tasks.createTask.errors.loadBranchesError')}: ${axiosError.response?.data?.message || axiosError.message}`);
             }
         }
     };
@@ -281,10 +300,10 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             if (file.type.startsWith('image/')) {
                 // Hinweis: Wir verwenden hier den Platzhalter, da die Datei erst nach dem Erstellen hochgeladen wird
                 // Die tatsächliche URL wird nach dem erfolgreichen Upload im Backend gesetzt
-                insertText = `\n![${file.name}](wird nach dem Erstellen hochgeladen)\n`;
+                insertText = `\n![${file.name}](${t('tasks.createTask.form.uploadAfterCreate')})\n`;
             } else {
                 // Für andere Dateien einen temporären Platzhalter
-                insertText = `\n[${file.name}](wird nach dem Erstellen hochgeladen)\n`;
+                insertText = `\n[${file.name}](${t('tasks.createTask.form.uploadAfterCreate')})\n`;
             }
             
             // Füge den Link an der aktuellen Cursorposition ein
@@ -342,8 +361,9 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             if (attachmentToRemove.fileName) {
                 // Suche nach Bild- und Link-Markdown mit dem Dateinamen
                 const escapedFileName = attachmentToRemove.fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const imagePattern = new RegExp(`!\\[${escapedFileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
-                const linkPattern = new RegExp(`\\[${escapedFileName}\\]\\(wird nach dem Erstellen hochgeladen\\)`, 'g');
+                const uploadText = t('tasks.createTask.form.uploadAfterCreate');
+                const imagePattern = new RegExp(`!\\[${escapedFileName}\\]\\(${uploadText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g');
+                const linkPattern = new RegExp(`\\[${escapedFileName}\\]\\(${uploadText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g');
                 
                 // Bereinige die Beschreibung
                 const newDescription = description
@@ -398,13 +418,13 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
         try {
             // Validierung
             if (!title || (!responsibleId && !roleId) || !branchId) {
-                setError('Bitte füllen Sie alle erforderlichen Felder aus');
+                setError(t('tasks.createTask.errors.fillAllFields'));
                 setLoading(false);
                 return;
             }
 
             if (responsibleId && roleId) {
-                setError('Bitte wählen Sie entweder einen verantwortlichen Benutzer ODER eine Rolle aus, nicht beides');
+                setError(t('tasks.createTask.errors.chooseUserOrRole'));
                 setLoading(false);
                 return;
             }
@@ -426,7 +446,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
                 (roleId && isNaN(role!)) || 
                 isNaN(branch) || 
                 (qualityControlId && isNaN(qualityControl!))) {
-                setError('Ungültige ID-Werte');
+                setError(t('tasks.createTask.errors.invalidIds'));
                 setLoading(false);
                 return;
             }
@@ -473,7 +493,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             
             // Einfachere Fehlerbehandlung ohne axios-Import
             const axiosError = err as any;
-            setError(axiosError.response?.data?.error || axiosError.message || 'Ein unerwarteter Fehler ist aufgetreten');
+            setError(axiosError.response?.data?.error || axiosError.message || t('tasks.createTask.errors.createError'));
         } finally {
             setLoading(false);
         }
@@ -512,7 +532,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
                     <Dialog.Panel className="mx-auto max-w-xl w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
                         <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
                             <Dialog.Title className="text-lg font-semibold dark:text-white">
-                                Neue Aufgabe erstellen
+                                {t('tasks.createTask.title')}
                             </Dialog.Title>
                             <button
                                 onClick={handleClose}
@@ -566,23 +586,37 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
     }
     
     // Für Desktop (ab 640px) - Sidepane
+    // WICHTIG: Sidepane muss IMMER gerendert bleiben für Transition
     return (
-        <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
-            {/* Semi-transparenter Hintergrund für den Rest der Seite */}
-            <div 
-                className="fixed inset-0 bg-black/10 transition-opacity" 
-                aria-hidden="true" 
-                onClick={handleClose}
-            />
+        <>
+            {/* Backdrop - nur wenn offen und <= 1070px */}
+            {/* Hinweis: onClick entfernt, da Backdrop pointer-events: none hat, damit Hauptinhalt interaktiv bleibt */}
+            {isOpen && !isLargeScreen && (
+                <div 
+                    className="fixed inset-0 bg-black/10 transition-opacity sidepane-overlay sidepane-backdrop z-40" 
+                    aria-hidden="true" 
+                    style={{
+                        opacity: isOpen ? 1 : 0,
+                        transition: 'opacity 300ms ease-out'
+                    }}
+                />
+            )}
             
-            {/* Sidepane von rechts einfahren */}
+            {/* Sidepane - IMMER gerendert, Position wird via Transform geändert */}
             <div 
-                className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                style={{
+                    transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                    pointerEvents: isOpen ? 'auto' : 'none'
+                }}
+                aria-hidden={!isOpen}
+                role="dialog"
+                aria-modal={isOpen}
             >
-                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-                    <Dialog.Title className="text-lg font-semibold dark:text-white">
+                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+                    <h2 className="text-lg font-semibold dark:text-white">
                         Neue Aufgabe erstellen
-                    </Dialog.Title>
+                    </h2>
                     <button
                         onClick={handleClose}
                         className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
@@ -591,7 +625,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
                     </button>
                 </div>
 
-                <div className="p-4 overflow-y-auto h-full">
+                <div className="p-4 overflow-y-auto flex-1 min-h-0">
                     <TaskForm 
                         error={error}
                         title={title}
@@ -631,7 +665,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
                     />
                 </div>
             </div>
-        </Dialog>
+        </>
     );
 };
 
@@ -711,6 +745,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
     handleDrop,
     handleDragOver,
 }) => {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState<'data' | 'cerebro'>('data');
     
     return (
@@ -754,7 +789,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 <>
                     <div>
                         <label htmlFor="title" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Titel *
+                            {t('tasks.createTask.form.title')} *
                         </label>
                         <input
                             type="text"
@@ -769,7 +804,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="description_sidepane" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Beschreibung
+                                {t('tasks.createTask.form.description')}
                             </label>
                             <div className="relative">
                                 <textarea
@@ -782,14 +817,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                     onPaste={handlePaste}
                                     onDrop={handleDrop}
                                     onDragOver={handleDragOver}
-                                    placeholder="Text, Bilder oder Dateien hier einfügen..."
+                                    placeholder={t('tasks.createTask.form.descriptionPlaceholder')}
                                 />
                                 {/* Heftklammer-Icon zum Hinzufügen von Dateien */}
                                 <button
                                     type="button"
                                     onClick={() => fileInputRef?.current?.click()}
                                     className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
-                                    title="Datei hinzufügen"
+                                    title={t('tasks.createTask.form.fileUpload')}
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -803,7 +838,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                 />
                                 {uploading && (
                                     <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70">
-                                        <span className="text-sm text-gray-500 dark:text-gray-400">Wird hochgeladen...</span>
+                                        <span className="text-sm text-gray-500 dark:text-gray-400">{t('tasks.createTask.form.uploading')}</span>
                                     </div>
                                 )}
                             </div>
@@ -821,7 +856,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                                         type="button"
                                                         onClick={() => onRemoveAttachment?.(index)}
                                                         className="text-red-600 hover:text-red-900 ml-1"
-                                                        title="Entfernen"
+                                                        title={t('tasks.createTask.form.remove')}
                                                     >
                                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -856,7 +891,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
                     <div className="space-y-2">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Verantwortlich für *
+                            {t('tasks.createTask.form.responsibleFor')} *
                         </label>
                         <div className="flex space-x-4">
                             <label className="inline-flex items-center">
@@ -871,7 +906,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                         setRoleId('');
                                     }}
                                 />
-                                <span className="ml-2 dark:text-gray-300">Benutzer</span>
+                                <span className="ml-2 dark:text-gray-300">{t('tasks.createTask.form.user')}</span>
                             </label>
                             <label className="inline-flex items-center">
                                 <input
@@ -885,7 +920,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                         setResponsibleId('');
                                     }}
                                 />
-                                <span className="ml-2 dark:text-gray-300">Rolle</span>
+                                <span className="ml-2 dark:text-gray-300">{t('tasks.createTask.form.role')}</span>
                             </label>
                         </div>
                     </div>
@@ -893,7 +928,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     {assigneeType === 'user' ? (
                         <div>
                             <label htmlFor="responsible" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Verantwortlicher Benutzer *
+                                {t('tasks.createTask.form.responsibleUser')} *
                             </label>
                             <select
                                 id="responsible"
@@ -902,7 +937,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 required
                             >
-                                <option value="">Bitte wählen</option>
+                                <option value="">{t('tasks.createTask.form.pleaseSelect')}</option>
                                 {Array.isArray(users) && users.map(user => (
                                     <option key={user.id} value={user.id}>
                                         {user.firstName} {user.lastName}
@@ -913,7 +948,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                     ) : (
                         <div>
                             <label htmlFor="role" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                                Verantwortliche Rolle *
+                                {t('tasks.createTask.form.responsibleRole')} *
                             </label>
                             <select
                                 id="role"
@@ -922,7 +957,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                                 required
                             >
-                                <option value="">Bitte wählen</option>
+                                <option value="">{t('tasks.createTask.form.pleaseSelect')}</option>
                                 {Array.isArray(roles) && roles.map(role => (
                                     <option key={role.id} value={role.id}>
                                         {role.name}
@@ -934,7 +969,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
                     <div>
                         <label htmlFor="qualityControl" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Qualitätskontrolle
+                            {t('tasks.createTask.form.qualityControl')}
                         </label>
                         <select
                             id="qualityControl"
@@ -942,7 +977,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                             onChange={(e) => setQualityControlId(e.target.value ? Number(e.target.value) : '')}
                             className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         >
-                            <option value="">Keine Qualitätskontrolle</option>
+                            <option value="">{t('tasks.createTask.form.noQualityControl')}</option>
                             {Array.isArray(users) && users.map(user => (
                                 <option key={user.id} value={user.id}>
                                     {user.firstName} {user.lastName}
@@ -953,7 +988,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
                     <div>
                         <label htmlFor="branch" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Niederlassung *
+                            {t('tasks.createTask.form.branch')} *
                         </label>
                         <select
                             id="branch"
@@ -973,7 +1008,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
                     <div>
                         <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                            Fälligkeitsdatum
+                            {t('tasks.createTask.form.dueDate')}
                         </label>
                         <input
                             type="date"
@@ -1025,16 +1060,22 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 <button
                     type="button"
                     onClick={handleClose}
-                    className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                    className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                    title={t('tasks.createTask.form.cancel')}
                 >
-                    Abbrechen
+                    <XMarkIcon className="h-5 w-5" />
                 </button>
                 <button
                     type="submit"
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800"
+                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    title={loading ? t('tasks.createTask.form.creating') : t('tasks.createTask.form.create')}
                     disabled={loading}
                 >
-                    {loading ? 'Wird erstellt...' : 'Erstellen'}
+                    {loading ? (
+                        <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                    ) : (
+                        <CheckIcon className="h-5 w-5" />
+                    )}
                 </button>
             </div>
         </form>

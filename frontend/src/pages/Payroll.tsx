@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import PayrollComponent from '../components/PayrollComponent.tsx';
 import InvoiceManagementTab from '../components/InvoiceManagementTab.tsx';
@@ -8,6 +9,7 @@ import { CalculatorIcon, DocumentTextIcon, ClipboardDocumentListIcon } from '@he
 type TabType = 'invoices' | 'monthly-reports' | 'payroll';
 
 const Payroll: React.FC = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState<TabType>('invoices');
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
@@ -42,19 +44,19 @@ const Payroll: React.FC = () => {
   const tabs = [
     {
       id: 'invoices' as TabType,
-      name: 'Beratungsrechnungen',
+      name: t('payroll.tabs.invoices'),
       icon: DocumentTextIcon,
       component: <InvoiceManagementTab />
     },
     {
       id: 'monthly-reports' as TabType,
-      name: 'Monatsabrechnungen',
+      name: t('payroll.tabs.monthlyReports'),
       icon: ClipboardDocumentListIcon,
       component: <MonthlyReportsTab />
     },
     {
       id: 'payroll' as TabType,
-      name: 'Lohnabrechnungen',
+      name: t('payroll.tabs.payroll'),
       icon: CalculatorIcon,
       component: <PayrollComponent />
     }

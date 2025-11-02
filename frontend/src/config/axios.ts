@@ -12,12 +12,16 @@ const instance = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  // Debug-Informationen
+  // Debug-Informationen nur in Development
   onUploadProgress: (progressEvent) => {
-    console.debug('Upload-Fortschritt:', progressEvent);
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Upload-Fortschritt:', progressEvent);
+    }
   },
   onDownloadProgress: (progressEvent) => {
-    console.debug('Download-Fortschritt:', progressEvent);
+    if (process.env.NODE_ENV === 'development') {
+      console.debug('Download-Fortschritt:', progressEvent);
+    }
   }
 });
 
@@ -35,8 +39,10 @@ instance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    // Debug-Logging
-    console.debug(`API-Request an: ${config.url}`, config);
+    // Debug-Logging nur in Development
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`API-Request an: ${config.url}`, config);
+    }
     
     return config;
   },
@@ -49,7 +55,10 @@ instance.interceptors.request.use(
 // Response-Interceptor für Debugging
 instance.interceptors.response.use(
   (response) => {
-    console.debug(`API-Response von: ${response.config.url}`, response.status);
+    // Debug-Logging nur in Development
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`API-Response von: ${response.config.url}`, response.status);
+    }
     return response;
   },
   (error) => {

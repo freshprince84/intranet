@@ -855,11 +855,34 @@ const WorktimeScreen = () => {
     setShowTaskDetailModal(true);
   };
   
-  // Handler für Task-Aktualisierung
-  const handleTaskUpdated = () => {
-    console.log('[WorktimeScreen] Task updated, reloading tasks...');
+  // Handler für Task-Aktualisierung - optimiert für selektive Updates
+  const handleTaskUpdated = (task: Task | null, deletedTaskId?: number) => {
+    if (deletedTaskId) {
+      // Task wurde gelöscht - entferne aus Liste
+      setTasks(prevTasks => prevTasks.filter(t => t.id !== deletedTaskId));
+      console.log(`[WorktimeScreen] Task ${deletedTaskId} deleted from list`);
+    } else if (task) {
+      // Task wurde erstellt oder aktualisiert
+      setTasks(prevTasks => {
+        const existingIndex = prevTasks.findIndex(t => t.id === task.id);
+        if (existingIndex >= 0) {
+          // Update bestehenden Task
+          const updatedTasks = [...prevTasks];
+          updatedTasks[existingIndex] = task;
+          console.log(`[WorktimeScreen] Task ${task.id} updated in list`);
+          return updatedTasks;
+        } else {
+          // Neuer Task - füge am Anfang hinzu
+          console.log(`[WorktimeScreen] Task ${task.id} added to list`);
+          return [task, ...prevTasks];
+        }
+      });
+    } else {
+      // Fallback: Vollständiges Reload wenn kein Task übergeben
+      console.log('[WorktimeScreen] Task updated, reloading tasks (fallback)...');
+      loadTasks();
+    }
     setShowTaskDetailModal(false); // Modal schließen
-    loadTasks(); // Taskliste neu laden
   };
   
   // Alle Aufgaben anzeigen (unabhängig vom Toggle)

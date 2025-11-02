@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { roleApi } from '../api/apiClient.ts';
 import { Role, AccessLevel } from '../types/interfaces.ts';
-import { PencilIcon, TrashIcon, PlusIcon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, FunnelIcon, XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -12,9 +13,7 @@ import SavedFilterTags from '../components/SavedFilterTags.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
 import { useError } from '../contexts/ErrorContext.tsx';
 import { ErrorCategory } from '../services/ErrorHandler.ts';
-import { 
-  CheckIcon, 
-} from '@heroicons/react/24/outline';
+import { useSidepane } from '../contexts/SidepaneContext.tsx';
 
 interface RoleManagementTabProps {
   onRolesChange?: () => void;
@@ -217,82 +216,12 @@ const buttonToTableMapping: Record<string, string | null> = {
 };
 
 // Display-Name-Mapping für Seiten (DB-Interne Bezeichnung → Frontend-Bezeichnung)
-const pageDisplayNames: Record<string, string> = {
-  'dashboard': 'Dashboard',
-  'worktracker': 'Worktracker',
-  'consultations': 'Beratungen',
-  'team_worktime_control': 'Team Kontrolle',
-  'payroll': 'Lohnabrechnung',
-  'usermanagement': 'Benutzerverwaltung',
-  'cerebro': 'Cerebro',
-  'settings': 'Einstellungen',
-  'profile': 'Profil'
-};
+// Wird dynamisch aus Übersetzungen geladen
 
 // Display-Name-Mapping für Tabellen (DB-Interne Bezeichnung → Frontend-Bezeichnung)
-const tableDisplayNames: Record<string, string> = {
-  'tasks': "To Do's",
-  'worktime': 'Time Tracker',
-  'users': 'Benutzer',
-  'roles': 'Rollen',
-  'clients': 'Kunden',
-  'consultation_invoices': 'Rechnungen',
-  'requests': 'Anfragen',
-  'team_worktime': 'Team Arbeitszeiten',
-  'settings': 'Einstellungen',
-  'notifications': 'Benachrichtigungen',
-  'branches': 'Filialen',
-  'monthly_reports': 'Monatsberichte'
-};
+// Wird dynamisch aus Übersetzungen geladen
 
-// Display-Name-Mapping für Buttons (DB-Interne Bezeichnung → Frontend-Bezeichnung)
-const buttonDisplayNames: Record<string, string> = {
-  // Worktime Buttons
-  'worktime_start': 'Start',
-  'worktime_stop': 'Stop',
-  'worktime_edit': 'Bearbeiten',
-  'worktime_delete': 'Löschen',
-  // Task/Todo Buttons (beide sind dasselbe - To Do's)
-  'task_create': 'Erstellen',
-  'task_edit': 'Bearbeiten',
-  'task_delete': 'Löschen',
-  'todo_create': 'Erstellen',
-  'todo_edit': 'Bearbeiten',
-  'todo_delete': 'Löschen',
-  // Client Buttons
-  'client_create': 'Erstellen',
-  'client_edit': 'Kunde bearbeiten',
-  'client_delete': 'Löschen',
-  'consultation_start': 'Start',
-  'consultation_stop': 'Stop',
-  'consultation_edit': 'Beratung bearbeiten',
-  // Invoice Buttons
-  'invoice_create': 'Erstellen',
-  'invoice_download': 'Herunterladen',
-  'invoice_mark_paid': 'Als bezahlt markieren',
-  'invoice_settings': 'Einstellungen',
-  // User Management Buttons
-  'user_create': 'Erstellen',
-  'user_edit': 'Bearbeiten',
-  'user_delete': 'Löschen',
-  'role_assign': 'Zuweisen',
-  'role_create': 'Erstellen',
-  'role_edit': 'Bearbeiten',
-  'role_delete': 'Löschen',
-  // Settings Buttons
-  'settings_system': 'System',
-  'settings_notifications': 'Benachrichtigungen',
-  'settings_profile': 'Profil',
-  // Database Buttons
-  'database_reset_table': 'Tabelle zurücksetzen',
-  'database_logs': 'Logs',
-  // Payroll Buttons
-  'payroll_generate': 'Generieren',
-  'payroll_export': 'Exportieren',
-  'payroll_edit': 'Bearbeiten',
-  // General
-  'cerebro': 'Cerebro'
-};
+// Display-Name-Mapping für Buttons wird dynamisch in der Komponente geladen
 
 // TableID für gespeicherte Filter
 const ROLES_TABLE_ID = 'roles-table';
@@ -316,6 +245,7 @@ const RoleCard: React.FC<{
   canEdit: boolean;
   canDelete: boolean;
 }> = ({ role, onEdit, onDelete, canEdit, canDelete }) => {
+  const { t } = useTranslation();
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 mb-4">
       {/* Header mit Rollenname und Aktionen */}
@@ -327,7 +257,7 @@ const RoleCard: React.FC<{
             <button
               onClick={() => onEdit(role)}
               className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
-              title="Rolle bearbeiten"
+              title={t('roles.actions.edit')}
             >
               <PencilIcon className="h-5 w-5" />
             </button>
@@ -337,7 +267,7 @@ const RoleCard: React.FC<{
             <button
               onClick={() => onDelete(role.id)}
               className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1"
-              title="Rolle löschen"
+              title={t('roles.actions.delete')}
             >
               <TrashIcon className="h-5 w-5" />
             </button>
@@ -346,11 +276,11 @@ const RoleCard: React.FC<{
       </div>
       
       {/* Beschreibung */}
-      <p className="text-sm text-gray-600 dark:text-gray-400">{role.description || 'Keine Beschreibung'}</p>
+      <p className="text-sm text-gray-600 dark:text-gray-400">{role.description || t('roles.noDescription')}</p>
       
       {/* Berechtigungen - kompakt */}
       <div className="mt-2">
-        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Berechtigungen:</h4>
+        <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">{t('roles.permissions')}:</h4>
         <div className="flex flex-wrap gap-1">
           {role.permissions
             .filter(perm => perm.accessLevel !== 'none') // Nur relevante Berechtigungen anzeigen
@@ -365,7 +295,7 @@ const RoleCard: React.FC<{
             ))}
           {role.permissions.filter(perm => perm.accessLevel !== 'none').length > 8 && (
             <span className="text-xs bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-300 px-2 py-1 rounded">
-              +{role.permissions.filter(perm => perm.accessLevel !== 'none').length - 8} mehr
+                +{role.permissions.filter(perm => perm.accessLevel !== 'none').length - 8} {t('common.showMore')}
             </span>
           )}
         </div>
@@ -375,10 +305,80 @@ const RoleCard: React.FC<{
 };
 
 const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, onError, readOnly = false }) => {
+  const { t } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Display-Name-Mapping für Seiten (dynamisch aus Übersetzungen)
+  const pageDisplayNames = useMemo(() => ({
+    'dashboard': t('roles.pages.dashboard'),
+    'worktracker': t('roles.pages.worktracker'),
+    'consultations': t('roles.pages.consultations'),
+    'team_worktime_control': t('roles.pages.team_worktime_control'),
+    'payroll': t('roles.pages.payroll'),
+    'usermanagement': t('roles.pages.usermanagement'),
+    'cerebro': t('roles.pages.cerebro'),
+    'settings': t('roles.pages.settings'),
+    'profile': t('roles.pages.profile')
+  }), [t]);
+
+  // Display-Name-Mapping für Tabellen (dynamisch aus Übersetzungen)
+  const tableDisplayNames = useMemo(() => ({
+    'tasks': t('roles.tables.tasks'),
+    'worktime': t('roles.tables.worktime'),
+    'users': t('roles.tables.users'),
+    'roles': t('roles.tables.roles'),
+    'clients': t('roles.tables.clients'),
+    'consultation_invoices': t('roles.tables.consultation_invoices'),
+    'requests': t('roles.tables.requests'),
+    'team_worktime': t('roles.tables.team_worktime'),
+    'settings': t('roles.tables.settings'),
+    'notifications': t('roles.tables.notifications'),
+    'branches': t('roles.tables.branches'),
+    'monthly_reports': t('roles.tables.monthly_reports')
+  }), [t]);
+
+  // Display-Name-Mapping für Buttons (dynamisch aus Übersetzungen)
+  const buttonDisplayNames = useMemo(() => ({
+    'worktime_start': t('roles.buttons.worktime_start'),
+    'worktime_stop': t('roles.buttons.worktime_stop'),
+    'worktime_edit': t('roles.buttons.worktime_edit'),
+    'worktime_delete': t('roles.buttons.worktime_delete'),
+    'task_create': t('roles.buttons.task_create'),
+    'task_edit': t('roles.buttons.task_edit'),
+    'task_delete': t('roles.buttons.task_delete'),
+    'todo_create': t('roles.buttons.todo_create'),
+    'todo_edit': t('roles.buttons.todo_edit'),
+    'todo_delete': t('roles.buttons.todo_delete'),
+    'client_create': t('roles.buttons.client_create'),
+    'client_edit': t('roles.buttons.client_edit'),
+    'client_delete': t('roles.buttons.client_delete'),
+    'consultation_start': t('roles.buttons.consultation_start'),
+    'consultation_stop': t('roles.buttons.consultation_stop'),
+    'consultation_edit': t('roles.buttons.consultation_edit'),
+    'invoice_create': t('roles.buttons.invoice_create'),
+    'invoice_download': t('roles.buttons.invoice_download'),
+    'invoice_mark_paid': t('roles.buttons.invoice_mark_paid'),
+    'invoice_settings': t('roles.buttons.invoice_settings'),
+    'user_create': t('roles.buttons.user_create'),
+    'user_edit': t('roles.buttons.user_edit'),
+    'user_delete': t('roles.buttons.user_delete'),
+    'role_assign': t('roles.buttons.role_assign'),
+    'role_create': t('roles.buttons.role_create'),
+    'role_edit': t('roles.buttons.role_edit'),
+    'role_delete': t('roles.buttons.role_delete'),
+    'settings_system': t('roles.buttons.settings_system'),
+    'settings_notifications': t('roles.buttons.settings_notifications'),
+    'settings_profile': t('roles.buttons.settings_profile'),
+    'database_reset_table': t('roles.buttons.database_reset_table'),
+    'database_logs': t('roles.buttons.database_logs'),
+    'payroll_generate': t('roles.buttons.payroll_generate'),
+    'payroll_export': t('roles.buttons.payroll_export'),
+    'payroll_edit': t('roles.buttons.payroll_edit'),
+    'cerebro': t('roles.buttons.cerebro')
+  }), [t]);
   const [formData, setFormData] = useState<RoleFormData>({
     name: '',
     description: '',
@@ -412,8 +412,14 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
   
+  // Filter State Management (Controlled Mode)
+  const [activeFilterName, setActiveFilterName] = useState<string>('Alle');
+  const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
+  
   // Responsiveness Hook (640px wie Standard)
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 640);
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
+  const { openSidepane, closeSidepane } = useSidepane();
   
   // Neue Fehlerbehandlung hinzufügen
   const { handleError, handleValidationError } = useError();
@@ -427,11 +433,25 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   useEffect(() => {
     const handleResize = () => {
       setIsMobile(window.innerWidth < 640);
+      setIsLargeScreen(window.innerWidth > 1070);
     };
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Sidepane-Status verwalten
+  useEffect(() => {
+    if (isModalOpen) {
+      openSidepane();
+    } else {
+      closeSidepane();
+    }
+    
+    return () => {
+      closeSidepane();
+    };
+  }, [isModalOpen, openSidepane, closeSidepane]);
 
   // Aktualisiere die fetchRoles-Funktion, um den neuen ErrorHandler zu nutzen
   const fetchRoles = useCallback(async () => {
@@ -1072,6 +1092,27 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     createStandardFilters();
   }, []);
 
+  // Initialer Default-Filter setzen (Controlled Mode)
+  useEffect(() => {
+    const setInitialFilter = async () => {
+      try {
+        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(ROLES_TABLE_ID));
+        const filters = response.data;
+        
+        const alleFilter = filters.find((filter: any) => filter.name === 'Alle');
+        if (alleFilter) {
+          setActiveFilterName('Alle');
+          setSelectedFilterId(alleFilter.id);
+          applyFilterConditions(alleFilter.conditions, alleFilter.operators);
+        }
+      } catch (error) {
+        console.error('Fehler beim Setzen des initialen Filters:', error);
+      }
+    };
+
+    setInitialFilter();
+  }, []);
+
   // Funktion zum Anwenden von Filterbedingungen
   const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
     setFilterConditions(conditions);
@@ -1082,6 +1123,15 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   const resetFilterConditions = () => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
+    setActiveFilterName('');
+    setSelectedFilterId(null);
+  };
+  
+  // Filter Change Handler (Controlled Mode)
+  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    setActiveFilterName(name);
+    setSelectedFilterId(id);
+    applyFilterConditions(conditions, operators);
   };
 
   return (
@@ -1117,18 +1167,16 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <button
-              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
+              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1 relative`}
               onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
               title="Filter"
             >
-              <div className="relative">
-                <FunnelIcon className="w-5 h-5" />
-                {getActiveFilterCount() > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                    {getActiveFilterCount()}
-                  </span>
-                )}
-              </div>
+              <FunnelIcon className="w-5 h-5" />
+              {getActiveFilterCount() > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                  {getActiveFilterCount()}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -1154,6 +1202,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           tableId={ROLES_TABLE_ID}
           onSelectFilter={applyFilterConditions}
           onReset={resetFilterConditions}
+          activeFilterName={activeFilterName}
+          selectedFilterId={selectedFilterId}
+          onFilterChange={handleFilterChange}
           defaultFilterName="Alle"
         />
 
@@ -1462,15 +1513,17 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                     <button
                       type="button"
                       onClick={() => setIsModalOpen(false)}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                      className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                      title="Abbrechen"
                     >
-                      Abbrechen
+                      <XMarkIcon className="h-5 w-5" />
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800"
+                      className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800"
+                      title={editingRole ? 'Aktualisieren' : 'Erstellen'}
                     >
-                      {editingRole ? 'Aktualisieren' : 'Erstellen'}
+                      <CheckIcon className="h-5 w-5" />
                     </button>
                   </div>
                 </form>
@@ -1479,22 +1532,36 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           </Dialog>
           ) : (
             /* Desktop (ab 640px) - Sidepane */
-            <Dialog open={isModalOpen} onClose={() => setIsModalOpen(false)} className="relative z-50">
-              {/* Semi-transparenter Hintergrund */}
-              <div 
-                className="fixed inset-0 bg-black/10 transition-opacity" 
-                aria-hidden="true" 
-                onClick={() => setIsModalOpen(false)}
-              />
+            /* WICHTIG: Sidepane muss IMMER gerendert bleiben für Transition */
+            <>
+              {/* Backdrop - nur wenn offen und <= 1070px */}
+              {/* Hinweis: onClick entfernt, da Backdrop pointer-events: none hat, damit Hauptinhalt interaktiv bleibt */}
+              {isModalOpen && !isLargeScreen && (
+                <div 
+                  className="fixed inset-0 bg-black/10 transition-opacity sidepane-overlay sidepane-backdrop z-40" 
+                  aria-hidden="true" 
+                  style={{
+                    opacity: isModalOpen ? 1 : 0,
+                    transition: 'opacity 300ms ease-out'
+                  }}
+                />
+              )}
               
-              {/* Sidepane von rechts einfahren */}
+              {/* Sidepane - IMMER gerendert, Position wird via Transform geändert */}
               <div 
-                className={`fixed inset-y-0 right-0 max-w-2xl w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isModalOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`fixed top-16 bottom-0 right-0 max-w-2xl w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isModalOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                style={{
+                  transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                  pointerEvents: isModalOpen ? 'auto' : 'none'
+                }}
+                aria-hidden={!isModalOpen}
+                role="dialog"
+                aria-modal={isModalOpen}
               >
-                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-                  <Dialog.Title className="text-lg font-semibold dark:text-white">
+                <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+                  <h2 className="text-lg font-semibold dark:text-white">
                     {editingRole ? 'Rolle bearbeiten' : 'Neue Rolle erstellen'}
-                  </Dialog.Title>
+                  </h2>
                   <button
                     onClick={() => setIsModalOpen(false)}
                     className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
@@ -1503,7 +1570,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                   </button>
                 </div>
 
-                <div className="p-4 overflow-y-auto h-full">
+                <div className="p-4 overflow-y-auto flex-1 min-h-0">
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -1766,21 +1833,23 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                       <button
                         type="button"
                         onClick={() => setIsModalOpen(false)}
-                        className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                        title="Abbrechen"
                       >
-                        Abbrechen
+                        <XMarkIcon className="h-5 w-5" />
                       </button>
                       <button
                         type="submit"
-                        className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800"
+                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
+                        title={editingRole ? 'Aktualisieren' : 'Erstellen'}
                       >
-                        {editingRole ? 'Aktualisieren' : 'Erstellen'}
+                        <CheckIcon className="h-5 w-5" />
                       </button>
                     </div>
                   </form>
                 </div>
               </div>
-            </Dialog>
+            </>
           )}
         </>
       )}

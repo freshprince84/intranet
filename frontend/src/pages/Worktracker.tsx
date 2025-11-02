@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
 import TableColumnConfig from '../components/TableColumnConfig.tsx';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import WorktimeTracker from '../components/WorktimeTracker.tsx';
@@ -16,6 +17,12 @@ import { FilterCondition } from '../components/FilterRow.tsx';
 import SavedFilterTags from '../components/SavedFilterTags.tsx';
 import { toast } from 'react-toastify';
 import MarkdownPreview from '../components/MarkdownPreview.tsx';
+import { getExpiryStatus, getExpiryColorClasses, createDueDateMetadataItem } from '../utils/expiryUtils.ts';
+import { getStatusText, getStatusColor } from '../utils/statusUtils.tsx';
+import DataCard, { MetadataItem } from '../components/shared/DataCard.tsx';
+import CardGrid from '../components/shared/CardGrid.tsx';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 
 interface Task {
     id: number;
@@ -51,32 +58,101 @@ interface SortConfig {
     direction: 'asc' | 'desc';
 }
 
-// Definiere die verfügbaren Spalten für die Tabelle
-const availableColumns = [
-    { id: 'title', label: 'Titel', shortLabel: 'Titel' },
-    { id: 'status', label: 'Status', shortLabel: 'Status' },
-    { id: 'responsibleAndQualityControl', label: 'Verantwortlich / Qualitätskontrolle', shortLabel: 'Ver. / QK' },
-    { id: 'branch', label: 'Niederlassung', shortLabel: 'Niedr.' },
-    { id: 'dueDate', label: 'Fälligkeitsdatum', shortLabel: 'Fällig' },
-    { id: 'actions', label: 'Aktionen', shortLabel: 'Akt.' },
-];
-
-// Definiere zusätzliche Spalten, die nur für den Filter verfügbar sind, nicht für die Tabellenanzeige
-const filterOnlyColumns = [
-    { id: 'responsible', label: 'Verantwortlicher', shortLabel: 'Ver.' },
-    { id: 'qualityControl', label: 'Qualitätskontrolle', shortLabel: 'QK' },
-];
-
-// Standard-Spaltenreihenfolge
-const defaultColumnOrder = availableColumns.map(column => column.id);
+// Standard-Spaltenreihenfolge (wird in der Komponente neu definiert)
+const defaultColumnOrder = ['title', 'responsibleAndQualityControl', 'status', 'dueDate', 'branch', 'actions'];
 
 // Definiere eine tableId für die To-Dos Tabelle
 const TODOS_TABLE_ID = 'worktracker-todos';
 
+// Card-Einstellungen Standardwerte
+const defaultCardMetadata = ['title', 'status', 'responsible', 'qualityControl', 'branch', 'dueDate', 'description'];
+const defaultCardColumnOrder = ['title', 'status', 'responsible', 'qualityControl', 'branch', 'dueDate', 'description'];
+const defaultCardSortDirections: Record<string, 'asc' | 'desc'> = {
+  title: 'asc',
+  status: 'asc',
+  responsible: 'asc',
+  qualityControl: 'asc',
+  branch: 'asc',
+  dueDate: 'asc',
+  description: 'asc'
+};
+
+// Mapping zwischen Tabellen-Spalten-IDs und Card-Metadaten-IDs
+// Tabellen-Spalte -> Card-Metadaten (kann Array sein für 1:N Mapping)
+const tableToCardMapping: Record<string, string[]> = {
+  'title': ['title'],
+  'status': ['status'],
+  'responsibleAndQualityControl': ['responsible', 'qualityControl'], // 1 Tabelle-Spalte -> 2 Card-Metadaten
+  'branch': ['branch'],
+  'dueDate': ['dueDate'],
+  'actions': [], // Keine Card-Entsprechung
+  'description': ['description'] // Nur in Cards verfügbar
+};
+
+// Reverse Mapping: Card-Metadaten -> Tabellen-Spalten
+const cardToTableMapping: Record<string, string> = {
+  'title': 'title',
+  'status': 'status',
+  'responsible': 'responsibleAndQualityControl',
+  'qualityControl': 'responsibleAndQualityControl',
+  'branch': 'branch',
+  'dueDate': 'dueDate',
+  'description': 'description'
+};
+
+// Helfer-Funktion: Tabellen-Spalte ausgeblendet -> Card-Metadaten ausblenden
+const getHiddenCardMetadata = (hiddenTableColumns: string[]): Set<string> => {
+  const hiddenCardMetadata = new Set<string>();
+  hiddenTableColumns.forEach(tableCol => {
+    const cardMetadata = tableToCardMapping[tableCol] || [];
+    cardMetadata.forEach(cardMeta => hiddenCardMetadata.add(cardMeta));
+  });
+  return hiddenCardMetadata;
+};
+
+// Helfer-Funktion: Card-Metadaten zu Tabellen-Spalten konvertieren
+const getCardMetadataFromColumnOrder = (columnOrder: string[]): string[] => {
+  const cardMetadata: string[] = [];
+  columnOrder.forEach(tableCol => {
+    const cardMeta = tableToCardMapping[tableCol];
+    if (cardMeta && cardMeta.length > 0) {
+      cardMetadata.push(...cardMeta);
+    }
+  });
+  // Beschreibung hinzufügen, wenn nicht schon vorhanden
+  if (!cardMetadata.includes('description')) {
+    cardMetadata.push('description');
+  }
+  return cardMetadata;
+};
+
 const Worktracker: React.FC = () => {
+    const { t } = useTranslation();
     const { user } = useAuth();
     const { hasPermission } = usePermissions();
     const location = useLocation();
+    
+    // Definiere die verfügbaren Spalten für die Tabelle (dynamisch aus Übersetzungen)
+    const availableColumns = useMemo(() => [
+        { id: 'title', label: t('tasks.columns.title'), shortLabel: t('tasks.columns.title') },
+        { id: 'status', label: t('tasks.columns.status'), shortLabel: t('tasks.columns.status') },
+        { id: 'responsibleAndQualityControl', label: t('tasks.columns.responsibleAndQualityControl'), shortLabel: t('tasks.columns.responsibleAndQualityControl').split('/')[0] },
+        { id: 'branch', label: t('tasks.columns.branch'), shortLabel: t('tasks.columns.branch').substring(0, 5) },
+        { id: 'dueDate', label: t('tasks.columns.dueDate'), shortLabel: t('tasks.columns.dueDate').substring(0, 5) },
+        { id: 'actions', label: t('tasks.columns.actions'), shortLabel: t('common.actions').substring(0, 3) },
+    ], [t]);
+
+    // Definiere zusätzliche Spalten, die nur für den Filter verfügbar sind, nicht für die Tabellenanzeige
+    const filterOnlyColumns = useMemo(() => [
+        { id: 'responsible', label: t('tasks.columns.responsible'), shortLabel: t('tasks.columns.responsible').substring(0, 3) },
+        { id: 'qualityControl', label: t('tasks.columns.qualityControl'), shortLabel: t('tasks.columns.qualityControl').substring(0, 2) },
+    ], [t]);
+    
+    // Status-Übersetzungen (verwende zentrale Utils mit Übersetzungsunterstützung)
+    // WICHTIG: Funktionalität bleibt identisch - nur Code-Duplikation entfernt!
+    const getStatusLabel = (status: Task['status']): string => {
+        return getStatusText(status, 'task', t);
+    };
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -86,6 +162,11 @@ const Worktracker: React.FC = () => {
     // State für erweiterte Filterbedingungen
     const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
     const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+    
+    // Filter State Management (Controlled Mode)
+    const [activeFilterName, setActiveFilterName] = useState<string>('');
+    const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
+    
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -100,15 +181,57 @@ const Worktracker: React.FC = () => {
         updateColumnOrder,
         updateHiddenColumns,
         toggleColumnVisibility,
-        isColumnVisible
+        isColumnVisible,
+        updateViewMode
     } = useTableSettings('worktracker_tasks', {
         defaultColumnOrder,
-        defaultHiddenColumns: []
+        defaultHiddenColumns: [],
+        defaultViewMode: 'cards'
     });
 
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
     const [displayLimit, setDisplayLimit] = useState<number>(10);
+
+    // View-Mode aus Settings laden
+    const viewMode = settings.viewMode || 'cards';
+    
+    // Lokale Sortierrichtungen für Cards (nicht persistiert)
+    const [cardSortDirections, setCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
+        return defaultCardSortDirections;
+    });
+
+    // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
+    // Card-Metadaten-Reihenfolge aus columnOrder ableiten
+    const cardMetadataOrder = useMemo(() => {
+        return getCardMetadataFromColumnOrder(settings.columnOrder || defaultColumnOrder);
+    }, [settings.columnOrder]);
+
+    // Versteckte Card-Metadaten aus hiddenColumns ableiten
+    const hiddenCardMetadata = useMemo(() => {
+        return getHiddenCardMetadata(settings.hiddenColumns || []);
+    }, [settings.hiddenColumns]);
+
+    // Sichtbare Card-Metadaten (alle Card-Metadaten minus versteckte)
+    const visibleCardMetadata = useMemo(() => {
+        return new Set(cardMetadataOrder.filter(meta => !hiddenCardMetadata.has(meta)));
+    }, [cardMetadataOrder, hiddenCardMetadata]);
+
+    // CSS-Klasse für Container-Box setzen (für CSS-basierte Schattierungs-Entfernung)
+    useEffect(() => {
+        const wrappers = document.querySelectorAll('.dashboard-tasks-wrapper');
+        wrappers.forEach(wrapper => {
+            if (viewMode === 'cards') {
+                wrapper.classList.add('cards-mode');
+            } else {
+                wrapper.classList.remove('cards-mode');
+            }
+        });
+    }, [viewMode]);
+
+    // Ref um sicherzustellen, dass loadTasks nur einmal beim Mount aufgerufen wird
+    // (auch bei React.StrictMode doppelter Ausführung)
+    const hasLoadedRef = useRef(false);
 
     // Funktion zum Neu Laden der Tasks
     const loadTasks = async () => {
@@ -119,15 +242,18 @@ const Worktracker: React.FC = () => {
             setError(null);
         } catch (error) {
             console.error('Fehler beim Laden der Tasks:', error);
-            setError('Fehler beim Laden der Tasks');
+            setError(t('worktime.messages.tasksLoadError'));
         } finally {
             setLoading(false);
         }
     };
 
-    // Lade Tasks beim ersten Render
+    // Lade Tasks beim ersten Render (nur einmal, auch bei React.StrictMode)
     useEffect(() => {
-        loadTasks();
+        if (!hasLoadedRef.current) {
+            hasLoadedRef.current = true;
+            loadTasks();
+        }
     }, []);
 
     // URL-Parameter für editTask verarbeiten
@@ -148,6 +274,27 @@ const Worktracker: React.FC = () => {
             }
         }
     }, [tasks, location.search]);
+
+    // Initialer Default-Filter setzen (Controlled Mode)
+    useEffect(() => {
+        const setInitialFilter = async () => {
+            try {
+                const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(TODOS_TABLE_ID));
+                const filters = response.data;
+                
+                const aktuellFilter = filters.find((filter: any) => filter.name === 'Aktuell');
+                if (aktuellFilter) {
+                    setActiveFilterName('Aktuell');
+                    setSelectedFilterId(aktuellFilter.id);
+                    applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators);
+                }
+            } catch (error) {
+                console.error('Fehler beim Setzen des initialen Filters:', error);
+            }
+        };
+
+        setInitialFilter();
+    }, []);
 
     // Standard-Filter erstellen und speichern
     useEffect(() => {
@@ -225,22 +372,7 @@ const Worktracker: React.FC = () => {
         createStandardFilters();
     }, []);
 
-    const getStatusColor = (status: Task['status']) => {
-        switch (status) {
-            case 'open':
-                return 'bg-gray-100 text-gray-800';
-            case 'in_progress':
-                return 'bg-blue-100 text-blue-800';
-            case 'improval':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'quality_control':
-                return 'bg-purple-100 text-purple-800';
-            case 'done':
-                return 'bg-green-100 text-green-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
+    // getStatusColor und getStatusText werden jetzt von statusUtils verwendet (siehe getStatusLabel oben)
 
     const handleStatusChange = async (taskId: number, newStatus: Task['status']) => {
         try {
@@ -252,12 +384,12 @@ const Worktracker: React.FC = () => {
             );
 
             await axiosInstance.patch(API_ENDPOINTS.TASKS.BY_ID(taskId), { status: newStatus });
-            toast.success('Status erfolgreich aktualisiert');
+            toast.success(t('worktime.messages.taskUpdated'));
         } catch (error) {
             // Rollback bei Fehler: Vollständiges Reload
             console.error('Fehler beim Aktualisieren des Status:', error);
             loadTasks();
-            toast.error('Fehler beim Aktualisieren des Status');
+                toast.error(t('worktime.messages.taskUpdatedError'));
         }
     };
 
@@ -301,8 +433,8 @@ const Worktracker: React.FC = () => {
                 <button
                     key="back"
                     onClick={() => handleStatusChange(task.id, 'open')}
-                    className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
-                    title="Zurück zu Offen"
+                    className="p-1.5 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
+                    title={t('tasks.actions.backToOpen')}
                 >
                     <ArrowLeftIcon className="h-5 w-5" />
                 </button>
@@ -312,8 +444,8 @@ const Worktracker: React.FC = () => {
                 <button
                     key="back"
                     onClick={() => handleStatusChange(task.id, 'in_progress')}
-                    className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
-                    title="Zurück in Bearbeitung"
+                    className="p-1.5 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
+                    title={t('tasks.actions.backToInProgress')}
                 >
                     <ArrowLeftIcon className="h-5 w-5" />
                 </button>
@@ -323,10 +455,10 @@ const Worktracker: React.FC = () => {
                 <button
                     key="back"
                     onClick={() => handleStatusChange(task.id, 'quality_control')}
-                    className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
-                    title="Zurück zur Qualitätskontrolle"
+                    className="p-2 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
+                    title={t('tasks.actions.backToQualityControl')}
                 >
-                    <ArrowLeftIcon className="h-5 w-5" />
+                    <ArrowLeftIcon className="h-6 w-6" />
                 </button>
             );
         }
@@ -337,8 +469,8 @@ const Worktracker: React.FC = () => {
                 <button
                     key="forward"
                     onClick={() => handleStatusChange(task.id, 'in_progress')}
-                    className="p-1 bg-blue-600 dark:bg-blue-500 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600"
-                    title="In Bearbeitung setzen"
+                    className="p-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600"
+                    title={t('tasks.actions.setInProgress')}
                 >
                     <ArrowRightIcon className="h-5 w-5" />
                 </button>
@@ -348,8 +480,8 @@ const Worktracker: React.FC = () => {
                 <button
                     key="forward"
                     onClick={() => handleStatusChange(task.id, 'quality_control')}
-                    className="p-1 bg-purple-600 dark:bg-purple-500 text-white rounded hover:bg-purple-700 dark:hover:bg-purple-600"
-                    title="Zur Qualitätskontrolle"
+                    className="p-1.5 bg-purple-600 dark:bg-purple-500 text-white rounded hover:bg-purple-700 dark:hover:bg-purple-600"
+                    title={t('tasks.actions.setQualityControl')}
                 >
                     <ArrowRightIcon className="h-5 w-5" />
                 </button>
@@ -359,8 +491,8 @@ const Worktracker: React.FC = () => {
                 <button
                     key="forward"
                     onClick={() => handleStatusChange(task.id, 'done')}
-                    className="p-1 bg-green-600 dark:bg-green-500 text-white rounded hover:bg-green-700 dark:hover:bg-green-600"
-                    title="Als erledigt markieren"
+                    className="p-1.5 bg-green-600 dark:bg-green-500 text-white rounded hover:bg-green-700 dark:hover:bg-green-600"
+                    title={t('tasks.actions.markDone')}
                 >
                     <ArrowRightIcon className="h-5 w-5" />
                 </button>
@@ -382,6 +514,15 @@ const Worktracker: React.FC = () => {
     const resetFilterConditions = () => {
         setFilterConditions([]);
         setFilterLogicalOperators([]);
+        setActiveFilterName('');
+        setSelectedFilterId(null);
+    };
+    
+    // Filter Change Handler (Controlled Mode)
+    const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+        setActiveFilterName(name);
+        setSelectedFilterId(id);
+        applyFilterConditions(conditions, operators);
     };
 
     const getStatusPriority = (status: Task['status']): number => {
@@ -592,70 +733,132 @@ const Worktracker: React.FC = () => {
                 return true;
             })
             .sort((a, b) => {
-                // Verwende die sortConfig, wenn sie vorhanden ist
-                if (sortConfig.key) {
-                    let valueA, valueB;
+                // Multi-Sortierung für Cards-Mode
+                if (viewMode === 'cards') {
+                    const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
                     
-                    // Extrahiere die Werte basierend auf dem Sortierungsschlüssel
-                    switch (sortConfig.key) {
-                        case 'title':
-                            valueA = a.title;
-                            valueB = b.title;
-                            break;
-                        case 'status':
-                            valueA = getStatusPriority(a.status);
-                            valueB = getStatusPriority(b.status);
-                            break;
-                        case 'responsible.firstName':
-                            valueA = a.responsible ? `${a.responsible.firstName} ${a.responsible.lastName}` : (a.role ? `Rolle: ${a.role.name}` : '');
-                            valueB = b.responsible ? `${b.responsible.firstName} ${b.responsible.lastName}` : (b.role ? `Rolle: ${b.role.name}` : '');
-                            break;
-                        case 'qualityControl.firstName':
-                            valueA = a.qualityControl ? `${a.qualityControl.firstName} ${a.qualityControl.lastName}` : '';
-                            valueB = b.qualityControl ? `${b.qualityControl.firstName} ${b.qualityControl.lastName}` : '';
-                            break;
-                        case 'branch.name':
-                            valueA = a.branch.name;
-                            valueB = b.branch.name;
-                            break;
-                        case 'dueDate':
-                            valueA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                            valueB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                            break;
-                        default:
-                            valueA = a[sortConfig.key as keyof Task];
-                            valueB = b[sortConfig.key as keyof Task];
+                    for (const columnId of sortableColumns) {
+                        const direction = cardSortDirections[columnId] || 'asc';
+                        let valueA: any, valueB: any;
+                        
+                        switch (columnId) {
+                            case 'title':
+                                valueA = a.title.toLowerCase();
+                                valueB = b.title.toLowerCase();
+                                break;
+                            case 'status':
+                                valueA = getStatusPriority(a.status);
+                                valueB = getStatusPriority(b.status);
+                                break;
+                            case 'responsible':
+                                valueA = a.responsible ? `${a.responsible.firstName} ${a.responsible.lastName}`.toLowerCase() : (a.role ? `Rolle: ${a.role.name}`.toLowerCase() : '');
+                                valueB = b.responsible ? `${b.responsible.firstName} ${b.responsible.lastName}`.toLowerCase() : (b.role ? `Rolle: ${b.role.name}`.toLowerCase() : '');
+                                break;
+                            case 'qualityControl':
+                                valueA = a.qualityControl ? `${a.qualityControl.firstName} ${a.qualityControl.lastName}`.toLowerCase() : '';
+                                valueB = b.qualityControl ? `${b.qualityControl.firstName} ${b.qualityControl.lastName}`.toLowerCase() : '';
+                                break;
+                            case 'branch':
+                                valueA = a.branch.name.toLowerCase();
+                                valueB = b.branch.name.toLowerCase();
+                                break;
+                            case 'dueDate':
+                                valueA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+                                valueB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+                                break;
+                            case 'description':
+                                valueA = (a.description || '').toLowerCase();
+                                valueB = (b.description || '').toLowerCase();
+                                break;
+                            default:
+                                continue; // Überspringe unbekannte Spalten
+                        }
+                        
+                        // Vergleich basierend auf Typ
+                        let comparison = 0;
+                        if (typeof valueA === 'number' && typeof valueB === 'number') {
+                            comparison = valueA - valueB;
+                        } else {
+                            comparison = String(valueA).localeCompare(String(valueB));
+                        }
+                        
+                        // Sortierrichtung anwenden
+                        if (direction === 'desc') {
+                            comparison = -comparison;
+                        }
+                        
+                        // Wenn unterschiedlich, gebe Vergleich zurück
+                        if (comparison !== 0) {
+                            return comparison;
+                        }
+                    }
+                    return 0; // Alle Spalten identisch
+                } else {
+                    // Tabellen-Mode: Einzel-Sortierung wie bisher
+                    if (sortConfig.key) {
+                        let valueA, valueB;
+                        
+                        // Extrahiere die Werte basierend auf dem Sortierungsschlüssel
+                        switch (sortConfig.key) {
+                            case 'title':
+                                valueA = a.title;
+                                valueB = b.title;
+                                break;
+                            case 'status':
+                                valueA = getStatusPriority(a.status);
+                                valueB = getStatusPriority(b.status);
+                                break;
+                            case 'responsible.firstName':
+                                valueA = a.responsible ? `${a.responsible.firstName} ${a.responsible.lastName}` : (a.role ? `Rolle: ${a.role.name}` : '');
+                                valueB = b.responsible ? `${b.responsible.firstName} ${b.responsible.lastName}` : (b.role ? `Rolle: ${b.role.name}` : '');
+                                break;
+                            case 'qualityControl.firstName':
+                                valueA = a.qualityControl ? `${a.qualityControl.firstName} ${a.qualityControl.lastName}` : '';
+                                valueB = b.qualityControl ? `${b.qualityControl.firstName} ${b.qualityControl.lastName}` : '';
+                                break;
+                            case 'branch.name':
+                                valueA = a.branch.name;
+                                valueB = b.branch.name;
+                                break;
+                            case 'dueDate':
+                                valueA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+                                valueB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+                                break;
+                            default:
+                                valueA = a[sortConfig.key as keyof Task];
+                                valueB = b[sortConfig.key as keyof Task];
+                        }
+                        
+                        // Vergleiche die Werte basierend auf der Sortierrichtung
+                        if (typeof valueA === 'number' && typeof valueB === 'number') {
+                            return sortConfig.direction === 'asc' ? valueA - valueB : valueB - valueA;
+                        } else {
+                            const comparison = String(valueA).localeCompare(String(valueB));
+                            return sortConfig.direction === 'asc' ? comparison : -comparison;
+                        }
+                    }
+                    // Standardsortierung nur anwenden, wenn keine benutzerdefinierte Sortierung aktiv ist
+                    // Primäre Sortierung nach Fälligkeitsdatum
+                    const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+                    const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+                    
+                    if (aDate !== bDate) {
+                        return aDate - bDate; // Aufsteigend nach Datum
                     }
                     
-                    // Vergleiche die Werte basierend auf der Sortierrichtung
-                    if (typeof valueA === 'number' && typeof valueB === 'number') {
-                        return sortConfig.direction === 'asc' ? valueA - valueB : valueB - valueA;
-                    } else {
-                        const comparison = String(valueA).localeCompare(String(valueB));
-                        return sortConfig.direction === 'asc' ? comparison : -comparison;
+                    // Sekundäre Sortierung nach Status-Priorität
+                    const aStatusPrio = getStatusPriority(a.status);
+                    const bStatusPrio = getStatusPriority(b.status);
+                    
+                    if (aStatusPrio !== bStatusPrio) {
+                        return aStatusPrio - bStatusPrio; // Aufsteigend nach Priorität
                     }
+                    
+                    // Tertiäre Sortierung nach Titel
+                    return a.title.localeCompare(b.title);
                 }
-                // Standardsortierung nur anwenden, wenn keine benutzerdefinierte Sortierung aktiv ist
-                // Primäre Sortierung nach Fälligkeitsdatum
-                const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                
-                if (aDate !== bDate) {
-                    return aDate - bDate; // Aufsteigend nach Datum
-                }
-                
-                // Sekundäre Sortierung nach Status-Priorität
-                const aStatusPrio = getStatusPriority(a.status);
-                const bStatusPrio = getStatusPriority(b.status);
-                
-                if (aStatusPrio !== bStatusPrio) {
-                    return aStatusPrio - bStatusPrio; // Aufsteigend nach Priorität
-                }
-                
-                // Tertiäre Sortierung nach Titel
-                return a.title.localeCompare(b.title);
             });
-    }, [tasks, searchTerm, sortConfig, getStatusPriority, filterConditions, filterLogicalOperators]);
+    }, [tasks, searchTerm, sortConfig, getStatusPriority, filterConditions, filterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
@@ -703,7 +906,15 @@ const Worktracker: React.FC = () => {
     };
 
     // Filtern und sortieren der Spalten gemäß den Benutzereinstellungen
-    const visibleColumnIds = settings.columnOrder.filter(id => isColumnVisible(id));
+    // Sicherstellen, dass alle Spalten aus defaultColumnOrder in columnOrder enthalten sind
+    const completeColumnOrder = useMemo(() => {
+        const currentOrder = settings.columnOrder || [];
+        // Fehlende Spalten aus defaultColumnOrder hinzufügen
+        const missingColumns = defaultColumnOrder.filter(id => !currentOrder.includes(id));
+        return [...currentOrder, ...missingColumns];
+    }, [settings.columnOrder]);
+
+    const visibleColumnIds = completeColumnOrder.filter(id => isColumnVisible(id));
 
     // Funktion zum Kopieren eines Tasks
     const handleCopyTask = async (task: Task) => {
@@ -742,18 +953,18 @@ const Worktracker: React.FC = () => {
     };
 
     const handleDeleteTask = async (taskId: number) => {
-        if (window.confirm('Sind Sie sicher, dass Sie diese Aufgabe löschen möchten?')) {
+        if (window.confirm(t('worktime.messages.taskDeleteConfirm'))) {
             // Optimistisches Update: Task sofort aus Liste entfernen
             setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
 
             try {
                 await axiosInstance.delete(API_ENDPOINTS.TASKS.BY_ID(taskId));
-                toast.success('Aufgabe erfolgreich gelöscht');
+                toast.success(t('worktime.messages.taskDeleted'));
             } catch (error) {
                 // Rollback bei Fehler: Vollständiges Reload
                 console.error('Fehler beim Löschen der Aufgabe:', error);
                 loadTasks();
-                toast.error('Fehler beim Löschen der Aufgabe');
+                toast.error(t('worktime.messages.taskDeletedError'));
             }
         }
     };
@@ -765,10 +976,10 @@ const Worktracker: React.FC = () => {
             loadTasks();
             setIsEditModalOpen(false);
             setSelectedTask(null);
-            toast.success('Aufgabe erfolgreich aktualisiert');
+            toast.success(t('worktime.messages.taskUpdated'));
         } catch (error) {
             console.error('Fehler beim Speichern der Aufgabe:', error);
-            toast.error('Fehler beim Speichern der Aufgabe');
+                toast.error(t('worktime.messages.taskSaveError'));
         }
     };
 
@@ -780,7 +991,7 @@ const Worktracker: React.FC = () => {
                     {/* Auf mobilen Geräten wird diese Reihenfolge angezeigt - Tasks oben, Zeiterfassung unten */}
                     <div className="block sm:hidden w-full">
                     {/* Tasks */}
-                        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
+                        <div className="dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
                             <div className="flex items-center justify-between">
                                 {/* Linke Seite: "Neuer Task"-Button */}
                                 <div className="flex items-center">
@@ -789,8 +1000,8 @@ const Worktracker: React.FC = () => {
                                             onClick={() => setIsCreateModalOpen(true)}
                                             className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
                                             style={{ width: '30.19px', height: '30.19px' }}
-                                            title="Neue Aufgabe erstellen"
-                                            aria-label="Neue Aufgabe erstellen"
+                                            title={t('tasks.createTask')}
+                                            aria-label={t('tasks.createTask')}
                                         >
                                             <PlusIcon className="h-4 w-4" />
                                         </button>
@@ -800,28 +1011,43 @@ const Worktracker: React.FC = () => {
                                 {/* Mitte: Titel */}
                                 <div className="flex items-center">
                                     <CheckCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
-                                    <h2 className="text-xl font-semibold dark:text-white">To Do's</h2>
+                                    <h2 className="text-xl font-semibold dark:text-white">{t('tasks.title')}</h2>
                                 </div>
                                 
                                 {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
                                 <div className="flex items-center gap-1.5">
                                     <input
                                         type="text"
-                                        placeholder="Suchen..."
+                                        placeholder={t('common.search') + '...'}
                                         className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                     
+                                    {/* View-Mode Toggle */}
+                                    <button
+                                        className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                            viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+                                        }`}
+                                        onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
+                                        title={viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
+                                    >
+                                        {viewMode === 'table' ? (
+                                            <Squares2X2Icon className="h-5 w-5" />
+                                        ) : (
+                                            <TableCellsIcon className="h-5 w-5" />
+                                        )}
+                                    </button>
+                                    
                                     {/* Filter-Button */}
                                     <button
-                                        className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
+                                        className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
                                         onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-                                        title="Filter"
+                                        title={t('common.filter')}
                                     >
                                         <FunnelIcon className="h-5 w-5" />
                                         {getActiveFilterCount() > 0 && (
-                                            <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
                                                 {getActiveFilterCount()}
                                             </span>
                                         )}
@@ -830,11 +1056,75 @@ const Worktracker: React.FC = () => {
                                     {/* Spalten-Konfiguration */}
                                     <div className="ml-1">
                                         <TableColumnConfig 
-                                            columns={availableColumns}
-                                            visibleColumns={visibleColumnIds}
-                                            columnOrder={settings.columnOrder}
-                                            onToggleColumnVisibility={toggleColumnVisibility}
-                                            onMoveColumn={handleMoveColumn}
+                                            columns={viewMode === 'cards'
+                                                ? [
+                                                    { id: 'title', label: t('tasks.columns.title') },
+                                                    { id: 'status', label: t('tasks.columns.status') },
+                                                    { id: 'responsible', label: t('tasks.columns.responsible') },
+                                                    { id: 'qualityControl', label: t('tasks.columns.qualityControl') },
+                                                    { id: 'branch', label: t('tasks.columns.branch') },
+                                                    { id: 'dueDate', label: t('tasks.columns.dueDate') },
+                                                    { id: 'description', label: t('tasks.columns.description') }
+                                                ]
+                                                : availableColumns}
+                                            visibleColumns={viewMode === 'cards'
+                                                ? Array.from(visibleCardMetadata)
+                                                : visibleColumnIds}
+                                            columnOrder={viewMode === 'cards'
+                                                ? cardMetadataOrder
+                                                : settings.columnOrder}
+                                            onToggleColumnVisibility={(columnId) => {
+                                                if (viewMode === 'cards') {
+                                                    // Für Cards: Mapping zurück zu Tabellen-Spalten
+                                                    const tableColumn = cardToTableMapping[columnId];
+                                                    if (tableColumn) {
+                                                        toggleColumnVisibility(tableColumn);
+                                                    }
+                                                } else {
+                                                    toggleColumnVisibility(columnId);
+                                                }
+                                            }}
+                                            onMoveColumn={viewMode === 'cards'
+                                                ? (dragIndex: number, hoverIndex: number) => {
+                                                    const newCardOrder = [...cardMetadataOrder];
+                                                    const dragged = newCardOrder[dragIndex];
+                                                    newCardOrder.splice(dragIndex, 1);
+                                                    newCardOrder.splice(hoverIndex, 0, dragged);
+                                                    
+                                                    // Konvertiere zurück zu Tabellen-Spalten-Reihenfolge
+                                                    const newTableOrder: string[] = [];
+                                                    const usedTableColumns = new Set<string>();
+                                                    
+                                                    newCardOrder.forEach(cardMeta => {
+                                                        const tableCol = cardToTableMapping[cardMeta];
+                                                        if (tableCol && !usedTableColumns.has(tableCol)) {
+                                                            usedTableColumns.add(tableCol);
+                                                            newTableOrder.push(tableCol);
+                                                        }
+                                                    });
+                                                    
+                                                    // Füge fehlende Tabellen-Spalten hinzu
+                                                    availableColumns.forEach(col => {
+                                                        if (!newTableOrder.includes(col.id) && col.id !== 'actions') {
+                                                            newTableOrder.push(col.id);
+                                                        }
+                                                    });
+                                                    
+                                                    updateColumnOrder(newTableOrder);
+                                                }
+                                                : handleMoveColumn}
+                                            sortDirections={viewMode === 'cards' ? cardSortDirections : undefined}
+                                            onSortDirectionChange={viewMode === 'cards'
+                                                ? (columnId: string, direction: 'asc' | 'desc') => {
+                                                    setCardSortDirections(prev => ({
+                                                        ...prev,
+                                                        [columnId]: direction
+                                                    }));
+                                                }
+                                                : undefined}
+                                            showSortDirection={viewMode === 'cards'}
+                                            buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
+                                            modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             onClose={() => {}}
                                         />
                                     </div>
@@ -858,85 +1148,99 @@ const Worktracker: React.FC = () => {
                                 tableId={TODOS_TABLE_ID}
                                 onSelectFilter={applyFilterConditions}
                                 onReset={resetFilterConditions}
+                                activeFilterName={activeFilterName}
+                                selectedFilterId={selectedFilterId}
+                                onFilterChange={handleFilterChange}
                                 defaultFilterName="Aktuell"
                             />
                             
-                            {/* Tabelle */}
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                    <thead className="bg-gray-50 dark:bg-gray-700">
-                                        <tr>
-                                            {visibleColumnIds.map((columnId) => {
-                                                const column = availableColumns.find(col => col.id === columnId);
-                                                if (!column) return null;
-                                                
-                                                return (
-                                                    <th
-                                                        key={columnId}
-                                                        scope="col"
-                                                        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
-                                                        draggable={true}
-                                                        onDragStart={() => handleDragStart(columnId)}
-                                                        onDragOver={(e) => handleDragOver(e, columnId)}
-                                                        onDrop={(e) => handleDrop(e, columnId)}
-                                                        onDragEnd={handleDragEnd}
-                                                    >
-                                                        <div className="flex items-center">
-                                                            {window.innerWidth <= 640 ? column.shortLabel : column.label}
-                                                            {columnId !== 'actions' && (
-                                                                <button 
-                                                                    onClick={() => handleSort(columnId as keyof Task)}
-                                                                    className="ml-1 focus:outline-none"
-                                                                >
-                                                                    <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                                                                </button>
-                                                            )}
+                            {/* Tabelle oder Cards */}
+                            {viewMode === 'table' ? (
+                                /* Tabellen-Ansicht */
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                        <thead className="bg-gray-50 dark:bg-gray-700">
+                                            <tr>
+                                                {visibleColumnIds.map((columnId) => {
+                                                    const column = availableColumns.find(col => col.id === columnId);
+                                                    if (!column) return null;
+                                                    
+                                                    return (
+                                                        <th
+                                                            key={columnId}
+                                                            scope="col"
+                                                            className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                            draggable={true}
+                                                            onDragStart={() => handleDragStart(columnId)}
+                                                            onDragOver={(e) => handleDragOver(e, columnId)}
+                                                            onDrop={(e) => handleDrop(e, columnId)}
+                                                            onDragEnd={handleDragEnd}
+                                                        >
+                                                            <div className="flex items-center">
+                                                                {window.innerWidth <= 640 ? column.shortLabel : column.label}
+                                                                {columnId !== 'actions' && (
+                                                                    <button 
+                                                                        onClick={() => handleSort(columnId as keyof Task)}
+                                                                        className="ml-1 focus:outline-none"
+                                                                    >
+                                                                        <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </th>
+                                                    );
+                                                })}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                            {loading ? (
+                                                <tr>
+                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
+                                                        <div className="flex justify-center">
+                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
                                                         </div>
-                                                    </th>
-                                                );
-                                            })}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                        {loading ? (
-                                            <tr>
-                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
-                                                    <div className="flex justify-center">
-                                                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ) : error ? (
-                                            <tr>
-                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
-                                                    {error}
-                                                </td>
-                                            </tr>
-                                        ) : filteredAndSortedTasks.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                                                    <div className="flex flex-col items-center justify-center gap-4">
+                                                    </td>
+                                                </tr>
+                                            ) : error ? (
+                                                <tr>
+                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
+                                                        {error}
+                                                    </td>
+                                                </tr>
+                                            ) : filteredAndSortedTasks.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                                                        <div className="flex flex-col items-center justify-center gap-4">
                                                         <ClipboardDocumentListIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
-                                                        <div className="text-sm">Keine To Do's gefunden</div>
+                                                        <div className="text-sm">{t('tasks.noTasksFound')}</div>
                                                     </div>
                                                 </td>
                                             </tr>
                                         ) : (
                                             <>
-                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => (
-                                                <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => {
+                                            const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
+                                            const expiryColors = getExpiryColorClasses(expiryStatus);
+                                            
+                                            return (
+                                                <tr 
+                                                    key={task.id} 
+                                                    className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                                                        expiryStatus !== 'none' ? `${expiryColors.bgClass} ${expiryColors.borderClass} border-l-4` : ''
+                                                    }`}
+                                                >
                                                     {visibleColumnIds.map(columnId => {
-                                                        switch (columnId) {
-                                                            case 'title':
-                                                                return (
-                                                                    <td key={columnId} className="px-6 py-4">
-                                                                        <div className="text-sm text-gray-900 dark:text-gray-200 break-words flex items-center">
-                                                                            {task.title}
+                                                    switch (columnId) {
+                                                        case 'title':
+                                                            return (
+                                                                <td key={columnId} className="px-6 py-4">
+                                                                    <div className="text-sm text-gray-900 dark:text-gray-200 break-words flex items-center">
+                                                                        {task.title}
                                                                             {task.description && (
                                                                                 <div className="ml-2 relative group">
                                                                                     <button 
                                                                                         className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                                                                                        title="Beschreibung anzeigen"
+                                                                                        title={t('tasks.showDescription')}
                                                                                     >
                                                                                         <InformationCircleIcon className="h-5 w-5" />
                                                                                     </button>
@@ -951,7 +1255,7 @@ const Worktracker: React.FC = () => {
                                                             case 'status':
                                                                 return (
                                                                     <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)} dark:bg-opacity-30 status-col`}>
+                                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status, 'task')} dark:bg-opacity-30 status-col`}>
                                                                             {task.status}
                                                                         </span>
                                                                     </td>
@@ -966,8 +1270,8 @@ const Worktracker: React.FC = () => {
                                                                                 {task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : task.role ? task.role.name : '-'}
                                                                             </div>
                                                                             <div className="text-sm text-gray-900 dark:text-gray-200 mt-1">
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Qualitätskontrolle:</span>
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">QK:</span><br />
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('tasks.qualityControlLabel')}</span>
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">{t('tasks.columns.qualityControl').substring(0, 2)}:</span><br />
                                                                                 {task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-'}
                                                                             </div>
                                                                         </div>
@@ -980,10 +1284,15 @@ const Worktracker: React.FC = () => {
                                                                     </td>
                                                                 );
                                                             case 'dueDate':
+                                                                const expiryStatusForDate = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
+                                                                const expiryColorsForDate = getExpiryColorClasses(expiryStatusForDate);
                                                                 return (
                                                                     <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                                                                        <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                        <div className={`text-sm ${expiryStatusForDate !== 'none' ? expiryColorsForDate.textClass : 'text-gray-900 dark:text-gray-200'}`}>
                                                                             {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
+                                                                            {expiryStatusForDate !== 'none' && (
+                                                                                <span className="ml-2 text-xs">⚠</span>
+                                                                            )}
                                                                         </div>
                                                                     </td>
                                                                 );
@@ -1000,18 +1309,19 @@ const Worktracker: React.FC = () => {
                                                                                         setSelectedTask(task);
                                                                                         setIsEditModalOpen(true);
                                                                                     }}
-                                                                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 edit-button ml-0.5"
+                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                    title={t('common.edit')}
                                                                                 >
-                                                                                    <PencilIcon className="h-5 w-5" />
+                                                                                    <PencilIcon className="h-4 w-4" />
                                                                                 </button>
                                                                             )}
                                                                             {hasPermission('tasks', 'both', 'table') && (
                                                                                 <button
                                                                                     onClick={() => handleCopyTask(task)}
-                                                                                    className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 copy-button ml-0.5"
-                                                                                    title="Task kopieren"
+                                                                                    className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                                                                                    title={t('tasks.actions.copy')}
                                                                                 >
-                                                                                    <DocumentDuplicateIcon className="h-5 w-5" />
+                                                                                    <DocumentDuplicateIcon className="h-4 w-4" />
                                                                                 </button>
                                                                             )}
                                                                         </div>
@@ -1021,13 +1331,149 @@ const Worktracker: React.FC = () => {
                                                                 return null;
                                                         }
                                                     })}
-                                                </tr>
-                                            ))}
+                                                    </tr>
+                                                );
+                                            })}
                                             </>
                                         )}
                                     </tbody>
                                 </table>
                             </div>
+                            ) : (
+                                /* Card-Ansicht - ohne Box-Schattierung, Cards auf voller Breite */
+                                <div className="-mx-6">
+                                    {loading ? (
+                                        <div className="flex justify-center py-12">
+                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
+                                        </div>
+                                    ) : error ? (
+                                        <div className="flex justify-center py-12 text-red-600 dark:text-red-400">
+                                            {error}
+                                        </div>
+                                    ) : filteredAndSortedTasks.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+                                            <ClipboardDocumentListIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />
+                                            <div className="text-sm">Keine To Do's gefunden</div>
+                                        </div>
+                                    ) : (
+                                        <CardGrid>
+                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => {
+                                                const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
+                                                
+                                                // Metadaten basierend auf sichtbaren Einstellungen - strukturiert nach Position
+                                                const metadata: MetadataItem[] = [];
+                                                
+                                                // Links: Niederlassung
+                                                if (visibleCardMetadata.has('branch')) {
+                                                    metadata.push({
+                                                        icon: <BuildingOfficeIcon className="h-4 w-4" />,
+                                                        label: t('tasks.columns.branch'),
+                                                        value: task.branch.name,
+                                                        section: 'left'
+                                                    });
+                                                }
+                                                
+                                                // Haupt-Metadaten: Verantwortlicher & Qualitätskontrolle
+                                                if (visibleCardMetadata.has('responsible')) {
+                                                    metadata.push({
+                                                        icon: <UserIcon className="h-4 w-4" />,
+                                                        label: t('tasks.columns.responsible'),
+                                                        value: task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : (task.role ? task.role.name : '-'),
+                                                        section: 'main'
+                                                    });
+                                                }
+                                                if (visibleCardMetadata.has('qualityControl')) {
+                                                    metadata.push({
+                                                        icon: <UserIcon className="h-4 w-4" />,
+                                                        label: t('tasks.columns.qualityControl'),
+                                                        value: task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-',
+                                                        section: 'main-second'
+                                                    });
+                                                }
+                                                
+                                                // Rechts: Fälligkeit (erste Zeile rechts, neben Status)
+                                                if (visibleCardMetadata.has('dueDate')) {
+                                                    const dueDateItem = createDueDateMetadataItem(
+                                                        task.dueDate,
+                                                        'todo',
+                                                        task.title,
+                                                        task.description,
+                                                        <CalendarIcon className="h-4 w-4" />,
+                                                        t('tasks.columns.dueDate'),
+                                                        (date) => format(date, 'dd.MM.yyyy', { locale: de }),
+                                                        false // Keine Badge-Art, nur Text
+                                                    );
+                                                    metadata.push({
+                                                        ...dueDateItem,
+                                                        section: 'right-inline' // Neue Section für inline rechts (neben Status)
+                                                    });
+                                                }
+                                                
+                                                // Full-Width: Beschreibung
+                                                if (visibleCardMetadata.has('description') && task.description) {
+                                                    metadata.push({
+                                                        icon: <InformationCircleIcon className="h-4 w-4" />,
+                                                        label: t('tasks.columns.description'),
+                                                        value: '',
+                                                        descriptionContent: task.description,
+                                                        section: 'full'
+                                                    });
+                                                }
+                                                
+                                                // Action-Buttons
+                                                const actionButtons = (
+                                                    <div className="flex items-center space-x-2">
+                                                        {/* Status-Buttons */}
+                                                        <div className="status-buttons">
+                                                            {renderStatusButtons(task)}
+                                                        </div>
+                                                        {hasPermission('tasks', 'write', 'table') && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedTask(task);
+                                                                    setIsEditModalOpen(true);
+                                                                }}
+                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                title={t('common.edit')}
+                                                            >
+                                                                <PencilIcon className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                        {hasPermission('tasks', 'both', 'table') && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleCopyTask(task);
+                                                                }}
+                                                                className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                                                                title={t('tasks.actions.copy')}
+                                                            >
+                                                                <DocumentDuplicateIcon className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                                
+                                                return (
+                                                    <DataCard
+                                                        key={task.id}
+                                                        title={task.title}
+                                                        status={{
+                                                            label: getStatusText(task.status, 'task', t),
+                                                            color: getStatusColor(task.status, 'task'),
+                                                            onPreviousClick: undefined,
+                                                            onNextClick: undefined
+                                                        }}
+                                                        metadata={metadata}
+                                                        actions={actionButtons}
+                                                    />
+                                                );
+                                            })}
+                                        </CardGrid>
+                                    )}
+                                </div>
+                            )}
                             
                             {/* "Mehr anzeigen" Button - Mobil */}
                             {filteredAndSortedTasks.length > displayLimit && (
@@ -1036,7 +1482,7 @@ const Worktracker: React.FC = () => {
                                         className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
                                         onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
                                     >
-                                        Mehr anzeigen ({filteredAndSortedTasks.length - displayLimit} verbleibend)
+                                        {t('common.showMore')} ({filteredAndSortedTasks.length - displayLimit} {t('common.remaining')})
                                     </button>
                                 </div>
                             )}
@@ -1056,7 +1502,7 @@ const Worktracker: React.FC = () => {
                         </div>
                         
                         {/* Tasks - vollständiger Inhalt für Desktop-Ansicht */}
-                        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
+                        <div className="dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
                             <div className="flex items-center mb-4 justify-between">
                                 {/* Linke Seite: "Neuer Task"-Button */}
                                 <div className="flex items-center">
@@ -1065,8 +1511,8 @@ const Worktracker: React.FC = () => {
                                             onClick={() => setIsCreateModalOpen(true)}
                                             className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
                                             style={{ width: '30.19px', height: '30.19px' }}
-                                            title="Neue Aufgabe erstellen"
-                                            aria-label="Neue Aufgabe erstellen"
+                                            title={t('tasks.createTask')}
+                                            aria-label={t('tasks.createTask')}
                                         >
                                             <PlusIcon className="h-4 w-4" />
                                         </button>
@@ -1076,28 +1522,43 @@ const Worktracker: React.FC = () => {
                                 {/* Mitte: Titel */}
                                 <div className="flex items-center">
                                     <CheckCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
-                                    <h2 className="text-xl font-semibold dark:text-white">To Do's</h2>
+                                    <h2 className="text-xl font-semibold dark:text-white">{t('tasks.title')}</h2>
                                 </div>
                                 
                                 {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
                                 <div className="flex items-center gap-1.5">
                                     <input
                                         type="text"
-                                        placeholder="Suchen..."
+                                        placeholder={t('common.search') + '...'}
                                         className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />
                                     
+                                    {/* View-Mode Toggle */}
+                                    <button
+                                        className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                            viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+                                        }`}
+                                        onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
+                                        title={viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
+                                    >
+                                        {viewMode === 'table' ? (
+                                            <Squares2X2Icon className="h-5 w-5" />
+                                        ) : (
+                                            <TableCellsIcon className="h-5 w-5" />
+                                        )}
+                                    </button>
+                                    
                                     {/* Filter-Button */}
                                     <button
-                                        className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1`}
+                                        className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
                                         onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-                                        title="Filter"
+                                        title={t('common.filter')}
                                     >
                                         <FunnelIcon className="h-5 w-5" />
                                         {getActiveFilterCount() > 0 && (
-                                            <span className="absolute top-0 right-0 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
                                                 {getActiveFilterCount()}
                                             </span>
                                         )}
@@ -1106,11 +1567,72 @@ const Worktracker: React.FC = () => {
                                     {/* Spalten-Konfiguration */}
                                     <div className="ml-1">
                                         <TableColumnConfig
-                                            columns={availableColumns}
-                                            visibleColumns={visibleColumnIds}
-                                            columnOrder={settings.columnOrder}
-                                            onToggleColumnVisibility={toggleColumnVisibility}
-                                            onMoveColumn={handleMoveColumn}
+                                            columns={viewMode === 'cards'
+                                                ? [
+                                                    { id: 'title', label: t('tasks.columns.title') },
+                                                    { id: 'status', label: t('tasks.columns.status') },
+                                                    { id: 'responsible', label: t('tasks.columns.responsible') },
+                                                    { id: 'qualityControl', label: t('tasks.columns.qualityControl') },
+                                                    { id: 'branch', label: t('tasks.columns.branch') },
+                                                    { id: 'dueDate', label: t('tasks.columns.dueDate') },
+                                                    { id: 'description', label: t('tasks.columns.description') }
+                                                ]
+                                                : availableColumns}
+                                            visibleColumns={viewMode === 'cards'
+                                                ? Array.from(visibleCardMetadata)
+                                                : visibleColumnIds}
+                                            columnOrder={viewMode === 'cards'
+                                                ? cardMetadataOrder
+                                                : settings.columnOrder}
+                                            onToggleColumnVisibility={(columnId) => {
+                                                if (viewMode === 'cards') {
+                                                    const tableColumn = cardToTableMapping[columnId];
+                                                    if (tableColumn) {
+                                                        toggleColumnVisibility(tableColumn);
+                                                    }
+                                                } else {
+                                                    toggleColumnVisibility(columnId);
+                                                }
+                                            }}
+                                            onMoveColumn={viewMode === 'cards'
+                                                ? (dragIndex: number, hoverIndex: number) => {
+                                                    const newCardOrder = [...cardMetadataOrder];
+                                                    const dragged = newCardOrder[dragIndex];
+                                                    newCardOrder.splice(dragIndex, 1);
+                                                    newCardOrder.splice(hoverIndex, 0, dragged);
+                                                    
+                                                    const newTableOrder: string[] = [];
+                                                    const usedTableColumns = new Set<string>();
+                                                    
+                                                    newCardOrder.forEach(cardMeta => {
+                                                        const tableCol = cardToTableMapping[cardMeta];
+                                                        if (tableCol && !usedTableColumns.has(tableCol)) {
+                                                            usedTableColumns.add(tableCol);
+                                                            newTableOrder.push(tableCol);
+                                                        }
+                                                    });
+                                                    
+                                                    availableColumns.forEach(col => {
+                                                        if (!newTableOrder.includes(col.id) && col.id !== 'actions') {
+                                                            newTableOrder.push(col.id);
+                                                        }
+                                                    });
+                                                    
+                                                    updateColumnOrder(newTableOrder);
+                                                }
+                                                : handleMoveColumn}
+                                            sortDirections={viewMode === 'cards' ? cardSortDirections : undefined}
+                                            onSortDirectionChange={viewMode === 'cards'
+                                                ? (columnId: string, direction: 'asc' | 'desc') => {
+                                                    setCardSortDirections(prev => ({
+                                                        ...prev,
+                                                        [columnId]: direction
+                                                    }));
+                                                }
+                                                : undefined}
+                                            showSortDirection={viewMode === 'cards'}
+                                            buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
+                                            modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             onClose={() => {}}
                                         />
                                     </div>
@@ -1134,85 +1656,99 @@ const Worktracker: React.FC = () => {
                                 tableId={TODOS_TABLE_ID}
                                 onSelectFilter={applyFilterConditions}
                                 onReset={resetFilterConditions}
+                                activeFilterName={activeFilterName}
+                                selectedFilterId={selectedFilterId}
+                                onFilterChange={handleFilterChange}
                                 defaultFilterName="Aktuell"
                             />
 
-                            {/* Tabelle */}
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                                    <thead className="bg-gray-50 dark:bg-gray-700">
-                                        <tr>
-                                            {visibleColumnIds.map((columnId) => {
-                                                const column = availableColumns.find(col => col.id === columnId);
-                                                if (!column) return null;
+                            {/* Tabelle oder Cards */}
+                            {viewMode === 'table' ? (
+                                /* Tabellen-Ansicht */
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                        <thead className="bg-gray-50 dark:bg-gray-700">
+                                            <tr>
+                                                {visibleColumnIds.map((columnId) => {
+                                                    const column = availableColumns.find(col => col.id === columnId);
+                                                    if (!column) return null;
 
-                                                return (
-                                                    <th 
-                                                        key={columnId}
-                                                        scope="col"
-                                                        className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
-                                                        draggable={true}
-                                                        onDragStart={() => handleDragStart(columnId)}
-                                                        onDragOver={(e) => handleDragOver(e, columnId)}
-                                                        onDrop={(e) => handleDrop(e, columnId)}
-                                                        onDragEnd={handleDragEnd}
-                                                    >
-                                                        <div className="flex items-center">
-                                                            {window.innerWidth <= 640 ? column.shortLabel : column.label}
-                                                            {columnId !== 'actions' && (
-                                                                <button 
-                                                                    onClick={() => handleSort(columnId as keyof Task)}
-                                                                    className="ml-1 focus:outline-none"
-                                                                >
-                                                                    <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                                                                </button>
-                                                            )}
+                                                    return (
+                                                        <th 
+                                                            key={columnId}
+                                                            scope="col"
+                                                            className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                            draggable={true}
+                                                            onDragStart={() => handleDragStart(columnId)}
+                                                            onDragOver={(e) => handleDragOver(e, columnId)}
+                                                            onDrop={(e) => handleDrop(e, columnId)}
+                                                            onDragEnd={handleDragEnd}
+                                                        >
+                                                            <div className="flex items-center">
+                                                                {window.innerWidth <= 640 ? column.shortLabel : column.label}
+                                                                {columnId !== 'actions' && (
+                                                                    <button 
+                                                                        onClick={() => handleSort(columnId as keyof Task)}
+                                                                        className="ml-1 focus:outline-none"
+                                                                    >
+                                                                        <ArrowsUpDownIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </th>
+                                                    );
+                                                })}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                            {loading ? (
+                                                <tr>
+                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
+                                                        <div className="flex justify-center">
+                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
                                                         </div>
-                                                    </th>
-                                                );
-                                            })}
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                        {loading ? (
-                                            <tr>
-                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
-                                                    <div className="flex justify-center">
-                                                        <div className="rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ) : error ? (
-                                            <tr>
-                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
-                                                    {error}
-                                                </td>
-                                            </tr>
-                                        ) : filteredAndSortedTasks.length === 0 ? (
-                                            <tr>
-                                                <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
-                                                    <div className="flex flex-col items-center justify-center gap-4">
+                                                    </td>
+                                                </tr>
+                                            ) : error ? (
+                                                <tr>
+                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
+                                                        {error}
+                                                    </td>
+                                                </tr>
+                                            ) : filteredAndSortedTasks.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                                                        <div className="flex flex-col items-center justify-center gap-4">
                                                         <ClipboardDocumentListIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
-                                                        <div className="text-sm">Keine To Do's gefunden</div>
+                                                        <div className="text-sm">{t('tasks.noTasksFound')}</div>
                                                     </div>
                                                 </td>
                                             </tr>
                                         ) : (
                                             <>
-                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => (
-                                                <tr key={task.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => {
+                                            const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
+                                            const expiryColors = getExpiryColorClasses(expiryStatus);
+                                            
+                                            return (
+                                                <tr 
+                                                    key={task.id} 
+                                                    className={`hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                                                        expiryStatus !== 'none' ? `${expiryColors.bgClass} ${expiryColors.borderClass} border-l-4` : ''
+                                                    }`}
+                                                >
                                                     {visibleColumnIds.map(columnId => {
-                                                        switch (columnId) {
-                                                            case 'title':
-                                                                return (
-                                                                    <td key={columnId} className="px-6 py-4">
-                                                                        <div className="text-sm text-gray-900 dark:text-gray-200 break-words flex items-center">
-                                                                            {task.title}
+                                                    switch (columnId) {
+                                                        case 'title':
+                                                            return (
+                                                                <td key={columnId} className="px-6 py-4">
+                                                                    <div className="text-sm text-gray-900 dark:text-gray-200 break-words flex items-center">
+                                                                        {task.title}
                                                                             {task.description && (
                                                                                 <div className="ml-2 relative group">
                                                                                     <button 
                                                                                         className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                                                                                        title="Beschreibung anzeigen"
+                                                                                        title={t('tasks.showDescription')}
                                                                                     >
                                                                                         <InformationCircleIcon className="h-5 w-5" />
                                                                                     </button>
@@ -1227,7 +1763,7 @@ const Worktracker: React.FC = () => {
                                                             case 'status':
                                                                 return (
                                                                     <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status)} dark:bg-opacity-30 status-col`}>
+                                                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status, 'task')} dark:bg-opacity-30 status-col`}>
                                                                             {task.status}
                                                                         </span>
                                                                     </td>
@@ -1242,8 +1778,8 @@ const Worktracker: React.FC = () => {
                                                                                 {task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : task.role ? task.role.name : '-'}
                                                                             </div>
                                                                             <div className="text-sm text-gray-900 dark:text-gray-200 mt-1">
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">Qualitätskontrolle:</span>
-                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">QK:</span><br />
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('tasks.qualityControlLabel')}</span>
+                                                                                <span className="text-xs text-gray-500 dark:text-gray-400 inline sm:hidden">{t('tasks.columns.qualityControl').substring(0, 2)}:</span><br />
                                                                                 {task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-'}
                                                                             </div>
                                                                         </div>
@@ -1256,10 +1792,15 @@ const Worktracker: React.FC = () => {
                                                                     </td>
                                                                 );
                                                             case 'dueDate':
+                                                                const expiryStatusForDate2 = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
+                                                                const expiryColorsForDate2 = getExpiryColorClasses(expiryStatusForDate2);
                                                                 return (
                                                                     <td key={columnId} className="px-6 py-4 whitespace-nowrap">
-                                                                        <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                        <div className={`text-sm ${expiryStatusForDate2 !== 'none' ? expiryColorsForDate2.textClass : 'text-gray-900 dark:text-gray-200'}`}>
                                                                             {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
+                                                                            {expiryStatusForDate2 !== 'none' && (
+                                                                                <span className="ml-2 text-xs">⚠</span>
+                                                                            )}
                                                                         </div>
                                                                     </td>
                                                                 );
@@ -1276,18 +1817,19 @@ const Worktracker: React.FC = () => {
                                                                                         setSelectedTask(task);
                                                                                         setIsEditModalOpen(true);
                                                                                     }}
-                                                                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 edit-button ml-0.5"
+                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                    title={t('common.edit')}
                                                                                 >
-                                                                                    <PencilIcon className="h-5 w-5" />
+                                                                                    <PencilIcon className="h-4 w-4" />
                                                                                 </button>
                                                                             )}
                                                                             {hasPermission('tasks', 'both', 'table') && (
                                                                                 <button
                                                                                     onClick={() => handleCopyTask(task)}
-                                                                                    className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 copy-button ml-0.5"
-                                                                                    title="Task kopieren"
+                                                                                    className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                                                                                    title={t('tasks.actions.copy')}
                                                                                 >
-                                                                                    <DocumentDuplicateIcon className="h-5 w-5" />
+                                                                                    <DocumentDuplicateIcon className="h-4 w-4" />
                                                                                 </button>
                                                                             )}
                                                                         </div>
@@ -1297,13 +1839,149 @@ const Worktracker: React.FC = () => {
                                                                 return null;
                                                         }
                                                     })}
-                                                </tr>
-                                            ))}
+                                                    </tr>
+                                                );
+                                            })}
                                             </>
                                         )}
                                     </tbody>
                                 </table>
                             </div>
+                            ) : (
+                                /* Card-Ansicht - ohne Box-Schattierung, Cards auf voller Breite */
+                                <div className="-mx-6">
+                                    {loading ? (
+                                        <div className="flex justify-center py-12">
+                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
+                                        </div>
+                                    ) : error ? (
+                                        <div className="flex justify-center py-12 text-red-600 dark:text-red-400">
+                                            {error}
+                                        </div>
+                                    ) : filteredAndSortedTasks.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+                                            <ClipboardDocumentListIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />
+                                            <div className="text-sm">Keine To Do's gefunden</div>
+                                        </div>
+                                    ) : (
+                                        <CardGrid>
+                                            {filteredAndSortedTasks.slice(0, displayLimit).map(task => {
+                                                const expiryStatus = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
+                                                
+                                                // Metadaten basierend auf sichtbaren Einstellungen - strukturiert nach Position
+                                                const metadata: MetadataItem[] = [];
+                                                
+                                                // Links: Niederlassung
+                                                if (visibleCardMetadata.has('branch')) {
+                                                    metadata.push({
+                                                        icon: <BuildingOfficeIcon className="h-4 w-4" />,
+                                                        label: t('tasks.columns.branch'),
+                                                        value: task.branch.name,
+                                                        section: 'left'
+                                                    });
+                                                }
+                                                
+                                                // Haupt-Metadaten: Verantwortlicher & Qualitätskontrolle
+                                                if (visibleCardMetadata.has('responsible')) {
+                                                    metadata.push({
+                                                        icon: <UserIcon className="h-4 w-4" />,
+                                                        label: t('tasks.columns.responsible'),
+                                                        value: task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : (task.role ? task.role.name : '-'),
+                                                        section: 'main'
+                                                    });
+                                                }
+                                                if (visibleCardMetadata.has('qualityControl')) {
+                                                    metadata.push({
+                                                        icon: <UserIcon className="h-4 w-4" />,
+                                                        label: t('tasks.columns.qualityControl'),
+                                                        value: task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-',
+                                                        section: 'main-second'
+                                                    });
+                                                }
+                                                
+                                                // Rechts: Fälligkeit (erste Zeile rechts, neben Status)
+                                                if (visibleCardMetadata.has('dueDate')) {
+                                                    const dueDateItem = createDueDateMetadataItem(
+                                                        task.dueDate,
+                                                        'todo',
+                                                        task.title,
+                                                        task.description,
+                                                        <CalendarIcon className="h-4 w-4" />,
+                                                        t('tasks.columns.dueDate'),
+                                                        (date) => format(date, 'dd.MM.yyyy', { locale: de }),
+                                                        false // Keine Badge-Art, nur Text
+                                                    );
+                                                    metadata.push({
+                                                        ...dueDateItem,
+                                                        section: 'right-inline' // Neue Section für inline rechts (neben Status)
+                                                    });
+                                                }
+                                                
+                                                // Full-Width: Beschreibung
+                                                if (visibleCardMetadata.has('description') && task.description) {
+                                                    metadata.push({
+                                                        icon: <InformationCircleIcon className="h-4 w-4" />,
+                                                        label: t('tasks.columns.description'),
+                                                        value: '',
+                                                        descriptionContent: task.description,
+                                                        section: 'full'
+                                                    });
+                                                }
+                                                
+                                                // Action-Buttons
+                                                const actionButtons = (
+                                                    <div className="flex items-center space-x-2">
+                                                        {/* Status-Buttons */}
+                                                        <div className="status-buttons">
+                                                            {renderStatusButtons(task)}
+                                                        </div>
+                                                        {hasPermission('tasks', 'write', 'table') && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedTask(task);
+                                                                    setIsEditModalOpen(true);
+                                                                }}
+                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                title={t('common.edit')}
+                                                            >
+                                                                <PencilIcon className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                        {hasPermission('tasks', 'both', 'table') && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleCopyTask(task);
+                                                                }}
+                                                                className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                                                                title={t('tasks.actions.copy')}
+                                                            >
+                                                                <DocumentDuplicateIcon className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                                
+                                                return (
+                                                    <DataCard
+                                                        key={task.id}
+                                                        title={task.title}
+                                                        status={{
+                                                            label: getStatusText(task.status, 'task', t),
+                                                            color: getStatusColor(task.status, 'task'),
+                                                            onPreviousClick: undefined,
+                                                            onNextClick: undefined
+                                                        }}
+                                                        metadata={metadata}
+                                                        actions={actionButtons}
+                                                    />
+                                                );
+                                            })}
+                                        </CardGrid>
+                                    )}
+                                </div>
+                            )}
                             
                             {/* "Mehr anzeigen" Button - Desktop */}
                             {filteredAndSortedTasks.length > displayLimit && (
@@ -1312,7 +1990,7 @@ const Worktracker: React.FC = () => {
                                         className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
                                         onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
                                     >
-                                        Mehr anzeigen ({filteredAndSortedTasks.length - displayLimit} verbleibend)
+                                        {t('common.showMore')} ({filteredAndSortedTasks.length - displayLimit} {t('common.remaining')})
                                     </button>
                                 </div>
                             )}
@@ -1350,7 +2028,7 @@ const Worktracker: React.FC = () => {
                         );
                         setIsEditModalOpen(false);
                         setSelectedTask(null);
-                        toast.success('Aufgabe erfolgreich aktualisiert');
+                        toast.success(t('worktime.messages.taskUpdated'));
                     }}
                     task={selectedTask}
                 />

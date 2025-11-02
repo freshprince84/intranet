@@ -272,6 +272,20 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         });
         // Benachrichtigung bei Statusänderung
         if (updateData.status && updateData.status !== currentTask.status) {
+            // Status-History speichern
+            const userId = req.userId;
+            if (userId) {
+                yield prisma.taskStatusHistory.create({
+                    data: {
+                        taskId: task.id,
+                        userId: Number(userId),
+                        oldStatus: currentTask.status,
+                        newStatus: updateData.status,
+                        branchId: task.branchId,
+                        changedAt: new Date()
+                    }
+                });
+            }
             // Benachrichtigung für den Verantwortlichen, nur wenn ein Benutzer zugewiesen ist
             if (task.responsibleId) {
                 yield (0, notificationController_1.createNotificationIfEnabled)({

@@ -6,6 +6,7 @@ export interface TableSettings {
   tableId: string;
   columnOrder: string[];
   hiddenColumns: string[];
+  viewMode?: 'table' | 'cards';
 }
 
 // Helfer-Funktion, um den localStorage-Schlüssel für eine Tabelle zu generieren

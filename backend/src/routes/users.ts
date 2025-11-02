@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllUsers, getAllUsersForDropdown, getCurrentUser, updateProfile, getUserById, updateUserRoles, updateUserById, updateUserSettings, updateInvoiceSettings, switchUserRole } from '../controllers/userController';
+import { getAllUsers, getAllUsersForDropdown, getCurrentUser, updateProfile, getUserById, updateUserRoles, updateUserById, updateUserSettings, updateInvoiceSettings, switchUserRole, createUser, getUserActiveLanguage } from '../controllers/userController';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
 
@@ -15,12 +15,14 @@ router.use(organizationMiddleware);
 router.get('/', getAllUsers);
 router.get('/dropdown', getAllUsersForDropdown);
 router.get('/profile', getCurrentUser);
+router.get('/active-language', getUserActiveLanguage);
 router.put('/profile', updateProfile);
 router.put('/settings', updateUserSettings);
 router.put('/invoice-settings', updateInvoiceSettings);
 router.put('/switch-role', switchUserRole);
 
-// Neue Routen für Benutzerverwaltung
+// Neue Routen für Organisation
+router.post('/', createUser); // Neue Benutzer erstellen (nur für Admins einer Organisation)
 router.get('/:id', getUserById);
 router.put('/:id', updateUserById);
 router.put('/:id/roles', updateUserRoles);

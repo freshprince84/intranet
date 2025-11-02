@@ -5,7 +5,8 @@ import {
   LockClosedIcon,
   ClockIcon,
   DocumentTextIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
@@ -261,18 +262,20 @@ const DatabaseManagement: React.FC = () => {
                   <button
                     onClick={handleDeleteDemoClients}
                     disabled={loading}
-                    className="w-full px-3 py-2 bg-orange-600 text-white text-sm rounded hover:bg-orange-700 disabled:opacity-50 transition-colors"
+                    className="w-full p-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50 transition-colors flex items-center justify-center"
+                    title="Demo-Clients entfernen"
                   >
-                    Demo-Clients entfernen
+                    <TrashIcon className="h-5 w-5" />
                   </button>
                 )}
                 
                 <button
                   onClick={() => handleTableReset(table.name)}
                   disabled={loading}
-                  className="w-full px-3 py-2 bg-red-600 text-white text-sm rounded hover:bg-red-700 disabled:opacity-50 transition-colors"
+                  className="w-full p-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center"
+                  title="Zurücksetzen & neu befüllen"
                 >
-                  Zurücksetzen & neu befüllen
+                  <ArrowPathIcon className="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -290,9 +293,10 @@ const DatabaseManagement: React.FC = () => {
           <button
             onClick={loadLogs}
             disabled={logsLoading}
-            className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
+            title="Aktualisieren"
           >
-            Aktualisieren
+            <ArrowPathIcon className="h-5 w-5" />
           </button>
         </div>
         

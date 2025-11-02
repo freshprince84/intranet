@@ -38,19 +38,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        const abortController = new AbortController();
         const token = localStorage.getItem('token');
+        
         if (token) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
             axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            fetchCurrentUser();
+            fetchCurrentUser(abortController.signal);
         } else {
             setIsLoading(false);
         }
+        
+        return () => {
+            abortController.abort();
+        };
     }, []);
 
-    const fetchCurrentUser = async () => {
+    const fetchCurrentUser = async (signal?: AbortSignal) => {
         try {
-            const response = await axiosInstance.get('/users/profile');
+            const response = await axiosInstance.get('/users/profile', {
+                signal
+            });
+            
+            // Prüfe ob Request abgebrochen wurde
+            if (signal?.aborted) {
+                return;
+            }
             
             if (response.data && response.data.roles) {
                 const activeRole = response.data.roles.find((r: UserRole) => r.lastUsed);
@@ -69,12 +82,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             
             setUser(response.data);
-        } catch (error) {
+        } catch (error: any) {
+            // Ignoriere Abort-Errors
+            if (error.name === 'AbortError' || error.name === 'CanceledError') {
+                return;
+            }
+            
+            // Prüfe ob Request abgebrochen wurde
+            if (signal?.aborted) {
+                return;
+            }
+            
             localStorage.removeItem('token');
             delete axios.defaults.headers.common['Authorization'];
             delete axiosInstance.defaults.headers.common['Authorization'];
         } finally {
-            setIsLoading(false);
+            // Nur isLoading setzen wenn nicht abgebrochen
+            if (!signal?.aborted) {
+                setIsLoading(false);
+            }
         }
     };
 
@@ -83,7 +109,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const response = await axiosInstance.post('/auth/login', { username, password });
             const { token, user } = response.data;
             
-            if (!user || !user.id || !user.username || !user.firstName || !user.lastName || !user.roles) {
+            if (!token) {
+                console.error('[FRONTEND LOGIN] Kein Token in Response');
+                throw new Error('Kein Token erhalten');
+            }
+            
+            if (!user) {
+                console.error('[FRONTEND LOGIN] Kein User in Response');
+                throw new Error('Keine Benutzerdaten erhalten');
+            }
+            
+            if (!user.id || !user.username || !user.roles) {
+                console.error('[FRONTEND LOGIN] Unvollständige Benutzerdaten:', user);
                 throw new Error('Unvollständige Benutzerdaten vom Server');
             }
             

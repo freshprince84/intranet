@@ -8,6 +8,14 @@ import {
   updateUserWorktime,
   updateApprovedOvertimeHours
 } from '../controllers/teamWorktimeController';
+import {
+  getTodosByUserForDate,
+  getRequestsByUserForDate,
+  getTodosChronological,
+  getRequestsChronological,
+  getTodosFrequencyAnalysis,
+  getTodosShiftAnalysis
+} from '../controllers/analyticsController';
 
 const router = express.Router();
 
@@ -29,5 +37,24 @@ router.put('/update', updateUserWorktime);
 
 // Bewilligte Überstunden aktualisieren
 router.put('/overtime', updateApprovedOvertimeHours);
+
+// Analytics-Endpunkte
+// To-Dos pro User für ein Datum (Tab 1)
+router.get('/analytics/todos-by-user', getTodosByUserForDate);
+
+// Requests pro User für ein Datum (Tab 1)
+router.get('/analytics/requests-by-user', getRequestsByUserForDate);
+
+// Alle To-Dos chronologisch für ein Datum (Tab 2)
+router.get('/analytics/todos-chronological', getTodosChronological);
+
+// Alle Requests chronologisch für ein Datum (Tab 3)
+router.get('/analytics/requests-chronological', getRequestsChronological);
+
+// Häufigkeitsanalyse für To-Dos (Tab 2)
+router.get('/analytics/todos-frequency', getTodosFrequencyAnalysis);
+
+// Schicht-basierte Analysen für To-Dos (Tab 2)
+router.get('/analytics/todos-shifts', getTodosShiftAnalysis);
 
 export default router; 

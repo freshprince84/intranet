@@ -1,32 +1,37 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth.tsx';
-import Login from './pages/Login.tsx';
-import Register from './pages/Register.tsx';
-import Dashboard from './pages/Dashboard.tsx';
-import Settings from './pages/Settings.tsx';
-import MobileAppLanding from './pages/MobileAppLanding.tsx';
 import ProtectedRoute from './components/ProtectedRoute.tsx';
 import PublicRoute from './components/PublicRoute.tsx';
-import UserManagement from './pages/UserManagement.tsx';
-import Worktracker from './pages/Worktracker.tsx';
-import TeamWorktimeControl from './pages/TeamWorktimeControl.tsx';
 import { ThemeProvider } from './contexts/ThemeContext.tsx';
 import { SidebarProvider } from './contexts/SidebarContext.tsx';
 import Layout from './components/Layout.tsx';
-import Profile from './pages/Profile.tsx';
 import { WorktimeProvider } from './contexts/WorktimeContext.tsx';
 import { BranchProvider } from './contexts/BranchContext.tsx';
-import NotificationList from './components/NotificationList.tsx';
 import FaviconLoader from './components/FaviconLoader.tsx';
-import Cerebro from './pages/Cerebro.tsx';
-import Payroll from './pages/Payroll.tsx';
-import Consultations from './pages/Consultations.tsx';
 import { MessageProvider } from './contexts/MessageContext.tsx';
 import { ErrorProvider } from './contexts/ErrorContext.tsx';
 import ErrorBoundary from './components/ErrorBoundary.tsx';
 import { initClaudeConsole } from './utils/claudeConsole.ts';
 import { OrganizationProvider } from './contexts/OrganizationContext.tsx';
+import { SidepaneProvider } from './contexts/SidepaneContext.tsx';
+import { LanguageProvider } from './contexts/LanguageContext.tsx';
+import LoadingScreen from './components/LoadingScreen.tsx';
+
+// Lazy Loading für Page-Komponenten
+const Login = React.lazy(() => import('./pages/Login.tsx'));
+const Register = React.lazy(() => import('./pages/Register.tsx'));
+const Dashboard = React.lazy(() => import('./pages/Dashboard.tsx'));
+const Settings = React.lazy(() => import('./pages/Settings.tsx'));
+const MobileAppLanding = React.lazy(() => import('./pages/MobileAppLanding.tsx'));
+const UserManagement = React.lazy(() => import('./pages/UserManagement.tsx'));
+const Worktracker = React.lazy(() => import('./pages/Worktracker.tsx'));
+const TeamWorktimeControl = React.lazy(() => import('./pages/TeamWorktimeControl.tsx'));
+const Profile = React.lazy(() => import('./pages/Profile.tsx'));
+const NotificationList = React.lazy(() => import('./components/NotificationList.tsx'));
+const Cerebro = React.lazy(() => import('./pages/Cerebro.tsx'));
+const Payroll = React.lazy(() => import('./pages/Payroll.tsx'));
+const Consultations = React.lazy(() => import('./pages/Consultations.tsx'));
 
 const App: React.FC = () => {
     // Claude Console initialisieren
@@ -39,29 +44,39 @@ const App: React.FC = () => {
         <ErrorBoundary>
             <ErrorProvider>
                 <AuthProvider>
+                    <LanguageProvider>
                     <OrganizationProvider>
                         <ThemeProvider>
                             <SidebarProvider>
-                                <WorktimeProvider>
-                                    <BranchProvider>
-                                        <MessageProvider>
+                                <SidepaneProvider>
+                                    <WorktimeProvider>
+                                        <BranchProvider>
+                                            <MessageProvider>
                                             <FaviconLoader />
                                             <Router>
                                                 <Routes>
                                                     {/* Öffentliche Routen */}
                                                     <Route path="/login" element={
                                                         <PublicRoute>
-                                                            <Login />
+                                                            <Suspense fallback={<LoadingScreen />}>
+                                                                <Login />
+                                                            </Suspense>
                                                         </PublicRoute>
                                                     } />
                                                     <Route path="/register" element={
                                                         <PublicRoute>
-                                                            <Register />
+                                                            <Suspense fallback={<LoadingScreen />}>
+                                                                <Register />
+                                                            </Suspense>
                                                         </PublicRoute>
                                                     } />
                                                     
                                                     {/* Mobile App Landing Page - öffentlich zugänglich */}
-                                                    <Route path="/mobile-app" element={<MobileAppLanding />} />
+                                                    <Route path="/mobile-app" element={
+                                                        <Suspense fallback={<LoadingScreen />}>
+                                                            <MobileAppLanding />
+                                                        </Suspense>
+                                                    } />
                                                     
                                                     {/* Geschützte Routen */}
                                                     <Route path="/" element={
@@ -70,22 +85,60 @@ const App: React.FC = () => {
                                                         </ProtectedRoute>
                                                     }>
                                                         <Route index element={<Navigate to="/dashboard" replace />} />
-                                                        <Route path="/dashboard" element={<Dashboard />} />
-                                                        <Route path="/worktracker" element={<Worktracker />} />
-                                                        <Route path="/consultations" element={<ProtectedRoute><Consultations /></ProtectedRoute>} />
-                                                        <Route path="/team-worktime-control" element={
-                                                            <ProtectedRoute entity="team_worktime_control" accessLevel="read">
-                                                                <TeamWorktimeControl />
+                                                        <Route path="/dashboard" element={
+                                                            <Suspense fallback={<LoadingScreen />}>
+                                                                <Dashboard />
+                                                            </Suspense>
+                                                        } />
+                                                        <Route path="/worktracker" element={
+                                                            <Suspense fallback={<LoadingScreen />}>
+                                                                <Worktracker />
+                                                            </Suspense>
+                                                        } />
+                                                        <Route path="/consultations" element={
+                                                            <ProtectedRoute>
+                                                                <Suspense fallback={<LoadingScreen />}>
+                                                                    <Consultations />
+                                                                </Suspense>
                                                             </ProtectedRoute>
                                                         } />
-                                                        <Route path="/users" element={<UserManagement />} />
-                                                        <Route path="/settings" element={<Settings />} />
-                                                        <Route path="/profile" element={<Profile />} />
-                                                        <Route path="/notifications" element={<NotificationList />} />
-                                                        <Route path="/cerebro/*" element={<Cerebro />} />
+                                                        <Route path="/team-worktime-control" element={
+                                                            <ProtectedRoute entity="team_worktime_control" accessLevel="read">
+                                                                <Suspense fallback={<LoadingScreen />}>
+                                                                    <TeamWorktimeControl />
+                                                                </Suspense>
+                                                            </ProtectedRoute>
+                                                        } />
+                                                        <Route path="/users" element={
+                                                            <Suspense fallback={<LoadingScreen />}>
+                                                                <UserManagement />
+                                                            </Suspense>
+                                                        } />
+                                                        <Route path="/settings" element={
+                                                            <Suspense fallback={<LoadingScreen />}>
+                                                                <Settings />
+                                                            </Suspense>
+                                                        } />
+                                                        <Route path="/profile" element={
+                                                            <Suspense fallback={<LoadingScreen />}>
+                                                                <Profile />
+                                                            </Suspense>
+                                                        } />
+                                                        <Route path="/notifications" element={
+                                                            <Suspense fallback={<LoadingScreen />}>
+                                                                <NotificationList />
+                                                            </Suspense>
+                                                        } />
+                                                        <Route path="/cerebro/*" element={
+                                                            <Suspense fallback={<LoadingScreen />}>
+                                                                <Cerebro />
+                                                            </Suspense>
+                                                        } />
                                                         <Route path="/payroll" element={
                                                             <ProtectedRoute entity="payroll" accessLevel="read">
-                                                                <Payroll />
+                                                                <Suspense fallback={<LoadingScreen />}>
+                                                                    <Payroll />
+                                                                </Suspense>
                                                             </ProtectedRoute>
                                                         } />
                                                     </Route>
@@ -94,9 +147,11 @@ const App: React.FC = () => {
                                         </MessageProvider>
                                     </BranchProvider>
                                 </WorktimeProvider>
+                            </SidepaneProvider>
                             </SidebarProvider>
                         </ThemeProvider>
                     </OrganizationProvider>
+                    </LanguageProvider>
                 </AuthProvider>
             </ErrorProvider>
         </ErrorBoundary>

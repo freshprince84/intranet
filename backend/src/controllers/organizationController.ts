@@ -19,6 +19,8 @@ const updateOrganizationSchema = z.object({
   isActive: z.boolean().optional()
 });
 
+const languageSchema = z.enum(['es', 'de', 'en']);
+
 // Alle Organisationen abrufen
 export const getAllOrganizations = async (_req: Request, res: Response) => {
   try {
@@ -155,7 +157,7 @@ export const createOrganization = async (req: Request, res: Response) => {
 
     // Alle verfügbaren Seiten, Tabellen und Buttons (aus seed.ts)
     const ALL_PAGES = [
-      'dashboard', 'worktracker', 'workcenter', 'benutzerverwaltung', 'requests', 'cerebro', 'settings',
+      'dashboard', 'worktracker', 'workcenter', 'organization', 'requests', 'cerebro', 'settings',
       'payroll', 'team_worktime_control', 'identification_documents', 'document_recognition',
       'consultations', 'consultation_invoices', 'monthly_reports'
     ];
@@ -755,5 +757,123 @@ export const searchOrganizations = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Fehler beim Suchen von Organisationen:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
+  }
+};
+
+// Organisation-Sprache abrufen
+export const getOrganizationLanguage = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Nicht authentifiziert' });
+    }
+
+    // Hole die aktuelle Organisation des Users
+    const userRole = await prisma.userRole.findFirst({
+      where: { 
+        userId: Number(userId),
+        lastUsed: true 
+      },
+      include: {
+        role: {
+          include: {
+            organization: true
+          }
+        }
+      }
+    });
+
+    if (!userRole?.role.organization) {
+      return res.status(404).json({ message: 'Keine Organisation gefunden' });
+    }
+
+    const organization = userRole.role.organization;
+    const settings = organization.settings as any;
+
+    // Lese Sprache aus settings JSON-Feld
+    const language = settings?.language || null;
+
+    res.json({ language });
+  } catch (error) {
+    console.error('Fehler beim Abrufen der Organisation-Sprache:', error);
+    res.status(500).json({ 
+      message: 'Fehler beim Abrufen der Organisation-Sprache', 
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
+    });
+  }
+};
+
+// Organisation-Sprache aktualisieren
+export const updateOrganizationLanguage = async (req: Request, res: Response) => {
+  try {
+    const userId = req.userId;
+    
+    if (!userId) {
+      return res.status(401).json({ message: 'Nicht authentifiziert' });
+    }
+
+    // Validiere Sprache
+    const { language } = req.body;
+    const validatedLanguage = languageSchema.parse(language);
+
+    // Hole die aktuelle Organisation des Users
+    const userRole = await prisma.userRole.findFirst({
+      where: { 
+        userId: Number(userId),
+        lastUsed: true 
+      },
+      include: {
+        role: {
+          include: {
+            organization: true
+          }
+        }
+      }
+    });
+
+    if (!userRole?.role.organization) {
+      return res.status(404).json({ message: 'Keine Organisation gefunden' });
+    }
+
+    const organization = userRole.role.organization;
+    const currentSettings = (organization.settings as any) || {};
+
+    // Aktualisiere Sprache in settings JSON-Feld
+    const updatedSettings = {
+      ...currentSettings,
+      language: validatedLanguage
+    };
+
+    const updatedOrganization = await prisma.organization.update({
+      where: { id: organization.id },
+      data: {
+        settings: updatedSettings
+      },
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        settings: true
+      }
+    });
+
+    res.json({ 
+      language: validatedLanguage,
+      organization: updatedOrganization
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ 
+        message: 'Ungültige Sprache', 
+        errors: error.errors 
+      });
+    }
+
+    console.error('Fehler beim Aktualisieren der Organisation-Sprache:', error);
+    res.status(500).json({ 
+      message: 'Fehler beim Aktualisieren der Organisation-Sprache', 
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
+    });
   }
 }; 

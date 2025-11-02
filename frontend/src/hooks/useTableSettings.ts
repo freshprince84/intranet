@@ -1,9 +1,13 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { tableSettingsApi, TableSettings } from '../api/tableSettingsApi.ts';
 
 interface UseTableSettingsOptions {
   defaultColumnOrder?: string[];
   defaultHiddenColumns?: string[];
+  defaultViewMode?: 'table' | 'cards';
+  defaultVisibleCardMetadata?: string[];
+  defaultCardColumnOrder?: string[];
+  defaultCardSortDirections?: Record<string, 'asc' | 'desc'>;
 }
 
 /**
@@ -20,30 +24,49 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // Tabelleneinstellungen laden
+  // Tabelleneinstellungen laden - beim Mount oder wenn tableId sich ändert
   useEffect(() => {
+    let isMounted = true;
+    
     const loadSettings = async () => {
       try {
         setIsLoading(true);
         const loadedSettings = await tableSettingsApi.getTableSettings(tableId);
+        
+        if (!isMounted) return; // Component wurde bereits unmounted
+        
+        console.log('Geladene Tabelleneinstellungen vom Server:', loadedSettings);
         
         // Wenn leere Einstellungen zurückgegeben werden, verwende die Standardwerte
         if (loadedSettings.columnOrder.length === 0 && options?.defaultColumnOrder) {
           loadedSettings.columnOrder = options.defaultColumnOrder;
         }
         
+        // View-Mode initialisieren, falls nicht vorhanden
+        if (!loadedSettings.viewMode && options?.defaultViewMode) {
+          loadedSettings.viewMode = options.defaultViewMode;
+        }
+        
+        console.log('Finale Tabelleneinstellungen nach Initialisierung:', loadedSettings);
         setSettings(loadedSettings);
         setError(null);
       } catch (err) {
+        if (!isMounted) return;
         setError(err instanceof Error ? err : new Error('Fehler beim Laden der Einstellungen'));
         console.error('Fehler beim Laden der Tabelleneinstellungen:', err);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
     loadSettings();
-  }, [tableId, options?.defaultColumnOrder]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [tableId]); // NUR tableId als Dependency!
 
   // Spaltenreihenfolge aktualisieren
   const updateColumnOrder = useCallback(async (newColumnOrder: string[]) => {
@@ -91,6 +114,18 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
     }
   }, [settings]);
 
+  // View-Mode aktualisieren
+  const updateViewMode = useCallback(async (newViewMode: 'table' | 'cards') => {
+    try {
+      const updatedSettings = { ...settings, viewMode: newViewMode };
+      setSettings(updatedSettings);
+      await tableSettingsApi.saveTableSettings(updatedSettings);
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Fehler beim Speichern des View-Modes'));
+      console.error('Fehler beim Speichern des View-Modes:', err);
+    }
+  }, [settings]);
+
   return {
     settings,
     isLoading,
@@ -98,6 +133,7 @@ export const useTableSettings = (tableId: string, options?: UseTableSettingsOpti
     updateColumnOrder,
     updateHiddenColumns,
     toggleColumnVisibility,
-    isColumnVisible: (columnId: string) => !settings.hiddenColumns.includes(columnId)
+    isColumnVisible: (columnId: string) => !settings.hiddenColumns.includes(columnId),
+    updateViewMode
   };
 }; 

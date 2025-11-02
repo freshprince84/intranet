@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
+import './i18n/config.ts';
 import App from './App.tsx';
 import reportWebVitals from './reportWebVitals.ts';
 import initializeErrorHandler from './services/initializeErrorHandler.ts';

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { cerebroApi, CerebroArticleDetail } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
@@ -72,6 +73,7 @@ const isGitHubMarkdownUrl = (url: string): boolean => {
 
 // Hauptkomponente
 const ArticleEdit: React.FC = () => {
+  const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
@@ -145,7 +147,7 @@ const ArticleEdit: React.FC = () => {
         setError(null);
       } catch (err) {
         console.error('Fehler beim Laden der Daten:', err);
-        setError('Fehler beim Laden der Daten. Bitte versuchen Sie es später erneut.');
+        setError(t('cerebro.articleEdit.loadError'));
       } finally {
         setLoading(false);
       }
@@ -159,13 +161,13 @@ const ArticleEdit: React.FC = () => {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          Sie haben keine Berechtigung, Artikel zu bearbeiten.
+          {t('cerebro.messages.noPermission')}
         </div>
         <button
           className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
           onClick={() => navigate('/cerebro')}
         >
-          Zurück zur Übersicht
+          {t('cerebro.actions.backToOverview')}
         </button>
       </div>
     );
@@ -187,7 +189,7 @@ const ArticleEdit: React.FC = () => {
     e.preventDefault();
     
     if (!formData.title.trim()) {
-      setError('Bitte geben Sie einen Titel ein.');
+      setError(t('cerebro.articleEdit.titleRequired'));
       return;
     }
     

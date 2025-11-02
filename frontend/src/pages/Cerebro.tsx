@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Routes, Route, Link, useNavigate, Outlet, useParams, useLocation } from 'react-router-dom';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { cerebroApi, CerebroArticle } from '../api/cerebroApi.ts';
@@ -91,9 +92,10 @@ const CerebroLayout: React.FC = () => {
 
 // Inhalt für die Startseite - zeigt das README an
 const CerebroHome: React.FC = () => {
+  const { t } = useTranslation();
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-      <h1 className="text-2xl font-bold mb-6 dark:text-white">Readme - Überblick</h1>
+      <h1 className="text-2xl font-bold mb-6 dark:text-white">{t('cerebro.home.title')}</h1>
       <GitHubMarkdownViewer 
         owner={GITHUB_OWNER}
         repo={GITHUB_REPO}
@@ -106,6 +108,7 @@ const CerebroHome: React.FC = () => {
 
 // Markdown-Viewer für Dateien aus GitHub
 const GitHubFileView: React.FC = () => {
+  const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const [mdFile, setMdFile] = useState<{path: string, title: string} | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -195,8 +198,8 @@ const GitHubFileView: React.FC = () => {
   if (!mdFile) {
     return (
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h1 className="text-xl font-semibold mb-4 dark:text-white">Datei nicht gefunden</h1>
-        <p className="dark:text-gray-300">Die angeforderte Markdown-Datei konnte nicht gefunden werden.</p>
+        <h1 className="text-xl font-semibold mb-4 dark:text-white">{t('cerebro.fileView.fileNotFound')}</h1>
+        <p className="dark:text-gray-300">{t('cerebro.fileView.fileNotFoundDescription')}</p>
       </div>
     );
   }
@@ -216,9 +219,10 @@ const GitHubFileView: React.FC = () => {
 
 // Komponente für alle Artikel
 const CerebroAllArticles: React.FC = () => {
+  const { t } = useTranslation();
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-      <h2 className="text-xl font-semibold mb-4 dark:text-white">Alle Artikel</h2>
+      <h2 className="text-xl font-semibold mb-4 dark:text-white">{t('cerebro.allArticles.title')}</h2>
       <ArticleList />
     </div>
   );
@@ -226,6 +230,7 @@ const CerebroAllArticles: React.FC = () => {
 
 // Komponente für die Suche nach Artikeln
 const CerebroSearch: React.FC = () => {
+  const { t } = useTranslation();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const query = queryParams.get('q') || '';
@@ -233,7 +238,7 @@ const CerebroSearch: React.FC = () => {
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
       <div className="flex items-center mb-6">
-        <h2 className="text-xl font-semibold dark:text-white">Suchergebnisse für "{query}"</h2>
+        <h2 className="text-xl font-semibold dark:text-white">{t('cerebro.search.title')} "{query}"</h2>
       </div>
       <ArticleList searchQuery={query} />
     </div>

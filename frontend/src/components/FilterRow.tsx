@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -36,34 +37,34 @@ interface Role {
   name: string;
 }
 
-const getOperatorsByColumnType = (columnId: string): { value: string; label: string }[] => {
+const getOperatorsByColumnType = (columnId: string, t: (key: string) => string): { value: string; label: string }[] => {
   // Standard-Text-Operatoren
   const textOperators = [
-    { value: 'equals', label: '=' },
-    { value: 'contains', label: 'enthält' },
-    { value: 'startsWith', label: 'beginnt mit' },
-    { value: 'endsWith', label: 'endet mit' }
+    { value: 'equals', label: t('filter.operators.equals') },
+    { value: 'contains', label: t('filter.operators.contains') },
+    { value: 'startsWith', label: t('filter.operators.startsWith') },
+    { value: 'endsWith', label: t('filter.operators.endsWith') }
   ];
 
   // Datum-Operatoren (benutzerfreundliche Labels)
   const dateOperators = [
-    { value: 'equals', label: 'ist genau' },
-    { value: 'after', label: 'ab' },           // "ab nächstem Monat"
-    { value: 'before', label: 'bis' },         // "bis Ende letztes Jahr"
-    { value: 'between', label: 'zwischen' }
+    { value: 'equals', label: t('filter.operators.isExactly') },
+    { value: 'after', label: t('filter.operators.after') },
+    { value: 'before', label: t('filter.operators.before') },
+    { value: 'between', label: t('filter.operators.between') }
   ];
 
   // Dauer-Operatoren (für Zeitspannen)
   const durationOperators = [
-    { value: 'equals', label: 'ist gleich' },
-    { value: 'greater_than', label: 'länger als' },
-    { value: 'less_than', label: 'kürzer als' }
+    { value: 'equals', label: t('filter.operators.isEqual') },
+    { value: 'greater_than', label: t('filter.operators.greaterThan') },
+    { value: 'less_than', label: t('filter.operators.lessThan') }
   ];
 
   // Status-Operatoren (für Enum-Werte)
   const statusOperators = [
-    { value: 'equals', label: '=' },
-    { value: 'notEquals', label: 'ist nicht' }
+    { value: 'equals', label: t('filter.operators.equals') },
+    { value: 'notEquals', label: t('filter.operators.notEquals') }
   ];
 
   // Je nach Spaltentyp entsprechende Operatoren zurückgeben
@@ -89,6 +90,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
   isFirst,
   isLast
 }) => {
+  const { t } = useTranslation();
   const [operators, setOperators] = useState<{ value: string; label: string }[]>([]);
   // States für Benutzer und Rollen
   const [users, setUsers] = useState<User[]>([]);
@@ -98,8 +100,8 @@ const FilterRow: React.FC<FilterRowProps> = ({
   
   // Operatoren aktualisieren, wenn sich die Spalte ändert
   useEffect(() => {
-    setOperators(getOperatorsByColumnType(condition.column));
-  }, [condition.column]);
+    setOperators(getOperatorsByColumnType(condition.column, t));
+  }, [condition.column, t]);
   
   // Laden der Benutzer und Rollen, wenn benötigt
   useEffect(() => {
@@ -159,11 +161,11 @@ const FilterRow: React.FC<FilterRowProps> = ({
             value={value as string || ''}
             onChange={(e) => onChange(e.target.value)}
           >
-            <option value="">Bitte wählen</option>
-            <option value="approval">Zur Genehmigung</option>
-            <option value="approved">Genehmigt</option>
-            <option value="to_improve">Zu verbessern</option>
-            <option value="denied">Abgelehnt</option>
+            <option value="">{t('filter.row.pleaseSelect')}</option>
+            <option value="approval">{t('filter.row.status.approval')}</option>
+            <option value="approved">{t('filter.row.status.approved')}</option>
+            <option value="to_improve">{t('filter.row.status.to_improve')}</option>
+            <option value="denied">{t('filter.row.status.denied')}</option>
           </select>
         );
       } else if (isTaskTable) {
@@ -174,12 +176,12 @@ const FilterRow: React.FC<FilterRowProps> = ({
             value={value as string || ''}
             onChange={(e) => onChange(e.target.value)}
           >
-            <option value="">Bitte wählen</option>
-            <option value="open">Offen</option>
-            <option value="in_progress">In Bearbeitung</option>
-            <option value="improval">Zu verbessern</option>
-            <option value="quality_control">Qualitätskontrolle</option>
-            <option value="done">Erledigt</option>
+            <option value="">{t('filter.row.pleaseSelect')}</option>
+            <option value="open">{t('filter.row.status.open')}</option>
+            <option value="in_progress">{t('filter.row.status.in_progress')}</option>
+            <option value="improval">{t('filter.row.status.improval')}</option>
+            <option value="quality_control">{t('filter.row.status.quality_control')}</option>
+            <option value="done">{t('filter.row.status.done')}</option>
           </select>
         );
       } else if (isInvoiceTable) {
@@ -190,12 +192,12 @@ const FilterRow: React.FC<FilterRowProps> = ({
             value={value as string || ''}
             onChange={(e) => onChange(e.target.value)}
           >
-            <option value="">Bitte wählen</option>
-            <option value="DRAFT">Entwurf</option>
-            <option value="SENT">Gesendet</option>
-            <option value="PAID">Bezahlt</option>
-            <option value="OVERDUE">Überfällig</option>
-            <option value="CANCELLED">Storniert</option>
+            <option value="">{t('filter.row.pleaseSelect')}</option>
+            <option value="DRAFT">{t('filter.row.status.draft')}</option>
+            <option value="SENT">{t('filter.row.status.sent')}</option>
+            <option value="PAID">{t('filter.row.status.paid')}</option>
+            <option value="OVERDUE">{t('filter.row.status.overdue')}</option>
+            <option value="CANCELLED">{t('filter.row.status.cancelled')}</option>
           </select>
         );
       } else {
@@ -206,10 +208,10 @@ const FilterRow: React.FC<FilterRowProps> = ({
             value={value as string || ''}
             onChange={(e) => onChange(e.target.value)}
           >
-            <option value="">Bitte wählen</option>
-            <option value="open">Offen</option>
-            <option value="in_progress">In Bearbeitung</option>
-            <option value="done">Erledigt</option>
+            <option value="">{t('filter.row.pleaseSelect')}</option>
+            <option value="open">{t('filter.row.status.open')}</option>
+            <option value="in_progress">{t('filter.row.status.in_progress')}</option>
+            <option value="done">{t('filter.row.status.done')}</option>
           </select>
         );
       }
@@ -224,10 +226,10 @@ const FilterRow: React.FC<FilterRowProps> = ({
           onChange={(e) => onChange(e.target.value)}
           disabled={loadingUsers || loadingRoles}
         >
-          <option value="">Bitte wählen</option>
+            <option value="">{t('filter.row.pleaseSelect')}</option>
           
           {users.length > 0 && (
-            <optgroup label="Benutzer">
+            <optgroup label={t('filter.row.groups.users')}>
               {users.map(user => (
                 <option key={`user-${user.id}`} value={`user-${user.id}`}>
                   {user.firstName} {user.lastName}
@@ -237,7 +239,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
           )}
           
           {roles.length > 0 && (
-            <optgroup label="Rollen">
+            <optgroup label={t('filter.row.groups.roles')}>
               {roles.map(role => (
                 <option key={`role-${role.id}`} value={`role-${role.id}`}>
                   {role.name}
@@ -247,7 +249,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
           )}
           
           {(loadingUsers || loadingRoles) && (
-            <option value="" disabled>Lade Daten...</option>
+            <option value="" disabled>{t('filter.row.loadingData')}</option>
           )}
         </select>
       );
@@ -262,10 +264,10 @@ const FilterRow: React.FC<FilterRowProps> = ({
           onChange={(e) => onChange(e.target.value)}
           disabled={loadingUsers}
         >
-          <option value="">Bitte wählen</option>
+            <option value="">{t('filter.row.pleaseSelect')}</option>
           
           {users.length > 0 && (
-            <optgroup label="Benutzer">
+            <optgroup label={t('filter.row.groups.users')}>
               {users.map(user => (
                 <option key={`user-${user.id}`} value={`user-${user.id}`}>
                   {user.firstName} {user.lastName}
@@ -275,7 +277,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
           )}
           
           {loadingUsers && (
-            <option value="" disabled>Lade Benutzer...</option>
+            <option value="" disabled>{t('filter.row.loadingUsers')}</option>
           )}
         </select>
       );
@@ -301,8 +303,8 @@ const FilterRow: React.FC<FilterRowProps> = ({
               }
             }}
           >
-            <option value="date">Datum wählen</option>
-            <option value="variable">Aktueller Tag</option>
+            <option value="date">{t('filter.row.selectDate')}</option>
+            <option value="variable">{t('filter.row.currentDay')}</option>
           </select>
           
           {/* Datum-Input nur anzeigen wenn nicht Variable */}
@@ -318,7 +320,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
           {/* Variable-Anzeige */}
           {isVariable && (
             <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-blue-700 dark:text-blue-300 text-sm">
-              📅 Aktueller Tag (dynamisch)
+              📅 {t('filter.row.dynamicDay')}
             </div>
           )}
         </div>
@@ -332,7 +334,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
         className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
         value={value as string || ''}
         onChange={(e) => onChange(e.target.value)}
-        placeholder="Filterwert eingeben..."
+        placeholder={t('filter.row.enterValue')}
       />
     );
   };
@@ -351,7 +353,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
             value: null  // ✅ VALUE ZURÜCKSETZEN beim Spaltenwechsel
           })}
         >
-          <option value="">Spalte wählen</option>
+          <option value="">{t('filter.row.selectColumn')}</option>
           {columns.map((column) => (
             <option key={column.id} value={column.id}>
               {column.label}
@@ -393,7 +395,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
           onClick={onDelete}
           className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500 rounded-md"
           disabled={isFirst && !isLast}
-          title="Filterbedingung entfernen"
+          title={t('filter.row.removeCondition')}
         >
           <XMarkIcon className="h-5 w-5" />
         </button>
@@ -404,7 +406,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
             type="button"
             onClick={onAdd}
             className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 rounded-md"
-            title="Neue Filterbedingung hinzufügen"
+            title={t('filter.row.addCondition')}
           >
             <PlusIcon className="h-5 w-5" />
           </button>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useSidebar } from '../contexts/SidebarContext.tsx';
 import { 
@@ -83,52 +84,54 @@ const Sidebar: React.FC = () => {
         return location.pathname === path;
     };
 
+    const { t } = useTranslation();
+
     // Definiere alle potenziellen Menüelemente
     const baseMenuItems: MenuItem[] = [
         {
-            name: 'Dashboard',
+            name: t('menu.dashboard'),
             path: '/dashboard',
             icon: <HomeIcon className="h-full w-full" />,
             page: 'dashboard',
             group: 'main'
         },
         {
-            name: 'Worktracker',
+            name: t('menu.worktracker'),
             path: '/worktracker',
             icon: <ClipboardDocumentListIcon className="h-full w-full" />,
             page: 'worktracker',
             group: 'main'
         },
         {
-            name: 'Beratungen',
+            name: t('menu.consultations'),
             path: '/consultations',
             icon: <UserGroupIcon className="h-full w-full" />,
             page: 'consultations',
             group: 'main'
         },
         {
-            name: 'Workcenter', // Umbenannt von "Team Worktime Control"
+            name: t('menu.workcenter'),
             path: '/team-worktime-control',
             icon: <UsersIcon className="h-full w-full" />,
             page: 'team_worktime_control',
             group: 'main'
         },
         {
-            name: 'Lohnabrechnung',
+            name: t('menu.payroll'),
             path: '/payroll',
             icon: <CurrencyDollarIcon className="h-full w-full" />,
             page: 'payroll',
             group: 'main'
         },
         {
-            name: 'Cerebro',
+            name: t('menu.cerebro'),
             path: '/cerebro',
             icon: <img src="/images/brain.png" alt="Cerebro" className="h-full w-full" />,
             page: 'cerebro',
             group: 'main'
         },
         {
-            name: 'Benutzerverwaltung',
+            name: t('menu.organization'),
             path: '/users',
             icon: <UserGroupIcon className="h-full w-full" />,
             page: 'usermanagement',
@@ -138,7 +141,7 @@ const Sidebar: React.FC = () => {
 
     // Einstellungs-Element separat definieren
     const settingsItem: MenuItem = {
-        name: 'Einstellungen',
+        name: t('menu.settings'),
         path: '/settings',
         icon: <CogIcon className="h-full w-full" />,
         page: 'settings',
@@ -191,13 +194,13 @@ const Sidebar: React.FC = () => {
                                 className={`flex flex-col items-center justify-center px-0.5 py-1 text-[10px] ${
                                     showMoreMenu ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
                                 }`}
-                                aria-label="Mehr Optionen anzeigen"
+                                aria-label={t('sidebar.moreOptions')}
                             >
                                 <div className="h-[26px] w-[26px] mb-0.5">
                                     <EllipsisVerticalIcon className="h-[26px] w-[26px]" />
                                 </div>
                                 {/* Text nur auf größeren Mobilgeräten (>=480px) und Tablets anzeigen */}
-                                <span className="mt-0.5 footer-icon-text">Mehr</span>
+                                <span className="mt-0.5 footer-icon-text">{t('sidebar.more')}</span>
                             </button>
                             
                             {showMoreMenu && (
@@ -233,7 +236,7 @@ const Sidebar: React.FC = () => {
                         <button
                             onClick={toggleCollapsed}
                             className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
-                            title={isCollapsed ? "Erweitern" : "Einklappen"}
+                            title={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
                         >
                             {isCollapsed ? 
                                 <ArrowRightIcon className="h-6 w-6" /> :

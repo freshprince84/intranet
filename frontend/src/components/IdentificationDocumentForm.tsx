@@ -6,7 +6,7 @@ import { isMobile } from '../utils/deviceDetection.ts';
 import CameraCapture from './CameraCapture.tsx';
 import { recognizeDocument } from '../utils/documentRecognition.ts';
 import { recognizeDocumentWithAI } from '../utils/aiDocumentRecognition.ts';
-import { CameraIcon, DocumentTextIcon, ArrowPathIcon as SpinnerIcon } from '@heroicons/react/24/outline';
+import { CameraIcon, DocumentTextIcon, ArrowPathIcon as SpinnerIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
 
 // Liste der Dokumenttypen
 const documentTypes = [
@@ -401,17 +401,23 @@ const IdentificationDocumentForm: React.FC<IdentificationDocumentFormProps> = ({
         <button
           type="button"
           onClick={onCancel}
-          className="py-2 px-4 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+          className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+          title="Abbrechen"
         >
-          Abbrechen
+          <XMarkIcon className="h-5 w-5" />
         </button>
         
         <button
           type="submit"
-          className="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:focus:ring-offset-gray-800"
+          className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={isLoading}
+          title={isLoading ? 'Wird gespeichert...' : document ? 'Aktualisieren' : 'Speichern'}
         >
-          {isLoading ? 'Wird gespeichert...' : document ? 'Aktualisieren' : 'Speichern'}
+          {isLoading ? (
+            <SpinnerIcon className="h-5 w-5 animate-spin" />
+          ) : (
+            <CheckIcon className="h-5 w-5" />
+          )}
         </button>
       </div>
     </form>

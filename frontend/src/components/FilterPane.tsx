@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import FilterRow, { FilterCondition } from './FilterRow.tsx';
 import FilterLogicalOperator from './FilterLogicalOperator.tsx';
 import axiosInstance from '../config/axios.ts';
@@ -27,6 +28,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   savedOperators,
   tableId
 }) => {
+  const { t } = useTranslation();
   // Initialisiere mit einem leeren Filter, wenn keine gespeicherten Filter vorhanden sind
   const [conditions, setConditions] = useState<FilterCondition[]>(
     savedConditions && savedConditions.length > 0 
@@ -131,13 +133,13 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   // Funktion zum Speichern des aktuellen Filters
   const handleSaveFilter = async () => {
     if (!filterName.trim()) {
-      toast.error('Bitte geben Sie einen Namen für den Filter ein');
+      toast.error(t('filter.noName'));
       return;
     }
 
     // Prüfe, ob der Name ein reservierter Standardfilter-Name ist
     if (filterName === 'Archiv' || filterName === 'Aktuell') {
-      toast.error('Die Namen "Archiv" und "Aktuell" sind für Standardfilter reserviert');
+      toast.error(t('filter.reservedNames'));
       return;
     }
 
@@ -147,7 +149,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     );
     
     if (standardFilterExists) {
-      toast.error('Standardfilter können nicht überschrieben werden');
+      toast.error(t('filter.cannotOverwriteStandard'));
       return;
     }
 
@@ -155,7 +157,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     const validConditions = conditions.filter(c => c.column !== '');
     
     if (validConditions.length === 0) {
-      toast.error('Filter enthält keine gültigen Bedingungen');
+      toast.error(t('filter.noConditions'));
       return;
     }
 
@@ -163,7 +165,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       const token = localStorage.getItem('token');
       
       if (!token) {
-        toast.error('Nicht authentifiziert');
+        toast.error(t('filter.notAuthenticated'));
         return;
       }
       
@@ -177,18 +179,18 @@ const FilterPane: React.FC<FilterPaneProps> = ({
         }
       );
       
-      toast.success('Filter erfolgreich gespeichert');
+      toast.success(t('filter.saveSuccess'));
       setShowSaveInput(false);
       setFilterName('');
     } catch (err) {
       console.error('Fehler beim Speichern des Filters:', err);
-      toast.error('Fehler beim Speichern des Filters');
+      toast.error(t('filter.saveError'));
     }
   };
   
   return (
     <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-      <h3 className="text-base font-medium text-gray-700 dark:text-gray-200 mb-3">Filter</h3>
+      <h3 className="text-base font-medium text-gray-700 dark:text-gray-200 mb-3">{t('filter.title')}</h3>
       
       <div className="space-y-0">
         {conditions.map((condition, index) => (
@@ -220,7 +222,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
           <input
             type="text"
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white flex-grow"
-            placeholder="Filter-Name"
+            placeholder={t('filter.filterName')}
             value={filterName}
             onChange={(e) => setFilterName(e.target.value)}
           />
@@ -228,13 +230,13 @@ const FilterPane: React.FC<FilterPaneProps> = ({
             onClick={handleSaveFilter}
             className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none"
           >
-            Speichern
+            {t('filter.saveFilter')}
           </button>
           <button
             onClick={() => setShowSaveInput(false)}
             className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
-            Abbrechen
+            {t('filter.cancel')}
           </button>
         </div>
       ) : (
@@ -243,19 +245,19 @@ const FilterPane: React.FC<FilterPaneProps> = ({
             onClick={handleResetFilters}
             className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
           >
-            Filter zurücksetzen
+            {t('filter.reset')}
           </button>
           <button
             onClick={() => setShowSaveInput(true)}
             className="px-4 py-2 text-sm text-green-700 dark:text-green-500 hover:text-green-900 dark:hover:text-green-400"
           >
-            Filter speichern
+            {t('filter.save')}
           </button>
           <button
             onClick={handleApplyFilters}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
           >
-            Filter anwenden
+            {t('filter.apply')}
           </button>
         </div>
       )}

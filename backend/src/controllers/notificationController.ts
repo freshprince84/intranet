@@ -416,7 +416,8 @@ export const getNotificationSettings = async (req: Request, res: Response) => {
 // Alle Benachrichtigungen eines Benutzers abrufen
 export const getUserNotifications = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    // Unterstütze sowohl req.user?.id als auch req.userId für Kompatibilität
+    const userId = req.user?.id || (req.userId ? parseInt(req.userId.toString(), 10) : null);
     if (!userId) {
       return res.status(401).json({ message: 'Nicht autorisiert' });
     }
@@ -464,7 +465,8 @@ export const getUserNotifications = async (req: Request, res: Response) => {
 // Ungelesene Benachrichtigungen zählen
 export const countUnreadNotifications = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
+    // Unterstütze sowohl req.user?.id als auch req.userId für Kompatibilität
+    const userId = req.user?.id || (req.userId ? parseInt(req.userId.toString(), 10) : null);
     if (!userId) {
       return res.status(401).json({ message: 'Nicht autorisiert' });
     }
@@ -486,7 +488,8 @@ export const countUnreadNotifications = async (req: Request, res: Response) => {
 export const markNotificationAsRead = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id;
+    // Unterstütze sowohl req.user?.id als auch req.userId für Kompatibilität
+    const userId = req.user?.id || (req.userId ? parseInt(req.userId.toString(), 10) : null);
     
     if (!userId) {
       return res.status(401).json({ message: 'Nicht authentifiziert' });

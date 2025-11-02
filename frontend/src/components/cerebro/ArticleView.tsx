@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -179,7 +180,7 @@ const ExternalLinkPreview: React.FC<{ link: CerebroExternalLink }> = ({ link }) 
           rel="noopener noreferrer"
           className="text-blue-600 hover:text-blue-800 flex items-center"
         >
-          <Icon.Link /> Öffnen
+                <Icon.Link /> {t('cerebro.actions.open')}
         </a>
       </div>
       
@@ -228,6 +229,7 @@ const ExternalLinkPreview: React.FC<{ link: CerebroExternalLink }> = ({ link }) 
 
 // Hauptkomponente für die Artikelansicht
 const ArticleView: React.FC = () => {
+  const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
@@ -270,7 +272,7 @@ const ArticleView: React.FC = () => {
         setError(null);
       } catch (err) {
         console.error('Fehler beim Laden des Artikels:', err);
-        setError('Der Artikel konnte nicht geladen werden. Bitte versuchen Sie es später erneut.');
+        setError(t('cerebro.messages.loadError'));
       } finally {
         setLoading(false);
       }
@@ -280,7 +282,7 @@ const ArticleView: React.FC = () => {
   }, [slug]);
   
   const handleDeleteArticle = async () => {
-    if (!article || !window.confirm('Sind Sie sicher, dass Sie diesen Artikel löschen möchten?')) {
+    if (!article || !window.confirm(t('cerebro.messages.deleteConfirm'))) {
       return;
     }
     
@@ -289,7 +291,7 @@ const ArticleView: React.FC = () => {
       navigate('/cerebro');
     } catch (err) {
       console.error('Fehler beim Löschen des Artikels:', err);
-      alert('Fehler beim Löschen des Artikels. Bitte versuchen Sie es später erneut.');
+      alert(t('cerebro.messages.deleteError'));
     }
   };
   
@@ -304,13 +306,13 @@ const ArticleView: React.FC = () => {
   if (error || !article) {
     return (
       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-        <h3 className="font-bold">Fehler</h3>
-        <p>{error || 'Artikel nicht gefunden'}</p>
+        <h3 className="font-bold">{t('common.error')}</h3>
+        <p>{error || t('cerebro.messages.articleNotFound')}</p>
         <button 
           onClick={() => navigate('/cerebro')}
           className="mt-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded flex items-center"
         >
-          <Icon.ArrowLeft /> Zurück
+          <Icon.ArrowLeft /> {t('cerebro.actions.back')}
         </button>
       </div>
     );
@@ -368,7 +370,7 @@ const ArticleView: React.FC = () => {
                 rel="noopener noreferrer"
                 className="text-blue-600 hover:text-blue-800 flex items-center"
               >
-                <Icon.Link /> Auf GitHub ansehen
+                <Icon.Link /> {t('cerebro.actions.viewOnGitHub')}
               </a>
             </div>
             <GitHubMarkdownViewer

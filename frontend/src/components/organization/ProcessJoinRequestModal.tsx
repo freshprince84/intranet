@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckIcon, ArrowPathIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import { organizationService } from '../../services/organizationService.ts';
 import { OrganizationJoinRequest, ProcessJoinRequestRequest } from '../../types/organization.ts';
 import { roleApi } from '../../api/apiClient.ts';
 import { Role } from '../../types/interfaces.ts';
 import useMessage from '../../hooks/useMessage.ts';
+import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 
 interface Props {
   isOpen: boolean;
@@ -15,6 +17,7 @@ interface Props {
 }
 
 const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest, onSuccess }) => {
+  const { t } = useTranslation();
   const [action, setAction] = useState<'approve' | 'reject'>('approve');
   const [roleId, setRoleId] = useState<number | null>(null);
   const [response, setResponse] = useState<string>('');
@@ -23,11 +26,14 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
   const [saving, setSaving] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
+  const { openSidepane, closeSidepane } = useSidepane();
   const { showMessage } = useMessage();
 
   useEffect(() => {
     const checkScreenSize = () => {
       setIsMobile(window.innerWidth < 640);
+      setIsLargeScreen(window.innerWidth > 1070);
     };
     
     checkScreenSize();
@@ -37,6 +43,19 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
       window.removeEventListener('resize', checkScreenSize);
     };
   }, []);
+
+  // Sidepane-Status verwalten
+  useEffect(() => {
+    if (isOpen) {
+      openSidepane();
+    } else {
+      closeSidepane();
+    }
+    
+    return () => {
+      closeSidepane();
+    };
+  }, [isOpen, openSidepane, closeSidepane]);
 
   useEffect(() => {
     if (isOpen && joinRequest) {
@@ -62,7 +81,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
       }
     } catch (err: any) {
       console.error('Fehler beim Laden der Rollen:', err);
-      showMessage('Fehler beim Laden der Rollen', 'error');
+      showMessage(t('joinRequest.loadRolesError'), 'error');
     } finally {
       setLoadingRoles(false);
     }
@@ -72,7 +91,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
     const newErrors: Record<string, string> = {};
     
     if (action === 'approve' && !roleId) {
-      newErrors.roleId = 'Bitte wählen Sie eine Rolle aus';
+      newErrors.roleId = t('joinRequest.selectRoleError');
     }
     
     setErrors(newErrors);
@@ -83,7 +102,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
     e.preventDefault();
     
     if (!validateForm()) {
-      showMessage('Bitte füllen Sie alle erforderlichen Felder aus', 'error');
+      showMessage(t('joinRequest.fillRequired'), 'error');
       return;
     }
     
@@ -101,7 +120,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
       
       await organizationService.processJoinRequest(joinRequest.id, data);
       showMessage(
-        action === 'approve' ? 'Beitrittsanfrage erfolgreich genehmigt' : 'Beitrittsanfrage erfolgreich abgelehnt',
+        action === 'approve' ? t('joinRequest.approveSuccess') : t('joinRequest.rejectSuccess'),
         'success'
       );
       
@@ -114,7 +133,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
       onClose();
       onSuccess();
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || 'Fehler beim Bearbeiten der Beitrittsanfrage';
+      const errorMessage = err.response?.data?.message || t('joinRequest.processError');
       showMessage(errorMessage, 'error');
       setErrors({ submit: errorMessage });
     } finally {
@@ -144,7 +163,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
           <Dialog.Panel className="mx-auto max-w-lg w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
               <Dialog.Title className="text-lg font-semibold dark:text-white">
-                Beitrittsanfrage bearbeiten
+                {t('joinRequest.title')}
               </Dialog.Title>
               <button
                 onClick={handleClose}
@@ -164,14 +183,14 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
               <div className="space-y-4">
                 {/* Antragsteller Info */}
                 <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Antragsteller:</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('joinRequest.applicant')}:</p>
                   <p className="text-sm text-gray-900 dark:text-white">
                     {joinRequest.requester.firstName} {joinRequest.requester.lastName}
                   </p>
                   <p className="text-xs text-gray-600 dark:text-gray-400">{joinRequest.requester.email}</p>
                   {joinRequest.message && (
                     <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Nachricht:</p>
+                      <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('joinRequest.message')}:</p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">{joinRequest.message}</p>
                     </div>
                   )}
@@ -180,7 +199,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                 {/* Aktion (Genehmigen/Ablehnen) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Aktion *
+                    {t('joinRequest.actionRequired')}
                   </label>
                   <div className="flex gap-4 mt-2">
                     <label className="flex items-center">
@@ -194,7 +213,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                         }}
                         className="mr-2 text-blue-600 focus:ring-blue-500"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Genehmigen</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{t('joinRequest.approve')}</span>
                     </label>
                     <label className="flex items-center">
                       <input
@@ -207,7 +226,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                         }}
                         className="mr-2 text-red-600 focus:ring-red-500"
                       />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Ablehnen</span>
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{t('joinRequest.reject')}</span>
                     </label>
                   </div>
                 </div>
@@ -219,12 +238,12 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                       htmlFor="roleId" 
                       className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                     >
-                      Rolle zuweisen *
+                      {t('joinRequest.assignRole')}
                     </label>
                     {loadingRoles ? (
                       <div className="flex items-center py-2">
                         <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                        <span className="text-sm text-gray-500 dark:text-gray-400">Lade Rollen...</span>
+                        <span className="text-sm text-gray-500 dark:text-gray-400">{t('joinRequest.loadingRoles')}</span>
                       </div>
                     ) : (
                       <select
@@ -242,7 +261,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                             : 'border-gray-300 dark:border-gray-600'
                         }`}
                       >
-                        <option value="">-- Rolle auswählen --</option>
+                        <option value="">{t('joinRequest.selectRole')}</option>
                         {roles.map(role => (
                           <option key={role.id} value={role.id}>
                             {role.name} {role.description ? `- ${role.description}` : ''}
@@ -262,14 +281,14 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                     htmlFor="response" 
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
-                    Antwort (optional)
+                    {t('joinRequest.response')}
                   </label>
                   <textarea
                     id="response"
                     value={response}
                     onChange={(e) => setResponse(e.target.value)}
                     rows={3}
-                    placeholder={`Optional: ${action === 'approve' ? 'Willkommensnachricht' : 'Ablehnungsgrund'} hinzufügen...`}
+                    placeholder={t('joinRequest.addOptional', { type: action === 'approve' ? t('joinRequest.welcomeMessage') : t('joinRequest.rejectionReason') })}
                     className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
                   />
                 </div>
@@ -279,26 +298,27 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                  className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                  title={t('joinRequest.cancel')}
                 >
-                  Abbrechen
+                  <XMarkIcon className="h-5 w-5" />
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center ${
+                  className={`p-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
                     action === 'approve'
                       ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 focus:ring-green-500'
                       : 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 focus:ring-red-500'
                   }`}
+                  title={saving ? (action === 'approve' ? t('joinRequest.approving') : t('joinRequest.rejecting')) : (action === 'approve' ? t('joinRequest.approve') : t('joinRequest.reject'))}
                 >
                   {saving ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      {action === 'approve' ? 'Genehmige...' : 'Lehne ab...'}
-                    </>
+                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                  ) : action === 'approve' ? (
+                    <CheckIcon className="h-5 w-5" />
                   ) : (
-                    action === 'approve' ? 'Genehmigen' : 'Ablehnen'
+                    <XCircleIcon className="h-5 w-5" />
                   )}
                 </button>
               </div>
@@ -310,21 +330,37 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
   }
 
   // Für Desktop (ab 640px) - Sidepane
+  // WICHTIG: Sidepane muss IMMER gerendert bleiben für Transition
   return (
-    <Dialog open={isOpen} onClose={handleClose} className="relative z-50">
-      <div 
-        className="fixed inset-0 bg-black/10 transition-opacity" 
-        aria-hidden="true" 
-        onClick={handleClose}
-      />
+    <>
+      {/* Backdrop - nur wenn offen und <= 1070px */}
+      {isOpen && !isLargeScreen && (
+        <div 
+          className="fixed inset-0 bg-black/10 transition-opacity sidepane-overlay sidepane-backdrop z-40" 
+          aria-hidden="true" 
+          onClick={handleClose}
+          style={{
+            opacity: isOpen ? 1 : 0,
+            transition: 'opacity 300ms ease-out'
+          }}
+        />
+      )}
       
+      {/* Sidepane - IMMER gerendert, Position wird via Transform geändert */}
       <div 
-        className={`fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl transform transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{
+          transition: 'transform 350ms cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+          pointerEvents: isOpen ? 'auto' : 'none'
+        }}
+        aria-hidden={!isOpen}
+        role="dialog"
+        aria-modal={isOpen}
       >
-        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
-          <Dialog.Title className="text-lg font-semibold dark:text-white">
-            Beitrittsanfrage bearbeiten
-          </Dialog.Title>
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
+          <h2 className="text-lg font-semibold dark:text-white">
+            {t('joinRequest.title')}
+          </h2>
           <button
             onClick={handleClose}
             className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
@@ -333,7 +369,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
           </button>
         </div>
 
-        <div className="p-4 overflow-y-auto h-full">
+        <div className="p-4 overflow-y-auto flex-1 min-h-0">
           {errors.submit && (
             <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
               {errors.submit}
@@ -343,14 +379,14 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Antragsteller Info */}
             <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Antragsteller:</p>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{t('joinRequest.applicant')}:</p>
               <p className="text-sm text-gray-900 dark:text-white">
                 {joinRequest.requester.firstName} {joinRequest.requester.lastName}
               </p>
               <p className="text-xs text-gray-600 dark:text-gray-400">{joinRequest.requester.email}</p>
               {joinRequest.message && (
                 <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
-                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Nachricht:</p>
+                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">{t('joinRequest.message')}:</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400">{joinRequest.message}</p>
                 </div>
               )}
@@ -359,7 +395,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
             {/* Aktion (Genehmigen/Ablehnen) */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Aktion *
+                {t('joinRequest.actionRequired')}
               </label>
               <div className="flex gap-4 mt-2">
                 <label className="flex items-center">
@@ -373,7 +409,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                     }}
                     className="mr-2 text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Genehmigen</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('joinRequest.approve')}</span>
                 </label>
                 <label className="flex items-center">
                   <input
@@ -386,7 +422,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                     }}
                     className="mr-2 text-red-600 focus:ring-red-500"
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Ablehnen</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">{t('joinRequest.reject')}</span>
                 </label>
               </div>
             </div>
@@ -398,12 +434,12 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                   htmlFor="roleId" 
                   className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                 >
-                  Rolle zuweisen *
+                  {t('joinRequest.assignRole')}
                 </label>
                 {loadingRoles ? (
                   <div className="flex items-center py-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Lade Rollen...</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400">{t('joinRequest.loadingRoles')}</span>
                   </div>
                 ) : (
                   <select
@@ -421,7 +457,7 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                         : 'border-gray-300 dark:border-gray-600'
                     }`}
                   >
-                    <option value="">-- Rolle auswählen --</option>
+                    <option value="">{t('joinRequest.selectRole')}</option>
                     {roles.map(role => (
                       <option key={role.id} value={role.id}>
                         {role.name} {role.description ? `- ${role.description}` : ''}
@@ -441,14 +477,14 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
                 htmlFor="response" 
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                Antwort (optional)
+                {t('joinRequest.response')}
               </label>
               <textarea
                 id="response"
                 value={response}
                 onChange={(e) => setResponse(e.target.value)}
                 rows={3}
-                placeholder={`Optional: ${action === 'approve' ? 'Willkommensnachricht' : 'Ablehnungsgrund'} hinzufügen...`}
+                placeholder={t('joinRequest.addOptional', { type: action === 'approve' ? t('joinRequest.welcomeMessage') : t('joinRequest.rejectionReason') })}
                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
               />
             </div>
@@ -457,33 +493,34 @@ const ProcessJoinRequestModal: React.FC<Props> = ({ isOpen, onClose, joinRequest
               <button
                 type="button"
                 onClick={handleClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                title="Abbrechen"
               >
-                Abbrechen
+                <XMarkIcon className="h-5 w-5" />
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className={`px-4 py-2 text-sm font-medium text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center ${
+                className={`p-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
                   action === 'approve'
                     ? 'bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 focus:ring-green-500'
                     : 'bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 focus:ring-red-500'
                 }`}
+                title={saving ? (action === 'approve' ? 'Genehmige...' : 'Lehne ab...') : (action === 'approve' ? 'Genehmigen' : 'Ablehnen')}
               >
                 {saving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    {action === 'approve' ? 'Genehmige...' : 'Lehne ab...'}
-                  </>
+                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                ) : action === 'approve' ? (
+                  <CheckIcon className="h-5 w-5" />
                 ) : (
-                  action === 'approve' ? 'Genehmigen' : 'Ablehnen'
+                  <XCircleIcon className="h-5 w-5" />
                 )}
               </button>
             </div>
           </form>
         </div>
       </div>
-    </Dialog>
+    </>
   );
 };
 
