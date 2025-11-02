@@ -23,6 +23,7 @@
     "axios": "^1.8.3",
     "date-fns": "^4.1.0",
     "express-validator": "^7.2.1",
+    "github-markdown-css": "^5.8.1",
     "i18next": "^23.16.8",
     "i18next-browser-languagedetector": "^7.2.2",
     "qrcode.react": "^4.2.0",
