@@ -116,47 +116,53 @@ async function main() {
     // ========================================
     console.log('📋 Erstelle/Aktualisiere Rollen...');
     
-    // Admin-Rolle (ID 1)
+    // Admin-Rolle (ID 1) - ohne Organisation (organizationId = null)
     const adminRole = await prisma.role.upsert({
       where: { id: 1 },
       update: {
         name: 'Admin',
-        description: 'Administrator mit allen Rechten'
+        description: 'Administrator mit allen Rechten',
+        organizationId: null
       },
       create: {
         id: 1,
         name: 'Admin',
         description: 'Administrator mit allen Rechten',
+        organizationId: null
       },
     });
     console.log(`✅ Admin-Rolle: ${adminRole.name} (ID: ${adminRole.id})`);
     
-    // User-Rolle (ID 2)
+    // User-Rolle (ID 2) - ohne Organisation (organizationId = null)
     const userRole = await prisma.role.upsert({
       where: { id: 2 },
       update: {
         name: 'User',
-        description: 'Standardbenutzer mit eingeschränkten Rechten'
+        description: 'Standardbenutzer mit eingeschränkten Rechten',
+        organizationId: null
       },
       create: {
         id: 2,
         name: 'User',
         description: 'Standardbenutzer mit eingeschränkten Rechten',
+        organizationId: null
       },
     });
     console.log(`✅ User-Rolle: ${userRole.name} (ID: ${userRole.id})`);
     
-    // Hamburger-Rolle (ID 999)
+    // Hamburger-Rolle (ID 999) - ohne Organisation (organizationId = null)
     const hamburgerRole = await prisma.role.upsert({
       where: { id: 999 },
       update: {
         name: 'Hamburger',
-        description: 'Hamburger-Rolle für neue Benutzer'
+        description: 'Hamburger-Rolle für neue Benutzer',
+        organizationId: null
       },
       create: {
         id: 999,
         name: 'Hamburger',
         description: 'Hamburger-Rolle für neue Benutzer',
+        organizationId: null
       },
     });
     console.log(`✅ Hamburger-Rolle: ${hamburgerRole.name} (ID: ${hamburgerRole.id})`);
