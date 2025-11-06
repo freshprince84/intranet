@@ -996,9 +996,7 @@ async function main() {
     console.log('👥 Erstelle Clients für Org 2 (Mosaik)...');
     
     // Hole erste Branch für Org 2 (für WorkTime-Verknüpfung)
-    const org2Branch = await prisma.branch.findFirst({
-      where: { name: 'Hauptsitz' }
-    });
+    // org2Branch wurde bereits oben erstellt
 
     const org2Clients = [
       {
@@ -1220,12 +1218,12 @@ async function main() {
     console.log(`   - 3 globale Rollen (Admin, User, Hamburger)`);
     console.log(`   - 2 Organisationen: La Familia Hostel & Mosaik`);
     console.log(`   - Standard-Organisation (für Rückwärtskompatibilität)`);
-    console.log(`   - Rollen pro Organisation: Admin, Recepcion/Beratung, Hamburger`);
+    console.log(`   - Rollen pro Organisation: Admin, User, Hamburger`);
     console.log(`   - Admin-Benutzer je Organisation`);
-    console.log(`   - Patrick in Org 1 (Recepcion)`);
-    console.log(`   - Rebeca Benitez & Christina Di Biaso in Org 2 (Beratung)`);
+    console.log(`   - Patrick in Org 1 (User)`);
+    console.log(`   - Rebeca Benitez & Christina Di Biaso in Org 2 (User)`);
     console.log(`   - 5 Clients für Org 2 (Mosaik)`);
-    console.log(`   - ${branches.length} Niederlassungen`);
+    console.log(`   - 3 Niederlassungen (Parque Poblado, Manila, Sonnenhalden)`);
     console.log(`   - Demo-Clients und Beratungen`);
     console.log('\n✨ Das System ist bereit für die Nutzung!');
 
