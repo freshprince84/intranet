@@ -400,7 +400,8 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
                     responsibleId: updatedRequest.responsibleId,
                     qualityControlId: updatedRequest.requesterId,
                     branchId: updatedRequest.branchId,
-                    dueDate: updatedRequest.dueDate
+                    dueDate: updatedRequest.dueDate,
+                    organizationId: updatedRequest.organizationId || req.organizationId || null
                 }
             });
 
