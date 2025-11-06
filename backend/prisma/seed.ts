@@ -386,21 +386,20 @@ async function main() {
     // Organisation 1: La Familia Hostel
     let org1;
     if (existingOrg1 && existingOrg1.name !== 'la-familia-hostel') {
-      // Falls Organisation mit ID 1 existiert, aber falscher Name, löschen und neu erstellen
-      console.log(`⚠️ Organisation mit ID 1 existiert mit anderem Namen (${existingOrg1.name}), lösche...`);
-      await prisma.organization.delete({ where: { id: 1 } });
-    }
-    
-    // Prüfe ob Organisation mit Namen existiert
-    const org1ByName = await prisma.organization.findUnique({
-      where: { name: 'la-familia-hostel' }
-    });
-
-    if (org1ByName) {
-      // Falls Organisation mit Namen existiert, aktualisiere sie
+      // Falls Organisation mit ID 1 existiert, aber falscher Name, umbenennen
+      console.log(`⚠️ Organisation mit ID 1 existiert mit anderem Namen (${existingOrg1.name}), benenne um...`);
+      // Prüfe ob Organisation mit Zielnamen bereits existiert
+      const conflictingOrg = await prisma.organization.findUnique({
+        where: { name: 'la-familia-hostel' }
+      });
+      if (conflictingOrg) {
+        // Falls Konflikt, lösche die andere Organisation zuerst
+        await prisma.organization.delete({ where: { name: 'la-familia-hostel' } });
+      }
       org1 = await prisma.organization.update({
-        where: { name: 'la-familia-hostel' },
+        where: { id: 1 },
         data: {
+          name: 'la-familia-hostel',
           displayName: 'La Familia Hostel',
           domain: 'lafamilia-hostel.com',
           isActive: true,
@@ -408,16 +407,54 @@ async function main() {
           subscriptionPlan: 'enterprise'
         }
       });
-      // Falls ID nicht 1 ist, müssen wir die Sequenz anpassen
-      if (org1.id !== 1) {
-        console.log(`⚠️ Organisation hat ID ${org1.id}, setze Sequenz zurück...`);
-        // Setze Sequenz zurück, damit nächste Organisation ID 1 bekommt (falls org1.id > 1)
-        if (org1.id > 1) {
-          await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', ${org1.id - 1}, true)`;
+    } else {
+      // Prüfe ob Organisation mit Namen existiert
+      const org1ByName = await prisma.organization.findUnique({
+        where: { name: 'la-familia-hostel' }
+      });
+
+      if (org1ByName) {
+        // Falls Organisation mit Namen existiert, aktualisiere sie
+        org1 = await prisma.organization.update({
+          where: { name: 'la-familia-hostel' },
+          data: {
+            displayName: 'La Familia Hostel',
+            domain: 'lafamilia-hostel.com',
+            isActive: true,
+            maxUsers: 1000,
+            subscriptionPlan: 'enterprise'
+          }
+        });
+        // Falls ID nicht 1 ist, müssen wir die Sequenz anpassen
+        if (org1.id !== 1) {
+          console.log(`⚠️ Organisation hat ID ${org1.id}, setze Sequenz zurück...`);
+          // Setze Sequenz zurück, damit nächste Organisation ID 1 bekommt (falls org1.id > 1)
+          if (org1.id > 1) {
+            await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', ${org1.id - 1}, true)`;
+          }
+          // Lösche org1 und erstelle neu mit ID 1
+          await prisma.organization.delete({ where: { id: org1.id } });
+          await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 0, true)`;
+          org1 = await prisma.organization.create({
+            data: {
+              name: 'la-familia-hostel',
+              displayName: 'La Familia Hostel',
+              domain: 'lafamilia-hostel.com',
+              isActive: true,
+              maxUsers: 1000,
+              subscriptionPlan: 'enterprise'
+            }
+          });
         }
-        // Lösche org1 und erstelle neu mit ID 1
-        await prisma.organization.delete({ where: { id: org1.id } });
-        await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 0, true)`;
+      } else {
+        // Falls keine Organisation existiert, erstelle mit ID 1
+        // Setze Sequenz zurück, falls nötig
+        const maxId = await prisma.$queryRaw<[{ max: bigint | null }]>`
+          SELECT MAX(id) as max FROM "Organization"
+        `;
+        if (maxId[0].max && maxId[0].max >= 1) {
+          await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 0, true)`;
+        }
         org1 = await prisma.organization.create({
           data: {
             name: 'la-familia-hostel',
@@ -429,46 +466,26 @@ async function main() {
           }
         });
       }
-    } else {
-      // Falls keine Organisation existiert, erstelle mit ID 1
-      // Setze Sequenz zurück, falls nötig
-      const maxId = await prisma.$queryRaw<[{ max: bigint | null }]>`
-        SELECT MAX(id) as max FROM "Organization"
-      `;
-      if (maxId[0].max && maxId[0].max >= 1) {
-        await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 0, true)`;
-      }
-      org1 = await prisma.organization.create({
-        data: {
-          name: 'la-familia-hostel',
-          displayName: 'La Familia Hostel',
-          domain: 'lafamilia-hostel.com',
-          isActive: true,
-          maxUsers: 1000,
-          subscriptionPlan: 'enterprise'
-        }
-      });
     }
     console.log(`✅ Organisation 1: ${org1.displayName} (ID: ${org1.id})`);
 
     // Organisation 2: Mosaik
     let org2;
     if (existingOrg2 && existingOrg2.name !== 'mosaik') {
-      // Falls Organisation mit ID 2 existiert, aber falscher Name, löschen und neu erstellen
-      console.log(`⚠️ Organisation mit ID 2 existiert mit anderem Namen (${existingOrg2.name}), lösche...`);
-      await prisma.organization.delete({ where: { id: 2 } });
-    }
-    
-    // Prüfe ob Organisation mit Namen existiert
-    const org2ByName = await prisma.organization.findUnique({
-      where: { name: 'mosaik' }
-    });
-
-    if (org2ByName) {
-      // Falls Organisation mit Namen existiert, aktualisiere sie
+      // Falls Organisation mit ID 2 existiert, aber falscher Name, umbenennen
+      console.log(`⚠️ Organisation mit ID 2 existiert mit anderem Namen (${existingOrg2.name}), benenne um...`);
+      // Prüfe ob Organisation mit Zielnamen bereits existiert
+      const conflictingOrg = await prisma.organization.findUnique({
+        where: { name: 'mosaik' }
+      });
+      if (conflictingOrg) {
+        // Falls Konflikt, lösche die andere Organisation zuerst
+        await prisma.organization.delete({ where: { name: 'mosaik' } });
+      }
       org2 = await prisma.organization.update({
-        where: { name: 'mosaik' },
+        where: { id: 2 },
         data: {
+          name: 'mosaik',
           displayName: 'Mosaik',
           domain: 'mosaik.ch',
           isActive: true,
@@ -476,11 +493,43 @@ async function main() {
           subscriptionPlan: 'enterprise'
         }
       });
-      // Falls ID nicht 2 ist, müssen wir die Sequenz anpassen
-      if (org2.id !== 2) {
-        console.log(`⚠️ Organisation hat ID ${org2.id}, setze Sequenz zurück...`);
-        // Lösche org2 und erstelle neu mit ID 2
-        await prisma.organization.delete({ where: { id: org2.id } });
+    } else {
+      // Prüfe ob Organisation mit Namen existiert
+      const org2ByName = await prisma.organization.findUnique({
+        where: { name: 'mosaik' }
+      });
+
+      if (org2ByName) {
+        // Falls Organisation mit Namen existiert, aktualisiere sie
+        org2 = await prisma.organization.update({
+          where: { name: 'mosaik' },
+          data: {
+            displayName: 'Mosaik',
+            domain: 'mosaik.ch',
+            isActive: true,
+            maxUsers: 1000,
+            subscriptionPlan: 'enterprise'
+          }
+        });
+        // Falls ID nicht 2 ist, müssen wir die Sequenz anpassen
+        if (org2.id !== 2) {
+          console.log(`⚠️ Organisation hat ID ${org2.id}, setze Sequenz zurück...`);
+          // Lösche org2 und erstelle neu mit ID 2
+          await prisma.organization.delete({ where: { id: org2.id } });
+          await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 1, true)`;
+          org2 = await prisma.organization.create({
+            data: {
+              name: 'mosaik',
+              displayName: 'Mosaik',
+              domain: 'mosaik.ch',
+              isActive: true,
+              maxUsers: 1000,
+              subscriptionPlan: 'enterprise'
+            }
+          });
+        }
+      } else {
+        // Falls keine Organisation existiert, erstelle mit ID 2
         await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 1, true)`;
         org2 = await prisma.organization.create({
           data: {
@@ -493,19 +542,6 @@ async function main() {
           }
         });
       }
-    } else {
-      // Falls keine Organisation existiert, erstelle mit ID 2
-      await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 1, true)`;
-      org2 = await prisma.organization.create({
-        data: {
-          name: 'mosaik',
-          displayName: 'Mosaik',
-          domain: 'mosaik.ch',
-          isActive: true,
-          maxUsers: 1000,
-          subscriptionPlan: 'enterprise'
-        }
-      });
     }
     console.log(`✅ Organisation 2: ${org2.displayName} (ID: ${org2.id})`);
 
