@@ -52,11 +52,13 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
       .replace(/^#+\s+/gm, '') // Headers
       .replace(/\*\*([^*]+)\*\*/g, '$1') // Bold
       .replace(/\*([^*]+)\*/g, '$1') // Italic
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // Bilder komplett entfernen (nicht nur alt-Text)
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links - nur alt-Text behalten
       .replace(/```[\s\S]*?```/g, '') // Code blocks
       .replace(/`([^`]+)`/g, '$1') // Inline code
       .replace(/^\s*[-*+]\s+/gm, '') // List items
       .replace(/^\s*\d+\.\s+/gm, '') // Numbered list
+      .replace(/\s+/g, ' ') // Mehrfache Leerzeichen zu einem
       .trim();
     
     return plain;
@@ -165,31 +167,32 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
   
   const remainingMarkdown = isExpanded && hasMoreContent ? getRemainingMarkdown(item.descriptionContent || '', firstLine) : '';
   
+  // Extrahiere Anhänge aus dem gesamten descriptionContent (nicht nur aus remainingMarkdown)
+  const fullDescriptionContent = item.descriptionContent || '';
+  
   return (
     <div className={`text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 ${item.className || ''}`}>
-      {/* Hauptzeile: Label, Text und Pfeil */}
+      {/* Hauptzeile: Label, Text, Pfeil rechts */}
       <div className="flex items-center gap-1 sm:gap-1.5">
-        <div className="flex-1 min-w-0 flex items-center gap-1 sm:gap-1.5">
-          <span ref={labelRef} className="font-medium mr-1 sm:mr-2 whitespace-nowrap flex-shrink-0">{item.label}:</span>
-          {/* Erste Zeile - immer sichtbar, auf eine Zeile begrenzt */}
-          <span 
-            ref={firstLineRef}
-            className="text-gray-900 dark:text-white line-clamp-1 flex-1 min-w-0"
-          >
-            {firstLine}
-          </span>
-        </div>
-        {/* Pfeil ganz rechts, bündig mit anderen Elementen */}
+        <span ref={labelRef} className="font-medium mr-1 sm:mr-2 whitespace-nowrap flex-shrink-0">{item.label}:</span>
+        {/* Text - kann umbrechen, keine line-clamp mehr */}
+        <span 
+          ref={firstLineRef}
+          className="text-gray-900 dark:text-white flex-1 min-w-0 break-words"
+        >
+          {firstLine}
+        </span>
+        {/* Pfeil rechts, nach dem Text */}
         {(hasMoreContent && needsExpansion && !isExpanded) && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               setIsExpanded(true);
             }}
-            className="flex-shrink-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            className="flex-shrink-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors ml-0.5 sm:ml-1 mr-2 sm:mr-3"
             title={t('dataCard.expandDescription')}
           >
-            <span className="text-base lg:text-lg xl:text-xl">&lt;</span>
+            <ChevronLeftIcon className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 xl:h-8 xl:w-8" />
           </button>
         )}
         {isExpanded && (
@@ -198,14 +201,25 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
               e.stopPropagation();
               setIsExpanded(false);
             }}
-            className="flex-shrink-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            className="flex-shrink-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors ml-0.5 sm:ml-1 mr-2 sm:mr-3"
             title={t('dataCard.collapseDescription')}
           >
-            <ChevronDownIcon className="h-4 w-4 lg:h-5 lg:w-5 xl:h-6 xl:w-6" />
+            <ChevronDownIcon className="h-5 w-5 sm:h-6 sm:w-6 lg:h-7 lg:w-7 xl:h-8 xl:w-8" />
           </button>
         )}
       </div>
-      {/* Container für expandierten Inhalt - unter der Hauptzeile */}
+      {/* Anhänge IMMER direkt unter dem Text anzeigen */}
+      {fullDescriptionContent && (
+        <div 
+          className="mt-2" 
+          style={{ 
+            marginLeft: labelRef.current ? `${labelRef.current.offsetWidth + 8}px` : 'calc(0.75rem * 5 + 0.5rem)'
+          }}
+        >
+          <MarkdownPreview content={fullDescriptionContent} onlyAttachments={true} />
+        </div>
+      )}
+      {/* Container für expandierten Text-Inhalt - unter den Anhängen */}
       {isExpanded && hasMoreContent && remainingMarkdown && (
         <div 
           className="mt-1" 
@@ -213,7 +227,9 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
             marginLeft: labelRef.current ? `${labelRef.current.offsetWidth + 8}px` : 'calc(0.75rem * 5 + 0.5rem)'
           }}
         >
-          <MarkdownPreview content={remainingMarkdown} showImagePreview={true} maxHeight="none" />
+          <div className="dark:text-gray-200 whitespace-pre-wrap break-words">
+            {remainingPlainText}
+          </div>
         </div>
       )}
     </div>
@@ -244,25 +260,25 @@ const DataCard: React.FC<DataCardProps> = ({
       onClick={onClick}
     >
       {/* Container für Titel links und alle Metadaten rechts - Grid-Layout mit 2 Spalten */}
-      <div className="grid items-start gap-4 mb-2 min-w-0" style={{ gridTemplateColumns: 'auto 1fr' }}>
-        {/* Titel links - flexibel, nimmt nur benötigten Platz */}
-        <div className="min-w-0 pr-2 overflow-hidden">
+      <div className="grid items-start gap-4 mb-2 min-w-0" style={{ gridTemplateColumns: '1fr auto' }}>
+        {/* Titel links - flexibel, nimmt nur benötigten Platz, kann umbrechen */}
+        <div className="min-w-0 pr-2">
           {typeof title === 'string' ? (
-            <h3 className="font-semibold text-gray-900 dark:text-white truncate" style={{ fontSize: 'clamp(0.9375rem, 1.2vw + 0.5rem, 1.25rem)' }}>
+            <h3 className="font-semibold text-gray-900 dark:text-white break-words" style={{ fontSize: 'clamp(0.9375rem, 1.2vw + 0.5rem, 1.25rem)', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
               {title}
             </h3>
           ) : (
             title
           )}
           {subtitle && (
-            <p className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-500 dark:text-gray-400 mt-1 truncate">
+            <p className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-500 dark:text-gray-400 mt-1 break-words">
               {subtitle}
             </p>
           )}
         </div>
         
-        {/* Rechts: Alle Metadaten zusammen (Solicitado por, Responsable, Datum, Status) - rechtsbündig ausgerichtet */}
-        <div className="flex items-start justify-end gap-3 sm:gap-4 flex-nowrap min-w-0">
+        {/* Rechts: Alle Metadaten zusammen (Solicitado por, Responsable, Datum, Status) - rechtsbündig ausgerichtet, feste Breite für Bündigkeit */}
+        <div className="flex items-start justify-end gap-3 sm:gap-4 flex-nowrap flex-shrink-0 min-w-[220px]">
           {/* Container für Solicitado por + Responsable (untereinander) */}
           <div className="flex flex-col gap-1 sm:gap-1.5 flex-shrink-0">
             {/* Solicitado por (erste Zeile) */}
@@ -387,12 +403,30 @@ const DataCard: React.FC<DataCardProps> = ({
         </div>
       )}
 
-      {/* Dritte Zeile: Beschreibung */}
-      {metadata.filter(item => item.section === 'full' && item.descriptionContent).length > 0 && (
-        <div className="mb-3 sm:mb-4 mt-2 sm:mt-2.5">
-          {metadata.filter(item => item.section === 'full' && item.descriptionContent).map((item, index) => (
-            <DescriptionMetadataItem key={index} item={item} />
-          ))}
+      {/* Beschreibung und Buttons in einer Zeile - Grid-Layout für feste Positionen */}
+      {(metadata.filter(item => item.section === 'full' && item.descriptionContent).length > 0 || actions) && (
+        <div className="grid items-start gap-3 sm:gap-4 mt-2 sm:mt-2.5 mb-3 sm:mb-4" style={{ gridTemplateColumns: '1fr auto' }}>
+          {/* Beschreibung links - nimmt verfügbaren Platz */}
+          {metadata.filter(item => item.section === 'full' && item.descriptionContent).length > 0 ? (
+            <div className="flex-1 min-w-0">
+              {metadata.filter(item => item.section === 'full' && item.descriptionContent).map((item, index) => (
+                <DescriptionMetadataItem key={index} item={item} />
+              ))}
+            </div>
+          ) : (
+            <div />
+          )}
+          {/* Buttons rechts - immer sichtbar wenn vorhanden, feste Position */}
+          {actions ? (
+            <div
+              className="flex items-center space-x-2 flex-shrink-0"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {actions}
+            </div>
+          ) : (
+            <div />
+          )}
         </div>
       )}
 
@@ -486,15 +520,6 @@ const DataCard: React.FC<DataCardProps> = ({
         </div>
       )}
 
-      {/* Action-Buttons */}
-      {actions && (
-        <div
-          className="flex items-center justify-end space-x-2 pt-3 border-t border-gray-200 dark:border-gray-700"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {actions}
-        </div>
-      )}
     </div>
   );
 };

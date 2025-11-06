@@ -238,6 +238,8 @@ const Worktracker: React.FC = () => {
         try {
             setLoading(true);
             const response = await axiosInstance.get(API_ENDPOINTS.TASKS.BASE);
+            console.log('📋 Tasks geladen:', response.data.length, 'Tasks');
+            console.log('📋 Tasks Details:', response.data);
             setTasks(response.data);
             setError(null);
         } catch (error) {
@@ -325,7 +327,7 @@ const Worktracker: React.FC = () => {
                 if (!archivFilterExists) {
                     const archivFilter = {
                         tableId: TODOS_TABLE_ID,
-                        name: t('tasks.filters.archive'),
+                        name: 'Archiv', // Immer auf Deutsch speichern, wird beim Anzeigen übersetzt
                         conditions: [
                             { column: 'status', operator: 'equals', value: 'done' }
                         ],
@@ -347,7 +349,7 @@ const Worktracker: React.FC = () => {
                 if (!aktuellFilterExists) {
                     const aktuellFilter = {
                         tableId: TODOS_TABLE_ID,
-                        name: t('tasks.filters.current'),
+                        name: 'Aktuell', // Immer auf Deutsch speichern, wird beim Anzeigen übersetzt
                         conditions: [
                             { column: 'status', operator: 'notEquals', value: 'done' }
                         ],
@@ -537,7 +539,9 @@ const Worktracker: React.FC = () => {
     };
 
     const filteredAndSortedTasks = useMemo(() => {
-        return tasks
+        console.log('🔄 Filtere Tasks:', tasks.length, 'Tasks vorhanden');
+        console.log('🔄 Filterbedingungen:', filterConditions);
+        const filtered = tasks
             .filter(task => {
                 // Globale Suchfunktion
                 if (searchTerm) {
@@ -731,7 +735,10 @@ const Worktracker: React.FC = () => {
                 }
                 
                 return true;
-            })
+            });
+        
+        console.log('✅ Gefilterte Tasks:', filtered.length, 'von', tasks.length);
+        const sorted = filtered
             .sort((a, b) => {
                 // Multi-Sortierung für Cards-Mode
                 if (viewMode === 'cards') {
@@ -858,6 +865,9 @@ const Worktracker: React.FC = () => {
                     return a.title.localeCompare(b.title);
                 }
             });
+        
+        console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
+        return sorted;
     }, [tasks, searchTerm, sortConfig, getStatusPriority, filterConditions, filterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
@@ -984,7 +994,7 @@ const Worktracker: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen">
+        <div className="min-h-screen dark:bg-gray-900">
             <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
                 {/* Neu angeordnete UI-Elemente in einer Zeile */}
                 <div className="w-full mb-4">
@@ -1379,18 +1389,24 @@ const Worktracker: React.FC = () => {
                                                 
                                                 // Haupt-Metadaten: Verantwortlicher & Qualitätskontrolle
                                                 if (visibleCardMetadata.has('responsible')) {
+                                                    // Benutzernamen auf 4 Zeichen kürzen
+                                                    const responsibleValue = task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : (task.role ? task.role.name : '-');
+                                                    const shortenedName = responsibleValue.length > 4 && responsibleValue !== '-' ? responsibleValue.substring(0, 4) : responsibleValue;
                                                     metadata.push({
                                                         icon: <UserIcon className="h-4 w-4" />,
                                                         label: t('tasks.columns.responsible'),
-                                                        value: task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : (task.role ? task.role.name : '-'),
+                                                        value: shortenedName,
                                                         section: 'main'
                                                     });
                                                 }
                                                 if (visibleCardMetadata.has('qualityControl')) {
+                                                    // Benutzernamen auf 4 Zeichen kürzen
+                                                    const qualityControlValue = task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-';
+                                                    const shortenedName = qualityControlValue.length > 4 && qualityControlValue !== '-' ? qualityControlValue.substring(0, 4) : qualityControlValue;
                                                     metadata.push({
                                                         icon: <UserIcon className="h-4 w-4" />,
                                                         label: t('tasks.columns.qualityControl'),
-                                                        value: task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-',
+                                                        value: shortenedName,
                                                         section: 'main-second'
                                                     });
                                                 }
@@ -1416,7 +1432,6 @@ const Worktracker: React.FC = () => {
                                                 // Full-Width: Beschreibung
                                                 if (visibleCardMetadata.has('description') && task.description) {
                                                     metadata.push({
-                                                        icon: <InformationCircleIcon className="h-4 w-4" />,
                                                         label: t('tasks.columns.description'),
                                                         value: '',
                                                         descriptionContent: task.description,
@@ -1889,18 +1904,24 @@ const Worktracker: React.FC = () => {
                                                 
                                                 // Haupt-Metadaten: Verantwortlicher & Qualitätskontrolle
                                                 if (visibleCardMetadata.has('responsible')) {
+                                                    // Benutzernamen auf 4 Zeichen kürzen
+                                                    const responsibleValue = task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : (task.role ? task.role.name : '-');
+                                                    const shortenedName = responsibleValue.length > 4 && responsibleValue !== '-' ? responsibleValue.substring(0, 4) : responsibleValue;
                                                     metadata.push({
                                                         icon: <UserIcon className="h-4 w-4" />,
                                                         label: t('tasks.columns.responsible'),
-                                                        value: task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}` : (task.role ? task.role.name : '-'),
+                                                        value: shortenedName,
                                                         section: 'main'
                                                     });
                                                 }
                                                 if (visibleCardMetadata.has('qualityControl')) {
+                                                    // Benutzernamen auf 4 Zeichen kürzen
+                                                    const qualityControlValue = task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-';
+                                                    const shortenedName = qualityControlValue.length > 4 && qualityControlValue !== '-' ? qualityControlValue.substring(0, 4) : qualityControlValue;
                                                     metadata.push({
                                                         icon: <UserIcon className="h-4 w-4" />,
                                                         label: t('tasks.columns.qualityControl'),
-                                                        value: task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}` : '-',
+                                                        value: shortenedName,
                                                         section: 'main-second'
                                                     });
                                                 }
@@ -1926,7 +1947,6 @@ const Worktracker: React.FC = () => {
                                                 // Full-Width: Beschreibung
                                                 if (visibleCardMetadata.has('description') && task.description) {
                                                     metadata.push({
-                                                        icon: <InformationCircleIcon className="h-4 w-4" />,
                                                         label: t('tasks.columns.description'),
                                                         value: '',
                                                         descriptionContent: task.description,

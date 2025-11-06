@@ -56,8 +56,9 @@ const Consultations: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
-      <div className="space-y-6">
+    <div className="min-h-screen dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
+        <div className="space-y-6">
         {/* Consultation Tracker */}
         <ConsultationTracker 
           onConsultationChange={handleConsultationChange}
@@ -69,6 +70,7 @@ const Consultations: React.FC = () => {
           ref={consultationListRef}
           onConsultationChange={handleConsultationChange}
         />
+        </div>
       </div>
     </div>
   );

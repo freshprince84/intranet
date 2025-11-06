@@ -367,6 +367,10 @@
         "deleteError": "Fehler beim Löschen des Tasks",
         "fileError": "Fehler beim Verarbeiten der Datei"
       }
+    },
+    "filters": {
+      "archive": "Archiv",
+      "current": "Aktuell"
     }
   },
   "organisation": {

@@ -409,6 +409,10 @@
         "deleteError": "Error deleting task",
         "fileError": "Error processing file"
       }
+    },
+    "filters": {
+      "archive": "Archive",
+      "current": "Current"
     }
   },
   "users": {

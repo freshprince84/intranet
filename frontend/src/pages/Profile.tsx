@@ -204,7 +204,8 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
+    <div className="min-h-screen dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
       {/* Warnung wenn Profil unvollständig */}
       {isProfileIncomplete() && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 mb-6">
@@ -223,7 +224,7 @@ const Profile: React.FC = () => {
         </div>
       )}
       
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 mb-6">
         <div className="border-b border-gray-200 dark:border-gray-700">
           <nav className="flex -mb-px">
             <button
@@ -253,7 +254,7 @@ const Profile: React.FC = () => {
       </div>
 
       {activeTab === 'profile' && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold flex items-center dark:text-white">
               <UserCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
@@ -531,10 +532,11 @@ const Profile: React.FC = () => {
       )}
 
       {activeTab === 'documents' && user && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           <IdentificationDocumentList userId={user.id} />
         </div>
       )}
+    </div>
     </div>
   );
 };

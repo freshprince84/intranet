@@ -67,7 +67,7 @@ const Payroll: React.FC = () => {
       <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           {/* Tab Headers */}
-          <div className="border-b border-gray-200 dark:border-gray-700 -mx-6 px-6 mb-6">
+          <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
             <nav className="-mb-px flex space-x-8">
               {tabs.map((tab) => {
                 const Icon = tab.icon;
@@ -90,7 +90,7 @@ const Payroll: React.FC = () => {
           </div>
 
           {/* Tab Content */}
-          <div className="pt-0">
+          <div className="mt-6">
             {tabs.find(tab => tab.id === activeTab)?.component}
           </div>
         </div>

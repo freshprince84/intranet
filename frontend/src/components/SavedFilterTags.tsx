@@ -37,9 +37,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Übersetze Filter-Namen beim Anzeigen
   const translateFilterName = (name: string): string => {
-    // Standard-Filter übersetzen
-    if (name === 'Archiv') return t('requests.filters.archiv');
-    if (name === 'Aktuell') return t('requests.filters.aktuell');
+    // Standard-Filter übersetzen (auch wenn als Übersetzungsschlüssel gespeichert)
+    if (name === 'Archiv' || name === 'tasks.filters.archive' || name === 'requests.filters.archiv') {
+      return tableId === 'worktracker-todos' ? t('tasks.filters.archive') : t('requests.filters.archiv');
+    }
+    if (name === 'Aktuell' || name === 'tasks.filters.current' || name === 'requests.filters.aktuell') {
+      return tableId === 'worktracker-todos' ? t('tasks.filters.current') : t('requests.filters.aktuell');
+    }
     if (name === 'Heute') return t('common.today', 'Heute');
     if (name === 'Woche') return t('common.week', 'Woche');
     if (name === 'Aktive') return t('common.active', 'Aktive');
@@ -247,9 +251,14 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Prüfen, ob ein Filter ein Standard-Filter ist
   const isStandardFilter = (filterName: string) => {
-    const baseStandardFilters = ['Archiv', 'Aktuell', 'Aktive', 'Alle', 'Heute', 'Woche'];
+    // Erkenne auch Übersetzungsschlüssel
+    const standardFilterNames = [
+      'Archiv', 'Aktuell', 'Aktive', 'Alle', 'Heute', 'Woche',
+      'tasks.filters.archive', 'tasks.filters.current',
+      'requests.filters.archiv', 'requests.filters.aktuell'
+    ];
     
-    if (baseStandardFilters.includes(filterName)) {
+    if (standardFilterNames.includes(filterName)) {
       return true;
     }
     

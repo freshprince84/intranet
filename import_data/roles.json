@@ -1,0 +1,57 @@
+[
+  {
+    "old_id": "0",
+    "name": "Owner",
+    "description": null
+  },
+  {
+    "old_id": "1",
+    "name": "Admin",
+    "description": null
+  },
+  {
+    "old_id": "2",
+    "name": "Reception",
+    "description": null
+  },
+  {
+    "old_id": "3",
+    "name": "Restaurant",
+    "description": null
+  },
+  {
+    "old_id": "4",
+    "name": "Bar",
+    "description": null
+  },
+  {
+    "old_id": "5",
+    "name": "Cleaning",
+    "description": null
+  },
+  {
+    "old_id": "6",
+    "name": "Promotion",
+    "description": null
+  },
+  {
+    "old_id": "7",
+    "name": "IT",
+    "description": null
+  },
+  {
+    "old_id": "8",
+    "name": "Contabilidad",
+    "description": null
+  },
+  {
+    "old_id": "9",
+    "name": "Derecho",
+    "description": null
+  },
+  {
+    "old_id": "99",
+    "name": "Hamburger",
+    "description": null
+  }
+]
