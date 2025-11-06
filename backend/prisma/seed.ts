@@ -781,23 +781,27 @@ async function main() {
     // ========================================
     console.log('👥 Erstelle/Aktualisiere Benutzer...');
     
-    // Standard Admin-Benutzer (für Rückwärtskompatibilität)
+    // ========================================
+    // 7.1. ADMIN-BENUTZER - FIXER ADMIN FÜR ALLE ORGANISATIONEN (UNLÖSCHBAR)
+    // ========================================
+    console.log('🔒 Erstelle/aktualisiere fixen Admin-Benutzer: admin...');
+    
+    // Admin-Benutzer - Fixer Admin-Benutzer für ALLE Organisationen
+    // WICHTIG: Dieser Benutzer muss IMMER existieren und ist UNLÖSCHBAR
+    // Er hat Admin-Rolle für: Standard-Organisation, Org 1 (La Familia Hostel), Org 2 (Mosaik)
     const hashedPassword = await bcrypt.hash('admin123', 10);
     const adminUser = await prisma.user.upsert({
       where: { username: 'admin' },
-      update: {},
+      update: {
+        firstName: 'Pat',
+        lastName: 'Admin'
+      },
       create: {
         username: 'admin',
         email: 'admin@example.com',
         password: hashedPassword,
-        firstName: 'Admin',
-        lastName: 'User',
-        roles: {
-          create: {
-            roleId: adminRole.id,
-            lastUsed: true
-          }
-        }
+        firstName: 'Pat',
+        lastName: 'Admin'
       },
       include: {
         roles: {
@@ -811,10 +815,10 @@ async function main() {
         }
       }
     });
-    console.log(`✅ Admin-Benutzer: ${adminUser.username}`);
+    console.log(`✅ Admin-Benutzer erstellt/aktualisiert: ${adminUser.username} (ID: ${adminUser.id})`);
 
-    // Admin-User mit Standard-Organisations-Rolle verknüpfen (als lastUsed)
-    const existingOrgUserRole = await prisma.userRole.findUnique({
+    // Admin mit Standard-Organisations-Admin-Rolle verknüpfen
+    let adminStandardOrgRole = await prisma.userRole.findUnique({
       where: {
         userId_roleId: {
           userId: adminUser.id,
@@ -822,183 +826,61 @@ async function main() {
         }
       }
     });
-
-    if (!existingOrgUserRole) {
-      // Deaktiviere alle anderen Rollen des Admin-Users
-      await prisma.userRole.updateMany({
-        where: {
-          userId: adminUser.id,
-          lastUsed: true
-        },
-        data: {
-          lastUsed: false
-        }
-      });
-
-      // Weise Admin-User zur Organisations-Admin-Rolle zu (als lastUsed)
+    if (!adminStandardOrgRole) {
       await prisma.userRole.create({
         data: {
           userId: adminUser.id,
           roleId: orgAdminRole.id,
-          lastUsed: true
+          lastUsed: false
         }
       });
-      console.log(`🔗 Admin-User mit Standard-Organisations-Admin-Rolle verknüpft`);
-    } else if (!existingOrgUserRole.lastUsed) {
-      // Falls Rolle existiert aber nicht lastUsed ist, aktiviere sie
-      await prisma.userRole.updateMany({
-        where: {
+      console.log(`✅ Admin-Benutzer mit Standard-Organisations-Admin-Rolle verknüpft`);
+    }
+
+    // Admin mit Org 1 Admin-Rolle verknüpfen
+    let adminOrg1Role = await prisma.userRole.findUnique({
+      where: {
+        userId_roleId: {
           userId: adminUser.id,
-          lastUsed: true
-        },
-        data: {
-          lastUsed: false
-        }
-      });
-      await prisma.userRole.update({
-        where: {
-          userId_roleId: {
-            userId: adminUser.id,
-            roleId: orgAdminRole.id
-          }
-        },
-        data: {
-          lastUsed: true
-        }
-      });
-      console.log(`🔗 Admin-User mit Standard-Organisations-Admin-Rolle aktiviert`);
-    }
-
-    // Admin für Org 1 (La Familia Hostel)
-    const org1AdminUser = await prisma.user.upsert({
-      where: { username: 'admin-org1' },
-      update: {},
-      create: {
-        username: 'admin-org1',
-        email: 'admin@lafamilia-hostel.com',
-        password: hashedPassword,
-        firstName: 'Admin',
-        lastName: 'La Familia Hostel',
-        roles: {
-          create: {
-            roleId: org1AdminRole.id,
-            lastUsed: true
-          }
-        }
-      }
-    });
-    console.log(`✅ Org 1 Admin-Benutzer: ${org1AdminUser.username}`);
-
-    // Admin für Org 2 (Mosaik)
-    const org2AdminUser = await prisma.user.upsert({
-      where: { username: 'admin-org2' },
-      update: {},
-      create: {
-        username: 'admin-org2',
-        email: 'admin@mosaik.ch',
-        password: hashedPassword,
-        firstName: 'Admin',
-        lastName: 'Mosaik',
-        roles: {
-          create: {
-            roleId: org2AdminRole.id,
-            lastUsed: true
-          }
-        }
-      }
-    });
-    console.log(`✅ Org 2 Admin-Benutzer: ${org2AdminUser.username}`);
-
-    // ========================================
-    // 7.1. PATRICK AMMANN - FIXER ADMIN-BENUTZER (UNLÖSCHBAR)
-    // ========================================
-    console.log('🔒 Erstelle/aktualisiere fixen Admin-Benutzer: Patrick Ammann...');
-    
-    // Patrick Ammann - Fixer Admin-Benutzer für ALLE Organisationen
-    // WICHTIG: Dieser Benutzer muss IMMER existieren und ist UNLÖSCHBAR
-    // Er hat Admin-Rolle für: Standard-Organisation, Org 1 (La Familia Hostel), Org 2 (Mosaik)
-    const patrickPassword = await bcrypt.hash('admin123', 10);
-    const patrickUser = await prisma.user.upsert({
-      where: { username: 'patrick-ammann' },
-      update: {
-        firstName: 'Patrick',
-        lastName: 'Ammann',
-        email: 'patrick.ammann@intranet.ch'
-      },
-      create: {
-        username: 'patrick-ammann',
-        email: 'patrick.ammann@intranet.ch',
-        password: patrickPassword,
-        firstName: 'Patrick',
-        lastName: 'Ammann'
-      }
-    });
-    console.log(`✅ Patrick Ammann-Benutzer erstellt/aktualisiert: ${patrickUser.username} (ID: ${patrickUser.id})`);
-
-    // Patrick mit Standard-Organisations-Admin-Rolle verknüpfen
-    let patrickStandardOrgRole = await prisma.userRole.findUnique({
-      where: {
-        userId_roleId: {
-          userId: patrickUser.id,
-          roleId: orgAdminRole.id
-        }
-      }
-    });
-    if (!patrickStandardOrgRole) {
-      await prisma.userRole.create({
-        data: {
-          userId: patrickUser.id,
-          roleId: orgAdminRole.id,
-          lastUsed: false
-        }
-      });
-      console.log(`✅ Patrick Ammann mit Standard-Organisations-Admin-Rolle verknüpft`);
-    }
-
-    // Patrick mit Org 1 Admin-Rolle verknüpfen
-    let patrickOrg1Role = await prisma.userRole.findUnique({
-      where: {
-        userId_roleId: {
-          userId: patrickUser.id,
           roleId: org1AdminRole.id
         }
       }
     });
-    if (!patrickOrg1Role) {
+    if (!adminOrg1Role) {
       await prisma.userRole.create({
         data: {
-          userId: patrickUser.id,
+          userId: adminUser.id,
           roleId: org1AdminRole.id,
           lastUsed: false
         }
       });
-      console.log(`✅ Patrick Ammann mit Org 1 (La Familia Hostel) Admin-Rolle verknüpft`);
+      console.log(`✅ Admin-Benutzer mit Org 1 (La Familia Hostel) Admin-Rolle verknüpft`);
     }
 
-    // Patrick mit Org 2 Admin-Rolle verknüpfen
-    let patrickOrg2Role = await prisma.userRole.findUnique({
+    // Admin mit Org 2 Admin-Rolle verknüpfen
+    let adminOrg2Role = await prisma.userRole.findUnique({
       where: {
         userId_roleId: {
-          userId: patrickUser.id,
+          userId: adminUser.id,
           roleId: org2AdminRole.id
         }
       }
     });
-    if (!patrickOrg2Role) {
+    if (!adminOrg2Role) {
       await prisma.userRole.create({
         data: {
-          userId: patrickUser.id,
+          userId: adminUser.id,
           roleId: org2AdminRole.id,
           lastUsed: false
         }
       });
-      console.log(`✅ Patrick Ammann mit Org 2 (Mosaik) Admin-Rolle verknüpft`);
+      console.log(`✅ Admin-Benutzer mit Org 2 (Mosaik) Admin-Rolle verknüpft`);
     }
 
-    // Setze Standard-Organisations-Rolle als lastUsed für Patrick
+    // Setze Standard-Organisations-Rolle als lastUsed für Admin
     await prisma.userRole.updateMany({
       where: {
-        userId: patrickUser.id,
+        userId: adminUser.id,
         lastUsed: true
       },
       data: {
@@ -1008,7 +890,7 @@ async function main() {
     await prisma.userRole.update({
       where: {
         userId_roleId: {
-          userId: patrickUser.id,
+          userId: adminUser.id,
           roleId: orgAdminRole.id
         }
       },
@@ -1016,7 +898,7 @@ async function main() {
         lastUsed: true
       }
     });
-    console.log(`🔒 Patrick Ammann ist jetzt Admin für alle Organisationen (fixer, unloschbarer Benutzer)`);
+    console.log(`🔒 Admin-Benutzer ist jetzt Admin für alle Organisationen (fixer, unloschbarer Benutzer)`);
 
     // ========================================
     // 7.2. WEITERE BENUTZER ERSTELLEN
@@ -1224,8 +1106,8 @@ async function main() {
 
     // Erstelle Demo-WorkTimes für Org 2 Clients, damit sie zur Org 2 gehören
     // (Clients werden über WorkTimes → User → Roles → Organization zugeordnet)
-    if (createdOrg2Clients.length > 0 && org2Branch && (rebecaUser || org2AdminUser)) {
-      const org2UserId = rebecaUser ? rebecaUser.id : org2AdminUser.id;
+    if (createdOrg2Clients.length > 0 && org2Branch && (rebecaUser || adminUser)) {
+      const org2UserId = rebecaUser ? rebecaUser.id : adminUser.id;
       const heute = new Date();
       const gestern = new Date(heute);
       gestern.setDate(heute.getDate() - 1);
