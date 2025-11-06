@@ -11,6 +11,7 @@ interface MarkdownPreviewProps {
     file?: File;
   }>;
   showImagePreview?: boolean;
+  onlyAttachments?: boolean; // Nur Anhänge rendern, ohne Text
 }
 
 const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ 
@@ -18,7 +19,8 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   className = "", 
   maxHeight = "150px",
   temporaryAttachments = [],
-  showImagePreview = false
+  showImagePreview = false,
+  onlyAttachments = false
 }) => {
   // Extrahiere alle Anhänge aus dem Markdown
   const extractAttachments = () => {
@@ -138,7 +140,143 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     );
   };
 
-  // Für Worktracker-Tooltips den gesamten Inhalt rendern
+  // Rendere Anhänge direkt als Vorschau
+  const renderInlineAttachments = () => {
+    const attachments = extractAttachments();
+    
+    // Filtere ungültige Anhänge heraus
+    const validAttachments = attachments.filter(attachment => {
+      let url = attachment.url;
+      if (attachment.isTemporary) {
+        const tempUrl = getTemporaryFileUrl(attachment.alt);
+        if (tempUrl) url = tempUrl;
+      }
+      return url && url !== "wird nach dem Erstellen hochgeladen";
+    });
+    
+    if (validAttachments.length === 0) return null;
+    
+    return (
+      <div className="flex flex-col gap-3 mt-2">
+        {validAttachments
+          .map((attachment, index) => {
+            let url: string = attachment.url || '';
+            if (attachment.isTemporary) {
+              const tempUrl = getTemporaryFileUrl(attachment.alt);
+              if (tempUrl) url = tempUrl;
+            }
+            
+            // Sicherstellen, dass url definiert ist
+            if (!url || url === "wird nach dem Erstellen hochgeladen") {
+              return null;
+            }
+            
+            // Prüfe Dateityp basierend auf URL und Dateiname
+            const fileName = attachment.alt.toLowerCase();
+            // Bilder: Prüfe auf Bild-Endungen oder API-Endpunkte für Attachments
+            const isImage = attachment.type === 'image' || 
+                           (url && url.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i)) ||
+                           fileName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) ||
+                           (url && (url.includes('/api/requests/attachments/') || url.includes('/api/tasks/attachments/')) && 
+                            (fileName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) || !fileName.endsWith('.pdf')));
+            const isPdf = (url && url.toLowerCase().endsWith('.pdf')) || 
+                         (url && url.match(/\.pdf(\?|$)/i)) ||
+                         fileName.endsWith('.pdf') ||
+                         (url && (url.includes('/api/requests/attachments/') || url.includes('/api/tasks/attachments/')) && fileName.endsWith('.pdf'));
+            const isExternalLink = url && url.match(/^https?:\/\//) && !isImage && !isPdf;
+            
+            return (
+              <div key={index} className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                {isImage ? (
+                  // Bild-Vorschau - groß und prominent
+                  <div>
+                    <img 
+                      src={url} 
+                      alt={attachment.alt} 
+                      className="w-full h-auto max-h-96 object-contain" 
+                      style={{ display: 'block' }}
+                    />
+                  </div>
+                ) : isPdf ? (
+                  // PDF-Vorschau
+                  <div className="p-3">
+                    <div className="flex items-center mb-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      <span className="text-sm font-medium dark:text-gray-200">{attachment.alt}</span>
+                      <a 
+                        href={url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="ml-auto text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                      >
+                        Öffnen
+                      </a>
+                    </div>
+                    <iframe 
+                      src={`${url}#view=FitH`} 
+                      className="w-full rounded border dark:border-gray-600"
+                      style={{ height: '400px' }}
+                      title={attachment.alt}
+                    />
+                  </div>
+                ) : isExternalLink ? (
+                  // Externer Link-Vorschau
+                  <div className="p-3">
+                    <div className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                      <a 
+                        href={url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                      >
+                        {attachment.alt || url}
+                      </a>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 break-all">
+                      {url}
+                    </div>
+                  </div>
+                ) : (
+                  // Andere Dateitypen
+                  <div className="p-3 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <a 
+                      href={url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {attachment.alt}
+                    </a>
+                  </div>
+                )}
+              </div>
+            );
+          })
+          .filter(Boolean)}
+      </div>
+    );
+  };
+
+  // Nur Anhänge rendern (ohne Text)
+  if (onlyAttachments) {
+    const attachments = renderInlineAttachments();
+    if (!attachments) return null;
+    return (
+      <div className={className}>
+        {attachments}
+      </div>
+    );
+  }
+
+  // Für Worktracker-Tooltips den gesamten Inhalt rendern mit Anhang-Vorschauen
   if (showImagePreview) {
     const style: React.CSSProperties = {};
     if (maxHeight === "none") {
@@ -149,9 +287,25 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       style.overflowY = 'auto';
     }
     
+    // Ersetze Markdown-Links und Bilder im Text durch Platzhalter, damit sie nicht doppelt angezeigt werden
+    let processedContent = content;
+    const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    
+    // Ersetze Bilder durch Text-Referenz
+    processedContent = processedContent.replace(imageRegex, (match, alt, url) => {
+      return `[Bild: ${alt}]`;
+    });
+    
+    // Ersetze Links durch Text mit Link-Referenz
+    processedContent = processedContent.replace(linkRegex, (match, alt, url) => {
+      return `${alt} [Link]`;
+    });
+    
     return (
       <div className={`markdown-preview ${className} dark:text-gray-200`} style={style}>
-        <div dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br/>') }} />
+        <div dangerouslySetInnerHTML={{ __html: processedContent.replace(/\n/g, '<br/>') }} />
+        {renderInlineAttachments()}
       </div>
     );
   }

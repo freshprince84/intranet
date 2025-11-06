@@ -56,10 +56,8 @@ const Dashboard: React.FC = () => {
 
         <div className="mt-2 sm:mt-4 md:mt-6 grid grid-cols-1 gap-4">
           {/* Anfragen-Bereich */}
-          <div className="dashboard-requests-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full shadow-sm">
-            <div>
-              <Requests />
-            </div>
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full">
+            <Requests />
           </div>
           
           {/* App-Download-Bereich */}

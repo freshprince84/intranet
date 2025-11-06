@@ -1,0 +1,522 @@
+[
+  {
+    "id": "279",
+    "user_id": "1",
+    "branch_id": "1"
+  },
+  {
+    "id": "280",
+    "user_id": "1",
+    "branch_id": "2"
+  },
+  {
+    "id": "281",
+    "user_id": "1",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "138",
+    "user_id": "3",
+    "branch_id": "1"
+  },
+  {
+    "id": "229",
+    "user_id": "3",
+    "branch_id": "2"
+  },
+  {
+    "id": "1338",
+    "user_id": "3",
+    "branch_id": "11"
+  },
+  {
+    "id": "230",
+    "user_id": "3",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "165",
+    "user_id": "5",
+    "branch_id": "1"
+  },
+  {
+    "id": "166",
+    "user_id": "5",
+    "branch_id": "2"
+  },
+  {
+    "id": "171",
+    "user_id": "5",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "5",
+    "user_id": "6",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "6",
+    "user_id": "7",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "7",
+    "user_id": "8",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "1426",
+    "user_id": "9",
+    "branch_id": "2"
+  },
+  {
+    "id": "137",
+    "user_id": "10",
+    "branch_id": "1"
+  },
+  {
+    "id": "10",
+    "user_id": "11",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "11",
+    "user_id": "12",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "12",
+    "user_id": "13",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "13",
+    "user_id": "14",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "14",
+    "user_id": "15",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "15",
+    "user_id": "17",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "16",
+    "user_id": "20",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "17",
+    "user_id": "24",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "18",
+    "user_id": "29",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "19",
+    "user_id": "30",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "21",
+    "user_id": "32",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "22",
+    "user_id": "33",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "23",
+    "user_id": "34",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "24",
+    "user_id": "35",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "25",
+    "user_id": "36",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "26",
+    "user_id": "38",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "133",
+    "user_id": "39",
+    "branch_id": "1"
+  },
+  {
+    "id": "783",
+    "user_id": "39",
+    "branch_id": "2"
+  },
+  {
+    "id": "28",
+    "user_id": "55",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "29",
+    "user_id": "56",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "30",
+    "user_id": "57",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "31",
+    "user_id": "58",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "134",
+    "user_id": "59",
+    "branch_id": "1"
+  },
+  {
+    "id": "163",
+    "user_id": "60",
+    "branch_id": "1"
+  },
+  {
+    "id": "164",
+    "user_id": "60",
+    "branch_id": "2"
+  },
+  {
+    "id": "159",
+    "user_id": "61",
+    "branch_id": "1"
+  },
+  {
+    "id": "160",
+    "user_id": "61",
+    "branch_id": "2"
+  },
+  {
+    "id": "214",
+    "user_id": "62",
+    "branch_id": "1"
+  },
+  {
+    "id": "36",
+    "user_id": "63",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "1379",
+    "user_id": "64",
+    "branch_id": "1"
+  },
+  {
+    "id": "168",
+    "user_id": "64",
+    "branch_id": "2"
+  },
+  {
+    "id": "38",
+    "user_id": "65",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "167",
+    "user_id": "66",
+    "branch_id": "2"
+  },
+  {
+    "id": "135",
+    "user_id": "67",
+    "branch_id": "1"
+  },
+  {
+    "id": "41",
+    "user_id": "68",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "789",
+    "user_id": "69",
+    "branch_id": "1"
+  },
+  {
+    "id": "175",
+    "user_id": "69",
+    "branch_id": "2"
+  },
+  {
+    "id": "220",
+    "user_id": "71",
+    "branch_id": "2"
+  },
+  {
+    "id": "176",
+    "user_id": "72",
+    "branch_id": "2"
+  },
+  {
+    "id": "233",
+    "user_id": "73",
+    "branch_id": "2"
+  },
+  {
+    "id": "455",
+    "user_id": "74",
+    "branch_id": "1"
+  },
+  {
+    "id": "182",
+    "user_id": "75",
+    "branch_id": "99999"
+  },
+  {
+    "id": "1406",
+    "user_id": "76",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "199",
+    "user_id": "77",
+    "branch_id": "1"
+  },
+  {
+    "id": "202",
+    "user_id": "78",
+    "branch_id": "99999"
+  },
+  {
+    "id": "205",
+    "user_id": "79",
+    "branch_id": "1"
+  },
+  {
+    "id": "207",
+    "user_id": "80",
+    "branch_id": "1"
+  },
+  {
+    "id": "219",
+    "user_id": "81",
+    "branch_id": "2"
+  },
+  {
+    "id": "437",
+    "user_id": "82",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "439",
+    "user_id": "83",
+    "branch_id": "1"
+  },
+  {
+    "id": "442",
+    "user_id": "83",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "462",
+    "user_id": "84",
+    "branch_id": "1"
+  },
+  {
+    "id": "463",
+    "user_id": "85",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "1431",
+    "user_id": "86",
+    "branch_id": "1"
+  },
+  {
+    "id": "983",
+    "user_id": "86",
+    "branch_id": "2"
+  },
+  {
+    "id": "754",
+    "user_id": "87",
+    "branch_id": "2"
+  },
+  {
+    "id": "1425",
+    "user_id": "88",
+    "branch_id": "1"
+  },
+  {
+    "id": "769",
+    "user_id": "89",
+    "branch_id": "1"
+  },
+  {
+    "id": "777",
+    "user_id": "90",
+    "branch_id": "1"
+  },
+  {
+    "id": "1413",
+    "user_id": "91",
+    "branch_id": "1"
+  },
+  {
+    "id": "786",
+    "user_id": "91",
+    "branch_id": "2"
+  },
+  {
+    "id": "1423",
+    "user_id": "92",
+    "branch_id": "1"
+  },
+  {
+    "id": "962",
+    "user_id": "93",
+    "branch_id": "1"
+  },
+  {
+    "id": "979",
+    "user_id": "94",
+    "branch_id": "1"
+  },
+  {
+    "id": "988",
+    "user_id": "95",
+    "branch_id": "2"
+  },
+  {
+    "id": "994",
+    "user_id": "96",
+    "branch_id": "2"
+  },
+  {
+    "id": "1385",
+    "user_id": "97",
+    "branch_id": "1"
+  },
+  {
+    "id": "1428",
+    "user_id": "97",
+    "branch_id": "2"
+  },
+  {
+    "id": "1209",
+    "user_id": "98",
+    "branch_id": "1"
+  },
+  {
+    "id": "1207",
+    "user_id": "98",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "1320",
+    "user_id": "99",
+    "branch_id": "1"
+  },
+  {
+    "id": "1324",
+    "user_id": "100",
+    "branch_id": "1"
+  },
+  {
+    "id": "1329",
+    "user_id": "101",
+    "branch_id": "2"
+  },
+  {
+    "id": "1424",
+    "user_id": "102",
+    "branch_id": "2"
+  },
+  {
+    "id": "1334",
+    "user_id": "103",
+    "branch_id": "1"
+  },
+  {
+    "id": "1361",
+    "user_id": "104",
+    "branch_id": "11"
+  },
+  {
+    "id": "1350",
+    "user_id": "104",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "1356",
+    "user_id": "105",
+    "branch_id": "11"
+  },
+  {
+    "id": "1351",
+    "user_id": "105",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "1363",
+    "user_id": "106",
+    "branch_id": "11"
+  },
+  {
+    "id": "1352",
+    "user_id": "106",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "1359",
+    "user_id": "107",
+    "branch_id": "11"
+  },
+  {
+    "id": "1353",
+    "user_id": "107",
+    "branch_id": "9999999"
+  },
+  {
+    "id": "1376",
+    "user_id": "108",
+    "branch_id": "11"
+  },
+  {
+    "id": "1387",
+    "user_id": "109",
+    "branch_id": "2"
+  },
+  {
+    "id": "1391",
+    "user_id": "110",
+    "branch_id": "1"
+  },
+  {
+    "id": "1395",
+    "user_id": "111",
+    "branch_id": "2"
+  },
+  {
+    "id": "1398",
+    "user_id": "112",
+    "branch_id": "1"
+  },
+  {
+    "id": "1397",
+    "user_id": "112",
+    "branch_id": "2"
+  }
+]

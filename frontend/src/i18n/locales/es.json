@@ -410,6 +410,10 @@
         "deleteError": "Error al eliminar la tarea",
         "fileError": "Error al procesar el archivo"
       }
+    },
+    "filters": {
+      "archive": "Archivo",
+      "current": "Actual"
     }
   },
   "users": {

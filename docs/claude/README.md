@@ -37,6 +37,9 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 - **[claude_usage_guidelines.md](claude_usage_guidelines.md)** - Richtlinien für die automatische Tool-Nutzung durch Claude
 - **[log_housekeeping.md](log_housekeeping.md)** - Automatisches Log-Management und Rotation-System für Claude Console Logs
 
+### UI-Standards und Container-Strukturen
+- **[container-structures.md](docs/container-structures.md)** - Konsistente Container-Strukturen für Seiten und Boxen - **MUSS bei neuen Seiten befolgt werden!**
+
 ## Memory Anchors
 
 Im Code werden spezielle Kommentare als "Memory Anchors" verwendet, um auf spezifische Stellen zu verweisen. Diese folgen dem Format:

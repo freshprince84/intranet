@@ -1228,20 +1228,26 @@ const Requests: React.FC = () => {
                   
                   // Haupt-Metadaten: Ersteller (erste Zeile in der Mitte)
                   if (visibleCardMetadata.has('requestedBy')) {
+                    // Benutzernamen auf 4 Zeichen kürzen
+                    const requestedByName = `${request.requestedBy.firstName} ${request.requestedBy.lastName}`;
+                    const shortenedName = requestedByName.length > 4 ? requestedByName.substring(0, 4) : requestedByName;
                     metadata.push({
                       icon: <UserIcon className="h-4 w-4" />,
                       label: t('requests.columns.requestedBy'),
-                      value: `${request.requestedBy.firstName} ${request.requestedBy.lastName}`,
+                      value: shortenedName,
                       section: 'main'
                     });
                   }
                   
                   // Verantwortlicher (zweite Zeile in der Mitte)
                   if (visibleCardMetadata.has('responsible')) {
+                    // Benutzernamen auf 4 Zeichen kürzen
+                    const responsibleName = `${request.responsible.firstName} ${request.responsible.lastName}`;
+                    const shortenedName = responsibleName.length > 4 ? responsibleName.substring(0, 4) : responsibleName;
                     metadata.push({
                       icon: <UserIcon className="h-4 w-4" />,
                       label: t('requests.columns.responsible'),
-                      value: `${request.responsible.firstName} ${request.responsible.lastName}`,
+                      value: shortenedName,
                       section: 'main-second' // Neue Section für zweite Zeile
                     });
                   }

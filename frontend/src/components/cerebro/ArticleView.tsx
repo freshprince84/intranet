@@ -434,6 +434,129 @@ const ArticleView: React.FC = () => {
                 {children}
               </code>
             );
+          },
+          // Custom-Komponente für Bilder mit Vorschau
+          img: ({ node, src, alt, ...props }: any) => {
+            if (!src) return null;
+            const isPdf = src.toLowerCase().endsWith('.pdf') || src.match(/\.pdf(\?|$)/i);
+            const isExternalLink = src.match(/^https?:\/\//);
+            
+            return (
+              <div className="my-4 border rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50">
+                <div className="flex items-center mb-2">
+                  <Icon.Image />
+                  <span className="ml-2 text-sm font-medium dark:text-gray-200">{alt || 'Bild'}</span>
+                </div>
+                {isPdf ? (
+                  <iframe 
+                    src={`${src}#view=FitH`} 
+                    className="w-full rounded border dark:border-gray-600"
+                    style={{ height: '400px' }}
+                    title={alt || 'PDF Vorschau'}
+                  />
+                ) : (
+                  <img 
+                    src={src} 
+                    alt={alt || ''} 
+                    className="max-w-full border rounded dark:border-gray-600" 
+                    style={{ maxHeight: '400px', objectFit: 'contain' }}
+                    {...props}
+                  />
+                )}
+              </div>
+            );
+          },
+          // Custom-Komponente für Links mit Vorschau
+          a: ({ node, href, children, ...props }: any) => {
+            if (!href) return <a {...props}>{children}</a>;
+            
+            const isPdf = href.toLowerCase().endsWith('.pdf') || href.match(/\.pdf(\?|$)/i);
+            const isImage = href.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i);
+            const isExternalLink = href.match(/^https?:\/\//);
+            
+            // Wenn es ein Bild-Link ist, rendere als Bild-Vorschau
+            if (isImage) {
+              return (
+                <div className="my-4 border rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50">
+                  <div className="flex items-center mb-2">
+                    <Icon.Image />
+                    <a 
+                      href={href} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="ml-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {children || href}
+                    </a>
+                  </div>
+                  <img 
+                    src={href} 
+                    alt={String(children) || 'Bild'} 
+                    className="max-w-full border rounded dark:border-gray-600" 
+                    style={{ maxHeight: '400px', objectFit: 'contain' }}
+                  />
+                </div>
+              );
+            }
+            
+            // Wenn es ein PDF-Link ist, rendere als PDF-Vorschau
+            if (isPdf) {
+              return (
+                <div className="my-4 border rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50">
+                  <div className="flex items-center mb-2">
+                    <Icon.PDF />
+                    <a 
+                      href={href} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="ml-2 text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+                    >
+                      {children || href}
+                    </a>
+                  </div>
+                  <iframe 
+                    src={`${href}#view=FitH`} 
+                    className="w-full rounded border dark:border-gray-600"
+                    style={{ height: '400px' }}
+                    title={String(children) || 'PDF Vorschau'}
+                  />
+                </div>
+              );
+            }
+            
+            // Für externe Links eine Vorschau-Box
+            if (isExternalLink) {
+              return (
+                <div className="my-3 border rounded-lg p-3 bg-gray-50 dark:bg-gray-700/50 inline-block">
+                  <div className="flex items-center">
+                    <Icon.ExternalLink />
+                    <a 
+                      href={href} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="ml-2 text-blue-600 dark:text-blue-400 hover:underline break-all"
+                      {...props}
+                    >
+                      {children || href}
+                    </a>
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 break-all">
+                    {href}
+                  </div>
+                </div>
+              );
+            }
+            
+            // Standard-Link-Rendering für interne Links
+            return (
+              <a 
+                href={href} 
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+                {...props}
+              >
+                {children}
+              </a>
+            );
           }
         }}
       >

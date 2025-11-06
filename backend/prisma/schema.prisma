@@ -177,6 +177,7 @@ model UsersBranches {
   id        Int      @id @default(autoincrement())
   userId    Int
   branchId  Int
+  lastUsed  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   branch    Branch   @relation(fields: [branchId], references: [id])

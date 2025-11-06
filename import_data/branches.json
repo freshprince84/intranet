@@ -1,0 +1,22 @@
+[
+  {
+    "old_id": "1",
+    "name": "Parque Poblado",
+    "address": "Calle 10 # 43 - 6"
+  },
+  {
+    "old_id": "2",
+    "name": "Manila",
+    "address": "Calle 11 # "
+  },
+  {
+    "old_id": "11",
+    "name": "Alianza Paisa",
+    "address": "Calle 10"
+  },
+  {
+    "old_id": "9999999",
+    "name": "Nowhere",
+    "address": "Nowhere yet"
+  }
+]
