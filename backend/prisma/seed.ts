@@ -375,46 +375,138 @@ async function main() {
     // ========================================
     console.log('🏢 Erstelle/Aktualisiere Organisationen...');
     
-    // Organisation 1: La Familia Hostel
-    const org1 = await prisma.organization.upsert({
-      where: { name: 'la-familia-hostel' },
-      update: {
-        displayName: 'La Familia Hostel',
-        domain: 'lafamilia-hostel.com',
-        isActive: true,
-        maxUsers: 1000,
-        subscriptionPlan: 'enterprise'
-      },
-      create: {
-        name: 'la-familia-hostel',
-        displayName: 'La Familia Hostel',
-        domain: 'lafamilia-hostel.com',
-        isActive: true,
-        maxUsers: 1000,
-        subscriptionPlan: 'enterprise'
-      }
+    // Zuerst prüfen, ob Organisationen mit den gewünschten IDs existieren
+    const existingOrg1 = await prisma.organization.findUnique({
+      where: { id: 1 }
     });
+    const existingOrg2 = await prisma.organization.findUnique({
+      where: { id: 2 }
+    });
+
+    // Organisation 1: La Familia Hostel
+    let org1;
+    if (existingOrg1 && existingOrg1.name !== 'la-familia-hostel') {
+      // Falls Organisation mit ID 1 existiert, aber falscher Name, löschen und neu erstellen
+      console.log(`⚠️ Organisation mit ID 1 existiert mit anderem Namen (${existingOrg1.name}), lösche...`);
+      await prisma.organization.delete({ where: { id: 1 } });
+    }
+    
+    // Prüfe ob Organisation mit Namen existiert
+    const org1ByName = await prisma.organization.findUnique({
+      where: { name: 'la-familia-hostel' }
+    });
+
+    if (org1ByName) {
+      // Falls Organisation mit Namen existiert, aktualisiere sie
+      org1 = await prisma.organization.update({
+        where: { name: 'la-familia-hostel' },
+        data: {
+          displayName: 'La Familia Hostel',
+          domain: 'lafamilia-hostel.com',
+          isActive: true,
+          maxUsers: 1000,
+          subscriptionPlan: 'enterprise'
+        }
+      });
+      // Falls ID nicht 1 ist, müssen wir die Sequenz anpassen
+      if (org1.id !== 1) {
+        console.log(`⚠️ Organisation hat ID ${org1.id}, setze Sequenz zurück...`);
+        // Setze Sequenz zurück, damit nächste Organisation ID 1 bekommt (falls org1.id > 1)
+        if (org1.id > 1) {
+          await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', ${org1.id - 1}, true)`;
+        }
+        // Lösche org1 und erstelle neu mit ID 1
+        await prisma.organization.delete({ where: { id: org1.id } });
+        await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 0, true)`;
+        org1 = await prisma.organization.create({
+          data: {
+            name: 'la-familia-hostel',
+            displayName: 'La Familia Hostel',
+            domain: 'lafamilia-hostel.com',
+            isActive: true,
+            maxUsers: 1000,
+            subscriptionPlan: 'enterprise'
+          }
+        });
+      }
+    } else {
+      // Falls keine Organisation existiert, erstelle mit ID 1
+      // Setze Sequenz zurück, falls nötig
+      const maxId = await prisma.$queryRaw<[{ max: bigint | null }]>`
+        SELECT MAX(id) as max FROM "Organization"
+      `;
+      if (maxId[0].max && maxId[0].max >= 1) {
+        await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 0, true)`;
+      }
+      org1 = await prisma.organization.create({
+        data: {
+          name: 'la-familia-hostel',
+          displayName: 'La Familia Hostel',
+          domain: 'lafamilia-hostel.com',
+          isActive: true,
+          maxUsers: 1000,
+          subscriptionPlan: 'enterprise'
+        }
+      });
+    }
     console.log(`✅ Organisation 1: ${org1.displayName} (ID: ${org1.id})`);
 
     // Organisation 2: Mosaik
-    const org2 = await prisma.organization.upsert({
-      where: { name: 'mosaik' },
-      update: {
-        displayName: 'Mosaik',
-        domain: 'mosaik.ch',
-        isActive: true,
-        maxUsers: 1000,
-        subscriptionPlan: 'enterprise'
-      },
-      create: {
-        name: 'mosaik',
-        displayName: 'Mosaik',
-        domain: 'mosaik.ch',
-        isActive: true,
-        maxUsers: 1000,
-        subscriptionPlan: 'enterprise'
-      }
+    let org2;
+    if (existingOrg2 && existingOrg2.name !== 'mosaik') {
+      // Falls Organisation mit ID 2 existiert, aber falscher Name, löschen und neu erstellen
+      console.log(`⚠️ Organisation mit ID 2 existiert mit anderem Namen (${existingOrg2.name}), lösche...`);
+      await prisma.organization.delete({ where: { id: 2 } });
+    }
+    
+    // Prüfe ob Organisation mit Namen existiert
+    const org2ByName = await prisma.organization.findUnique({
+      where: { name: 'mosaik' }
     });
+
+    if (org2ByName) {
+      // Falls Organisation mit Namen existiert, aktualisiere sie
+      org2 = await prisma.organization.update({
+        where: { name: 'mosaik' },
+        data: {
+          displayName: 'Mosaik',
+          domain: 'mosaik.ch',
+          isActive: true,
+          maxUsers: 1000,
+          subscriptionPlan: 'enterprise'
+        }
+      });
+      // Falls ID nicht 2 ist, müssen wir die Sequenz anpassen
+      if (org2.id !== 2) {
+        console.log(`⚠️ Organisation hat ID ${org2.id}, setze Sequenz zurück...`);
+        // Lösche org2 und erstelle neu mit ID 2
+        await prisma.organization.delete({ where: { id: org2.id } });
+        await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 1, true)`;
+        org2 = await prisma.organization.create({
+          data: {
+            name: 'mosaik',
+            displayName: 'Mosaik',
+            domain: 'mosaik.ch',
+            isActive: true,
+            maxUsers: 1000,
+            subscriptionPlan: 'enterprise'
+          }
+        });
+      }
+    } else {
+      // Falls keine Organisation existiert, erstelle mit ID 2
+      await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 1, true)`;
+      org2 = await prisma.organization.create({
+        data: {
+          name: 'mosaik',
+          displayName: 'Mosaik',
+          domain: 'mosaik.ch',
+          isActive: true,
+          maxUsers: 1000,
+          subscriptionPlan: 'enterprise'
+        }
+      });
+    }
     console.log(`✅ Organisation 2: ${org2.displayName} (ID: ${org2.id})`);
 
     // Standard-Organisation erstellen oder aktualisieren (für Rückwärtskompatibilität)
@@ -441,7 +533,7 @@ async function main() {
     // ========================================
     console.log('📋 Erstelle Rollen für Organisationen...');
 
-    // Org 1 Rollen: Admin, Recepcion (statt User), Hamburger
+    // Org 1 Rollen: Admin, User, Hamburger
     const org1AdminRole = await prisma.role.upsert({
       where: {
         name_organizationId: {
@@ -460,23 +552,23 @@ async function main() {
     });
     console.log(`✅ Org 1 Admin-Rolle: ${org1AdminRole.name} (ID: ${org1AdminRole.id})`);
 
-    const org1RecepcionRole = await prisma.role.upsert({
+    const org1UserRole = await prisma.role.upsert({
       where: {
         name_organizationId: {
-          name: 'Recepcion',
+          name: 'User',
           organizationId: org1.id
         }
       },
       update: {
-        description: 'Recepcion-Rolle für La Familia Hostel'
+        description: 'User-Rolle für La Familia Hostel'
       },
       create: {
-        name: 'Recepcion',
-        description: 'Recepcion-Rolle für La Familia Hostel',
+        name: 'User',
+        description: 'User-Rolle für La Familia Hostel',
         organizationId: org1.id
       }
     });
-    console.log(`✅ Org 1 Recepcion-Rolle: ${org1RecepcionRole.name} (ID: ${org1RecepcionRole.id})`);
+    console.log(`✅ Org 1 User-Rolle: ${org1UserRole.name} (ID: ${org1UserRole.id})`);
 
     const org1HamburgerRole = await prisma.role.upsert({
       where: {
@@ -496,7 +588,7 @@ async function main() {
     });
     console.log(`✅ Org 1 Hamburger-Rolle: ${org1HamburgerRole.name} (ID: ${org1HamburgerRole.id})`);
 
-    // Org 2 Rollen: Admin, Beratung (statt User), Hamburger
+    // Org 2 Rollen: Admin, User, Hamburger
     const org2AdminRole = await prisma.role.upsert({
       where: {
         name_organizationId: {
@@ -515,23 +607,23 @@ async function main() {
     });
     console.log(`✅ Org 2 Admin-Rolle: ${org2AdminRole.name} (ID: ${org2AdminRole.id})`);
 
-    const org2BeratungRole = await prisma.role.upsert({
+    const org2UserRole = await prisma.role.upsert({
       where: {
         name_organizationId: {
-          name: 'Beratung',
+          name: 'User',
           organizationId: org2.id
         }
       },
       update: {
-        description: 'Beratung-Rolle für Mosaik'
+        description: 'User-Rolle für Mosaik'
       },
       create: {
-        name: 'Beratung',
-        description: 'Beratung-Rolle für Mosaik',
+        name: 'User',
+        description: 'User-Rolle für Mosaik',
         organizationId: org2.id
       }
     });
-    console.log(`✅ Org 2 Beratung-Rolle: ${org2BeratungRole.name} (ID: ${org2BeratungRole.id})`);
+    console.log(`✅ Org 2 User-Rolle: ${org2UserRole.name} (ID: ${org2UserRole.id})`);
 
     const org2HamburgerRole = await prisma.role.upsert({
       where: {
@@ -580,8 +672,8 @@ async function main() {
     ALL_BUTTONS.forEach(button => org1AdminPermissionMap[`button_${button}`] = 'both');
     await ensureAllPermissionsForRole(org1AdminRole.id, org1AdminPermissionMap);
 
-    // Org 1 Recepcion: gleiche Berechtigungen wie User
-    await ensureAllPermissionsForRole(org1RecepcionRole.id, userPermissionMap);
+    // Org 1 User: gleiche Berechtigungen wie User
+    await ensureAllPermissionsForRole(org1UserRole.id, userPermissionMap);
 
     // Org 1 Hamburger: gleiche Berechtigungen wie Hamburger
     await ensureAllPermissionsForRole(org1HamburgerRole.id, hamburgerPermissionMap);
@@ -593,8 +685,8 @@ async function main() {
     ALL_BUTTONS.forEach(button => org2AdminPermissionMap[`button_${button}`] = 'both');
     await ensureAllPermissionsForRole(org2AdminRole.id, org2AdminPermissionMap);
 
-    // Org 2 Beratung: gleiche Berechtigungen wie User
-    await ensureAllPermissionsForRole(org2BeratungRole.id, userPermissionMap);
+    // Org 2 User: gleiche Berechtigungen wie User
+    await ensureAllPermissionsForRole(org2UserRole.id, userPermissionMap);
 
     // Org 2 Hamburger: gleiche Berechtigungen wie Hamburger
     await ensureAllPermissionsForRole(org2HamburgerRole.id, hamburgerPermissionMap);
@@ -752,7 +844,7 @@ async function main() {
         lastName: '',
         roles: {
           create: {
-            roleId: org1RecepcionRole.id,
+            roleId: org1UserRole.id,
             lastUsed: true
           }
         }
@@ -773,7 +865,7 @@ async function main() {
         lastName: 'Benitez',
         roles: {
           create: {
-            roleId: org2BeratungRole.id,
+            roleId: org2UserRole.id,
             lastUsed: true
           }
         }
@@ -794,7 +886,7 @@ async function main() {
         lastName: 'Di Biaso',
         roles: {
           create: {
-            roleId: org2BeratungRole.id,
+            roleId: org2UserRole.id,
             lastUsed: true
           }
         }
@@ -807,37 +899,44 @@ async function main() {
     // ========================================
     console.log('🏢 Erstelle/Aktualisiere Niederlassungen...');
     
-    const branches = ['Hauptsitz', 'Manila', 'Parque Poblado'];
-    for (const branchName of branches) {
+    // La Familia Hostel Branches: Parque Poblado & Manila
+    const org1Branches = ['Parque Poblado', 'Manila'];
+    for (const branchName of org1Branches) {
       const branch = await prisma.branch.upsert({
         where: { name: branchName },
-        update: {},
+        update: {
+          organizationId: org1.id
+        },
         create: {
-          name: branchName
+          name: branchName,
+          organizationId: org1.id
         }
       });
-      console.log(`✅ Niederlassung: ${branch.name}`);
-      
-      // Verknüpfe Admin mit jeder Niederlassung (nur wenn nicht bereits verknüpft)
-      const existingConnection = await prisma.usersBranches.findUnique({
-        where: { 
-          userId_branchId: { 
-            userId: adminUser.id, 
-            branchId: branch.id 
-          } 
-        }
-      });
-
-      if (!existingConnection) {
-        await prisma.usersBranches.create({
-          data: {
-            userId: adminUser.id,
-            branchId: branch.id
-          }
-        });
-        console.log(`🔗 Admin mit ${branch.name} verknüpft`);
-      }
+      console.log(`✅ Niederlassung Org 1: ${branch.name} (Org ID: ${branch.organizationId})`);
     }
+
+    // Mosaik Branches: Sonnenhalden
+    const org2Branch = await prisma.branch.upsert({
+      where: { name: 'Sonnenhalden' },
+      update: {
+        organizationId: org2.id
+      },
+      create: {
+        name: 'Sonnenhalden',
+        organizationId: org2.id
+      }
+    });
+    console.log(`✅ Niederlassung Org 2: ${org2Branch.name} (Org ID: ${org2Branch.organizationId})`);
+    
+    // Hauptsitz für Standard-Organisation (Rückwärtskompatibilität)
+    const hauptsitzBranch = await prisma.branch.upsert({
+      where: { name: 'Hauptsitz' },
+      update: {},
+      create: {
+        name: 'Hauptsitz'
+      }
+    });
+    console.log(`✅ Niederlassung: ${hauptsitzBranch.name}`);
 
     // ========================================
     // 9. STANDARD-EINSTELLUNGEN
