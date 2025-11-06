@@ -905,7 +905,7 @@ async function main() {
     // ========================================
     console.log('👥 Erstelle weitere Benutzer...');
 
-    // Rebeca Benitez für Org 2
+    // Rebeca Benitez für Org 2 (NUR Org 2!)
     const rebecaPassword = await bcrypt.hash('admin123', 10);
     const rebecaUser = await prisma.user.upsert({
       where: { username: 'rebeca-benitez' },
@@ -915,16 +915,82 @@ async function main() {
         email: 'rebeca.benitez@mosaik.ch',
         password: rebecaPassword,
         firstName: 'Rebeca',
-        lastName: 'Benitez',
-        roles: {
-          create: {
-            roleId: org2UserRole.id,
-            lastUsed: true
+        lastName: 'Benitez'
+      }
+    });
+    
+    // Stelle sicher, dass Rebeca NUR Org 2 Rollen hat
+    // Entferne alle Rollen, die nicht zu Org 2 gehören
+    const rebecaUserRoles = await prisma.userRole.findMany({
+      where: { userId: rebecaUser.id },
+      include: {
+        role: {
+          select: {
+            id: true,
+            organizationId: true
           }
         }
       }
     });
-    console.log(`✅ Rebeca Benitez-Benutzer: ${rebecaUser.username}`);
+    
+    for (const userRole of rebecaUserRoles) {
+      if (userRole.role.organizationId !== org2.id) {
+        await prisma.userRole.delete({
+          where: {
+            userId_roleId: {
+              userId: rebecaUser.id,
+              roleId: userRole.role.id
+            }
+          }
+        });
+        console.log(`   🗑️ Entfernt: Rebeca Benitez Rolle für Org ${userRole.role.organizationId}`);
+      }
+    }
+    
+    // Stelle sicher, dass Rebeca die Org 2 User-Rolle hat
+    const rebecaOrg2UserRole = await prisma.userRole.findUnique({
+      where: {
+        userId_roleId: {
+          userId: rebecaUser.id,
+          roleId: org2UserRole.id
+        }
+      }
+    });
+    
+    if (!rebecaOrg2UserRole) {
+      await prisma.userRole.create({
+        data: {
+          userId: rebecaUser.id,
+          roleId: org2UserRole.id,
+          lastUsed: true
+        }
+      });
+      console.log(`   ✅ Rebeca Benitez mit Org 2 User-Rolle verknüpft`);
+    } else {
+      // Setze lastUsed für Org 2 Rolle
+      await prisma.userRole.updateMany({
+        where: {
+          userId: rebecaUser.id
+        },
+        data: {
+          lastUsed: false
+        }
+      });
+      await prisma.userRole.update({
+        where: {
+          userId_roleId: {
+            userId: rebecaUser.id,
+            roleId: org2UserRole.id
+          }
+        },
+        data: {
+          lastUsed: true
+        }
+      });
+      console.log(`   ✅ Rebeca Benitez Org 2 User-Rolle als lastUsed gesetzt`);
+    }
+    
+    console.log(`✅ Rebeca Benitez-Benutzer: ${rebecaUser.username} (nur Org 2)`);
 
     // Christina Di Biaso für Org 2
     const christinaPassword = await bcrypt.hash('admin123', 10);
@@ -1273,7 +1339,6 @@ async function main() {
     console.log(`   - Standard-Organisation (für Rückwärtskompatibilität)`);
     console.log(`   - Rollen pro Organisation: Admin, User, Hamburger`);
     console.log(`   - Admin-Benutzer je Organisation`);
-    console.log(`   - Patrick in Org 1 (User)`);
     console.log(`   - Rebeca Benitez & Christina Di Biaso in Org 2 (User)`);
     console.log(`   - 5 Clients für Org 2 (Mosaik)`);
     console.log(`   - 3 Niederlassungen (Parque Poblado, Manila, Sonnenhalden)`);
