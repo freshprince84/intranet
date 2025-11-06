@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   TrashIcon, 
   ExclamationTriangleIcon, 
@@ -30,6 +31,7 @@ interface DatabaseLog {
 }
 
 const DatabaseManagement: React.FC = () => {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [tables, setTables] = useState<ResetableTable[]>([]);
   const [logs, setLogs] = useState<DatabaseLog[]>([]);
@@ -74,7 +76,7 @@ const DatabaseManagement: React.FC = () => {
       setTables(response.data);
     } catch (error) {
       console.error('Fehler beim Laden der Tabellen:', error);
-      toast.error('Fehler beim Laden der verfügbaren Tabellen');
+      toast.error(t('database.loadTablesError'));
     }
   };
 
@@ -84,7 +86,7 @@ const DatabaseManagement: React.FC = () => {
       const response = await axiosInstance.get(API_ENDPOINTS.DATABASE.LOGS);
       setLogs(response.data);
     } catch (error) {
-      console.error('Fehler beim Laden der Logs:', error);
+      console.error(t('database.loadLogsError'), error);
     } finally {
       setLogsLoading(false);
     }
@@ -98,12 +100,12 @@ const DatabaseManagement: React.FC = () => {
 
   const confirmTableReset = async () => {
     if (!selectedTable || !tablePassword) {
-      toast.error('Passwort ist erforderlich');
+      toast.error(t('database.passwordRequired'));
       return;
     }
 
     if (tableCountdown > 0) {
-      toast.error(`Bitte warten Sie noch ${tableCountdown} Sekunden`);
+      toast.error(t('database.waitSeconds', { seconds: tableCountdown }));
       return;
     }
 
@@ -114,13 +116,13 @@ const DatabaseManagement: React.FC = () => {
         adminPassword: tablePassword
       });
       
-      toast.success(`Tabelle ${selectedTable} wurde erfolgreich zurückgesetzt und mit Seed-Daten befüllt`);
+      toast.success(t('database.resetTableSuccess', { tableName: selectedTable }));
       setShowTableConfirm(false);
       setSelectedTable(null);
       setTablePassword('');
       loadLogs(); // Logs neu laden
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Zurücksetzen der Tabelle');
+      toast.error(error.response?.data?.message || t('database.resetTableError'));
     } finally {
       setLoading(false);
     }
@@ -140,12 +142,12 @@ const DatabaseManagement: React.FC = () => {
 
   const confirmDeleteDemoClients = async () => {
     if (!demoPassword) {
-      toast.error('Passwort ist erforderlich');
+      toast.error(t('database.passwordRequired'));
       return;
     }
 
     if (demoCountdown > 0) {
-      toast.error(`Bitte warten Sie noch ${demoCountdown} Sekunden`);
+      toast.error(t('database.waitSeconds', { seconds: demoCountdown }));
       return;
     }
 
@@ -155,12 +157,12 @@ const DatabaseManagement: React.FC = () => {
         adminPassword: demoPassword
       });
       
-      toast.success('Demo-Clients wurden erfolgreich gelöscht');
+      toast.success(t('database.deleteDemoClientsSuccess'));
       setShowDemoConfirm(false);
       setDemoPassword('');
       loadLogs(); // Logs neu laden
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Löschen der Demo-Clients');
+      toast.error(error.response?.data?.message || t('database.deleteDemoClientsError'));
     } finally {
       setLoading(false);
     }
@@ -195,10 +197,10 @@ const DatabaseManagement: React.FC = () => {
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6 text-center">
         <ExclamationTriangleIcon className="h-12 w-12 text-red-600 dark:text-red-400 mx-auto mb-4" />
         <p className="text-red-800 dark:text-red-200 font-medium">
-          Keine Berechtigung
+          {t('database.noPermission')}
         </p>
         <p className="text-red-600 dark:text-red-400 text-sm mt-2">
-          Diese Funktionen sind nur für Administratoren verfügbar.
+          {t('database.adminOnly')}
         </p>
       </div>
     );
@@ -212,13 +214,13 @@ const DatabaseManagement: React.FC = () => {
           <ExclamationTriangleIcon className="h-6 w-6 text-yellow-600 dark:text-yellow-400 mr-3 mt-1" />
           <div>
             <h3 className="text-lg font-medium text-yellow-800 dark:text-yellow-200 mb-2">
-              ⚠️ ACHTUNG: Tabellen zurücksetzen
+              {t('database.warningTitle')}
             </h3>
             <ul className="text-yellow-700 dark:text-yellow-300 text-sm space-y-1">
-              <li>• Diese Funktionen löschen alle Daten aus den gewählten Tabellen</li>
-              <li>• Standard-Daten werden automatisch durch Seed-Dateien wiederhergestellt</li>
-              <li>• Nur Tabellen mit Seed-Daten können zurückgesetzt werden</li>
-              <li>• Alle Operationen werden protokolliert</li>
+              <li>• {t('database.warning1')}</li>
+              <li>• {t('database.warning2')}</li>
+              <li>• {t('database.warning3')}</li>
+              <li>• {t('database.warning4')}</li>
             </ul>
           </div>
         </div>
@@ -228,7 +230,7 @@ const DatabaseManagement: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4 flex items-center">
           <TrashIcon className="h-5 w-5 mr-2" />
-          Tabellen mit Seed-Daten zurücksetzen
+          {t('database.resetTablesTitle')}
         </h3>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -244,8 +246,8 @@ const DatabaseManagement: React.FC = () => {
                   table.danger === 'medium' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300' :
                   'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300'
                 }`}>
-                  {table.danger === 'high' ? 'Hoch' : 
-                   table.danger === 'medium' ? 'Mittel' : 'Niedrig'}
+                  {table.danger === 'high' ? t('database.danger.high') : 
+                   table.danger === 'medium' ? t('database.danger.medium') : t('database.danger.low')}
                 </span>
               </div>
               
@@ -253,7 +255,7 @@ const DatabaseManagement: React.FC = () => {
               
               <div className="flex items-center text-sm mb-3">
                 <CheckCircleIcon className="h-4 w-4 mr-1" />
-                Seed-Daten werden wiederhergestellt
+                {t('database.seedDataRestored')}
               </div>
               
               <div className="space-y-2">
@@ -263,7 +265,7 @@ const DatabaseManagement: React.FC = () => {
                     onClick={handleDeleteDemoClients}
                     disabled={loading}
                     className="w-full p-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50 transition-colors flex items-center justify-center"
-                    title="Demo-Clients entfernen"
+                    title={t('database.deleteDemoClients')}
                   >
                     <TrashIcon className="h-5 w-5" />
                   </button>
@@ -273,7 +275,7 @@ const DatabaseManagement: React.FC = () => {
                   onClick={() => handleTableReset(table.name)}
                   disabled={loading}
                   className="w-full p-2 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 transition-colors flex items-center justify-center"
-                  title="Zurücksetzen & neu befüllen"
+                  title={t('database.resetAndRefill')}
                 >
                   <ArrowPathIcon className="h-5 w-5" />
                 </button>
@@ -288,22 +290,22 @@ const DatabaseManagement: React.FC = () => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
             <DocumentTextIcon className="h-5 w-5 mr-2" />
-            Database-Operationen (Audit-Log)
+            {t('database.operationsTitle')}
           </h3>
           <button
             onClick={loadLogs}
             disabled={logsLoading}
             className="p-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
-            title="Aktualisieren"
+            title={t('common.refresh')}
           >
             <ArrowPathIcon className="h-5 w-5" />
           </button>
         </div>
         
         {logsLoading ? (
-          <div className="text-center py-4">Lade Logs...</div>
+          <div className="text-center py-4">{t('database.loadingLogs')}</div>
         ) : logs.length === 0 ? (
-          <div className="text-center py-4 text-gray-500 dark:text-gray-400">Keine Logs verfügbar</div>
+          <div className="text-center py-4 text-gray-500 dark:text-gray-400">{t('database.noLogsAvailable')}</div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">
             {logs.map((log, index) => (
@@ -313,11 +315,11 @@ const DatabaseManagement: React.FC = () => {
               >
                 <div className="flex items-center space-x-3">
                   <span className="text-gray-500 dark:text-gray-400">
-                    {new Date(log.timestamp).toLocaleString('de-DE')}
+                    {new Date(log.timestamp).toLocaleString()}
                   </span>
                   <span className="font-medium text-gray-900 dark:text-white">{log.operation}</span>
                   <span className={`font-medium ${getStatusColor(log.status)}`}>
-                    {log.status === 'success' ? '✓' : log.status === 'error' ? '✗' : '•'} {log.status}
+                    {log.status === 'success' ? '✓' : log.status === 'error' ? '✗' : '•'} {t(`database.logStatus.${log.status}` as 'database.logStatus.start' | 'database.logStatus.success' | 'database.logStatus.error')}
                   </span>
                 </div>
                 {log.error && (
@@ -338,22 +340,22 @@ const DatabaseManagement: React.FC = () => {
             <div className="flex items-center mb-4">
               <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 mr-2" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Tabelle zurücksetzen bestätigen
+                {t('database.confirmResetTitle')}
               </h3>
             </div>
             
             <div className="mb-4">
               <p className="text-gray-700 dark:text-gray-300 mb-2">
-                Sie sind dabei, die Tabelle <strong>{tables.find(t => t.name === selectedTable)?.displayName}</strong> zurückzusetzen.
+                {t('database.confirmResetMessage', { tableName: tables.find(t => t.name === selectedTable)?.displayName })}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Alle Daten werden gelöscht und durch Seed-Daten ersetzt.
+                {t('database.confirmResetWarning')}
               </p>
               
               {tableCountdown > 0 && (
                 <div className="flex items-center text-orange-600 dark:text-orange-400 mb-3">
                   <ClockIcon className="h-4 w-4 mr-1" />
-                  Bedenkzeit: {tableCountdown} Sekunden
+                  {t('database.reflectionTime', { seconds: tableCountdown })}
                 </div>
               )}
             </div>
@@ -361,14 +363,14 @@ const DatabaseManagement: React.FC = () => {
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 <LockClosedIcon className="h-4 w-4 inline mr-1" />
-                Admin-Passwort zur Bestätigung:
+                {t('database.adminPasswordLabel')}
               </label>
               <input
                 type="password"
                 value={tablePassword}
                 onChange={(e) => setTablePassword(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                placeholder="Ihr Admin-Passwort"
+                placeholder={t('database.adminPasswordPlaceholder')}
               />
             </div>
             
@@ -378,14 +380,14 @@ const DatabaseManagement: React.FC = () => {
                 disabled={loading || tableCountdown > 0 || !tablePassword}
                 className="flex-1 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50 transition-colors"
               >
-                {loading ? 'Wird zurückgesetzt...' : 'Bestätigen'}
+                {loading ? t('database.resetting') : t('common.confirm')}
               </button>
               <button
                 onClick={cancelTableReset}
                 disabled={loading}
                 className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
               >
-                Abbrechen
+                {t('common.cancel')}
               </button>
             </div>
           </div>
@@ -399,22 +401,22 @@ const DatabaseManagement: React.FC = () => {
             <div className="flex items-center mb-4">
               <ExclamationTriangleIcon className="h-6 w-6 text-orange-600 mr-2" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Demo-Clients entfernen bestätigen
+                {t('database.confirmDeleteDemoClientsTitle')}
               </h3>
             </div>
             
             <div className="mb-4">
               <p className="text-gray-700 dark:text-gray-300 mb-2">
-                Sie sind dabei, <strong>nur die Demo-Clients</strong> zu löschen.
+                {t('database.confirmDeleteDemoClientsMessage')}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Die Demo-Clients werden dauerhaft gelöscht und NICHT wiederhergestellt.
+                {t('database.confirmDeleteDemoClientsWarning')}
               </p>
               
               {demoCountdown > 0 && (
                 <div className="flex items-center text-orange-600 dark:text-orange-400 mb-3">
                   <ClockIcon className="h-4 w-4 mr-1" />
-                  Bedenkzeit: {demoCountdown} Sekunden
+                  {t('database.reflectionTime', { seconds: demoCountdown })}
                 </div>
               )}
             </div>
@@ -422,14 +424,14 @@ const DatabaseManagement: React.FC = () => {
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 <LockClosedIcon className="h-4 w-4 inline mr-1" />
-                Admin-Passwort zur Bestätigung:
+                {t('database.adminPasswordLabel')}
               </label>
               <input
                 type="password"
                 value={demoPassword}
                 onChange={(e) => setDemoPassword(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                placeholder="Ihr Admin-Passwort"
+                placeholder={t('database.adminPasswordPlaceholder')}
               />
             </div>
             
@@ -439,14 +441,14 @@ const DatabaseManagement: React.FC = () => {
                 disabled={loading || demoCountdown > 0 || !demoPassword}
                 className="flex-1 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 disabled:opacity-50 transition-colors"
               >
-                {loading ? 'Wird gelöscht...' : 'Bestätigen'}
+                {loading ? t('database.deleting') : t('common.confirm')}
               </button>
               <button
                 onClick={cancelDeleteDemoClients}
                 disabled={loading}
                 className="flex-1 px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
               >
-                Abbrechen
+                {t('common.cancel')}
               </button>
             </div>
           </div>

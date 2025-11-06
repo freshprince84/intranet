@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getTest, getAllBranches } from '../controllers/branchController';
 import { authMiddleware } from '../middleware/auth';
+import { organizationMiddleware } from '../middleware/organization';
 
 const router = Router();
 
@@ -12,7 +13,11 @@ router.get('/debug', (_req, res) => {
 // Test-Route ohne Auth mit Controller
 router.get('/test', getTest);
 
-// Alle Niederlassungen abrufen - ohne Auth zum Testen
+// Alle Routen erfordern Authentifizierung und Organisation-Kontext
+router.use(authMiddleware);
+router.use(organizationMiddleware);
+
+// Alle Niederlassungen abrufen - nur für authentifizierte User der Organisation
 router.get('/', getAllBranches);
 
 export default router; 

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { getDataIsolationFilter } from '../middleware/organization';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { de } from 'date-fns/locale';
 
@@ -18,8 +19,11 @@ export const getMonthlyReports = async (req: AuthenticatedRequest, res: Response
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
+    // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
+    const reportFilter = getDataIsolationFilter(req as any, 'monthlyReport');
+    
     const reports = await prisma.monthlyConsultationReport.findMany({
-      where: { userId },
+      where: reportFilter,
       include: {
         items: {
           include: {
@@ -180,7 +184,8 @@ export const generateMonthlyReport = async (req: AuthenticatedRequest, res: Resp
           recipient,
           totalHours,
           currency: 'CHF',
-          status: 'GENERATED'
+          status: 'GENERATED',
+          organizationId: req.organizationId || null
         }
       });
 

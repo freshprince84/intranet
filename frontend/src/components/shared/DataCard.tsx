@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import MarkdownPreview from '../MarkdownPreview.tsx';
 
@@ -38,6 +39,7 @@ export interface DataCardProps {
 
 // Komponente für expandierbare Beschreibung
 const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = useState(false);
   const [needsExpansion, setNeedsExpansion] = useState(false);
   const firstLineRef = useRef<HTMLParagraphElement>(null);
@@ -185,7 +187,7 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
               setIsExpanded(true);
             }}
             className="flex-shrink-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-            title="Beschreibung aufklappen"
+            title={t('dataCard.expandDescription')}
           >
             <span className="text-base lg:text-lg xl:text-xl">&lt;</span>
           </button>
@@ -197,7 +199,7 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
               setIsExpanded(false);
             }}
             className="flex-shrink-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-            title="Beschreibung einklappen"
+            title={t('dataCard.collapseDescription')}
           >
             <ChevronDownIcon className="h-4 w-4 lg:h-5 lg:w-5 xl:h-6 xl:w-6" />
           </button>
@@ -241,9 +243,9 @@ const DataCard: React.FC<DataCardProps> = ({
       className={`bg-white dark:bg-gray-800 rounded-lg ${borderClass} p-3 sm:p-4 md:p-5 lg:p-6 shadow-sm hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''} w-full overflow-hidden ${className}`}
       onClick={onClick}
     >
-      {/* Container für Titel links und Mitte/Rechts - Grid-Layout mit FIXEN Spaltenbreiten */}
-      <div className="grid items-start gap-4 mb-2 min-w-0" style={{ gridTemplateColumns: '200px 180px auto' }}>
-        {/* Titel links - fixe Breite, unabhängig vom Inhalt */}
+      {/* Container für Titel links und alle Metadaten rechts - Grid-Layout mit 2 Spalten */}
+      <div className="grid items-start gap-4 mb-2 min-w-0" style={{ gridTemplateColumns: 'auto 1fr' }}>
+        {/* Titel links - flexibel, nimmt nur benötigten Platz */}
         <div className="min-w-0 pr-2 overflow-hidden">
           {typeof title === 'string' ? (
             <h3 className="font-semibold text-gray-900 dark:text-white truncate" style={{ fontSize: 'clamp(0.9375rem, 1.2vw + 0.5rem, 1.25rem)' }}>
@@ -259,11 +261,13 @@ const DataCard: React.FC<DataCardProps> = ({
           )}
         </div>
         
-        {/* Mitte: Solicitado por + Responsable (untereinander, bündig) - FIXE Position, unabhängig vom Titel */}
-        <div className="flex flex-col gap-1 sm:gap-1.5">
+        {/* Rechts: Alle Metadaten zusammen (Solicitado por, Responsable, Datum, Status) - rechtsbündig ausgerichtet */}
+        <div className="flex items-start justify-end gap-3 sm:gap-4 flex-nowrap min-w-0">
+          {/* Container für Solicitado por + Responsable (untereinander) */}
+          <div className="flex flex-col gap-1 sm:gap-1.5 flex-shrink-0">
             {/* Solicitado por (erste Zeile) */}
             {metadata.filter(item => item.section === 'main' || (!item.section && item.label === 'Angefragt von')).length > 0 && (
-              <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
                 {metadata
                   .filter(item => item.section === 'main' || (!item.section && item.label === 'Angefragt von'))
                   .map((item, index) => {
@@ -273,7 +277,7 @@ const DataCard: React.FC<DataCardProps> = ({
                       <React.Fragment key={index}>
                         {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
                         <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>
-                        <span className={`${item.className || 'text-gray-900 dark:text-white'}`}>
+                        <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
                           {typeof item.value === 'string' ? item.value : item.value}
                         </span>
                       </React.Fragment>
@@ -284,7 +288,7 @@ const DataCard: React.FC<DataCardProps> = ({
             
             {/* Responsable (zweite Zeile, bündig unter Solicitado por) */}
             {metadata.filter(item => item.section === 'main-second' || (!item.section && item.label === 'Verantwortlicher')).length > 0 && (
-              <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400">
+              <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
                 {metadata
                   .filter(item => item.section === 'main-second' || (!item.section && item.label === 'Verantwortlicher'))
                   .map((item, index) => {
@@ -294,7 +298,7 @@ const DataCard: React.FC<DataCardProps> = ({
                       <React.Fragment key={index}>
                         {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
                         <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>
-                        <span className={`${item.className || 'text-gray-900 dark:text-white'}`}>
+                        <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
                           {typeof item.value === 'string' ? item.value : item.value}
                         </span>
                       </React.Fragment>
@@ -302,57 +306,55 @@ const DataCard: React.FC<DataCardProps> = ({
                   })}
               </div>
             )}
-        </div>
-        
-        {/* Rechts: Datum + Status (mit mehr Abstand) - sicherstellen dass innerhalb der Card */}
-        <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-shrink-0">
-            {/* Datum (right-inline) */}
-            {metadata.filter(item => item.section === 'right-inline').map((item, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400"
-              >
-                {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                <span className={item.className || 'text-gray-900 dark:text-white'}>
-                  {typeof item.value === 'string' ? item.value : item.value}
-                </span>
-              </div>
-            ))}
-            
-            {/* Status - sicherstellen dass innerhalb der Card bleibt */}
-            {status && (
-              <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0 min-w-0">
-                {/* Status-Shift-Button (links) */}
-                {status.onPreviousClick ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      status.onPreviousClick?.();
-                    }}
-                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                    title="Vorheriger Status"
-                  >
-                    <ChevronLeftIcon className="h-6 w-6" />
-                  </button>
-                ) : null}
-                <span className={`px-1.5 sm:px-2 md:px-2.5 py-0.5 sm:py-0.5 md:py-1 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-medium rounded-full ${status.color} ${status.className || ''} whitespace-nowrap flex-shrink-0`}>
-                  {status.label}
-                </span>
-                {/* Status-Shift-Button (rechts) */}
-                {status.onNextClick ? (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      status.onNextClick?.();
-                    }}
-                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                    title="Nächster Status"
-                  >
-                    <ChevronRightIcon className="h-6 w-6" />
-                  </button>
-                ) : null}
-              </div>
-            )}
+          </div>
+          
+          {/* Datum (right-inline) */}
+          {metadata.filter(item => item.section === 'right-inline').map((item, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 flex-shrink-0 whitespace-nowrap"
+            >
+              {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+              <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
+                {typeof item.value === 'string' ? item.value : item.value}
+              </span>
+            </div>
+          ))}
+          
+          {/* Status - sicherstellen dass innerhalb der Card bleibt */}
+          {status && (
+            <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0 min-w-0">
+              {/* Status-Shift-Button (links) */}
+              {status.onPreviousClick ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    status.onPreviousClick?.();
+                  }}
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
+                  title="Vorheriger Status"
+                >
+                  <ChevronLeftIcon className="h-6 w-6" />
+                </button>
+              ) : null}
+              <span className={`px-1.5 sm:px-2 md:px-2.5 py-0.5 sm:py-0.5 md:py-1 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-medium rounded-full ${status.color} ${status.className || ''} whitespace-nowrap flex-shrink-0`}>
+                {status.label}
+              </span>
+              {/* Status-Shift-Button (rechts) */}
+              {status.onNextClick ? (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    status.onNextClick?.();
+                  }}
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
+                  title="Nächster Status"
+                >
+                  <ChevronRightIcon className="h-6 w-6" />
+                </button>
+              ) : null}
+            </div>
+          )}
         </div>
       </div>
       

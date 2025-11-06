@@ -1148,6 +1148,88 @@ Für detaillierte Anleitung zur Implementierung der Card-Ansicht siehe:
 Die Requests-Komponente dient als Referenz-Implementierung:
 - `frontend/src/components/Requests.tsx`
 
+### Card-Ansicht mit Edit-Button (Standard-Pattern)
+
+**WICHTIG:** Alle Komponenten, die Daten bearbeitbar machen, müssen das Standard-Pattern für Card-Ansicht mit Edit-Button verwenden. Direkt editierbare Felder in der Ansicht sind NICHT erlaubt.
+
+#### Standard-Pattern
+
+1. **Card-Ansicht**: Zeigt Informationen schreibgeschützt in einer Card an
+2. **Edit-Button**: Öffnet ein Edit-Sidepane für Bearbeitung
+3. **Keine direkte Bearbeitung**: Felder in der Card-Ansicht sind NICHT direkt editierbar
+
+#### Card-Struktur mit Edit-Button
+
+```jsx
+<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow hover:shadow-md transition-shadow mb-6">
+  <div className="flex items-start justify-between">
+    <div className="flex-1">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+            <Icon className="h-5 w-5 mr-2" />
+            {data.title}
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {data.subtitle}
+          </p>
+        </div>
+        {canEdit && (
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
+            title={t('common.edit')}
+          >
+            <PencilIcon className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Informationen schreibgeschützt anzeigen */}
+      <div className="space-y-3">
+        {data.field1 && (
+          <div>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('field.label')}:</span>
+            <span className="ml-2 text-sm text-gray-900 dark:text-white">{data.field1}</span>
+          </div>
+        )}
+        {/* Weitere Felder... */}
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+#### Edit-Sidepane
+
+Der Edit-Button öffnet ein Sidepane (Desktop) oder Modal (Mobile) für die Bearbeitung:
+
+- **Standard-Pattern**: Wie `CreateTaskModal.tsx` / `CreateRequestModal.tsx`
+- **Komponente**: EditOrganizationModal.tsx, EditRoleModal.tsx, etc.
+- **Features**: 
+  - Mobile (<640px): Modal
+  - Desktop (≥640px, ≤1070px): Sidepane MIT Overlay
+  - Large Desktop (>1070px): Sidepane OHNE Overlay
+
+#### Referenz-Implementierungen
+
+- **Card-Ansicht mit Edit-Button**: `frontend/src/components/RoleManagementTab.tsx` (RoleCard-Komponente)
+- **Edit-Sidepane**: `frontend/src/components/organization/EditOrganizationModal.tsx`
+- **Standard-Pattern**: `frontend/src/components/CreateTaskModal.tsx` / `CreateRequestModal.tsx`
+
+#### Verbindliche Regel
+
+**NIEMALS direkt editierbare Felder in der Hauptansicht verwenden!** Alle Bearbeitungen erfolgen über:
+1. Card-Ansicht mit Infos (schreibgeschützt)
+2. Edit-Button → Edit-Sidepane öffnet sich
+3. Bearbeitung im Sidepane
+4. Nach Speichern: Card-Ansicht aktualisiert sich
+
+**Beispiele für korrekte Implementierung:**
+- ✅ `RoleManagementTab.tsx` - Card-Ansicht mit Edit-Button
+- ✅ `OrganizationSettings.tsx` - Card-Ansicht mit Edit-Button (NEU)
+- ❌ NICHT erlaubt: Direkt editierbare Input-Felder in der Hauptansicht
+
 ## Page-Design
 
 Alle Hauptseiten müssen dem folgenden Layout entsprechen:

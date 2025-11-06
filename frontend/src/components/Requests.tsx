@@ -713,7 +713,7 @@ const Requests: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="p-4">Lädt...</div>;
+  if (loading) return <div className="p-4">{t('common.loading')}</div>;
   if (error) return <div className="p-4 text-red-600">{error}</div>;
 
   // Filtern und sortieren der Spalten gemäß den Benutzereinstellungen
@@ -757,7 +757,7 @@ const Requests: React.FC = () => {
         data-view-mode={viewMode}
       >
         {/* Neu angeordnete UI-Elemente in einer Zeile */}
-        <div className={`flex items-center mb-4 justify-between ${viewMode === 'cards' ? '-mx-6 px-6' : ''}`}>
+        <div className="flex items-center mb-4 justify-between px-3 sm:px-4 md:px-6">
           {/* Linke Seite: "Neuer Request"-Button */}
           <div className="flex items-center">
             {hasPermission('requests', 'write', 'table') && (
@@ -925,7 +925,7 @@ const Requests: React.FC = () => {
 
         {/* Filter-Pane */}
         {isFilterModalOpen && (
-          <div className={viewMode === 'cards' ? '-mx-6 px-6' : ''}>
+          <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
             <FilterPane
             columns={[
               { id: 'title', label: t('requests.columns.title') },
@@ -945,7 +945,7 @@ const Requests: React.FC = () => {
         )}
         
         {/* Gespeicherte Filter als Tags anzeigen */}
-        <div className={viewMode === 'cards' ? '-mx-6 px-6' : ''}>
+        <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
           <SavedFilterTags
           tableId={REQUESTS_TABLE_ID}
           onSelectFilter={applyFilterConditions}
@@ -959,7 +959,7 @@ const Requests: React.FC = () => {
 
         {/* Conditional Rendering: Table oder Cards */}
         {viewMode === 'table' ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -973,7 +973,7 @@ const Requests: React.FC = () => {
                     return (
                       <th 
                         key={columnId}
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-move relative"
+                        className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-move relative"
                         draggable
                         onDragStart={() => handleDragStart(columnId)}
                         onDragOver={(e) => handleDragOver(e, columnId)}
@@ -997,9 +997,9 @@ const Requests: React.FC = () => {
                   if (columnId === 'dueDate') sortKey = 'dueDate';
 
                   return (
-                    <th 
-                      key={columnId}
-                      className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider relative ${sortKey ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''} ${columnId !== 'actions' ? 'cursor-move' : ''}`}
+                      <th 
+                        key={columnId}
+                        className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider relative ${sortKey ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''} ${columnId !== 'actions' ? 'cursor-move' : ''}`}
                       onClick={sortKey ? () => handleSort(sortKey) : undefined}
                       draggable={columnId !== 'actions'}
                       onDragStart={columnId !== 'actions' ? () => handleDragStart(columnId) : undefined}
@@ -1046,7 +1046,7 @@ const Requests: React.FC = () => {
                         switch (columnId) {
                           case 'title':
                             return (
-                              <td key={columnId} className="px-6 py-4">
+                              <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4">
                                 <div className="text-sm text-gray-900 dark:text-gray-200 break-words flex items-center">
                                   {request.title}
                                   {request.description && (
@@ -1204,7 +1204,7 @@ const Requests: React.FC = () => {
         </div>
         ) : (
           /* Card-Ansicht - ohne Box-Schattierung, Cards auf voller Breite */
-          <div className="-mx-6">
+          <div className="-mx-3 sm:-mx-4 md:-mx-6">
             {filteredAndSortedRequests.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
                 <DocumentTextIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />

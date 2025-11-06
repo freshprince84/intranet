@@ -5,7 +5,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma, RequestStatus, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
-import { getDataIsolationFilter } from '../middleware/organization';
+import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
@@ -170,6 +170,29 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
         const responsibleId = parseInt(responsible_id, 10);
         const branchId = parseInt(branch_id, 10);
 
+        // Validierung: Prüfe ob User-IDs zur Organisation gehören
+        const userFilter = getUserOrganizationFilter(req);
+
+        const requesterUser = await prisma.user.findFirst({
+            where: {
+                ...userFilter,
+                id: requesterId
+            }
+        });
+        if (!requesterUser) {
+            return res.status(400).json({ message: 'Antragsteller gehört nicht zu Ihrer Organisation' });
+        }
+
+        const responsibleUser = await prisma.user.findFirst({
+            where: {
+                ...userFilter,
+                id: responsibleId
+            }
+        });
+        if (!responsibleUser) {
+            return res.status(400).json({ message: 'Verantwortlicher gehört nicht zu Ihrer Organisation' });
+        }
+
         const request = await prisma.request.create({
             data: {
                 title,
@@ -179,7 +202,8 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
                 responsibleId,
                 branchId,
                 dueDate: due_date ? new Date(due_date) : null,
-                createTodo: create_todo
+                createTodo: create_todo,
+                organizationId: req.organizationId || null
             },
             include: {
                 requester: {
@@ -214,8 +238,8 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
         if (requesterId !== responsibleId) {
             await createNotificationIfEnabled({
                 userId: request.requesterId,
-                targetId: request.id,
-                targetType: 'request',
+                relatedEntityId: request.id,
+                relatedEntityType: 'create',
                 type: NotificationType.request,
                 title: `Neuer Request: ${request.title}`,
                 message: `Du hast einen neuen Request erstellt: ${request.title}`
@@ -223,8 +247,8 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
 
             await createNotificationIfEnabled({
                 userId: request.responsibleId,
-                targetId: request.id,
-                targetType: 'request',
+                relatedEntityId: request.id,
+                relatedEntityType: 'create',
                 type: NotificationType.request,
                 title: `Neuer Request: ${request.title}`,
                 message: `Dir wurde ein neuer Request zugewiesen: ${request.title}`
@@ -253,9 +277,13 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
             create_todo
         } = req.body;
 
-        // Prüfe, ob der Request existiert
-        const existingRequest = await prisma.request.findUnique({
-            where: { id: parseInt(id) },
+        // Prüfe, ob der Request existiert und zur Organisation gehört
+        const isolationFilter = getDataIsolationFilter(req as any, 'request');
+        const existingRequest = await prisma.request.findFirst({
+            where: {
+                id: parseInt(id),
+                ...isolationFilter
+            },
             include: {
                 requester: {
                     select: userSelect
@@ -271,6 +299,33 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
 
         if (!existingRequest) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
+        }
+
+        // Validierung: Prüfe ob User-IDs zur Organisation gehören (wenn geändert)
+        if (requested_by_id) {
+            const userFilter = getUserOrganizationFilter(req);
+            const requesterUser = await prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: parseInt(requested_by_id, 10)
+                }
+            });
+            if (!requesterUser) {
+                return res.status(400).json({ message: 'Antragsteller gehört nicht zu Ihrer Organisation' });
+            }
+        }
+
+        if (responsible_id) {
+            const userFilter = getUserOrganizationFilter(req);
+            const responsibleUser = await prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: parseInt(responsible_id, 10)
+                }
+            });
+            if (!responsibleUser) {
+                return res.status(400).json({ message: 'Verantwortlicher gehört nicht zu Ihrer Organisation' });
+            }
         }
 
         // Update den Request
@@ -304,8 +359,8 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
             // Benachrichtigung für den Ersteller
             await createNotificationIfEnabled({
                 userId: updatedRequest.requesterId,
-                targetId: updatedRequest.id,
-                targetType: 'request',
+                relatedEntityId: updatedRequest.id,
+                relatedEntityType: 'status',
                 type: NotificationType.request,
                 title: `Statusänderung: ${updatedRequest.title}`,
                 message: `Der Status deines Requests "${updatedRequest.title}" wurde zu "${status}" geändert.`
@@ -317,8 +372,8 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
             // Benachrichtigung für den alten Verantwortlichen
             await createNotificationIfEnabled({
                 userId: existingRequest.responsibleId,
-                targetId: updatedRequest.id,
-                targetType: 'request',
+                relatedEntityId: updatedRequest.id,
+                relatedEntityType: 'update',
                 type: NotificationType.request,
                 title: `Verantwortlichkeit geändert: ${updatedRequest.title}`,
                 message: `Die Verantwortlichkeit für den Request "${updatedRequest.title}" wurde geändert.`
@@ -327,8 +382,8 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
             // Benachrichtigung für den neuen Verantwortlichen
             await createNotificationIfEnabled({
                 userId: parseInt(responsible_id),
-                targetId: updatedRequest.id,
-                targetType: 'request',
+                relatedEntityId: updatedRequest.id,
+                relatedEntityType: 'update',
                 type: NotificationType.request,
                 title: `Neuer Request: ${updatedRequest.title}`,
                 message: `Dir wurde ein Request zugewiesen: ${updatedRequest.title}`
@@ -357,8 +412,8 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
                 // Benachrichtigung für den Verantwortlichen
                 await createNotificationIfEnabled({
                     userId: updatedRequest.responsibleId,
-                    targetId: task.id,
-                    targetType: 'task',
+                    relatedEntityId: task.id,
+                    relatedEntityType: 'create',
                     type: NotificationType.task,
                     title: `Neuer Task: ${task.title}`,
                     message: `Dir wurde ein neuer Task zugewiesen: ${task.title}`
@@ -448,9 +503,13 @@ export const deleteRequest = async (req: Request<{ id: string }>, res: Response)
     try {
         const { id } = req.params;
 
-        // Prüfe, ob der Request existiert
-        const request = await prisma.request.findUnique({
-            where: { id: parseInt(id) },
+        // Prüfe, ob der Request existiert und zur Organisation gehört
+        const isolationFilter = getDataIsolationFilter(req as any, 'request');
+        const request = await prisma.request.findFirst({
+            where: {
+                id: parseInt(id),
+                ...isolationFilter
+            },
             include: {
                 requester: {
                     select: userSelect
@@ -468,8 +527,8 @@ export const deleteRequest = async (req: Request<{ id: string }>, res: Response)
         // Benachrichtigung für den Ersteller
         await createNotificationIfEnabled({
             userId: request.requesterId,
-            targetId: request.id,
-            targetType: 'request',
+            relatedEntityId: request.id,
+            relatedEntityType: 'delete',
             type: NotificationType.request,
             title: `Request gelöscht: ${request.title}`,
             message: `Dein Request "${request.title}" wurde gelöscht.`

@@ -991,8 +991,8 @@ const Worktracker: React.FC = () => {
                     {/* Auf mobilen Geräten wird diese Reihenfolge angezeigt - Tasks oben, Zeiterfassung unten */}
                     <div className="block sm:hidden w-full">
                     {/* Tasks */}
-                        <div className="dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
-                            <div className="flex items-center justify-between">
+                        <div className="dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full mb-20">
+                            <div className="flex items-center justify-between px-3 sm:px-4 md:px-6">
                                 {/* Linke Seite: "Neuer Task"-Button */}
                                 <div className="flex items-center">
                                     {hasPermission('tasks', 'write', 'table') && (
@@ -1133,7 +1133,8 @@ const Worktracker: React.FC = () => {
 
                             {/* Filter-Pane */}
                             {isFilterModalOpen && (
-                                <FilterPane
+                                <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
+                                    <FilterPane
                                     columns={[...availableColumns, ...filterOnlyColumns]}
                                     onApply={applyFilterConditions}
                                     onReset={resetFilterConditions}
@@ -1141,10 +1142,12 @@ const Worktracker: React.FC = () => {
                                     savedOperators={filterLogicalOperators}
                                     tableId={TODOS_TABLE_ID}
                                 />
+                                </div>
                             )}
                             
                             {/* Gespeicherte Filter als Tags anzeigen */}
-                            <SavedFilterTags
+                            <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
+                                <SavedFilterTags
                                 tableId={TODOS_TABLE_ID}
                                 onSelectFilter={applyFilterConditions}
                                 onReset={resetFilterConditions}
@@ -1153,11 +1156,12 @@ const Worktracker: React.FC = () => {
                                 onFilterChange={handleFilterChange}
                                 defaultFilterName={t('tasks.filters.current')}
                             />
+                            </div>
                             
                             {/* Tabelle oder Cards */}
                             {viewMode === 'table' ? (
                                 /* Tabellen-Ansicht */
-                                <div className="overflow-x-auto">
+                                <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead className="bg-gray-50 dark:bg-gray-700">
                                             <tr>
@@ -1169,7 +1173,7 @@ const Worktracker: React.FC = () => {
                                                         <th
                                                             key={columnId}
                                                             scope="col"
-                                                            className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
                                                             draggable={true}
                                                             onDragStart={() => handleDragStart(columnId)}
                                                             onDragOver={(e) => handleDragOver(e, columnId)}
@@ -1195,7 +1199,7 @@ const Worktracker: React.FC = () => {
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                             {loading ? (
                                                 <tr>
-                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
+                                                    <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-4 text-center">
                                                         <div className="flex justify-center">
                                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
                                                         </div>
@@ -1233,7 +1237,7 @@ const Worktracker: React.FC = () => {
                                                     switch (columnId) {
                                                         case 'title':
                                                             return (
-                                                                <td key={columnId} className="px-6 py-4">
+                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4">
                                                                     <div className="text-sm text-gray-900 dark:text-gray-200 break-words flex items-center">
                                                                         {task.title}
                                                                             {task.description && (
@@ -1254,7 +1258,7 @@ const Worktracker: React.FC = () => {
                                                                 );
                                                             case 'status':
                                                                 return (
-                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                    <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status, 'task')} dark:bg-opacity-30 status-col`}>
                                                                             {task.status}
                                                                         </span>
@@ -1262,7 +1266,7 @@ const Worktracker: React.FC = () => {
                                                                 );
                                                             case 'responsibleAndQualityControl':
                                                                 return (
-                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                    <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                         <div className="flex flex-col">
                                                                             <div className="text-sm text-gray-900 dark:text-gray-200">
                                                                                 <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('tasks.columns.responsible')}:</span>
@@ -1279,7 +1283,7 @@ const Worktracker: React.FC = () => {
                                                                 );
                                                             case 'branch':
                                                                 return (
-                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                    <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                         <div className="text-sm text-gray-900 dark:text-gray-200">{task.branch.name}</div>
                                                                     </td>
                                                                 );
@@ -1287,7 +1291,7 @@ const Worktracker: React.FC = () => {
                                                                 const expiryStatusForDate = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                                                 const expiryColorsForDate = getExpiryColorClasses(expiryStatusForDate);
                                                                 return (
-                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                    <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                         <div className={`text-sm ${expiryStatusForDate !== 'none' ? expiryColorsForDate.textClass : 'text-gray-900 dark:text-gray-200'}`}>
                                                                             {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
                                                                             {expiryStatusForDate !== 'none' && (
@@ -1298,7 +1302,7 @@ const Worktracker: React.FC = () => {
                                                                 );
                                                             case 'actions':
                                                                 return (
-                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                    <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                         <div className="flex space-x-2 action-buttons">
                                                                             <div className="status-buttons">
                                                                                 {renderStatusButtons(task)}
@@ -1341,7 +1345,7 @@ const Worktracker: React.FC = () => {
                             </div>
                             ) : (
                                 /* Card-Ansicht - ohne Box-Schattierung, Cards auf voller Breite */
-                                <div className="-mx-6">
+                                <div className="-mx-3 sm:-mx-4 md:-mx-6">
                                     {loading ? (
                                         <div className="flex justify-center py-12">
                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
@@ -1502,8 +1506,8 @@ const Worktracker: React.FC = () => {
                         </div>
                         
                         {/* Tasks - vollständiger Inhalt für Desktop-Ansicht */}
-                        <div className="dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 w-full mb-20">
-                            <div className="flex items-center mb-4 justify-between">
+                        <div className="dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full mb-20">
+                            <div className="flex items-center mb-4 justify-between px-3 sm:px-4 md:px-6">
                                 {/* Linke Seite: "Neuer Task"-Button */}
                                 <div className="flex items-center">
                                     {hasPermission('tasks', 'write', 'table') && (
@@ -1641,7 +1645,8 @@ const Worktracker: React.FC = () => {
 
                             {/* Filter-Pane */}
                             {isFilterModalOpen && (
-                                <FilterPane
+                                <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
+                                    <FilterPane
                                     columns={[...availableColumns, ...filterOnlyColumns]}
                                     onApply={applyFilterConditions}
                                     onReset={resetFilterConditions}
@@ -1649,6 +1654,7 @@ const Worktracker: React.FC = () => {
                                     savedOperators={filterLogicalOperators}
                                     tableId={TODOS_TABLE_ID}
                                 />
+                                </div>
                             )}
 
                             {/* Gespeicherte Filter als Tags anzeigen */}
@@ -1677,7 +1683,7 @@ const Worktracker: React.FC = () => {
                                                         <th 
                                                             key={columnId}
                                                             scope="col"
-                                                            className={`px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
+                                                            className={`px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider ${columnId === dragOverColumn ? 'bg-blue-100 dark:bg-blue-800' : ''}`}
                                                             draggable={true}
                                                             onDragStart={() => handleDragStart(columnId)}
                                                             onDragOver={(e) => handleDragOver(e, columnId)}
@@ -1703,7 +1709,7 @@ const Worktracker: React.FC = () => {
                                         <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                             {loading ? (
                                                 <tr>
-                                                    <td colSpan={visibleColumnIds.length} className="px-6 py-4 text-center">
+                                                    <td colSpan={visibleColumnIds.length} className="px-3 sm:px-4 md:px-6 py-4 text-center">
                                                         <div className="flex justify-center">
                                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
                                                         </div>
@@ -1741,7 +1747,7 @@ const Worktracker: React.FC = () => {
                                                     switch (columnId) {
                                                         case 'title':
                                                             return (
-                                                                <td key={columnId} className="px-6 py-4">
+                                                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4">
                                                                     <div className="text-sm text-gray-900 dark:text-gray-200 break-words flex items-center">
                                                                         {task.title}
                                                                             {task.description && (
@@ -1762,7 +1768,7 @@ const Worktracker: React.FC = () => {
                                                                 );
                                                             case 'status':
                                                                 return (
-                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                    <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(task.status, 'task')} dark:bg-opacity-30 status-col`}>
                                                                             {task.status}
                                                                         </span>
@@ -1770,7 +1776,7 @@ const Worktracker: React.FC = () => {
                                                                 );
                                                             case 'responsibleAndQualityControl':
                                                                 return (
-                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                    <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                         <div className="flex flex-col">
                                                                             <div className="text-sm text-gray-900 dark:text-gray-200">
                                                                                 <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">{t('tasks.columns.responsible')}:</span>
@@ -1787,7 +1793,7 @@ const Worktracker: React.FC = () => {
                                                                 );
                                                             case 'branch':
                                                                 return (
-                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                    <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                         <div className="text-sm text-gray-900 dark:text-gray-200">{task.branch.name}</div>
                                                                     </td>
                                                                 );
@@ -1795,7 +1801,7 @@ const Worktracker: React.FC = () => {
                                                                 const expiryStatusForDate2 = getExpiryStatus(task.dueDate, 'todo', undefined, task.title, task.description);
                                                                 const expiryColorsForDate2 = getExpiryColorClasses(expiryStatusForDate2);
                                                                 return (
-                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                    <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                         <div className={`text-sm ${expiryStatusForDate2 !== 'none' ? expiryColorsForDate2.textClass : 'text-gray-900 dark:text-gray-200'}`}>
                                                                             {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : '-'}
                                                                             {expiryStatusForDate2 !== 'none' && (
@@ -1806,7 +1812,7 @@ const Worktracker: React.FC = () => {
                                                                 );
                                                             case 'actions':
                                                                 return (
-                                                                    <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                                                    <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                         <div className="flex space-x-2 action-buttons">
                                                                             <div className="status-buttons">
                                                                                 {renderStatusButtons(task)}
@@ -1849,7 +1855,7 @@ const Worktracker: React.FC = () => {
                             </div>
                             ) : (
                                 /* Card-Ansicht - ohne Box-Schattierung, Cards auf voller Breite */
-                                <div className="-mx-6">
+                                <div className="-mx-3 sm:-mx-4 md:-mx-6">
                                     {loading ? (
                                         <div className="flex justify-center py-12">
                                             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>

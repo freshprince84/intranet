@@ -204,7 +204,7 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto py-4">
+    <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
       {/* Warnung wenn Profil unvollständig */}
       {isProfileIncomplete() && (
         <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4 mb-6">

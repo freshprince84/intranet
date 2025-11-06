@@ -26,13 +26,13 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const { email, password, username, first_name, last_name } = req.body;
         // Email als Username verwenden wenn kein Username angegeben
         const finalUsername = username || email;
-        // Finde die Hamburger-Rolle mit ID 999
-        const hamburgerRole = yield prisma.role.findUnique({
-            where: { id: 999 }
+        // Finde die User-Rolle mit ID 2 (Standard-Rolle für neue Benutzer)
+        const userRole = yield prisma.role.findUnique({
+            where: { id: 2 }
         });
-        if (!hamburgerRole) {
-            console.error('Hamburger-Rolle nicht gefunden');
-            return res.status(500).json({ message: 'Hamburger-Rolle nicht gefunden' });
+        if (!userRole) {
+            console.error('User-Rolle nicht gefunden');
+            return res.status(500).json({ message: 'User-Rolle nicht gefunden' });
         }
         // Prüfe ob Benutzer bereits existiert
         const existingUser = yield prisma.user.findFirst({
@@ -60,7 +60,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     create: {
                         role: {
                             connect: {
-                                id: hamburgerRole.id
+                                id: userRole.id
                             }
                         },
                         lastUsed: true
@@ -82,7 +82,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Erstelle Token
         const token = jsonwebtoken_1.default.sign({
             userId: user.id,
-            roleId: hamburgerRole.id
+            roleId: userRole.id
         }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '24h' });
         const userResponse = {
             id: user.id,

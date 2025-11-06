@@ -1,24 +1,23 @@
 import { Router } from 'express';
 import { getAllRoles, getRoleById, createRole, updateRole, deleteRole, getRolePermissions } from '../controllers/roleController';
 import { authMiddleware } from '../middleware/auth';
+import { organizationMiddleware } from '../middleware/organization';
 
 const router = Router();
 
+// Authentifizierung und Organisation-Kontext zuerst setzen
+router.use(authMiddleware);
+router.use(organizationMiddleware);
+
 // Erweiterte Authentifizierungs-Middleware für Rollen-Routen mit korrekter Berechtigungsprüfung
+// Auth und Organization sind bereits durch router.use() gesetzt
 const roleAuthMiddleware = (req, res, next) => {
-  // Standard-Authentifizierung durchführen
-  authMiddleware(req, res, (err) => {
-    if (err) {
-      console.error('Authentifizierungsfehler:', err);
-      return res.status(401).json({ message: 'Authentifizierungsfehler', error: err.message });
-    }
-    
     // Für GET-Anfragen erlauben wir den Zugriff, wenn der Benutzer eine Read-Berechtigung hat
     if (req.method === 'GET') {
       const hasRoleReadPermission = req.user && req.user.roles && req.user.roles.some(userRole => {
         if (userRole.lastUsed) {
           return userRole.role.permissions.some(permission => 
-            permission.entity === 'usermanagement' && 
+            permission.entity === 'organization_management' && 
             ['read', 'both'].includes(permission.accessLevel)
           );
         }
@@ -26,10 +25,10 @@ const roleAuthMiddleware = (req, res, next) => {
       });
 
       if (hasRoleReadPermission) {
-        console.log('Benutzer hat Leseberechtigung für Usermanagement');
+        console.log('Benutzer hat Leseberechtigung für Organization Management');
         return next();
       } else {
-        console.log('Benutzer hat KEINE Leseberechtigung für Usermanagement');
+        console.log('Benutzer hat KEINE Leseberechtigung für Organization Management');
         return res.status(403).json({ message: 'Leseberechtigung für Rollen erforderlich' });
       }
     }
@@ -38,7 +37,7 @@ const roleAuthMiddleware = (req, res, next) => {
     const hasRoleWritePermission = req.user && req.user.roles && req.user.roles.some(userRole => {
       if (userRole.lastUsed) {
         return userRole.role.permissions.some(permission => 
-          permission.entity === 'usermanagement' && 
+          permission.entity === 'organization_management' && 
           (permission.entityType === 'table' || permission.entityType === 'page') &&
           ['write', 'both'].includes(permission.accessLevel)
         );
@@ -47,13 +46,12 @@ const roleAuthMiddleware = (req, res, next) => {
     });
     
     if (!hasRoleWritePermission) {
-      console.log('Benutzer hat KEINE Schreibberechtigung für Rollen/Usermanagement');
+      console.log('Benutzer hat KEINE Schreibberechtigung für Rollen/Organization Management');
       return res.status(403).json({ message: 'Schreibberechtigung für Rollen erforderlich für diese Operation' });
     }
     
-    console.log('Benutzer hat Schreibberechtigung für Rollen/Usermanagement');
+    console.log('Benutzer hat Schreibberechtigung für Rollen/Organization Management');
     next();
-  });
 };
 
 // Alle Rollen abrufen

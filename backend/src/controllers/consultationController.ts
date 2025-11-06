@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { getDataIsolationFilter } from '../middleware/organization';
 
 const prisma = new PrismaClient();
 
@@ -15,6 +16,18 @@ export const startConsultation = async (req: Request, res: Response) => {
 
     if (!clientId) {
       return res.status(400).json({ message: 'Client ist erforderlich' });
+    }
+
+    // Validierung: Prüfe ob Client zur Organisation gehört
+    const clientFilter = getDataIsolationFilter(req as any, 'client');
+    const client = await prisma.client.findFirst({
+      where: {
+        ...clientFilter,
+        id: Number(clientId)
+      }
+    });
+    if (!client) {
+      return res.status(400).json({ message: 'Client gehört nicht zu Ihrer Organisation' });
     }
 
     // Prüfe, ob bereits eine aktive Zeiterfassung existiert
@@ -38,7 +51,8 @@ export const startConsultation = async (req: Request, res: Response) => {
         branchId: Number(branchId),
         clientId: Number(clientId),
         notes: notes || null,
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        organizationId: req.organizationId || null
       },
       include: {
         branch: true,
@@ -108,8 +122,12 @@ export const getConsultations = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
+    // Datenisolation: Verwende getDataIsolationFilter für WorkTimes
+    // Zeigt alle WorkTimes der Organisation (wenn User Organisation hat) oder nur eigene (wenn standalone)
+    const worktimeFilter = getDataIsolationFilter(req as any, 'worktime');
+    
     let whereClause: any = {
-      userId: Number(userId),
+      ...worktimeFilter,
       clientId: { not: null }
     };
 
@@ -118,7 +136,7 @@ export const getConsultations = async (req: Request, res: Response) => {
     }
 
     if (from || to) {
-      whereClause.startTime = {};
+      whereClause.startTime = whereClause.startTime || {};
       if (from) whereClause.startTime.gte = new Date(from as string);
       if (to) whereClause.startTime.lte = new Date(to as string);
     }

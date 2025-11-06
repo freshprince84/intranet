@@ -95,6 +95,53 @@ Error: P1001: Can't reach database server at `localhost`:`5432`
    sudo ufw status
    ```
 
+#### Fehler: Port bereits belegt (EADDRINUSE)
+
+**Symptom:**
+Der Server startet nicht und gibt einen Fehler aus wie:
+```
+Error: listen EADDRINUSE: address already in use :::5000
+```
+
+**Ursache:**
+Ein anderer Prozess nutzt bereits Port 5000 (oder den konfigurierten Port). Dies passiert häufig, wenn:
+- Der Server bereits läuft und nodemon versucht, ihn erneut zu starten
+- Ein anderer Prozess den Port belegt hat
+- Ein vorheriger Server-Prozess nicht ordnungsgemäß beendet wurde
+
+**Lösung:**
+1. **Windows:**
+   ```bash
+   # Finden Sie den Prozess, der Port 5000 verwendet
+   netstat -ano | findstr :5000
+   
+   # Beenden Sie den Prozess mit der PID (ersetzen Sie PID mit der tatsächlichen Prozess-ID)
+   taskkill /PID <PID> /F
+   ```
+
+2. **Linux/Mac:**
+   ```bash
+   # Finden Sie den Prozess, der Port 5000 verwendet
+   lsof -i :5000
+   # oder
+   netstat -tulpn | grep :5000
+   
+   # Beenden Sie den Prozess
+   kill -9 <PID>
+   ```
+
+3. **Alternative: Anderen Port verwenden**
+   ```bash
+   # Temporär einen anderen Port verwenden
+   PORT=5001 npm run dev
+   ```
+
+4. **Falls der Server bereits läuft:**
+   - Überprüfen Sie, ob der Server bereits läuft und benötigt wird
+   - Falls ja, müssen Sie ihn nicht neu starten
+
+**Hinweis:** Die Fehlermeldung wurde verbessert und zeigt nun automatisch diese Lösungsvorschläge an, wenn der Fehler auftritt.
+
 ### Dateianhänge
 
 #### Fehler: "Tabelle RequestAttachment existiert nicht"

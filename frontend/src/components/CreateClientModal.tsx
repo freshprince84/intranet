@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -18,6 +19,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
   onClose,
   onSave
 }) => {
+  const { t } = useTranslation();
   const { openSidepane, closeSidepane } = useSidepane();
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const [formData, setFormData] = useState({
@@ -270,7 +272,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
                   type="button"
                   onClick={handleClose}
                   className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                  title="Abbrechen"
+                  title={t('common.cancel')}
                 >
                   <XMarkIcon className="h-5 w-5" />
                 </button>
@@ -454,7 +456,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
                 type="button"
                 onClick={handleClose}
                 className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                title="Abbrechen"
+                title={t('common.cancel')}
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>

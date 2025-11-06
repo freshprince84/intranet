@@ -260,9 +260,9 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 request-analytics-wrapper">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 request-analytics-wrapper">
       {/* Titelzeile */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 px-3 sm:px-4 md:px-6">
         {/* Linke Seite: Titel mit Icon */}
         <div className="flex items-center">
           <DocumentTextIcon className="h-6 w-6 mr-2 dark:text-white" />
@@ -319,7 +319,8 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
 
       {/* Filter-Pane */}
       {isFilterPanelOpen && (
-        <FilterPane
+        <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
+          <FilterPane
           columns={availableColumns}
           onApply={applyFilterConditions}
           onReset={resetFilterConditions}
@@ -327,10 +328,12 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
           savedOperators={filterLogicalOperators}
           tableId={REQUEST_ANALYTICS_TABLE_ID}
         />
+        </div>
       )}
       
       {/* Gespeicherte Filter als Tags */}
-      <SavedFilterTags
+      <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
+        <SavedFilterTags
         tableId={REQUEST_ANALYTICS_TABLE_ID}
         onSelectFilter={applyFilterConditions}
         onReset={resetFilterConditions}
@@ -339,6 +342,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
         onFilterChange={handleFilterChange}
         defaultFilterName={t('teamWorktime.filters.all')}
       />
+      </div>
 
       {/* Statistiken */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
@@ -371,7 +375,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
         </div>
       ) : viewMode === 'table' ? (
         /* Tabellen-Ansicht */
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-800">
               <tr>
@@ -380,7 +384,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                   return column ? (
                     <th
                       key={columnId}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                      className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
                       {column.label}
                     </th>
@@ -391,7 +395,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
               {filteredRequests.length === 0 ? (
                 <tr>
-                  <td colSpan={columnOrder.filter(id => visibleColumnIds.includes(id)).length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={columnOrder.filter(id => visibleColumnIds.includes(id)).length} className="px-3 sm:px-4 md:px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     {t('analytics.request.noRequestsForDate')}
                   </td>
                 </tr>
@@ -402,19 +406,19 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                       switch (columnId) {
                         case 'time':
                           return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {format(new Date(request.createdAt), 'HH:mm')}
                             </td>
                           );
                         case 'title':
                           return (
-                            <td key={columnId} className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                               {request.title}
                             </td>
                           );
                         case 'status':
                           return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(request.status)}`}>
                                 {getStatusLabel(request.status)}
                               </span>
@@ -422,19 +426,19 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                           );
                         case 'requester':
                           return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {request.requester.firstName} {request.requester.lastName}
                             </td>
                           );
                         case 'responsible':
                           return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {request.responsible.firstName} {request.responsible.lastName}
                             </td>
                           );
                         case 'branch':
                           return (
-                            <td key={columnId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {request.branch.name}
                             </td>
                           );
@@ -450,7 +454,7 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
         </div>
       ) : (
         /* Card-Ansicht */
-        <div className="-mx-6">
+        <div className="-mx-3 sm:-mx-4 md:-mx-6">
           {filteredRequests.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
               <DocumentTextIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />

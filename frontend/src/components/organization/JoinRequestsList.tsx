@@ -6,8 +6,11 @@ import { OrganizationJoinRequest } from '../../types/organization.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import FilterPane from '../FilterPane.tsx';
+import SavedFilterTags from '../SavedFilterTags.tsx';
 import { FilterCondition } from '../FilterRow.tsx';
 import ProcessJoinRequestModal from './ProcessJoinRequestModal.tsx';
+import { API_ENDPOINTS } from '../../config/api.ts';
+import axiosInstance from '../../config/axios.ts';
 
 // Status-Badge Funktionen
 const getStatusColor = (status: string) => {
@@ -50,9 +53,13 @@ const JoinRequestsList: React.FC = () => {
   const [isFilterPanelOpen, setIsFilterPanelOpen] = useState<boolean>(false);
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchTerm, setSearchTerm] = useState<string>('');
   const [isProcessModalOpen, setIsProcessModalOpen] = useState<boolean>(false);
   const [selectedRequest, setSelectedRequest] = useState<OrganizationJoinRequest | null>(null);
+  
+  // Filter State Management (Controlled Mode)
+  const [activeFilterName, setActiveFilterName] = useState<string>('Alle');
+  const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
   
   const { canViewJoinRequests, canManageJoinRequests, loading: permissionsLoading } = usePermissions();
   const { showMessage } = useMessage();
@@ -160,26 +167,100 @@ const JoinRequestsList: React.FC = () => {
   const resetFilterConditions = () => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
-    setStatusFilter('all');
+    setActiveFilterName('');
+    setSelectedFilterId(null);
+  };
+
+  // Filter Change Handler (Controlled Mode)
+  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    setActiveFilterName(name);
+    setSelectedFilterId(id);
+    applyFilterConditions(conditions, operators);
   };
 
   const getActiveFilterCount = () => {
-    let count = 0;
-    if (statusFilter !== 'all') count++;
-    if (filterConditions.length > 0) count++;
-    return count;
+    return filterConditions.length;
   };
+
+  // Initialer Default-Filter setzen (Controlled Mode)
+  useEffect(() => {
+    const setInitialFilter = async () => {
+      try {
+        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(JOIN_REQUESTS_TABLE_ID));
+        const filters = response.data;
+        
+        const alleFilter = filters.find((filter: any) => filter.name === 'Alle');
+        if (alleFilter) {
+          setActiveFilterName('Alle');
+          setSelectedFilterId(alleFilter.id);
+          applyFilterConditions(alleFilter.conditions, alleFilter.operators);
+        }
+      } catch (error) {
+        console.error('Fehler beim Setzen des initialen Filters:', error);
+      }
+    };
+
+    setInitialFilter();
+  }, []);
+
+  // Standard-Filter erstellen und speichern
+  useEffect(() => {
+    const createStandardFilters = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          console.error('Nicht authentifiziert');
+          return;
+        }
+
+        // Prüfen, ob die Standard-Filter bereits existieren
+        const existingFiltersResponse = await axiosInstance.get(
+          API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(JOIN_REQUESTS_TABLE_ID)
+        );
+
+        const existingFilters = existingFiltersResponse.data || [];
+        const alleFilterExists = existingFilters.some((filter: any) => filter.name === 'Alle');
+
+        // Erstelle "Alle"-Filter, wenn er noch nicht existiert
+        if (!alleFilterExists) {
+          const alleFilter = {
+            tableId: JOIN_REQUESTS_TABLE_ID,
+            name: 'Alle',
+            conditions: [],
+            operators: []
+          };
+
+          await axiosInstance.post(
+            API_ENDPOINTS.SAVED_FILTERS.BASE,
+            alleFilter
+          );
+          console.log('Alle-Filter für Join Requests erstellt');
+        }
+      } catch (error) {
+        console.error('Fehler beim Erstellen der Standard-Filter:', error);
+      }
+    };
+
+    createStandardFilters();
+  }, []);
 
   // Gefilterte Join-Requests
   const filteredJoinRequests = useMemo(() => {
     let filtered = [...joinRequests];
 
-    // Status-Filter
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(request => request.status === statusFilter);
+    // Suchfeld-Filter
+    if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(request => {
+        const requesterName = `${request.requester.firstName} ${request.requester.lastName}`.toLowerCase();
+        const requesterEmail = request.requester.email?.toLowerCase() || '';
+        const message = request.message?.toLowerCase() || '';
+        return requesterName.includes(searchLower) || requesterEmail.includes(searchLower) || message.includes(searchLower);
+      });
     }
 
-    // Weitere Filter aus FilterPane
+    // Filter-Bedingungen aus FilterPane
     if (filterConditions.length > 0) {
       filtered = filterConditions.reduce((acc, condition, index) => {
         if (!condition.column || condition.value === null || condition.value === '') {
@@ -198,6 +279,10 @@ const JoinRequestsList: React.FC = () => {
               
               if (operator === 'contains') {
                 return requesterName.includes(searchValue) || requesterEmail.includes(searchValue);
+              } else if (operator === 'equals') {
+                return requesterName === searchValue || requesterEmail === searchValue;
+              } else if (operator === 'startsWith') {
+                return requesterName.startsWith(searchValue) || requesterEmail.startsWith(searchValue);
     }
               return false;
 
@@ -207,6 +292,16 @@ const JoinRequestsList: React.FC = () => {
               
               if (operator === 'contains') {
                 return message.includes(msgValue);
+              } else if (operator === 'equals') {
+                return message === msgValue;
+              } else if (operator === 'startsWith') {
+                return message.startsWith(msgValue);
+              }
+              return false;
+
+            case 'status':
+              if (operator === 'equals') {
+                return request.status === value;
               }
               return false;
 
@@ -218,7 +313,7 @@ const JoinRequestsList: React.FC = () => {
     }
 
     return filtered;
-  }, [joinRequests, statusFilter, filterConditions]);
+  }, [joinRequests, searchTerm, filterConditions, filterLogicalOperators]);
 
   if (permissionsLoading) {
     return (
@@ -243,40 +338,32 @@ const JoinRequestsList: React.FC = () => {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 shadow p-6 sm:p-6 mb-6">
-      {/* Titelzeile mit Icon und Filter-Button */}
+      {/* Titelzeile mit Icon, Suchfeld, Filter-Button */}
       <div className="flex items-center justify-between mb-4 sm:mb-4">
         <h2 className="text-xl sm:text-xl font-semibold flex items-center dark:text-white">
           <UserPlusIcon className="h-6 w-6 sm:h-6 sm:w-6 mr-2 sm:mr-2" />
           {t('joinRequestsList.title')}
         </h2>
         
-        <div className="flex items-center gap-2">
-          {/* Status-Filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">{t('joinRequestsList.allStatus')}</option>
-            <option value="pending">{t('joinRequestsList.status.pending')}</option>
-            <option value="approved">{t('joinRequestsList.status.approved')}</option>
-            <option value="rejected">{t('joinRequestsList.status.rejected')}</option>
-            <option value="withdrawn">{t('joinRequestsList.status.withdrawn')}</option>
-          </select>
+        <div className="flex items-center gap-1.5">
+          {/* Suchfeld */}
+          <input
+            type="text"
+            placeholder={t('common.search') || 'Suchen...'}
+            className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
 
           {/* Filter-Button */}
           <button
-            className={`relative p-2 rounded-md border ${
-              getActiveFilterCount() > 0
-                ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
-            }`}
+            className={`p-2 rounded-md border ${getActiveFilterCount() > 0 ? 'border-blue-300 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'} relative`}
             onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-            title="Filter"
+            title={t('common.filter')}
           >
             <FunnelIcon className="h-5 w-5" />
             {getActiveFilterCount() > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
                 {getActiveFilterCount()}
               </span>
             )}
@@ -290,7 +377,8 @@ const JoinRequestsList: React.FC = () => {
           <FilterPane
             columns={[
               { id: 'requester', label: t('joinRequestsList.filter.requester') },
-              { id: 'message', label: t('joinRequestsList.filter.message') }
+              { id: 'message', label: t('joinRequestsList.filter.message') },
+              { id: 'status', label: t('joinRequestsList.status.title') || 'Status' }
             ]}
             onApply={applyFilterConditions}
             onReset={resetFilterConditions}
@@ -300,6 +388,17 @@ const JoinRequestsList: React.FC = () => {
           />
         </div>
       )}
+
+      {/* Gespeicherte Filter als Tags anzeigen */}
+      <SavedFilterTags
+        tableId={JOIN_REQUESTS_TABLE_ID}
+        onSelectFilter={applyFilterConditions}
+        onReset={resetFilterConditions}
+        activeFilterName={activeFilterName}
+        selectedFilterId={selectedFilterId}
+        onFilterChange={handleFilterChange}
+        defaultFilterName="Alle"
+      />
 
       {/* Error Display */}
       {error && (

@@ -6,6 +6,7 @@ import { organizationService } from '../../services/organizationService.ts';
 import { CreateOrganizationRequest } from '../../types/organization.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
+import { useAuth } from '../../hooks/useAuth.tsx';
 
 interface Props {
   isOpen: boolean;
@@ -26,6 +27,7 @@ const CreateOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const { openSidepane, closeSidepane } = useSidepane();
   const { showMessage } = useMessage();
+  const { fetchCurrentUser } = useAuth();
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -91,6 +93,11 @@ const CreateOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }
       await organizationService.createOrganization(formData);
       setErrors({});
       showMessage(t('organization.create.createSuccess'), 'success');
+      
+      // WICHTIG: User und Berechtigungen neu laden nach Erstellen der Organisation
+      // Der User wurde der Admin-Rolle zugeordnet und hat jetzt neue Berechtigungen
+      await fetchCurrentUser();
+      
       // Formular zurücksetzen
       setFormData({
         name: '',
@@ -362,7 +369,7 @@ const CreateOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }
                 type="button"
                 onClick={handleClose}
                 className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                title="Abbrechen"
+                title={t('common.cancel')}
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
@@ -370,7 +377,7 @@ const CreateOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }
                 type="submit"
                 disabled={loading}
                 className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                title={loading ? 'Erstelle...' : 'Erstellen'}
+                title={loading ? t('organization.create.creating') : t('organization.create.createButton')}
               >
                 {loading ? (
                   <ArrowPathIcon className="h-5 w-5 animate-spin" />

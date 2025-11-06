@@ -554,6 +554,173 @@ Verwende `TableColumnConfig` für beide Ansichten:
 
 ---
 
+## Card-Ansicht mit Edit-Button (Standard-Pattern)
+
+**WICHTIG:** Alle Komponenten, die Daten bearbeitbar machen, müssen das Standard-Pattern für Card-Ansicht mit Edit-Button verwenden. Direkt editierbare Felder in der Ansicht sind **NICHT erlaubt**.
+
+### Standard-Pattern
+
+1. **Card-Ansicht**: Zeigt Informationen schreibgeschützt in einer Card an
+2. **Edit-Button**: Öffnet ein Edit-Sidepane für Bearbeitung
+3. **Keine direkte Bearbeitung**: Felder in der Card-Ansicht sind NICHT direkt editierbar
+
+### Schritt-für-Schritt Anleitung
+
+#### Schritt 1: Card-Komponente erstellen
+
+Erstelle eine Card-Komponente, die die Daten schreibgeschützt anzeigt:
+
+```tsx
+<div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow hover:shadow-md transition-shadow mb-6">
+  <div className="flex items-start justify-between">
+    <div className="flex-1">
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+            <Icon className="h-5 w-5 mr-2" />
+            {data.title || data.name}
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            {data.subtitle || data.description}
+          </p>
+        </div>
+        {canEdit && (
+          <button
+            onClick={() => setIsEditModalOpen(true)}
+            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
+            title={t('common.edit')}
+          >
+            <PencilIcon className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Informationen schreibgeschützt anzeigen */}
+      <div className="space-y-3">
+        {data.field1 && (
+          <div>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('field.label')}:</span>
+            <span className="ml-2 text-sm text-gray-900 dark:text-white">{data.field1}</span>
+          </div>
+        )}
+        {/* Weitere Felder... */}
+      </div>
+    </div>
+  </div>
+</div>
+```
+
+#### Schritt 2: Edit-Sidepane erstellen
+
+Erstelle ein Edit-Sidepane basierend auf dem Standard-Pattern:
+
+```tsx
+import { useSidepane } from '../contexts/SidepaneContext.tsx';
+import { Dialog } from '@headlessui/react';
+import { XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+
+const EditDataModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, data }) => {
+  const { openSidepane, closeSidepane } = useSidepane();
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
+
+  // Sidepane-Status verwalten
+  useEffect(() => {
+    if (isOpen) {
+      openSidepane();
+    } else {
+      closeSidepane();
+    }
+    return () => closeSidepane();
+  }, [isOpen, openSidepane, closeSidepane]);
+
+  // Mobile: Modal
+  if (isMobile) {
+    return (
+      <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+        <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+        <div className="fixed inset-0 flex items-center justify-center p-4">
+          <Dialog.Panel className="mx-auto max-w-lg w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
+            {/* Formular-Inhalt */}
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+    );
+  }
+
+  // Desktop: Sidepane
+  return (
+    <>
+      {isOpen && !isLargeScreen && (
+        <div className="fixed inset-0 bg-black/10 transition-opacity sidepane-overlay sidepane-backdrop z-40" />
+      )}
+      <div className={`fixed top-16 bottom-0 right-0 max-w-sm w-full bg-white dark:bg-gray-800 shadow-xl sidepane-panel sidepane-panel-container transform z-50 flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        {/* Formular-Inhalt */}
+      </div>
+    </>
+  );
+};
+```
+
+#### Schritt 3: Integration
+
+Verbinde Card und Edit-Sidepane:
+
+```tsx
+const MyComponent: React.FC = () => {
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [data, setData] = useState<DataType | null>(null);
+
+  const handleEditSuccess = () => {
+    // Daten neu laden nach erfolgreicher Bearbeitung
+    fetchData();
+  };
+
+  return (
+    <>
+      {/* Card-Ansicht */}
+      {data && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow hover:shadow-md transition-shadow mb-6">
+          {/* Card-Inhalt */}
+          <button onClick={() => setIsEditModalOpen(true)}>
+            <PencilIcon className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
+      {/* Edit-Sidepane */}
+      <EditDataModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSuccess={handleEditSuccess}
+        data={data}
+      />
+    </>
+  );
+};
+```
+
+### Referenz-Implementierungen
+
+- **Card-Ansicht mit Edit-Button**: `frontend/src/components/RoleManagementTab.tsx` (RoleCard-Komponente)
+- **Edit-Sidepane**: `frontend/src/components/organization/EditOrganizationModal.tsx`
+- **Standard-Pattern**: `frontend/src/components/CreateTaskModal.tsx` / `CreateRequestModal.tsx`
+
+### Verbindliche Regel
+
+**NIEMALS direkt editierbare Felder in der Hauptansicht verwenden!** Alle Bearbeitungen erfolgen über:
+1. Card-Ansicht mit Infos (schreibgeschützt)
+2. Edit-Button → Edit-Sidepane öffnet sich
+3. Bearbeitung im Sidepane
+4. Nach Speichern: Card-Ansicht aktualisiert sich
+
+**Beispiele für korrekte Implementierung:**
+- ✅ `RoleManagementTab.tsx` - Card-Ansicht mit Edit-Button
+- ✅ `OrganizationSettings.tsx` - Card-Ansicht mit Edit-Button
+- ❌ NICHT erlaubt: Direkt editierbare Input-Felder in der Hauptansicht
+
+---
+
 ## Weitere Ressourcen
 
 - **Design-Standards**: `docs/core/DESIGN_STANDARDS.md` - Card-Design Sektion

@@ -220,6 +220,19 @@ server.listen(PORT, () => {
   console.log(`📊 Database verfügbar`);
   console.log(`🔍 Claude API verfügbar unter /api/claude/`);
   console.log(`🖥️ Claude Console WebSocket verfügbar unter ws://localhost:${PORT}/ws/claude-console`);
+}).on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ FEHLER: Port ${PORT} ist bereits belegt!`);
+    console.error(`\n📋 Lösungsvorschläge:`);
+    console.error(`   1. Beenden Sie den bereits laufenden Prozess auf Port ${PORT}`);
+    console.error(`   2. Unter Windows: netstat -ano | findstr :${PORT}`);
+    console.error(`   3. Oder verwenden Sie einen anderen Port: PORT=5001 npm run dev`);
+    console.error(`\n💡 Falls der Server bereits läuft, müssen Sie ihn nicht neu starten.\n`);
+    process.exit(1);
+  } else {
+    console.error(`\n❌ FEHLER beim Starten des Servers:`, err);
+    process.exit(1);
+  }
 });
 
 // Graceful Shutdown

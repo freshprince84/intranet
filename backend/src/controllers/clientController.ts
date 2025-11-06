@@ -1,12 +1,17 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { getDataIsolationFilter, belongsToOrganization } from '../middleware/organization';
 
 const prisma = new PrismaClient();
 
 // Alle Clients abrufen
 export const getClients = async (req: Request, res: Response) => {
   try {
+    // Datenisolation: Zeigt alle Clients der Organisation oder nur eigene (wenn standalone)
+    const clientFilter = getDataIsolationFilter(req as any, 'client');
+    
     const clients = await prisma.client.findMany({
+      where: clientFilter,
       orderBy: { name: 'asc' }
     });
     res.json(clients);
@@ -20,8 +25,16 @@ export const getClients = async (req: Request, res: Response) => {
 export const getClientById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const clientId = Number(id);
+    
+    // Prüfe ob Client zur Organisation gehört
+    const hasAccess = await belongsToOrganization(req as any, 'client', clientId);
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'Zugriff auf diesen Client verweigert' });
+    }
+    
     const client = await prisma.client.findUnique({
-      where: { id: Number(id) },
+      where: { id: clientId },
       include: {
         workTimes: {
           include: {
@@ -61,7 +74,8 @@ export const createClient = async (req: Request, res: Response) => {
         email,
         phone,
         address,
-        notes
+        notes,
+        organizationId: req.organizationId || null
       }
     });
     
@@ -76,10 +90,17 @@ export const createClient = async (req: Request, res: Response) => {
 export const updateClient = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const clientId = Number(id);
     const { name, company, email, phone, address, notes, isActive } = req.body;
     
+    // Prüfe ob Client zur Organisation gehört
+    const hasAccess = await belongsToOrganization(req as any, 'client', clientId);
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'Zugriff auf diesen Client verweigert' });
+    }
+    
     const client = await prisma.client.update({
-      where: { id: Number(id) },
+      where: { id: clientId },
       data: {
         name,
         company,
@@ -104,7 +125,12 @@ export const deleteClient = async (req: Request, res: Response) => {
     const { id } = req.params;
     const clientId = Number(id);
     
-    // 1. Prüfe ob Client existiert
+    // 1. Prüfe ob Client existiert und zur Organisation gehört
+    const hasAccess = await belongsToOrganization(req as any, 'client', clientId);
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'Zugriff auf diesen Client verweigert' });
+    }
+    
     const client = await prisma.client.findUnique({
       where: { id: clientId }
     });

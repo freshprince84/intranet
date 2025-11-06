@@ -1,5 +1,6 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { organizationMiddleware } from '../middleware/organization';
 import {
   startWorktime,
   stopWorktime,
@@ -15,6 +16,7 @@ const router = express.Router();
 
 // Alle Routen erfordern Authentifizierung
 router.use(authMiddleware);
+router.use(organizationMiddleware);
 
 // Spezifische Routen zuerst definieren
 router.post('/start', startWorktime);

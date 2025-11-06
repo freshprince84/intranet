@@ -5,6 +5,7 @@ import { startOfWeek, endOfWeek, format, startOfDay, endOfDay, isAfter, isSameDa
 import { de } from 'date-fns/locale';
 import { createNotificationIfEnabled } from './notificationController';
 import { parse } from 'date-fns';
+import { getDataIsolationFilter } from '../middleware/organization';
 
 const prisma = new PrismaClient();
 
@@ -108,7 +109,8 @@ export const startWorktime = async (req: Request, res: Response) => {
         userId: Number(userId),
         branchId: Number(branchId),
         // Speichere die Zeitzone des Benutzers, um später die korrekte Anzeige zu ermöglichen
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        organizationId: req.organizationId || null
       },
       include: {
         branch: true
@@ -124,7 +126,7 @@ export const startWorktime = async (req: Request, res: Response) => {
       message: `Zeiterfassung für ${worktime.branch.name} wurde gestartet.`,
       type: NotificationType.worktime,
       relatedEntityId: worktime.id,
-      relatedEntityType: 'worktime_start'
+      relatedEntityType: 'start'
     });
 
     res.status(201).json(worktime);
@@ -182,7 +184,7 @@ export const stopWorktime = async (req: Request, res: Response) => {
       message: `Zeiterfassung für ${worktime.branch.name} wurde beendet.`,
       type: NotificationType.worktime,
       relatedEntityId: worktime.id,
-      relatedEntityType: 'worktime_stop'
+      relatedEntityType: 'stop'
     });
 
     res.json(worktime);
@@ -211,7 +213,7 @@ export const getWorktimes = async (req: Request, res: Response) => {
     }
 
     let whereClause: Prisma.WorkTimeWhereInput = {
-      userId: Number(userId)
+      ...getDataIsolationFilter(req as any, 'worktime')
     };
 
     if (date) {
@@ -281,16 +283,17 @@ export const deleteWorktime = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
-    const worktime = await prisma.workTime.findUnique({
-      where: { id: Number(id) }
+    // Datenisolation: Nur WorkTimes der Organisation
+    const worktimeFilter = getDataIsolationFilter(req as any, 'worktime');
+    const worktime = await prisma.workTime.findFirst({
+      where: {
+        ...worktimeFilter,
+        id: Number(id)
+      }
     });
 
     if (!worktime) {
       return res.status(404).json({ message: 'Zeiterfassung nicht gefunden' });
-    }
-
-    if (worktime.userId !== Number(userId)) {
-      return res.status(403).json({ message: 'Keine Berechtigung' });
     }
 
     await prisma.workTime.delete({
@@ -316,17 +319,19 @@ export const updateWorktime = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
-    // Prüfe, ob die Zeiterfassung existiert und dem Benutzer gehört
-    const worktime = await prisma.workTime.findUnique({
-      where: { id: Number(id) }
+    // Datenisolation: Nur WorkTimes der Organisation
+    const worktimeFilter = getDataIsolationFilter(req as any, 'worktime');
+
+    // Prüfe, ob die Zeiterfassung existiert und zur Organisation gehört
+    const worktime = await prisma.workTime.findFirst({
+      where: {
+        ...worktimeFilter,
+        id: Number(id)
+      }
     });
 
     if (!worktime) {
       return res.status(404).json({ message: 'Zeiterfassung nicht gefunden' });
-    }
-
-    if (worktime.userId !== Number(userId)) {
-      return res.status(403).json({ message: 'Keine Berechtigung' });
     }
 
     // Daten für das Update vorbereiten
@@ -811,7 +816,9 @@ export const getActiveWorktime = async (req: Request, res: Response) => {
 
     res.json({
       ...activeWorktime,
-      active: true
+      active: true,
+      // organizationId explizit zurückgeben für Frontend-Vergleich
+      organizationId: activeWorktime.organizationId
     });
   } catch (error) {
     console.error('Fehler beim Abrufen der aktiven Zeiterfassung:', error);
@@ -942,7 +949,7 @@ export const checkAndStopExceededWorktimes = async () => {
           message: `Deine Zeiterfassung wurde automatisch beendet, da die tägliche Arbeitszeit von ${worktime.user.normalWorkingHours}h erreicht wurde.`,
           type: NotificationType.worktime,
           relatedEntityId: worktime.id,
-          relatedEntityType: 'worktime_auto_stop'
+          relatedEntityType: 'auto_stop'
         });
 
         console.log(`Zeiterfassung für Benutzer ${worktime.userId} automatisch beendet.`);

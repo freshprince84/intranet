@@ -44,7 +44,22 @@
     "searchPlaceholder": "Suchen...",
     "showFilter": "Filter anzeigen",
     "collapse": "Einklappen",
-    "expand": "Ausklappen"
+    "expand": "Ausklappen",
+    "close": "Schließen",
+    "unknown": "Unbekannt",
+    "refresh": "Aktualisieren",
+    "loadingScreen": "Wird geladen",
+    "loadingScreenSubtitle": "Fast fertig... nur noch einen Moment! ⚡"
+  },
+  "header": {
+    "profile": "Profil",
+    "switchRole": "Rolle wechseln",
+    "switchBranch": "Standort wechseln",
+    "logout": "Abmelden"
+  },
+  "dataCard": {
+    "expandDescription": "Beschreibung aufklappen",
+    "collapseDescription": "Beschreibung einklappen"
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -184,40 +199,6 @@
     "documents": "Identifikationsdokumente",
     "profileTab": "Profil",
     "documentsTab": "Identifikationsdokumente"
-  },
-  "tasks": {
-    "title": "To Do's",
-    "createTask": "Neue Aufgabe erstellen",
-    "columns": {
-      "title": "Titel",
-      "status": "Status",
-      "responsibleAndQualityControl": "Verantwortlich / Qualitätskontrolle",
-      "responsible": "Verantwortlicher",
-      "qualityControl": "Qualitätskontrolle",
-      "branch": "Niederlassung",
-      "dueDate": "Fälligkeitsdatum",
-      "description": "Beschreibung",
-      "actions": "Aktionen"
-    },
-    "status": {
-      "open": "Offen",
-      "in_progress": "In Bearbeitung",
-      "improval": "Zu verbessern",
-      "quality_control": "Qualitätskontrolle",
-      "done": "Erledigt"
-    },
-    "actions": {
-      "backToOpen": "Zurück zu Offen",
-      "backToInProgress": "Zurück in Bearbeitung",
-      "backToQualityControl": "Zurück zur Qualitätskontrolle",
-      "setInProgress": "In Bearbeitung setzen",
-      "setQualityControl": "Zur Qualitätskontrolle",
-      "markDone": "Als erledigt markieren",
-      "copy": "Task kopieren"
-    },
-    "noTasksFound": "Keine To Do's gefunden",
-    "showDescription": "Beschreibung anzeigen",
-    "qualityControlLabel": "Qualitätskontrolle:"
   },
   "requests": {
     "title": "Requests",
@@ -372,6 +353,10 @@
         "uploadAfterCreate": "wird nach dem Erstellen hochgeladen",
         "linkedCerebroArticles": "Verknüpfte Cerebro-Artikel"
       },
+      "tabs": {
+        "data": "Daten",
+        "cerebro": "Cerebro Artikel"
+      },
       "errors": {
         "connectionError": "Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.",
         "loadUsersError": "Fehler beim Laden der Benutzer",
@@ -382,6 +367,30 @@
         "deleteError": "Fehler beim Löschen des Tasks",
         "fileError": "Fehler beim Verarbeiten der Datei"
       }
+    }
+  },
+  "organisation": {
+    "title": "Organisation",
+    "tabs": {
+      "users": "Benutzer",
+      "roles": "Rollen",
+      "organization": "Organisation"
+    },
+    "noPermission": "Nur Administratoren haben Zugriff auf diese Seite.",
+    "error": "Fehler:",
+    "loading": "Lädt...",
+    "noPermissionForPage": "Keine Berechtigung für diese Seite.",
+    "proFeature": {
+      "users": "Die Benutzerverwaltung ist eine PRO-Funktion. Bitte upgraden Sie Ihr Abonnement, um diese Funktion zu nutzen.",
+      "roles": "Die Rollenverwaltung ist eine PRO-Funktion. Bitte upgraden Sie Ihr Abonnement, um diese Funktion zu nutzen."
+    },
+    "createUser": {
+      "title": "Neuen Benutzer erstellen",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "create": "Erstellen"
     }
   },
   "users": {
@@ -419,9 +428,29 @@
     "title": "Rollen",
     "permissions": "Berechtigungen",
     "noDescription": "Keine Beschreibung",
+    "createRole": "Neue Rolle erstellen",
+    "editRole": "Rolle bearbeiten",
     "actions": {
       "edit": "Rolle bearbeiten",
-      "delete": "Rolle löschen"
+      "delete": "Rolle löschen",
+      "copy": "Rolle kopieren"
+    },
+    "form": {
+      "name": "Name",
+      "description": "Beschreibung",
+      "detailedPermissions": "Detaillierte Berechtigungen",
+      "activateAllPages": "Alle Seiten aktivieren",
+      "deactivateAllPages": "Alle Seiten deaktivieren",
+      "pagesChecked": "Seiten ✓",
+      "pagesUnchecked": "Seiten ✗",
+      "activateAllTables": "Alle Tabellen aktivieren",
+      "deactivateAllTables": "Alle Tabellen deaktivieren",
+      "tablesChecked": "Tabellen ✓",
+      "tablesUnchecked": "Tabellen ✗",
+      "activateAllButtons": "Alle Buttons aktivieren",
+      "deactivateAllButtons": "Alle Buttons deaktivieren",
+      "buttonsChecked": "Buttons ✓",
+      "buttonsUnchecked": "Buttons ✗"
     },
     "pages": {
       "dashboard": "Dashboard",
@@ -430,6 +459,7 @@
       "team_worktime_control": "Team Kontrolle",
       "payroll": "Lohnabrechnung",
       "usermanagement": "Organisation",
+      "organization_management": "Organisationsverwaltung",
       "cerebro": "Cerebro",
       "settings": "Einstellungen",
       "profile": "Profil"
@@ -439,6 +469,9 @@
       "worktime": "Time Tracker",
       "users": "Benutzer",
       "roles": "Rollen",
+      "organization": "Organisation",
+      "organization_join_requests": "Beitrittsanfragen",
+      "organization_users": "Organisationsbenutzer",
       "clients": "Kunden",
       "consultation_invoices": "Rechnungen",
       "requests": "Anfragen",
@@ -476,6 +509,9 @@
       "role_create": "Erstellen",
       "role_edit": "Bearbeiten",
       "role_delete": "Löschen",
+      "organization_create": "Erstellen",
+      "organization_edit": "Bearbeiten",
+      "organization_delete": "Löschen",
       "settings_system": "System",
       "settings_notifications": "Benachrichtigungen",
       "settings_profile": "Profil",
@@ -555,7 +591,11 @@
       "started": "Gestartet:",
       "running": "Läuft",
       "start": "Start",
-      "unknown": "Unbekannt"
+      "unknown": "Unbekannt",
+      "differentOrganizationWarning": {
+        "title": "Hinweis: Andere Organisation",
+        "message": "Diese Zeiterfassung wurde in einer anderen Organisation gestartet. Sie wird nach dem Stoppen der Organisation zugeordnet, in der sie gestartet wurde."
+      }
     },
     "list": {
       "title": "Zeiteinträge",
@@ -848,7 +888,40 @@
     "updateError": "Fehler beim Aktualisieren der Organisation",
     "updateSuccess": "Organisation erfolgreich aktualisiert",
     "noPermissionEdit": "Keine Berechtigung zum Bearbeiten der Organisation",
-    "saving": "Speichern..."
+    "saving": "Speichern...",
+    "notFound": "Keine Organisation gefunden",
+    "noDomain": "Keine Domain",
+    "createOrJoinHint": "Erstellen Sie eine neue Organisation oder treten Sie einer bestehenden bei.",
+    "edit": {
+      "title": "Organisation bearbeiten"
+    },
+    "create": {
+      "title": "Neue Organisation erstellen",
+      "name": "Name *",
+      "displayName": "Anzeigename *",
+      "domain": "Domain",
+      "nameRequired": "Name ist erforderlich",
+      "displayNameRequired": "Anzeigename ist erforderlich",
+      "createSuccess": "Organisation erfolgreich erstellt",
+      "createError": "Fehler beim Erstellen der Organisation",
+      "creating": "Erstelle...",
+      "createButton": "Erstellen"
+    },
+    "join": {
+      "title": "Organisation beitreten",
+      "search": "Organisation suchen *",
+      "searchPlaceholder": "Organisationsname eingeben...",
+      "searching": "Suche...",
+      "noOrganizations": "Keine Organisationen gefunden",
+      "nameRequired": "Organisationsname ist erforderlich",
+      "selectFromList": "Bitte wählen Sie eine Organisation aus der Liste aus",
+      "message": "Nachricht (optional)",
+      "messagePlaceholder": "Optional: Fügen Sie eine Nachricht hinzu...",
+      "sendSuccess": "Beitrittsanfrage erfolgreich gesendet",
+      "sendError": "Fehler beim Senden der Beitrittsanfrage",
+      "sending": "Sende...",
+      "send": "Senden"
+    }
   },
   "settings": {
     "title": "Einstellungen",
@@ -893,12 +966,19 @@
     "invalidResponse": "Ungültiges Antwortformat vom Server"
   },
   "notifications": {
-    "title": "Benachrichtigungseinstellungen",
+    "title": "Benachrichtigungen",
+    "ariaLabel": "Benachrichtigungen",
+    "markAllAsRead": "Alle als gelesen markieren",
+    "noNotifications": "Keine Benachrichtigungen vorhanden",
+    "showAll": "Alle Benachrichtigungen anzeigen",
+    "invalidDate": "Ungültiges Datum",
+    "loadError": "Fehler beim Laden der Benachrichtigungen",
+    "notificationSettings": "Benachrichtigungseinstellungen",
     "description": "Wählen Sie aus, für welche Ereignisse Sie Benachrichtigungen erhalten möchten.",
     "loading": "Lade Einstellungen...",
     "saveSuccess": "Einstellungen wurden erfolgreich gespeichert.",
     "saveError": "Einstellungen konnten nicht gespeichert werden",
-    "loadError": "Einstellungen konnten nicht geladen werden. Standardeinstellungen werden verwendet.",
+    "loadSettingsError": "Einstellungen konnten nicht geladen werden. Standardeinstellungen werden verwendet.",
     "allNotifications": "Alle Benachrichtigungen",
     "allNotificationsDescription": "Aktivieren oder deaktivieren Sie alle Benachrichtigungen",
     "all": "Alle",
@@ -985,6 +1065,33 @@
       "work_permit": "Arbeitserlaubnis",
       "tax_id": "Steuer-ID",
       "social_security": "Sozialversicherungsausweis"
+    },
+    "form": {
+      "noDocumentUploaded": "Bitte lade zuerst ein Dokument hoch oder nimm ein Foto auf",
+      "noImageData": "Kann keine Bilddaten finden",
+      "recognitionSuccess": "Dokument wurde erfolgreich erkannt",
+      "recognitionError": "Fehler bei der Dokumentenerkennung: {{error}}",
+      "fillRequiredFields": "Bitte füllen Sie alle Pflichtfelder aus",
+      "updateSuccess": "Dokument erfolgreich aktualisiert",
+      "createSuccess": "Dokument erfolgreich hinzugefügt",
+      "error": "Fehler: {{error}}",
+      "documentType": "Dokumenttyp",
+      "selectDocumentType": "Bitte auswählen",
+      "documentNumber": "Dokumentnummer",
+      "issuingCountry": "Ausstellungsland",
+      "issuingAuthority": "Ausstellende Behörde",
+      "issueDate": "Ausstellungsdatum",
+      "expiryDate": "Ablaufdatum",
+      "documentImage": "Dokumentbild",
+      "uploadFile": "Datei hochladen",
+      "takePhoto": "Foto aufnehmen",
+      "recognitionRunning": "Erkennung läuft...",
+      "autoRecognize": "Automatisch erkennen",
+      "selectedFile": "Ausgewählte Datei: {{name}}",
+      "capturedImage": "Aufgenommenes Bild:",
+      "capturedDocument": "Aufgenommenes Dokument",
+      "recognitionErrorLabel": "Fehler bei der Erkennung: {{error}}",
+      "update": "Aktualisieren"
     }
   },
   "roleAssignment": {
@@ -995,7 +1102,19 @@
     "availableRoles": "Verfügbare Rollen",
     "noRoles": "Keine Rollen verfügbar",
     "saveSuccess": "Rollen erfolgreich zugewiesen",
-    "saveError": "Fehler beim Zuweisen der Rollen"
+    "saveError": "Fehler beim Zuweisen der Rollen",
+    "loading": "Rollen werden geladen...",
+    "unknownRolesWarning": "Achtung: Unbekannte Rollen-IDs gefunden",
+    "unknownRolesMessage": "Einige Rollen-IDs des Benutzers ({{ids}}) sind in den verfügbaren Rollen nicht vorhanden.",
+    "availableRoleIds": "Verfügbare Rollen-IDs: {{ids}}",
+    "noRolesAssigned": "Keine Rollen zugewiesen",
+    "fixed": "Fix",
+    "fixedAssigned": "Fest zugewiesen",
+    "remove": "Entfernen",
+    "unknownRole": "Unbekannte Rolle (ID: {{id}})",
+    "unknownRoleDescription": "Diese Rolle ist dem Benutzer zugewiesen, aber nicht in der Rollenliste vorhanden.",
+    "add": "Hinzufügen",
+    "noRolesAvailable": "Keine weiteren Rollen verfügbar"
   },
   "sidebar": {
     "expand": "Erweitern",
@@ -1125,6 +1244,7 @@
     "title": "Beitrittsanfragen",
     "allStatus": "Alle Status",
     "status": {
+      "title": "Status",
       "pending": "Ausstehend",
       "approved": "Genehmigt",
       "rejected": "Abgelehnt",
@@ -1144,33 +1264,19 @@
     "noRequests": "Keine Beitrittsanfragen vorhanden.",
     "noMatching": "Keine Beitrittsanfragen entsprechen den Filterkriterien."
   },
-  "organization": {
-    "create": {
-      "title": "Neue Organisation erstellen",
-      "name": "Name *",
-      "displayName": "Anzeigename *",
-      "domain": "Domain",
-      "nameRequired": "Name ist erforderlich",
-      "displayNameRequired": "Anzeigename ist erforderlich",
-      "createSuccess": "Organisation erfolgreich erstellt",
-      "createError": "Fehler beim Erstellen der Organisation",
-      "creating": "Erstelle...",
-      "createButton": "Erstellen"
-    },
-    "join": {
-      "title": "Organisation beitreten",
-      "search": "Organisation suchen *",
-      "searchPlaceholder": "Organisationsname eingeben...",
-      "searching": "Suche...",
-      "noOrganizations": "Keine Organisationen gefunden",
-      "nameRequired": "Organisationsname ist erforderlich",
-      "selectFromList": "Bitte wählen Sie eine Organisation aus der Liste aus",
-      "message": "Nachricht (optional)",
-      "messagePlaceholder": "Optional: Fügen Sie eine Nachricht hinzu...",
-      "sendSuccess": "Beitrittsanfrage erfolgreich gesendet",
-      "sendError": "Fehler beim Senden der Beitrittsanfrage",
-      "sending": "Sende...",
-      "send": "Senden"
+  "myJoinRequests": {
+    "title": "Meine Beitrittsanfragen",
+    "loading": "Lade Beitrittsanfragen...",
+    "loadError": "Fehler beim Laden der Beitrittsanfragen",
+    "noRequests": "Sie haben noch keine Beitrittsanfragen gestellt.",
+    "withdraw": "Zurückziehen",
+    "withdrawing": "Zurückziehen...",
+    "withdrawSuccess": "Beitrittsanfrage erfolgreich zurückgezogen",
+    "withdrawError": "Fehler beim Zurückziehen der Beitrittsanfrage",
+    "confirmWithdraw": "Möchten Sie diese Beitrittsanfrage wirklich zurückziehen?",
+    "processedBy": "Bearbeitet von",
+    "filter": {
+      "organization": "Organisation"
     }
   },
   "analytics": {
@@ -1358,6 +1464,93 @@
     "itemUnitPrice": "Stundensatz",
     "itemAmount": "Betrag",
     "noItems": "Keine Rechnungspositionen vorhanden",
-    "deletePosition": "Position löschen"
+    "deletePosition": "Position löschen",
+    "editSidepane": {
+      "title": "Rechnung bearbeiten: {{invoiceNumber}}",
+      "basicInfo": "Grundinformationen",
+      "issueDate": "Rechnungsdatum",
+      "dueDate": "Fälligkeitsdatum",
+      "notesPlaceholder": "Zusätzliche Notizen zur Rechnung...",
+      "items": "Rechnungspositionen",
+      "addItem": "Position hinzufügen",
+      "hours": "Stunden",
+      "total": "Total",
+      "status": {
+        "draft": "Entwurf",
+        "sent": "Gesendet",
+        "paid": "Bezahlt",
+        "overdue": "Überfällig",
+        "cancelled": "Storniert"
+      }
+    },
+    "status": {
+      "draft": "Entwurf",
+      "sent": "Gesendet",
+      "paid": "Bezahlt",
+      "overdue": "Überfällig",
+      "cancelled": "Storniert"
+    }
+  },
+  "register": {
+    "title": "Registrierung",
+    "subtitle": "Erstellen Sie Ihr Konto mit E-Mail und Passwort",
+    "email": "E-Mail-Adresse",
+    "emailPlaceholder": "ihre.email@beispiel.de",
+    "password": "Passwort",
+    "passwordPlaceholder": "Mindestens 6 Zeichen",
+    "confirmPassword": "Passwort bestätigen",
+    "confirmPasswordPlaceholder": "Passwort wiederholen",
+    "register": "Registrieren",
+    "registering": "Registriere...",
+    "alreadyRegistered": "Bereits registriert?",
+    "login": "Anmelden",
+    "passwordsDoNotMatch": "Die Passwörter stimmen nicht überein.",
+    "passwordTooShort": "Das Passwort muss mindestens 6 Zeichen lang sein.",
+    "registrationFailed": "Registrierung fehlgeschlagen. Bitte überprüfen Sie Ihre Eingaben."
+  },
+  "database": {
+    "noPermission": "Keine Berechtigung",
+    "adminOnly": "Diese Funktionen sind nur für Administratoren verfügbar.",
+    "warningTitle": "⚠️ ACHTUNG: Tabellen zurücksetzen",
+    "warning1": "Diese Funktionen löschen alle Daten aus den gewählten Tabellen",
+    "warning2": "Standard-Daten werden automatisch durch Seed-Dateien wiederhergestellt",
+    "warning3": "Nur Tabellen mit Seed-Daten können zurückgesetzt werden",
+    "warning4": "Alle Operationen werden protokolliert",
+    "resetTablesTitle": "Tabellen mit Seed-Daten zurücksetzen",
+    "danger": {
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig"
+    },
+    "seedDataRestored": "Seed-Daten werden wiederhergestellt",
+    "deleteDemoClients": "Demo-Clients entfernen",
+    "resetAndRefill": "Zurücksetzen & neu befüllen",
+    "operationsTitle": "Database-Operationen (Audit-Log)",
+    "loadingLogs": "Lade Logs...",
+    "noLogsAvailable": "Keine Logs verfügbar",
+    "confirmResetTitle": "Tabelle zurücksetzen bestätigen",
+    "confirmResetMessage": "Sie sind dabei, die Tabelle <strong>{{tableName}}</strong> zurückzusetzen.",
+    "confirmResetWarning": "Alle Daten werden gelöscht und durch Seed-Daten ersetzt.",
+    "reflectionTime": "Bedenkzeit: {{seconds}} Sekunden",
+    "adminPasswordLabel": "Admin-Passwort zur Bestätigung:",
+    "adminPasswordPlaceholder": "Ihr Admin-Passwort",
+    "resetting": "Wird zurückgesetzt...",
+    "confirmDeleteDemoClientsTitle": "Demo-Clients entfernen bestätigen",
+    "confirmDeleteDemoClientsMessage": "Sie sind dabei, <strong>nur die Demo-Clients</strong> zu löschen.",
+    "confirmDeleteDemoClientsWarning": "Die Demo-Clients werden dauerhaft gelöscht und NICHT wiederhergestellt.",
+    "deleting": "Wird gelöscht...",
+    "passwordRequired": "Passwort ist erforderlich",
+    "waitSeconds": "Bitte warten Sie noch {{seconds}} Sekunden",
+    "resetTableSuccess": "Tabelle {{tableName}} wurde erfolgreich zurückgesetzt und mit Seed-Daten befüllt",
+    "resetTableError": "Fehler beim Zurücksetzen der Tabelle",
+    "deleteDemoClientsSuccess": "Demo-Clients wurden erfolgreich gelöscht",
+    "deleteDemoClientsError": "Fehler beim Löschen der Demo-Clients",
+    "loadTablesError": "Fehler beim Laden der verfügbaren Tabellen",
+    "loadLogsError": "Fehler beim Laden der Logs",
+    "logStatus": {
+      "start": "Gestartet",
+      "success": "Erfolg",
+      "error": "Fehler"
+    }
   }
 }

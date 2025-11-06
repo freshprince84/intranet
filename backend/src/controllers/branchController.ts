@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
+import { getDataIsolationFilter } from '../middleware/organization';
 
 const prisma = new PrismaClient();
 
@@ -18,13 +19,18 @@ export const getTest = async (_req: Request, res: Response) => {
 };
 
 // Alle Niederlassungen abrufen
-export const getAllBranches = async (_req: Request, res: Response) => {
+export const getAllBranches = async (req: Request, res: Response) => {
     try {
+        // Datenisolation: Zeigt alle Branches der Organisation oder nur eigene (wenn standalone)
+        const branchFilter = getDataIsolationFilter(req as any, 'branch');
+        
         const branches = await prisma.branch.findMany({
+            where: branchFilter,
             select: {
                 id: true,
                 name: true
-            }
+            },
+            orderBy: { name: 'asc' }
         });
         res.json(branches);
     } catch (error) {

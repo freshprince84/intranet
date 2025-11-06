@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { roleApi } from '../api/apiClient.ts';
 import { Role, AccessLevel } from '../types/interfaces.ts';
-import { PencilIcon, TrashIcon, PlusIcon, FunnelIcon, XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, FunnelIcon, XMarkIcon, CheckIcon, ArrowPathIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -31,7 +31,7 @@ const defaultPages = [
   'consultations',
   'team_worktime_control', // = workcenter
   'payroll', // = lohnabrechnung
-  'usermanagement', // = benutzerverwaltung
+  'organization_management', // = organisation (Hauptseite)
   'cerebro',
   'settings',
   'profile'
@@ -41,8 +41,11 @@ const defaultPages = [
 const defaultTables = [
   'requests',           // auf dashboard
   'tasks',             // auf worktracker
-  'users',             // auf usermanagement
-  'roles',             // auf usermanagement
+  'users',             // auf organization_management
+  'roles',             // auf organization_management
+  'organization',      // auf organization_management
+  'organization_join_requests', // auf organization_management
+  'organization_users',  // auf organization_management
   'team_worktime',     // auf team_worktime_control
   'worktime',          // auf worktracker
   'clients',           // auf consultations
@@ -82,6 +85,11 @@ const defaultButtons = [
   'role_edit',
   'role_delete',
   
+  // Organization Management Buttons
+  'organization_create',
+  'organization_edit',
+  'organization_delete',
+  
   // Worktime Buttons
   'worktime_start',
   'worktime_stop', 
@@ -116,8 +124,11 @@ const defaultButtons = [
 const tableToPageMapping = {
   'requests': 'dashboard',
   'tasks': 'worktracker',
-  'users': 'usermanagement',
-  'roles': 'usermanagement', 
+  'users': 'organization_management',
+  'roles': 'organization_management',
+  'organization': 'organization_management',
+  'organization_join_requests': 'organization_management',
+  'organization_users': 'organization_management',
   'team_worktime': 'team_worktime_control',
   'worktime': 'worktracker',
   'clients': 'consultations',
@@ -142,13 +153,16 @@ const buttonToPageMapping = {
   'task_create': 'worktracker',
   'task_edit': 'worktracker',
   'task_delete': 'worktracker',
-  'user_create': 'usermanagement',
-  'user_edit': 'usermanagement',
-  'user_delete': 'usermanagement',
-  'role_assign': 'usermanagement',
-  'role_create': 'usermanagement',
-  'role_edit': 'usermanagement',
-  'role_delete': 'usermanagement',
+  'user_create': 'organization_management',
+  'user_edit': 'organization_management',
+  'user_delete': 'organization_management',
+  'role_assign': 'organization_management',
+  'role_create': 'organization_management',
+  'role_edit': 'organization_management',
+  'role_delete': 'organization_management',
+  'organization_create': 'organization_management',
+  'organization_edit': 'organization_management',
+  'organization_delete': 'organization_management',
   'worktime_start': 'worktracker',
   'worktime_stop': 'worktracker',
   'worktime_edit': 'worktracker',
@@ -202,6 +216,10 @@ const buttonToTableMapping: Record<string, string | null> = {
   'role_create': 'roles',
   'role_edit': 'roles',
   'role_delete': 'roles',
+  // Organization Management Buttons → organization Tabelle
+  'organization_create': 'organization',
+  'organization_edit': 'organization',
+  'organization_delete': 'organization',
   // Settings Buttons → settings Tabelle
   'settings_system': 'settings',
   'settings_notifications': 'settings',
@@ -226,6 +244,25 @@ const buttonToTableMapping: Record<string, string | null> = {
 // TableID für gespeicherte Filter
 const ROLES_TABLE_ID = 'roles-table';
 
+// Standardrollen-IDs (für Rollen ohne Organisation)
+const STANDARD_ROLE_IDS = [1, 2, 999]; // Admin (1), User (2), Hamburger (999)
+
+// Standardrollen-Namen (dürfen nicht bearbeitet/gelöscht werden, egal von welcher Organisation)
+const STANDARD_ROLE_NAMES = ['Admin', 'User', 'Hamburger'];
+
+// Helper-Funktion zur Prüfung ob es sich um eine Standardrolle handelt
+const isStandardRole = (roleId: number, roleName?: string): boolean => {
+  // Prüfe zuerst auf Standard-IDs (für Rollen ohne Organisation)
+  if (STANDARD_ROLE_IDS.includes(roleId)) {
+    return true;
+  }
+  // Prüfe auf Standard-Namen (für Rollen in Organisationen)
+  if (roleName && STANDARD_ROLE_NAMES.includes(roleName)) {
+    return true;
+  }
+  return false;
+};
+
 interface RoleFormData {
   name: string;
   description: string;
@@ -242,9 +279,11 @@ const RoleCard: React.FC<{
   role: Role;
   onEdit: (role: Role) => void;
   onDelete: (roleId: number) => void;
+  onCopy: (role: Role) => void;
   canEdit: boolean;
   canDelete: boolean;
-}> = ({ role, onEdit, onDelete, canEdit, canDelete }) => {
+  canCopy: boolean;
+}> = ({ role, onEdit, onDelete, onCopy, canEdit, canDelete, canCopy }) => {
   const { t } = useTranslation();
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 mb-4">
@@ -253,6 +292,16 @@ const RoleCard: React.FC<{
         <h3 className="text-lg font-medium text-gray-900 dark:text-white">{role.name}</h3>
         
         <div className="flex space-x-2">
+          {canCopy && (
+            <button
+              onClick={() => onCopy(role)}
+              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
+              title={t('roles.actions.copy')}
+            >
+              <DocumentDuplicateIcon className="h-5 w-5" />
+            </button>
+          )}
+          
           {canEdit && (
             <button
               onClick={() => onEdit(role)}
@@ -318,7 +367,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     'consultations': t('roles.pages.consultations'),
     'team_worktime_control': t('roles.pages.team_worktime_control'),
     'payroll': t('roles.pages.payroll'),
-    'usermanagement': t('roles.pages.usermanagement'),
+    'organization_management': t('roles.pages.organization_management'), // Organisation-Seite (Hauptseite)
     'cerebro': t('roles.pages.cerebro'),
     'settings': t('roles.pages.settings'),
     'profile': t('roles.pages.profile')
@@ -330,6 +379,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     'worktime': t('roles.tables.worktime'),
     'users': t('roles.tables.users'),
     'roles': t('roles.tables.roles'),
+    'organization': t('roles.tables.organization'),
+    'organization_join_requests': t('roles.tables.organization_join_requests'),
+    'organization_users': t('roles.tables.organization_users'),
     'clients': t('roles.tables.clients'),
     'consultation_invoices': t('roles.tables.consultation_invoices'),
     'requests': t('roles.tables.requests'),
@@ -369,6 +421,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     'role_create': t('roles.buttons.role_create'),
     'role_edit': t('roles.buttons.role_edit'),
     'role_delete': t('roles.buttons.role_delete'),
+    'organization_create': t('roles.buttons.organization_create'),
+    'organization_edit': t('roles.buttons.organization_edit'),
+    'organization_delete': t('roles.buttons.organization_delete'),
     'settings_system': t('roles.buttons.settings_system'),
     'settings_notifications': t('roles.buttons.settings_notifications'),
     'settings_profile': t('roles.buttons.settings_profile'),
@@ -522,7 +577,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       }
       
       // Überprüfen, ob es sich um eine geschützte Rolle handelt
-      if (editingRole.id === 1 || editingRole.id === 2 || editingRole.id === 999) {
+      if (isStandardRole(editingRole.id, editingRole.name)) {
         console.warn(`DEBUGAUSGABE: Versuch, geschützte Rolle mit ID ${editingRole.id} zu bearbeiten`);
         handleError({
           message: 'Geschützte Systemrollen können nicht bearbeitet werden',
@@ -665,9 +720,12 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       return;
     }
     
+    // Finde die Rolle in der Liste, um den Namen zu prüfen
+    const role = roles.find(r => r.id === roleId);
+    
     // Überprüfen, ob es sich um eine geschützte Rolle handelt
-    if (roleId === 1 || roleId === 2 || roleId === 999) {
-      console.warn(`Versuch, geschützte Rolle mit ID ${roleId} zu löschen`);
+    if (role && isStandardRole(roleId, role.name)) {
+      console.warn(`Versuch, geschützte Rolle mit ID ${roleId} (${role.name}) zu löschen`);
       handleError('Geschützte Systemrollen können nicht gelöscht werden', {
         component: 'RoleManagementTab',
         roleId: roleId
@@ -753,10 +811,55 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     }
   };
 
+  // Kopieren einer Rolle (für Standardrollen)
+  const handleCopyRole = async (role: Role) => {
+    try {
+      if (!role || !role.id) {
+        handleError('Ungültige Rolle zum Kopieren', {
+          component: 'RoleManagementTab'
+        });
+        return;
+      }
+
+      // Kopie der Rolle erstellen mit angepasstem Namen
+      const copiedRoleData = {
+        name: `${role.name}-Kopie`,
+        description: role.description || '',
+        permissions: role.permissions
+          .filter(permission => permission.accessLevel !== 'none')
+          .map(permission => ({
+            entity: permission.entity,
+            entityType: permission.entityType,
+            accessLevel: permission.accessLevel
+          }))
+      };
+
+      console.log('DEBUGAUSGABE: Kopiere Rolle:', role.name, 'mit Daten:', copiedRoleData);
+
+      // Rolle erstellen
+      const response = await roleApi.create(copiedRoleData);
+      console.log('DEBUGAUSGABE: Rolle erfolgreich kopiert:', response.data);
+
+      // Optimistisches Update: Neue Rolle zur Liste hinzufügen
+      setRoles(prevRoles => [response.data, ...prevRoles]);
+      
+      // Bearbeitungsmodal für die kopierte Rolle öffnen
+      prepareRoleForEditing(response.data);
+      
+      if (onRolesChange) onRolesChange();
+    } catch (err) {
+      console.error('DEBUGAUSGABE: Fehler beim Kopieren der Rolle:', err);
+      handleError(err, {
+        component: 'RoleManagementTab',
+        roleId: role.id
+      });
+    }
+  };
+
   // Rolle zum Bearbeiten vorbereiten
   const prepareRoleForEditing = (role: Role) => {
     // Verhindere das Bearbeiten von geschützten Rollen
-    if (role.id === 1 || role.id === 2 || role.id === 999) {
+    if (isStandardRole(role.id, role.name)) {
       handleError('Geschützte Systemrollen können nicht bearbeitet werden', {
         component: 'RoleManagementTab',
         roleId: role.id
@@ -998,8 +1101,10 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                 role={role} 
                 onEdit={prepareRoleForEditing}
                 onDelete={handleDelete}
-                canEdit={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
-                canDelete={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
+                onCopy={handleCopyRole}
+                canEdit={!readOnly && hasPermission('roles', 'write', 'table') && !isStandardRole(role.id, role.name)}
+                canDelete={!readOnly && hasPermission('roles', 'write', 'table') && !isStandardRole(role.id, role.name)}
+                canCopy={!readOnly && hasPermission('roles', 'write', 'table') && isStandardRole(role.id, role.name)}
               />
             ))}
           </div>
@@ -1028,8 +1133,10 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                 role={role} 
                 onEdit={prepareRoleForEditing}
                 onDelete={handleDelete}
-                canEdit={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
-                canDelete={!readOnly && hasPermission('roles', 'write', 'table') && role.id !== 1 && role.id !== 2 && role.id !== 999}
+                onCopy={handleCopyRole}
+                canEdit={!readOnly && hasPermission('roles', 'write', 'table') && !isStandardRole(role.id, role.name)}
+                canDelete={!readOnly && hasPermission('roles', 'write', 'table') && !isStandardRole(role.id, role.name)}
+                canCopy={!readOnly && hasPermission('roles', 'write', 'table') && isStandardRole(role.id, role.name)}
               />
             ))}
           </div>
@@ -1146,8 +1253,8 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                 onClick={() => setIsModalOpen(true)}
                 className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
                 style={{ width: '30.19px', height: '30.19px' }}
-                title="Neue Rolle erstellen"
-                aria-label="Neue Rolle erstellen"
+                title={t('roles.createRole')}
+                aria-label={t('roles.createRole')}
               >
                 <PlusIcon className="h-4 w-4" />
               </button>
@@ -1231,7 +1338,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                   <div className="px-6 py-4 border-b dark:border-gray-700 flex-shrink-0">
                     <div className="flex items-center justify-between">
                       <Dialog.Title className="text-lg font-semibold dark:text-white">
-                        {editingRole ? 'Rolle bearbeiten' : 'Neue Rolle erstellen'}
+                        {editingRole ? t('roles.editRole') : t('roles.createRole')}
                       </Dialog.Title>
                       <button
                         onClick={() => setIsModalOpen(false)}
@@ -1271,63 +1378,65 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                   
                   <div className="mt-2">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Detaillierte Berechtigungen</label>
-                      {/* Bulk Actions - kompakt integriert */}
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => setAllPagePermissions('both')}
-                          className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
-                          title="Alle Seiten aktivieren"
-                        >
-                          Seiten ✓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAllPagePermissions('none')}
-                          className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                          title="Alle Seiten deaktivieren"
-                        >
-                          Seiten ✗
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAllTablePermissions('both')}
-                          className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800"
-                          title="Alle Tabellen aktivieren"
-                        >
-                          Tabellen ✓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAllTablePermissions('none')}
-                          className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                          title="Alle Tabellen deaktivieren"
-                        >
-                          Tabellen ✗
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAllButtonPermissions('both')}
-                          className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800"
-                          title="Alle Buttons aktivieren"
-                        >
-                          Buttons ✓
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setAllButtonPermissions('none')}
-                          className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                          title="Alle Buttons deaktivieren"
-                        >
-                          Buttons ✗
-                        </button>
-                      </div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('roles.form.detailedPermissions')}</label>
+                        {/* Bulk Actions - kompakt integriert */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setAllPagePermissions('both')}
+                            className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                            title={t('roles.form.activateAllPages')}
+                          >
+                            {t('roles.form.pagesChecked')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAllPagePermissions('none')}
+                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            title={t('roles.form.deactivateAllPages')}
+                          >
+                            {t('roles.form.pagesUnchecked')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAllTablePermissions('both')}
+                            className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800"
+                            title={t('roles.form.activateAllTables')}
+                          >
+                            {t('roles.form.tablesChecked')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAllTablePermissions('none')}
+                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            title={t('roles.form.deactivateAllTables')}
+                          >
+                            {t('roles.form.tablesUnchecked')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAllButtonPermissions('both')}
+                            className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800"
+                            title={t('roles.form.activateAllButtons')}
+                          >
+                            {t('roles.form.buttonsChecked')}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setAllButtonPermissions('none')}
+                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            title={t('roles.form.deactivateAllButtons')}
+                          >
+                            {t('roles.form.buttonsUnchecked')}
+                          </button>
+                        </div>
                     </div>
                     
                     <div className="grid grid-cols-1 gap-4 overflow-y-auto border rounded-lg p-4 dark:border-gray-600">
                     {formData.permissions
-                      .filter(permission => permission.entityType === 'page')
+                      .filter(permission => 
+                        permission.entityType === 'page'
+                      )
                       .map((permission, index) => {
                         const permIndex = formData.permissions.indexOf(permission);
                         const isActive = permission.accessLevel === 'both';
@@ -1369,6 +1478,13 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                               .sort((a, b) => {
                                 const aName = tableDisplayNames[a.entity] || a.entity;
                                 const bName = tableDisplayNames[b.entity] || b.entity;
+                                // Sortierung: users, roles, organization zuerst (in dieser Reihenfolge)
+                                const priorityOrder = ['users', 'roles', 'organization'];
+                                const aIndex = priorityOrder.indexOf(a.entity);
+                                const bIndex = priorityOrder.indexOf(b.entity);
+                                if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+                                if (aIndex !== -1) return -1;
+                                if (bIndex !== -1) return 1;
                                 return aName.localeCompare(bName);
                               })
                               .map((tablePerm, tableIndex) => {
@@ -1574,7 +1690,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                   <form onSubmit={handleSubmit} className="space-y-5">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Name</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('roles.form.name')}</label>
                         <input
                           type="text"
                           value={formData.name}
@@ -1584,7 +1700,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Beschreibung</label>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('roles.form.description')}</label>
                         <input
                           type="text"
                           value={formData.description}
@@ -1652,7 +1768,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                       
                       <div className="grid grid-cols-1 gap-4 overflow-y-auto border rounded-lg p-4 dark:border-gray-600 max-h-[60vh]">
                         {formData.permissions
-                          .filter(permission => permission.entityType === 'page')
+                          .filter(permission => 
+                            permission.entityType === 'page'
+                          )
                           .map((permission, index) => {
                             const permIndex = formData.permissions.indexOf(permission);
                             const isActive = permission.accessLevel === 'both';

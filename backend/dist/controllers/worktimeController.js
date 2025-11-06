@@ -47,6 +47,7 @@ const client_1 = require("@prisma/client");
 const ExcelJS = __importStar(require("exceljs"));
 const date_fns_1 = require("date-fns");
 const notificationController_1 = require("./notificationController");
+const organization_1 = require("../middleware/organization");
 const prisma = new client_1.PrismaClient();
 const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -215,9 +216,7 @@ const getWorktimes = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (!user) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
-        let whereClause = {
-            userId: Number(userId)
-        };
+        let whereClause = Object.assign({}, (0, organization_1.getDataIsolationFilter)(req, 'worktime'));
         if (date) {
             const queryDateStr = date;
             // Wir erstellen das Datum für den Anfang des Tages
@@ -272,14 +271,13 @@ const deleteWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const worktime = yield prisma.workTime.findUnique({
-            where: { id: Number(id) }
+        // Datenisolation: Nur WorkTimes der Organisation
+        const worktimeFilter = (0, organization_1.getDataIsolationFilter)(req, 'worktime');
+        const worktime = yield prisma.workTime.findFirst({
+            where: Object.assign(Object.assign({}, worktimeFilter), { id: Number(id) })
         });
         if (!worktime) {
             return res.status(404).json({ message: 'Zeiterfassung nicht gefunden' });
-        }
-        if (worktime.userId !== Number(userId)) {
-            return res.status(403).json({ message: 'Keine Berechtigung' });
         }
         yield prisma.workTime.delete({
             where: { id: Number(id) }
@@ -301,15 +299,14 @@ const updateWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        // Prüfe, ob die Zeiterfassung existiert und dem Benutzer gehört
-        const worktime = yield prisma.workTime.findUnique({
-            where: { id: Number(id) }
+        // Datenisolation: Nur WorkTimes der Organisation
+        const worktimeFilter = (0, organization_1.getDataIsolationFilter)(req, 'worktime');
+        // Prüfe, ob die Zeiterfassung existiert und zur Organisation gehört
+        const worktime = yield prisma.workTime.findFirst({
+            where: Object.assign(Object.assign({}, worktimeFilter), { id: Number(id) })
         });
         if (!worktime) {
             return res.status(404).json({ message: 'Zeiterfassung nicht gefunden' });
-        }
-        if (worktime.userId !== Number(userId)) {
-            return res.status(403).json({ message: 'Keine Berechtigung' });
         }
         // Daten für das Update vorbereiten
         const updateData = {};

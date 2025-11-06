@@ -601,7 +601,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                         } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
                         onClick={() => setActiveTab('data')}
                     >
-                        Daten
+                        {t('tasks.editTask.tabs.data')}
                     </button>
                     <button
                         type="button"
@@ -612,7 +612,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                         } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
                         onClick={() => setActiveTab('cerebro')}
                     >
-                        Cerebro Artikel
+                        {t('tasks.editTask.tabs.cerebro')}
                     </button>
                 </nav>
             </div>

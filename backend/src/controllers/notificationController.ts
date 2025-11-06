@@ -24,42 +24,92 @@ async function isNotificationEnabled(
   // Systemeinstellungen abrufen
   const systemSettings = await prisma.notificationSettings.findFirst();
 
+  // Wenn keine Systemeinstellungen vorhanden sind, erstelle Standard-Werte
+  if (!systemSettings) {
+    console.warn('Keine NotificationSettings in der Datenbank gefunden. Verwende Standard-Werte (alle aktiviert).');
+  }
+
   let enabled = true;
 
   switch (type) {
     case NotificationType.task:
-      enabled = (userSettings?.taskCreate ?? systemSettings.taskCreate) ||
-                (userSettings?.taskUpdate ?? systemSettings.taskUpdate) ||
-                (userSettings?.taskDelete ?? systemSettings.taskDelete) ||
-                (userSettings?.taskStatusChange ?? systemSettings.taskStatusChange);
+      if (relatedEntityType === 'create') {
+        enabled = userSettings?.taskCreate ?? systemSettings?.taskCreate ?? true;
+      } else if (relatedEntityType === 'update') {
+        enabled = userSettings?.taskUpdate ?? systemSettings?.taskUpdate ?? true;
+      } else if (relatedEntityType === 'delete') {
+        enabled = userSettings?.taskDelete ?? systemSettings?.taskDelete ?? true;
+      } else if (relatedEntityType === 'status') {
+        enabled = userSettings?.taskStatusChange ?? systemSettings?.taskStatusChange ?? true;
+      } else {
+        // Fallback: wenn kein relatedEntityType angegeben, prüfe ob IRGENDEINE Task-Notification aktiviert ist
+        enabled = (userSettings?.taskCreate ?? systemSettings?.taskCreate ?? true) ||
+                  (userSettings?.taskUpdate ?? systemSettings?.taskUpdate ?? true) ||
+                  (userSettings?.taskDelete ?? systemSettings?.taskDelete ?? true) ||
+                  (userSettings?.taskStatusChange ?? systemSettings?.taskStatusChange ?? true);
+      }
       break;
     case NotificationType.request:
-      enabled = (userSettings?.requestCreate ?? systemSettings.requestCreate) ||
-                (userSettings?.requestUpdate ?? systemSettings.requestUpdate) ||
-                (userSettings?.requestDelete ?? systemSettings.requestDelete) ||
-                (userSettings?.requestStatusChange ?? systemSettings.requestStatusChange);
+      if (relatedEntityType === 'create') {
+        enabled = userSettings?.requestCreate ?? systemSettings?.requestCreate ?? true;
+      } else if (relatedEntityType === 'update') {
+        enabled = userSettings?.requestUpdate ?? systemSettings?.requestUpdate ?? true;
+      } else if (relatedEntityType === 'delete') {
+        enabled = userSettings?.requestDelete ?? systemSettings?.requestDelete ?? true;
+      } else if (relatedEntityType === 'status') {
+        enabled = userSettings?.requestStatusChange ?? systemSettings?.requestStatusChange ?? true;
+      } else {
+        // Fallback: wenn kein relatedEntityType angegeben, prüfe ob IRGENDEINE Request-Notification aktiviert ist
+        enabled = (userSettings?.requestCreate ?? systemSettings?.requestCreate ?? true) ||
+                  (userSettings?.requestUpdate ?? systemSettings?.requestUpdate ?? true) ||
+                  (userSettings?.requestDelete ?? systemSettings?.requestDelete ?? true) ||
+                  (userSettings?.requestStatusChange ?? systemSettings?.requestStatusChange ?? true);
+      }
       break;
     case NotificationType.user:
-      enabled = (userSettings?.userCreate ?? systemSettings.userCreate) ||
-                (userSettings?.userUpdate ?? systemSettings.userUpdate) ||
-                (userSettings?.userDelete ?? systemSettings.userDelete);
+      if (relatedEntityType === 'create') {
+        enabled = userSettings?.userCreate ?? systemSettings?.userCreate ?? true;
+      } else if (relatedEntityType === 'update') {
+        enabled = userSettings?.userUpdate ?? systemSettings?.userUpdate ?? true;
+      } else if (relatedEntityType === 'delete') {
+        enabled = userSettings?.userDelete ?? systemSettings?.userDelete ?? true;
+      } else {
+        // Fallback: wenn kein relatedEntityType angegeben, prüfe ob IRGENDEINE User-Notification aktiviert ist
+        enabled = (userSettings?.userCreate ?? systemSettings?.userCreate ?? true) ||
+                  (userSettings?.userUpdate ?? systemSettings?.userUpdate ?? true) ||
+                  (userSettings?.userDelete ?? systemSettings?.userDelete ?? true);
+      }
       break;
     case NotificationType.role:
-      enabled = (userSettings?.roleCreate ?? systemSettings.roleCreate) ||
-                (userSettings?.roleUpdate ?? systemSettings.roleUpdate) ||
-                (userSettings?.roleDelete ?? systemSettings.roleDelete);
+      if (relatedEntityType === 'create') {
+        enabled = userSettings?.roleCreate ?? systemSettings?.roleCreate ?? true;
+      } else if (relatedEntityType === 'update') {
+        enabled = userSettings?.roleUpdate ?? systemSettings?.roleUpdate ?? true;
+      } else if (relatedEntityType === 'delete') {
+        enabled = userSettings?.roleDelete ?? systemSettings?.roleDelete ?? true;
+      } else {
+        // Fallback: wenn kein relatedEntityType angegeben, prüfe ob IRGENDEINE Role-Notification aktiviert ist
+        enabled = (userSettings?.roleCreate ?? systemSettings?.roleCreate ?? true) ||
+                  (userSettings?.roleUpdate ?? systemSettings?.roleUpdate ?? true) ||
+                  (userSettings?.roleDelete ?? systemSettings?.roleDelete ?? true);
+      }
       break;
     case NotificationType.worktime:
       if (relatedEntityType === 'start') {
-        enabled = userSettings?.worktimeStart ?? systemSettings.worktimeStart;
+        enabled = userSettings?.worktimeStart ?? systemSettings?.worktimeStart ?? true;
       } else if (relatedEntityType === 'stop') {
-        enabled = userSettings?.worktimeStop ?? systemSettings.worktimeStop;
+        enabled = userSettings?.worktimeStop ?? systemSettings?.worktimeStop ?? true;
       } else if (relatedEntityType === 'auto_stop') {
-        enabled = userSettings?.worktimeAutoStop ?? systemSettings.worktimeAutoStop;
+        enabled = userSettings?.worktimeAutoStop ?? systemSettings?.worktimeAutoStop ?? true;
+      } else {
+        // Fallback: wenn kein relatedEntityType angegeben, prüfe ob IRGENDEINE Worktime-Notification aktiviert ist
+        enabled = (userSettings?.worktimeStart ?? systemSettings?.worktimeStart ?? true) ||
+                  (userSettings?.worktimeStop ?? systemSettings?.worktimeStop ?? true) ||
+                  (userSettings?.worktimeAutoStop ?? systemSettings?.worktimeAutoStop ?? true);
       }
       break;
     case NotificationType.worktime_manager_stop:
-      enabled = userSettings?.worktimeManagerStop ?? systemSettings.worktimeManagerStop;
+      enabled = userSettings?.worktimeManagerStop ?? systemSettings?.worktimeManagerStop ?? true;
       break;
     // Neue Organisation-spezifische Benachrichtigungen
     case NotificationType.joinRequest:
@@ -90,6 +140,7 @@ export async function createNotificationIfEnabled(
     const enabled = await isNotificationEnabled(data.userId, data.type, data.relatedEntityType);
 
     if (!enabled) {
+      console.log(`Notification nicht erstellt: Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId} ist deaktiviert`);
       return false;
     }
 
@@ -104,8 +155,17 @@ export async function createNotificationIfEnabled(
       }
     });
 
+    console.log(`Notification erstellt: ID ${notification.id}, Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId}`);
     return true;
   } catch (error) {
+    console.error('Fehler beim Erstellen der Notification:', error);
+    console.error('Notification-Daten:', {
+      userId: data.userId,
+      type: data.type,
+      relatedEntityType: data.relatedEntityType,
+      relatedEntityId: data.relatedEntityId,
+      title: data.title
+    });
     return false;
   }
 }
@@ -626,8 +686,14 @@ export async function notifyOrganizationAdmins(
 ): Promise<void> {
   try {
     // Finde alle Admins der Organisation
+    const { getUserOrganizationFilter } = await import('../middleware/organization');
+    // Erstelle ein Request-Objekt für den Filter (benötigt req.organizationId)
+    const mockReq = { organizationId } as any;
+    const userFilter = getUserOrganizationFilter(mockReq);
+    
     const orgAdmins = await prisma.user.findMany({
       where: {
+        ...userFilter,
         roles: {
           some: {
             role: {

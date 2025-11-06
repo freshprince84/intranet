@@ -371,9 +371,9 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 todo-analytics-wrapper">
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 todo-analytics-wrapper">
       {/* Titelzeile */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 px-3 sm:px-4 md:px-6">
         {/* Linke Seite: Titel mit Icon */}
         <div className="flex items-center">
           <ClipboardDocumentListIcon className="h-6 w-6 mr-2 dark:text-white" />
@@ -430,7 +430,8 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
 
       {/* Filter-Pane */}
       {isFilterPanelOpen && (
-        <FilterPane
+        <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
+          <FilterPane
           columns={availableColumns}
           onApply={applyFilterConditions}
           onReset={resetFilterConditions}
@@ -438,10 +439,12 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
           savedOperators={filterLogicalOperators}
           tableId={TODO_ANALYTICS_TABLE_ID}
         />
+        </div>
       )}
       
       {/* Gespeicherte Filter als Tags */}
-      <SavedFilterTags
+      <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
+        <SavedFilterTags
         tableId={TODO_ANALYTICS_TABLE_ID}
         onSelectFilter={applyFilterConditions}
         onReset={resetFilterConditions}
@@ -450,6 +453,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
         onFilterChange={handleFilterChange}
         defaultFilterName={t('teamWorktime.filters.all')}
       />
+      </div>
 
       {/* Häufigkeitsanalyse & Schicht-Analyse Toggle */}
       <div className="mb-4 flex items-center gap-2">
@@ -507,17 +511,17 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
               {frequencyData.userStats && frequencyData.userStats.length > 0 && (
                 <div>
                   <h4 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t('analytics.todo.frequency.completionsPerUser')}</h4>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.frequency.user')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.frequency.completed')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.frequency.lastCompletion')}
                           </th>
                         </tr>
@@ -525,13 +529,13 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                       <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
                         {frequencyData.userStats.slice(0, 10).map((stat: any) => (
                           <tr key={stat.userId} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                            <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                               {stat.user ? `${stat.user.firstName} ${stat.user.lastName}` : t('analytics.todo.unknown')}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {stat.completedCount}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {stat.lastCompletedAt ? format(new Date(stat.lastCompletedAt), 'HH:mm') : '-'}
                             </td>
                           </tr>
@@ -546,20 +550,20 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
               {frequencyData.taskStats && frequencyData.taskStats.length > 0 && (
                 <div>
                   <h4 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t('analytics.todo.frequency.frequentCompleted')}</h4>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.columns.title')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.columns.status')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.columns.branch')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.frequency.completed')}
                           </th>
                         </tr>
@@ -567,18 +571,18 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                       <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
                         {frequencyData.taskStats.slice(0, 20).map((stat: any) => (
                           <tr key={stat.taskId} className={`hover:bg-gray-50 dark:hover:bg-gray-800 ${stat.neverCompleted ? 'bg-red-50 dark:bg-red-900/10' : ''}`}>
-                            <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                            <td className="px-3 sm:px-4 md:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                               {stat.title}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(stat.currentStatus)}`}>
                                 {getStatusLabel(stat.currentStatus)}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {stat.branch.name}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {stat.completedCount}x {stat.neverCompleted && <span className="text-red-600 dark:text-red-400">{t('analytics.todo.never')}</span>}
                             </td>
                           </tr>
@@ -736,23 +740,23 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
               {shiftData.shifts && shiftData.shifts.length > 0 && (
                 <div>
                   <h4 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t('analytics.todo.shift.shiftsWithTodos')}</h4>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.frequency.user')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.columns.branch')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.shift.time')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.shift.duration')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.columns.title')}
                           </th>
                         </tr>
@@ -763,20 +767,20 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                           return (
                             <React.Fragment key={shift.workTimeId}>
                               <tr className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                                   {shift.user.firstName} {shift.user.lastName}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   {shift.branch.name}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   {format(new Date(shift.startTime), 'HH:mm')}
                                   {shift.endTime && ` - ${format(new Date(shift.endTime), 'HH:mm')}`}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   {shift.durationHours ? `${shift.durationHours}h` : t('worktime.running')}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   <div className="flex items-center gap-2">
                                     <span>{shift.linkedTasksCount}</span>
                                     {shift.linkedTasksCount > 0 && (
@@ -797,7 +801,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                               </tr>
                               {isExpanded && shift.linkedTasksCount > 0 && (
                                 <tr className="bg-gray-50 dark:bg-gray-800/50">
-                                  <td colSpan={5} className="px-6 py-4">
+                                  <td colSpan={5} className="px-3 sm:px-4 md:px-6 py-4">
                                     <div className="ml-4 border-l-2 border-blue-200 dark:border-blue-700 pl-4">
                                       <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{t('analytics.todo.shift.linkedTasks')}</h5>
                                       <div className="space-y-2">
@@ -832,20 +836,20 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
               {shiftData.tasksWithShifts && shiftData.tasksWithShifts.length > 0 && (
                 <div>
                   <h4 className="text-base font-medium text-gray-900 dark:text-white mb-3">{t('analytics.todo.shift.tasksWithShiftDistribution')}</h4>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-800">
                         <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.columns.title')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.columns.status')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.shift.totalShifts')}
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                          <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                             {t('analytics.todo.shift.totalTime')}
                           </th>
                         </tr>
@@ -853,18 +857,18 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                       <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
                         {shiftData.tasksWithShifts.slice(0, 30).map((item: any) => (
                           <tr key={item.task.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
-                            <td className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                            <td className="px-3 sm:px-4 md:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                               {item.task.title}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(item.task.status)}`}>
                                 {getStatusLabel(item.task.status)}
                               </span>
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {item.shiftCount}x
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                               {item.totalDurationHours}h
                             </td>
                           </tr>
@@ -1022,7 +1026,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                   return column ? (
                     <th
                       key={columnId}
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
+                      className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
                     >
                       {column.label}
                     </th>
@@ -1033,7 +1037,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
               {filteredTodos.length === 0 ? (
                 <tr>
-                  <td colSpan={columnOrder.filter(id => visibleColumnIds.includes(id)).length} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={columnOrder.filter(id => visibleColumnIds.includes(id)).length} className="px-3 sm:px-4 md:px-6 py-4 text-center text-gray-500 dark:text-gray-400">
                     Keine To-Dos für dieses Datum gefunden
                   </td>
                 </tr>
@@ -1049,13 +1053,13 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                           switch (columnId) {
                             case 'time':
                               return (
-                                <td key={columnId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   {format(new Date(todo.updatedAt), 'HH:mm')}
                                 </td>
                               );
                             case 'title':
                               return (
-                                <td key={columnId} className="px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                                   <div className="flex items-center gap-2">
                                     {hasStatusHistory && (
                                       <button
@@ -1084,7 +1088,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                               );
                             case 'responsible':
                               return (
-                                <td key={columnId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   {todo.responsible
                                     ? `${todo.responsible.firstName} ${todo.responsible.lastName}`
                                     : '-'}
@@ -1092,7 +1096,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                               );
                             case 'qualityControl':
                               return (
-                                <td key={columnId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   {todo.qualityControl
                                     ? `${todo.qualityControl.firstName} ${todo.qualityControl.lastName}`
                                     : '-'}
@@ -1100,7 +1104,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                               );
                             case 'branch':
                               return (
-                                <td key={columnId} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                                   {todo.branch.name}
                                 </td>
                               );
@@ -1112,7 +1116,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                       {/* Status-Historie Zeile */}
                       {isExpanded && hasStatusHistory && (
                         <tr className="bg-gray-50 dark:bg-gray-800/50">
-                          <td colSpan={columnOrder.filter(id => visibleColumnIds.includes(id)).length} className="px-6 py-4">
+                          <td colSpan={columnOrder.filter(id => visibleColumnIds.includes(id)).length} className="px-3 sm:px-4 md:px-6 py-4">
                             <div className="ml-4 border-l-2 border-blue-200 dark:border-blue-700 pl-4">
                               <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
                                 <ArrowPathIcon className="h-4 w-4" />
@@ -1152,7 +1156,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
         </div>
       ) : (
         /* Card-Ansicht */
-        <div className="-mx-6">
+        <div className="-mx-3 sm:-mx-4 md:-mx-6">
           {filteredTodos.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
               <ClipboardDocumentListIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />

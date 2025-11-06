@@ -60,21 +60,29 @@ model User {
 }
 
 model Organization {
-  id               Int                       @id @default(autoincrement())
-  name             String                    @unique
-  displayName      String
-  domain           String?                   @unique
-  logo             String?
-  isActive         Boolean                   @default(true)
-  maxUsers         Int                       @default(50)
-  subscriptionPlan String                    @default("basic")
-  subscriptionEnd  DateTime?
-  settings         Json?
-  createdAt        DateTime                  @default(now())
-  updatedAt        DateTime                  @updatedAt
-  invitations      OrganizationInvitation[]
-  joinRequests     OrganizationJoinRequest[]
-  roles            Role[]
+  id                   Int                         @id @default(autoincrement())
+  name                 String                      @unique
+  displayName          String
+  domain               String?                     @unique
+  logo                 String?
+  isActive             Boolean                     @default(true)
+  maxUsers             Int                         @default(50)
+  subscriptionPlan     String                      @default("basic")
+  subscriptionEnd      DateTime?
+  settings             Json?
+  createdAt            DateTime                    @default(now())
+  updatedAt            DateTime                    @updatedAt
+  invitations          OrganizationInvitation[]
+  joinRequests         OrganizationJoinRequest[]
+  roles                Role[]
+  tasks                Task[]
+  requests             Request[]
+  workTimes            WorkTime[]
+  clients              Client[]
+  branches             Branch[]
+  consultationInvoices ConsultationInvoice[]
+  monthlyReports       MonthlyConsultationReport[]
+  carticles            CerebroCarticle[]
 }
 
 model OrganizationJoinRequest {
@@ -156,6 +164,8 @@ model Branch {
   name              String              @unique
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
+  organizationId    Int?
+  organization      Organization?       @relation(fields: [organizationId], references: [id])
   requests          Request[]
   tasks             Task[]
   users             UsersBranches[]
@@ -187,6 +197,8 @@ model WorkTime {
   clientId        Int?
   notes           String?
   monthlyReportId Int?
+  organizationId  Int?
+  organization    Organization?              @relation(fields: [organizationId], references: [id])
   invoiceItems    ConsultationInvoiceItem[]
   branch          Branch                     @relation(fields: [branchId], references: [id])
   client          Client?                    @relation(fields: [clientId], references: [id])
@@ -207,6 +219,8 @@ model Task {
   createdAt        DateTime              @default(now())
   updatedAt        DateTime              @updatedAt
   roleId           Int?
+  organizationId   Int?
+  organization     Organization?         @relation(fields: [organizationId], references: [id])
   branch           Branch                @relation(fields: [branchId], references: [id])
   qualityControl   User                  @relation("quality_control", fields: [qualityControlId], references: [id])
   responsible      User?                 @relation("responsible", fields: [responsibleId], references: [id])
@@ -218,22 +232,24 @@ model Task {
 }
 
 model Request {
-  id            Int                      @id @default(autoincrement())
-  title         String
-  description   String?
-  status        RequestStatus            @default(approval)
-  requesterId   Int
-  responsibleId Int
-  branchId      Int
-  dueDate       DateTime?
-  createTodo    Boolean                  @default(false)
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  branch        Branch                   @relation(fields: [branchId], references: [id])
-  requester     User                     @relation("requester", fields: [requesterId], references: [id])
-  responsible   User                     @relation("responsible", fields: [responsibleId], references: [id])
-  attachments   RequestAttachment[]
-  carticles     RequestCerebroCarticle[]
+  id             Int                      @id @default(autoincrement())
+  title          String
+  description    String?
+  status         RequestStatus            @default(approval)
+  requesterId    Int
+  responsibleId  Int
+  branchId       Int
+  dueDate        DateTime?
+  createTodo     Boolean                  @default(false)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  organizationId Int?
+  organization   Organization?            @relation(fields: [organizationId], references: [id])
+  branch         Branch                   @relation(fields: [branchId], references: [id])
+  requester      User                     @relation("requester", fields: [requesterId], references: [id])
+  responsible    User                     @relation("responsible", fields: [responsibleId], references: [id])
+  attachments    RequestAttachment[]
+  carticles      RequestCerebroCarticle[]
 }
 
 model Settings {
@@ -381,28 +397,30 @@ model EmployeePayroll {
 }
 
 model CerebroCarticle {
-  id            Int                      @id @default(autoincrement())
-  title         String
-  content       String?
-  slug          String                   @unique
-  parentId      Int?
-  createdById   Int
-  updatedById   Int?
-  isPublished   Boolean                  @default(false)
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  position      Int?                     @default(999)
-  githubPath    String?
-  createdBy     User                     @relation("CarticleCreator", fields: [createdById], references: [id])
-  parent        CerebroCarticle?         @relation("Hierarchy", fields: [parentId], references: [id])
-  children      CerebroCarticle[]        @relation("Hierarchy")
-  updatedBy     User?                    @relation("CarticleUpdater", fields: [updatedById], references: [id])
-  externalLinks CerebroExternalLink[]
-  media         CerebroMedia[]
-  notifications Notification[]
-  requests      RequestCerebroCarticle[]
-  tasks         TaskCerebroCarticle[]
-  tags          CerebroTag[]             @relation("CerebroCarticleToCerebroTag")
+  id             Int                      @id @default(autoincrement())
+  title          String
+  content        String?
+  slug           String                   @unique
+  parentId       Int?
+  createdById    Int
+  updatedById    Int?
+  isPublished    Boolean                  @default(false)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  position       Int?                     @default(999)
+  githubPath     String?
+  organizationId Int?
+  organization   Organization?            @relation(fields: [organizationId], references: [id])
+  createdBy      User                     @relation("CarticleCreator", fields: [createdById], references: [id])
+  parent         CerebroCarticle?         @relation("Hierarchy", fields: [parentId], references: [id])
+  children       CerebroCarticle[]        @relation("Hierarchy")
+  updatedBy      User?                    @relation("CarticleUpdater", fields: [updatedById], references: [id])
+  externalLinks  CerebroExternalLink[]
+  media          CerebroMedia[]
+  notifications  Notification[]
+  requests       RequestCerebroCarticle[]
+  tasks          TaskCerebroCarticle[]
+  tags           CerebroTag[]             @relation("CerebroCarticleToCerebroTag")
 }
 
 model TaskCerebroCarticle {
@@ -517,34 +535,38 @@ model Client {
   isActive             Boolean                         @default(true)
   createdAt            DateTime                        @default(now())
   updatedAt            DateTime                        @updatedAt
+  organizationId       Int?
+  organization         Organization?                   @relation(fields: [organizationId], references: [id])
   consultationInvoices ConsultationInvoice[]
   monthlyReportItems   MonthlyConsultationReportItem[]
   workTimes            WorkTime[]
 }
 
 model ConsultationInvoice {
-  id            Int                       @id @default(autoincrement())
-  invoiceNumber String
-  clientId      Int
-  userId        Int
-  issueDate     DateTime                  @default(now())
-  dueDate       DateTime
-  status        InvoiceStatus             @default(DRAFT)
-  subtotal      Decimal                   @db.Decimal(10, 2)
-  vatRate       Decimal?                  @db.Decimal(5, 2)
-  vatAmount     Decimal?                  @db.Decimal(10, 2)
-  total         Decimal                   @db.Decimal(10, 2)
-  currency      String                    @default("CHF")
-  paymentTerms  String                    @default("30 Tage netto")
-  notes         String?
-  pdfPath       String?
-  qrReference   String?
-  createdAt     DateTime                  @default(now())
-  updatedAt     DateTime                  @updatedAt
-  client        Client                    @relation(fields: [clientId], references: [id])
-  user          User                      @relation(fields: [userId], references: [id])
-  items         ConsultationInvoiceItem[]
-  payments      InvoicePayment[]
+  id             Int                       @id @default(autoincrement())
+  invoiceNumber  String
+  clientId       Int
+  userId         Int
+  issueDate      DateTime                  @default(now())
+  dueDate        DateTime
+  status         InvoiceStatus             @default(DRAFT)
+  subtotal       Decimal                   @db.Decimal(10, 2)
+  vatRate        Decimal?                  @db.Decimal(5, 2)
+  vatAmount      Decimal?                  @db.Decimal(10, 2)
+  total          Decimal                   @db.Decimal(10, 2)
+  currency       String                    @default("CHF")
+  paymentTerms   String                    @default("30 Tage netto")
+  notes          String?
+  pdfPath        String?
+  qrReference    String?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+  organizationId Int?
+  organization   Organization?             @relation(fields: [organizationId], references: [id])
+  client         Client                    @relation(fields: [clientId], references: [id])
+  user           User                      @relation(fields: [userId], references: [id])
+  items          ConsultationInvoiceItem[]
+  payments       InvoicePayment[]
 }
 
 model ConsultationInvoiceItem {
@@ -602,23 +624,25 @@ model InvoiceSettings {
 }
 
 model MonthlyConsultationReport {
-  id           Int                             @id @default(autoincrement())
-  userId       Int
-  reportNumber String
-  periodStart  DateTime
-  periodEnd    DateTime
-  recipient    String
-  totalHours   Decimal                         @db.Decimal(10, 2)
-  totalAmount  Decimal?                        @db.Decimal(10, 2)
-  currency     String                          @default("CHF")
-  pdfPath      String?
-  status       MonthlyReportStatus             @default(GENERATED)
-  generatedAt  DateTime                        @default(now())
-  createdAt    DateTime                        @default(now())
-  updatedAt    DateTime                        @updatedAt
-  user         User                            @relation(fields: [userId], references: [id])
-  items        MonthlyConsultationReportItem[]
-  workTimes    WorkTime[]
+  id             Int                             @id @default(autoincrement())
+  userId         Int
+  reportNumber   String
+  periodStart    DateTime
+  periodEnd      DateTime
+  recipient      String
+  totalHours     Decimal                         @db.Decimal(10, 2)
+  totalAmount    Decimal?                        @db.Decimal(10, 2)
+  currency       String                          @default("CHF")
+  pdfPath        String?
+  status         MonthlyReportStatus             @default(GENERATED)
+  generatedAt    DateTime                        @default(now())
+  createdAt      DateTime                        @default(now())
+  updatedAt      DateTime                        @updatedAt
+  organizationId Int?
+  organization   Organization?                   @relation(fields: [organizationId], references: [id])
+  user           User                            @relation(fields: [userId], references: [id])
+  items          MonthlyConsultationReportItem[]
+  workTimes      WorkTime[]
 }
 
 model MonthlyConsultationReportItem {

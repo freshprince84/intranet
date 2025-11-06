@@ -24,7 +24,7 @@ const Register = React.lazy(() => import('./pages/Register.tsx'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard.tsx'));
 const Settings = React.lazy(() => import('./pages/Settings.tsx'));
 const MobileAppLanding = React.lazy(() => import('./pages/MobileAppLanding.tsx'));
-const UserManagement = React.lazy(() => import('./pages/UserManagement.tsx'));
+const Organisation = React.lazy(() => import('./pages/Organisation.tsx'));
 const Worktracker = React.lazy(() => import('./pages/Worktracker.tsx'));
 const TeamWorktimeControl = React.lazy(() => import('./pages/TeamWorktimeControl.tsx'));
 const Profile = React.lazy(() => import('./pages/Profile.tsx'));
@@ -109,9 +109,9 @@ const App: React.FC = () => {
                                                                 </Suspense>
                                                             </ProtectedRoute>
                                                         } />
-                                                        <Route path="/users" element={
+                                                        <Route path="/organization" element={
                                                             <Suspense fallback={<LoadingScreen />}>
-                                                                <UserManagement />
+                                                                <Organisation />
                                                             </Suspense>
                                                         } />
                                                         <Route path="/settings" element={

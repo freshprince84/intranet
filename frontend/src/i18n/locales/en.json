@@ -44,7 +44,22 @@
     "searchPlaceholder": "Search...",
     "showFilter": "Show filter",
     "collapse": "Collapse",
-    "expand": "Expand"
+    "expand": "Expand",
+    "close": "Close",
+    "unknown": "Unknown",
+    "refresh": "Refresh",
+    "loadingScreen": "Loading",
+    "loadingScreenSubtitle": "Almost done... just a moment more! ⚡"
+  },
+  "header": {
+    "profile": "Profile",
+    "switchRole": "Switch role",
+    "switchBranch": "Switch location",
+    "logout": "Logout"
+  },
+  "dataCard": {
+    "expandDescription": "Expand description",
+    "collapseDescription": "Collapse description"
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -199,7 +214,19 @@
     "roles": "Roles",
     "joinRequests": "Join requests",
     "invitations": "Invitations",
-    "utilization": "Utilization"
+    "utilization": "Utilization",
+    "utilizationPercent": "Utilization",
+    "availableSlots": "Available slots",
+    "organizationName": "Organization Name",
+    "subscriptionPlan": "Subscription Plan",
+    "noPermission": "You do not have permission to view organization settings.",
+    "loadError": "Error loading organization",
+    "updateError": "Error updating organization",
+    "updateSuccess": "Organization updated successfully",
+    "noPermissionEdit": "You do not have permission to edit the organization",
+    "saving": "Saving...",
+    "notFound": "No organization found",
+    "createOrJoinHint": "You don't have an organization yet. Please create one or join one."
   },
   "tasks": {
     "title": "To Do's",
@@ -368,6 +395,10 @@
         "uploadAfterCreate": "will be uploaded after creation",
         "linkedCerebroArticles": "Linked Cerebro Articles"
       },
+      "tabs": {
+        "data": "Data",
+        "cerebro": "Cerebro Articles"
+      },
       "errors": {
         "connectionError": "Could not establish connection to server. Please make sure the server is running.",
         "loadUsersError": "Error loading users",
@@ -409,6 +440,14 @@
       "identificationNumber": "Identification Number",
       "taxIdentificationNumber": "Tax Identification Number",
       "payrollSettings": "Payroll Settings"
+    },
+    "createUser": {
+      "title": "Create New User",
+      "email": "Email",
+      "password": "Password",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "create": "Create"
     }
   },
   "roles": {
@@ -417,7 +456,8 @@
     "noDescription": "No description",
     "actions": {
       "edit": "Edit role",
-      "delete": "Delete role"
+      "delete": "Delete role",
+      "copy": "Copy role"
     },
     "pages": {
       "dashboard": "Dashboard",
@@ -794,7 +834,9 @@
     "updateError": "Error updating organization",
     "updateSuccess": "Organization updated successfully",
     "noPermissionEdit": "You do not have permission to edit the organization",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "notFound": "No organization found",
+    "createOrJoinHint": "You don't have an organization yet. Please create one or join one."
   },
   "settings": {
     "title": "Settings",
@@ -839,12 +881,19 @@
     "invalidResponse": "Invalid response format from server"
   },
   "notifications": {
-    "title": "Notification Settings",
+    "title": "Notifications",
+    "ariaLabel": "Notifications",
+    "markAllAsRead": "Mark all as read",
+    "noNotifications": "No notifications available",
+    "showAll": "Show all notifications",
+    "invalidDate": "Invalid date",
+    "loadError": "Error loading notifications",
+    "notificationSettings": "Notification Settings",
     "description": "Select which events you want to receive notifications for.",
     "loading": "Loading settings...",
     "saveSuccess": "Settings saved successfully.",
     "saveError": "Settings could not be saved",
-    "loadError": "Settings could not be loaded. Default settings will be used.",
+    "loadSettingsError": "Settings could not be loaded. Default settings will be used.",
     "allNotifications": "All Notifications",
     "allNotificationsDescription": "Enable or disable all notifications",
     "all": "All",
@@ -931,6 +980,33 @@
       "work_permit": "Work Permit",
       "tax_id": "Tax ID",
       "social_security": "Social Security Card"
+    },
+    "form": {
+      "noDocumentUploaded": "Please upload a document first or take a photo",
+      "noImageData": "Cannot find image data",
+      "recognitionSuccess": "Document recognized successfully",
+      "recognitionError": "Document recognition error: {{error}}",
+      "fillRequiredFields": "Please fill in all required fields",
+      "updateSuccess": "Document updated successfully",
+      "createSuccess": "Document added successfully",
+      "error": "Error: {{error}}",
+      "documentType": "Document Type",
+      "selectDocumentType": "Please select",
+      "documentNumber": "Document Number",
+      "issuingCountry": "Issuing Country",
+      "issuingAuthority": "Issuing Authority",
+      "issueDate": "Issue Date",
+      "expiryDate": "Expiry Date",
+      "documentImage": "Document Image",
+      "uploadFile": "Upload File",
+      "takePhoto": "Take Photo",
+      "recognitionRunning": "Recognition running...",
+      "autoRecognize": "Auto Recognize",
+      "selectedFile": "Selected File: {{name}}",
+      "capturedImage": "Captured Image:",
+      "capturedDocument": "Captured Document",
+      "recognitionErrorLabel": "Recognition Error: {{error}}",
+      "update": "Update"
     }
   },
   "roleAssignment": {
@@ -941,9 +1017,21 @@
     "availableRoles": "Available Roles",
     "noRoles": "No roles available",
     "saveSuccess": "Roles assigned successfully",
-    "saveError": "Error assigning roles"
+    "saveError": "Error assigning roles",
+    "loading": "Loading roles...",
+    "unknownRolesWarning": "Warning: Unknown role IDs found",
+    "unknownRolesMessage": "Some user role IDs ({{ids}}) are not present in available roles.",
+    "availableRoleIds": "Available Role IDs: {{ids}}",
+    "noRolesAssigned": "No roles assigned",
+    "fixed": "Fixed",
+    "fixedAssigned": "Fixed Assigned",
+    "remove": "Remove",
+    "unknownRole": "Unknown Role (ID: {{id}})",
+    "unknownRoleDescription": "This role is assigned to the user but is not present in the role list.",
+    "add": "Add",
+    "noRolesAvailable": "No more roles available"
   },
-  "userManagement": {
+  "organisation": {
     "title": "Organization",
     "tabs": {
       "users": "Users",
@@ -953,19 +1041,119 @@
     "noPermission": "Only administrators have access to this page.",
     "error": "Error:",
     "loading": "Loading...",
-    "noPermissionForPage": "No permission for this page."
+    "noPermissionForPage": "No permission for this page.",
+    "proFeature": {
+      "users": "User management is a PRO feature. Please upgrade your subscription to use this feature.",
+      "roles": "Role management is a PRO feature. Please upgrade your subscription to use this feature."
+    },
+    "createUser": {
+      "title": "Create New User",
+      "email": "Email",
+      "password": "Password",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "create": "Create"
+    }
   },
   "roles": {
     "title": "Roles",
     "permissions": "Permissions",
     "noDescription": "No description",
+    "createRole": "Create New Role",
+    "editRole": "Edit Role",
     "actions": {
       "edit": "Edit role",
       "delete": "Delete role"
+    },
+    "form": {
+      "name": "Name",
+      "description": "Description",
+      "detailedPermissions": "Detailed Permissions",
+      "activateAllPages": "Activate All Pages",
+      "deactivateAllPages": "Deactivate All Pages",
+      "pagesChecked": "Pages ✓",
+      "pagesUnchecked": "Pages ✗",
+      "activateAllTables": "Activate All Tables",
+      "deactivateAllTables": "Deactivate All Tables",
+      "tablesChecked": "Tables ✓",
+      "tablesUnchecked": "Tables ✗",
+      "activateAllButtons": "Activate All Buttons",
+      "deactivateAllButtons": "Deactivate All Buttons",
+      "buttonsChecked": "Buttons ✓",
+      "buttonsUnchecked": "Buttons ✗"
+    },
+    "pages": {
+      "dashboard": "Dashboard",
+      "worktracker": "Worktracker",
+      "consultations": "Consultations",
+      "team_worktime_control": "Team Control",
+      "payroll": "Payroll",
+      "usermanagement": "Organization",
+      "organization_management": "Organization Management",
+      "cerebro": "Cerebro",
+      "settings": "Settings",
+      "profile": "Profile"
+    },
+    "tables": {
+      "tasks": "Tasks",
+      "worktime": "Time Tracker",
+      "users": "Users",
+      "roles": "Roles",
+      "organization": "Organization",
+      "organization_join_requests": "Join Requests",
+      "organization_users": "Organization Users",
+      "clients": "Clients",
+      "consultation_invoices": "Invoices",
+      "requests": "Requests",
+      "team_worktime": "Team Worktime",
+      "settings": "Settings",
+      "notifications": "Notifications",
+      "branches": "Branches",
+      "monthly_reports": "Monthly Reports"
+    },
+    "buttons": {
+      "worktime_start": "Start",
+      "worktime_stop": "Stop",
+      "worktime_edit": "Edit",
+      "worktime_delete": "Delete",
+      "task_create": "Create",
+      "task_edit": "Edit",
+      "task_delete": "Delete",
+      "todo_create": "Create",
+      "todo_edit": "Edit",
+      "todo_delete": "Delete",
+      "client_create": "Create",
+      "client_edit": "Edit Client",
+      "client_delete": "Delete",
+      "consultation_start": "Start",
+      "consultation_stop": "Stop",
+      "consultation_edit": "Edit Consultation",
+      "invoice_create": "Create",
+      "invoice_download": "Download",
+      "invoice_mark_paid": "Mark as Paid",
+      "invoice_settings": "Settings",
+      "user_create": "Create",
+      "user_edit": "Edit",
+      "user_delete": "Delete",
+      "role_assign": "Assign",
+      "role_create": "Create",
+      "role_edit": "Edit",
+      "role_delete": "Delete",
+      "organization_create": "Create",
+      "organization_edit": "Edit",
+      "organization_delete": "Delete",
+      "settings_system": "System",
+      "settings_notifications": "Notifications",
+      "settings_profile": "Profile",
+      "database_reset_table": "Reset Table",
+      "database_logs": "Logs",
+      "payroll_generate": "Generate",
+      "payroll_export": "Export",
+      "payroll_edit": "Edit",
+      "cerebro": "Cerebro"
     }
   },
   "cerebro": {
-    "title": "Cerebro",
     "home": {
       "title": "Readme - Overview"
     },
@@ -1157,35 +1345,6 @@
     "noRequests": "No join requests available.",
     "noMatching": "No join requests match the filter criteria."
   },
-  "organization": {
-    "create": {
-      "title": "Create new organization",
-      "name": "Name *",
-      "displayName": "Display name *",
-      "domain": "Domain",
-      "nameRequired": "Name is required",
-      "displayNameRequired": "Display name is required",
-      "createSuccess": "Organization created successfully",
-      "createError": "Error creating organization",
-      "creating": "Creating...",
-      "createButton": "Create"
-    },
-    "join": {
-      "title": "Join organization",
-      "search": "Search organization *",
-      "searchPlaceholder": "Enter organization name...",
-      "searching": "Searching...",
-      "noOrganizations": "No organizations found",
-      "nameRequired": "Organization name is required",
-      "selectFromList": "Please select an organization from the list",
-      "message": "Message (optional)",
-      "messagePlaceholder": "Optional: add a message...",
-      "sendSuccess": "Join request sent successfully",
-      "sendError": "Error sending join request",
-      "sending": "Sending...",
-      "send": "Send"
-    }
-  },
   "analytics": {
     "todo": {
       "title": "To-Do Analytics",
@@ -1371,6 +1530,93 @@
     "itemUnitPrice": "Hourly rate",
     "itemAmount": "Amount",
     "noItems": "No invoice positions available",
-    "deletePosition": "Delete position"
+    "deletePosition": "Delete position",
+    "editSidepane": {
+      "title": "Edit invoice: {{invoiceNumber}}",
+      "basicInfo": "Basic information",
+      "issueDate": "Invoice date",
+      "dueDate": "Due date",
+      "notesPlaceholder": "Additional notes about the invoice...",
+      "items": "Invoice positions",
+      "addItem": "Add position",
+      "hours": "Hours",
+      "total": "Total",
+      "status": {
+        "draft": "Draft",
+        "sent": "Sent",
+        "paid": "Paid",
+        "overdue": "Overdue",
+        "cancelled": "Cancelled"
+      }
+    },
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "cancelled": "Cancelled"
+    }
+  },
+  "register": {
+    "title": "Registration",
+    "subtitle": "Create your account with email and password",
+    "email": "Email address",
+    "emailPlaceholder": "your.email@example.com",
+    "password": "Password",
+    "passwordPlaceholder": "At least 6 characters",
+    "confirmPassword": "Confirm password",
+    "confirmPasswordPlaceholder": "Repeat password",
+    "register": "Register",
+    "registering": "Registering...",
+    "alreadyRegistered": "Already registered?",
+    "login": "Login",
+    "passwordsDoNotMatch": "Passwords do not match.",
+    "passwordTooShort": "Password must be at least 6 characters long.",
+    "registrationFailed": "Registration failed. Please check your entries."
+  },
+  "database": {
+    "noPermission": "No permission",
+    "adminOnly": "These functions are only available for administrators.",
+    "warningTitle": "⚠️ WARNING: Reset tables",
+    "warning1": "These functions delete all data from the selected tables",
+    "warning2": "Standard data is automatically restored via seed files",
+    "warning3": "Only tables with seed data can be reset",
+    "warning4": "All operations are logged",
+    "resetTablesTitle": "Reset tables with seed data",
+    "danger": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "seedDataRestored": "Seed data will be restored",
+    "deleteDemoClients": "Delete demo clients",
+    "resetAndRefill": "Reset & refill",
+    "operationsTitle": "Database Operations (Audit Log)",
+    "loadingLogs": "Loading logs...",
+    "noLogsAvailable": "No logs available",
+    "confirmResetTitle": "Confirm table reset",
+    "confirmResetMessage": "You are about to reset the table <strong>{{tableName}}</strong>.",
+    "confirmResetWarning": "All data will be deleted and replaced by seed data.",
+    "reflectionTime": "Reflection time: {{seconds}} seconds",
+    "adminPasswordLabel": "Admin password for confirmation:",
+    "adminPasswordPlaceholder": "Your admin password",
+    "resetting": "Resetting...",
+    "confirmDeleteDemoClientsTitle": "Confirm delete demo clients",
+    "confirmDeleteDemoClientsMessage": "You are about to delete <strong>only the demo clients</strong>.",
+    "confirmDeleteDemoClientsWarning": "The demo clients will be permanently deleted and NOT restored.",
+    "deleting": "Deleting...",
+    "passwordRequired": "Password is required",
+    "waitSeconds": "Please wait {{seconds}} more seconds",
+    "resetTableSuccess": "Table {{tableName}} was successfully reset and filled with seed data",
+    "resetTableError": "Error resetting table",
+    "deleteDemoClientsSuccess": "Demo clients were successfully deleted",
+    "deleteDemoClientsError": "Error deleting demo clients",
+    "loadTablesError": "Error loading available tables",
+    "loadLogsError": "Error loading logs",
+    "logStatus": {
+      "start": "Started",
+      "success": "Success",
+      "error": "Error"
+    }
   }
 }

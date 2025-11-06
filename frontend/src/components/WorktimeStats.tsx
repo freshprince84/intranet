@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, getWeek, getYear, parse, addDays } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { de, es, enUS } from 'date-fns/locale';
+import { useLanguage } from '../hooks/useLanguage.ts';
 import { ChartBarIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
 import { API_URL, API_ENDPOINTS } from '../config/api.ts';
 import WorktimeList from './WorktimeList.tsx';
@@ -30,19 +31,37 @@ interface WorktimeStats {
 }
 
 const WorktimeStats: React.FC = () => {
-    const { t } = useTranslation();
+    const { t, i18n } = useTranslation();
+    const { activeLanguage } = useLanguage();
     const { user } = useAuth();
     const [stats, setStats] = useState<WorktimeStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [maxHours, setMaxHours] = useState<number>(8); // Standard 8 Stunden
     
-    // Aktuelle Woche im Format YYYY-Www für das Input-Element
+    // Dynamisches Locale basierend auf aktueller Sprache
+    const dateLocale = useMemo(() => {
+        const lang = activeLanguage || i18n.language || 'de';
+        switch (lang) {
+            case 'es': return es;
+            case 'en': return enUS;
+            default: return de;
+        }
+    }, [activeLanguage, i18n.language]);
+    
+    // Aktuelle Woche im Format YYYY-Www für das Input-Element - aktualisiert sich bei Sprachänderung
     const today = new Date();
     
-    const currentWeekInput = `${getYear(today)}-W${String(getWeek(today, { locale: de })).padStart(2, '0')}`;
+    const currentWeekInput = useMemo(() => {
+        return `${getYear(today)}-W${String(getWeek(today, { locale: dateLocale })).padStart(2, '0')}`;
+    }, [dateLocale]);
     
     const [selectedWeekInput, setSelectedWeekInput] = useState<string>(currentWeekInput);
+    
+    // Aktualisiere selectedWeekInput wenn sich die Sprache ändert (und damit currentWeekInput)
+    useEffect(() => {
+        setSelectedWeekInput(currentWeekInput);
+    }, [currentWeekInput]);
     
     // Berechne das Datum des Montags der aktuellen Woche
     const currentMonday = startOfWeek(today, { weekStartsOn: 1 });

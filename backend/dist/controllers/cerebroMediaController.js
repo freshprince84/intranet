@@ -66,16 +66,33 @@ const uploadMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         if (!req.file) {
             return res.status(400).json({ message: 'Keine Datei hochgeladen' });
         }
-        const { carticleId } = req.body;
+        const { carticleId, carticleSlug } = req.body;
         const userId = parseInt(req.userId, 10);
-        if (!carticleId) {
+        let articleId = null;
+        // Unterstütze sowohl carticleId als auch carticleSlug
+        if (carticleId) {
+            articleId = parseInt(carticleId, 10);
+        }
+        else if (carticleSlug) {
+            // Artikel nach Slug suchen
+            const article = yield prisma.cerebroCarticle.findUnique({
+                where: { slug: carticleSlug },
+                select: { id: true }
+            });
+            if (!article) {
+                fs_1.default.unlinkSync(req.file.path);
+                return res.status(404).json({ message: 'Artikel nicht gefunden' });
+            }
+            articleId = article.id;
+        }
+        else {
             // Lösche die Datei, wenn kein Artikel angegeben ist
             fs_1.default.unlinkSync(req.file.path);
-            return res.status(400).json({ message: 'Artikel-ID ist erforderlich' });
+            return res.status(400).json({ message: 'Artikel-ID oder Artikel-Slug ist erforderlich' });
         }
         // Prüfen, ob der Artikel existiert
         const article = yield prisma.$queryRaw `
-            SELECT * FROM "CerebroCarticle" WHERE id = ${parseInt(carticleId, 10)}
+            SELECT * FROM "CerebroCarticle" WHERE id = ${articleId}
         `;
         if (!article || (Array.isArray(article) && article.length === 0)) {
             // Lösche die Datei, wenn der Artikel nicht existiert
@@ -99,7 +116,7 @@ const uploadMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 ${req.file.originalname}, 
                 ${req.file.mimetype}, 
                 ${req.file.size}, 
-                ${parseInt(carticleId, 10)}, 
+                ${articleId}, 
                 ${userId}, 
                 NOW(), 
                 NOW()

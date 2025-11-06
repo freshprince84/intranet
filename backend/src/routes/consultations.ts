@@ -1,5 +1,6 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { organizationMiddleware } from '../middleware/organization';
 import {
   startConsultation,
   stopConsultation,
@@ -14,6 +15,7 @@ const router = express.Router();
 
 // Alle Routen erfordern Authentifizierung
 router.use(authMiddleware);
+router.use(organizationMiddleware);
 
 // Consultation-Routen
 router.post('/start', startConsultation);

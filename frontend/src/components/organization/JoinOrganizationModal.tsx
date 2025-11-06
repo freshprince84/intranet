@@ -356,7 +356,7 @@ const JoinOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) 
       >
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
           <h2 className="text-lg font-semibold dark:text-white">
-            Organisation beitreten
+            {t('organization.join.title')}
           </h2>
           <button
             onClick={handleClose}
@@ -379,7 +379,7 @@ const JoinOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) 
                 htmlFor="organizationName" 
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                Organisation suchen *
+                {t('organization.join.search')}
               </label>
               <input
                 type="text"
@@ -387,7 +387,7 @@ const JoinOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) 
                 name="organizationName"
                 value={formData.organizationName}
                 onChange={handleOrganizationInputChange}
-                placeholder="Organisationsname eingeben..."
+                placeholder={t('organization.join.searchPlaceholder')}
                 className={`mt-1 block w-full rounded-md border shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2 ${
                   errors.organizationName 
                     ? 'border-red-300 dark:border-red-600' 
@@ -403,7 +403,7 @@ const JoinOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) 
                 <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
                   {searching ? (
                     <div className="p-3 text-center text-gray-500 dark:text-gray-400">
-                      Suche...
+                      {t('organization.join.searching')}
                     </div>
                   ) : organizations.length > 0 ? (
                     organizations.map(org => (
@@ -425,7 +425,7 @@ const JoinOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) 
                     ))
                   ) : (
                     <div className="p-3 text-center text-gray-500 dark:text-gray-400">
-                      Keine Organisationen gefunden
+                      {t('organization.join.noOrganizations')}
                     </div>
                   )}
                 </div>
@@ -437,7 +437,7 @@ const JoinOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) 
                 htmlFor="message" 
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                Nachricht (optional)
+                {t('organization.join.message')}
               </label>
               <textarea
                 id="message"
@@ -445,7 +445,7 @@ const JoinOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) 
                 value={formData.message || ''}
                 onChange={handleMessageChange}
                 rows={3}
-                placeholder="Optional: Fügen Sie eine Nachricht hinzu..."
+                placeholder={t('organization.join.messagePlaceholder')}
                 className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
               />
             </div>
@@ -455,7 +455,7 @@ const JoinOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) 
                 type="button"
                 onClick={handleClose}
                 className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                title="Abbrechen"
+                title={t('common.cancel')}
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
@@ -463,7 +463,7 @@ const JoinOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess }) 
                 type="submit"
                 disabled={loading}
                 className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                title={loading ? 'Sende...' : 'Senden'}
+                title={loading ? t('organization.join.sending') : t('organization.join.send')}
               >
                 {loading ? (
                   <ArrowPathIcon className="h-5 w-5 animate-spin" />

@@ -55,11 +55,13 @@ const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.getAllUsers = getAllUsers;
-// Alle Benutzer für Dropdowns abrufen (ohne Organization-Filter)
+// Alle Benutzer für Dropdowns abrufen (nur User der Organisation)
 const getAllUsersForDropdown = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Für Dropdowns: Alle User ohne Organization-Filter
+        // Für Dropdowns: Nur User der Organisation (oder nur eigene wenn standalone)
+        const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
         const users = yield prisma.user.findMany({
+            where: userFilter,
             select: {
                 id: true,
                 username: true,
@@ -108,7 +110,14 @@ const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -156,7 +165,14 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -229,7 +245,14 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -307,7 +330,14 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -351,16 +381,17 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
         if (!userExists) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
-        // Überprüfe, ob alle Rollen existieren
+        // Überprüfe, ob alle Rollen existieren und zur Organisation gehören
+        const roleFilter = (0, organization_1.getDataIsolationFilter)(req, 'role');
         const existingRoles = yield prisma.role.findMany({
-            where: {
-                id: {
+            where: Object.assign({ id: {
                     in: roleIds
-                }
-            }
+                } }, roleFilter)
         });
         if (existingRoles.length !== roleIds.length) {
-            return res.status(400).json({ message: 'Eine oder mehrere Rollen wurden nicht gefunden' });
+            return res.status(400).json({
+                message: 'Eine oder mehrere Rollen wurden nicht gefunden oder gehören nicht zu Ihrer Organisation'
+            });
         }
         // Aktuelle Benutzerrollen abrufen, um lastUsed-Status zu prüfen
         const currentUserRoles = yield prisma.userRole.findMany({
@@ -424,7 +455,14 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -440,20 +478,19 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
             relatedEntityId: userId,
             relatedEntityType: 'update'
         });
-        // Benachrichtigung für Administratoren senden
+        // Benachrichtigung für Administratoren der Organisation senden
+        const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
         const admins = yield prisma.user.findMany({
-            where: {
-                roles: {
+            where: Object.assign(Object.assign({}, userFilter), { roles: {
                     some: {
                         role: {
-                            name: 'Admin'
+                            name: 'Admin',
+                            organizationId: req.organizationId
                         }
                     }
-                },
-                id: {
+                }, id: {
                     not: userId // Nicht an den aktualisierten Benutzer senden, falls dieser Admin ist
-                }
-            }
+                } })
         });
         for (const admin of admins) {
             yield (0, notificationController_1.createNotificationIfEnabled)({
@@ -674,7 +711,14 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -902,20 +946,19 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             relatedEntityId: updatedUser.id,
             relatedEntityType: 'update'
         });
-        // Benachrichtigung für Administratoren senden
+        // Benachrichtigung für Administratoren der Organisation senden
+        const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
         const admins = yield prisma.user.findMany({
-            where: {
-                roles: {
+            where: Object.assign(Object.assign({}, userFilter), { roles: {
                     some: {
                         role: {
-                            name: 'Admin'
+                            name: 'Admin',
+                            organizationId: req.organizationId
                         }
                     }
-                },
-                id: {
+                }, id: {
                     not: userId // Nicht an den aktualisierten Benutzer senden, falls dieser Admin ist
-                }
-            }
+                } })
         });
         for (const admin of admins) {
             yield (0, notificationController_1.createNotificationIfEnabled)({
@@ -983,17 +1026,17 @@ const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 where: { id: userId }
             })
         ]);
-        // Benachrichtigung für Administratoren senden
+        // Benachrichtigung für Administratoren der Organisation senden
+        const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
         const admins = yield prisma.user.findMany({
-            where: {
-                roles: {
+            where: Object.assign(Object.assign({}, userFilter), { roles: {
                     some: {
                         role: {
-                            name: 'Admin'
+                            name: 'Admin',
+                            organizationId: req.organizationId
                         }
                     }
-                }
-            }
+                } })
         });
         for (const admin of admins) {
             yield (0, notificationController_1.createNotificationIfEnabled)({

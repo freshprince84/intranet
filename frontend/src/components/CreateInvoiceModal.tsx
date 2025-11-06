@@ -46,6 +46,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
   consultations,
   onInvoiceCreated
 }) => {
+  const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<InvoiceSettings | null>(null);
@@ -360,7 +361,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
                   type="button"
                   onClick={onClose}
                   className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                  title="Abbrechen"
+                  title={t('common.cancel')}
                 >
                   <XMarkIcon className="h-5 w-5" />
                 </button>

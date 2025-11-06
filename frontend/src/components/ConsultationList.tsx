@@ -914,7 +914,7 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 sm:shadow sm:rounded-lg sm:p-6 sm:border sm:border-gray-200 sm:dark:border-gray-700">
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
         {/* Header */}
         <div className="flex items-center mb-6 justify-between px-2 sm:px-0">
           <div className="flex items-center">

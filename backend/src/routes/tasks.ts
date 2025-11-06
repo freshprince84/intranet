@@ -17,6 +17,7 @@ import {
   deleteAttachment 
 } from '../controllers/taskAttachmentController';
 import { authMiddleware } from '../middleware/auth';
+import { organizationMiddleware } from '../middleware/organization';
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.get('/:taskId/attachments/:attachmentId', getAttachment);
 
 // Alle anderen Routen mit Authentifizierung schützen
 router.use(authMiddleware);
+router.use(organizationMiddleware);
 
 // Task-Routen
 router.get('/', getAllTasks);

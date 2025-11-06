@@ -15,9 +15,12 @@ declare global {
 
 export const organizationMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    console.log('=== organizationMiddleware CALLED ===');
     const userId = req.userId;
+    console.log('userId:', userId);
     
     if (!userId) {
+      console.log('❌ No userId in middleware, returning 401');
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
@@ -38,17 +41,23 @@ export const organizationMiddleware = async (req: Request, res: Response, next: 
     });
 
     if (!userRole) {
+      console.log('❌ No userRole found, returning 404');
       return res.status(404).json({ message: 'Keine aktive Rolle gefunden' });
     }
+
+    console.log('✅ userRole found:', userRole.id);
+    console.log('✅ role.organizationId:', userRole.role.organizationId);
 
     // Füge Organisations-Kontext zum Request hinzu
     // WICHTIG: Kann NULL sein für standalone User (Hamburger-Rolle)
     req.organizationId = userRole.role.organizationId;
     req.userRole = userRole;
 
+    console.log('✅ Setting req.organizationId to:', req.organizationId);
+    console.log('✅ Calling next()');
     next();
   } catch (error) {
-    console.error('Fehler in Organization Middleware:', error);
+    console.error('❌ Error in Organization Middleware:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });
   }
 };
@@ -125,36 +134,74 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
           ]
         };
       
+      case 'worktime':
+        return { userId: userId };
+      
+      case 'client':
+        // Standalone: Nur Clients, die der User verwendet hat
+        return {
+          workTimes: {
+            some: { userId: userId }
+          }
+        };
+      
+      case 'branch':
+        // Standalone: Nur Branches wo User Mitglied ist
+        return {
+          users: {
+            some: { userId: userId }
+          }
+        };
+      
+      case 'invoice':
+      case 'consultationInvoice':
+        return { userId: userId };
+      
+      case 'monthlyReport':
+      case 'monthlyConsultationReport':
+        return { userId: userId };
+      
+      case 'cerebroCarticle':
+      case 'carticle':
+        // Standalone: Nur Artikel die der User erstellt hat
+        return { createdById: userId };
+      
+      case 'role':
+        // Standalone: Nur Rollen die User hat (Hamburger-Rolle)
+        return {
+          users: {
+            some: { userId: userId }
+          }
+        };
+      
       default:
         // Für andere Entitäten: Alle Daten anzeigen (keine Isolation)
         return {};
     }
   }
 
-  // User mit Organisation - Organisations-spezifische Filter
+  // User mit Organisation - Filter nach organizationId
+  console.log(`[getDataIsolationFilter] entity: ${entity}, userId: ${userId}, organizationId: ${req.organizationId}`);
+  
   switch (entity) {
     case 'task':
-      return {
-        OR: [
-          { responsibleId: userId },
-          { qualityControlId: userId }
-        ]
-      };
-    
     case 'request':
-      return {
-        OR: [
-          { requesterId: userId },
-          { responsibleId: userId }
-        ]
-      };
-    
     case 'worktime':
+    case 'client':
+    case 'branch':
+    case 'invoice':
+    case 'consultationInvoice':
+    case 'monthlyReport':
+    case 'monthlyConsultationReport':
+    case 'cerebroCarticle':
+    case 'carticle':
+      // Einfache Filterung nach organizationId
       return {
-        userId: userId
+        organizationId: req.organizationId
       };
     
     case 'user':
+      // User-Filterung bleibt komplex (über UserRole)
       return {
         roles: {
           some: {
@@ -165,8 +212,127 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
         }
       };
     
+    case 'role':
+      return {
+        organizationId: req.organizationId
+      };
+    
     default:
-      // Fallback: Kein Filter (alle Daten anzeigen)
       return {};
+  }
+};
+
+// Hilfsfunktion zum Prüfen, ob eine Ressource zur Organisation des Users gehört
+export const belongsToOrganization = async (
+  req: Request,
+  entity: string,
+  resourceId: number
+): Promise<boolean> => {
+  try {
+    // Standalone User: Prüfe ob Ressource ihm gehört
+    if (!req.organizationId) {
+      const userId = Number(req.userId);
+      
+      switch (entity) {
+        case 'client':
+          const client = await prisma.client.findUnique({
+            where: { id: resourceId },
+            include: {
+              workTimes: {
+                where: { userId: userId },
+                take: 1
+              }
+            }
+          });
+          return client !== null && client.workTimes.length > 0;
+        
+        case 'role':
+          const role = await prisma.role.findUnique({
+            where: { id: resourceId },
+            include: {
+              users: {
+                where: { userId: userId },
+                take: 1
+              }
+            }
+          });
+          return role !== null && role.users.length > 0;
+        
+        case 'branch':
+          const branch = await prisma.branch.findUnique({
+            where: { id: resourceId },
+            include: {
+              users: {
+                where: { userId: userId },
+                take: 1
+              }
+            }
+          });
+          return branch !== null && branch.users.length > 0;
+        
+        default:
+          return false;
+      }
+    }
+
+    // User mit Organisation: Prüfe ob Ressource zur Organisation gehört
+    switch (entity) {
+      case 'client':
+        const client = await prisma.client.findFirst({
+          where: {
+            id: resourceId,
+            workTimes: {
+              some: {
+                user: {
+                  roles: {
+                    some: {
+                      role: {
+                        organizationId: req.organizationId
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+        return client !== null;
+      
+      case 'role':
+        const role = await prisma.role.findFirst({
+          where: {
+            id: resourceId,
+            organizationId: req.organizationId
+          }
+        });
+        return role !== null;
+      
+      case 'branch':
+        const branch = await prisma.branch.findFirst({
+          where: {
+            id: resourceId,
+            users: {
+              some: {
+                user: {
+                  roles: {
+                    some: {
+                      role: {
+                        organizationId: req.organizationId
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        });
+        return branch !== null;
+      
+      default:
+        return false;
+    }
+  } catch (error) {
+    console.error(`Fehler in belongsToOrganization für ${entity}:`, error);
+    return false;
   }
 }; 

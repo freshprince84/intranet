@@ -1,0 +1,199 @@
+import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { usePermissions } from '../hooks/usePermissions.ts';
+import { UserGroupIcon, UserIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import UserManagementTab from '../components/UserManagementTab.tsx';
+import RoleManagementTab from '../components/RoleManagementTab.tsx';
+import useMessage from '../hooks/useMessage.ts';
+import OrganizationSettings from '../components/organization/OrganizationSettings.tsx';
+import JoinRequestsList from '../components/organization/JoinRequestsList.tsx';
+
+const Organisation: React.FC = () => {
+  const { t } = useTranslation();
+  // Gemeinsame States
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { showMessage } = useMessage();
+
+  const { 
+    isAdmin, 
+    hasPermission, 
+    canViewOrganization 
+  } = usePermissions();
+
+  // Berechtigungen prüfen
+  const canViewOrganisation = hasPermission('organization_management', 'read', 'page');
+  const canViewUsers = hasPermission('users', 'read', 'table');
+  const canViewRoles = hasPermission('roles', 'read', 'table');
+  const canViewOrg = canViewOrganization();
+
+  // Standard-Tab setzen: organization wenn verfügbar, sonst users wenn verfügbar, sonst roles
+  const defaultTab = canViewOrg ? 'organization' : (canViewUsers ? 'users' : (canViewRoles ? 'roles' : 'organization'));
+  const [activeTabState, setActiveTabState] = useState<'users' | 'roles' | 'organization'>(defaultTab);
+
+  // Tab-Wechsel Handler - Fehler beim Wechsel zurücksetzen
+  const handleTabChange = (tab: 'users' | 'roles' | 'organization') => {
+    // Prüfe Berechtigung für den Tab
+    if (tab === 'users' && !canViewUsers) {
+      return; // Tab nicht aktivierbar
+    }
+    if (tab === 'roles' && !canViewRoles) {
+      return; // Tab nicht aktivierbar
+    }
+    if (tab === 'organization' && !canViewOrg) {
+      return; // Tab nicht aktivierbar
+    }
+    setActiveTabState(tab);
+    setError(null);
+  };
+
+  // Gemeinsame Fehlerbehandlung
+  const handleError = (err: any) => {
+    let message = t('errors.unknownError');
+    if (err.response?.data?.message) {
+      message = err.response.data.message;
+    } else if (err instanceof Error) {
+      message = err.message;
+    }
+    setError(message);
+    showMessage(message, 'error');
+  };
+
+  // Keine Berechtigung für die Seite
+  if (!canViewOrganisation) {
+    return <div className="p-4 text-red-600 dark:text-red-400">{t('organisation.noPermission')}</div>;
+  }
+
+  return (
+    <div className="min-h-screen dark:bg-gray-900">
+      <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+          {/* Header mit Icon */}
+          <div className="flex items-center mb-6">
+            <UserGroupIcon className="h-6 w-6 mr-2 dark:text-white" />
+            <h2 className="text-xl font-semibold dark:text-white">{t('organisation.title')}</h2>
+          </div>
+
+          {/* Tabs für Navigation */}
+          <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
+            <nav className="-mb-px flex space-x-8">
+              {/* Users Tab - immer sichtbar, aber mit Pro-Badge wenn nicht berechtigt */}
+              <button
+                className={`${
+                  activeTabState === 'users' && canViewUsers
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : !canViewUsers
+                    ? 'border-transparent text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center relative`}
+                onClick={() => canViewUsers && handleTabChange('users')}
+                disabled={!canViewUsers}
+              >
+                <UserIcon className="h-5 w-5 mr-2" />
+                {t('organisation.tabs.users')}
+                {!canViewUsers && (
+                  <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
+                    PRO
+                  </span>
+                )}
+              </button>
+
+              {/* Roles Tab - immer sichtbar, aber mit Pro-Badge wenn nicht berechtigt */}
+              <button
+                className={`${
+                  activeTabState === 'roles' && canViewRoles
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : !canViewRoles
+                    ? 'border-transparent text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center relative`}
+                onClick={() => canViewRoles && handleTabChange('roles')}
+                disabled={!canViewRoles}
+              >
+                <ShieldCheckIcon className="h-5 w-5 mr-2" />
+                {t('organisation.tabs.roles')}
+                {!canViewRoles && (
+                  <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
+                    PRO
+                  </span>
+                )}
+              </button>
+
+              {/* Organization Tab - sichtbar wenn berechtigt */}
+              {canViewOrg && (
+                <button
+                  className={`${
+                    activeTabState === 'organization'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                  } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center`}
+                  onClick={() => handleTabChange('organization')}
+                >
+                  <UserGroupIcon className="h-5 w-5 mr-2" />
+                  {t('organisation.tabs.organization')}
+                </button>
+              )}
+            </nav>
+          </div>
+
+          {error && (
+            <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded mb-4">
+              <p className="font-bold">{t('organisation.error')}</p>
+              <p>{error}</p>
+            </div>
+          )}
+
+          {loading && <div className="p-4 dark:text-gray-300">{t('organisation.loading')}</div>}
+
+          {/* Tab Inhalte */}
+          <div className="mt-6">
+            {activeTabState === 'users' ? (
+              canViewUsers ? (
+                <UserManagementTab onError={handleError} />
+              ) : (
+                <div className="p-8 text-center">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+                    <span className="inline-block px-3 py-1 text-sm font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded mb-4">
+                      PRO
+                    </span>
+                    <p className="text-gray-700 dark:text-gray-300 mt-4">
+                      {t('organisation.proFeature.users')}
+                    </p>
+                  </div>
+                </div>
+              )
+            ) : activeTabState === 'roles' ? (
+              canViewRoles ? (
+                <RoleManagementTab onError={handleError} />
+              ) : (
+                <div className="p-8 text-center">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+                    <span className="inline-block px-3 py-1 text-sm font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded mb-4">
+                      PRO
+                    </span>
+                    <p className="text-gray-700 dark:text-gray-300 mt-4">
+                      {t('organisation.proFeature.roles')}
+                    </p>
+                  </div>
+                </div>
+              )
+            ) : activeTabState === 'organization' && canViewOrg ? (
+              <div className="space-y-6">
+                <OrganizationSettings />
+                <JoinRequestsList />
+              </div>
+            ) : (
+              <div className="p-4 text-red-600 dark:text-red-400">
+                {t('organisation.noPermissionForPage')}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Organisation;
+
+

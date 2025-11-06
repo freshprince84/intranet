@@ -521,6 +521,7 @@ Die `WorkTime`-Tabelle protokolliert die Arbeitszeiterfassung und wurde für Ber
 | timezone | String | Zeitzone des Benutzers | @nullable |
 | clientId | Int | Client-ID für Beratungen | @foreign key @nullable |
 | notes | String | Notizen zur Beratung | @nullable |
+| organizationId | Int | Organisation-ID | @foreign key @nullable |
 | createdAt | DateTime | Erstellungszeitpunkt | @default(now()) |
 | updatedAt | DateTime | Aktualisierungszeitpunkt | @updatedAt |
 
@@ -528,6 +529,13 @@ Die `WorkTime`-Tabelle protokolliert die Arbeitszeiterfassung und wurde für Ber
 - `user`: Many-to-One zu User
 - `branch`: Many-to-One zu Branch  
 - `client`: Many-to-One zu Client (für Beratungen)
+- `organization`: Many-to-One zu Organization (für Multi-Tenant-Isolation)
+
+#### Wichtige Hinweise zur Organisation-Zuordnung
+- **`organizationId` wird beim Start gesetzt**: Die WorkTime wird der Organisation zugeordnet, die beim Start der Zeiterfassung aktiv ist (`req.organizationId`).
+- **`organizationId` wird beim Stoppen NICHT geändert**: Wenn ein User während der laufenden Zeiterfassung die Organisation wechselt und dann stoppt, bleibt die `organizationId` die der Start-Organisation. Die WorkTime gehört zur Organisation, in der sie gestartet wurde.
+- **Filterung**: WorkTimes werden nach `organizationId` gefiltert - nur WorkTimes der aktiven Organisation werden angezeigt.
+- **Standalone-User**: Wenn ein User keine Organisation hat (`organizationId = NULL`), werden nur seine eigenen WorkTimes angezeigt (gefiltert nach `userId`).
 - `taskLinks`: One-to-Many zu WorkTimeTask
 
 ### Client

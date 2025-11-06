@@ -110,6 +110,38 @@ import * as controller from '../controllers/myController.ts';
 - **UPPER_CASE** für Konstanten
 - **kebab-case** für CSS-Klassen und Dateinamen
 
+### Verbotene Begriffe und Namenskonventionen
+
+#### ⚠️ WICHTIG: "UserManagement" ist VERBOTEN
+
+**Die Seite/Seite für Organisationen heißt IMMER "Organisation" und NIEMALS "UserManagement":**
+
+- ✅ **KORREKT**: `Organisation.tsx`, `organisation`, `organization_management`
+- ❌ **VERBOTEN**: `UserManagement.tsx`, `userManagement`, `usermanagement` (außer für alte Berechtigungs-Schlüssel)
+
+**Regeln:**
+1. **Dateinamen**: Alle Dateien, die Organisation-Funktionalität betreffen, müssen `Organisation` oder `organization` im Namen enthalten
+2. **Komponenten**: Komponenten-Namen müssen `Organisation` verwenden, nicht `UserManagement`
+3. **Routes**: Routes müssen `/organization` oder `/organisation` verwenden, nicht `/users` für die Organisation-Seite
+4. **Übersetzungs-Schlüssel**: Verwende `organisation.*` statt `userManagement.*` für neue Übersetzungen
+5. **Berechtigungen**: Verwende `organization_management` (page) statt `usermanagement` (page) für neue Berechtigungen
+
+**Ausnahmen:**
+- Alte Berechtigungs-Schlüssel `usermanagement` in Übersetzungsdateien können für Rückwärtskompatibilität bestehen bleiben
+- Migration-Scripts können `usermanagement` verwenden, um alte Berechtigungen zu migrieren
+
+**Bei neuen Implementierungen:**
+- Prüfe IMMER, ob du `userManagement` verwenden willst → Verwende stattdessen `organisation` oder `organization_management`
+- Prüfe alle Dateien, Komponenten, Routes und Übersetzungs-Schlüssel vor dem Commit
+
+**Checkliste vor jedem Commit (Organisation-bezogene Features):**
+- [ ] Keine Dateien mit `UserManagement` im Namen erstellt/geändert
+- [ ] Keine Komponenten mit `UserManagement` im Namen erstellt/geändert
+- [ ] Keine Routes `/users` für Organisation-Seiten verwendet
+- [ ] Keine neuen Übersetzungs-Schlüssel `userManagement.*` hinzugefügt
+- [ ] Keine neuen Berechtigungen `usermanagement` (page) erstellt
+- [ ] Alle Referenzen verwenden `organisation` oder `organization_management`
+
 ## React Best Practices
 
 ### Funktionale Komponenten

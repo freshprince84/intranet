@@ -41,6 +41,9 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
           // Lade aktive Sprache (User → Organisation → Fallback)
           const language = await languageService.getActiveLanguage();
           setActiveLanguage(language);
+          
+          // Setze HTML lang Attribut
+          document.documentElement.lang = language;
 
           // Lade Organisation-Sprache separat (nur informativ)
           try {
@@ -52,23 +55,36 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
         } catch (error) {
           console.error('Fehler beim Laden der Sprache:', error);
           setActiveLanguage('de');
+          document.documentElement.lang = 'de';
         } finally {
           setIsLoading(false);
         }
       } else {
         // Kein User: Fallback
         setActiveLanguage('de');
+        document.documentElement.lang = 'de';
         setIsLoading(false);
       }
     };
 
     loadLanguage();
   }, [user]);
+  
+  // Aktualisiere HTML lang Attribut wenn sich die aktive Sprache ändert
+  useEffect(() => {
+    if (activeLanguage && i18n.language) {
+      const langToUse = activeLanguage || i18n.language || 'de';
+      document.documentElement.lang = langToUse;
+      i18n.changeLanguage(langToUse);
+    }
+  }, [activeLanguage, i18n]);
 
   const setUserLanguage = async (language: string) => {
     try {
       await languageService.setUserLanguage(language);
       setActiveLanguage(language);
+      document.documentElement.lang = language;
+      await i18n.changeLanguage(language);
     } catch (error) {
       console.error('Fehler beim Setzen der Benutzer-Sprache:', error);
       throw error;
@@ -84,6 +100,8 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       if (!user?.language || user.language.trim() === '') {
         await languageService.setLanguage(language);
         setActiveLanguage(language);
+        document.documentElement.lang = language;
+        await i18n.changeLanguage(language);
       }
     } catch (error) {
       console.error('Fehler beim Setzen der Organisation-Sprache:', error);

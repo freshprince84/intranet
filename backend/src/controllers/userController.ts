@@ -6,7 +6,7 @@ import { Request, Response } from 'express';
 import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { createNotificationIfEnabled } from './notificationController';
-import { organizationMiddleware, getUserOrganizationFilter } from '../middleware/organization';
+import { organizationMiddleware, getUserOrganizationFilter, getDataIsolationFilter } from '../middleware/organization';
 
 const prisma = new PrismaClient();
 
@@ -98,11 +98,13 @@ export const getAllUsers = async (req: Request, res: Response) => {
     }
 };
 
-// Alle Benutzer für Dropdowns abrufen (ohne Organization-Filter)
+// Alle Benutzer für Dropdowns abrufen (nur User der Organisation)
 export const getAllUsersForDropdown = async (req: Request, res: Response) => {
     try {
-        // Für Dropdowns: Alle User ohne Organization-Filter
+        // Für Dropdowns: Nur User der Organisation (oder nur eigene wenn standalone)
+        const userFilter = getUserOrganizationFilter(req);
         const users = await prisma.user.findMany({
+            where: userFilter,
             select: {
                 id: true,
                 username: true,
@@ -151,7 +153,14 @@ export const getUserById = async (req: Request, res: Response) => {
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -202,7 +211,14 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -319,7 +335,14 @@ export const updateUserById = async (req: Request, res: Response) => {
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -422,7 +445,14 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -470,17 +500,21 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
 
-        // Überprüfe, ob alle Rollen existieren
+        // Überprüfe, ob alle Rollen existieren und zur Organisation gehören
+        const roleFilter = getDataIsolationFilter(req as any, 'role');
         const existingRoles = await prisma.role.findMany({
             where: {
                 id: {
                     in: roleIds
-                }
+                },
+                ...roleFilter
             }
         });
 
         if (existingRoles.length !== roleIds.length) {
-            return res.status(400).json({ message: 'Eine oder mehrere Rollen wurden nicht gefunden' });
+            return res.status(400).json({ 
+                message: 'Eine oder mehrere Rollen wurden nicht gefunden oder gehören nicht zu Ihrer Organisation' 
+            });
         }
 
         // Aktuelle Benutzerrollen abrufen, um lastUsed-Status zu prüfen
@@ -556,7 +590,14 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -574,13 +615,16 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
             relatedEntityType: 'update'
         });
 
-        // Benachrichtigung für Administratoren senden
+        // Benachrichtigung für Administratoren der Organisation senden
+        const userFilter = getUserOrganizationFilter(req);
         const admins = await prisma.user.findMany({
             where: {
+                ...userFilter,
                 roles: {
                     some: {
                         role: {
-                            name: 'Admin'
+                            name: 'Admin',
+                            organizationId: req.organizationId
                         }
                     }
                 },
@@ -869,7 +913,14 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -1137,13 +1188,16 @@ export const updateUser = async (req: Request, res: Response) => {
             relatedEntityType: 'update'
         });
 
-        // Benachrichtigung für Administratoren senden
+        // Benachrichtigung für Administratoren der Organisation senden
+        const userFilter = getUserOrganizationFilter(req);
         const admins = await prisma.user.findMany({
             where: {
+                ...userFilter,
                 roles: {
                     some: {
                         role: {
-                            name: 'Admin'
+                            name: 'Admin',
+                            organizationId: req.organizationId
                         }
                     }
                 },
@@ -1224,13 +1278,16 @@ export const deleteUser = async (req: Request, res: Response) => {
             })
         ]);
 
-        // Benachrichtigung für Administratoren senden
+        // Benachrichtigung für Administratoren der Organisation senden
+        const userFilter = getUserOrganizationFilter(req);
         const admins = await prisma.user.findMany({
             where: {
+                ...userFilter,
                 roles: {
                     some: {
                         role: {
-                            name: 'Admin'
+                            name: 'Admin',
+                            organizationId: req.organizationId
                         }
                     }
                 }

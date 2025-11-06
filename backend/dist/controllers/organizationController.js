@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateOrganizationLanguage = exports.getOrganizationLanguage = exports.searchOrganizations = exports.processJoinRequest = exports.getJoinRequests = exports.createJoinRequest = exports.getCurrentOrganization = exports.getOrganizationStats = exports.deleteOrganization = exports.updateOrganization = exports.createOrganization = exports.getOrganizationById = exports.getAllOrganizations = void 0;
+exports.updateCurrentOrganization = exports.updateOrganizationLanguage = exports.getOrganizationLanguage = exports.searchOrganizations = exports.processJoinRequest = exports.getJoinRequests = exports.createJoinRequest = exports.getCurrentOrganization = exports.getOrganizationStats = exports.deleteOrganization = exports.updateOrganization = exports.createOrganization = exports.getOrganizationById = exports.getAllOrganizations = void 0;
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
 const prisma = new client_1.PrismaClient();
@@ -17,14 +17,17 @@ const prisma = new client_1.PrismaClient();
 const createOrganizationSchema = zod_1.z.object({
     name: zod_1.z.string().min(1, 'Name ist erforderlich'),
     displayName: zod_1.z.string().min(1, 'Anzeigename ist erforderlich'),
-    maxUsers: zod_1.z.number().min(1, 'Maximale Benutzeranzahl muss mindestens 1 sein'),
-    subscriptionPlan: zod_1.z.enum(['basic', 'pro', 'enterprise', 'trial'])
+    maxUsers: zod_1.z.number().min(1, 'Maximale Benutzeranzahl muss mindestens 1 sein').optional(),
+    subscriptionPlan: zod_1.z.enum(['basic', 'pro', 'enterprise', 'trial']).optional(),
+    domain: zod_1.z.string().optional()
 });
 const updateOrganizationSchema = zod_1.z.object({
     displayName: zod_1.z.string().min(1).optional(),
     maxUsers: zod_1.z.number().min(1).optional(),
     subscriptionPlan: zod_1.z.enum(['basic', 'pro', 'enterprise', 'trial']).optional(),
-    isActive: zod_1.z.boolean().optional()
+    isActive: zod_1.z.boolean().optional(),
+    domain: zod_1.z.string().optional(),
+    logo: zod_1.z.string().optional()
 });
 const languageSchema = zod_1.z.enum(['es', 'de', 'en']);
 // Alle Organisationen abrufen
@@ -146,22 +149,53 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         const validatedData = createOrganizationSchema.parse(req.body);
+        // Normalisiere Name zu lowercase für Konsistenz
+        const normalizedName = validatedData.name.toLowerCase().trim();
         // Prüfe ob Name bereits existiert
         const existingOrg = yield prisma.organization.findUnique({
-            where: { name: validatedData.name }
+            where: { name: normalizedName }
         });
         if (existingOrg) {
             return res.status(400).json({ message: 'Organisation mit diesem Namen existiert bereits' });
         }
+        // Prüfe auch Domain falls angegeben
+        if (validatedData.domain) {
+            const normalizedDomain = validatedData.domain.toLowerCase().trim();
+            const existingOrgByDomain = yield prisma.organization.findUnique({
+                where: { domain: normalizedDomain }
+            });
+            if (existingOrgByDomain) {
+                return res.status(400).json({ message: 'Organisation mit dieser Domain existiert bereits' });
+            }
+        }
         // Alle verfügbaren Seiten, Tabellen und Buttons (aus seed.ts)
         const ALL_PAGES = [
-            'dashboard', 'worktracker', 'workcenter', 'organization', 'requests', 'cerebro', 'settings',
-            'payroll', 'team_worktime_control', 'identification_documents', 'document_recognition',
-            'consultations', 'consultation_invoices', 'monthly_reports'
+            'dashboard',
+            'worktracker',
+            'consultations',
+            'team_worktime_control', // = workcenter
+            'payroll', // = lohnabrechnung
+            'organization_management', // = organisation (Hauptseite)
+            'cerebro',
+            'settings',
+            'profile'
         ];
         const ALL_TABLES = [
-            'users', 'roles', 'branches', 'requests', 'tasks', 'worktime', 'payrolls', 'cerebro_articles',
-            'consultations', 'consultation_invoices', 'identification_documents'
+            'requests', // auf dashboard
+            'tasks', // auf worktracker
+            'users', // auf organization_management
+            'roles', // auf organization_management
+            'organization', // auf organization_management
+            'team_worktime', // auf team_worktime_control
+            'worktime', // auf worktracker
+            'clients', // auf consultations
+            'consultation_invoices', // auf consultations
+            'branches', // auf settings/system
+            'notifications', // allgemein
+            'settings', // auf settings
+            'monthly_reports', // auf consultations/reports
+            'organization_join_requests', // auf organization_management
+            'organization_users' // auf organization_management
         ];
         const ALL_BUTTONS = [
             // Database Management Buttons (Settings/System)
@@ -187,6 +221,10 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
             'role_create',
             'role_edit',
             'role_delete',
+            // Organization Management Buttons
+            'organization_create',
+            'organization_edit',
+            'organization_delete',
             // Worktime Buttons
             'worktime_start',
             'worktime_stop',
@@ -213,13 +251,17 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
         ];
         // Erstelle Organisation und Admin-Rolle in einer Transaction
         const result = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+            var _a, _b;
             // 1. Organisation erstellen
+            const normalizedName = validatedData.name.toLowerCase().trim();
+            const normalizedDomain = validatedData.domain ? validatedData.domain.toLowerCase().trim() : null;
             const organization = yield tx.organization.create({
                 data: {
-                    name: validatedData.name,
-                    displayName: validatedData.displayName,
-                    maxUsers: validatedData.maxUsers,
-                    subscriptionPlan: validatedData.subscriptionPlan,
+                    name: normalizedName,
+                    displayName: validatedData.displayName.trim(),
+                    maxUsers: (_a = validatedData.maxUsers) !== null && _a !== void 0 ? _a : 50, // Default 50 falls nicht angegeben
+                    subscriptionPlan: (_b = validatedData.subscriptionPlan) !== null && _b !== void 0 ? _b : 'basic', // Default 'basic' falls nicht angegeben
+                    domain: normalizedDomain,
                     isActive: true
                 }
             });
@@ -263,7 +305,125 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
             yield tx.permission.createMany({
                 data: permissions
             });
+            // 3b. User-Rolle für die Organisation erstellen
+            const userRole = yield tx.role.create({
+                data: {
+                    name: 'User',
+                    description: 'Standardbenutzer der Organisation',
+                    organizationId: organization.id
+                }
+            });
+            // 3c. Berechtigungen für User-Rolle erstellen (basierend auf seed.ts)
+            const userPermissions = [];
+            const userPermissionMap = {
+                'page_dashboard': 'both',
+                'page_worktracker': 'both',
+                'page_consultations': 'both',
+                'page_payroll': 'both',
+                'page_cerebro': 'both',
+                'page_settings': 'both',
+                'page_profile': 'both',
+                'table_requests': 'both',
+                'table_clients': 'both',
+                'table_consultation_invoices': 'both',
+                'table_notifications': 'both',
+                'table_monthly_reports': 'both',
+                'button_invoice_create': 'both',
+                'button_invoice_download': 'both',
+                'button_cerebro': 'both',
+                'button_consultation_start': 'both',
+                'button_consultation_stop': 'both',
+                'button_consultation_edit': 'both',
+                'button_client_create': 'both',
+                'button_client_edit': 'both',
+                'button_client_delete': 'both',
+                'button_settings_notifications': 'both',
+                'button_settings_profile': 'both',
+                'button_worktime_start': 'both',
+                'button_worktime_stop': 'both'
+            };
+            for (const page of ALL_PAGES) {
+                const accessLevel = userPermissionMap[`page_${page}`] || 'none';
+                userPermissions.push({
+                    entity: page,
+                    entityType: 'page',
+                    accessLevel: accessLevel,
+                    roleId: userRole.id
+                });
+            }
+            for (const table of ALL_TABLES) {
+                const accessLevel = userPermissionMap[`table_${table}`] || 'none';
+                userPermissions.push({
+                    entity: table,
+                    entityType: 'table',
+                    accessLevel: accessLevel,
+                    roleId: userRole.id
+                });
+            }
+            for (const button of ALL_BUTTONS) {
+                const accessLevel = userPermissionMap[`button_${button}`] || 'none';
+                userPermissions.push({
+                    entity: button,
+                    entityType: 'button',
+                    accessLevel: accessLevel,
+                    roleId: userRole.id
+                });
+            }
+            yield tx.permission.createMany({
+                data: userPermissions
+            });
+            // 3d. Hamburger-Rolle für die Organisation erstellen
+            const hamburgerRole = yield tx.role.create({
+                data: {
+                    name: 'Hamburger',
+                    description: 'Hamburger-Rolle für neue Benutzer der Organisation',
+                    organizationId: organization.id
+                }
+            });
+            // 3e. Berechtigungen für Hamburger-Rolle erstellen (basierend auf seed.ts)
+            const hamburgerPermissions = [];
+            const hamburgerPermissionMap = {
+                'page_dashboard': 'both',
+                'page_settings': 'both',
+                'page_profile': 'both',
+                'page_cerebro': 'both',
+                'button_cerebro': 'both',
+                'button_settings_profile': 'both',
+                'table_notifications': 'both'
+            };
+            for (const page of ALL_PAGES) {
+                const accessLevel = hamburgerPermissionMap[`page_${page}`] || 'none';
+                hamburgerPermissions.push({
+                    entity: page,
+                    entityType: 'page',
+                    accessLevel: accessLevel,
+                    roleId: hamburgerRole.id
+                });
+            }
+            for (const table of ALL_TABLES) {
+                const accessLevel = hamburgerPermissionMap[`table_${table}`] || 'none';
+                hamburgerPermissions.push({
+                    entity: table,
+                    entityType: 'table',
+                    accessLevel: accessLevel,
+                    roleId: hamburgerRole.id
+                });
+            }
+            for (const button of ALL_BUTTONS) {
+                const accessLevel = hamburgerPermissionMap[`button_${button}`] || 'none';
+                hamburgerPermissions.push({
+                    entity: button,
+                    entityType: 'button',
+                    accessLevel: accessLevel,
+                    roleId: hamburgerRole.id
+                });
+            }
+            yield tx.permission.createMany({
+                data: hamburgerPermissions
+            });
             // 4. Deaktiviere alle anderen Rollen des Users (setze lastUsed auf false)
+            // WICHTIG: Wir löschen KEINE Rollen ohne Organisation, damit der User später
+            // mehreren Organisationen angehören kann (z.B. als "Oberadmin")
             yield tx.userRole.updateMany({
                 where: {
                     userId: Number(userId),
@@ -274,6 +434,7 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 }
             });
             // 5. Weise den Ersteller zur Admin-Rolle zu (als lastUsed)
+            // Dies aktiviert die neue Admin-Rolle der erstellten Organisation
             yield tx.userRole.create({
                 data: {
                     userId: Number(userId),
@@ -488,8 +649,21 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
                 }
             }
         });
-        if (!(userRole === null || userRole === void 0 ? void 0 : userRole.role.organization)) {
-            return res.status(404).json({ message: 'Keine Organisation gefunden' });
+        // Prüfe ob User eine Rolle hat
+        if (!userRole) {
+            return res.status(404).json({
+                message: 'Keine Organisation gefunden',
+                hasOrganization: false,
+                hint: 'Sie haben noch keine Organisation. Bitte erstellen Sie eine oder treten Sie einer bei.'
+            });
+        }
+        // Prüfe ob die Rolle eine Organisation hat
+        if (!userRole.role.organization) {
+            return res.status(404).json({
+                message: 'Keine Organisation gefunden',
+                hasOrganization: false,
+                hint: 'Sie haben noch keine Organisation. Bitte erstellen Sie eine oder treten Sie einer bei.'
+            });
         }
         res.json(userRole.role.organization);
     }
@@ -551,29 +725,24 @@ exports.createJoinRequest = createJoinRequest;
 // Beitrittsanfragen abrufen
 const getJoinRequests = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        console.log('=== getJoinRequests CALLED ===');
         const userId = req.userId;
+        console.log('userId:', userId);
+        console.log('req.organizationId:', req.organizationId);
         if (!userId) {
+            console.log('❌ No userId, returning 401');
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        // Hole aktuelle Organisation
-        const userRole = yield prisma.userRole.findFirst({
-            where: {
-                userId: Number(userId),
-                lastUsed: true
-            },
-            include: {
-                role: {
-                    include: {
-                        organization: true
-                    }
-                }
-            }
-        });
-        if (!userRole) {
-            return res.status(404).json({ message: 'Keine aktive Rolle gefunden' });
+        // Verwende req.organizationId aus Middleware (wie getOrganizationStats)
+        if (!req.organizationId) {
+            console.log('❌ No organizationId, returning 400');
+            return res.status(400).json({
+                message: 'Diese Funktion ist nur für Benutzer mit Organisation verfügbar'
+            });
         }
+        console.log('✅ Fetching join requests for organizationId:', req.organizationId);
         const joinRequests = yield prisma.organizationJoinRequest.findMany({
-            where: { organizationId: userRole.role.organizationId },
+            where: { organizationId: req.organizationId },
             include: {
                 requester: {
                     select: {
@@ -593,10 +762,12 @@ const getJoinRequests = (req, res) => __awaiter(void 0, void 0, void 0, function
             },
             orderBy: { createdAt: 'desc' }
         });
+        console.log('✅ Found join requests:', joinRequests.length);
+        console.log('✅ Returning join requests to frontend');
         res.json(joinRequests);
     }
     catch (error) {
-        console.error('Fehler beim Abrufen der Beitrittsanfragen:', error);
+        console.error('❌ Error in getJoinRequests:', error);
         res.status(500).json({ message: 'Interner Serverfehler' });
     }
 });
@@ -609,6 +780,12 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const userId = req.userId;
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        // Prüfe ob User eine Organisation hat
+        if (!req.organizationId) {
+            return res.status(400).json({
+                message: 'Diese Funktion ist nur für Benutzer mit Organisation verfügbar'
+            });
         }
         if (!['approve', 'reject'].includes(action)) {
             return res.status(400).json({ message: 'Ungültige Aktion' });
@@ -623,6 +800,10 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
         if (!joinRequest) {
             return res.status(404).json({ message: 'Beitrittsanfrage nicht gefunden' });
+        }
+        // Prüfe ob JoinRequest zur Organisation des Users gehört
+        if (joinRequest.organizationId !== req.organizationId) {
+            return res.status(403).json({ message: 'Keine Berechtigung für diese Beitrittsanfrage' });
         }
         if (joinRequest.status !== 'pending') {
             return res.status(400).json({ message: 'Anfrage bereits bearbeitet' });
@@ -640,13 +821,25 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
             if (action === 'approve') {
                 // Erstelle UserRole-Eintrag
-                if (!roleId) {
-                    throw new Error('Rolle ist für Genehmigung erforderlich');
+                let targetRoleId = roleId ? Number(roleId) : null;
+                // Falls keine Rolle angegeben, verwende Hamburger-Rolle als Standard
+                if (!targetRoleId) {
+                    const hamburgerRole = yield tx.role.findFirst({
+                        where: {
+                            organizationId: joinRequest.organizationId,
+                            name: 'Hamburger'
+                        }
+                    });
+                    if (!hamburgerRole) {
+                        throw new Error('Hamburger-Rolle für Organisation nicht gefunden');
+                    }
+                    targetRoleId = hamburgerRole.id;
                 }
                 yield tx.userRole.create({
                     data: {
                         userId: joinRequest.requesterId,
-                        roleId: Number(roleId)
+                        roleId: targetRoleId,
+                        lastUsed: false // Nicht als aktiv setzen, da User bereits andere Rolle haben könnte
                     }
                 });
             }
@@ -797,4 +990,66 @@ const updateOrganizationLanguage = (req, res) => __awaiter(void 0, void 0, void 
     }
 });
 exports.updateOrganizationLanguage = updateOrganizationLanguage;
+// Aktuelle Organisation aktualisieren (basierend auf User-Kontext)
+const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        // Validiere Eingabedaten
+        const validatedData = updateOrganizationSchema.parse(req.body);
+        // Hole die aktuelle Organisation des Users
+        const userRole = yield prisma.userRole.findFirst({
+            where: {
+                userId: Number(userId),
+                lastUsed: true
+            },
+            include: {
+                role: {
+                    include: {
+                        organization: true
+                    }
+                }
+            }
+        });
+        if (!(userRole === null || userRole === void 0 ? void 0 : userRole.role.organization)) {
+            return res.status(404).json({ message: 'Keine Organisation gefunden' });
+        }
+        const organization = userRole.role.organization;
+        // Aktualisiere Organisation
+        const updatedOrganization = yield prisma.organization.update({
+            where: { id: organization.id },
+            data: validatedData,
+            select: {
+                id: true,
+                name: true,
+                displayName: true,
+                domain: true,
+                logo: true,
+                isActive: true,
+                maxUsers: true,
+                subscriptionPlan: true,
+                settings: true,
+                createdAt: true,
+                updatedAt: true
+            }
+        });
+        res.json(updatedOrganization);
+    }
+    catch (error) {
+        if (error instanceof zod_1.z.ZodError) {
+            return res.status(400).json({
+                message: 'Validierungsfehler',
+                errors: error.errors
+            });
+        }
+        console.error('Error in updateCurrentOrganization:', error);
+        res.status(500).json({
+            message: 'Fehler beim Aktualisieren der Organisation',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.updateCurrentOrganization = updateCurrentOrganization;
 //# sourceMappingURL=organizationController.js.map

@@ -23,8 +23,7 @@ const ALL_PAGES = [
   'consultations',
   'team_worktime_control', // = workcenter
   'payroll', // = lohnabrechnung
-  'usermanagement', // = organisation
-  'organization_management', // = organisation tab auf usermanagement
+  'organization_management', // = organisation (Hauptseite)
   'cerebro',
   'settings',
   'profile'
@@ -34,8 +33,9 @@ const ALL_PAGES = [
 const ALL_TABLES = [
   'requests',           // auf dashboard
   'tasks',             // auf worktracker
-  'users',             // auf usermanagement
-  'roles',             // auf usermanagement
+  'users',             // auf organization_management
+  'roles',             // auf organization_management
+  'organization',      // auf organization_management
   'team_worktime',     // auf team_worktime_control
   'worktime',          // auf worktracker
   'clients',           // auf consultations
@@ -44,8 +44,8 @@ const ALL_TABLES = [
   'notifications',     // allgemein
   'settings',          // auf settings
   'monthly_reports',    // auf consultations/reports
-  'organization_join_requests', // auf usermanagement/organisation
-  'organization_users'  // auf usermanagement/organisation
+  'organization_join_requests', // auf organization_management
+  'organization_users'  // auf organization_management
 ];
 
 // ALLE BUTTONS IM SYSTEM
@@ -76,6 +76,11 @@ const ALL_BUTTONS = [
   'role_create',
   'role_edit',
   'role_delete',
+  
+  // Organization Management Buttons
+  'organization_create',
+  'organization_edit',
+  'organization_delete',
   
   // Worktime Buttons
   'worktime_start',
@@ -309,7 +314,7 @@ async function main() {
     
     const userPermissionMap: Record<string, AccessLevel> = {};
     
-    // PAGES: alle AUSSER workcenter & organisation
+    // PAGES: alle AUSSER workcenter, aber MIT organization_management
     userPermissionMap['page_dashboard'] = 'both';
     userPermissionMap['page_worktracker'] = 'both';
     userPermissionMap['page_consultations'] = 'both';
@@ -317,7 +322,8 @@ async function main() {
     userPermissionMap['page_cerebro'] = 'both';
     userPermissionMap['page_settings'] = 'both';
     userPermissionMap['page_profile'] = 'both';
-    // NICHT: team_worktime_control, usermanagement (bleiben 'none')
+    userPermissionMap['page_organization_management'] = 'both'; // Organisation-Seite (Hauptseite)
+    // NICHT: team_worktime_control (bleibt 'none')
     
     // TABELLEN: alle AUSSER die auf worktracker, workcenter & organisation
     userPermissionMap['table_requests'] = 'both';       // dashboard
@@ -326,6 +332,7 @@ async function main() {
     userPermissionMap['table_notifications'] = 'both';  // allgemein
     userPermissionMap['table_monthly_reports'] = 'both'; // consultations
     // NICHT: tasks, users, roles, team_worktime, worktime, branches (bleiben 'none')
+    // users & roles bleiben 'none', damit Tabs sichtbar aber inaktiv sind (PRO-Markierung)
     
     // BUTTONS: alle AUSSER in to do's & workcenter, lohnabrechnung, organisation & settings/system
     userPermissionMap['button_invoice_create'] = 'both';
@@ -352,7 +359,7 @@ async function main() {
     
     const hamburgerPermissionMap: Record<string, AccessLevel> = {};
     
-    // Nur Basis-Berechtigungen
+    // Basis-Berechtigungen (OHNE Organisation-Seite)
     hamburgerPermissionMap['page_dashboard'] = 'both';
     hamburgerPermissionMap['page_settings'] = 'both';
     hamburgerPermissionMap['page_profile'] = 'both';
@@ -364,11 +371,247 @@ async function main() {
     await ensureAllPermissionsForRole(hamburgerRole.id, hamburgerPermissionMap);
 
     // ========================================
-    // 6. BENUTZER ERSTELLEN
+    // 6. ORGANISATIONEN ERSTELLEN
+    // ========================================
+    console.log('🏢 Erstelle/Aktualisiere Organisationen...');
+    
+    // Organisation 1: La Familia Hostel
+    const org1 = await prisma.organization.upsert({
+      where: { name: 'la-familia-hostel' },
+      update: {
+        displayName: 'La Familia Hostel',
+        domain: 'lafamilia-hostel.com',
+        isActive: true,
+        maxUsers: 1000,
+        subscriptionPlan: 'enterprise'
+      },
+      create: {
+        name: 'la-familia-hostel',
+        displayName: 'La Familia Hostel',
+        domain: 'lafamilia-hostel.com',
+        isActive: true,
+        maxUsers: 1000,
+        subscriptionPlan: 'enterprise'
+      }
+    });
+    console.log(`✅ Organisation 1: ${org1.displayName} (ID: ${org1.id})`);
+
+    // Organisation 2: Mosaik
+    const org2 = await prisma.organization.upsert({
+      where: { name: 'mosaik' },
+      update: {
+        displayName: 'Mosaik',
+        domain: 'mosaik.ch',
+        isActive: true,
+        maxUsers: 1000,
+        subscriptionPlan: 'enterprise'
+      },
+      create: {
+        name: 'mosaik',
+        displayName: 'Mosaik',
+        domain: 'mosaik.ch',
+        isActive: true,
+        maxUsers: 1000,
+        subscriptionPlan: 'enterprise'
+      }
+    });
+    console.log(`✅ Organisation 2: ${org2.displayName} (ID: ${org2.id})`);
+
+    // Standard-Organisation erstellen oder aktualisieren (für Rückwärtskompatibilität)
+    const defaultOrganization = await prisma.organization.upsert({
+      where: { name: 'default' },
+      update: {
+        displayName: 'Standard Organisation',
+        isActive: true,
+        maxUsers: 1000,
+        subscriptionPlan: 'enterprise'
+      },
+      create: {
+        name: 'default',
+        displayName: 'Standard Organisation',
+        isActive: true,
+        maxUsers: 1000,
+        subscriptionPlan: 'enterprise'
+      }
+    });
+    console.log(`✅ Standard-Organisation: ${defaultOrganization.displayName} (ID: ${defaultOrganization.id})`);
+
+    // ========================================
+    // 6.1. ROLLEN FÜR ORGANISATIONEN ERSTELLEN
+    // ========================================
+    console.log('📋 Erstelle Rollen für Organisationen...');
+
+    // Org 1 Rollen: Admin, Recepcion (statt User), Hamburger
+    const org1AdminRole = await prisma.role.upsert({
+      where: {
+        name_organizationId: {
+          name: 'Admin',
+          organizationId: org1.id
+        }
+      },
+      update: {
+        description: 'Administrator von La Familia Hostel'
+      },
+      create: {
+        name: 'Admin',
+        description: 'Administrator von La Familia Hostel',
+        organizationId: org1.id
+      }
+    });
+    console.log(`✅ Org 1 Admin-Rolle: ${org1AdminRole.name} (ID: ${org1AdminRole.id})`);
+
+    const org1RecepcionRole = await prisma.role.upsert({
+      where: {
+        name_organizationId: {
+          name: 'Recepcion',
+          organizationId: org1.id
+        }
+      },
+      update: {
+        description: 'Recepcion-Rolle für La Familia Hostel'
+      },
+      create: {
+        name: 'Recepcion',
+        description: 'Recepcion-Rolle für La Familia Hostel',
+        organizationId: org1.id
+      }
+    });
+    console.log(`✅ Org 1 Recepcion-Rolle: ${org1RecepcionRole.name} (ID: ${org1RecepcionRole.id})`);
+
+    const org1HamburgerRole = await prisma.role.upsert({
+      where: {
+        name_organizationId: {
+          name: 'Hamburger',
+          organizationId: org1.id
+        }
+      },
+      update: {
+        description: 'Hamburger-Rolle für La Familia Hostel'
+      },
+      create: {
+        name: 'Hamburger',
+        description: 'Hamburger-Rolle für La Familia Hostel',
+        organizationId: org1.id
+      }
+    });
+    console.log(`✅ Org 1 Hamburger-Rolle: ${org1HamburgerRole.name} (ID: ${org1HamburgerRole.id})`);
+
+    // Org 2 Rollen: Admin, Beratung (statt User), Hamburger
+    const org2AdminRole = await prisma.role.upsert({
+      where: {
+        name_organizationId: {
+          name: 'Admin',
+          organizationId: org2.id
+        }
+      },
+      update: {
+        description: 'Administrator von Mosaik'
+      },
+      create: {
+        name: 'Admin',
+        description: 'Administrator von Mosaik',
+        organizationId: org2.id
+      }
+    });
+    console.log(`✅ Org 2 Admin-Rolle: ${org2AdminRole.name} (ID: ${org2AdminRole.id})`);
+
+    const org2BeratungRole = await prisma.role.upsert({
+      where: {
+        name_organizationId: {
+          name: 'Beratung',
+          organizationId: org2.id
+        }
+      },
+      update: {
+        description: 'Beratung-Rolle für Mosaik'
+      },
+      create: {
+        name: 'Beratung',
+        description: 'Beratung-Rolle für Mosaik',
+        organizationId: org2.id
+      }
+    });
+    console.log(`✅ Org 2 Beratung-Rolle: ${org2BeratungRole.name} (ID: ${org2BeratungRole.id})`);
+
+    const org2HamburgerRole = await prisma.role.upsert({
+      where: {
+        name_organizationId: {
+          name: 'Hamburger',
+          organizationId: org2.id
+        }
+      },
+      update: {
+        description: 'Hamburger-Rolle für Mosaik'
+      },
+      create: {
+        name: 'Hamburger',
+        description: 'Hamburger-Rolle für Mosaik',
+        organizationId: org2.id
+      }
+    });
+    console.log(`✅ Org 2 Hamburger-Rolle: ${org2HamburgerRole.name} (ID: ${org2HamburgerRole.id})`);
+
+    // Standard-Organisation Rollen (für Rückwärtskompatibilität)
+    const orgAdminRole = await prisma.role.upsert({
+      where: {
+        name_organizationId: {
+          name: 'Admin',
+          organizationId: defaultOrganization.id
+        }
+      },
+      update: {
+        description: 'Administrator der Standard-Organisation'
+      },
+      create: {
+        name: 'Admin',
+        description: 'Administrator der Standard-Organisation',
+        organizationId: defaultOrganization.id
+      }
+    });
+    console.log(`✅ Standard-Organisations-Admin-Rolle: ${orgAdminRole.name} (ID: ${orgAdminRole.id})`);
+
+    // Berechtigungen für alle Organisations-Rollen erstellen
+    console.log('🔑 Erstelle Berechtigungen für Organisations-Rollen...');
+    
+    // Org 1 Admin: alle Berechtigungen
+    const org1AdminPermissionMap: Record<string, AccessLevel> = {};
+    ALL_PAGES.forEach(page => org1AdminPermissionMap[`page_${page}`] = 'both');
+    ALL_TABLES.forEach(table => org1AdminPermissionMap[`table_${table}`] = 'both');
+    ALL_BUTTONS.forEach(button => org1AdminPermissionMap[`button_${button}`] = 'both');
+    await ensureAllPermissionsForRole(org1AdminRole.id, org1AdminPermissionMap);
+
+    // Org 1 Recepcion: gleiche Berechtigungen wie User
+    await ensureAllPermissionsForRole(org1RecepcionRole.id, userPermissionMap);
+
+    // Org 1 Hamburger: gleiche Berechtigungen wie Hamburger
+    await ensureAllPermissionsForRole(org1HamburgerRole.id, hamburgerPermissionMap);
+
+    // Org 2 Admin: alle Berechtigungen
+    const org2AdminPermissionMap: Record<string, AccessLevel> = {};
+    ALL_PAGES.forEach(page => org2AdminPermissionMap[`page_${page}`] = 'both');
+    ALL_TABLES.forEach(table => org2AdminPermissionMap[`table_${table}`] = 'both');
+    ALL_BUTTONS.forEach(button => org2AdminPermissionMap[`button_${button}`] = 'both');
+    await ensureAllPermissionsForRole(org2AdminRole.id, org2AdminPermissionMap);
+
+    // Org 2 Beratung: gleiche Berechtigungen wie User
+    await ensureAllPermissionsForRole(org2BeratungRole.id, userPermissionMap);
+
+    // Org 2 Hamburger: gleiche Berechtigungen wie Hamburger
+    await ensureAllPermissionsForRole(org2HamburgerRole.id, hamburgerPermissionMap);
+
+    // Standard-Organisation Admin: alle Berechtigungen
+    const orgAdminPermissionMap: Record<string, AccessLevel> = {};
+    ALL_PAGES.forEach(page => orgAdminPermissionMap[`page_${page}`] = 'both');
+    ALL_TABLES.forEach(table => orgAdminPermissionMap[`table_${table}`] = 'both');
+    ALL_BUTTONS.forEach(button => orgAdminPermissionMap[`button_${button}`] = 'both');
+    await ensureAllPermissionsForRole(orgAdminRole.id, orgAdminPermissionMap);
+
+    // ========================================
+    // 7. BENUTZER ERSTELLEN
     // ========================================
     console.log('👥 Erstelle/Aktualisiere Benutzer...');
     
-    // Admin-Benutzer
+    // Standard Admin-Benutzer (für Rückwärtskompatibilität)
     const hashedPassword = await bcrypt.hash('admin123', 10);
     const adminUser = await prisma.user.upsert({
       where: { username: 'admin' },
@@ -400,8 +643,167 @@ async function main() {
     });
     console.log(`✅ Admin-Benutzer: ${adminUser.username}`);
 
+    // Admin-User mit Standard-Organisations-Rolle verknüpfen (als lastUsed)
+    const existingOrgUserRole = await prisma.userRole.findUnique({
+      where: {
+        userId_roleId: {
+          userId: adminUser.id,
+          roleId: orgAdminRole.id
+        }
+      }
+    });
+
+    if (!existingOrgUserRole) {
+      // Deaktiviere alle anderen Rollen des Admin-Users
+      await prisma.userRole.updateMany({
+        where: {
+          userId: adminUser.id,
+          lastUsed: true
+        },
+        data: {
+          lastUsed: false
+        }
+      });
+
+      // Weise Admin-User zur Organisations-Admin-Rolle zu (als lastUsed)
+      await prisma.userRole.create({
+        data: {
+          userId: adminUser.id,
+          roleId: orgAdminRole.id,
+          lastUsed: true
+        }
+      });
+      console.log(`🔗 Admin-User mit Standard-Organisations-Admin-Rolle verknüpft`);
+    } else if (!existingOrgUserRole.lastUsed) {
+      // Falls Rolle existiert aber nicht lastUsed ist, aktiviere sie
+      await prisma.userRole.updateMany({
+        where: {
+          userId: adminUser.id,
+          lastUsed: true
+        },
+        data: {
+          lastUsed: false
+        }
+      });
+      await prisma.userRole.update({
+        where: {
+          userId_roleId: {
+            userId: adminUser.id,
+            roleId: orgAdminRole.id
+          }
+        },
+        data: {
+          lastUsed: true
+        }
+      });
+      console.log(`🔗 Admin-User mit Standard-Organisations-Admin-Rolle aktiviert`);
+    }
+
+    // Admin für Org 1 (La Familia Hostel)
+    const org1AdminUser = await prisma.user.upsert({
+      where: { username: 'admin-org1' },
+      update: {},
+      create: {
+        username: 'admin-org1',
+        email: 'admin@lafamilia-hostel.com',
+        password: hashedPassword,
+        firstName: 'Admin',
+        lastName: 'La Familia Hostel',
+        roles: {
+          create: {
+            roleId: org1AdminRole.id,
+            lastUsed: true
+          }
+        }
+      }
+    });
+    console.log(`✅ Org 1 Admin-Benutzer: ${org1AdminUser.username}`);
+
+    // Admin für Org 2 (Mosaik)
+    const org2AdminUser = await prisma.user.upsert({
+      where: { username: 'admin-org2' },
+      update: {},
+      create: {
+        username: 'admin-org2',
+        email: 'admin@mosaik.ch',
+        password: hashedPassword,
+        firstName: 'Admin',
+        lastName: 'Mosaik',
+        roles: {
+          create: {
+            roleId: org2AdminRole.id,
+            lastUsed: true
+          }
+        }
+      }
+    });
+    console.log(`✅ Org 2 Admin-Benutzer: ${org2AdminUser.username}`);
+
+    // Patrick für Org 1
+    const patrickPassword = await bcrypt.hash('admin123', 10);
+    const patrickUser = await prisma.user.upsert({
+      where: { username: 'patrick' },
+      update: {},
+      create: {
+        username: 'patrick',
+        email: 'patrick@lafamilia-hostel.com',
+        password: patrickPassword,
+        firstName: 'Patrick',
+        lastName: '',
+        roles: {
+          create: {
+            roleId: org1RecepcionRole.id,
+            lastUsed: true
+          }
+        }
+      }
+    });
+    console.log(`✅ Patrick-Benutzer: ${patrickUser.username}`);
+
+    // Rebeca Benitez für Org 2
+    const rebecaPassword = await bcrypt.hash('admin123', 10);
+    const rebecaUser = await prisma.user.upsert({
+      where: { username: 'rebeca-benitez' },
+      update: {},
+      create: {
+        username: 'rebeca-benitez',
+        email: 'rebeca.benitez@mosaik.ch',
+        password: rebecaPassword,
+        firstName: 'Rebeca',
+        lastName: 'Benitez',
+        roles: {
+          create: {
+            roleId: org2BeratungRole.id,
+            lastUsed: true
+          }
+        }
+      }
+    });
+    console.log(`✅ Rebeca Benitez-Benutzer: ${rebecaUser.username}`);
+
+    // Christina Di Biaso für Org 2
+    const christinaPassword = await bcrypt.hash('admin123', 10);
+    const christinaUser = await prisma.user.upsert({
+      where: { username: 'christina-di-biaso' },
+      update: {},
+      create: {
+        username: 'christina-di-biaso',
+        email: 'christina.dibiaso@mosaik.ch',
+        password: christinaPassword,
+        firstName: 'Christina',
+        lastName: 'Di Biaso',
+        roles: {
+          create: {
+            roleId: org2BeratungRole.id,
+            lastUsed: true
+          }
+        }
+      }
+    });
+    console.log(`✅ Christina Di Biaso-Benutzer: ${christinaUser.username}`);
+
     // ========================================
-    // 7. NIEDERLASSUNGEN ERSTELLEN
+    // 8. NIEDERLASSUNGEN ERSTELLEN
     // ========================================
     console.log('🏢 Erstelle/Aktualisiere Niederlassungen...');
     
@@ -438,7 +840,7 @@ async function main() {
     }
 
     // ========================================
-    // 8. STANDARD-EINSTELLUNGEN
+    // 9. STANDARD-EINSTELLUNGEN
     // ========================================
     console.log('⚙️ Erstelle Standard-Einstellungen...');
     
@@ -490,9 +892,108 @@ async function main() {
     }
 
     // ========================================
-    // 9. DEMO-CLIENTS ERSTELLEN
+    // 10. CLIENTS FÜR ORG 2 ERSTELLEN
     // ========================================
-    console.log('👥 Erstelle Demo-Clients (nur neue)...');
+    console.log('👥 Erstelle Clients für Org 2 (Mosaik)...');
+    
+    // Hole erste Branch für Org 2 (für WorkTime-Verknüpfung)
+    const org2Branch = await prisma.branch.findFirst({
+      where: { name: 'Hauptsitz' }
+    });
+
+    const org2Clients = [
+      {
+        name: 'Hampi',
+        isActive: true
+      },
+      {
+        name: 'Heinz Hunziker',
+        isActive: true
+      },
+      {
+        name: 'Rebeca Benitez',
+        isActive: true
+      },
+      {
+        name: 'Stiven Pino',
+        company: 'CESE ASOCIADOS',
+        phone: '323 8119170',
+        address: 'NN',
+        notes: 'Cliente: consultor indemnización, propiedad expropiada.',
+        isActive: true
+      },
+      {
+        name: 'Urs Schmidlin',
+        isActive: true
+      }
+    ];
+
+    let clientsCreated = 0;
+    let clientsSkipped = 0;
+    const createdOrg2Clients: any[] = [];
+
+    for (const clientData of org2Clients) {
+      // Prüfe ob Client bereits existiert (basierend auf Name)
+      const existingClient = await prisma.client.findFirst({
+        where: { name: clientData.name }
+      });
+
+      if (!existingClient) {
+        const client = await prisma.client.create({
+          data: clientData
+        });
+        clientsCreated++;
+        createdOrg2Clients.push(client);
+        console.log(`✅ Org 2 Client erstellt: ${clientData.name}`);
+      } else {
+        clientsSkipped++;
+        createdOrg2Clients.push(existingClient);
+        console.log(`⏭️ Org 2 Client existiert bereits: ${clientData.name}`);
+      }
+    }
+
+    console.log(`📊 Org 2 Clients: ${clientsCreated} erstellt, ${clientsSkipped} übersprungen`);
+
+    // Erstelle Demo-WorkTimes für Org 2 Clients, damit sie zur Org 2 gehören
+    // (Clients werden über WorkTimes → User → Roles → Organization zugeordnet)
+    if (createdOrg2Clients.length > 0 && org2Branch && (rebecaUser || org2AdminUser)) {
+      const org2UserId = rebecaUser ? rebecaUser.id : org2AdminUser.id;
+      const heute = new Date();
+      const gestern = new Date(heute);
+      gestern.setDate(heute.getDate() - 1);
+
+      // Erstelle eine Demo-WorkTime für den ersten Client
+      const existingWorkTime = await prisma.workTime.findFirst({
+        where: {
+          userId: org2UserId,
+          clientId: createdOrg2Clients[0].id,
+          startTime: {
+            gte: new Date(gestern.getTime() - 24 * 60 * 60 * 1000),
+            lt: new Date(gestern.getTime() + 24 * 60 * 60 * 1000)
+          }
+        }
+      });
+
+      if (!existingWorkTime) {
+        await prisma.workTime.create({
+          data: {
+            userId: org2UserId,
+            branchId: org2Branch.id,
+            clientId: createdOrg2Clients[0].id,
+            startTime: gestern,
+            endTime: new Date(gestern.getTime() + 1 * 60 * 60 * 1000), // 1 Stunde
+            notes: 'Demo-WorkTime für Org 2 Client-Verknüpfung',
+            timezone: 'Europe/Zurich'
+          }
+        });
+        console.log(`🔗 Demo-WorkTime für Org 2 Client-Verlinkung erstellt`);
+      }
+    }
+
+    // ========================================
+    // 10.1. DEMO-CLIENTS ERSTELLEN (für Standard-Organisation)
+    // ========================================
+    console.log('👥 Erstelle Demo-Clients für Standard-Organisation (nur neue)...');
     
     const demoClients = [
       {
@@ -525,8 +1026,8 @@ async function main() {
       }
     ];
 
-    let clientsCreated = 0;
-    let clientsSkipped = 0;
+    let demoClientsCreated = 0;
+    let demoClientsSkipped = 0;
 
     for (const clientData of demoClients) {
       // Prüfe ob Client bereits existiert (basierend auf Name)
@@ -535,21 +1036,21 @@ async function main() {
       });
 
       if (!existingClient) {
-      await prisma.client.create({
-        data: clientData
-      });
-        clientsCreated++;
+        await prisma.client.create({
+          data: clientData
+        });
+        demoClientsCreated++;
         console.log(`✅ Demo-Client erstellt: ${clientData.name}`);
       } else {
-        clientsSkipped++;
+        demoClientsSkipped++;
         console.log(`⏭️ Demo-Client existiert bereits: ${clientData.name}`);
       }
     }
 
-    console.log(`📊 Demo-Clients: ${clientsCreated} erstellt, ${clientsSkipped} übersprungen`);
+    console.log(`📊 Demo-Clients: ${demoClientsCreated} erstellt, ${demoClientsSkipped} übersprungen`);
 
     // ========================================
-    // 10. DEMO-WORKTIME/BERATUNGEN ERSTELLEN
+    // 11. DEMO-WORKTIME/BERATUNGEN ERSTELLEN
     // ========================================
     console.log('🕐 Erstelle Demo-Beratungen (nur neue)...');
     
@@ -617,8 +1118,14 @@ async function main() {
     console.log(`   - ${ALL_PAGES.length} Seiten-Berechtigungen definiert`);
     console.log(`   - ${ALL_TABLES.length} Tabellen-Berechtigungen definiert`);
     console.log(`   - ${ALL_BUTTONS.length} Button-Berechtigungen definiert`);
-    console.log(`   - 3 Rollen (Admin, User, Hamburger)`);
-    console.log(`   - Admin-Benutzer mit allen Berechtigungen`);
+    console.log(`   - 3 globale Rollen (Admin, User, Hamburger)`);
+    console.log(`   - 2 Organisationen: La Familia Hostel & Mosaik`);
+    console.log(`   - Standard-Organisation (für Rückwärtskompatibilität)`);
+    console.log(`   - Rollen pro Organisation: Admin, Recepcion/Beratung, Hamburger`);
+    console.log(`   - Admin-Benutzer je Organisation`);
+    console.log(`   - Patrick in Org 1 (Recepcion)`);
+    console.log(`   - Rebeca Benitez & Christina Di Biaso in Org 2 (Beratung)`);
+    console.log(`   - 5 Clients für Org 2 (Mosaik)`);
     console.log(`   - ${branches.length} Niederlassungen`);
     console.log(`   - Demo-Clients und Beratungen`);
     console.log('\n✨ Das System ist bereit für die Nutzung!');

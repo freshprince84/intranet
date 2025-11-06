@@ -235,7 +235,7 @@ code {
   input[placeholder*="Such"],
   input[type="text"].w-full,
   input[type="text"].border {
-    font-size: 0.75rem !important;
+    font-size: 0.9rem !important;
     padding: 0.25rem 0.5rem !important;
     height: 1.9rem !important;
   }
@@ -301,7 +301,7 @@ code {
   
   /* Datumseingabefelder kompakter machen */
   input[type="date"] {
-    font-size: 0.75rem !important;
+    font-size: 0.9rem !important;
     padding: 0.25rem 0.5rem !important;
     height: 1.9rem !important;
   }
@@ -355,7 +355,7 @@ code {
   }
   
   table td {
-    font-size: 0.75rem !important;
+    font-size: 0.9rem !important;
   }
   
   /* Optimierte Spaltenbreiten für mobile Ansicht */
@@ -790,7 +790,7 @@ code {
   white-space: normal;
   margin-top: -2.5rem;
   margin-left: -0.5rem;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   box-shadow: 0 0 10px rgba(0,0,0,0.2);
 }
 
@@ -918,7 +918,7 @@ code {
   
   /* Besonders kompakter Text in Tabellenzellen */
   .text-sm, .text-xs {
-    font-size: 0.75rem !important;
+    font-size: 0.9rem !important;
     line-height: 1.2 !important;
   }
   
@@ -1088,7 +1088,7 @@ code {
   .overflow-x-auto table td,
   div.bg-white.rounded-lg div.overflow-x-auto table td,
   div[class*="bg-white"][class*="rounded-lg"] table td {
-    font-size: 0.75rem !important;
+    font-size: 0.9rem !important;
     padding-top: 0.3rem !important;
     padding-bottom: 0.3rem !important;
   }

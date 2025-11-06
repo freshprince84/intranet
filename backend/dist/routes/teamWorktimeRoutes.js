@@ -6,11 +6,13 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
 const isTeamManager_1 = require("../middleware/isTeamManager");
+const organization_1 = require("../middleware/organization");
 const teamWorktimeController_1 = require("../controllers/teamWorktimeController");
 const analyticsController_1 = require("../controllers/analyticsController");
 const router = express_1.default.Router();
-// Alle Routen erfordern Authentifizierung und Team-Manager-Berechtigung
+// Alle Routen erfordern Authentifizierung, Organisation-Kontext und Team-Manager-Berechtigung
 router.use(auth_1.authenticateToken);
+router.use(organization_1.organizationMiddleware);
 router.use(isTeamManager_1.isTeamManager);
 // Aktive Zeiterfassungen im Team abrufen
 router.get('/active', teamWorktimeController_1.getActiveTeamWorktimes);

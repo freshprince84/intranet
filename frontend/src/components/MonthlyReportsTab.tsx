@@ -442,8 +442,8 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div>
+      <div className="flex items-center justify-between mb-6 px-3 sm:px-4 md:px-6 -mx-3 sm:-mx-4 md:-mx-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {t('analytics.monthlyReports.title')}
         </h2>
@@ -477,29 +477,29 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
       {/* Reports List */}
       {viewMode === 'table' ? (
         /* Tabellen-Ansicht */
-        <div className="dashboard-monthly-reports-wrapper bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden">
+        <div className="dashboard-monthly-reports-wrapper bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden -mx-3 sm:-mx-4 md:-mx-6">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th className="px-6 py-3 text-left w-12">
+              <th className="px-3 sm:px-4 md:px-6 py-3 text-left w-12">
                 {/* Expand-Button Spalte */}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 {t('analytics.monthlyReports.columns.reportNumber')}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 {t('analytics.monthlyReports.columns.period')}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 {t('analytics.monthlyReports.columns.recipient')}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 {t('analytics.monthlyReports.columns.totalHours')}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 {t('analytics.monthlyReports.columns.status')}
               </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+              <th className="px-3 sm:px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                 {t('analytics.monthlyReports.columns.actions')}
               </th>
             </tr>
@@ -511,7 +511,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                   className="hover:bg-gray-50 dark:hover:bg-gray-700" 
                   ref={selectedReportId === report.id ? selectedReportRef : null}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                     <button
                       onClick={() => toggleExpanded(report.id)}
                       className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -524,7 +524,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                       />
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900 dark:text-white">
                       {report.reportNumber}
                     </div>
@@ -542,7 +542,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                     {Number(report.totalHours).toFixed(2)} h
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
                       {getStatusIcon(report.status)}
                       <span className="ml-2 text-sm text-gray-900 dark:text-white">
@@ -566,7 +566,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                 {/* Erweiterte Details-Zeile */}
                 {expandedRows.has(report.id) && (
                   <tr className="bg-gray-50 dark:bg-gray-900">
-                    <td colSpan={7} className="px-6 py-4">
+                    <td colSpan={7} className="px-3 sm:px-4 md:px-6 py-4">
                       <div className="space-y-4">
                         {/* Abrechnungspositionen - Ohne Detail-Informationen darüber */}
                         <div>
@@ -636,7 +636,7 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
       </div>
       ) : (
         /* Card-Ansicht */
-        <div className="dashboard-monthly-reports-wrapper">
+        <div className="dashboard-monthly-reports-wrapper -mx-3 sm:-mx-4 md:-mx-6">
           {sortedReports.length === 0 ? (
             <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
               {t('analytics.monthlyReports.noReports')}

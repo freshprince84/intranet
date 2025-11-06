@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
+import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 
 const prisma = new PrismaClient();
 
@@ -16,8 +17,12 @@ export const getActiveTeamWorktimes = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
+    // Datenisolation: Nur WorkTimes der Organisation
+    const worktimeFilter = getDataIsolationFilter(req as any, 'worktime');
+
     // Basisabfrage für aktive Zeiterfassungen
     let activeWorktimesQuery: Prisma.WorkTimeWhereInput = {
+      ...worktimeFilter,
       endTime: null
     };
 
@@ -75,9 +80,13 @@ export const stopUserWorktime = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Benutzer-ID ist erforderlich' });
     }
 
+    // Datenisolation: Nur WorkTimes der Organisation
+    const worktimeFilter = getDataIsolationFilter(req as any, 'worktime');
+
     // Finde die aktive Zeiterfassung des Benutzers
     const activeWorktime = await prisma.workTime.findFirst({
       where: {
+        ...worktimeFilter,
         userId: Number(userId),
         endTime: null
       },
@@ -141,6 +150,9 @@ export const getUserWorktimesByDay = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Datum ist erforderlich' });
     }
 
+    // Datenisolation: Nur WorkTimes der Organisation
+    const worktimeFilter = getDataIsolationFilter(req as any, 'worktime');
+
     // Datum parsen
     const queryDateStr = date as string;
     
@@ -169,6 +181,7 @@ export const getUserWorktimesByDay = async (req: Request, res: Response) => {
     // Hole alle Zeiterfassungen für den angegebenen Tag
     const worktimes = await prisma.workTime.findMany({
       where: {
+        ...worktimeFilter,
         ...(userId ? { userId: Number(userId) } : {}),
         startTime: {
           gte: dayStart,
@@ -216,9 +229,15 @@ export const updateUserWorktime = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Zeiterfassungs-ID ist erforderlich' });
     }
 
+    // Datenisolation: Nur WorkTimes der Organisation
+    const worktimeFilter = getDataIsolationFilter(req as any, 'worktime');
+
     // Finde die Zeiterfassung
-    const worktime = await prisma.workTime.findUnique({
-      where: { id: Number(id) },
+    const worktime = await prisma.workTime.findFirst({
+      where: {
+        ...worktimeFilter,
+        id: Number(id)
+      },
       include: {
         user: true,
         branch: true
@@ -279,8 +298,23 @@ export const updateApprovedOvertimeHours = async (req: Request, res: Response) =
       return res.status(400).json({ message: 'Gültige bewilligte Überstunden sind erforderlich' });
     }
 
+    // Datenisolation: Nur User der Organisation
+    const userFilter = getUserOrganizationFilter(req);
+
+    // Prüfe ob User zur Organisation gehört
+    const user = await prisma.user.findFirst({
+      where: {
+        ...userFilter,
+        id: Number(userId)
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Benutzer nicht gefunden oder gehört nicht zu Ihrer Organisation' });
+    }
+
     // Aktualisiere die bewilligten Überstunden des Benutzers
-    const user = await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id: Number(userId) },
       data: {
         approvedOvertimeHours: Number(approvedOvertimeHours)
@@ -301,11 +335,11 @@ export const updateApprovedOvertimeHours = async (req: Request, res: Response) =
       title: 'Bewilligte Überstunden aktualisiert',
       message: `Ihre bewilligten Überstunden wurden auf ${approvedOvertimeHours} Stunden aktualisiert.`,
       type: NotificationType.worktime,
-      relatedEntityId: user.id,
+      relatedEntityId: updatedUser.id,
       relatedEntityType: 'overtime_update'
     });
 
-    res.json(user);
+    res.json(updatedUser);
   } catch (error) {
     console.error('Fehler beim Aktualisieren der bewilligten Überstunden:', error);
     res.status(500).json({ message: 'Interner Serverfehler' });

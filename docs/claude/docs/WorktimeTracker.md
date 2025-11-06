@@ -23,6 +23,7 @@ interface WorkTime {
     endTime: Date | null;
     branchId: number;
     userId: number;
+    organizationId: number | null;  // Organisation, in der die Zeiterfassung gestartet wurde
     branch: {
         id: number;
         name: string;
@@ -57,6 +58,14 @@ interface ComponentState {
 1. Benutzer deaktiviert den Zeiterfassungs-Toggle oder nutzt die Stopp-Funktion
 2. System zeichnet die Endzeit auf und stoppt den Timer
 3. Die Arbeitszeiterfassung wird als abgeschlossen markiert
+4. **Wichtig**: Die `organizationId` wird beim Stoppen NICHT geändert - sie bleibt die der Start-Organisation
+
+### Organisation-Wechsel während aktiver Zeiterfassung
+- Wenn ein User während einer laufenden Zeiterfassung die Organisation wechselt:
+  - Die `organizationId` der WorkTime bleibt unverändert (gehört zur Start-Organisation)
+  - Der User kann die Zeiterfassung trotzdem stoppen (organisationsübergreifend)
+  - Das Frontend zeigt eine Warnung an, wenn die aktive WorkTime zu einer anderen Organisation gehört
+  - Nach dem Stoppen wird die WorkTime nur in der Start-Organisation angezeigt (nicht in der aktuellen Organisation)
 
 ### Anzeige von Arbeitszeiten
 1. Benutzer klickt auf den Listenbutton
@@ -82,6 +91,8 @@ Die Komponente akzeptiert keine Props.
 - `useCallback`: Für memoized Callback-Funktionen
 - `useAuth`: Für Benutzerinformationen
 - `useWorktime`: Für globalen Zeiterfassungsstatus
+- `useBranch`: Für Niederlassungsauswahl
+- `useOrganization`: Für aktuelle Organisation (zum Vergleich mit WorkTime-Organisation)
 
 ### API-Endpunkte
 - `API_ENDPOINTS.WORKTIME.ACTIVE`: Prüfen des aktiven Zeiterfassungsstatus
@@ -124,10 +135,16 @@ Die Komponente akzeptiert keine Props.
 5. **Bestehende aktive Zeiterfassung**
    - Wird beim Laden erkannt
    - Timer wird mit der bereits verstrichenen Zeit fortgesetzt
+   - **Warnung bei anderer Organisation**: Wenn die aktive WorkTime zu einer anderen Organisation gehört als die aktive, wird eine gelbe Warnung angezeigt
 
 6. **Ladezustand**
    - Spinner wird angezeigt, während Daten geladen werden
    - Benutzerinteraktion ist während des Ladens blockiert
+
+7. **Organisation-Wechsel während aktiver Zeiterfassung**
+   - WorkTime kann weiterhin gestoppt werden (organisationsübergreifend)
+   - Frontend zeigt Warnung an: "Diese Zeiterfassung wurde in einer anderen Organisation gestartet"
+   - Nach dem Stoppen: WorkTime gehört zur Start-Organisation, wird dort angezeigt
 <!-- /CLAUDE-DOC-SECTION: ERROR_STATES -->
 
 ## Memory Anchor

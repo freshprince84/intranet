@@ -615,7 +615,7 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             >
                 <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
                     <h2 className="text-lg font-semibold dark:text-white">
-                        Neue Aufgabe erstellen
+                        {t('tasks.createTask.title')}
                     </h2>
                     <button
                         onClick={handleClose}

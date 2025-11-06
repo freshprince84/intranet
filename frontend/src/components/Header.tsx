@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useBranch } from '../contexts/BranchContext.tsx';
 import NotificationBell from './NotificationBell.tsx';
@@ -9,6 +10,7 @@ import HeaderMessage from './HeaderMessage.tsx';
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const { user, logout, switchRole } = useAuth();
     const { branches, selectedBranch, setSelectedBranch } = useBranch();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -126,6 +128,7 @@ const Header: React.FC = () => {
     // Aktuelle Rolle des Benutzers ermitteln
     const currentRole = user?.roles.find(r => r.role && r.lastUsed === true);
     const roleName = currentRole?.role.name || 'Keine Rolle';
+    const organizationName = currentRole?.role.organization?.displayName || currentRole?.role.organization?.name || null;
 
     return (
         <header className="bg-white dark:bg-gray-800">
@@ -206,9 +209,16 @@ const Header: React.FC = () => {
                                     {/* Anzeige der aktiven Rolle unter dem Benutzernamen */}
                                     {user && (
                                         <div className="w-full text-right -mt-1">
-                                            <span className="text-xs text-gray-500 dark:text-gray-400 pr-1 inline-block">
-                                                {roleName}
-                                            </span>
+                                            <div className="flex flex-col items-end pr-1">
+                                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                                    {roleName}
+                                                </span>
+                                                {organizationName && (
+                                                    <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                                                        {organizationName}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -228,7 +238,7 @@ const Header: React.FC = () => {
                                         <svg className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400 ml-4" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                                             <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                                         </svg>
-                                        Profil
+                                        {t('header.profile')}
                                     </Link>
                                     
                                     {/* Rollenauswahl Untermenü */}
@@ -247,7 +257,7 @@ const Header: React.FC = () => {
                                                     <svg className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                                                     </svg>
-                                                    <span>Rolle wechseln</span>
+                                                    <span>{t('header.switchRole')}</span>
                                                 </div>
                                             </button>
                                             
@@ -267,7 +277,15 @@ const Header: React.FC = () => {
                                                         onMouseLeave={handleMouseLeave}
                                                     >
                                                         {[...user.roles]
-                                                            .sort((a, b) => a.role.name.localeCompare(b.role.name))
+                                                            .sort((a, b) => {
+                                                                // Sortiere nach Organisationsname, dann nach Rollenname
+                                                                const orgA = a.role.organization?.displayName || a.role.organization?.name || '';
+                                                                const orgB = b.role.organization?.displayName || b.role.organization?.name || '';
+                                                                if (orgA !== orgB) {
+                                                                    return orgA.localeCompare(orgB);
+                                                                }
+                                                                return a.role.name.localeCompare(b.role.name);
+                                                            })
                                                             .map((userRole) => (
                                                                 <button
                                                                     key={userRole.role.id}
@@ -278,7 +296,14 @@ const Header: React.FC = () => {
                                                                             : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                                                                     }`}
                                                                 >
-                                                                    {userRole.role.name}
+                                                                    <div className="flex flex-col">
+                                                                        <span className="font-medium">{userRole.role.name}</span>
+                                                                        {userRole.role.organization && (
+                                                                            <span className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                                                {userRole.role.organization.displayName || userRole.role.organization.name}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
                                                                 </button>
                                                             ))}
                                                     </div>
@@ -304,7 +329,7 @@ const Header: React.FC = () => {
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                                                     </svg>
-                                                    <span>Standort wechseln</span>
+                                                    <span>{t('header.switchBranch')}</span>
                                                 </div>
                                             </button>
                                             
@@ -352,7 +377,7 @@ const Header: React.FC = () => {
                                         <svg className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400 ml-4" fill="none" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" stroke="currentColor">
                                             <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                                         </svg>
-                                        Abmelden
+                                        {t('header.logout')}
                                     </button>
                                 </div>
                             )}
