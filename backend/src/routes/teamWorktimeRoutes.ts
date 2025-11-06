@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticateToken } from '../middleware/auth';
 import { isTeamManager } from '../middleware/isTeamManager';
+import { organizationMiddleware } from '../middleware/organization';
 import {
   getActiveTeamWorktimes,
   stopUserWorktime,
@@ -19,8 +20,9 @@ import {
 
 const router = express.Router();
 
-// Alle Routen erfordern Authentifizierung und Team-Manager-Berechtigung
+// Alle Routen erfordern Authentifizierung, Organisation-Kontext und Team-Manager-Berechtigung
 router.use(authenticateToken);
+router.use(organizationMiddleware);
 router.use(isTeamManager);
 
 // Aktive Zeiterfassungen im Team abrufen

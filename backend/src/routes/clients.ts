@@ -1,5 +1,6 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/auth';
+import { organizationMiddleware } from '../middleware/organization';
 import {
   getClients,
   getClientById,
@@ -13,6 +14,7 @@ const router = express.Router();
 
 // Alle Routen erfordern Authentifizierung
 router.use(authMiddleware);
+router.use(organizationMiddleware);
 
 // Client-Routen
 router.get('/', getClients);

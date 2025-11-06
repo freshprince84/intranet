@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import authService from '../services/authService.ts';
 
 const Register: React.FC = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
@@ -25,13 +27,13 @@ const Register: React.FC = () => {
     
     // Passwort-Bestätigung prüfen
     if (formData.password !== formData.confirmPassword) {
-      setError('Die Passwörter stimmen nicht überein.');
+      setError(t('register.passwordsDoNotMatch'));
       return;
     }
     
     // Passwort-Länge prüfen
     if (formData.password.length < 6) {
-      setError('Das Passwort muss mindestens 6 Zeichen lang sein.');
+      setError(t('register.passwordTooShort'));
       return;
     }
     
@@ -44,7 +46,7 @@ const Register: React.FC = () => {
       navigate('/dashboard');
     } catch (err: any) {
       console.error('Registrierung fehlgeschlagen:', err);
-      setError(err.response?.data?.message || 'Registrierung fehlgeschlagen. Bitte überprüfen Sie Ihre Eingaben.');
+      setError(err.response?.data?.message || t('register.registrationFailed'));
     } finally {
       setLoading(false);
     }
@@ -55,10 +57,10 @@ const Register: React.FC = () => {
       <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-gray-800 rounded-lg shadow">
         <div>
           <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white">
-            Registrierung
+            {t('register.title')}
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            Erstellen Sie Ihr Konto mit E-Mail und Passwort
+            {t('register.subtitle')}
           </p>
           {error && (
             <p className="mt-2 text-center text-sm text-red-600 dark:text-red-400">
@@ -70,7 +72,7 @@ const Register: React.FC = () => {
           <div className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                E-Mail-Adresse
+                {t('register.email')}
               </label>
               <input
                 type="email"
@@ -80,12 +82,12 @@ const Register: React.FC = () => {
                 onChange={handleChange}
                 required
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="ihre.email@beispiel.de"
+                placeholder={t('register.emailPlaceholder')}
               />
             </div>
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Passwort
+                {t('register.password')}
               </label>
               <input
                 type="password"
@@ -96,12 +98,12 @@ const Register: React.FC = () => {
                 required
                 minLength={6}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="Mindestens 6 Zeichen"
+                placeholder={t('register.passwordPlaceholder')}
               />
             </div>
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Passwort bestätigen
+                {t('register.confirmPassword')}
               </label>
               <input
                 type="password"
@@ -112,7 +114,7 @@ const Register: React.FC = () => {
                 required
                 minLength={6}
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                placeholder="Passwort wiederholen"
+                placeholder={t('register.confirmPasswordPlaceholder')}
               />
             </div>
           </div>
@@ -122,14 +124,14 @@ const Register: React.FC = () => {
               disabled={loading}
               className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {loading ? 'Registriere...' : 'Registrieren'}
+              {loading ? t('register.registering') : t('register.register')}
             </button>
           </div>
         </form>
         <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-          Bereits registriert?{' '}
+          {t('register.alreadyRegistered')}{' '}
           <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
-            Anmelden
+            {t('register.login')}
           </Link>
         </p>
       </div>

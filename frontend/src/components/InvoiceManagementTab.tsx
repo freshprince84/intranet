@@ -591,7 +591,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
   const renderSortableHeader = (columnId: string, label: string, sortKey?: SortConfig['key']) => (
     <th
       key={columnId}
-      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none"
+      className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer select-none"
       onClick={() => sortKey && handleSort(sortKey)}
     >
       <div className="flex items-center space-x-1">
@@ -637,7 +637,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
   return (
     <div>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 px-3 sm:px-4 md:px-6 -mx-3 sm:-mx-4 md:-mx-6">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           Beratungsrechnungen
         </h2>
@@ -685,7 +685,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
       </div>
 
       {/* Suchfeld */}
-      <div className="relative mb-6">
+      <div className="relative mb-6 px-3 sm:px-4 md:px-6 -mx-3 sm:-mx-4 md:-mx-6">
         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
         </div>
@@ -699,7 +699,8 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
       </div>
 
       {/* Gespeicherte Filter */}
-      <SavedFilterTags
+      <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6 -mx-3 sm:-mx-4 md:-mx-6'}>
+        <SavedFilterTags
         tableId={INVOICES_TABLE_ID}
         onSelectFilter={applyFilterConditions}
         onReset={resetFilterConditions}
@@ -707,15 +708,16 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
         selectedFilterId={selectedFilterId}
         onFilterChange={handleFilterChange}
       />
+      </div>
 
       {/* Tabelle oder Cards */}
       {error ? (
-        <div className="text-center text-red-600 dark:text-red-400 py-6">
+        <div className="text-center text-red-600 dark:text-red-400 py-6 px-3 sm:px-4 md:px-6 -mx-3 sm:-mx-4 md:-mx-6">
           {error}
         </div>
       ) : viewMode === 'table' ? (
         /* Tabellen-Ansicht */
-        <div className="dashboard-invoices-wrapper overflow-x-auto">
+        <div className="dashboard-invoices-wrapper overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -728,7 +730,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                     switch (columnId) {
                       case 'expand':
                         return (
-                          <th key="expand" className="px-6 py-3 text-left w-12">
+                          <th key="expand" className="px-3 sm:px-4 md:px-6 py-3 text-left w-12">
                             {/* Leerer Header für Expand-Spalte */}
                           </th>
                         );
@@ -755,7 +757,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                 <React.Fragment key={invoice.id}>
                   <tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     {isColumnVisible('expand') && (
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => toggleExpanded(invoice.id)}
                           className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
@@ -808,7 +810,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                     )}
                     
                     {isColumnVisible('status') && (
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(invoice.status)}
                       </td>
                     )}
@@ -849,7 +851,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                   {/* Erweiterte Details-Zeile */}
                   {expandedRows.has(invoice.id) && (
                     <tr className="bg-gray-50 dark:bg-gray-900">
-                      <td colSpan={settings.columnOrder.filter(col => isColumnVisible(col)).length} className="px-6 py-4">
+                      <td colSpan={settings.columnOrder.filter(col => isColumnVisible(col)).length} className="px-3 sm:px-4 md:px-6 py-4">
                         <div className="space-y-4">
                           <h4 className="text-lg font-medium text-gray-900 dark:text-white">
                             {t('invoices.detailsAndPositions')}
@@ -982,7 +984,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
         </div>
       ) : (
         /* Card-Ansicht */
-        <div className="dashboard-invoices-wrapper">
+        <div className="dashboard-invoices-wrapper -mx-3 sm:-mx-4 md:-mx-6">
           {filteredAndSortedInvoices.length === 0 ? (
             <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
               {t('invoices.noInvoicesFound')}
@@ -1134,7 +1136,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                     {invoice.notes && (
                       <div className="mb-6">
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Notizen
+                          {t('invoices.notes')}
                         </label>
                         <div className="text-sm text-gray-900 dark:text-gray-200 bg-white dark:bg-gray-800 p-3 rounded border">
                           {invoice.notes}
@@ -1163,16 +1165,16 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                             <thead className="bg-gray-100 dark:bg-gray-700">
                               <tr>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                  Beschreibung
+                                  {t('invoices.itemDescription')}
                                 </th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                  Menge/Stunden
+                                  {t('invoices.itemQuantity')}
                                 </th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                  Stundensatz
+                                  {t('invoices.itemUnitPrice')}
                                 </th>
                                 <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                                  Betrag
+                                  {t('invoices.itemAmount')}
                                 </th>
                               </tr>
                             </thead>
@@ -1289,7 +1291,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                   <div className="px-4 py-6 bg-gray-50 dark:bg-gray-700 sm:px-6">
                     <div className="flex items-center justify-between">
                       <h2 className="text-lg font-medium text-gray-900 dark:text-white" id="slide-over-title">
-                        Rechnung bearbeiten: {editingInvoice.invoiceNumber}
+                        {t('invoices.editSidepane.title', { invoiceNumber: editingInvoice.invoiceNumber })}
                       </h2>
                       <div className="ml-3 h-7 flex items-center">
                         <button
@@ -1297,7 +1299,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                           className="bg-gray-50 dark:bg-gray-700 rounded-md text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                           onClick={closeEditSidepane}
                         >
-                          <span className="sr-only">Panel schließen</span>
+                          <span className="sr-only">{t('common.close')}</span>
                           <XMarkIcon className="h-6 w-6" aria-hidden="true" />
                         </button>
                       </div>
@@ -1311,12 +1313,12 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                       {/* Grundinformationen */}
                       <div>
                         <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">
-                          Grundinformationen
+                          {t('invoices.editSidepane.basicInfo')}
                         </h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Rechnungsnummer
+                              {t('invoices.invoiceNumber')}
                             </label>
                             <input
                               type="text"
@@ -1327,22 +1329,22 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Status
+                              {t('invoices.status')}
                             </label>
                             <select
                               value={editingInvoice.status}
                               className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                             >
-                              <option value="DRAFT">Entwurf</option>
-                              <option value="SENT">Gesendet</option>
-                              <option value="PAID">Bezahlt</option>
-                              <option value="OVERDUE">Überfällig</option>
-                              <option value="CANCELLED">Storniert</option>
+                              <option value="DRAFT">{t('invoices.status.draft')}</option>
+                              <option value="SENT">{t('invoices.status.sent')}</option>
+                              <option value="PAID">{t('invoices.status.paid')}</option>
+                              <option value="OVERDUE">{t('invoices.status.overdue')}</option>
+                              <option value="CANCELLED">{t('invoices.status.cancelled')}</option>
                             </select>
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Rechnungsdatum
+                              {t('invoices.editSidepane.issueDate')}
                             </label>
                             <input
                               type="date"
@@ -1352,7 +1354,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                           </div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                              Fälligkeitsdatum
+                              {t('invoices.editSidepane.dueDate')}
                             </label>
                             <input
                               type="date"
@@ -1366,13 +1368,13 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                       {/* Notizen */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Notizen
+                          {t('invoices.notes')}
                         </label>
                         <textarea
                           rows={3}
                           value={editingInvoice.notes || ''}
                           className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-                          placeholder="Zusätzliche Notizen zur Rechnung..."
+                          placeholder={t('invoices.editSidepane.notesPlaceholder')}
                         />
                       </div>
 
@@ -1380,14 +1382,14 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                       <div>
                         <div className="flex items-center justify-between mb-4">
                           <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                            Rechnungspositionen
+                            {t('invoices.editSidepane.items')}
                           </h3>
                           <button
                             type="button"
                             className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                           >
                             <PlusIcon className="h-4 w-4 mr-2" />
-                            Position hinzufügen
+                            {t('invoices.editSidepane.addItem')}
                           </button>
                         </div>
 
@@ -1397,7 +1399,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                 <div className="sm:col-span-2">
                                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                    Beschreibung
+                                    {t('invoices.itemDescription')}
                                   </label>
                                   <input
                                     type="text"
@@ -1407,7 +1409,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                                 </div>
                                 <div>
                                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                    Stunden
+                                    {t('invoices.editSidepane.hours')}
                                   </label>
                                   <input
                                     type="number"
@@ -1418,7 +1420,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                                 </div>
                                 <div>
                                   <label className="block text-xs font-medium text-gray-700 dark:text-gray-300">
-                                    Stundensatz
+                                    {t('invoices.itemUnitPrice')}
                                   </label>
                                   <div className="flex items-center space-x-2">
                                     <input
@@ -1439,7 +1441,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                               </div>
                               <div className="mt-2 text-right">
                                 <span className="text-sm text-gray-500 dark:text-gray-400">
-                                  Betrag: {editingInvoice.currency} {Number(item.amount).toFixed(2)}
+                                  {t('invoices.itemAmount')}: {editingInvoice.currency} {Number(item.amount).toFixed(2)}
                                 </span>
                               </div>
                             </div>
@@ -1451,7 +1453,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                       <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
                         <div className="space-y-2">
                           <div className="flex justify-between">
-                            <span className="text-sm text-gray-600 dark:text-gray-400">Untertotal:</span>
+                            <span className="text-sm text-gray-600 dark:text-gray-400">{t('invoices.subtotal')}:</span>
                             <span className="text-sm font-medium text-gray-900 dark:text-white">
                               {editingInvoice.currency} {Number(editingInvoice.subtotal).toFixed(2)}
                             </span>
@@ -1459,7 +1461,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                           {editingInvoice.vatAmount && (
                             <div className="flex justify-between">
                               <span className="text-sm text-gray-600 dark:text-gray-400">
-                                MwSt. ({editingInvoice.vatRate}%):
+                                {t('invoices.vat')} ({editingInvoice.vatRate}%):
                               </span>
                               <span className="text-sm font-medium text-gray-900 dark:text-white">
                                 {editingInvoice.currency} {Number(editingInvoice.vatAmount).toFixed(2)}
@@ -1467,7 +1469,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                             </div>
                           )}
                           <div className="flex justify-between pt-2 border-t border-gray-200 dark:border-gray-600">
-                            <span className="text-base font-medium text-gray-900 dark:text-white">Total:</span>
+                            <span className="text-base font-medium text-gray-900 dark:text-white">{t('invoices.editSidepane.total')}:</span>
                             <span className="text-base font-bold text-gray-900 dark:text-white">
                               {editingInvoice.currency} {Number(editingInvoice.total).toFixed(2)}
                             </span>

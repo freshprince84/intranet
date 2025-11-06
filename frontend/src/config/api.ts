@@ -194,6 +194,7 @@ export const API_ENDPOINTS = {
         SEARCH: '/organizations/search',
         JOIN_REQUEST: '/organizations/join-request',
         JOIN_REQUESTS: '/organizations/join-requests',
+        MY_JOIN_REQUESTS: '/organizations/join-requests/my',
         PROCESS_JOIN_REQUEST: (id: number) => `/organizations/join-requests/${id}`
     },
     // Sprache

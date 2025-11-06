@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAllBranches = exports.getTest = void 0;
 const client_1 = require("@prisma/client");
+const organization_1 = require("../middleware/organization");
 const prisma = new client_1.PrismaClient();
 // Debug-Funktion ohne DB-Zugriff
 const getTest = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -22,13 +23,17 @@ const getTest = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.getTest = getTest;
 // Alle Niederlassungen abrufen
-const getAllBranches = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // Datenisolation: Zeigt alle Branches der Organisation oder nur eigene (wenn standalone)
+        const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
         const branches = yield prisma.branch.findMany({
+            where: branchFilter,
             select: {
                 id: true,
                 name: true
-            }
+            },
+            orderBy: { name: 'asc' }
         });
         res.json(branches);
     }

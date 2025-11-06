@@ -29,6 +29,7 @@ interface AuthContextType {
     logout: () => Promise<void>;
     isLoading: boolean;
     switchRole: (roleId: number) => Promise<void>;
+    fetchCurrentUser: (signal?: AbortSignal) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -176,7 +177,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, isLoading, switchRole }}>
+        <AuthContext.Provider value={{ user, login, logout, isLoading, switchRole, fetchCurrentUser }}>
             {children}
         </AuthContext.Provider>
     );

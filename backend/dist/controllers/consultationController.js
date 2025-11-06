@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteConsultation = exports.updateConsultationNotes = exports.createTaskForConsultation = exports.linkTaskToConsultation = exports.getConsultations = exports.stopConsultation = exports.startConsultation = void 0;
 const client_1 = require("@prisma/client");
+const organization_1 = require("../middleware/organization");
 const prisma = new client_1.PrismaClient();
 // Beratung starten (erweiterte Version von worktime/start)
 const startConsultation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -22,6 +23,14 @@ const startConsultation = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         if (!clientId) {
             return res.status(400).json({ message: 'Client ist erforderlich' });
+        }
+        // Validierung: Prüfe ob Client zur Organisation gehört
+        const clientFilter = (0, organization_1.getDataIsolationFilter)(req, 'client');
+        const client = yield prisma.client.findFirst({
+            where: Object.assign(Object.assign({}, clientFilter), { id: Number(clientId) })
+        });
+        if (!client) {
+            return res.status(400).json({ message: 'Client gehört nicht zu Ihrer Organisation' });
         }
         // Prüfe, ob bereits eine aktive Zeiterfassung existiert
         const activeWorktime = yield prisma.workTime.findFirst({
@@ -104,15 +113,15 @@ const getConsultations = (req, res) => __awaiter(void 0, void 0, void 0, functio
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        let whereClause = {
-            userId: Number(userId),
-            clientId: { not: null }
-        };
+        // Datenisolation: Verwende getDataIsolationFilter für WorkTimes
+        // Zeigt alle WorkTimes der Organisation (wenn User Organisation hat) oder nur eigene (wenn standalone)
+        const worktimeFilter = (0, organization_1.getDataIsolationFilter)(req, 'worktime');
+        let whereClause = Object.assign(Object.assign({}, worktimeFilter), { clientId: { not: null } });
         if (clientId) {
             whereClause.clientId = Number(clientId);
         }
         if (from || to) {
-            whereClause.startTime = {};
+            whereClause.startTime = whereClause.startTime || {};
             if (from)
                 whereClause.startTime.gte = new Date(from);
             if (to)

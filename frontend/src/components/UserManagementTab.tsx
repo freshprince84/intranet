@@ -18,6 +18,15 @@ interface UserManagementTabProps {
 // Definiere Rollen, die immer vorhanden sein sollten (z.B. Admin-Rolle)
 const fixedRoles = [1, 2, 999]; // Admin (1), User (2) und Hamburger (999) sind fixe Rollen
 
+// Vertragstypen für Kolumbien (CO)
+const CONTRACT_TYPES = [
+  { code: 'tiempo_completo', name: 'Tiempo Completo (>21 Tage/Monat)' },
+  { code: 'tiempo_parcial_7', name: 'Tiempo Parcial (≤7 Tage/Monat)' },
+  { code: 'tiempo_parcial_14', name: 'Tiempo Parcial (≤14 Tage/Monat)' },
+  { code: 'tiempo_parcial_21', name: 'Tiempo Parcial (≤21 Tage/Monat)' },
+  { code: 'servicios_externos', name: 'Servicios Externos (Stundenbasiert)' }
+];
+
 // Gemeinsame Debug-Komponente hinzufügen
 const RoleDebugInfo = ({ title, data }: { title: string, data: any }) => (
   <div className="mb-2 p-2 border border-gray-300 rounded bg-gray-50">
@@ -846,29 +855,27 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
               {/* Rollenzuweisung - nur anzeigen, wenn Rollen geladen wurden */}
               {loadingRoles ? (
                 <div className="mt-4 mb-4">
-                  <h3 className="text-lg font-semibold mb-4 dark:text-white">Rollenzuweisung</h3>
-                  <p className="dark:text-gray-300">Rollen werden geladen...</p>
+                  <h3 className="text-lg font-semibold mb-4 dark:text-white">{t('roleAssignment.title')}</h3>
+                  <p className="dark:text-gray-300">{t('roleAssignment.loading')}</p>
                 </div>
               ) : roles.length > 0 && (
                 <div>
-                  <h3 className="text-lg font-semibold mb-4 dark:text-white">Rollenzuweisung</h3>
+                  <h3 className="text-lg font-semibold mb-4 dark:text-white">{t('roleAssignment.title')}</h3>
                   
                   {/* Überprüfung auf unbekannte Rollen */}
                   {selectedRoles.some(roleId => !roles.some(role => role.id === roleId)) && (
                     <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-700 text-yellow-700 dark:text-yellow-300 px-4 py-3 rounded mb-4">
-                      <p className="font-bold">Achtung: Unbekannte Rollen-IDs gefunden</p>
-                      <p>Einige Rollen-IDs des Benutzers ({
-                        selectedRoles.filter(roleId => !roles.some(role => role.id === roleId)).join(', ')
-                      }) sind in den verfügbaren Rollen nicht vorhanden.</p>
-                      <p className="mt-2 text-sm">Verfügbare Rollen-IDs: {roles.map(r => r.id).join(', ')}</p>
+                      <p className="font-bold">{t('roleAssignment.unknownRolesWarning')}</p>
+                      <p>{t('roleAssignment.unknownRolesMessage', { ids: selectedRoles.filter(roleId => !roles.some(role => role.id === roleId)).join(', ') })}</p>
+                      <p className="mt-2 text-sm">{t('roleAssignment.availableRoleIds', { ids: roles.map(r => r.id).join(', ') })}</p>
                     </div>
                   )}
                   
                   {/* Aktuell zugewiesene Rollen */}
                   <div className="mb-4">
-                    <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Aktuelle Rollen</h4>
+                    <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">{t('roleAssignment.currentRoles')}</h4>
                     {selectedRoles.length === 0 ? (
-                      <p className="text-gray-500 dark:text-gray-400 italic">Keine Rollen zugewiesen</p>
+                      <p className="text-gray-500 dark:text-gray-400 italic">{t('roleAssignment.noRolesAssigned')}</p>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {/* Bekannte zugewiesene Rollen */}
@@ -889,14 +896,14 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                                       {role.name}
                                       {isFixedRole && (
                                         <span className="ml-2 text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">
-                                          Fix
+                                          {t('roleAssignment.fixed')}
                                         </span>
                                       )}
                                     </h4>
                                     <p className="text-sm text-gray-600 dark:text-gray-400">{role.description}</p>
                                   </div>
                                   <div className={`flex items-center ${isFixedRole ? 'text-gray-400 dark:text-gray-500' : 'text-blue-600 dark:text-blue-400'}`}>
-                                    <span className="mr-2 text-sm">{isFixedRole ? 'Fest zugewiesen' : 'Entfernen'}</span>
+                                    <span className="mr-2 text-sm">{isFixedRole ? t('roleAssignment.fixedAssigned') : t('roleAssignment.remove')}</span>
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                                     </svg>
@@ -916,11 +923,11 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                             >
                               <div className="flex justify-between items-center">
                                 <div>
-                                  <h4 className="font-medium">Unbekannte Rolle (ID: {roleId})</h4>
-                                  <p className="text-sm text-orange-600">Diese Rolle ist dem Benutzer zugewiesen, aber nicht in der Rollenliste vorhanden.</p>
+                                  <h4 className="font-medium">{t('roleAssignment.unknownRole', { id: roleId })}</h4>
+                                  <p className="text-sm text-orange-600">{t('roleAssignment.unknownRoleDescription')}</p>
                                 </div>
                                 <div className="flex items-center text-orange-600">
-                                  <span className="mr-2 text-sm">Entfernen</span>
+                                  <span className="mr-2 text-sm">{t('roleAssignment.remove')}</span>
                                   <button 
                                     onClick={() => toggleRole(roleId)}
                                     className="focus:outline-none">
@@ -938,9 +945,9 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   
                   {/* Verfügbare Rollen */}
                   <div>
-                    <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Verfügbare Rollen</h4>
+                    <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">{t('roleAssignment.availableRoles')}</h4>
                     {roles.filter(role => !selectedRoles.includes(role.id)).length === 0 ? (
-                      <p className="text-gray-500 dark:text-gray-400 italic">Keine weiteren Rollen verfügbar</p>
+                      <p className="text-gray-500 dark:text-gray-400 italic">{t('roleAssignment.noRolesAvailable')}</p>
                     ) : (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {roles
@@ -957,7 +964,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                                   <p className="text-sm text-gray-600">{role.description}</p>
                                 </div>
                                 <div className="flex items-center text-gray-500 hover:text-blue-600">
-                                  <span className="mr-2 text-sm">Hinzufügen</span>
+                                  <span className="mr-2 text-sm">{t('roleAssignment.add')}</span>
                                   <PlusIcon className="h-5 w-5" />
                                 </div>
                               </div>
@@ -987,7 +994,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   <div className="px-6 py-4 border-b dark:border-gray-700">
                     <div className="flex items-center justify-between">
                       <Dialog.Title className="text-lg font-semibold dark:text-white">
-                        Neuen Benutzer erstellen
+                        {t('organisation.createUser.title')}
                       </Dialog.Title>
                       <button
                         onClick={() => setIsCreateModalOpen(false)}
@@ -1003,7 +1010,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     <div className="space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          E-Mail *
+                          {t('organisation.createUser.email')} *
                         </label>
                         <input
                           type="email"
@@ -1017,7 +1024,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Passwort *
+                          {t('organisation.createUser.password')} *
                         </label>
                         <input
                           type="password"
@@ -1031,7 +1038,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Vorname *
+                          {t('organisation.createUser.firstName')} *
                         </label>
                         <input
                           type="text"
@@ -1045,7 +1052,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Nachname *
+                          {t('organisation.createUser.lastName')} *
                         </label>
                         <input
                           type="text"
@@ -1064,14 +1071,14 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                         type="button"
                         onClick={() => setIsCreateModalOpen(false)}
                         className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                        title="Abbrechen"
+                        title={t('common.cancel')}
                       >
                         <XMarkIcon className="h-5 w-5" />
                       </button>
                       <button
                         type="submit"
                         className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
-                        title="Erstellen"
+                        title={t('organisation.createUser.create')}
                       >
                         <CheckIcon className="h-5 w-5" />
                       </button>
@@ -1110,7 +1117,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
               >
                 <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
                   <h2 className="text-lg font-semibold dark:text-white">
-                    Neuen Benutzer erstellen
+                    {t('organisation.createUser.title')}
                   </h2>
                   <button
                     onClick={() => setIsCreateModalOpen(false)}
@@ -1125,7 +1132,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     <div className="p-4 overflow-y-auto flex-1 min-h-0 space-y-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          E-Mail *
+                          {t('organisation.createUser.email')} *
                         </label>
                       <input
                         type="email"
@@ -1139,7 +1146,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Passwort *
+                        {t('organisation.createUser.password')} *
                       </label>
                       <input
                         type="password"
@@ -1153,7 +1160,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Vorname *
+                        {t('organisation.createUser.firstName')} *
                       </label>
                       <input
                         type="text"
@@ -1167,7 +1174,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Nachname *
+                        {t('organisation.createUser.lastName')} *
                       </label>
                       <input
                         type="text"
@@ -1186,14 +1193,14 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                         type="button"
                         onClick={() => setIsCreateModalOpen(false)}
                         className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                        title="Abbrechen"
+                        title={t('common.cancel')}
                       >
                         <XMarkIcon className="h-5 w-5" />
                       </button>
                       <button
                         type="submit"
                         className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
-                        title="Erstellen"
+                        title={t('organisation.createUser.create')}
                       >
                         <CheckIcon className="h-5 w-5" />
                       </button>

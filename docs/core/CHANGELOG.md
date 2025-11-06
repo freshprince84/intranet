@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Changed
+- Berechtigungssystem für Organisation-Seite vereinheitlicht:
+  - Alle Berechtigungen von `usermanagement` (page) auf `organization_management` (page) umgestellt
+  - Code-Änderungen in Frontend (UserManagement, Sidebar, RoleManagementTab) und Backend (routes/roles, seed.ts, organizationController)
+  - Datenbank-Migration durchgeführt: 4 Dopplungen entfernt, alle `usermanagement` Berechtigungen auf `organization_management` umgestellt
+  - Konsistente Verwendung von `organization_management` für die Organisation-Seite im gesamten System
+  - Alte Workaround-Scripts entfernt (addOrganizationPermissionsToUser, addHamburgerOrganizationPermissions, removeOrganizationPermissionsFromHamburger)
+  - Migration-Script erstellt: `backend/scripts/migrateUsermanagementToOrganizationManagement.ts`
+
 ### Added
 - IP-basierter Zugriff (192.168.1.1) zusätzlich zu localhost implementiert
 - Erweiterte Berechtigungsstruktur:

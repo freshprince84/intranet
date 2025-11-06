@@ -73,7 +73,7 @@ const NotificationSettingsComponent: React.FC = () => {
     } catch (error) {
       console.error('Fehler beim Laden der Benachrichtigungseinstellungen:', error);
       setSettings(defaultSettings);
-      showMessage(t('notifications.loadError'), 'error');
+      showMessage(t('notifications.loadSettingsError'), 'error');
     } finally {
       setLoading(false);
     }

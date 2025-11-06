@@ -18,7 +18,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 // Definiere die möglichen Seitenbezeichnungen
-type PageName = 'dashboard' | 'worktracker' | 'consultations' | 'team_worktime_control' | 'usermanagement' | 'settings' | 'profile' | 'cerebro' | 'payroll';
+type PageName = 'dashboard' | 'worktracker' | 'consultations' | 'team_worktime_control' | 'organization_management' | 'settings' | 'profile' | 'cerebro' | 'payroll';
 
 // Definiere die Struktur für die Menüelemente
 interface MenuItem {
@@ -132,9 +132,9 @@ const Sidebar: React.FC = () => {
         },
         {
             name: t('menu.organization'),
-            path: '/users',
+            path: '/organization',
             icon: <UserGroupIcon className="h-full w-full" />,
-            page: 'usermanagement',
+            page: 'organization_management',
             group: 'management'
         }
     ];

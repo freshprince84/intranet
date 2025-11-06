@@ -58,18 +58,36 @@ export const uploadMedia = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Keine Datei hochgeladen' });
         }
         
-        const { carticleId } = req.body;
+        const { carticleId, carticleSlug } = req.body;
         const userId = parseInt(req.userId, 10);
         
-        if (!carticleId) {
+        let articleId: number | null = null;
+        
+        // Unterstütze sowohl carticleId als auch carticleSlug
+        if (carticleId) {
+            articleId = parseInt(carticleId, 10);
+        } else if (carticleSlug) {
+            // Artikel nach Slug suchen
+            const article = await prisma.cerebroCarticle.findUnique({
+                where: { slug: carticleSlug },
+                select: { id: true }
+            });
+            
+            if (!article) {
+                fs.unlinkSync(req.file.path);
+                return res.status(404).json({ message: 'Artikel nicht gefunden' });
+            }
+            
+            articleId = article.id;
+        } else {
             // Lösche die Datei, wenn kein Artikel angegeben ist
             fs.unlinkSync(req.file.path);
-            return res.status(400).json({ message: 'Artikel-ID ist erforderlich' });
+            return res.status(400).json({ message: 'Artikel-ID oder Artikel-Slug ist erforderlich' });
         }
         
         // Prüfen, ob der Artikel existiert
         const article = await prisma.$queryRaw`
-            SELECT * FROM "CerebroCarticle" WHERE id = ${parseInt(carticleId, 10)}
+            SELECT * FROM "CerebroCarticle" WHERE id = ${articleId}
         `;
         
         if (!article || (Array.isArray(article) && article.length === 0)) {
@@ -95,7 +113,7 @@ export const uploadMedia = async (req: Request, res: Response) => {
                 ${req.file.originalname}, 
                 ${req.file.mimetype}, 
                 ${req.file.size}, 
-                ${parseInt(carticleId, 10)}, 
+                ${articleId}, 
                 ${userId}, 
                 NOW(), 
                 NOW()

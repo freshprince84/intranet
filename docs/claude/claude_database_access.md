@@ -14,15 +14,15 @@ Die MCP-Konfiguration für Cursor ist in `mcp.json` gespeichert:
     "postgres-intranet": {
       "command": "npx",
       "args": [
-        "@modelcontextprotocol/server-postgres"
-      ],
-      "env": {
-        "POSTGRES_CONNECTION_STRING": "postgresql://postgres:your_password@localhost:5432/intranet"
-      }
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:your_password@localhost:5432/intranet"
+      ]
     }
   }
 }
 ```
+
+**Wichtig:** Die Datenbank-URL muss als Kommandozeilenargument übergeben werden, nicht als Umgebungsvariable.
 
 ### Nutzung
 
@@ -187,8 +187,11 @@ WHERE w."endTime" IS NULL
 
 ### Datenbankverbindung ändern
 ```bash
-# In mcp.json
-"POSTGRES_CONNECTION_STRING": "postgresql://username:password@host:port/database"
+# In mcp.json - Die URL muss als Argument übergeben werden:
+"args": [
+  "@modelcontextprotocol/server-postgres",
+  "postgresql://username:password@host:port/database"
+]
 ```
 
 ### Sicherheits-Token ändern

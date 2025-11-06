@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams, useNavigate } from 'react-router-dom';
 import { cerebroApi, CerebroArticleDetail } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import { useUnifiedEditor } from '../../hooks/useUnifiedEditor.ts';
+import MarkdownPreview from '../MarkdownPreview.tsx';
 
 // Typen
 interface FormData {
@@ -12,64 +12,6 @@ interface FormData {
   parentId: string | null;
   content: string;
 }
-
-// Quill Editor Konfiguration
-const quillModules = {
-  toolbar: [
-    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-    [{ 'color': [] }, { 'background': [] }],
-    [{ 'align': [] }],
-    ['link', 'image', 'video'],
-    ['clean']
-  ],
-};
-
-const quillFormats = [
-  'header',
-  'bold', 'italic', 'underline', 'strike',
-  'list', 'bullet',
-  'color', 'background',
-  'align',
-  'link', 'image', 'video'
-];
-
-// Funktion zum Extrahieren von Links aus dem Inhalt
-const extractLinks = (content: string): string[] => {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  return content.match(urlRegex) || [];
-};
-
-// Funktion zum Extrahieren von Bild-URLs aus dem Inhalt
-const extractImageUrls = (content: string): string[] => {
-  const imgRegex = /(https?:\/\/.*\.(?:png|jpg|jpeg|gif|webp))/gi;
-  return content.match(imgRegex) || [];
-};
-
-// Funktion zum Extrahieren von Video-URLs aus dem Inhalt
-const extractVideoUrls = (content: string): string[] => {
-  const videoRegex = /(https?:\/\/.*\.(?:mp4|webm|ogg))/gi;
-  const youtubeRegex = /(https?:\/\/(?:www\.)?youtube\.com\/watch\?v=([^&]+))/gi;
-  const vimeoRegex = /(https?:\/\/(?:www\.)?vimeo\.com\/([0-9]+))/gi;
-  
-  const directVideos = content.match(videoRegex) || [];
-  const youtubeVideos = content.match(youtubeRegex) || [];
-  const vimeoVideos = content.match(vimeoRegex) || [];
-  
-  return [...directVideos, ...youtubeVideos, ...vimeoVideos];
-};
-
-// Funktion zum Extrahieren von PDF-URLs aus dem Inhalt
-const extractPdfUrls = (content: string): string[] => {
-  const pdfRegex = /(https?:\/\/.*\.pdf)/gi;
-  return content.match(pdfRegex) || [];
-};
-
-// Funktion zum Erkennen von GitHub-Markdown-URLs
-const isGitHubMarkdownUrl = (url: string): boolean => {
-  return url.includes('github.com') && (url.endsWith('.md') || url.includes('/blob/') || url.includes('/raw/'));
-};
 
 // Hauptkomponente
 const ArticleEdit: React.FC = () => {
@@ -90,34 +32,90 @@ const ArticleEdit: React.FC = () => {
   const [articles, setArticles] = useState<{id: string, title: string}[]>([]);
   const [isNewArticle, setIsNewArticle] = useState<boolean>(true);
   const [articleId, setArticleId] = useState<string | null>(null);
-  
-  // Automatische Erkennung von Links und Medien beim Ändern des Inhalts
-  const handleContentChange = useCallback((content: string) => {
-    setFormData(prev => ({ ...prev, content }));
-    
-    // Links und Medien extrahieren
-    const links = extractLinks(content);
-    const imageUrls = extractImageUrls(content);
-    const videoUrls = extractVideoUrls(content);
-    const pdfUrls = extractPdfUrls(content);
-    
-    // Automatisch Links und Medien hinzufügen, wenn der Artikel gespeichert wird
-    setAutoDetectedMedia([...imageUrls, ...videoUrls, ...pdfUrls]);
-    setAutoDetectedLinks(links.filter(link => 
-      !imageUrls.includes(link) && 
-      !videoUrls.includes(link) && 
-      !pdfUrls.includes(link)
-    ));
-  }, []);
-  
-  // Zustand für automatisch erkannte Medien und Links
-  const [autoDetectedMedia, setAutoDetectedMedia] = useState<string[]>([]);
-  const [autoDetectedLinks, setAutoDetectedLinks] = useState<string[]>([]);
+  const [articleSlug, setArticleSlug] = useState<string | null>(null);
+  const [uploading, setUploading] = useState<boolean>(false);
+  const [temporaryMedia, setTemporaryMedia] = useState<Array<{
+    fileName: string;
+    fileType: string;
+    fileSize: number;
+    file: File;
+    url: string;
+  }>>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Überprüfen der Berechtigungen - an die richtigen Berechtigungen anpassen
   const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
   const hasCerebroPagePermission = hasPermission('cerebro', 'both', 'page');
   const canEditArticles = hasCerebroButtonPermission || hasCerebroPagePermission;
+  
+  // Upload-Funktion für unified Editor
+  const handleUpload = async (file: File): Promise<{ url: string; fileName: string }> => {
+    // Für neue Artikel: Speichere temporär, wird nach dem Speichern hochgeladen
+    if (isNewArticle && !articleSlug) {
+      const tempUrl = URL.createObjectURL(file);
+      const tempMedia = {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+        file: file,
+        url: tempUrl
+      };
+      setTemporaryMedia(prev => [...prev, tempMedia]);
+      
+      // Temporären Platzhalter-URL zurückgeben
+      return {
+        url: 'wird nach dem Erstellen hochgeladen',
+        fileName: file.name
+      };
+    }
+    
+    // Für bestehende Artikel: Direkt hochladen
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    if (articleSlug) {
+      formData.append('carticleSlug', articleSlug);
+    } else {
+      throw new Error('Artikel-Slug nicht gefunden.');
+    }
+    
+    const media = await cerebroApi.media.uploadMedia(formData);
+    
+    // URL für das hochgeladene Medium generieren
+    const mediaUrl = media.path.startsWith('http') 
+      ? media.path 
+      : `${window.location.origin}/api/cerebro/media/${media.id}/file`;
+    
+    return {
+      url: mediaUrl,
+      fileName: media.filename
+    };
+  };
+  
+  // Unified Editor Hook verwenden
+  const { handlePaste, handleDrop, handleDragOver } = useUnifiedEditor({
+    textareaRef,
+    content: formData.content,
+    setContent: (content) => setFormData(prev => ({ ...prev, content })),
+    onUpload: handleUpload,
+    setUploading,
+    setError
+  });
+  
+  // File Upload Handler für Button
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    await handleUpload(file);
+    
+    // Zurücksetzen des Datei-Inputs
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
   
   // Daten laden
   useEffect(() => {
@@ -137,6 +135,7 @@ const ArticleEdit: React.FC = () => {
           const article = await cerebroApi.articles.getArticleBySlug(slug);
           setIsNewArticle(false);
           setArticleId(article.id);
+          setArticleSlug(article.slug);
           setFormData({
             title: article.title,
             parentId: article.parentId,
@@ -184,12 +183,12 @@ const ArticleEdit: React.FC = () => {
     }));
   };
   
-  // Formular absenden mit automatischer Erkennung
+  // Formular absenden
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.title.trim()) {
-      setError(t('cerebro.articleEdit.titleRequired'));
+      setError(t('cerebro.articleEdit.titleRequired') || 'Titel ist erforderlich');
       return;
     }
     
@@ -205,6 +204,27 @@ const ArticleEdit: React.FC = () => {
           parentId: formData.parentId,
           content: formData.content
         });
+        // Slug aktualisieren für Upload-Funktion
+        setArticleSlug(savedArticle.slug);
+        
+        // Temporäre Medien hochladen
+        if (temporaryMedia.length > 0) {
+          for (const tempMedia of temporaryMedia) {
+            try {
+              const uploadFormData = new FormData();
+              uploadFormData.append('file', tempMedia.file);
+              uploadFormData.append('carticleSlug', savedArticle.slug);
+              
+              await cerebroApi.media.uploadMedia(uploadFormData);
+              
+              // Temporäre URL aufräumen
+              URL.revokeObjectURL(tempMedia.url);
+            } catch (err) {
+              console.error(`Fehler beim Hochladen des temporären Mediums ${tempMedia.fileName}:`, err);
+            }
+          }
+          setTemporaryMedia([]);
+        }
       } else if (articleId) {
         // Bestehenden Artikel aktualisieren
         savedArticle = await cerebroApi.articles.updateArticle(articleId, {
@@ -212,61 +232,6 @@ const ArticleEdit: React.FC = () => {
           parentId: formData.parentId,
           content: formData.content
         });
-      }
-      
-      // Automatisch erkannte Medien und Links verarbeiten
-      if (savedArticle) {
-        // Links und Medien extrahieren
-        const links = extractLinks(formData.content);
-        const imageUrls = extractImageUrls(formData.content);
-        const videoUrls = extractVideoUrls(formData.content);
-        const pdfUrls = extractPdfUrls(formData.content);
-        
-        // Medien hinzufügen
-        const mediaUrls = [...imageUrls, ...videoUrls, ...pdfUrls];
-        for (const mediaUrl of mediaUrls) {
-          try {
-            let mediaType = 'other';
-            if (mediaUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) mediaType = 'image';
-            else if (mediaUrl.match(/\.(mp4|webm|ogg)$/i) || mediaUrl.includes('youtube.com') || mediaUrl.includes('vimeo.com')) mediaType = 'video';
-            else if (mediaUrl.match(/\.pdf$/i)) mediaType = 'pdf';
-            
-            // Formular für den Upload erstellen
-            const formData = new FormData();
-            formData.append('carticleId', savedArticle.id);
-            formData.append('url', mediaUrl);
-            formData.append('type', mediaType);
-            formData.append('title', `Automatisch erkannt: ${mediaUrl.split('/').pop() || mediaUrl}`);
-            formData.append('description', 'Automatisch erkannt aus dem Artikelinhalt');
-            
-            // Media hochladen
-            await cerebroApi.media.uploadMedia(formData);
-          } catch (err) {
-            console.error(`Fehler beim Hinzufügen des Mediums ${mediaUrl}:`, err);
-          }
-        }
-        
-        // Links hinzufügen (ohne Medien)
-        const linkUrls = links.filter(link => 
-          !imageUrls.includes(link) && 
-          !videoUrls.includes(link) && 
-          !pdfUrls.includes(link)
-        );
-        
-        for (const linkUrl of linkUrls) {
-          try {
-            const isGitHubMarkdown = isGitHubMarkdownUrl(linkUrl);
-            
-            await cerebroApi.externalLinks.createExternalLink({
-              carticleSlug: savedArticle.slug,
-              url: linkUrl,
-              title: `Automatisch erkannt: ${linkUrl.split('/').pop() || linkUrl}`,
-              type: isGitHubMarkdown ? 'github' : 'external'
-            });
-          } catch (err) {
-            console.error(`Fehler beim Hinzufügen des Links ${linkUrl}:`, err);
-          }
-        }
       }
       
       navigate(`/cerebro/${savedArticle.slug}`);
@@ -346,52 +311,58 @@ const ArticleEdit: React.FC = () => {
           </div>
           
           <div className="mb-6">
-            <label className="block text-gray-700 font-medium mb-2">Inhalt</label>
-            <div className="border border-gray-300 rounded-md">
-              <ReactQuill
-                theme="snow"
+            <label htmlFor="content" className="block text-gray-700 font-medium mb-2">
+              Inhalt
+            </label>
+            <div className="relative">
+              <textarea
+                ref={textareaRef}
+                id="content"
+                rows={10}
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                 value={formData.content}
-                onChange={handleContentChange}
-                modules={quillModules}
-                formats={quillFormats}
-                className="h-64 mb-12"
+                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                onPaste={handlePaste}
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                placeholder="Schreiben Sie hier Ihren Artikel in Markdown..."
               />
+              {/* Heftklammer-Icon zum Hinzufügen von Dateien */}
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
+                title="Datei hinzufügen"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              {uploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white dark:bg-gray-800 bg-opacity-70 dark:bg-opacity-70">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">Wird hochgeladen...</span>
+                </div>
+              )}
             </div>
             
-            {/* Vorschau der automatisch erkannten Medien und Links */}
-            {(autoDetectedMedia.length > 0 || autoDetectedLinks.length > 0) && (
-              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-lg font-medium mb-2">Automatisch erkannt:</h3>
-                
-                {autoDetectedMedia.length > 0 && (
-                  <div className="mb-3">
-                    <h4 className="font-medium text-sm text-gray-700 mb-1">Medien:</h4>
-                    <ul className="list-disc pl-5 text-sm">
-                      {autoDetectedMedia.map((url, index) => (
-                        <li key={index} className="text-blue-600 hover:underline">
-                          <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                {autoDetectedLinks.length > 0 && (
-                  <div>
-                    <h4 className="font-medium text-sm text-gray-700 mb-1">Links:</h4>
-                    <ul className="list-disc pl-5 text-sm">
-                      {autoDetectedLinks.map((url, index) => (
-                        <li key={index} className="text-blue-600 hover:underline">
-                          <a href={url} target="_blank" rel="noopener noreferrer">{url}</a>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                <p className="text-xs text-gray-500 mt-2">
-                  Diese Medien und Links werden automatisch mit dem Artikel gespeichert.
-                </p>
+            {/* Markdown-Vorschau - nur Tags, nicht den gesamten Inhalt */}
+            {formData.content && (
+              <div className="mt-3">
+                <MarkdownPreview 
+                  content={formData.content} 
+                  temporaryAttachments={temporaryMedia.map(tm => ({
+                    fileName: tm.fileName,
+                    fileType: tm.fileType,
+                    fileSize: tm.fileSize,
+                    file: tm.file
+                  }))}
+                />
               </div>
             )}
           </div>
@@ -400,14 +371,14 @@ const ArticleEdit: React.FC = () => {
             <button
               type="button"
               onClick={handleCancel}
-              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               disabled={saving}
             >
               Abbrechen
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={saving}
             >
               {saving ? (

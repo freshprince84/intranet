@@ -221,7 +221,7 @@ const Settings: React.FC = () => {
     }
 
     return (
-        <div className="p-6">
+        <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
                 {/* Header mit Icon */}
                 <div className="flex items-center mb-6">
@@ -230,7 +230,7 @@ const Settings: React.FC = () => {
                 </div>
                 
                 {/* Tabs für Navigation */}
-                <div className="border-b border-gray-200 mb-6">
+                <div className="border-b border-gray-200 dark:border-gray-700 -mx-6 px-6 mb-6">
                     <nav className="-mb-px flex space-x-8">
                         <button
                             className={`${

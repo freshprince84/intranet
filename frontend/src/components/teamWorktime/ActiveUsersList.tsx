@@ -626,7 +626,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       <th
         key={columnId}
         scope="col"
-        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer group relative"
+        className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer group relative"
         onClick={() => handleSort(columnId)}
         draggable
         onDragStart={() => handleDragStart(columnId)}
@@ -907,7 +907,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
   return (
     <div>
       {/* Header mit Datumsauswahl, Suche und Buttons */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 px-3 sm:px-4 md:px-6">
         {/* Datumsauswahl mit Pfeilen - linksbündig */}
         <div className="flex items-center gap-0.5">
           {/* Links-Pfeil (zurück) */}
@@ -1029,7 +1029,8 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       
       {/* Filter-Panel */}
       {isFilterOpen && (
-        <FilterPane
+        <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
+          <FilterPane
           columns={[
             { id: 'name', label: t('teamWorktime.columns.name') },
             { id: 'branch', label: t('teamWorktime.columns.branch') },
@@ -1042,10 +1043,12 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
           savedOperators={filterLogicalOperators}
           tableId={WORKCENTER_TABLE_ID}
         />
+        </div>
       )}
       
       {/* Gespeicherte Filter als Tags anzeigen */}
-      <SavedFilterTags
+      <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
+        <SavedFilterTags
         tableId={WORKCENTER_TABLE_ID}
         onSelectFilter={applyFilterConditions}
         onReset={resetFilterConditions}
@@ -1054,11 +1057,12 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         onFilterChange={handleFilterChange}
           defaultFilterName={t('teamWorktime.filters.active')}
       />
+      </div>
       
       {/* Tabelle oder Cards */}
       {viewMode === 'table' ? (
         /* Tabellen-Ansicht */
-        <div className="dashboard-workcenter-wrapper border-0 rounded-lg overflow-hidden">
+        <div className="dashboard-workcenter-wrapper border-0 rounded-lg overflow-hidden -mx-3 sm:-mx-4 md:-mx-6">
         <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
           <thead className="bg-gray-50 dark:bg-gray-700">
             <tr>
@@ -1073,7 +1077,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                       <th
                         key={columnId}
                         scope="col"
-                        className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
+                        className="px-3 sm:px-4 md:px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
                         draggable
                         onDragStart={() => handleDragStart(columnId)}
                         onDragOver={handleDragOver}
@@ -1093,7 +1097,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             {filteredAndSortedUsers.length === 0 ? (
               <tr>
-                <td colSpan={columnOrder.filter(id => !hiddenColumns.includes(id)).length} className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                <td colSpan={columnOrder.filter(id => !hiddenColumns.includes(id)).length} className="px-3 sm:px-4 md:px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400">
                   Keine Zeiterfassungen gefunden
                 </td>
               </tr>
@@ -1117,7 +1121,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                         .map(columnId => {
                           if (columnId === 'name') {
                             return (
-                              <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                              <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                 <div className="flex items-center">
                                   <div>
                                     <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -1206,7 +1210,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                     {/* To-Dos und Requests für User */}
                     {(showTodos || showRequests) && hasActivities && (
                       <tr className="bg-gray-50 dark:bg-gray-800/50">
-                        <td colSpan={columnOrder.filter(id => !hiddenColumns.includes(id)).length} className="px-6 py-3">
+                        <td colSpan={columnOrder.filter(id => !hiddenColumns.includes(id)).length} className="px-3 sm:px-4 md:px-6 py-3">
                           <div className="ml-4 border-l-2 border-blue-200 dark:border-blue-700 pl-4">
                             {/* To-Dos */}
                             {showTodos && userTodosData && userTodosData.total > 0 && (
@@ -1287,7 +1291,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       </div>
       ) : (
         /* Card-Ansicht */
-        <div className="dashboard-workcenter-wrapper">
+        <div className="dashboard-workcenter-wrapper -mx-3 sm:-mx-4 md:-mx-6">
           {filteredAndSortedUsers.length === 0 ? (
             <div className="text-center py-8 text-sm text-gray-500 dark:text-gray-400">
               Keine Zeiterfassungen gefunden
@@ -1362,7 +1366,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                       <button
                         onClick={() => handleOpenStopModal(group)}
                         className="p-1 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-                        title="Zeiterfassung stoppen"
+                        title={t('teamWorktime.actions.stopTracking')}
                       >
                         <StopIcon className="h-5 w-5 text-white fill-white" />
                       </button>
@@ -1371,7 +1375,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                       <button
                         onClick={() => handleOpenEditModal(group)}
                         className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                        title="Zeiterfassungen bearbeiten"
+                        title={t('teamWorktime.actions.editWorktimes')}
                       >
                         <PencilIcon className="h-5 w-5" />
                       </button>

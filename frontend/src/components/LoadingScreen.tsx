@@ -1,10 +1,13 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Moderne Loading-Screen-Komponente
  * Wird während der Authentifizierungsprüfung angezeigt
  */
 const LoadingScreen: React.FC = () => {
+    const { t } = useTranslation();
+    
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
             <div className="text-center">
@@ -16,7 +19,7 @@ const LoadingScreen: React.FC = () => {
                 {/* Text mit subtiler Animation */}
                 <div className="space-y-2">
                     <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                        Wird geladen
+                        {t('common.loadingScreen')}
                     </p>
                     <div className="flex justify-center gap-1">
                         <span className="text-sm text-gray-500 dark:text-gray-400">.</span>
@@ -28,7 +31,7 @@ const LoadingScreen: React.FC = () => {
                 {/* Subtile Nachricht */}
                 <div className="mt-6 text-xs text-gray-400 dark:text-gray-500">
                     <p>
-                        Fast fertig... nur noch einen Moment! ⚡
+                        {t('common.loadingScreenSubtitle')}
                     </p>
                 </div>
             </div>

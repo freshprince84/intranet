@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
 import { generateInvoicePDF } from '../services/invoicePdfGenerator';
+import { getDataIsolationFilter } from '../middleware/organization';
 import path from 'path';
 import fs from 'fs';
 
@@ -130,7 +131,8 @@ export const createInvoiceFromConsultations = async (req: Request, res: Response
           vatAmount: vatAmount || null,
           total,
           qrReference,
-          notes: notes || null
+          notes: notes || null,
+          organizationId: req.organizationId || null
         },
         include: {
           client: true,
@@ -190,8 +192,11 @@ export const getInvoices = async (req: Request, res: Response) => {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
+    // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
+    const invoiceFilter = getDataIsolationFilter(req as any, 'invoice');
+    
     let whereClause: any = {
-      userId: Number(userId)
+      ...invoiceFilter
     };
 
     if (status) {

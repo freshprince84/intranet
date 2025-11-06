@@ -132,6 +132,20 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const requesterId = parseInt(requested_by_id, 10);
         const responsibleId = parseInt(responsible_id, 10);
         const branchId = parseInt(branch_id, 10);
+        // Validierung: Prüfe ob User-IDs zur Organisation gehören
+        const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
+        const requesterUser = yield prisma.user.findFirst({
+            where: Object.assign(Object.assign({}, userFilter), { id: requesterId })
+        });
+        if (!requesterUser) {
+            return res.status(400).json({ message: 'Antragsteller gehört nicht zu Ihrer Organisation' });
+        }
+        const responsibleUser = yield prisma.user.findFirst({
+            where: Object.assign(Object.assign({}, userFilter), { id: responsibleId })
+        });
+        if (!responsibleUser) {
+            return res.status(400).json({ message: 'Verantwortlicher gehört nicht zu Ihrer Organisation' });
+        }
         const request = yield prisma.request.create({
             data: {
                 title,
@@ -202,9 +216,10 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     try {
         const { id } = req.params;
         const { title, description, requested_by_id, responsible_id, branch_id, status, due_date, create_todo } = req.body;
-        // Prüfe, ob der Request existiert
-        const existingRequest = yield prisma.request.findUnique({
-            where: { id: parseInt(id) },
+        // Prüfe, ob der Request existiert und zur Organisation gehört
+        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
+        const existingRequest = yield prisma.request.findFirst({
+            where: Object.assign({ id: parseInt(id) }, isolationFilter),
             include: {
                 requester: {
                     select: userSelect
@@ -219,6 +234,25 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
         if (!existingRequest) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
+        }
+        // Validierung: Prüfe ob User-IDs zur Organisation gehören (wenn geändert)
+        if (requested_by_id) {
+            const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
+            const requesterUser = yield prisma.user.findFirst({
+                where: Object.assign(Object.assign({}, userFilter), { id: parseInt(requested_by_id, 10) })
+            });
+            if (!requesterUser) {
+                return res.status(400).json({ message: 'Antragsteller gehört nicht zu Ihrer Organisation' });
+            }
+        }
+        if (responsible_id) {
+            const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
+            const responsibleUser = yield prisma.user.findFirst({
+                where: Object.assign(Object.assign({}, userFilter), { id: parseInt(responsible_id, 10) })
+            });
+            if (!responsibleUser) {
+                return res.status(400).json({ message: 'Verantwortlicher gehört nicht zu Ihrer Organisation' });
+            }
         }
         // Update den Request
         const updatedRequest = yield prisma.request.update({
@@ -378,9 +412,10 @@ const copyRequestAttachmentsToTask = (requestId, taskId) => __awaiter(void 0, vo
 const deleteRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        // Prüfe, ob der Request existiert
-        const request = yield prisma.request.findUnique({
-            where: { id: parseInt(id) },
+        // Prüfe, ob der Request existiert und zur Organisation gehört
+        const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
+        const request = yield prisma.request.findFirst({
+            where: Object.assign({ id: parseInt(id) }, isolationFilter),
             include: {
                 requester: {
                     select: userSelect

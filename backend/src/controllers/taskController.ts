@@ -6,7 +6,7 @@ import { Request, Response } from 'express';
 import { PrismaClient, Prisma, TaskStatus, NotificationType } from '@prisma/client';
 import { validateTask, TaskData } from '../validation/taskValidation';
 import { createNotificationIfEnabled } from './notificationController';
-import { getDataIsolationFilter } from '../middleware/organization';
+import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 
 const prisma = new PrismaClient();
 
@@ -119,6 +119,33 @@ export const createTask = async (req: Request<{}, {}, TaskData>, res: Response) 
             return res.status(400).json({ error: validationError });
         }
 
+        // Validierung: Prüfe ob User-IDs zur Organisation gehören
+        const userFilter = getUserOrganizationFilter(req);
+        
+        if (taskData.responsibleId) {
+            const responsibleUser = await prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: taskData.responsibleId
+                }
+            });
+            if (!responsibleUser) {
+                return res.status(400).json({ error: 'Verantwortlicher Benutzer gehört nicht zu Ihrer Organisation' });
+            }
+        }
+
+        if (taskData.qualityControlId) {
+            const qualityControlUser = await prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: taskData.qualityControlId
+                }
+            });
+            if (!qualityControlUser) {
+                return res.status(400).json({ error: 'Qualitätskontrolle-Benutzer gehört nicht zu Ihrer Organisation' });
+            }
+        }
+
         // Erstelle ein Basis-Datenobjekt ohne responsibleId/roleId
         const taskCreateData: any = {
             title: taskData.title,
@@ -126,7 +153,8 @@ export const createTask = async (req: Request<{}, {}, TaskData>, res: Response) 
             status: taskData.status || 'open',
             qualityControlId: taskData.qualityControlId,
             branchId: taskData.branchId,
-            dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null
+            dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
+            organizationId: req.organizationId || null
         };
 
         // Füge responsibleId nur hinzu, wenn ein Wert angegeben ist (nicht null oder undefined)
@@ -207,9 +235,15 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
 
         const updateData = req.body;
         
+        // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
+        const isolationFilter = getDataIsolationFilter(req as any, 'task');
+        
         // Aktuellen Task abrufen, um Änderungen zu erkennen
-        const currentTask = await prisma.task.findUnique({
-            where: { id: taskId },
+        const currentTask = await prisma.task.findFirst({
+            where: {
+                id: taskId,
+                ...isolationFilter
+            },
             include: {
                 responsible: {
                     select: userSelect
@@ -233,6 +267,33 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
             const validationError = validateTask(updateData);
             if (validationError) {
                 return res.status(400).json({ error: validationError });
+            }
+        }
+
+        // Validierung: Prüfe ob User-IDs zur Organisation gehören (wenn geändert)
+        if (updateData.responsibleId !== undefined && updateData.responsibleId !== null) {
+            const userFilter = getUserOrganizationFilter(req as any);
+            const responsibleUser = await prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: updateData.responsibleId
+                }
+            });
+            if (!responsibleUser) {
+                return res.status(400).json({ error: 'Verantwortlicher Benutzer gehört nicht zu Ihrer Organisation' });
+            }
+        }
+
+        if (updateData.qualityControlId !== undefined && updateData.qualityControlId !== null) {
+            const userFilter = getUserOrganizationFilter(req as any);
+            const qualityControlUser = await prisma.user.findFirst({
+                where: {
+                    ...userFilter,
+                    id: updateData.qualityControlId
+                }
+            });
+            if (!qualityControlUser) {
+                return res.status(400).json({ error: 'Qualitätskontrolle-Benutzer gehört nicht zu Ihrer Organisation' });
             }
         }
 
@@ -396,9 +457,15 @@ export const deleteTask = async (req: Request<TaskParams>, res: Response) => {
             return res.status(400).json({ error: 'Ungültige Task-ID' });
         }
 
+        // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
+        const isolationFilter = getDataIsolationFilter(req as any, 'task');
+
         // Task vor dem Löschen abrufen, um Benachrichtigungen zu senden
-        const task = await prisma.task.findUnique({
-            where: { id: taskId },
+        const task = await prisma.task.findFirst({
+            where: {
+                id: taskId,
+                ...isolationFilter
+            },
             include: {
                 responsible: {
                     select: userSelect
@@ -467,8 +534,14 @@ export const getTaskCarticles = async (req: Request<TaskParams>, res: Response) 
             return res.status(400).json({ error: 'Ungültige Task-ID' });
         }
 
-        const task = await prisma.task.findUnique({
-            where: { id: taskId },
+        // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
+        const isolationFilter = getDataIsolationFilter(req as any, 'task');
+
+        const task = await prisma.task.findFirst({
+            where: {
+                id: taskId,
+                ...isolationFilter
+            },
             include: {
                 carticles: {
                     include: {
@@ -525,8 +598,16 @@ export const linkTaskToCarticle = async (req: Request, res: Response) => {
             return res.status(400).json({ error: 'Ungültige Task-ID oder Artikel-ID' });
         }
 
+        // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
+        const isolationFilter = getDataIsolationFilter(req as any, 'task');
+
         // Prüfen, ob Task existiert
-        const task = await prisma.task.findUnique({ where: { id: taskId } });
+        const task = await prisma.task.findFirst({
+            where: {
+                id: taskId,
+                ...isolationFilter
+            }
+        });
         if (!task) {
             return res.status(404).json({ error: 'Task nicht gefunden' });
         }

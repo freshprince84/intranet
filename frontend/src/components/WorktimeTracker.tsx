@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth.tsx';
-import { ClockIcon, ListBulletIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { ClockIcon, ListBulletIcon, ArrowPathIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { useWorktime } from '../contexts/WorktimeContext.tsx';
 import { useBranch } from '../contexts/BranchContext.tsx';
+import { useOrganization } from '../contexts/OrganizationContext.tsx';
 import { WorktimeModal } from './WorktimeModal.tsx';
 
 // Wir entfernen die benutzerdefinierten API-URL-Definitionen und verwenden die direkte URL,
@@ -24,6 +25,7 @@ interface WorkTime {
     endTime: Date | null;
     branchId: number;
     userId: number;
+    organizationId: number | null;
     branch: {
         id: number;
         name: string;
@@ -48,6 +50,16 @@ const WorktimeTracker: React.FC = () => {
     const { user } = useAuth();
     const { updateTrackingStatus } = useWorktime();
     const { branches, selectedBranch, setSelectedBranch } = useBranch();
+    const { organization } = useOrganization();
+
+    // Prüfe ob aktive WorkTime zu anderer Organisation gehört
+    const isDifferentOrganization = useMemo(() => {
+        if (!activeWorktime || !organization) return false;
+        // Beide null = standalone User, keine Warnung
+        if (activeWorktime.organizationId === null && organization.id === undefined) return false;
+        // Vergleich: WorkTime gehört zu anderer Organisation
+        return activeWorktime.organizationId !== organization.id;
+    }, [activeWorktime, organization]);
 
     // Funktion zum Abrufen des aktiven Worktime-Status
     const checkActiveWorktime = useCallback(async () => {
@@ -136,7 +148,7 @@ const WorktimeTracker: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
-    }, [user?.id, updateTrackingStatus, selectedBranch]);
+    }, [user?.id, updateTrackingStatus, selectedBranch, organization]);
     
     // Initiale Prüfung, ob bereits eine aktive Zeiterfassung läuft
     useEffect(() => {
@@ -414,6 +426,19 @@ const WorktimeTracker: React.FC = () => {
                             {t('worktime.tracker.stop')} {t('common.force', 'Erzwingen')}
                         </button>
                     )}
+                </div>
+            )}
+
+            {/* Warnung wenn WorkTime zu anderer Organisation gehört */}
+            {isTracking && isDifferentOrganization && (
+                <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 border border-yellow-200 dark:border-yellow-700 rounded-md flex items-start">
+                    <ExclamationTriangleIcon className="h-5 w-5 mr-2 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1">
+                        <p className="font-medium">{t('worktime.tracker.differentOrganizationWarning.title', 'Hinweis: Andere Organisation')}</p>
+                        <p className="text-sm mt-1">
+                            {t('worktime.tracker.differentOrganizationWarning.message', 'Diese Zeiterfassung wurde in einer anderen Organisation gestartet. Sie wird nach dem Stoppen der Organisation zugeordnet, in der sie gestartet wurde.')}
+                        </p>
+                    </div>
                 </div>
             )}
             

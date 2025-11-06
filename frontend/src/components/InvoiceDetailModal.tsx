@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { 
   XMarkIcon, 
@@ -108,6 +109,7 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
   invoiceId,
   onInvoiceUpdated
 }) => {
+  const { t } = useTranslation();
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -504,7 +506,7 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
                   <button
                     onClick={onClose}
                     className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
-                    title="Schließen"
+                    title={t('common.close')}
                   >
                     <XMarkIcon className="h-5 w-5" />
                   </button>

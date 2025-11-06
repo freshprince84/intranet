@@ -5,10 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const auth_1 = require("../middleware/auth");
+const organization_1 = require("../middleware/organization");
 const consultationController_1 = require("../controllers/consultationController");
 const router = express_1.default.Router();
 // Alle Routen erfordern Authentifizierung
 router.use(auth_1.authMiddleware);
+router.use(organization_1.organizationMiddleware);
 // Consultation-Routen
 router.post('/start', consultationController_1.startConsultation);
 router.post('/stop', consultationController_1.stopConsultation);

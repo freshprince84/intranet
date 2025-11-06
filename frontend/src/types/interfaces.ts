@@ -32,11 +32,18 @@ export interface UserRole {
   lastUsed: boolean;
 }
 
+export interface Organization {
+  id: number;
+  name: string;
+  displayName: string | null;
+}
+
 export interface Role {
   id: number;
   name: string;
   description: string | null;
   permissions: Permission[];
+  organization?: Organization | null;
 }
 
 export interface Permission {

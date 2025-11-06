@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { MonthlyReportSettings } from '../types/monthlyConsultationReport.ts';
@@ -17,6 +18,7 @@ const MonthlyReportSettingsModal: React.FC<MonthlyReportSettingsModalProps> = ({
     onSave,
     currentSettings
 }) => {
+    const { t } = useTranslation();
     const [formData, setFormData] = useState<MonthlyReportSettings>({
         monthlyReportEnabled: true, // Wird aktiviert
         monthlyReportDay: currentSettings.monthlyReportDay || 25,
@@ -183,7 +185,7 @@ const MonthlyReportSettingsModal: React.FC<MonthlyReportSettingsModalProps> = ({
                                 type="button"
                                 onClick={handleCancel}
                                 className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                                title="Abbrechen"
+                                title={t('common.cancel')}
                             >
                                 <XMarkIcon className="h-5 w-5" />
                             </button>

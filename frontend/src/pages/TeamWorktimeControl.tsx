@@ -7,11 +7,19 @@ import { format } from 'date-fns';
 import ActiveUsersList from '../components/teamWorktime/ActiveUsersList.tsx';
 import TodoAnalyticsTab from '../components/teamWorktime/TodoAnalyticsTab.tsx';
 import RequestAnalyticsTab from '../components/teamWorktime/RequestAnalyticsTab.tsx';
+import { usePermissions } from '../hooks/usePermissions.ts';
 
 type TabType = 'worktimes' | 'todos' | 'requests';
 
 const TeamWorktimeControl: React.FC = () => {
   const { t } = useTranslation();
+  const { hasPermission } = usePermissions();
+  
+  // Prüfe Berechtigungen - beide werden benötigt
+  const hasPagePermission = hasPermission('team_worktime_control', 'read', 'page');
+  const hasTablePermission = hasPermission('team_worktime', 'read', 'table');
+  const hasRequiredPermissions = hasPagePermission && hasTablePermission;
+  
   // State für aktive Benutzer und Zeiterfassungen
   const [activeUsers, setActiveUsers] = useState<any[]>([]);
   const [allWorktimes, setAllWorktimes] = useState<any[]>([]);
@@ -30,9 +38,38 @@ const TeamWorktimeControl: React.FC = () => {
       
       const response = await axiosInstance.get(API_ENDPOINTS.TEAM_WORKTIME.ACTIVE);
       setActiveUsers(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Fehler beim Laden der aktiven Benutzer:', error);
-      setError(t('teamWorktime.messages.loadActiveUsersError'));
+      
+      // Spezifische Fehlerbehandlung
+      let errorMessage = t('teamWorktime.messages.loadActiveUsersError');
+      
+      if (error.response) {
+        const status = error.response.status;
+        const backendMessage = error.response.data?.message;
+        
+        if (status === 403) {
+          // Berechtigungsfehler - zeige spezifische Nachricht
+          errorMessage = backendMessage || t('teamWorktime.messages.forbidden') || 'Keine ausreichenden Berechtigungen für Team Worktime Control';
+        } else if (status === 401) {
+          errorMessage = t('teamWorktime.messages.unauthorized') || 'Nicht autorisiert';
+        } else if (status === 500) {
+          errorMessage = t('teamWorktime.messages.serverError') || 'Serverfehler';
+        } else if (backendMessage) {
+          errorMessage = backendMessage;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      setError(errorMessage);
+      
+      console.error('Fehlerdetails:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        message: error.message
+      });
     } finally {
       setLoading(false);
     }
@@ -77,6 +114,12 @@ const TeamWorktimeControl: React.FC = () => {
   
   // Lade aktive Benutzer und Zeiterfassungen beim ersten Rendern
   useEffect(() => {
+    // Nur API-Calls machen, wenn Berechtigungen vorhanden sind
+    if (!hasRequiredPermissions) {
+      setError('Keine ausreichenden Berechtigungen für Team Worktime Control. Bitte stellen Sie sicher, dass Sie sowohl die Berechtigung für "team_worktime_control" (Seite) als auch "team_worktime" (Tabelle) haben.');
+      return;
+    }
+    
     fetchActiveUsers();
     fetchAllWorktimes();
     
@@ -84,7 +127,7 @@ const TeamWorktimeControl: React.FC = () => {
     const intervalId = setInterval(fetchActiveUsers, 30000) as unknown as number;
     
     return () => clearInterval(intervalId);
-  }, [fetchActiveUsers, fetchAllWorktimes]);
+  }, [fetchActiveUsers, fetchAllWorktimes, hasRequiredPermissions]);
 
   // Lade Zeiterfassungen neu, wenn sich das Datum ändert
   useEffect(() => {
@@ -94,8 +137,7 @@ const TeamWorktimeControl: React.FC = () => {
   return (
     <div className="h-auto">
       <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
-        <div className="py-1">
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
             {/* Header mit Icon */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center pl-2 sm:pl-0">
@@ -103,6 +145,22 @@ const TeamWorktimeControl: React.FC = () => {
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white">{t('teamWorktime.title')}</h2>
               </div>
             </div>
+            
+            {/* Berechtigungsfehler */}
+            {!hasRequiredPermissions && (
+              <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-4">
+                <p className="font-medium mb-2">Keine ausreichenden Berechtigungen</p>
+                <ul className="list-disc list-inside text-sm space-y-1">
+                  {!hasPagePermission && (
+                    <li>Fehlende Berechtigung: team_worktime_control (Seite)</li>
+                  )}
+                  {!hasTablePermission && (
+                    <li>Fehlende Berechtigung: team_worktime (Tabelle)</li>
+                  )}
+                </ul>
+                <p className="text-sm mt-2">Bitte kontaktieren Sie einen Administrator, um die erforderlichen Berechtigungen zu erhalten.</p>
+              </div>
+            )}
             
             {/* Fehlermeldung */}
             {error && (
@@ -168,7 +226,6 @@ const TeamWorktimeControl: React.FC = () => {
               <RequestAnalyticsTab selectedDate={selectedDate} />
             )}
           </div>
-        </div>
       </div>
     </div>
   );

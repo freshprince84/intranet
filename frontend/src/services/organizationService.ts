@@ -62,6 +62,17 @@ export const organizationService = {
     return response.data;
   },
 
+  // Meine Beitrittsanfragen abrufen
+  getMyJoinRequests: async (): Promise<OrganizationJoinRequest[]> => {
+    const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATIONS.MY_JOIN_REQUESTS);
+    return response.data;
+  },
+
+  // Beitrittsanfrage zurückziehen
+  withdrawJoinRequest: async (id: number): Promise<void> => {
+    await axiosInstance.delete(API_ENDPOINTS.ORGANIZATIONS.PROCESS_JOIN_REQUEST(id));
+  },
+
   // Beitrittsanfrage bearbeiten
   processJoinRequest: async (id: number, data: ProcessJoinRequestRequest): Promise<OrganizationJoinRequest> => {
     const response = await axiosInstance.patch(

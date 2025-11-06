@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
+import { getDataIsolationFilter, belongsToOrganization, getUserOrganizationFilter } from '../middleware/organization';
 
 const prisma = new PrismaClient();
 
@@ -30,7 +31,7 @@ const userSelect = {
 } as const;
 
 // Alle Rollen abrufen
-export const getAllRoles = async (_req: Request, res: Response) => {
+export const getAllRoles = async (req: Request, res: Response) => {
     try {
         console.log('getAllRoles aufgerufen');
         
@@ -38,10 +39,15 @@ export const getAllRoles = async (_req: Request, res: Response) => {
         await prisma.$connect();
         console.log('Prisma-Verbindung OK');
         
+        // Datenisolation: Zeigt alle Rollen der Organisation oder nur eigene (wenn standalone)
+        const roleFilter = getDataIsolationFilter(req as any, 'role');
+        
         const roles = await prisma.role.findMany({
+            where: roleFilter,
             include: {
                 permissions: true
-            }
+            },
+            orderBy: { name: 'asc' }
         });
         console.log('Gefundene Rollen:', roles.length);
         res.json(roles);
@@ -61,6 +67,12 @@ export const getRoleById = async (req: Request<RoleParams>, res: Response) => {
         
         if (isNaN(roleId)) {
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
+        }
+
+        // Prüfe ob Rolle zur Organisation gehört
+        const hasAccess = await belongsToOrganization(req as any, 'role', roleId);
+        if (!hasAccess) {
+            return res.status(403).json({ message: 'Zugriff auf diese Rolle verweigert' });
         }
 
         const role = await prisma.role.findUnique({
@@ -124,12 +136,21 @@ export const createRole = async (req: Request<{}, {}, CreateRoleBody>, res: Resp
             console.log(`  - entity: ${perm.entity}, entityType: ${perm.entityType || 'nicht angegeben'}, accessLevel: ${perm.accessLevel}`);
         });
 
+        // Prüfe ob User eine Organisation hat
+        const organizationId = (req as any).organizationId;
+        
+        if (!organizationId) {
+            return res.status(400).json({
+                message: 'Fehler beim Erstellen der Rolle: Sie müssen Mitglied einer Organisation sein, um Rollen zu erstellen'
+            });
+        }
+
         try {
             const role = await prisma.role.create({
                 data: {
                     name,
                     description,
-                    organizationId: 1, // Standard-Organisation für jetzt
+                    organizationId: organizationId, // Verwende Organisation des aktuellen Users
                     permissions: {
                         create: permissions.map(permission => ({
                             entity: permission.entity,
@@ -153,13 +174,16 @@ export const createRole = async (req: Request<{}, {}, CreateRoleBody>, res: Resp
                 });
             }
             
-            // Benachrichtigung für Administratoren senden
+            // Benachrichtigung für Administratoren der Organisation senden
+            const userFilter = getUserOrganizationFilter(req);
             const admins = await prisma.user.findMany({
                 where: {
+                    ...userFilter,
                     roles: {
                         some: {
                             role: {
-                                name: 'Admin'
+                                name: 'Admin',
+                                organizationId: req.organizationId
                             }
                         }
                     }
@@ -222,6 +246,12 @@ export const updateRole = async (req: Request<RoleParams, {}, UpdateRoleBody>, r
         
         if (isNaN(roleId)) {
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
+        }
+
+        // Prüfe ob Rolle zur Organisation gehört
+        const hasAccess = await belongsToOrganization(req as any, 'role', roleId);
+        if (!hasAccess) {
+            return res.status(403).json({ message: 'Zugriff auf diese Rolle verweigert' });
         }
 
         console.log(`Aktualisierung für Rolle mit ID ${roleId} begonnen...`);
@@ -312,12 +342,16 @@ export const updateRole = async (req: Request<RoleParams, {}, UpdateRoleBody>, r
             });
         }
 
-        // Benachrichtigung für Benutzer mit dieser Rolle senden
+        // Benachrichtigung für Benutzer mit dieser Rolle senden (nur User der Organisation)
+        const roleFilter = getDataIsolationFilter(req as any, 'role');
         const usersWithRole = await prisma.user.findMany({
             where: {
                 roles: {
                     some: {
-                        roleId: roleId
+                        roleId: roleId,
+                        role: {
+                            ...roleFilter
+                        }
                     }
                 }
             }
@@ -373,6 +407,12 @@ export const deleteRole = async (req: Request<RoleParams>, res: Response) => {
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
         }
 
+        // Prüfe ob Rolle zur Organisation gehört
+        const hasAccess = await belongsToOrganization(req as any, 'role', roleId);
+        if (!hasAccess) {
+            return res.status(403).json({ message: 'Zugriff auf diese Rolle verweigert' });
+        }
+
         // Rolle vor dem Löschen abrufen
         const role = await prisma.role.findUnique({
             where: { id: roleId },
@@ -385,12 +425,16 @@ export const deleteRole = async (req: Request<RoleParams>, res: Response) => {
             return res.status(404).json({ message: 'Rolle nicht gefunden' });
         }
 
-        // Benutzer mit dieser Rolle abrufen
+        // Benutzer mit dieser Rolle abrufen (nur User der Organisation)
+        const roleFilter = getDataIsolationFilter(req as any, 'role');
         const usersWithRole = await prisma.user.findMany({
             where: {
                 roles: {
                     some: {
-                        roleId: roleId
+                        roleId: roleId,
+                        role: {
+                            ...roleFilter
+                        }
                     }
                 }
             }
@@ -483,6 +527,12 @@ export const getRolePermissions = async (req: Request<RoleParams>, res: Response
         
         if (isNaN(roleId)) {
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
+        }
+
+        // Prüfe ob Rolle zur Organisation gehört
+        const hasAccess = await belongsToOrganization(req as any, 'role', roleId);
+        if (!hasAccess) {
+            return res.status(403).json({ message: 'Zugriff auf diese Rolle verweigert' });
         }
 
         const permissions = await prisma.permission.findMany({

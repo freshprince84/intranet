@@ -3,6 +3,7 @@ import multer from 'multer';
 import { getAllRequests, getRequestById, createRequest, updateRequest, deleteRequest } from '../controllers/requestController';
 import { addAttachment, getRequestAttachments, getAttachment, deleteAttachment } from '../controllers/requestAttachmentController';
 import { authMiddleware } from '../middleware/auth';
+import { organizationMiddleware } from '../middleware/organization';
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.get('/:requestId/attachments/:attachmentId', getAttachment);
 
 // Alle anderen Routen mit Authentifizierung schützen
 router.use(authMiddleware);
+router.use(organizationMiddleware);
 
 // Request-Routen
 router.get('/', getAllRequests);

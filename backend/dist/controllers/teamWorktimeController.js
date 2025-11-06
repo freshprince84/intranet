@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateApprovedOvertimeHours = exports.updateUserWorktime = exports.getUserWorktimesByDay = exports.stopUserWorktime = exports.getActiveTeamWorktimes = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
+const organization_1 = require("../middleware/organization");
 const prisma = new client_1.PrismaClient();
 /**
  * Ruft alle Benutzer mit aktiver Zeiterfassung ab
@@ -23,10 +24,10 @@ const getActiveTeamWorktimes = (req, res) => __awaiter(void 0, void 0, void 0, f
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
+        // Datenisolation: Nur WorkTimes der Organisation
+        const worktimeFilter = (0, organization_1.getDataIsolationFilter)(req, 'worktime');
         // Basisabfrage für aktive Zeiterfassungen
-        let activeWorktimesQuery = {
-            endTime: null
-        };
+        let activeWorktimesQuery = Object.assign(Object.assign({}, worktimeFilter), { endTime: null });
         // Wenn eine Team-ID angegeben ist, filtere nach Benutzern in diesem Team
         if (teamId) {
             // Hier könnte eine Teamfilterung implementiert werden, wenn Teams existieren
@@ -74,12 +75,11 @@ const stopUserWorktime = (req, res) => __awaiter(void 0, void 0, void 0, functio
         if (!userId) {
             return res.status(400).json({ message: 'Benutzer-ID ist erforderlich' });
         }
+        // Datenisolation: Nur WorkTimes der Organisation
+        const worktimeFilter = (0, organization_1.getDataIsolationFilter)(req, 'worktime');
         // Finde die aktive Zeiterfassung des Benutzers
         const activeWorktime = yield prisma.workTime.findFirst({
-            where: {
-                userId: Number(userId),
-                endTime: null
-            },
+            where: Object.assign(Object.assign({}, worktimeFilter), { userId: Number(userId), endTime: null }),
             include: {
                 user: true,
                 branch: true
@@ -129,6 +129,8 @@ const getUserWorktimesByDay = (req, res) => __awaiter(void 0, void 0, void 0, fu
         if (!date) {
             return res.status(400).json({ message: 'Datum ist erforderlich' });
         }
+        // Datenisolation: Nur WorkTimes der Organisation
+        const worktimeFilter = (0, organization_1.getDataIsolationFilter)(req, 'worktime');
         // Datum parsen
         const queryDateStr = date;
         // Wir erstellen das Datum für den Anfang des Tages
@@ -150,7 +152,7 @@ const getUserWorktimesByDay = (req, res) => __awaiter(void 0, void 0, void 0, fu
         const dayEnd = new Date(localEndOfDay.getTime() - endOffsetMinutes * 60000);
         // Hole alle Zeiterfassungen für den angegebenen Tag
         const worktimes = yield prisma.workTime.findMany({
-            where: Object.assign(Object.assign({}, (userId ? { userId: Number(userId) } : {})), { startTime: {
+            where: Object.assign(Object.assign(Object.assign({}, worktimeFilter), (userId ? { userId: Number(userId) } : {})), { startTime: {
                     gte: dayStart,
                     lte: dayEnd
                 } }),
@@ -192,9 +194,11 @@ const updateUserWorktime = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (!id) {
             return res.status(400).json({ message: 'Zeiterfassungs-ID ist erforderlich' });
         }
+        // Datenisolation: Nur WorkTimes der Organisation
+        const worktimeFilter = (0, organization_1.getDataIsolationFilter)(req, 'worktime');
         // Finde die Zeiterfassung
-        const worktime = yield prisma.workTime.findUnique({
-            where: { id: Number(id) },
+        const worktime = yield prisma.workTime.findFirst({
+            where: Object.assign(Object.assign({}, worktimeFilter), { id: Number(id) }),
             include: {
                 user: true,
                 branch: true
@@ -248,8 +252,17 @@ const updateApprovedOvertimeHours = (req, res) => __awaiter(void 0, void 0, void
         if (approvedOvertimeHours === undefined || approvedOvertimeHours < 0) {
             return res.status(400).json({ message: 'Gültige bewilligte Überstunden sind erforderlich' });
         }
+        // Datenisolation: Nur User der Organisation
+        const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
+        // Prüfe ob User zur Organisation gehört
+        const user = yield prisma.user.findFirst({
+            where: Object.assign(Object.assign({}, userFilter), { id: Number(userId) })
+        });
+        if (!user) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden oder gehört nicht zu Ihrer Organisation' });
+        }
         // Aktualisiere die bewilligten Überstunden des Benutzers
-        const user = yield prisma.user.update({
+        const updatedUser = yield prisma.user.update({
             where: { id: Number(userId) },
             data: {
                 approvedOvertimeHours: Number(approvedOvertimeHours)
@@ -269,10 +282,10 @@ const updateApprovedOvertimeHours = (req, res) => __awaiter(void 0, void 0, void
             title: 'Bewilligte Überstunden aktualisiert',
             message: `Ihre bewilligten Überstunden wurden auf ${approvedOvertimeHours} Stunden aktualisiert.`,
             type: client_1.NotificationType.worktime,
-            relatedEntityId: user.id,
+            relatedEntityId: updatedUser.id,
             relatedEntityType: 'overtime_update'
         });
-        res.json(user);
+        res.json(updatedUser);
     }
     catch (error) {
         console.error('Fehler beim Aktualisieren der bewilligten Überstunden:', error);

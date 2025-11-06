@@ -36,8 +36,9 @@ Das System verwendet die zentrale Funktion `createNotificationIfEnabled` für al
 
 ### 5. Worktime-Trigger
 
-- **worktimeStart**: Benachrichtigt den Benutzer, wenn die Zeiterfassung gestartet wird
-- **worktimeStop**: Benachrichtigt den Benutzer, wenn die Zeiterfassung beendet wird
+- **worktimeStart**: Benachrichtigt den Benutzer, wenn die Zeiterfassung gestartet wird (`relatedEntityType: 'start'`)
+- **worktimeStop**: Benachrichtigt den Benutzer, wenn die Zeiterfassung beendet wird (`relatedEntityType: 'stop'`)
+- **worktimeAutoStop**: Benachrichtigt den Benutzer, wenn die Zeiterfassung automatisch beendet wurde (`relatedEntityType: 'auto_stop'`)
 
 ## Implementierungsdetails
 
@@ -49,6 +50,33 @@ Die Funktion `createNotificationIfEnabled` überprüft:
 1. Ob Benachrichtigungen für den Benutzer aktiviert sind
 2. Ob der spezifische Benachrichtigungstyp aktiviert ist
 3. Ob der Benutzer die Berechtigung hat, diese Benachrichtigung zu erhalten
+
+**Wichtig:** Beim Aufruf von `createNotificationIfEnabled` müssen folgende Parameter verwendet werden:
+- `relatedEntityId`: Die ID der zugehörigen Entity (Task, Request, WorkTime, etc.)
+- `relatedEntityType`: Der Typ der Aktion (`'create'`, `'update'`, `'delete'`, `'status'`, `'start'`, `'stop'`, `'auto_stop'`)
+
+**NICHT verwenden:** `targetId` und `targetType` - diese Parameter werden nicht verwendet und führen dazu, dass Notifications ohne korrekte Metadaten gespeichert werden!
+
+### Parameter-Mapping
+
+- **Task-Notifications**: `relatedEntityType` kann sein: `'create'`, `'update'`, `'delete'`, `'status'`
+- **Request-Notifications**: `relatedEntityType` kann sein: `'create'`, `'update'`, `'delete'`, `'status'`
+- **Worktime-Notifications**: `relatedEntityType` kann sein: `'start'`, `'stop'`, `'auto_stop'`
+
+### Bekannte Probleme und Lösungen
+
+**Problem 1 (behoben):** Request-Notifications verwendeten `targetId`/`targetType` statt `relatedEntityId`/`relatedEntityType`. Dies führte dazu, dass Notifications ohne korrekte Metadaten gespeichert wurden.
+
+**Problem 2 (behoben):** Worktime-Notifications verwendeten `'worktime_start'`/`'worktime_stop'` statt `'start'`/`'stop'`. Dies führte dazu, dass die Prüfung in `isNotificationEnabled` nicht korrekt funktionierte.
+
+**Problem 3 (behoben - HAUPTPROBLEM):** Die Funktion `isNotificationEnabled` prüfte für Task- und Request-Notifications alle Settings mit OR-Verknüpfung, anstatt die spezifische Aktion basierend auf `relatedEntityType` zu prüfen. Dies führte dazu, dass:
+- Wenn IRGENDEINE Setting aktiviert war, wurden ALLE Notifications erlaubt
+- Die spezifische Prüfung für `create`, `update`, `delete`, `status` wurde nicht durchgeführt
+
+**Lösung:** 
+1. Alle Notification-Aufrufe wurden korrigiert, um die korrekten Parameter zu verwenden
+2. Die Logik in `isNotificationEnabled` wurde angepasst, um die spezifische Aktion basierend auf `relatedEntityType` zu prüfen (wie bereits bei Worktime-Notifications implementiert)
+3. Alle Notification-Typen verwenden jetzt konsistent die gleiche Prüfungslogik mit Fallback auf `true` als Default
 
 ### Frontend-Darstellung
 

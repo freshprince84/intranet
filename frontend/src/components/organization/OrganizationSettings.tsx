@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { BuildingOfficeIcon, PlusIcon, UserPlusIcon, UserGroupIcon, ShieldCheckIcon, EnvelopeIcon, ChartBarIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { BuildingOfficeIcon, PlusIcon, UserPlusIcon, UserGroupIcon, ShieldCheckIcon, EnvelopeIcon, ChartBarIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { useTranslation } from 'react-i18next';
 import { organizationService } from '../../services/organizationService.ts';
-import { Organization, UpdateOrganizationRequest } from '../../types/organization.ts';
+import { Organization } from '../../types/organization.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
-import { useLanguage } from '../../hooks/useLanguage.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import CreateOrganizationModal from './CreateOrganizationModal.tsx';
 import JoinOrganizationModal from './JoinOrganizationModal.tsx';
+import EditOrganizationModal from './EditOrganizationModal.tsx';
+import MyJoinRequestsList from './MyJoinRequestsList.tsx';
 
 interface OrganizationStats {
   currentUsers: number;
@@ -24,19 +25,15 @@ interface OrganizationStats {
 const OrganizationSettings: React.FC = () => {
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [stats, setStats] = useState<OrganizationStats | null>(null);
-  const [formData, setFormData] = useState<UpdateOrganizationRequest>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [loadingStats, setLoadingStats] = useState<boolean>(false);
-  const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState<boolean>(false);
   const [isJoinModalOpen, setIsJoinModalOpen] = useState<boolean>(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const { canViewOrganization, canManageOrganization, loading: permissionsLoading } = usePermissions();
   const { showMessage } = useMessage();
   const { t } = useTranslation();
-  const { organizationLanguage, setOrganizationLanguage } = useLanguage();
-  const [selectedOrgLanguage, setSelectedOrgLanguage] = useState<string>('');
-  const [savingOrgLanguage, setSavingOrgLanguage] = useState<boolean>(false);
 
   const fetchOrganization = useCallback(async () => {
     try {
@@ -44,20 +41,6 @@ const OrganizationSettings: React.FC = () => {
       setError(null);
       const org = await organizationService.getCurrentOrganization();
       setOrganization(org);
-      setFormData({
-        displayName: org.displayName || '',
-        domain: org.domain || '',
-        logo: org.logo || '',
-        settings: org.settings
-      });
-      
-      // Lade Organisation-Sprache
-      try {
-        const langResponse = await organizationService.getOrganizationLanguage();
-        setSelectedOrgLanguage(langResponse.language || '');
-      } catch (langError) {
-        console.error('Fehler beim Laden der Organisation-Sprache:', langError);
-      }
       
       // Statistiken laden
       try {
@@ -71,10 +54,20 @@ const OrganizationSettings: React.FC = () => {
         setLoadingStats(false);
       }
     } catch (err: any) {
-      const errorMessage = err.response?.data?.message || t('organization.loadError');
-      setError(errorMessage);
-      // showMessage wird hier verwendet, aber nicht in Dependencies
-      showMessage(errorMessage, 'error');
+      // Prüfe ob es ein 404-Fehler ist (keine Organisation gefunden)
+      if (err.response?.status === 404 && err.response?.data?.hasOrganization === false) {
+        // Benutzer hat keine Organisation - das ist OK, setze Error aber nicht kritisch
+        // Verwende IMMER die Übersetzung, nicht die Backend-Nachricht
+        setError(t('organization.notFound'));
+        setOrganization(null);
+        // Zeige Info-Message statt Error
+        showMessage(t('organization.notFound'), 'info');
+      } else {
+        // Andere Fehler - kritisch
+        const errorMessage = err.response?.data?.message || t('organization.loadError');
+        setError(errorMessage);
+        showMessage(errorMessage, 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -106,38 +99,8 @@ const OrganizationSettings: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [permissionsLoading]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    // Fehler beim Ändern löschen
-    if (error) {
-      setError(null);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!canManageOrganization()) {
-      const errorMessage = t('organization.noPermissionEdit');
-      setError(errorMessage);
-      showMessage(errorMessage, 'error');
-      return;
-    }
-    
-    try {
-      setSaving(true);
-      setError(null);
-      const updatedOrg = await organizationService.updateOrganization(formData);
-      setOrganization(updatedOrg);
-      showMessage(t('organization.updateSuccess'), 'success');
-    } catch (err: any) {
-      const errorMessage = err.response?.data?.message || t('organization.updateError');
-      setError(errorMessage);
-      showMessage(errorMessage, 'error');
-    } finally {
-      setSaving(false);
-    }
+  const handleEditSuccess = () => {
+    fetchOrganization();
   };
 
   if (permissionsLoading) {
@@ -172,34 +135,32 @@ const OrganizationSettings: React.FC = () => {
 
   return (
     <>
-      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 shadow p-6 sm:p-6 mb-6">
-        {/* Titelzeile mit Icon und Action-Buttons */}
-        <div className="flex items-center justify-between mb-4 sm:mb-4">
-          <h2 className="text-xl sm:text-xl font-semibold flex items-center dark:text-white">
-            <BuildingOfficeIcon className="h-6 w-6 sm:h-6 sm:w-6 mr-2 sm:mr-2" />
-            {t('organization.settings')}
-          </h2>
-          
-          <div className="flex items-center gap-2">
-            {/* Button: Organisation beitreten */}
+      <div className="space-y-4">
+        {/* Titelzeile mit Action-Buttons */}
+        <div className="flex items-center mb-4 sm:mb-4">
+          {/* Linke Seite: Action-Buttons */}
+          <div className="flex items-center">
+            {/* Button: Neue Organisation erstellen - immer sichtbar (nicht nur für Admins) */}
             <button
-              onClick={() => setIsJoinModalOpen(true)}
-              className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              title={t('organization.joinOrganization')}
+              onClick={() => setIsCreateModalOpen(true)}
+              className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
+              style={{ width: '30.19px', height: '30.19px' }}
+              title={t('organization.createOrganization')}
+              aria-label={t('organization.createOrganization')}
             >
-              <UserPlusIcon className="h-5 w-5" />
+              <PlusIcon className="h-4 w-4" />
             </button>
             
-            {/* Button: Neue Organisation erstellen */}
-            {canManageOrganization() && (
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-md dark:bg-green-700 dark:hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                title={t('organization.createOrganization')}
-              >
-                <PlusIcon className="h-5 w-5" />
-              </button>
-            )}
+            {/* Button: Organisation beitreten - immer sichtbar */}
+            <button
+              onClick={() => setIsJoinModalOpen(true)}
+              className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center ml-2"
+              style={{ width: '30.19px', height: '30.19px' }}
+              title={t('organization.joinOrganization')}
+              aria-label={t('organization.joinOrganization')}
+            >
+              <UserPlusIcon className="h-4 w-4" />
+            </button>
           </div>
         </div>
 
@@ -211,131 +172,72 @@ const OrganizationSettings: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* Error Display */}
+          {/* Error/Info Display */}
           {error && (
-            <div className="mb-4 p-4 bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 rounded">
-              {error}
+            <div className={`mb-4 p-4 border rounded ${
+              !organization 
+                ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-400 dark:border-blue-700 text-blue-700 dark:text-blue-300'
+                : 'bg-red-100 dark:bg-red-900 border-red-400 dark:border-red-700 text-red-700 dark:text-red-300'
+            }`}>
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  {!organization ? (
+                    <UserGroupIcon className="h-5 w-5" />
+                  ) : (
+                    <span className="text-red-600 dark:text-red-400">⚠️</span>
+                  )}
+                </div>
+                <div className="ml-3 flex-1">
+                  <p className="font-medium">{error}</p>
+                  {!organization && (
+                    <p className="mt-2 text-sm">{t('organization.createOrJoinHint')}</p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
-          {/* Formular */}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Card-Ansicht - nur anzeigen wenn Organisation existiert */}
+          {organization ? (
+            <>
+            {/* Card mit Organisations-Infos */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4 shadow hover:shadow-md transition-shadow">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center justify-between mb-4">
             <div>
-              <label 
-                htmlFor="displayName" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                {t('organization.displayName')}
-              </label>
-              <input
-                type="text"
-                id="displayName"
-                name="displayName"
-                value={formData.displayName || ''}
-                onChange={handleChange}
-                disabled={!canManageOrganization() || saving}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-              />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                        <BuildingOfficeIcon className="h-5 w-5 mr-2" />
+                        {organization.displayName || organization.name}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        {organization.domain || t('organization.noDomain')}
+                      </p>
+            </div>
+                    {canManageOrganization() && (
+                      <button
+                        onClick={() => setIsEditModalOpen(true)}
+                        className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
+                        title={t('organization.edit.title')}
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                    )}
             </div>
 
+                  {/* Organisations-Infos */}
+                  <div className="space-y-3">
+                    {organization.subscriptionPlan && (
             <div>
-              <label 
-                htmlFor="domain" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                {t('organization.domain')}
-              </label>
-              <input
-                type="text"
-                id="domain"
-                name="domain"
-                value={formData.domain || ''}
-                onChange={handleChange}
-                disabled={!canManageOrganization() || saving}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            <div>
-              <label 
-                htmlFor="logo" 
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                {t('organization.logoUrl')}
-              </label>
-              <input
-                type="text"
-                id="logo"
-                name="logo"
-                value={formData.logo || ''}
-                onChange={handleChange}
-                disabled={!canManageOrganization() || saving}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Organisation-Sprache */}
-            {canManageOrganization() && (
-              <div className="border-t pt-4">
-                <label 
-                  htmlFor="organizationLanguage" 
-                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-                >
-                  {t('organization.language')}
-                </label>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-                  {t('organization.languageDescription')}
-                </p>
-                <select
-                  id="organizationLanguage"
-                  value={selectedOrgLanguage || organizationLanguage || ''}
-                  onChange={async (e) => {
-                    const newLanguage = e.target.value;
-                    setSelectedOrgLanguage(newLanguage);
-                    if (newLanguage && newLanguage !== organizationLanguage) {
-                      setSavingOrgLanguage(true);
-                      try {
-                        await setOrganizationLanguage(newLanguage);
-                        showMessage(t('common.save'), 'success');
-                      } catch (error) {
-                        console.error('Fehler beim Speichern der Organisation-Sprache:', error);
-                        showMessage(t('worktime.messages.orgLanguageError'), 'error');
-                      } finally {
-                        setSavingOrgLanguage(false);
-                      }
-                    }
-                  }}
-                  disabled={!canManageOrganization() || savingOrgLanguage || saving}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed"
-                >
-                  <option value="">{t('settings.useOrganizationLanguage')} ({t('worktime.language.fallback')}: {t('worktime.language.german')})</option>
-                  <option value="de">{t('worktime.language.german')}</option>
-                  <option value="es">{t('worktime.language.spanish')}</option>
-                  <option value="en">{t('worktime.language.english')}</option>
-                </select>
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('organization.subscriptionPlan')}:</span>
+                        <span className="ml-2 text-sm text-gray-900 dark:text-white capitalize">{organization.subscriptionPlan}</span>
               </div>
             )}
-
-            {canManageOrganization() && (
-              <div className="flex items-center justify-end space-x-3 pt-4">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="p-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md dark:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                  title={saving ? t('organization.saving') : t('common.save')}
-                >
-                  {saving ? (
-                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <CheckIcon className="h-5 w-5" />
-                  )}
-                </button>
               </div>
-            )}
-          </form>
 
-          {/* Statistik-Cards */}
+                  {/* Statistiken direkt in der Card */}
           {stats && (
+                    <>
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('organization.statistics')}</h3>
               {loadingStats ? (
@@ -434,30 +336,31 @@ const OrganizationSettings: React.FC = () => {
                 </div>
               )}
             </div>
-          )}
-
-          {/* Info-Bereich */}
-          {organization && (
-            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-gray-600 dark:text-gray-400">{t('organization.organizationName')}:</span>
-                  <span className="ml-2 font-medium text-gray-900 dark:text-white">{organization.name}</span>
+                    </>
+                  )}
                 </div>
-                {organization.subscriptionPlan && (
-                  <div>
-                    <span className="text-gray-600 dark:text-gray-400">{t('organization.subscriptionPlan')}:</span>
-                    <span className="ml-2 font-medium text-gray-900 dark:text-white capitalize">
-                      {organization.subscriptionPlan}
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
-          )}
+
+            </>
+          ) : (
+            /* Keine Organisation - zeige Hinweis */
+            <div className="text-center py-8">
+            <UserGroupIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500 mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              {t('organization.notFound')}
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400">
+              {t('organization.createOrJoinHint')}
+            </p>
+          </div>
+        )}
         </>
       )}
       </div>
+
+      {/* Meine Beitrittsanfragen - immer anzeigen */}
+      <MyJoinRequestsList />
 
       {/* Modals */}
       <CreateOrganizationModal
@@ -470,6 +373,13 @@ const OrganizationSettings: React.FC = () => {
         isOpen={isJoinModalOpen}
         onClose={() => setIsJoinModalOpen(false)}
         onSuccess={handleJoinSuccess}
+      />
+
+      <EditOrganizationModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSuccess={handleEditSuccess}
+        organization={organization}
       />
     </>
   );

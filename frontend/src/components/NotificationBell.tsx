@@ -16,10 +16,14 @@ import {
 import { BellIcon } from '@heroicons/react/24/outline';
 import { Notification, notificationApi } from '../api/notificationApi.ts';
 import { formatDistanceToNow } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { de, es, enUS } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useLanguage } from '../hooks/useLanguage.ts';
 
 const NotificationBell: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const { activeLanguage } = useLanguage();
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
@@ -28,6 +32,16 @@ const NotificationBell: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isDarkMode = theme.palette.mode === 'dark';
+  
+  // Dynamisches Locale basierend auf aktueller Sprache
+  const dateLocale = React.useMemo(() => {
+    const lang = activeLanguage || i18n.language || 'de';
+    switch (lang) {
+      case 'es': return es;
+      case 'en': return enUS;
+      default: return de;
+    }
+  }, [activeLanguage, i18n.language]);
   
   const open = Boolean(anchorEl);
   const id = open ? 'notification-popover' : undefined;
@@ -83,12 +97,12 @@ const NotificationBell: React.FC = () => {
       setError(null);
     } catch (err) {
       console.error('Fehler beim Laden der Benachrichtigungen:', err);
-      setError('Fehler beim Laden der Benachrichtigungen');
+      setError(t('notifications.loadError'));
       setNotifications([]);
     } finally {
       setLoading(false);
     }
-  }, [open]);
+  }, [open, t]);
 
   const markAsRead = async (id: number) => {
     try {
@@ -170,10 +184,10 @@ const NotificationBell: React.FC = () => {
     try {
       return formatDistanceToNow(new Date(dateString), { 
         addSuffix: true,
-        locale: de
+        locale: dateLocale
       });
     } catch (error) {
-      return 'Ungültiges Datum';
+      return t('notifications.invalidDate');
     }
   };
 
@@ -183,7 +197,7 @@ const NotificationBell: React.FC = () => {
         color="inherit" 
         aria-describedby={id}
         onClick={handleClick}
-        aria-label="notifications"
+        aria-label={t('notifications.ariaLabel')}
         sx={{ mr: 1 }}
         className="dark:text-gray-200"
       >
@@ -210,17 +224,17 @@ const NotificationBell: React.FC = () => {
         <Box sx={{ width: 320, maxHeight: 400, overflow: 'auto', pt: 1 }} className="dark:bg-gray-800">
           <Box sx={{ px: 2, py: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }} className="dark:bg-gray-800">
             <Typography variant="subtitle1" fontWeight="bold" className="dark:text-white">
-              Benachrichtigungen
+              {t('notifications.title')}
             </Typography>
             
             {unreadCount > 0 && (
               <Button 
                 size="small" 
                 onClick={markAllAsRead}
-                sx={{ fontSize: '0.75rem' }}
+                sx={{ fontSize: '0.9rem' }}
                 className="dark:text-blue-400"
               >
-                Alle als gelesen markieren
+                {t('notifications.markAllAsRead')}
               </Button>
             )}
           </Box>
@@ -238,7 +252,7 @@ const NotificationBell: React.FC = () => {
           ) : notifications.length === 0 ? (
             <Box sx={{ p: 2, textAlign: 'center' }} className="dark:bg-gray-800">
               <Typography variant="body2" color="text.secondary" className="dark:text-gray-400">
-                Keine Benachrichtigungen vorhanden
+                {t('notifications.noNotifications')}
               </Typography>
             </Box>
           ) : (
@@ -288,7 +302,7 @@ const NotificationBell: React.FC = () => {
               fullWidth
               className="dark:text-blue-400 dark:hover:bg-gray-700"
             >
-              Alle Benachrichtigungen anzeigen
+              {t('notifications.showAll')}
             </Button>
           </Box>
         </Box>

@@ -44,22 +44,36 @@ Das System enthält die folgenden vordefinierten Rollen:
    - Vollständiger Zugriff auf alle Systembereiche
    - Kann Benutzer, Rollen und Berechtigungen verwalten
    - Kann Systemeinstellungen konfigurieren
+   - Kann Organisationen erstellen und verwalten
 
-2. **Manager**
-   - Kann Teams und Niederlassungen verwalten
-   - Kann Arbeitszeitberichte für Teammitglieder einsehen
-   - Kann Aufgaben und Anfragen zuweisen und verwalten
-   - Kann Wiki-Artikel erstellen und bearbeiten
-
-3. **Mitarbeiter**
+2. **User** (Standard-Benutzer - wird bei Registrierung zugewiesen)
+   - **Wird automatisch neuen Benutzern bei der Registrierung zugewiesen** (ohne Organisation)
    - Kann eigene Arbeitszeit erfassen
    - Kann eigene Aufgaben einsehen und verwalten
    - Kann Anfragen stellen
    - Kann Wiki-Artikel lesen
+   - Kann Beratungen verwalten
+   - Eingeschränkter Zugriff auf bestimmte Module
+   - **Nach Beitritt zu einer Organisation:** Erhält zusätzlich eine organisations-spezifische Rolle (z.B. Hamburger, User oder Admin)
+
+3. **Hamburger** (Basis-Rolle für neue Benutzer in Organisationen)
+   - **Wird Benutzern zugewiesen, die einer Organisation beitreten** (ohne spezifische Rolle)
+   - Basis-Berechtigungen für grundlegende Funktionen:
+     - Dashboard anzeigen
+     - Einstellungen und Profil verwalten
+     - Cerebro Wiki lesen
+     - Benachrichtigungen anzeigen
+     - **KEINE Zugriff auf Organisation-Seite** (nur für Admin-Rolle)
+   - Die Hamburger-Rolle existiert nur innerhalb von Organisationen (nicht mehr ohne Organisation)
 
 4. **Gast**
    - Eingeschränkter Lesezugriff auf öffentliche Bereiche
    - Kann keine Änderungen vornehmen
+
+**Hinweis:** 
+- Neue Registrierungen erhalten automatisch die **User-Rolle** (ohne Organisation)
+- Beim Gründen einer Organisation erhält der Gründer die **Admin-Rolle** der neuen Organisation (User-Rolle bleibt bestehen)
+- Beim Beitritt zu einer Organisation erhält der Benutzer die **Hamburger-Rolle** der Organisation (User-Rolle bleibt bestehen)
 
 ### Berechtigungscodes
 
@@ -133,33 +147,27 @@ model Role {
 
 ### Permission
 
+Das aktuelle Berechtigungssystem verwendet ein flexibles Modell mit `entity` und `entityType`:
+
 ```prisma
 model Permission {
-  id           Int             @id @default(autoincrement())
-  code         String          @unique
-  description  String
-  module       String
-  roles        RolePermission[]
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id          Int      @id @default(autoincrement())
+  roleId      Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  accessLevel String   // "read", "write", "both" oder "none"
+  entity      String   // z.B. "organization_management", "users", "roles"
+  entityType  String   @default("page") // "page", "table" oder "button"
+  role        Role     @relation(fields: [roleId], references: [id])
 }
 ```
 
-### RolePermission (Verbindungstabelle)
+**Hinweis:** Das alte System mit `Permission.code` und `RolePermission` wurde durch dieses direkte Modell ersetzt, das Berechtigungen direkt an Rollen bindet.
 
-```prisma
-model RolePermission {
-  id           Int         @id @default(autoincrement())
-  roleId       Int
-  permissionId Int
-  role         Role        @relation(fields: [roleId], references: [id])
-  permission   Permission  @relation(fields: [permissionId], references: [id])
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-
-  @@unique([roleId, permissionId])
-}
-```
+**Beispiele für Berechtigungen:**
+- `entity: "organization_management"`, `entityType: "page"` - Zugriff auf die Organisation-Seite
+- `entity: "users"`, `entityType: "table"` - Zugriff auf die Users-Tabelle
+- `entity: "user_create"`, `entityType: "button"` - Zugriff auf den "User erstellen" Button
 
 ## Implementierung
 
@@ -231,7 +239,8 @@ export const hasPermission = (requiredPermission: string) => {
 
       // Berechtigungen überprüfen
       const hasRequiredPermission = user.role.permissions.some(
-        rp => rp.permission.code === requiredPermission
+        p => p.entity === requiredPermission && 
+            (p.accessLevel === 'both' || p.accessLevel === 'read' || p.accessLevel === 'write')
       );
 
       if (!hasRequiredPermission) {
@@ -270,10 +279,14 @@ router.post('/login', userController.login);
 router.get('/profile', authenticate, userController.getProfile);
 
 // Routen mit Berechtigungsprüfung
-router.get('/users', authenticate, hasPermission('USER_VIEW'), userController.getAllUsers);
-router.post('/users', authenticate, hasPermission('USER_CREATE'), userController.createUser);
-router.put('/users/:id', authenticate, hasPermission('USER_EDIT'), userController.updateUser);
-router.delete('/users/:id', authenticate, hasPermission('USER_DELETE'), userController.deleteUser);
+// Beispiel: Prüfung auf Tabellen-Berechtigung
+router.get('/users', authenticate, hasPermission('users', 'table'), userController.getAllUsers);
+router.post('/users', authenticate, hasPermission('users', 'table'), userController.createUser);
+router.put('/users/:id', authenticate, hasPermission('users', 'table'), userController.updateUser);
+router.delete('/users/:id', authenticate, hasPermission('users', 'table'), userController.deleteUser);
+
+// Beispiel: Prüfung auf Seiten-Berechtigung
+router.get('/organization', authenticate, hasPermission('organization_management', 'page'), organizationController.getOrganization);
 
 export default router;
 ```

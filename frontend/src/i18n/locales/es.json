@@ -44,7 +44,22 @@
     "searchPlaceholder": "Buscar...",
     "showFilter": "Mostrar filtro",
     "collapse": "Contraer",
-    "expand": "Expandir"
+    "expand": "Expandir",
+    "close": "Cerrar",
+    "unknown": "Desconocido",
+    "refresh": "Actualizar",
+    "loadingScreen": "Cargando",
+    "loadingScreenSubtitle": "¡Casi listo... solo un momento más! ⚡"
+  },
+  "header": {
+    "profile": "Perfil",
+    "switchRole": "Cambiar rol",
+    "switchBranch": "Cambiar ubicación",
+    "logout": "Cerrar sesión"
+  },
+  "dataCard": {
+    "expandDescription": "Expandir descripción",
+    "collapseDescription": "Contraer descripción"
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -199,7 +214,19 @@
     "roles": "Roles",
     "joinRequests": "Solicitudes de unión",
     "invitations": "Invitaciones",
-    "utilization": "Utilización"
+    "utilization": "Utilización",
+    "utilizationPercent": "Utilización",
+    "availableSlots": "Plazas disponibles",
+    "organizationName": "Nombre de la organización",
+    "subscriptionPlan": "Plan de suscripción",
+    "noPermission": "No tiene permiso para ver la configuración de la organización.",
+    "loadError": "Error al cargar la organización",
+    "updateError": "Error al actualizar la organización",
+    "updateSuccess": "Organización actualizada exitosamente",
+    "noPermissionEdit": "No tiene permiso para editar la organización",
+    "saving": "Guardando...",
+    "notFound": "No se encontró organización",
+    "createOrJoinHint": "Aún no tiene una organización. Por favor, cree una o únase a una."
   },
   "tasks": {
     "title": "Tareas",
@@ -369,6 +396,10 @@
         "uploadAfterCreate": "se subirá después de crear",
         "linkedCerebroArticles": "Artículos de Cerebro vinculados"
       },
+      "tabs": {
+        "data": "Datos",
+        "cerebro": "Artículos de Cerebro"
+      },
       "errors": {
         "connectionError": "No se pudo establecer conexión con el servidor. Por favor asegúrese de que el servidor esté en ejecución.",
         "loadUsersError": "Error al cargar los usuarios",
@@ -410,6 +441,14 @@
       "identificationNumber": "Número de identificación",
       "taxIdentificationNumber": "Número de identificación fiscal",
       "payrollSettings": "Configuración de nómina"
+    },
+    "createUser": {
+      "title": "Crear nuevo usuario",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "create": "Crear"
     }
   },
   "roles": {
@@ -418,7 +457,8 @@
     "noDescription": "Sin descripción",
     "actions": {
       "edit": "Editar rol",
-      "delete": "Eliminar rol"
+      "delete": "Eliminar rol",
+      "copy": "Copiar rol"
     },
     "pages": {
       "dashboard": "Dashboard",
@@ -795,7 +835,9 @@
     "updateError": "Error al actualizar la organización",
     "updateSuccess": "Organización actualizada exitosamente",
     "noPermissionEdit": "No tiene permiso para editar la organización",
-    "saving": "Guardando..."
+    "saving": "Guardando...",
+    "notFound": "No se encontró organización",
+    "createOrJoinHint": "Aún no tiene una organización. Por favor, cree una o únase a una."
   },
   "settings": {
     "title": "Configuración",
@@ -840,12 +882,19 @@
     "invalidResponse": "Formato de respuesta inválido del servidor"
   },
   "notifications": {
-    "title": "Configuración de notificaciones",
+    "title": "Notificaciones",
+    "ariaLabel": "Notificaciones",
+    "markAllAsRead": "Marcar todas como leídas",
+    "noNotifications": "No hay notificaciones disponibles",
+    "showAll": "Mostrar todas las notificaciones",
+    "invalidDate": "Fecha inválida",
+    "loadError": "Error al cargar las notificaciones",
+    "notificationSettings": "Configuración de notificaciones",
     "description": "Seleccione para qué eventos desea recibir notificaciones.",
     "loading": "Cargando configuración...",
     "saveSuccess": "Configuración guardada exitosamente.",
     "saveError": "No se pudo guardar la configuración",
-    "loadError": "No se pudo cargar la configuración. Se utilizarán los valores predeterminados.",
+    "loadSettingsError": "No se pudo cargar la configuración. Se utilizarán los valores predeterminados.",
     "allNotifications": "Todas las notificaciones",
     "allNotificationsDescription": "Activar o desactivar todas las notificaciones",
     "all": "Todas",
@@ -932,6 +981,33 @@
       "work_permit": "Permiso de trabajo",
       "tax_id": "ID fiscal",
       "social_security": "Carné de seguridad social"
+    },
+    "form": {
+      "noDocumentUploaded": "Por favor cargue primero un documento o tome una foto",
+      "noImageData": "No se pueden encontrar datos de imagen",
+      "recognitionSuccess": "Documento reconocido exitosamente",
+      "recognitionError": "Error en el reconocimiento del documento: {{error}}",
+      "fillRequiredFields": "Por favor complete todos los campos obligatorios",
+      "updateSuccess": "Documento actualizado exitosamente",
+      "createSuccess": "Documento agregado exitosamente",
+      "error": "Error: {{error}}",
+      "documentType": "Tipo de documento",
+      "selectDocumentType": "Por favor seleccione",
+      "documentNumber": "Número de documento",
+      "issuingCountry": "País emisor",
+      "issuingAuthority": "Autoridad emisora",
+      "issueDate": "Fecha de emisión",
+      "expiryDate": "Fecha de vencimiento",
+      "documentImage": "Imagen del documento",
+      "uploadFile": "Cargar archivo",
+      "takePhoto": "Tomar foto",
+      "recognitionRunning": "Reconocimiento en curso...",
+      "autoRecognize": "Reconocer automáticamente",
+      "selectedFile": "Archivo seleccionado: {{name}}",
+      "capturedImage": "Imagen capturada:",
+      "capturedDocument": "Documento capturado",
+      "recognitionErrorLabel": "Error en el reconocimiento: {{error}}",
+      "update": "Actualizar"
     }
   },
   "roleAssignment": {
@@ -942,9 +1018,21 @@
     "availableRoles": "Roles disponibles",
     "noRoles": "No hay roles disponibles",
     "saveSuccess": "Roles asignados exitosamente",
-    "saveError": "Error al asignar roles"
+    "saveError": "Error al asignar roles",
+    "loading": "Cargando roles...",
+    "unknownRolesWarning": "Atención: Se encontraron IDs de roles desconocidos",
+    "unknownRolesMessage": "Algunos IDs de roles del usuario ({{ids}}) no están presentes en los roles disponibles.",
+    "availableRoleIds": "IDs de roles disponibles: {{ids}}",
+    "noRolesAssigned": "No hay roles asignados",
+    "fixed": "Fijo",
+    "fixedAssigned": "Asignado permanentemente",
+    "remove": "Eliminar",
+    "unknownRole": "Rol desconocido (ID: {{id}})",
+    "unknownRoleDescription": "Este rol está asignado al usuario, pero no está presente en la lista de roles.",
+    "add": "Agregar",
+    "noRolesAvailable": "No hay más roles disponibles"
   },
-  "userManagement": {
+  "organisation": {
     "title": "Organización",
     "tabs": {
       "users": "Usuarios",
@@ -954,19 +1042,119 @@
     "noPermission": "Solo los administradores tienen acceso a esta página.",
     "error": "Error:",
     "loading": "Cargando...",
-    "noPermissionForPage": "No tiene permiso para esta página."
+    "noPermissionForPage": "No tiene permiso para esta página.",
+    "proFeature": {
+      "users": "La gestión de usuarios es una función PRO. Por favor, actualice su suscripción para utilizar esta función.",
+      "roles": "La gestión de roles es una función PRO. Por favor, actualice su suscripción para utilizar esta función."
+    },
+    "createUser": {
+      "title": "Crear nuevo usuario",
+      "email": "Correo electrónico",
+      "password": "Contraseña",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "create": "Crear"
+    }
   },
   "roles": {
     "title": "Roles",
     "permissions": "Permisos",
     "noDescription": "Sin descripción",
+    "createRole": "Crear nuevo rol",
+    "editRole": "Editar rol",
     "actions": {
       "edit": "Editar rol",
       "delete": "Eliminar rol"
+    },
+    "form": {
+      "name": "Nombre",
+      "description": "Descripción",
+      "detailedPermissions": "Permisos detallados",
+      "activateAllPages": "Activar todas las páginas",
+      "deactivateAllPages": "Desactivar todas las páginas",
+      "pagesChecked": "Páginas ✓",
+      "pagesUnchecked": "Páginas ✗",
+      "activateAllTables": "Activar todas las tablas",
+      "deactivateAllTables": "Desactivar todas las tablas",
+      "tablesChecked": "Tablas ✓",
+      "tablesUnchecked": "Tablas ✗",
+      "activateAllButtons": "Activar todos los botones",
+      "deactivateAllButtons": "Desactivar todos los botones",
+      "buttonsChecked": "Botones ✓",
+      "buttonsUnchecked": "Botones ✗"
+    },
+    "pages": {
+      "dashboard": "Dashboard",
+      "worktracker": "Worktracker",
+      "consultations": "Consultas",
+      "team_worktime_control": "Control de tiempo del equipo",
+      "payroll": "Nómina",
+      "usermanagement": "Organización",
+      "organization_management": "Gestión de Organización",
+      "cerebro": "Cerebro",
+      "settings": "Configuración",
+      "profile": "Perfil"
+    },
+    "tables": {
+      "tasks": "Tareas",
+      "worktime": "Registro de tiempo",
+      "users": "Usuarios",
+      "roles": "Roles",
+      "organization": "Organización",
+      "organization_join_requests": "Solicitudes de Unión",
+      "organization_users": "Usuarios de Organización",
+      "clients": "Clientes",
+      "consultation_invoices": "Facturas",
+      "requests": "Solicitudes",
+      "team_worktime": "Tiempo del equipo",
+      "settings": "Configuración",
+      "notifications": "Notificaciones",
+      "branches": "Sucursales",
+      "monthly_reports": "Informes mensuales"
+    },
+    "buttons": {
+      "worktime_start": "Iniciar",
+      "worktime_stop": "Detener",
+      "worktime_edit": "Editar",
+      "worktime_delete": "Eliminar",
+      "task_create": "Crear",
+      "task_edit": "Editar",
+      "task_delete": "Eliminar",
+      "todo_create": "Crear",
+      "todo_edit": "Editar",
+      "todo_delete": "Eliminar",
+      "client_create": "Crear",
+      "client_edit": "Editar cliente",
+      "client_delete": "Eliminar",
+      "consultation_start": "Iniciar",
+      "consultation_stop": "Detener",
+      "consultation_edit": "Editar consulta",
+      "invoice_create": "Crear",
+      "invoice_download": "Descargar",
+      "invoice_mark_paid": "Marcar como pagado",
+      "invoice_settings": "Configuración",
+      "user_create": "Crear",
+      "user_edit": "Editar",
+      "user_delete": "Eliminar",
+      "role_assign": "Asignar",
+      "role_create": "Crear",
+      "role_edit": "Editar",
+      "role_delete": "Eliminar",
+      "organization_create": "Crear",
+      "organization_edit": "Editar",
+      "organization_delete": "Eliminar",
+      "settings_system": "Sistema",
+      "settings_notifications": "Notificaciones",
+      "settings_profile": "Perfil",
+      "database_reset_table": "Restablecer tabla",
+      "database_logs": "Registros",
+      "payroll_generate": "Generar",
+      "payroll_export": "Exportar",
+      "payroll_edit": "Editar",
+      "cerebro": "Cerebro"
     }
   },
   "cerebro": {
-    "title": "Cerebro",
     "home": {
       "title": "Readme - Resumen"
     },
@@ -1158,35 +1346,6 @@
     "noRequests": "No hay solicitudes de afiliación.",
     "noMatching": "No hay solicitudes de afiliación que coincidan con los criterios de filtro."
   },
-  "organization": {
-    "create": {
-      "title": "Crear nueva organización",
-      "name": "Nombre *",
-      "displayName": "Nombre para mostrar *",
-      "domain": "Dominio",
-      "nameRequired": "El nombre es obligatorio",
-      "displayNameRequired": "El nombre para mostrar es obligatorio",
-      "createSuccess": "Organización creada exitosamente",
-      "createError": "Error al crear la organización",
-      "creating": "Creando...",
-      "createButton": "Crear"
-    },
-    "join": {
-      "title": "Unirse a organización",
-      "search": "Buscar organización *",
-      "searchPlaceholder": "Ingrese el nombre de la organización...",
-      "searching": "Buscando...",
-      "noOrganizations": "No se encontraron organizaciones",
-      "nameRequired": "El nombre de la organización es obligatorio",
-      "selectFromList": "Por favor seleccione una organización de la lista",
-      "message": "Mensaje (opcional)",
-      "messagePlaceholder": "Opcional: agregue un mensaje...",
-      "sendSuccess": "Solicitud de afiliación enviada exitosamente",
-      "sendError": "Error al enviar la solicitud de afiliación",
-      "sending": "Enviando...",
-      "send": "Enviar"
-    }
-  },
   "analytics": {
     "todo": {
       "title": "Evaluaciones de tareas",
@@ -1372,6 +1531,93 @@
     "itemUnitPrice": "Tarifa por hora",
     "itemAmount": "Monto",
     "noItems": "No hay posiciones de factura disponibles",
-    "deletePosition": "Eliminar posición"
+    "deletePosition": "Eliminar posición",
+    "editSidepane": {
+      "title": "Editar factura: {{invoiceNumber}}",
+      "basicInfo": "Información básica",
+      "issueDate": "Fecha de factura",
+      "dueDate": "Fecha de vencimiento",
+      "notesPlaceholder": "Notas adicionales sobre la factura...",
+      "items": "Posiciones de factura",
+      "addItem": "Agregar posición",
+      "hours": "Horas",
+      "total": "Total",
+      "status": {
+        "draft": "Borrador",
+        "sent": "Enviado",
+        "paid": "Pagado",
+        "overdue": "Vencido",
+        "cancelled": "Cancelado"
+      }
+    },
+    "status": {
+      "draft": "Borrador",
+      "sent": "Enviado",
+      "paid": "Pagado",
+      "overdue": "Vencido",
+      "cancelled": "Cancelado"
+    }
+  },
+  "register": {
+    "title": "Registro",
+    "subtitle": "Cree su cuenta con correo electrónico y contraseña",
+    "email": "Dirección de correo electrónico",
+    "emailPlaceholder": "su.correo@ejemplo.com",
+    "password": "Contraseña",
+    "passwordPlaceholder": "Mínimo 6 caracteres",
+    "confirmPassword": "Confirmar contraseña",
+    "confirmPasswordPlaceholder": "Repetir contraseña",
+    "register": "Registrarse",
+    "registering": "Registrando...",
+    "alreadyRegistered": "¿Ya está registrado?",
+    "login": "Iniciar sesión",
+    "passwordsDoNotMatch": "Las contraseñas no coinciden.",
+    "passwordTooShort": "La contraseña debe tener al menos 6 caracteres.",
+    "registrationFailed": "Registro fallido. Por favor revise sus entradas."
+  },
+  "database": {
+    "noPermission": "Sin permiso",
+    "adminOnly": "Estas funciones solo están disponibles para administradores.",
+    "warningTitle": "⚠️ ADVERTENCIA: Restablecer tablas",
+    "warning1": "Estas funciones eliminan todos los datos de las tablas seleccionadas",
+    "warning2": "Los datos estándar se restauran automáticamente mediante archivos de semilla",
+    "warning3": "Solo las tablas con datos de semilla pueden restablecerse",
+    "warning4": "Todas las operaciones se registran",
+    "resetTablesTitle": "Restablecer tablas con datos de semilla",
+    "danger": {
+      "high": "Alto",
+      "medium": "Medio",
+      "low": "Bajo"
+    },
+    "seedDataRestored": "Los datos de semilla se restaurarán",
+    "deleteDemoClients": "Eliminar clientes demo",
+    "resetAndRefill": "Restablecer y rellenar",
+    "operationsTitle": "Operaciones de base de datos (Registro de auditoría)",
+    "loadingLogs": "Cargando registros...",
+    "noLogsAvailable": "No hay registros disponibles",
+    "confirmResetTitle": "Confirmar restablecimiento de tabla",
+    "confirmResetMessage": "Está a punto de restablecer la tabla <strong>{{tableName}}</strong>.",
+    "confirmResetWarning": "Todos los datos serán eliminados y reemplazados por datos de semilla.",
+    "reflectionTime": "Tiempo de reflexión: {{seconds}} segundos",
+    "adminPasswordLabel": "Contraseña de administrador para confirmación:",
+    "adminPasswordPlaceholder": "Su contraseña de administrador",
+    "resetting": "Restableciendo...",
+    "confirmDeleteDemoClientsTitle": "Confirmar eliminación de clientes demo",
+    "confirmDeleteDemoClientsMessage": "Está a punto de eliminar <strong>solo los clientes demo</strong>.",
+    "confirmDeleteDemoClientsWarning": "Los clientes demo se eliminarán permanentemente y NO se restaurarán.",
+    "deleting": "Eliminando...",
+    "passwordRequired": "Se requiere contraseña",
+    "waitSeconds": "Por favor espere {{seconds}} segundos más",
+    "resetTableSuccess": "La tabla {{tableName}} se restableció exitosamente y se llenó con datos de semilla",
+    "resetTableError": "Error al restablecer la tabla",
+    "deleteDemoClientsSuccess": "Los clientes demo se eliminaron exitosamente",
+    "deleteDemoClientsError": "Error al eliminar los clientes demo",
+    "loadTablesError": "Error al cargar las tablas disponibles",
+    "loadLogsError": "Error al cargar los registros",
+    "logStatus": {
+      "start": "Iniciado",
+      "success": "Éxito",
+      "error": "Error"
+    }
   }
 }

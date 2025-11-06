@@ -58,14 +58,14 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
         // Email als Username verwenden wenn kein Username angegeben
         const finalUsername = username || email;
         
-        // Finde die Hamburger-Rolle mit ID 999
-        const hamburgerRole = await prisma.role.findUnique({
-            where: { id: 999 }
+        // Finde die User-Rolle mit ID 2 (Standard-Rolle für neue Benutzer)
+        const userRole = await prisma.role.findUnique({
+            where: { id: 2 }
         });
 
-        if (!hamburgerRole) {
-            console.error('Hamburger-Rolle nicht gefunden');
-            return res.status(500).json({ message: 'Hamburger-Rolle nicht gefunden' });
+        if (!userRole) {
+            console.error('User-Rolle nicht gefunden');
+            return res.status(500).json({ message: 'User-Rolle nicht gefunden' });
         }
         
         // Prüfe ob Benutzer bereits existiert
@@ -97,7 +97,7 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
                     create: {
                         role: {
                             connect: {
-                                id: hamburgerRole.id
+                                id: userRole.id
                             }
                         },
                         lastUsed: true
@@ -121,7 +121,7 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
         const token = jwt.sign(
             { 
                 userId: user.id,
-                roleId: hamburgerRole.id
+                roleId: userRole.id
             },
             process.env.JWT_SECRET || 'your-secret-key',
             { expiresIn: '24h' }

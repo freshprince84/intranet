@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon, TrashIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -23,6 +24,7 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
   onClientDeleted,
   client
 }) => {
+  const { t } = useTranslation();
   const { openSidepane, closeSidepane } = useSidepane();
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const [formData, setFormData] = useState({
@@ -351,7 +353,7 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
                     type="button"
                     onClick={handleClose}
                     className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                    title="Abbrechen"
+                    title={t('common.cancel')}
                   >
                     <XMarkIcon className="h-5 w-5" />
                   </button>
@@ -570,7 +572,7 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
                   type="button"
                   onClick={handleClose}
                   className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                  title="Abbrechen"
+                  title={t('common.cancel')}
                 >
                   <XMarkIcon className="h-5 w-5" />
                 </button>
