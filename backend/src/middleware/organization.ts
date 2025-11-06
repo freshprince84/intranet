@@ -15,12 +15,9 @@ declare global {
 
 export const organizationMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    console.log('=== organizationMiddleware CALLED ===');
     const userId = req.userId;
-    console.log('userId:', userId);
     
     if (!userId) {
-      console.log('❌ No userId in middleware, returning 401');
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
@@ -41,20 +38,14 @@ export const organizationMiddleware = async (req: Request, res: Response, next: 
     });
 
     if (!userRole) {
-      console.log('❌ No userRole found, returning 404');
       return res.status(404).json({ message: 'Keine aktive Rolle gefunden' });
     }
-
-    console.log('✅ userRole found:', userRole.id);
-    console.log('✅ role.organizationId:', userRole.role.organizationId);
 
     // Füge Organisations-Kontext zum Request hinzu
     // WICHTIG: Kann NULL sein für standalone User (Hamburger-Rolle)
     req.organizationId = userRole.role.organizationId;
     req.userRole = userRole;
 
-    console.log('✅ Setting req.organizationId to:', req.organizationId);
-    console.log('✅ Calling next()');
     next();
   } catch (error) {
     console.error('❌ Error in Organization Middleware:', error);
@@ -181,7 +172,6 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
   }
 
   // User mit Organisation - Filter nach organizationId
-  console.log(`[getDataIsolationFilter] entity: ${entity}, userId: ${userId}, organizationId: ${req.organizationId}`);
   
   switch (entity) {
     case 'task':
