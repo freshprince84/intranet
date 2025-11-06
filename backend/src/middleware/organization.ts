@@ -186,7 +186,8 @@ export const getDataIsolationFilter = (req: Request, entity: string): any => {
     case 'cerebroCarticle':
     case 'carticle':
       // Einfache Filterung nach organizationId
-      // WICHTIG: Schließe NULL-Werte explizit aus, wenn organizationId gesetzt ist
+      // WICHTIG: Wenn organizationId gesetzt ist, werden nur Einträge mit dieser organizationId angezeigt
+      // NULL-Werte werden automatisch ausgeschlossen
       return {
         organizationId: req.organizationId
       };
