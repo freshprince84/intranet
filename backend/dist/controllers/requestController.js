@@ -155,7 +155,8 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 responsibleId,
                 branchId,
                 dueDate: due_date ? new Date(due_date) : null,
-                createTodo: create_todo
+                createTodo: create_todo,
+                organizationId: req.organizationId || null
             },
             include: {
                 requester: {
@@ -188,16 +189,16 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (requesterId !== responsibleId) {
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: request.requesterId,
-                targetId: request.id,
-                targetType: 'request',
+                relatedEntityId: request.id,
+                relatedEntityType: 'create',
                 type: client_1.NotificationType.request,
                 title: `Neuer Request: ${request.title}`,
                 message: `Du hast einen neuen Request erstellt: ${request.title}`
             });
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: request.responsibleId,
-                targetId: request.id,
-                targetType: 'request',
+                relatedEntityId: request.id,
+                relatedEntityType: 'create',
                 type: client_1.NotificationType.request,
                 title: `Neuer Request: ${request.title}`,
                 message: `Dir wurde ein neuer Request zugewiesen: ${request.title}`
@@ -284,8 +285,8 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             // Benachrichtigung für den Ersteller
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: updatedRequest.requesterId,
-                targetId: updatedRequest.id,
-                targetType: 'request',
+                relatedEntityId: updatedRequest.id,
+                relatedEntityType: 'status',
                 type: client_1.NotificationType.request,
                 title: `Statusänderung: ${updatedRequest.title}`,
                 message: `Der Status deines Requests "${updatedRequest.title}" wurde zu "${status}" geändert.`
@@ -296,8 +297,8 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             // Benachrichtigung für den alten Verantwortlichen
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: existingRequest.responsibleId,
-                targetId: updatedRequest.id,
-                targetType: 'request',
+                relatedEntityId: updatedRequest.id,
+                relatedEntityType: 'update',
                 type: client_1.NotificationType.request,
                 title: `Verantwortlichkeit geändert: ${updatedRequest.title}`,
                 message: `Die Verantwortlichkeit für den Request "${updatedRequest.title}" wurde geändert.`
@@ -305,8 +306,8 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             // Benachrichtigung für den neuen Verantwortlichen
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: parseInt(responsible_id),
-                targetId: updatedRequest.id,
-                targetType: 'request',
+                relatedEntityId: updatedRequest.id,
+                relatedEntityType: 'update',
                 type: client_1.NotificationType.request,
                 title: `Neuer Request: ${updatedRequest.title}`,
                 message: `Dir wurde ein Request zugewiesen: ${updatedRequest.title}`
@@ -322,7 +323,8 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     responsibleId: updatedRequest.responsibleId,
                     qualityControlId: updatedRequest.requesterId,
                     branchId: updatedRequest.branchId,
-                    dueDate: updatedRequest.dueDate
+                    dueDate: updatedRequest.dueDate,
+                    organizationId: updatedRequest.organizationId || req.organizationId || null
                 }
             });
             // Kopiere Anhänge vom Request zum Task
@@ -332,8 +334,8 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 // Benachrichtigung für den Verantwortlichen
                 yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: updatedRequest.responsibleId,
-                    targetId: task.id,
-                    targetType: 'task',
+                    relatedEntityId: task.id,
+                    relatedEntityType: 'create',
                     type: client_1.NotificationType.task,
                     title: `Neuer Task: ${task.title}`,
                     message: `Dir wurde ein neuer Task zugewiesen: ${task.title}`
@@ -431,8 +433,8 @@ const deleteRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Benachrichtigung für den Ersteller
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: request.requesterId,
-            targetId: request.id,
-            targetType: 'request',
+            relatedEntityId: request.id,
+            relatedEntityType: 'delete',
             type: client_1.NotificationType.request,
             title: `Request gelöscht: ${request.title}`,
             message: `Dein Request "${request.title}" wurde gelöscht.`

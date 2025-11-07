@@ -1,0 +1,275 @@
+[
+  {
+    "userId": 3,
+    "branchId": 4,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.661Z",
+    "updatedAt": "2025-11-06T07:03:05.661Z"
+  },
+  {
+    "userId": 3,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.666Z",
+    "updatedAt": "2025-11-06T07:03:05.666Z"
+  },
+  {
+    "userId": 4,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.673Z",
+    "updatedAt": "2025-11-06T07:03:05.673Z"
+  },
+  {
+    "userId": 5,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.674Z",
+    "updatedAt": "2025-11-06T07:03:05.674Z"
+  },
+  {
+    "userId": 6,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.676Z",
+    "updatedAt": "2025-11-06T07:03:05.676Z"
+  },
+  {
+    "userId": 7,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.677Z",
+    "updatedAt": "2025-11-06T07:03:05.677Z"
+  },
+  {
+    "userId": 10,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.686Z",
+    "updatedAt": "2025-11-06T07:03:05.686Z"
+  },
+  {
+    "userId": 11,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.688Z",
+    "updatedAt": "2025-11-06T07:03:05.688Z"
+  },
+  {
+    "userId": 12,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.689Z",
+    "updatedAt": "2025-11-06T07:03:05.689Z"
+  },
+  {
+    "userId": 13,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.691Z",
+    "updatedAt": "2025-11-06T07:03:05.691Z"
+  },
+  {
+    "userId": 14,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.692Z",
+    "updatedAt": "2025-11-06T07:03:05.692Z"
+  },
+  {
+    "userId": 15,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.694Z",
+    "updatedAt": "2025-11-06T07:03:05.694Z"
+  },
+  {
+    "userId": 16,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.699Z",
+    "updatedAt": "2025-11-06T07:03:05.699Z"
+  },
+  {
+    "userId": 17,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.702Z",
+    "updatedAt": "2025-11-06T07:03:05.702Z"
+  },
+  {
+    "userId": 18,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.704Z",
+    "updatedAt": "2025-11-06T07:03:05.704Z"
+  },
+  {
+    "userId": 19,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.706Z",
+    "updatedAt": "2025-11-06T07:03:05.706Z"
+  },
+  {
+    "userId": 21,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.708Z",
+    "updatedAt": "2025-11-06T07:03:05.708Z"
+  },
+  {
+    "userId": 22,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.709Z",
+    "updatedAt": "2025-11-06T07:03:05.709Z"
+  },
+  {
+    "userId": 23,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.710Z",
+    "updatedAt": "2025-11-06T07:03:05.710Z"
+  },
+  {
+    "userId": 24,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.712Z",
+    "updatedAt": "2025-11-06T07:03:05.712Z"
+  },
+  {
+    "userId": 25,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.714Z",
+    "updatedAt": "2025-11-06T07:03:05.714Z"
+  },
+  {
+    "userId": 26,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.716Z",
+    "updatedAt": "2025-11-06T07:03:05.716Z"
+  },
+  {
+    "userId": 28,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.720Z",
+    "updatedAt": "2025-11-06T07:03:05.720Z"
+  },
+  {
+    "userId": 29,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.722Z",
+    "updatedAt": "2025-11-06T07:03:05.722Z"
+  },
+  {
+    "userId": 30,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.723Z",
+    "updatedAt": "2025-11-06T07:03:05.723Z"
+  },
+  {
+    "userId": 31,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.724Z",
+    "updatedAt": "2025-11-06T07:03:05.724Z"
+  },
+  {
+    "userId": 36,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.736Z",
+    "updatedAt": "2025-11-06T07:03:05.736Z"
+  },
+  {
+    "userId": 38,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.740Z",
+    "updatedAt": "2025-11-06T07:03:05.740Z"
+  },
+  {
+    "userId": 41,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.745Z",
+    "updatedAt": "2025-11-06T07:03:05.745Z"
+  },
+  {
+    "userId": 47,
+    "branchId": 5,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:03:05.758Z",
+    "updatedAt": "2025-11-06T07:03:05.758Z"
+  },
+  {
+    "userId": 65,
+    "branchId": 4,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:03:05.797Z",
+    "updatedAt": "2025-11-06T07:03:05.797Z"
+  },
+  {
+    "userId": 65,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.800Z",
+    "updatedAt": "2025-11-06T07:03:05.800Z"
+  },
+  {
+    "userId": 66,
+    "branchId": 4,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:03:05.802Z",
+    "updatedAt": "2025-11-06T07:03:05.802Z"
+  },
+  {
+    "userId": 66,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.804Z",
+    "updatedAt": "2025-11-06T07:03:05.804Z"
+  },
+  {
+    "userId": 67,
+    "branchId": 4,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:03:05.807Z",
+    "updatedAt": "2025-11-06T07:03:05.807Z"
+  },
+  {
+    "userId": 67,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.809Z",
+    "updatedAt": "2025-11-06T07:03:05.809Z"
+  },
+  {
+    "userId": 68,
+    "branchId": 4,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:03:05.811Z",
+    "updatedAt": "2025-11-06T07:03:05.811Z"
+  },
+  {
+    "userId": 68,
+    "branchId": 5,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:03:05.815Z",
+    "updatedAt": "2025-11-06T07:03:05.815Z"
+  },
+  {
+    "userId": 69,
+    "branchId": 4,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:03:05.817Z",
+    "updatedAt": "2025-11-06T07:03:05.817Z"
+  }
+]

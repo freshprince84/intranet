@@ -31,6 +31,7 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 
 ### Implementierungsanleitungen
 - [CARD_VIEW_IMPLEMENTATION_GUIDE.md](docs/implementation_guides/CARD_VIEW_IMPLEMENTATION_GUIDE.md) - Vollständige Anleitung zur Implementierung der Card-Ansicht
+- [MARKDOWN_PREVIEW_USAGE.md](docs/implementation_guides/MARKDOWN_PREVIEW_USAGE.md) - Korrekte Verwendung der MarkdownPreview Komponente
 
 ### Technische Spezifikationen
 - [API_REFERENZ.md](docs/technical/API_REFERENZ.md) - Vollständige API-Dokumentation
@@ -39,6 +40,9 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [DEPLOYMENT.md](docs/technical/DEPLOYMENT.md) - Server-Setup und Deployment-Prozess
 - [SERVER_UPDATE.md](docs/technical/SERVER_UPDATE.md) - Richtlinien für Server-Updates
 - [FEHLERBEHEBUNG.md](docs/technical/FEHLERBEHEBUNG.md) - Häufige Fehler und deren Lösungen
+- [ATTACHMENT_URL_FIX.md](docs/technical/ATTACHMENT_URL_FIX.md) - Attachment URL-Generierung und Fixes
+- [IMAGE_PREVIEW_IMPLEMENTATION.md](docs/technical/IMAGE_PREVIEW_IMPLEMENTATION.md) - Vollständige Anleitung zur Bildvorschau-Implementierung
+- [EXPANDABLE_DESCRIPTION_IMPLEMENTATION.md](docs/technical/EXPANDABLE_DESCRIPTION_IMPLEMENTATION.md) - Expandierbare Beschreibung in DataCard
 - [NOTIFICATION_SYSTEM.md](docs/modules/NOTIFICATION_SYSTEM.md) - Benachrichtigungssystem und Trigger
 
 ### Modulspezifische Dokumentation

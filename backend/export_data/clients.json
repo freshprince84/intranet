@@ -1,0 +1,14 @@
+[
+  {
+    "id": 5,
+    "name": "Patrick Ammann",
+    "company": null,
+    "email": "p.ammann@me.com",
+    "phone": "0787192338",
+    "address": "Mühlensteg 6",
+    "notes": null,
+    "isActive": true,
+    "createdAt": "2025-11-02T00:04:16.807Z",
+    "updatedAt": "2025-11-02T00:04:16.807Z"
+  }
+]

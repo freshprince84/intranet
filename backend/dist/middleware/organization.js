@@ -14,11 +14,8 @@ const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log('=== organizationMiddleware CALLED ===');
         const userId = req.userId;
-        console.log('userId:', userId);
         if (!userId) {
-            console.log('❌ No userId in middleware, returning 401');
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Hole aktuelle Rolle und Organisation des Users
@@ -37,17 +34,12 @@ const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, voi
             }
         });
         if (!userRole) {
-            console.log('❌ No userRole found, returning 404');
             return res.status(404).json({ message: 'Keine aktive Rolle gefunden' });
         }
-        console.log('✅ userRole found:', userRole.id);
-        console.log('✅ role.organizationId:', userRole.role.organizationId);
         // Füge Organisations-Kontext zum Request hinzu
         // WICHTIG: Kann NULL sein für standalone User (Hamburger-Rolle)
         req.organizationId = userRole.role.organizationId;
         req.userRole = userRole;
-        console.log('✅ Setting req.organizationId to:', req.organizationId);
-        console.log('✅ Calling next()');
         next();
     }
     catch (error) {
@@ -121,34 +113,36 @@ const getDataIsolationFilter = (req, entity) => {
                     ]
                 };
             case 'worktime':
-                return {
-                    userId: userId
-                };
+                return { userId: userId };
             case 'client':
                 // Standalone: Nur Clients, die der User verwendet hat
                 return {
                     workTimes: {
-                        some: {
-                            userId: userId
-                        }
+                        some: { userId: userId }
                     }
                 };
             case 'branch':
                 // Standalone: Nur Branches wo User Mitglied ist
                 return {
                     users: {
-                        some: {
-                            userId: userId
-                        }
+                        some: { userId: userId }
                     }
                 };
+            case 'invoice':
+            case 'consultationInvoice':
+                return { userId: userId };
+            case 'monthlyReport':
+            case 'monthlyConsultationReport':
+                return { userId: userId };
+            case 'cerebroCarticle':
+            case 'carticle':
+                // Standalone: Nur Artikel die der User erstellt hat
+                return { createdById: userId };
             case 'role':
                 // Standalone: Nur Rollen die User hat (Hamburger-Rolle)
                 return {
                     users: {
-                        some: {
-                            userId: userId
-                        }
+                        some: { userId: userId }
                     }
                 };
             default:
@@ -156,108 +150,27 @@ const getDataIsolationFilter = (req, entity) => {
                 return {};
         }
     }
-    // User mit Organisation - Organisations-spezifische Filter
-    // WICHTIG: Zeigt ALLE Daten der Organisation, nicht nur eigene!
-    console.log(`[getDataIsolationFilter] entity: ${entity}, userId: ${userId}, organizationId: ${req.organizationId}`);
+    // User mit Organisation - Filter nach organizationId
     switch (entity) {
         case 'task':
-            // Alle Tasks der Organisation
-            // WICHTIG: BEIDE beteiligten User (responsible UND qualityControl) müssen Rollen in der Organisation haben
-            const taskFilter = {
-                OR: [
-                    // Task hat direkte Role-Zuordnung zur Organisation
-                    {
-                        role: {
-                            organizationId: req.organizationId
-                        }
-                    },
-                    // ODER: Task hat keine Role-Zuordnung UND ALLE beteiligten User haben Rollen in Organisation
-                    {
-                        AND: [
-                            { roleId: null }, // Nur wenn keine direkte Role-Zuordnung
-                            // Responsible muss Rolle in Organisation haben (wenn gesetzt)
-                            {
-                                OR: [
-                                    { responsibleId: null }, // ODER responsible ist nicht gesetzt
-                                    {
-                                        responsible: {
-                                            roles: {
-                                                some: {
-                                                    role: {
-                                                        organizationId: req.organizationId
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                ]
-                            },
-                            // QualityControl muss Rolle in Organisation haben (immer gesetzt)
-                            {
-                                qualityControl: {
-                                    roles: {
-                                        some: {
-                                            role: {
-                                                organizationId: req.organizationId
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                ]
-            };
-            console.log('[getDataIsolationFilter] task filter:', JSON.stringify(taskFilter, null, 2));
-            return taskFilter;
         case 'request':
-            // Alle Requests der Organisation
-            // WICHTIG: BEIDE beteiligten User (requester UND responsible) müssen Rollen in der Organisation haben
-            const requestFilter = {
-                AND: [
-                    // Requester muss Rolle in Organisation haben
-                    {
-                        requester: {
-                            roles: {
-                                some: {
-                                    role: {
-                                        organizationId: req.organizationId
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    // Responsible muss Rolle in Organisation haben
-                    {
-                        responsible: {
-                            roles: {
-                                some: {
-                                    role: {
-                                        organizationId: req.organizationId
-                                    }
-                                }
-                            }
-                        }
-                    }
-                ]
-            };
-            console.log('[getDataIsolationFilter] request filter:', JSON.stringify(requestFilter, null, 2));
-            return requestFilter;
         case 'worktime':
-            // Alle WorkTimes der Organisation (via user)
+        case 'client':
+        case 'branch':
+        case 'invoice':
+        case 'consultationInvoice':
+        case 'monthlyReport':
+        case 'monthlyConsultationReport':
+        case 'cerebroCarticle':
+        case 'carticle':
+            // Einfache Filterung nach organizationId
+            // WICHTIG: Wenn organizationId gesetzt ist, werden nur Einträge mit dieser organizationId angezeigt
+            // NULL-Werte werden automatisch ausgeschlossen
             return {
-                user: {
-                    roles: {
-                        some: {
-                            role: {
-                                organizationId: req.organizationId
-                            }
-                        }
-                    }
-                }
+                organizationId: req.organizationId
             };
         case 'user':
-            // Alle User der Organisation
+            // User-Filterung bleibt komplex (über UserRole)
             return {
                 roles: {
                     some: {
@@ -267,47 +180,11 @@ const getDataIsolationFilter = (req, entity) => {
                     }
                 }
             };
-        case 'client':
-            // Alle Clients der Organisation (via WorkTimes → User → Roles → Organization)
-            return {
-                workTimes: {
-                    some: {
-                        user: {
-                            roles: {
-                                some: {
-                                    role: {
-                                        organizationId: req.organizationId
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            };
-        case 'branch':
-            // Alle Branches der Organisation (via Users → Roles → Organization)
-            return {
-                users: {
-                    some: {
-                        user: {
-                            roles: {
-                                some: {
-                                    role: {
-                                        organizationId: req.organizationId
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            };
         case 'role':
-            // Alle Rollen der Organisation
             return {
                 organizationId: req.organizationId
             };
         default:
-            // Fallback: Kein Filter (alle Daten anzeigen)
             return {};
     }
 };

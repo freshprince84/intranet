@@ -137,7 +137,8 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             status: taskData.status || 'open',
             qualityControlId: taskData.qualityControlId,
             branchId: taskData.branchId,
-            dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null
+            dueDate: taskData.dueDate ? new Date(taskData.dueDate) : null,
+            organizationId: req.organizationId || null
         };
         // Füge responsibleId nur hinzu, wenn ein Wert angegeben ist (nicht null oder undefined)
         if (taskData.responsibleId) {

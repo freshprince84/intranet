@@ -132,7 +132,8 @@ const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 userId: Number(userId),
                 branchId: Number(branchId),
                 // Speichere die Zeitzone des Benutzers, um später die korrekte Anzeige zu ermöglichen
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                organizationId: req.organizationId || null
             },
             include: {
                 branch: true
@@ -146,7 +147,7 @@ const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             message: `Zeiterfassung für ${worktime.branch.name} wurde gestartet.`,
             type: client_1.NotificationType.worktime,
             relatedEntityId: worktime.id,
-            relatedEntityType: 'worktime_start'
+            relatedEntityType: 'start'
         });
         res.status(201).json(worktime);
     }
@@ -192,7 +193,7 @@ const stopWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             message: `Zeiterfassung für ${worktime.branch.name} wurde beendet.`,
             type: client_1.NotificationType.worktime,
             relatedEntityId: worktime.id,
-            relatedEntityType: 'worktime_stop'
+            relatedEntityType: 'stop'
         });
         res.json(worktime);
     }
@@ -731,7 +732,9 @@ const getActiveWorktime = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 message: 'Keine aktive Zeiterfassung gefunden'
             });
         }
-        res.json(Object.assign(Object.assign({}, activeWorktime), { active: true }));
+        res.json(Object.assign(Object.assign({}, activeWorktime), { active: true, 
+            // organizationId explizit zurückgeben für Frontend-Vergleich
+            organizationId: activeWorktime.organizationId }));
     }
     catch (error) {
         console.error('Fehler beim Abrufen der aktiven Zeiterfassung:', error);
@@ -838,7 +841,7 @@ const checkAndStopExceededWorktimes = () => __awaiter(void 0, void 0, void 0, fu
                     message: `Deine Zeiterfassung wurde automatisch beendet, da die tägliche Arbeitszeit von ${worktime.user.normalWorkingHours}h erreicht wurde.`,
                     type: client_1.NotificationType.worktime,
                     relatedEntityId: worktime.id,
-                    relatedEntityType: 'worktime_auto_stop'
+                    relatedEntityType: 'auto_stop'
                 });
                 console.log(`Zeiterfassung für Benutzer ${worktime.userId} automatisch beendet.`);
             }

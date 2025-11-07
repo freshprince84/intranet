@@ -12,6 +12,12 @@ interface MarkdownPreviewProps {
   }>;
   showImagePreview?: boolean;
   onlyAttachments?: boolean; // Nur Anhänge rendern, ohne Text
+  attachmentMetadata?: Array<{
+    id: number;
+    fileName: string;
+    fileType: string;
+    url: string;
+  }>; // Attachment-Metadaten für bessere Dateityp-Erkennung
 }
 
 const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ 
@@ -20,7 +26,8 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   maxHeight = "150px",
   temporaryAttachments = [],
   showImagePreview = false,
-  onlyAttachments = false
+  onlyAttachments = false,
+  attachmentMetadata = []
 }) => {
   // Extrahiere alle Anhänge aus dem Markdown
   const extractAttachments = () => {
@@ -42,10 +49,10 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     
     const allAttachments = [...imageMatches, ...linkMatches];
     
-    // Duplikate entfernen - gruppieren nach alt (Dateiname) und nur eindeutige behalten
+    // Duplikate entfernen - gruppieren nach alt (Dateiname) und URL, nur eindeutige behalten
     const uniqueAttachments = allAttachments.reduce((acc, current) => {
-      const key = `${current.type}-${current.alt}`;
-      if (!acc.some(item => `${item.type}-${item.alt}` === key)) {
+      const key = `${current.type}-${current.alt}-${current.url}`;
+      if (!acc.some(item => `${item.type}-${item.alt}-${item.url}` === key)) {
         acc.push(current);
       }
       return acc;
@@ -140,9 +147,36 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     );
   };
 
+  // Finde Attachment-Metadaten für einen Dateinamen
+  const getAttachmentMetadata = (fileName: string) => {
+    // Versuche zuerst nach Dateiname zu suchen
+    let metadata = attachmentMetadata.find(meta => meta.fileName === fileName);
+    
+    // Falls nicht gefunden, versuche auch nach Dateiname ohne Groß-/Kleinschreibung
+    if (!metadata) {
+      metadata = attachmentMetadata.find(meta => meta.fileName.toLowerCase() === fileName.toLowerCase());
+    }
+    
+    // Falls immer noch nicht gefunden, versuche die ID aus der URL zu extrahieren
+    if (!metadata && attachmentMetadata.length > 0) {
+      // Versuche Attachment-ID aus URL zu extrahieren (falls vorhanden)
+      // Dies ist ein Fallback für den Fall, dass der Dateiname nicht exakt übereinstimmt
+    }
+    
+    return metadata;
+  };
+  
   // Rendere Anhänge direkt als Vorschau
   const renderInlineAttachments = () => {
     const attachments = extractAttachments();
+    
+    // DEBUG: Logging für Diagnose
+    console.log('📦 renderInlineAttachments aufgerufen:', {
+      contentLength: content.length,
+      attachmentsFound: attachments.length,
+      attachmentMetadataCount: attachmentMetadata.length,
+      attachmentMetadata: attachmentMetadata
+    });
     
     // Filtere ungültige Anhänge heraus
     const validAttachments = attachments.filter(attachment => {
@@ -156,111 +190,175 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     
     if (validAttachments.length === 0) return null;
     
+    // Rendere alle Anhänge und filtere null-Werte heraus
+    const renderedAttachments = validAttachments
+      .map((attachment, index) => {
+        // Hole Metadaten für diesen Anhang (falls verfügbar)
+        let metadata = getAttachmentMetadata(attachment.alt);
+        
+        // Falls Metadaten nicht per Dateiname gefunden wurden, versuche per URL-ID
+        if (!metadata && attachment.url) {
+          const attachmentIdMatch = attachment.url.match(/\/attachments\/(\d+)/);
+          if (attachmentIdMatch) {
+            const attachmentId = parseInt(attachmentIdMatch[1]);
+            metadata = attachmentMetadata.find(meta => meta.id === attachmentId);
+          }
+        }
+        
+        // Bestimme URL: Priorität: Metadaten-URL > Markdown-URL > Temporäre URL
+        let url: string = '';
+        if (metadata?.url) {
+          // Verwende URL aus Metadaten (falls verfügbar)
+          url = metadata.url;
+        } else {
+          // Verwende URL aus Markdown
+          url = attachment.url || '';
+        }
+        
+        // Temporäre URLs haben Vorrang (für neue Uploads)
+        if (attachment.isTemporary) {
+          const tempUrl = getTemporaryFileUrl(attachment.alt);
+          if (tempUrl) url = tempUrl;
+        }
+        
+        // Sicherstellen, dass url definiert ist
+        if (!url || url === "wird nach dem Erstellen hochgeladen") {
+          return null;
+        }
+        
+        // Prüfe Dateityp basierend auf Metadaten, URL und Dateiname
+        const fileName = attachment.alt.toLowerCase();
+        
+        // Bestimme Dateityp: Priorität: Metadaten > Markdown-Type > URL/Dateiname
+        let isImage = false;
+        let isPdf = false;
+        
+        // DEBUG: Logging für Diagnose
+        console.log('🔍 Attachment Debug:', {
+          alt: attachment.alt,
+          fileName: fileName,
+          url: url,
+          metadata: metadata,
+          attachmentType: attachment.type
+        });
+        
+        // 1. Prüfe Metadaten (höchste Priorität)
+        if (metadata?.fileType) {
+          isImage = metadata.fileType.startsWith('image/');
+          isPdf = metadata.fileType === 'application/pdf';
+          console.log('✅ Metadaten gefunden:', { fileType: metadata.fileType, isImage, isPdf });
+        }
+        
+        // 2. Falls keine Metadaten, prüfe Markdown-Type
+        if (!metadata && attachment.type === 'image') {
+          isImage = true;
+        }
+        
+        // 3. Falls immer noch nicht bestimmt, prüfe URL und Dateiname
+        if (!metadata) {
+          const urlEndsWithPdf = url && url.toLowerCase().endsWith('.pdf');
+          const urlMatchesPdf = url && url.match(/\.pdf(\?|$)/i);
+          const fileNameEndsWithPdf = fileName.endsWith('.pdf');
+          const isApiAttachmentPdf = url && (url.includes('/api/requests/attachments/') || url.includes('/api/tasks/attachments/')) && fileNameEndsWithPdf;
+          
+          isPdf = urlEndsWithPdf || urlMatchesPdf || fileNameEndsWithPdf || isApiAttachmentPdf;
+          
+          console.log('🔍 PDF-Erkennung (ohne Metadaten):', {
+            urlEndsWithPdf,
+            urlMatchesPdf,
+            fileNameEndsWithPdf,
+            isApiAttachmentPdf,
+            isPdf
+          });
+        }
+        
+        console.log('📄 Finale Entscheidung:', { isImage, isPdf, isExternalLink: url && url.match(/^https?:\/\//) && !isImage && !isPdf });
+        
+        const isExternalLink = url && url.match(/^https?:\/\//) && !isImage && !isPdf;
+        
+        return (
+          <div key={index} className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+            {isImage ? (
+              // Bild-Vorschau - groß und prominent
+              <div>
+                <img 
+                  src={url} 
+                  alt={attachment.alt} 
+                  className="w-full h-auto max-h-96 object-contain" 
+                  style={{ display: 'block' }}
+                />
+              </div>
+            ) : isPdf ? (
+              // PDF-Vorschau
+              <div className="p-3">
+                <div className="flex items-center mb-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <span className="text-sm font-medium dark:text-gray-200">{attachment.alt}</span>
+                  <a 
+                    href={url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="ml-auto text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                  >
+                    Öffnen
+                  </a>
+                </div>
+                <iframe 
+                  src={`${url}#view=FitH`} 
+                  className="w-full rounded border dark:border-gray-600"
+                  style={{ height: '400px' }}
+                  title={attachment.alt}
+                />
+              </div>
+            ) : isExternalLink ? (
+              // Externer Link-Vorschau
+              <div className="p-3">
+                <div className="flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                  </svg>
+                  <a 
+                    href={url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                  >
+                    {attachment.alt || url}
+                  </a>
+                </div>
+                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 break-all">
+                  {url}
+                </div>
+              </div>
+            ) : (
+              // Andere Dateitypen
+              <div className="p-3 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <a 
+                  href={url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  {attachment.alt}
+                </a>
+              </div>
+            )}
+          </div>
+        );
+      })
+      .filter((item): item is React.ReactElement => item !== null);
+    
+    // Wenn nach dem Filtern keine Anhänge mehr vorhanden sind, null zurückgeben
+    if (renderedAttachments.length === 0) return null;
+    
     return (
       <div className="flex flex-col gap-3 mt-2">
-        {validAttachments
-          .map((attachment, index) => {
-            let url: string = attachment.url || '';
-            if (attachment.isTemporary) {
-              const tempUrl = getTemporaryFileUrl(attachment.alt);
-              if (tempUrl) url = tempUrl;
-            }
-            
-            // Sicherstellen, dass url definiert ist
-            if (!url || url === "wird nach dem Erstellen hochgeladen") {
-              return null;
-            }
-            
-            // Prüfe Dateityp basierend auf URL und Dateiname
-            const fileName = attachment.alt.toLowerCase();
-            // Bilder: Prüfe auf Bild-Endungen oder API-Endpunkte für Attachments
-            const isImage = attachment.type === 'image' || 
-                           (url && url.match(/\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i)) ||
-                           fileName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) ||
-                           (url && (url.includes('/api/requests/attachments/') || url.includes('/api/tasks/attachments/')) && 
-                            (fileName.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i) || !fileName.endsWith('.pdf')));
-            const isPdf = (url && url.toLowerCase().endsWith('.pdf')) || 
-                         (url && url.match(/\.pdf(\?|$)/i)) ||
-                         fileName.endsWith('.pdf') ||
-                         (url && (url.includes('/api/requests/attachments/') || url.includes('/api/tasks/attachments/')) && fileName.endsWith('.pdf'));
-            const isExternalLink = url && url.match(/^https?:\/\//) && !isImage && !isPdf;
-            
-            return (
-              <div key={index} className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
-                {isImage ? (
-                  // Bild-Vorschau - groß und prominent
-                  <div>
-                    <img 
-                      src={url} 
-                      alt={attachment.alt} 
-                      className="w-full h-auto max-h-96 object-contain" 
-                      style={{ display: 'block' }}
-                    />
-                  </div>
-                ) : isPdf ? (
-                  // PDF-Vorschau
-                  <div className="p-3">
-                    <div className="flex items-center mb-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      <span className="text-sm font-medium dark:text-gray-200">{attachment.alt}</span>
-                      <a 
-                        href={url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="ml-auto text-blue-600 dark:text-blue-400 hover:underline text-sm"
-                      >
-                        Öffnen
-                      </a>
-                    </div>
-                    <iframe 
-                      src={`${url}#view=FitH`} 
-                      className="w-full rounded border dark:border-gray-600"
-                      style={{ height: '400px' }}
-                      title={attachment.alt}
-                    />
-                  </div>
-                ) : isExternalLink ? (
-                  // Externer Link-Vorschau
-                  <div className="p-3">
-                    <div className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                      </svg>
-                      <a 
-                        href={url} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 dark:text-blue-400 hover:underline break-all"
-                      >
-                        {attachment.alt || url}
-                      </a>
-                    </div>
-                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 break-all">
-                      {url}
-                    </div>
-                  </div>
-                ) : (
-                  // Andere Dateitypen
-                  <div className="p-3 flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    <a 
-                      href={url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-blue-600 dark:text-blue-400 hover:underline"
-                    >
-                      {attachment.alt}
-                    </a>
-                  </div>
-                )}
-              </div>
-            );
-          })
-          .filter(Boolean)}
+        {renderedAttachments}
       </div>
     );
   };
@@ -268,7 +366,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
   // Nur Anhänge rendern (ohne Text)
   if (onlyAttachments) {
     const attachments = renderInlineAttachments();
-    if (!attachments) return null;
+    if (!attachments) return <div className={className}></div>;
     return (
       <div className={className}>
         {attachments}
@@ -287,25 +385,129 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       style.overflowY = 'auto';
     }
     
-    // Ersetze Markdown-Links und Bilder im Text durch Platzhalter, damit sie nicht doppelt angezeigt werden
+    // Extrahiere Anhänge aus dem originalen content
+    const attachments = extractAttachments();
+    
+    // Filtere Bilder heraus, die als große Vorschau gerendert werden sollen
+    const imagesToRender = attachments.filter(attachment => {
+      // Hole Metadaten für diesen Anhang
+      let metadata = getAttachmentMetadata(attachment.alt);
+      
+      // Bestimme URL
+      let url: string = '';
+      if (metadata?.url) {
+        url = metadata.url;
+      } else {
+        url = attachment.url || '';
+      }
+      
+      if (attachment.isTemporary) {
+        const tempUrl = getTemporaryFileUrl(attachment.alt);
+        if (tempUrl) url = tempUrl;
+      }
+      
+      if (!url || url === "wird nach dem Erstellen hochgeladen") {
+        return false;
+      }
+      
+      // Prüfe ob es ein Bild ist (nicht PDF)
+      let isImage = false;
+      let isPdf = false;
+      
+      if (metadata?.fileType) {
+        isImage = metadata.fileType.startsWith('image/');
+        isPdf = metadata.fileType === 'application/pdf';
+      } else if (attachment.type === 'image') {
+        isImage = true;
+      }
+      
+      // Nur Bilder rendern, keine PDFs (PDFs werden separat behandelt)
+      return isImage && !isPdf;
+    });
+    
+    // Ersetze Markdown-Links und Bilder im Text durch Platzhalter
     let processedContent = content;
     const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
     const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
     
-    // Ersetze Bilder durch Text-Referenz
-    processedContent = processedContent.replace(imageRegex, (match, alt, url) => {
-      return `[Bild: ${alt}]`;
+    // Ersetze ALLE Bilder komplett aus dem Text (werden separat als große Vorschau gerendert)
+    // WICHTIG: Muss GLOBAL sein, damit alle Bilder entfernt werden
+    processedContent = processedContent.replace(imageRegex, () => {
+      // Entferne ALLE Bilder komplett - sie werden durch renderFilteredAttachments() gerendert
+      return '';
     });
     
-    // Ersetze Links durch Text mit Link-Referenz
+    // Entferne auch alle Leerzeilen, die durch das Entfernen der Bilder entstehen könnten
+    processedContent = processedContent.replace(/\n{3,}/g, '\n\n').trim();
+    
+    // Ersetze Links durch Text mit Link-Referenz (aber nur wenn es kein Bild ist)
     processedContent = processedContent.replace(linkRegex, (match, alt, url) => {
+      // Überspringe Links, die bereits als Bilder behandelt wurden
+      if (match.startsWith('![')) {
+        return match;
+      }
       return `${alt} [Link]`;
     });
     
+    // Rendere nur die Bilder aus imagesToRender als große Vorschau
+    const renderFilteredAttachments = () => {
+      if (imagesToRender.length === 0) return null;
+      
+      // Entferne Duplikate basierend auf Dateiname und URL
+      const uniqueImages = imagesToRender.reduce((acc, current) => {
+        const key = `${current.alt}-${current.url || ''}`;
+        if (!acc.some(img => `${img.alt}-${img.url || ''}` === key)) {
+          acc.push(current);
+        }
+        return acc;
+      }, [] as typeof imagesToRender);
+      
+      return (
+        <div className="flex flex-col gap-3 mt-2">
+          {uniqueImages.map((attachment, index) => {
+            // Hole Metadaten für diesen Anhang
+            let metadata = getAttachmentMetadata(attachment.alt);
+            
+            // Bestimme URL
+            let url: string = '';
+            if (metadata?.url) {
+              url = metadata.url;
+            } else {
+              url = attachment.url || '';
+            }
+            
+            if (attachment.isTemporary) {
+              const tempUrl = getTemporaryFileUrl(attachment.alt);
+              if (tempUrl) url = tempUrl;
+            }
+            
+            if (!url || url === "wird nach dem Erstellen hochgeladen") {
+              return null;
+            }
+            
+            return (
+              <div key={`img-${attachment.alt}-${url}-${index}`} className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                <img 
+                  src={url} 
+                  alt={attachment.alt} 
+                  className="w-full h-auto max-h-96 object-contain" 
+                  style={{ display: 'block' }}
+                />
+              </div>
+            );
+          }).filter((item): item is React.ReactElement => item !== null)}
+        </div>
+      );
+    };
+    
     return (
       <div className={`markdown-preview ${className} dark:text-gray-200`} style={style}>
-        <div dangerouslySetInnerHTML={{ __html: processedContent.replace(/\n/g, '<br/>') }} />
-        {renderInlineAttachments()}
+        {/* Text-Inhalt ohne Bilder */}
+        {processedContent && (
+          <div dangerouslySetInnerHTML={{ __html: processedContent.replace(/\n/g, '<br/>') }} />
+        )}
+        {/* Bilder als große Vorschau */}
+        {renderFilteredAttachments()}
       </div>
     );
   }

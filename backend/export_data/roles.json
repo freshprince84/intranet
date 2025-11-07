@@ -1,0 +1,86 @@
+[
+  {
+    "id": 3,
+    "name": "Admin",
+    "description": "Administrator der Organisation",
+    "organizationId": 4
+  },
+  {
+    "id": 4,
+    "name": "User",
+    "description": "Standardbenutzer der Organisation",
+    "organizationId": 4
+  },
+  {
+    "id": 5,
+    "name": "Hamburger",
+    "description": "Hamburger-Rolle für neue Benutzer der Organisation",
+    "organizationId": 4
+  },
+  {
+    "id": 7,
+    "name": "Owner",
+    "description": null,
+    "organizationId": 1
+  },
+  {
+    "id": 8,
+    "name": "Admin",
+    "description": null,
+    "organizationId": 1
+  },
+  {
+    "id": 9,
+    "name": "Reception",
+    "description": "",
+    "organizationId": 1
+  },
+  {
+    "id": 10,
+    "name": "Restaurant",
+    "description": null,
+    "organizationId": 1
+  },
+  {
+    "id": 11,
+    "name": "Bar",
+    "description": null,
+    "organizationId": 1
+  },
+  {
+    "id": 12,
+    "name": "Cleaning",
+    "description": null,
+    "organizationId": 1
+  },
+  {
+    "id": 13,
+    "name": "Promotion",
+    "description": null,
+    "organizationId": 1
+  },
+  {
+    "id": 14,
+    "name": "IT",
+    "description": null,
+    "organizationId": 1
+  },
+  {
+    "id": 15,
+    "name": "Contabilidad",
+    "description": null,
+    "organizationId": 1
+  },
+  {
+    "id": 16,
+    "name": "Derecho",
+    "description": null,
+    "organizationId": 1
+  },
+  {
+    "id": 17,
+    "name": "Hamburger",
+    "description": null,
+    "organizationId": 1
+  }
+]

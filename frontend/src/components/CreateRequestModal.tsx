@@ -255,7 +255,8 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
       
       setTemporaryAttachments(prev => [...prev, newAttachment]);
 
-      // Füge einen Link/Vorschau in die Beschreibung ein
+      // Füge Markdown-Link ins Textarea ein (für Card-Anzeige)
+      // Bilder werden zusätzlich als große Vorschau unter dem Textarea angezeigt
       let insertText = '';
       if (file.type.startsWith('image/')) {
         // Hinweis: Wir verwenden hier den Platzhalter, da die Datei erst nach dem Erstellen hochgeladen wird
@@ -478,6 +479,30 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
     );
   };
 
+  // Rendere große Bildvorschauen für Bilder (nicht PDFs)
+  const renderImagePreviews = () => {
+    const temporaryImageAttachments = temporaryAttachments.filter(att => 
+      att.fileType?.startsWith('image/') && att.file
+    );
+    
+    if (temporaryImageAttachments.length === 0) return null;
+    
+    return (
+      <div className="flex flex-col gap-3 mt-2">
+        {temporaryImageAttachments.map((attachment, index) => (
+          <div key={`temp-img-${index}`} className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+            <img 
+              src={URL.createObjectURL(attachment.file!)}
+              alt={attachment.fileName}
+              className="w-full h-auto max-h-96 object-contain"
+              style={{ display: 'block' }}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   if (!isOpen) return null;
 
   // Für Mobile (unter 640px) - klassisches Modal
@@ -565,6 +590,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                       <MarkdownPreview 
                         content={formData.description} 
                         temporaryAttachments={temporaryAttachments}
+                        showImagePreview={true}
                       />
                     </div>
                   )}
@@ -762,6 +788,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                   <MarkdownPreview 
                     content={formData.description} 
                     temporaryAttachments={temporaryAttachments}
+                    showImagePreview={true}
                   />
                 </div>
               )}

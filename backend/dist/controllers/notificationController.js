@@ -53,63 +53,127 @@ const prisma = new client_1.PrismaClient();
 // Hilfsfunktion zum Prüfen, ob Benachrichtigung für einen Typ aktiviert ist
 function isNotificationEnabled(userId, type, relatedEntityType) {
     return __awaiter(this, void 0, void 0, function* () {
-        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x;
+        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, _40, _41, _42, _43, _44, _45, _46, _47, _48, _49;
         // Benutzereinstellungen abrufen
         const userSettings = yield prisma.userNotificationSettings.findFirst({
             where: { userId }
         });
         // Systemeinstellungen abrufen
         const systemSettings = yield prisma.notificationSettings.findFirst();
+        // Wenn keine Systemeinstellungen vorhanden sind, erstelle Standard-Werte
+        if (!systemSettings) {
+            console.warn('Keine NotificationSettings in der Datenbank gefunden. Verwende Standard-Werte (alle aktiviert).');
+        }
         let enabled = true;
         switch (type) {
             case client_1.NotificationType.task:
-                enabled = ((_a = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskCreate) !== null && _a !== void 0 ? _a : systemSettings.taskCreate) ||
-                    ((_b = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskUpdate) !== null && _b !== void 0 ? _b : systemSettings.taskUpdate) ||
-                    ((_c = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskDelete) !== null && _c !== void 0 ? _c : systemSettings.taskDelete) ||
-                    ((_d = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskStatusChange) !== null && _d !== void 0 ? _d : systemSettings.taskStatusChange);
+                if (relatedEntityType === 'create') {
+                    enabled = (_b = (_a = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskCreate) !== null && _a !== void 0 ? _a : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.taskCreate) !== null && _b !== void 0 ? _b : true;
+                }
+                else if (relatedEntityType === 'update') {
+                    enabled = (_d = (_c = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskUpdate) !== null && _c !== void 0 ? _c : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.taskUpdate) !== null && _d !== void 0 ? _d : true;
+                }
+                else if (relatedEntityType === 'delete') {
+                    enabled = (_f = (_e = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskDelete) !== null && _e !== void 0 ? _e : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.taskDelete) !== null && _f !== void 0 ? _f : true;
+                }
+                else if (relatedEntityType === 'status') {
+                    enabled = (_h = (_g = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskStatusChange) !== null && _g !== void 0 ? _g : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.taskStatusChange) !== null && _h !== void 0 ? _h : true;
+                }
+                else {
+                    // Fallback: wenn kein relatedEntityType angegeben, prüfe ob IRGENDEINE Task-Notification aktiviert ist
+                    enabled = ((_k = (_j = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskCreate) !== null && _j !== void 0 ? _j : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.taskCreate) !== null && _k !== void 0 ? _k : true) ||
+                        ((_m = (_l = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskUpdate) !== null && _l !== void 0 ? _l : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.taskUpdate) !== null && _m !== void 0 ? _m : true) ||
+                        ((_p = (_o = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskDelete) !== null && _o !== void 0 ? _o : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.taskDelete) !== null && _p !== void 0 ? _p : true) ||
+                        ((_r = (_q = userSettings === null || userSettings === void 0 ? void 0 : userSettings.taskStatusChange) !== null && _q !== void 0 ? _q : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.taskStatusChange) !== null && _r !== void 0 ? _r : true);
+                }
                 break;
             case client_1.NotificationType.request:
-                enabled = ((_e = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestCreate) !== null && _e !== void 0 ? _e : systemSettings.requestCreate) ||
-                    ((_f = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestUpdate) !== null && _f !== void 0 ? _f : systemSettings.requestUpdate) ||
-                    ((_g = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestDelete) !== null && _g !== void 0 ? _g : systemSettings.requestDelete) ||
-                    ((_h = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestStatusChange) !== null && _h !== void 0 ? _h : systemSettings.requestStatusChange);
+                if (relatedEntityType === 'create') {
+                    enabled = (_t = (_s = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestCreate) !== null && _s !== void 0 ? _s : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.requestCreate) !== null && _t !== void 0 ? _t : true;
+                }
+                else if (relatedEntityType === 'update') {
+                    enabled = (_v = (_u = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestUpdate) !== null && _u !== void 0 ? _u : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.requestUpdate) !== null && _v !== void 0 ? _v : true;
+                }
+                else if (relatedEntityType === 'delete') {
+                    enabled = (_x = (_w = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestDelete) !== null && _w !== void 0 ? _w : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.requestDelete) !== null && _x !== void 0 ? _x : true;
+                }
+                else if (relatedEntityType === 'status') {
+                    enabled = (_z = (_y = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestStatusChange) !== null && _y !== void 0 ? _y : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.requestStatusChange) !== null && _z !== void 0 ? _z : true;
+                }
+                else {
+                    // Fallback: wenn kein relatedEntityType angegeben, prüfe ob IRGENDEINE Request-Notification aktiviert ist
+                    enabled = ((_1 = (_0 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestCreate) !== null && _0 !== void 0 ? _0 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.requestCreate) !== null && _1 !== void 0 ? _1 : true) ||
+                        ((_3 = (_2 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestUpdate) !== null && _2 !== void 0 ? _2 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.requestUpdate) !== null && _3 !== void 0 ? _3 : true) ||
+                        ((_5 = (_4 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestDelete) !== null && _4 !== void 0 ? _4 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.requestDelete) !== null && _5 !== void 0 ? _5 : true) ||
+                        ((_7 = (_6 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.requestStatusChange) !== null && _6 !== void 0 ? _6 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.requestStatusChange) !== null && _7 !== void 0 ? _7 : true);
+                }
                 break;
             case client_1.NotificationType.user:
-                enabled = ((_j = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userCreate) !== null && _j !== void 0 ? _j : systemSettings.userCreate) ||
-                    ((_k = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userUpdate) !== null && _k !== void 0 ? _k : systemSettings.userUpdate) ||
-                    ((_l = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userDelete) !== null && _l !== void 0 ? _l : systemSettings.userDelete);
+                if (relatedEntityType === 'create') {
+                    enabled = (_9 = (_8 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userCreate) !== null && _8 !== void 0 ? _8 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.userCreate) !== null && _9 !== void 0 ? _9 : true;
+                }
+                else if (relatedEntityType === 'update') {
+                    enabled = (_11 = (_10 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userUpdate) !== null && _10 !== void 0 ? _10 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.userUpdate) !== null && _11 !== void 0 ? _11 : true;
+                }
+                else if (relatedEntityType === 'delete') {
+                    enabled = (_13 = (_12 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userDelete) !== null && _12 !== void 0 ? _12 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.userDelete) !== null && _13 !== void 0 ? _13 : true;
+                }
+                else {
+                    // Fallback: wenn kein relatedEntityType angegeben, prüfe ob IRGENDEINE User-Notification aktiviert ist
+                    enabled = ((_15 = (_14 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userCreate) !== null && _14 !== void 0 ? _14 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.userCreate) !== null && _15 !== void 0 ? _15 : true) ||
+                        ((_17 = (_16 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userUpdate) !== null && _16 !== void 0 ? _16 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.userUpdate) !== null && _17 !== void 0 ? _17 : true) ||
+                        ((_19 = (_18 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.userDelete) !== null && _18 !== void 0 ? _18 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.userDelete) !== null && _19 !== void 0 ? _19 : true);
+                }
                 break;
             case client_1.NotificationType.role:
-                enabled = ((_m = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleCreate) !== null && _m !== void 0 ? _m : systemSettings.roleCreate) ||
-                    ((_o = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleUpdate) !== null && _o !== void 0 ? _o : systemSettings.roleUpdate) ||
-                    ((_p = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleDelete) !== null && _p !== void 0 ? _p : systemSettings.roleDelete);
+                if (relatedEntityType === 'create') {
+                    enabled = (_21 = (_20 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleCreate) !== null && _20 !== void 0 ? _20 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.roleCreate) !== null && _21 !== void 0 ? _21 : true;
+                }
+                else if (relatedEntityType === 'update') {
+                    enabled = (_23 = (_22 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleUpdate) !== null && _22 !== void 0 ? _22 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.roleUpdate) !== null && _23 !== void 0 ? _23 : true;
+                }
+                else if (relatedEntityType === 'delete') {
+                    enabled = (_25 = (_24 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleDelete) !== null && _24 !== void 0 ? _24 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.roleDelete) !== null && _25 !== void 0 ? _25 : true;
+                }
+                else {
+                    // Fallback: wenn kein relatedEntityType angegeben, prüfe ob IRGENDEINE Role-Notification aktiviert ist
+                    enabled = ((_27 = (_26 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleCreate) !== null && _26 !== void 0 ? _26 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.roleCreate) !== null && _27 !== void 0 ? _27 : true) ||
+                        ((_29 = (_28 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleUpdate) !== null && _28 !== void 0 ? _28 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.roleUpdate) !== null && _29 !== void 0 ? _29 : true) ||
+                        ((_31 = (_30 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.roleDelete) !== null && _30 !== void 0 ? _30 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.roleDelete) !== null && _31 !== void 0 ? _31 : true);
+                }
                 break;
             case client_1.NotificationType.worktime:
                 if (relatedEntityType === 'start') {
-                    enabled = (_q = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeStart) !== null && _q !== void 0 ? _q : systemSettings.worktimeStart;
+                    enabled = (_33 = (_32 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeStart) !== null && _32 !== void 0 ? _32 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.worktimeStart) !== null && _33 !== void 0 ? _33 : true;
                 }
                 else if (relatedEntityType === 'stop') {
-                    enabled = (_r = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeStop) !== null && _r !== void 0 ? _r : systemSettings.worktimeStop;
+                    enabled = (_35 = (_34 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeStop) !== null && _34 !== void 0 ? _34 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.worktimeStop) !== null && _35 !== void 0 ? _35 : true;
                 }
                 else if (relatedEntityType === 'auto_stop') {
-                    enabled = (_s = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeAutoStop) !== null && _s !== void 0 ? _s : systemSettings.worktimeAutoStop;
+                    enabled = (_37 = (_36 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeAutoStop) !== null && _36 !== void 0 ? _36 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.worktimeAutoStop) !== null && _37 !== void 0 ? _37 : true;
+                }
+                else {
+                    // Fallback: wenn kein relatedEntityType angegeben, prüfe ob IRGENDEINE Worktime-Notification aktiviert ist
+                    enabled = ((_39 = (_38 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeStart) !== null && _38 !== void 0 ? _38 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.worktimeStart) !== null && _39 !== void 0 ? _39 : true) ||
+                        ((_41 = (_40 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeStop) !== null && _40 !== void 0 ? _40 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.worktimeStop) !== null && _41 !== void 0 ? _41 : true) ||
+                        ((_43 = (_42 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeAutoStop) !== null && _42 !== void 0 ? _42 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.worktimeAutoStop) !== null && _43 !== void 0 ? _43 : true);
                 }
                 break;
             case client_1.NotificationType.worktime_manager_stop:
-                enabled = (_t = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeManagerStop) !== null && _t !== void 0 ? _t : systemSettings.worktimeManagerStop;
+                enabled = (_45 = (_44 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.worktimeManagerStop) !== null && _44 !== void 0 ? _44 : systemSettings === null || systemSettings === void 0 ? void 0 : systemSettings.worktimeManagerStop) !== null && _45 !== void 0 ? _45 : true;
                 break;
             // Neue Organisation-spezifische Benachrichtigungen
             case client_1.NotificationType.joinRequest:
-                enabled = (_u = userSettings === null || userSettings === void 0 ? void 0 : userSettings.joinRequestReceived) !== null && _u !== void 0 ? _u : true; // Default: aktiviert
+                enabled = (_46 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.joinRequestReceived) !== null && _46 !== void 0 ? _46 : true; // Default: aktiviert
                 break;
             case client_1.NotificationType.joinApproved:
-                enabled = (_v = userSettings === null || userSettings === void 0 ? void 0 : userSettings.joinRequestApproved) !== null && _v !== void 0 ? _v : true; // Default: aktiviert
+                enabled = (_47 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.joinRequestApproved) !== null && _47 !== void 0 ? _47 : true; // Default: aktiviert
                 break;
             case client_1.NotificationType.joinRejected:
-                enabled = (_w = userSettings === null || userSettings === void 0 ? void 0 : userSettings.joinRequestRejected) !== null && _w !== void 0 ? _w : true; // Default: aktiviert
+                enabled = (_48 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.joinRequestRejected) !== null && _48 !== void 0 ? _48 : true; // Default: aktiviert
                 break;
             case client_1.NotificationType.organizationInvitation:
-                enabled = (_x = userSettings === null || userSettings === void 0 ? void 0 : userSettings.organizationInvitationReceived) !== null && _x !== void 0 ? _x : true; // Default: aktiviert
+                enabled = (_49 = userSettings === null || userSettings === void 0 ? void 0 : userSettings.organizationInvitationReceived) !== null && _49 !== void 0 ? _49 : true; // Default: aktiviert
                 break;
             case client_1.NotificationType.system:
                 enabled = true; // System-Benachrichtigungen sind immer aktiviert
@@ -124,6 +188,7 @@ function createNotificationIfEnabled(data) {
         try {
             const enabled = yield isNotificationEnabled(data.userId, data.type, data.relatedEntityType);
             if (!enabled) {
+                console.log(`Notification nicht erstellt: Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId} ist deaktiviert`);
                 return false;
             }
             const notification = yield prisma.notification.create({
@@ -136,9 +201,18 @@ function createNotificationIfEnabled(data) {
                     relatedEntityType: data.relatedEntityType
                 }
             });
+            console.log(`Notification erstellt: ID ${notification.id}, Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId}`);
             return true;
         }
         catch (error) {
+            console.error('Fehler beim Erstellen der Notification:', error);
+            console.error('Notification-Daten:', {
+                userId: data.userId,
+                type: data.type,
+                relatedEntityType: data.relatedEntityType,
+                relatedEntityId: data.relatedEntityId,
+                title: data.title
+            });
             return false;
         }
     });

@@ -67,6 +67,11 @@ export const getAllRequests = async (req: Request, res: Response) => {
                 },
                 branch: {
                     select: branchSelect
+                },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
                 }
             },
             orderBy: {
@@ -86,7 +91,15 @@ export const getAllRequests = async (req: Request, res: Response) => {
             requestedBy: request.requester,
             responsible: request.responsible,
             branch: request.branch,
-            createTodo: request.createTodo
+            createTodo: request.createTodo,
+            attachments: request.attachments.map(att => ({
+                id: att.id,
+                fileName: att.fileName,
+                fileType: att.fileType,
+                fileSize: att.fileSize,
+                filePath: att.filePath,
+                uploadedAt: att.uploadedAt
+            }))
         }));
 
         res.json(formattedRequests);
@@ -118,6 +131,11 @@ export const getRequestById = async (req: Request<{ id: string }>, res: Response
                 },
                 branch: {
                     select: branchSelect
+                },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
                 }
             }
         });
@@ -138,7 +156,15 @@ export const getRequestById = async (req: Request<{ id: string }>, res: Response
             requestedBy: request.requester,
             responsible: request.responsible,
             branch: request.branch,
-            createTodo: request.createTodo
+            createTodo: request.createTodo,
+            attachments: request.attachments.map(att => ({
+                id: att.id,
+                fileName: att.fileName,
+                fileType: att.fileType,
+                fileSize: att.fileSize,
+                filePath: att.filePath,
+                uploadedAt: att.uploadedAt
+            }))
         };
 
         res.json(formattedRequest);

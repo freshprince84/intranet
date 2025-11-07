@@ -10,7 +10,7 @@ import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import WorktimeTracker from '../components/WorktimeTracker.tsx';
 import WorktimeList from '../components/WorktimeList.tsx';
-import { API_ENDPOINTS } from '../config/api.ts';
+import { API_ENDPOINTS, getTaskAttachmentUrl } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import FilterPane from '../components/FilterPane.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
@@ -51,6 +51,15 @@ interface Task {
     };
     dueDate: string | null;
     requestId: number | null;
+    attachments?: Array<{
+        id: number;
+        fileName: string;
+        fileType: string;
+        fileSize?: number;
+        filePath?: string;
+        uploadedAt?: string;
+        url: string;
+    }>;
 }
 
 interface SortConfig {
@@ -238,9 +247,29 @@ const Worktracker: React.FC = () => {
         try {
             setLoading(true);
             const response = await axiosInstance.get(API_ENDPOINTS.TASKS.BASE);
-            console.log('📋 Tasks geladen:', response.data.length, 'Tasks');
-            console.log('📋 Tasks Details:', response.data);
-            setTasks(response.data);
+            const tasksData = response.data;
+            
+            // Attachments sind bereits in der Response enthalten
+            // URL-Generierung für Attachments hinzufügen
+            const tasksWithAttachments = tasksData.map((task: Task) => {
+                const attachments = (task.attachments || []).map((att: any) => ({
+                    id: att.id,
+                    fileName: att.fileName,
+                    fileType: att.fileType,
+                    fileSize: att.fileSize,
+                    filePath: att.filePath,
+                    uploadedAt: att.uploadedAt,
+                    url: getTaskAttachmentUrl(task.id, att.id)
+                }));
+                
+                return {
+                    ...task,
+                    attachments: attachments
+                };
+            });
+            
+            console.log('📋 Tasks geladen:', tasksWithAttachments.length, 'Tasks');
+            setTasks(tasksWithAttachments);
             setError(null);
         } catch (error) {
             console.error('Fehler beim Laden der Tasks:', error);
@@ -1435,6 +1464,7 @@ const Worktracker: React.FC = () => {
                                                         label: t('tasks.columns.description'),
                                                         value: '',
                                                         descriptionContent: task.description,
+                                                        attachmentMetadata: task.attachments || [], // Attachment-Metadaten für Vorschau
                                                         section: 'full'
                                                     });
                                                 }
@@ -1950,6 +1980,7 @@ const Worktracker: React.FC = () => {
                                                         label: t('tasks.columns.description'),
                                                         value: '',
                                                         descriptionContent: task.description,
+                                                        attachmentMetadata: task.attachments || [], // Attachment-Metadaten für Vorschau
                                                         section: 'full'
                                                     });
                                                 }

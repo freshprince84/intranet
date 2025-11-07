@@ -50,6 +50,11 @@ export const getAllTasks = async (req: Request, res: Response) => {
                 },
                 branch: {
                     select: branchSelect
+                },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
                 }
             }
         });
@@ -91,6 +96,11 @@ export const getTaskById = async (req: Request<TaskParams>, res: Response) => {
                 },
                 branch: {
                     select: branchSelect
+                },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
                 }
             }
         });

@@ -295,7 +295,8 @@ const CreateTaskModal = ({ isOpen, onClose, onTaskCreated }: CreateTaskModalProp
             
             setTemporaryAttachments(prev => [...prev, newAttachment]);
 
-            // Füge einen Link/Vorschau in die Beschreibung ein
+            // Füge Markdown-Link ins Textarea ein (für Card-Anzeige)
+            // Bilder werden zusätzlich als große Vorschau unter dem Textarea angezeigt
             let insertText = '';
             if (file.type.startsWith('image/')) {
                 // Hinweis: Wir verwenden hier den Platzhalter, da die Datei erst nach dem Erstellen hochgeladen wird
@@ -883,6 +884,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                     <MarkdownPreview 
                                         content={description} 
                                         temporaryAttachments={temporaryAttachments}
+                                        showImagePreview={true}
                                     />
                                 </div>
                             )}
