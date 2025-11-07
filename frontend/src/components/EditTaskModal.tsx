@@ -485,20 +485,19 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             // Hole den aktualisierten Task vom Server (inkl. Attachments)
             const updatedTaskResponse = await axiosInstance.get(API_ENDPOINTS.TASKS.BY_ID(task.id));
             
-            // Lade auch Attachments für den aktualisierten Task
-            try {
-                const attachmentsResponse = await axiosInstance.get(
-                    API_ENDPOINTS.TASKS.ATTACHMENTS(task.id)
-                );
-                    const attachments = attachmentsResponse.data.map((att: any) => ({
-                        id: att.id,
-                        fileName: att.fileName,
-                        fileType: att.fileType,
-                        url: getTaskAttachmentUrl(task.id, att.id)
-                    }));
-                updatedTaskResponse.data.attachments = attachments;
-            } catch (err) {
-                // Wenn Attachments nicht geladen werden können, setze leeres Array
+            // Attachments sind bereits in der Response enthalten
+            // URL-Generierung für Attachments hinzufügen
+            if (updatedTaskResponse.data.attachments) {
+                updatedTaskResponse.data.attachments = updatedTaskResponse.data.attachments.map((att: any) => ({
+                    id: att.id,
+                    fileName: att.fileName,
+                    fileType: att.fileType,
+                    fileSize: att.fileSize,
+                    filePath: att.filePath,
+                    uploadedAt: att.uploadedAt,
+                    url: getTaskAttachmentUrl(task.id, att.id)
+                }));
+            } else {
                 updatedTaskResponse.data.attachments = [];
             }
             

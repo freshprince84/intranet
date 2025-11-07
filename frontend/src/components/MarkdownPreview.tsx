@@ -147,8 +147,8 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     );
   };
 
-  // Finde Attachment-Metadaten für einen Dateinamen
-  const getAttachmentMetadata = (fileName: string) => {
+  // Finde Attachment-Metadaten für einen Dateinamen oder URL
+  const getAttachmentMetadata = (fileName: string, url?: string) => {
     // Versuche zuerst nach Dateiname zu suchen
     let metadata = attachmentMetadata.find(meta => meta.fileName === fileName);
     
@@ -157,10 +157,14 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       metadata = attachmentMetadata.find(meta => meta.fileName.toLowerCase() === fileName.toLowerCase());
     }
     
-    // Falls immer noch nicht gefunden, versuche die ID aus der URL zu extrahieren
-    if (!metadata && attachmentMetadata.length > 0) {
-      // Versuche Attachment-ID aus URL zu extrahieren (falls vorhanden)
-      // Dies ist ein Fallback für den Fall, dass der Dateiname nicht exakt übereinstimmt
+    // Falls immer noch nicht gefunden und URL vorhanden, versuche die ID aus der URL zu extrahieren
+    if (!metadata && url && attachmentMetadata.length > 0) {
+      // Versuche Attachment-ID aus URL zu extrahieren (z.B. /api/tasks/123/attachments/456 oder /api/requests/123/attachments/456)
+      const attachmentIdMatch = url.match(/\/(?:tasks|requests)\/\d+\/attachments\/(\d+)/);
+      if (attachmentIdMatch) {
+        const attachmentId = parseInt(attachmentIdMatch[1], 10);
+        metadata = attachmentMetadata.find(meta => meta.id === attachmentId);
+      }
     }
     
     return metadata;
@@ -193,8 +197,8 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     // Rendere alle Anhänge und filtere null-Werte heraus
     const renderedAttachments = validAttachments
       .map((attachment, index) => {
-        // Hole Metadaten für diesen Anhang (falls verfügbar)
-        let metadata = getAttachmentMetadata(attachment.alt);
+        // Hole Metadaten für diesen Anhang (mit URL als Fallback)
+        let metadata = getAttachmentMetadata(attachment.alt, attachment.url);
         
         // Falls Metadaten nicht per Dateiname gefunden wurden, versuche per URL-ID
         if (!metadata && attachment.url) {
@@ -390,8 +394,19 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     
     // Filtere Bilder heraus, die als große Vorschau gerendert werden sollen
     const imagesToRender = attachments.filter(attachment => {
-      // Hole Metadaten für diesen Anhang
-      let metadata = getAttachmentMetadata(attachment.alt);
+      // Hole Metadaten für diesen Anhang (mit URL als Fallback)
+      let metadata = getAttachmentMetadata(attachment.alt, attachment.url);
+      
+      // DEBUG: Logging für Diagnose
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🔍 Bild-Filterung:', {
+          alt: attachment.alt,
+          url: attachment.url,
+          metadata: metadata,
+          attachmentMetadataCount: attachmentMetadata.length,
+          attachmentMetadata: attachmentMetadata
+        });
+      }
       
       // Bestimme URL
       let url: string = '';
@@ -418,7 +433,12 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         isImage = metadata.fileType.startsWith('image/');
         isPdf = metadata.fileType === 'application/pdf';
       } else if (attachment.type === 'image') {
+        // Fallback: Wenn kein Metadata, aber type ist 'image', dann ist es ein Bild
         isImage = true;
+      } else {
+        // Fallback: Prüfe Dateiname oder URL auf Bild-Endungen
+        const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?|$)/i;
+        isImage = imageExtensions.test(attachment.alt) || imageExtensions.test(url);
       }
       
       // Nur Bilder rendern, keine PDFs (PDFs werden separat behandelt)
@@ -465,8 +485,8 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       return (
         <div className="flex flex-col gap-3 mt-2">
           {uniqueImages.map((attachment, index) => {
-            // Hole Metadaten für diesen Anhang
-            let metadata = getAttachmentMetadata(attachment.alt);
+            // Hole Metadaten für diesen Anhang (mit URL als Fallback)
+            let metadata = getAttachmentMetadata(attachment.alt, attachment.url);
             
             // Bestimme URL
             let url: string = '';
