@@ -3,9 +3,13 @@ import { Outlet } from 'react-router-dom';
 import Header from './Header.tsx';
 import Sidebar from './Sidebar.tsx';
 import { useWorktime } from '../contexts/WorktimeContext.tsx';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { useTheme } from '../contexts/ThemeContext.tsx';
 
 const Layout: React.FC = () => {
   const { isTracking } = useWorktime();
+  const { isDarkMode } = useTheme();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isTabletOrLarger, setIsTabletOrLarger] = useState(window.innerWidth >= 768);
 
@@ -41,6 +45,18 @@ const Layout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme={isDarkMode ? 'dark' : 'light'}
+      />
     </div>
   );
 };

@@ -490,6 +490,16 @@ export const deleteTask = async (req: Request<TaskParams>, res: Response) => {
             return res.status(404).json({ error: 'Task nicht gefunden' });
         }
 
+        // Lösche abhängige Datensätze vor dem Löschen des Tasks
+        // TaskCerebroCarticle und WorkTimeTask haben keine Cascade Delete
+        await prisma.taskCerebroCarticle.deleteMany({
+            where: { taskId: taskId }
+        });
+
+        await prisma.workTimeTask.deleteMany({
+            where: { taskId: taskId }
+        });
+
         await prisma.task.delete({
             where: { id: taskId }
         });

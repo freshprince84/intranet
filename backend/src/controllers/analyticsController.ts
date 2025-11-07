@@ -55,6 +55,11 @@ export const getTodosByUserForDate = async (req: Request, res: Response) => {
                                 id: true,
                                 name: true
                             }
+                        },
+                        attachments: {
+                            orderBy: {
+                                uploadedAt: 'desc'
+                            }
                         }
                     }
                 },
@@ -85,6 +90,11 @@ export const getTodosByUserForDate = async (req: Request, res: Response) => {
                             select: {
                                 id: true,
                                 name: true
+                            }
+                        },
+                        attachments: {
+                            orderBy: {
+                                uploadedAt: 'desc'
                             }
                         }
                     }
@@ -181,6 +191,11 @@ export const getRequestsByUserForDate = async (req: Request, res: Response) => {
                                 id: true,
                                 name: true
                             }
+                        },
+                        attachments: {
+                            orderBy: {
+                                uploadedAt: 'desc'
+                            }
                         }
                     }
                 },
@@ -201,6 +216,11 @@ export const getRequestsByUserForDate = async (req: Request, res: Response) => {
                             select: {
                                 id: true,
                                 name: true
+                            }
+                        },
+                        attachments: {
+                            orderBy: {
+                                uploadedAt: 'desc'
                             }
                         }
                     }
@@ -361,6 +381,11 @@ export const getTodosChronological = async (req: Request, res: Response) => {
                         name: true
                     }
                 },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
+                },
                 statusHistory: {
                     where: {
                         changedAt: {
@@ -477,6 +502,11 @@ export const getRequestsChronological = async (req: Request, res: Response) => {
                     select: {
                         id: true,
                         name: true
+                    }
+                },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
                     }
                 }
             },

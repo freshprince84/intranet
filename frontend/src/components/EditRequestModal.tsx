@@ -485,20 +485,19 @@ const EditRequestModal = ({
       // Hole den aktualisierten Request vom Server (inkl. Attachments)
       const updatedResponse = await axiosInstance.get(API_ENDPOINTS.REQUESTS.BY_ID(request.id));
       
-      // Lade auch Attachments für den aktualisierten Request
-      try {
-        const attachmentsResponse = await axiosInstance.get(
-          API_ENDPOINTS.REQUESTS.ATTACHMENTS(request.id)
-        );
-        const attachments = attachmentsResponse.data.map((att: any) => ({
+      // Attachments sind bereits in der Response enthalten
+      // URL-Generierung für Attachments hinzufügen
+      if (updatedResponse.data.attachments) {
+        updatedResponse.data.attachments = updatedResponse.data.attachments.map((att: any) => ({
           id: att.id,
           fileName: att.fileName,
           fileType: att.fileType,
+          fileSize: att.fileSize,
+          filePath: att.filePath,
+          uploadedAt: att.uploadedAt,
           url: getRequestAttachmentUrl(request.id, att.id)
         }));
-        updatedResponse.data.attachments = attachments;
-      } catch (err) {
-        // Wenn Attachments nicht geladen werden können, setze leeres Array
+      } else {
         updatedResponse.data.attachments = [];
       }
 

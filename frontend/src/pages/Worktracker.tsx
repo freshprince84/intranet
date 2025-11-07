@@ -251,22 +251,27 @@ const Worktracker: React.FC = () => {
             
             // Attachments sind bereits in der Response enthalten
             // URL-Generierung für Attachments hinzufügen
-            const tasksWithAttachments = tasksData.map((task: Task) => {
-                const attachments = (task.attachments || []).map((att: any) => ({
-                    id: att.id,
-                    fileName: att.fileName,
-                    fileType: att.fileType,
-                    fileSize: att.fileSize,
-                    filePath: att.filePath,
-                    uploadedAt: att.uploadedAt,
-                    url: getTaskAttachmentUrl(task.id, att.id)
-                }));
-                
-                return {
-                    ...task,
-                    attachments: attachments
-                };
-            });
+            // Sicherstellen, dass keine undefined/null Werte im Array sind
+            const tasksWithAttachments = tasksData
+                .filter((task: Task) => task != null)
+                .map((task: Task) => {
+                    const attachments = (task.attachments || [])
+                        .filter((att: any) => att != null)
+                        .map((att: any) => ({
+                            id: att.id,
+                            fileName: att.fileName,
+                            fileType: att.fileType,
+                            fileSize: att.fileSize,
+                            filePath: att.filePath,
+                            uploadedAt: att.uploadedAt,
+                            url: getTaskAttachmentUrl(task.id, att.id)
+                        }));
+                    
+                    return {
+                        ...task,
+                        attachments: attachments
+                    };
+                });
             
             console.log('📋 Tasks geladen:', tasksWithAttachments.length, 'Tasks');
             setTasks(tasksWithAttachments);
@@ -408,11 +413,12 @@ const Worktracker: React.FC = () => {
     const handleStatusChange = async (taskId: number, newStatus: Task['status']) => {
         try {
             // Optimistisches Update: State sofort aktualisieren
-            setTasks(prevTasks => 
-                prevTasks.map(task => 
+            setTasks(prevTasks => {
+                const validTasks = prevTasks.filter(task => task != null);
+                return validTasks.map(task => 
                     task.id === taskId ? { ...task, status: newStatus } : task
-                )
-            );
+                );
+            });
 
             await axiosInstance.patch(API_ENDPOINTS.TASKS.BY_ID(taskId), { status: newStatus });
             toast.success(t('worktime.messages.taskUpdated'));
@@ -570,7 +576,9 @@ const Worktracker: React.FC = () => {
     const filteredAndSortedTasks = useMemo(() => {
         console.log('🔄 Filtere Tasks:', tasks.length, 'Tasks vorhanden');
         console.log('🔄 Filterbedingungen:', filterConditions);
-        const filtered = tasks
+        // Sicherstellen, dass keine undefined/null Werte im Array sind
+        const validTasks = tasks.filter(task => task != null);
+        const filtered = validTasks
             .filter(task => {
                 // Globale Suchfunktion
                 if (searchTerm) {
@@ -948,12 +956,14 @@ const Worktracker: React.FC = () => {
     // Sicherstellen, dass alle Spalten aus defaultColumnOrder in columnOrder enthalten sind
     const completeColumnOrder = useMemo(() => {
         const currentOrder = settings.columnOrder || [];
+        // Sicherstellen, dass keine undefined/null Werte im Array sind
+        const validOrder = currentOrder.filter(id => id != null && typeof id === 'string');
         // Fehlende Spalten aus defaultColumnOrder hinzufügen
-        const missingColumns = defaultColumnOrder.filter(id => !currentOrder.includes(id));
-        return [...currentOrder, ...missingColumns];
+        const missingColumns = defaultColumnOrder.filter(id => !validOrder.includes(id));
+        return [...validOrder, ...missingColumns];
     }, [settings.columnOrder]);
 
-    const visibleColumnIds = completeColumnOrder.filter(id => isColumnVisible(id));
+    const visibleColumnIds = completeColumnOrder.filter(id => id != null && typeof id === 'string' && isColumnVisible(id));
 
     // Funktion zum Kopieren eines Tasks
     const handleCopyTask = async (task: Task) => {
@@ -993,15 +1003,29 @@ const Worktracker: React.FC = () => {
 
     const handleDeleteTask = async (taskId: number) => {
         if (window.confirm(t('worktime.messages.taskDeleteConfirm'))) {
-            // Optimistisches Update: Task sofort aus Liste entfernen
-            setTasks(prevTasks => prevTasks.filter(task => task.id !== taskId));
+            console.log('🗑️ Starte Löschung von Task:', taskId);
+            console.log('📋 Aktuelle Tasks vor Löschung:', tasks.length);
+            
+            // Optimistisches Update: Task sofort aus Liste entfernen für sofortiges Feedback
+            // Sicherstellen, dass keine undefined/null Werte im Array bleiben
+            setTasks(prevTasks => {
+                const filtered = prevTasks.filter(task => task != null && task.id !== taskId);
+                console.log('📋 Tasks nach Filterung:', filtered.length, 'von', prevTasks.length);
+                return filtered;
+            });
+
+            // Test-Toast um zu prüfen, ob Toast funktioniert
+            toast.info('Test: Task wird gelöscht...');
 
             try {
+                console.log('📡 Sende Delete-Request...');
                 await axiosInstance.delete(API_ENDPOINTS.TASKS.BY_ID(taskId));
+                console.log('✅ Delete erfolgreich');
+                // Erfolgs-Rückmeldung anzeigen
                 toast.success(t('worktime.messages.taskDeleted'));
             } catch (error) {
                 // Rollback bei Fehler: Vollständiges Reload
-                console.error('Fehler beim Löschen der Aufgabe:', error);
+                console.error('❌ Fehler beim Löschen der Aufgabe:', error);
                 loadTasks();
                 toast.error(t('worktime.messages.taskDeletedError'));
             }
@@ -1365,6 +1389,15 @@ const Worktracker: React.FC = () => {
                                                                                     title={t('tasks.actions.copy')}
                                                                                 >
                                                                                     <DocumentDuplicateIcon className="h-4 w-4" />
+                                                                                </button>
+                                                                            )}
+                                                                            {hasPermission('tasks', 'delete', 'table') && (
+                                                                                <button
+                                                                                    onClick={() => handleDeleteTask(task.id)}
+                                                                                    className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                                                                    title={t('common.delete')}
+                                                                                >
+                                                                                    <TrashIcon className="h-4 w-4" />
                                                                                 </button>
                                                                             )}
                                                                         </div>
@@ -1883,6 +1916,15 @@ const Worktracker: React.FC = () => {
                                                                                     <DocumentDuplicateIcon className="h-4 w-4" />
                                                                                 </button>
                                                                             )}
+                                                                            {hasPermission('tasks', 'delete', 'table') && (
+                                                                                <button
+                                                                                    onClick={() => handleDeleteTask(task.id)}
+                                                                                    className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                                                                    title={t('common.delete')}
+                                                                                >
+                                                                                    <TrashIcon className="h-4 w-4" />
+                                                                                </button>
+                                                                            )}
                                                                         </div>
                                                                     </td>
                                                                 );
@@ -2063,9 +2105,14 @@ const Worktracker: React.FC = () => {
                 onClose={() => setIsCreateModalOpen(false)}
                 onTaskCreated={(newTask) => {
                     // Optimistisches Update: Neuen Task zur Liste hinzufügen statt vollständigem Reload
-                    setTasks(prevTasks => [newTask, ...prevTasks]);
-                    setIsEditModalOpen(true);
-                    setSelectedTask(newTask);
+                    if (newTask != null) {
+                        setTasks(prevTasks => {
+                            const validTasks = prevTasks.filter(task => task != null);
+                            return [newTask, ...validTasks];
+                        });
+                        setIsEditModalOpen(true);
+                        setSelectedTask(newTask);
+                    }
                 }}
             />
             
@@ -2078,14 +2125,18 @@ const Worktracker: React.FC = () => {
                     }}
                     onTaskUpdated={(updatedTask) => {
                         // Optimistisches Update: Task in Liste aktualisieren statt vollständigem Reload
-                        setTasks(prevTasks => 
-                            prevTasks.map(task => 
-                                task.id === updatedTask.id ? updatedTask : task
-                            )
-                        );
-                        setIsEditModalOpen(false);
-                        setSelectedTask(null);
-                        toast.success(t('worktime.messages.taskUpdated'));
+                        if (updatedTask != null) {
+                            setTasks(prevTasks => 
+                                prevTasks
+                                    .filter(task => task != null)
+                                    .map(task => 
+                                        task.id === updatedTask.id ? updatedTask : task
+                                    )
+                            );
+                            setIsEditModalOpen(false);
+                            setSelectedTask(null);
+                            toast.success(t('worktime.messages.taskUpdated'));
+                        }
                     }}
                     task={selectedTask}
                 />
