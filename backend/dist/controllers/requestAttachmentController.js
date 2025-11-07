@@ -120,6 +120,13 @@ const getAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             res.setHeader('Cache-Control', 'max-age=31536000'); // 1 Jahr cachen
             fs_1.default.createReadStream(filePath).pipe(res);
         }
+        else if (attachment.fileType === 'application/pdf') {
+            // PDFs direkt anzeigen (für iframe-Vorschau)
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(attachment.fileName)}"`);
+            res.setHeader('Cache-Control', 'max-age=31536000'); // 1 Jahr cachen
+            fs_1.default.createReadStream(filePath).pipe(res);
+        }
         else {
             // Andere Dateien als Download anbieten
             res.download(filePath, attachment.fileName);

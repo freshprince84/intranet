@@ -203,5 +203,21 @@ export const API_ENDPOINTS = {
     }
 };
 
+/**
+ * Generiert eine vollständige URL für ein Task-Attachment
+ * Verwendet API_URL für korrekte URL-Generierung in Entwicklung und Produktion
+ */
+export const getTaskAttachmentUrl = (taskId: number, attachmentId: number): string => {
+  return `${API_URL}${API_ENDPOINTS.TASKS.ATTACHMENT(taskId, attachmentId)}`;
+};
+
+/**
+ * Generiert eine vollständige URL für ein Request-Attachment
+ * Verwendet API_URL für korrekte URL-Generierung in Entwicklung und Produktion
+ */
+export const getRequestAttachmentUrl = (requestId: number, attachmentId: number): string => {
+  return `${API_URL}${API_ENDPOINTS.REQUESTS.ATTACHMENT(requestId, attachmentId)}`;
+};
+
 // Exportiere die API-Endpunkte als Standard-Export
 export default API_ENDPOINTS; 

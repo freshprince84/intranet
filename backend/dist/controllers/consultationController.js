@@ -50,7 +50,8 @@ const startConsultation = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 branchId: Number(branchId),
                 clientId: Number(clientId),
                 notes: notes || null,
-                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                organizationId: req.organizationId || null
             },
             include: {
                 branch: true,

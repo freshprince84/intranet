@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axiosInstance from '../config/axios.ts';
-import { API_ENDPOINTS } from '../config/api.ts';
+import { API_ENDPOINTS, getTaskAttachmentUrl } from '../config/api.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import CerebroArticleSelector from './CerebroArticleSelector.tsx';
 import { Dialog } from '@headlessui/react';
@@ -87,8 +87,17 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
     const { openSidepane, closeSidepane } = useSidepane();
     const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
     
+    // Entferne Bild-Markdown-Links aus der Beschreibung (für Textarea-Anzeige)
+    const removeImageMarkdown = (text: string): string => {
+        if (!text) return '';
+        // Entferne alle Bild-Markdown-Links: ![alt](url)
+        return text.replace(/!\[([^\]]*)\]\([^)]+\)/g, '').trim();
+    };
+    
     const [title, setTitle] = useState(task.title || '');
-    const [description, setDescription] = useState(task.description || '');
+    const [description, setDescription] = useState(removeImageMarkdown(task.description || ''));
+    // Speichere die originale Beschreibung (mit Bildern) für das Speichern
+    const originalDescription = task.description || '';
     const [status, setStatus] = useState(task.status || 'open');
     const [assigneeType, setAssigneeType] = useState<'user' | 'role'>(task.roleId ? 'role' : 'user');
     const [responsibleId, setResponsibleId] = useState<number | null>(task.responsibleId || null);
@@ -98,6 +107,8 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
     const [attachments, setAttachments] = useState<TaskAttachment[]>(task.attachments || []);
     const [temporaryAttachments, setTemporaryAttachments] = useState<TaskAttachment[]>([]);
     const [uploading, setUploading] = useState(false);
+    // Liste der während der Bearbeitung hochgeladenen Attachments (für Cleanup bei Abbrechen)
+    const [uploadedDuringEdit, setUploadedDuringEdit] = useState<number[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -135,6 +146,25 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    // Cleanup: Lösche hochgeladene Attachments wenn Modal ohne Speichern geschlossen wird
+    useEffect(() => {
+        if (!isOpen && uploadedDuringEdit.length > 0) {
+            // Modal wurde geschlossen - lösche alle während der Bearbeitung hochgeladenen Attachments
+            const cleanup = async () => {
+                for (const attachmentId of uploadedDuringEdit) {
+                    try {
+                        await axiosInstance.delete(API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachmentId));
+                        console.log(`Task Attachment ${attachmentId} gelöscht (Modal ohne Speichern geschlossen)`);
+                    } catch (err) {
+                        console.error(`Fehler beim Löschen von Task Attachment ${attachmentId}:`, err);
+                    }
+                }
+                setUploadedDuringEdit([]);
+            };
+            cleanup();
+        }
+    }, [isOpen, uploadedDuringEdit, task.id]);
 
     // Sidepane-Status verwalten
     useEffect(() => {
@@ -314,36 +344,34 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
 
             const newAttachment = response.data;
             setAttachments([...attachments, newAttachment]);
+            // Merke diese Attachment-ID für mögliches Cleanup
+            setUploadedDuringEdit(prev => [...prev, newAttachment.id]);
 
-            // Bild in den text einfügen
-            let insertText = '';
-            if (newAttachment.fileType.startsWith('image/')) {
-                // Für Bilder einen Markdown-Image-Link einfügen mit vollständiger URL
-                insertText = `\n![${newAttachment.fileName}](${window.location.origin}/api${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, newAttachment.id)})\n`;
-            } else {
-                // Für andere Dateien einen normalen Link mit vollständiger URL
-                insertText = `\n[${newAttachment.fileName}](${window.location.origin}/api${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, newAttachment.id)})\n`;
-            }
-            
-            // Füge den Link an der aktuellen Cursorposition ein
-            if (textareaRef.current) {
-                const cursorPos = textareaRef.current.selectionStart;
-                const textBefore = description.substring(0, cursorPos);
-                const textAfter = description.substring(cursorPos);
+            // Für Bilder: KEIN Markdown-Link ins Textarea einfügen (wird beim Speichern automatisch hinzugefügt)
+            // Für andere Dateien: Link ins Textarea einfügen
+            if (!newAttachment.fileType.startsWith('image/')) {
+                const insertText = `\n[${newAttachment.fileName}](${getTaskAttachmentUrl(task.id, newAttachment.id)})\n`;
                 
-                setDescription(textBefore + insertText + textAfter);
-                
-                // Setze den Cursor hinter den eingefügten Link
-                setTimeout(() => {
-                    if (textareaRef.current) {
-                        const newPos = cursorPos + insertText.length;
-                        textareaRef.current.selectionStart = newPos;
-                        textareaRef.current.selectionEnd = newPos;
-                        textareaRef.current.focus();
-                    }
-                }, 0);
-            } else {
-                setDescription(description + insertText);
+                // Füge den Link an der aktuellen Cursorposition ein
+                if (textareaRef.current) {
+                    const cursorPos = textareaRef.current.selectionStart;
+                    const textBefore = description.substring(0, cursorPos);
+                    const textAfter = description.substring(cursorPos);
+                    
+                    setDescription(textBefore + insertText + textAfter);
+                    
+                    // Setze den Cursor hinter den eingefügten Link
+                    setTimeout(() => {
+                        if (textareaRef.current) {
+                            const newPos = cursorPos + insertText.length;
+                            textareaRef.current.selectionStart = newPos;
+                            textareaRef.current.selectionEnd = newPos;
+                            textareaRef.current.focus();
+                        }
+                    }, 0);
+                } else {
+                    setDescription(description + insertText);
+                }
             }
         } catch (err) {
             console.error('Fehler beim Verarbeiten der Datei:', err);
@@ -394,10 +422,47 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                 return;
             }
 
+            // Verwende description (vom Textarea) als Basis
+            // Füge Markdown-Links für Bilder automatisch hinzu (falls noch nicht vorhanden)
+            let finalDescription = description || ''; // WICHTIG: Verwende description als Basis, nicht originalDescription
+            const imageAttachments = attachments.filter(att => att.fileType?.startsWith('image/') && att.id);
+            
+            // Extrahiere bereits vorhandene Bilder aus originalDescription (falls vorhanden)
+            const existingImagePattern = /!\[([^\]]*)\]\([^)]+\)/g;
+            const existingImages: string[] = [];
+            let match;
+            if (originalDescription) {
+                while ((match = existingImagePattern.exec(originalDescription)) !== null) {
+                    existingImages.push(match[0]);
+                }
+            }
+            
+            // Füge alle Bilder hinzu (sowohl neue als auch bereits vorhandene)
+            for (const attachment of imageAttachments) {
+                const imageUrl = getTaskAttachmentUrl(task.id, attachment.id!);
+                const imageMarkdown = `![${attachment.fileName}](${imageUrl})`;
+                
+                // Prüfe, ob dieser Bild-Link bereits in der Beschreibung vorhanden ist
+                const escapedFileName = attachment.fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const imagePattern = new RegExp(`!\\[${escapedFileName}\\]\\([^)]+\\)`, 'g');
+                
+                if (!imagePattern.test(finalDescription)) {
+                    // Bild-Link ist noch nicht in der Beschreibung, füge ihn hinzu
+                    finalDescription = finalDescription ? `${finalDescription}\n${imageMarkdown}` : imageMarkdown;
+                }
+            }
+            
+            // Füge auch bereits vorhandene Bilder hinzu, die nicht in attachments sind (z.B. von anderen Quellen)
+            for (const existingImage of existingImages) {
+                if (!finalDescription.includes(existingImage)) {
+                    finalDescription = finalDescription ? `${finalDescription}\n${existingImage}` : existingImage;
+                }
+            }
+
             // Basis-Daten für die Anfrage
             const taskData: any = {
                 title,
-                description,
+                description: finalDescription,
                 status,
                 qualityControlId,
                 branchId,
@@ -416,8 +481,31 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
             const response = await axiosInstance.put(`${API_ENDPOINTS.TASKS.BASE}/${task.id}`, taskData);
 
             console.log('Task aktualisiert:', response.data);
+            
+            // Hole den aktualisierten Task vom Server (inkl. Attachments)
+            const updatedTaskResponse = await axiosInstance.get(API_ENDPOINTS.TASKS.BY_ID(task.id));
+            
+            // Lade auch Attachments für den aktualisierten Task
+            try {
+                const attachmentsResponse = await axiosInstance.get(
+                    API_ENDPOINTS.TASKS.ATTACHMENTS(task.id)
+                );
+                    const attachments = attachmentsResponse.data.map((att: any) => ({
+                        id: att.id,
+                        fileName: att.fileName,
+                        fileType: att.fileType,
+                        url: getTaskAttachmentUrl(task.id, att.id)
+                    }));
+                updatedTaskResponse.data.attachments = attachments;
+            } catch (err) {
+                // Wenn Attachments nicht geladen werden können, setze leeres Array
+                updatedTaskResponse.data.attachments = [];
+            }
+            
             // Übergebe den aktualisierten Task an den Callback
-            onTaskUpdated(response.data);
+            // Reset uploadedDuringEdit da erfolgreich gespeichert
+            setUploadedDuringEdit([]);
+            onTaskUpdated(updatedTaskResponse.data);
             onClose();
         } catch (err) {
             console.error('Fehler beim Aktualisieren des Tasks:', err);
@@ -509,7 +597,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                 // Entferne auch die Verweise im Beschreibungstext
                 if (attachmentToRemove.fileName) {
                     // Erzeuge URL-Muster für diesen Anhang
-                    const attachmentUrl = `${window.location.origin}/api${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachmentId)}`;
+                    const attachmentUrl = getTaskAttachmentUrl(task.id, attachmentId);
                     const escapedAttachmentUrl = attachmentUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
                     
                     // Suche nach Bild- und Link-Markdown
@@ -675,8 +763,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                         </div>
                         {renderAttachments()}
                         {renderTemporaryAttachments()}
-                        {/* MarkdownPreview entfernt: Bei Edit-Modals werden Anhänge bereits durch renderAttachments() 
-                            und renderTemporaryAttachments() angezeigt, Beschreibung nur im Textarea */}
+                        {/* Bilder werden bereits im Textarea als Markdown angezeigt und in der Card durch MarkdownPreview mit showImagePreview={true} */}
                     </div>
 
                     <div>
@@ -958,7 +1045,7 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                             {attachment.fileType.startsWith('image/') && (
                                 <div className="absolute z-10 invisible group-hover:visible bg-white dark:bg-gray-800 p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200 dark:border-gray-600">
                                     <img 
-                                        src={`${window.location.origin}/api${API_ENDPOINTS.TASKS.ATTACHMENT(task.id, attachment.id)}`}
+                                        src={getTaskAttachmentUrl(task.id, attachment.id)}
                                         alt={attachment.fileName}
                                         className="max-w-[200px] max-h-[150px] object-contain"
                                     />

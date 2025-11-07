@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.cancelInvoice = exports.markAsPaid = exports.generateInvoicePDFEndpoint = exports.updateInvoiceStatus = exports.getInvoiceById = exports.getInvoices = exports.createInvoiceFromConsultations = void 0;
 const client_1 = require("@prisma/client");
 const invoicePdfGenerator_1 = require("../services/invoicePdfGenerator");
+const organization_1 = require("../middleware/organization");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const prisma = new client_1.PrismaClient();
@@ -118,7 +119,8 @@ const createInvoiceFromConsultations = (req, res) => __awaiter(void 0, void 0, v
                     vatAmount: vatAmount || null,
                     total,
                     qrReference,
-                    notes: notes || null
+                    notes: notes || null,
+                    organizationId: req.organizationId || null
                 },
                 include: {
                     client: true,
@@ -169,9 +171,9 @@ const getInvoices = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        let whereClause = {
-            userId: Number(userId)
-        };
+        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
+        const invoiceFilter = (0, organization_1.getDataIsolationFilter)(req, 'invoice');
+        let whereClause = Object.assign({}, invoiceFilter);
         if (status) {
             whereClause.status = status;
         }

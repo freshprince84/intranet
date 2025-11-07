@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axiosInstance from '../config/axios.ts';
-import { API_ENDPOINTS } from '../config/api.ts';
+import { API_ENDPOINTS, getRequestAttachmentUrl } from '../config/api.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { Dialog } from '@headlessui/react';
@@ -85,6 +85,13 @@ const EditRequestModal = ({
   const { t, i18n } = useTranslation();
   const { user } = useAuth();
   
+  // Entferne Bild-Markdown-Links aus der Beschreibung (für Textarea-Anzeige)
+  const removeImageMarkdown = (text: string): string => {
+    if (!text) return '';
+    // Entferne alle Bild-Markdown-Links: ![alt](url)
+    return text.replace(/!\[([^\]]*)\]\([^)]+\)/g, '').trim();
+  };
+  
   // Debug: Log aktuelle Sprache und verfügbare Übersetzungen
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
@@ -97,7 +104,7 @@ const EditRequestModal = ({
   const { openSidepane, closeSidepane } = useSidepane();
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const [title, setTitle] = useState(request.title);
-  const [description, setDescription] = useState(request.description || '');
+  const [description, setDescription] = useState(removeImageMarkdown(request.description || ''));
   const [responsibleId, setResponsibleId] = useState(request.responsible.id);
   const [branchId, setBranchId] = useState(request.branch.id);
   const [dueDate, setDueDate] = useState(request.dueDate ? request.dueDate.split('T')[0] : '');
@@ -111,12 +118,33 @@ const EditRequestModal = ({
   const [attachments, setAttachments] = useState<RequestAttachment[]>(request.attachments || []);
   const [uploading, setUploading] = useState(false);
   const [temporaryAttachments, setTemporaryAttachments] = useState<RequestAttachment[]>([]);
+  // Liste der während der Bearbeitung hochgeladenen Attachments (für Cleanup bei Abbrechen)
+  const [uploadedDuringEdit, setUploadedDuringEdit] = useState<number[]>([]);
   
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const { hasPermission } = usePermissions();
   const canDeleteRequest = hasPermission('requests', 'both', 'table');
+
+  // Cleanup: Lösche hochgeladene Attachments wenn Modal ohne Speichern geschlossen wird
+  useEffect(() => {
+    if (!isOpen && uploadedDuringEdit.length > 0) {
+      // Modal wurde geschlossen - lösche alle während der Bearbeitung hochgeladenen Attachments
+      const cleanup = async () => {
+        for (const attachmentId of uploadedDuringEdit) {
+          try {
+            await axiosInstance.delete(API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, attachmentId));
+            console.log(`Attachment ${attachmentId} gelöscht (Modal ohne Speichern geschlossen)`);
+          } catch (err) {
+            console.error(`Fehler beim Löschen von Attachment ${attachmentId}:`, err);
+          }
+        }
+        setUploadedDuringEdit([]);
+      };
+      cleanup();
+    }
+  }, [isOpen, uploadedDuringEdit, request.id]);
 
   // Responsive Design: Überwache Fensterbreite
   useEffect(() => {
@@ -231,7 +259,8 @@ const EditRequestModal = ({
     
     if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
       const file = event.dataTransfer.files[0];
-      await handleTemporaryAttachment(file);
+      // Bei Edit-Modals sofort hochladen (wie bei Tasks)
+      await uploadFileAndInsertLink(file);
     }
   };
 
@@ -260,41 +289,39 @@ const EditRequestModal = ({
 
       const newAttachment = response.data;
       setAttachments([...attachments, newAttachment]);
+      // Merke diese Attachment-ID für mögliches Cleanup
+      setUploadedDuringEdit(prev => [...prev, newAttachment.id]);
 
-      // Füge einen Link/Vorschau in die Beschreibung ein
-      let insertText = '';
-      if (newAttachment.fileType.startsWith('image/')) {
-        // Für Bilder einen Markdown-Image-Link einfügen mit vollständiger URL
-        insertText = `\n![${newAttachment.fileName}](${window.location.origin}/api${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
-      } else {
-        // Für andere Dateien einen normalen Link mit vollständiger URL
-        insertText = `\n[${newAttachment.fileName}](${window.location.origin}/api${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)})\n`;
-      }
-      
-      // Füge den Link an der aktuellen Cursorposition ein
-      if (textareaRef.current) {
-        const cursorPos = textareaRef.current.selectionStart;
-        const textBefore = description.substring(0, cursorPos);
-        const textAfter = description.substring(cursorPos);
+      // Für Bilder: KEIN Markdown-Link ins Textarea einfügen (wird beim Speichern automatisch hinzugefügt)
+      // Für andere Dateien: Link ins Textarea einfügen
+      if (!newAttachment.fileType.startsWith('image/')) {
+        const insertText = `\n[${newAttachment.fileName}](${getRequestAttachmentUrl(request.id, newAttachment.id)})\n`;
         
-        setDescription(textBefore + insertText + textAfter);
-        
-        // Setze den Cursor hinter den eingefügten Link
-        setTimeout(() => {
-          if (textareaRef.current) {
-            const newPos = cursorPos + insertText.length;
-            textareaRef.current.selectionStart = newPos;
-            textareaRef.current.selectionEnd = newPos;
-            textareaRef.current.focus();
-          }
-        }, 0);
-      } else {
-        setDescription(description + insertText);
+        // Füge den Link an der aktuellen Cursorposition ein
+        if (textareaRef.current) {
+          const cursorPos = textareaRef.current.selectionStart;
+          const textBefore = description.substring(0, cursorPos);
+          const textAfter = description.substring(cursorPos);
+          
+          setDescription(textBefore + insertText + textAfter);
+          
+          // Setze den Cursor hinter den eingefügten Link
+          setTimeout(() => {
+            if (textareaRef.current) {
+              const newPos = cursorPos + insertText.length;
+              textareaRef.current.selectionStart = newPos;
+              textareaRef.current.selectionEnd = newPos;
+              textareaRef.current.focus();
+            }
+          }, 0);
+        } else {
+          setDescription(description + insertText);
+        }
       }
 
       // Erstelle ein Element für das Vorschaubild und füge es dem Dokument hinzu
       const img = document.createElement('img');
-      img.src = `${window.location.origin}/api${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, newAttachment.id)}`;
+      img.src = getRequestAttachmentUrl(request.id, newAttachment.id);
       img.alt = newAttachment.fileName;
       img.classList.add('hidden'); // Verstecken
 
@@ -321,7 +348,8 @@ const EditRequestModal = ({
     if (!files || files.length === 0) return;
 
     const file = files[0];
-    await handleTemporaryAttachment(file);
+    // Bei Edit-Modals sofort hochladen (wie bei Tasks)
+    await uploadFileAndInsertLink(file);
     
     // Zurücksetzen des Datei-Inputs
     if (fileInputRef.current) {
@@ -407,22 +435,76 @@ const EditRequestModal = ({
       // Keine Validierung notwendig, da bereits Zahlen vorliegen
       // Direkte Verwendung der Zustände
 
+      // Verwende description (vom Textarea) als Basis
+      // Füge Markdown-Links für Bilder automatisch hinzu (falls noch nicht vorhanden)
+      const originalDescription = request.description || '';
+      let finalDescription = description || ''; // WICHTIG: Verwende description als Basis, nicht originalDescription
+      const imageAttachments = attachments.filter(att => att.fileType?.startsWith('image/') && att.id);
+      
+      // Extrahiere bereits vorhandene Bilder aus originalDescription (falls vorhanden)
+      const existingImagePattern = /!\[([^\]]*)\]\([^)]+\)/g;
+      const existingImages: string[] = [];
+      let match;
+      if (originalDescription) {
+        while ((match = existingImagePattern.exec(originalDescription)) !== null) {
+          existingImages.push(match[0]);
+        }
+      }
+      
+      // Füge alle Bilder hinzu (sowohl neue als auch bereits vorhandene)
+      for (const attachment of imageAttachments) {
+        const imageUrl = getRequestAttachmentUrl(request.id, attachment.id!);
+        const imageMarkdown = `![${attachment.fileName}](${imageUrl})`;
+        
+        // Prüfe, ob dieser Bild-Link bereits in der Beschreibung vorhanden ist
+        const escapedFileName = attachment.fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const imagePattern = new RegExp(`!\\[${escapedFileName}\\]\\([^)]+\\)`, 'g');
+        
+        if (!imagePattern.test(finalDescription)) {
+          // Bild-Link ist noch nicht in der Beschreibung, füge ihn hinzu
+          finalDescription = finalDescription ? `${finalDescription}\n${imageMarkdown}` : imageMarkdown;
+        }
+      }
+      
+      // Füge auch bereits vorhandene Bilder hinzu, die nicht in attachments sind (z.B. von anderen Quellen)
+      for (const existingImage of existingImages) {
+        if (!finalDescription.includes(existingImage)) {
+          finalDescription = finalDescription ? `${finalDescription}\n${existingImage}` : existingImage;
+        }
+      }
+
       await axiosInstance.put(API_ENDPOINTS.REQUESTS.BY_ID(request.id), {
         title: title,
-        description: description || '',
+        description: finalDescription,
         responsible_id: responsibleId,
         branch_id: branchId,
         due_date: dueDate || null,
         create_todo: createTodo,
       });
 
-      // Hochladen der temporären Anhänge
-      await uploadTemporaryAttachments();
-
-      // Hole den aktualisierten Request vom Server
+      // Hole den aktualisierten Request vom Server (inkl. Attachments)
       const updatedResponse = await axiosInstance.get(API_ENDPOINTS.REQUESTS.BY_ID(request.id));
+      
+      // Lade auch Attachments für den aktualisierten Request
+      try {
+        const attachmentsResponse = await axiosInstance.get(
+          API_ENDPOINTS.REQUESTS.ATTACHMENTS(request.id)
+        );
+        const attachments = attachmentsResponse.data.map((att: any) => ({
+          id: att.id,
+          fileName: att.fileName,
+          fileType: att.fileType,
+          url: getRequestAttachmentUrl(request.id, att.id)
+        }));
+        updatedResponse.data.attachments = attachments;
+      } catch (err) {
+        // Wenn Attachments nicht geladen werden können, setze leeres Array
+        updatedResponse.data.attachments = [];
+      }
 
       // Erfolgreiches Update - Schließe das Modal
+      // Reset uploadedDuringEdit da erfolgreich gespeichert
+      setUploadedDuringEdit([]);
       onClose();
       if (onRequestUpdated) {
         // Übergebe den aktualisierten Request an den Callback
@@ -505,35 +587,31 @@ const EditRequestModal = ({
       
       setTemporaryAttachments(prev => [...prev, newAttachment]);
 
-      // Füge einen Link/Vorschau in die Beschreibung ein
-      let insertText = '';
-      if (file.type.startsWith('image/')) {
-        // Für Bilder ein Markdown-Bild einfügen
-        insertText = `\n![${file.name}](${t('createRequest.editRequest.form.uploadAfterCreate')})\n`;
-      } else {
-        // Für andere Dateien einen Link einfügen
-        insertText = `\n[${file.name}](${t('createRequest.editRequest.form.uploadAfterCreate')})\n`;
-      }
-      
-      // Füge den Link an der aktuellen Cursorposition ein
-      if (textareaRef.current) {
-        const cursorPos = textareaRef.current.selectionStart;
-        const textBefore = description.substring(0, cursorPos);
-        const textAfter = description.substring(cursorPos);
+      // Für Bilder: KEIN Markdown-Link ins Textarea einfügen (wird beim Speichern automatisch hinzugefügt)
+      // Für andere Dateien: Link ins Textarea einfügen
+      if (!file.type.startsWith('image/')) {
+        const insertText = `\n[${file.name}](${t('createRequest.editRequest.form.uploadAfterCreate')})\n`;
         
-        setDescription(textBefore + insertText + textAfter);
-        
-        // Setze den Cursor hinter den eingefügten Link
-        setTimeout(() => {
-          if (textareaRef.current) {
-            const newPos = cursorPos + insertText.length;
-            textareaRef.current.selectionStart = newPos;
-            textareaRef.current.selectionEnd = newPos;
-            textareaRef.current.focus();
-          }
-        }, 0);
-      } else {
-        setDescription(description + insertText);
+        // Füge den Link an der aktuellen Cursorposition ein
+        if (textareaRef.current) {
+          const cursorPos = textareaRef.current.selectionStart;
+          const textBefore = description.substring(0, cursorPos);
+          const textAfter = description.substring(cursorPos);
+          
+          setDescription(textBefore + insertText + textAfter);
+          
+          // Setze den Cursor hinter den eingefügten Link
+          setTimeout(() => {
+            if (textareaRef.current) {
+              const newPos = cursorPos + insertText.length;
+              textareaRef.current.selectionStart = newPos;
+              textareaRef.current.selectionEnd = newPos;
+              textareaRef.current.focus();
+            }
+          }, 0);
+        } else {
+          setDescription(description + insertText);
+        }
       }
     } catch (err) {
       console.error('Fehler beim Verarbeiten der Datei:', err);
@@ -551,14 +629,17 @@ const EditRequestModal = ({
     try {
       setLoading(true);
       
-      // Upload jeder temporären Datei
+      let updatedDescription = description;
+      const uploadText = t('createRequest.editRequest.form.uploadAfterCreate');
+      
+      // Upload jeder temporären Datei und aktualisiere die URLs im Beschreibungstext
       for (const attachment of temporaryAttachments) {
         if (!attachment.file) continue;
         
         const formData = new FormData();
         formData.append('file', attachment.file);
         
-        await axiosInstance.post(
+        const response = await axiosInstance.post(
           API_ENDPOINTS.REQUESTS.ATTACHMENTS(request.id),
           formData,
           {
@@ -567,6 +648,46 @@ const EditRequestModal = ({
             },
           }
         );
+        
+        const newAttachment = response.data;
+        
+        // Für Bilder: Prüfe, ob bereits im Text vorhanden, sonst hinzufügen
+        if (newAttachment.fileType.startsWith('image/')) {
+          const fileName = attachment.fileName;
+          const escapedFileName = fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const imagePattern = new RegExp(`!\\[${escapedFileName}\\]\\([^)]+\\)`, 'g');
+          
+          if (!imagePattern.test(updatedDescription)) {
+            // Bild-Link ist noch nicht in der Beschreibung, füge ihn hinzu
+            const realUrl = getRequestAttachmentUrl(request.id, newAttachment.id);
+            updatedDescription = updatedDescription ? `${updatedDescription}\n![${fileName}](${realUrl})` : `![${fileName}](${realUrl})`;
+          } else {
+            // Ersetze Platzhalter durch echte URL, falls vorhanden
+            const placeholderPattern = new RegExp(`!\\[${escapedFileName}\\]\\(${uploadText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g');
+            const realUrl = getRequestAttachmentUrl(request.id, newAttachment.id);
+            updatedDescription = updatedDescription.replace(placeholderPattern, `![${fileName}](${realUrl})`);
+          }
+        } else {
+          // Für andere Dateien: Ersetze Platzhalter durch echte URL
+          const fileName = attachment.fileName;
+          const escapedFileName = fileName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const placeholderLinkPattern = new RegExp(`\\[${escapedFileName}\\]\\(${uploadText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\)`, 'g');
+          const realUrl = getRequestAttachmentUrl(request.id, newAttachment.id);
+          updatedDescription = updatedDescription.replace(placeholderLinkPattern, `[${fileName}](${realUrl})`);
+        }
+      }
+      
+      // Aktualisiere die Beschreibung mit den echten URLs
+      if (updatedDescription !== description) {
+        await axiosInstance.put(API_ENDPOINTS.REQUESTS.BY_ID(request.id), {
+          title: title,
+          description: updatedDescription,
+          responsible_id: responsibleId,
+          branch_id: branchId,
+          due_date: dueDate || null,
+          create_todo: createTodo,
+        });
+        setDescription(updatedDescription);
       }
       
       console.log(`${temporaryAttachments.length} Anhänge erfolgreich hochgeladen.`);
@@ -618,7 +739,7 @@ const EditRequestModal = ({
               {attachment.fileType.startsWith('image/') && attachment.id && (
                 <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
                   <img 
-                    src={`${window.location.origin}/api${API_ENDPOINTS.REQUESTS.ATTACHMENT(request.id, attachment.id)}`}
+                    src={getRequestAttachmentUrl(request.id, attachment.id)}
                     alt={attachment.fileName}
                     className="max-w-[200px] max-h-[150px] object-contain"
                   />
@@ -726,8 +847,8 @@ const EditRequestModal = ({
         </div>
         {renderAttachments()}
         {renderTemporaryAttachments()}
-        {/* MarkdownPreview entfernt: Bei Edit-Modals werden Anhänge bereits durch renderAttachments() 
-            und renderTemporaryAttachments() angezeigt, Beschreibung nur im Textarea */}
+        {/* Bilder werden NICHT ins Textarea eingefügt */}
+        {/* Beim Speichern werden sie automatisch zum Markdown-Text hinzugefügt (für Card-Anzeige) */}
       </div>
 
       <div>

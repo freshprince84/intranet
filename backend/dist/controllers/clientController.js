@@ -78,7 +78,8 @@ const createClient = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 email,
                 phone,
                 address,
-                notes
+                notes,
+                organizationId: req.organizationId || null
             }
         });
         res.status(201).json(client);

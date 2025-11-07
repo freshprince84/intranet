@@ -12,7 +12,7 @@ import SavedFilterTags from './SavedFilterTags.tsx';
 import { FilterCondition } from './FilterRow.tsx';
 import { applyFilters, evaluateDateCondition } from '../utils/filterLogic.ts';
 import { getStatusColor, getStatusText } from '../utils/statusUtils.tsx';
-import { API_ENDPOINTS } from '../config/api.ts';
+import { API_ENDPOINTS, getRequestAttachmentUrl } from '../config/api.ts';
 import { 
   PlusIcon,
   CheckIcon, 
@@ -63,6 +63,15 @@ interface Request {
   dueDate: string;
   createTodo: boolean;
   description?: string;
+  attachments?: Array<{
+    id: number;
+    fileName: string;
+    fileType: string;
+    fileSize?: number;
+    filePath?: string;
+    uploadedAt?: string;
+    url: string;
+  }>;
 }
 
 interface SortConfig {
@@ -236,7 +245,28 @@ const Requests: React.FC = () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get('/requests');
-      setRequests(response.data);
+      const requestsData = response.data;
+      
+      // Attachments sind bereits in der Response enthalten
+      // URL-Generierung für Attachments hinzufügen
+      const requestsWithAttachments = requestsData.map((request: Request) => {
+        const attachments = (request.attachments || []).map((att: any) => ({
+          id: att.id,
+          fileName: att.fileName,
+          fileType: att.fileType,
+          fileSize: att.fileSize,
+          filePath: att.filePath,
+          uploadedAt: att.uploadedAt,
+          url: getRequestAttachmentUrl(request.id, att.id)
+        }));
+        
+        return {
+          ...request,
+          attachments: attachments
+        };
+      });
+      
+      setRequests(requestsWithAttachments);
       setError(null);
     } catch (err) {
       console.error('Request Error:', err);
@@ -1276,6 +1306,7 @@ const Requests: React.FC = () => {
                       label: t('common.description'),
                       value: '', // Nicht verwendet bei descriptionContent
                       descriptionContent: request.description, // Für expandierbare Beschreibung
+                      attachmentMetadata: request.attachments || [], // Attachment-Metadaten für Vorschau
                       section: 'full'
                     });
                   }

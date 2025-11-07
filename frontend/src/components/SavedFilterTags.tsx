@@ -147,11 +147,13 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         }
         
         const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId));
-        setSavedFilters(response.data);
+        // Sicherstellen, dass response.data ein Array ist
+        const filters = Array.isArray(response.data) ? response.data.filter(f => f != null) : [];
+        setSavedFilters(filters);
 
         // Nur Default-Filter anwenden wenn es eine uncontrolled component ist (legacy)
         if (!onFilterChange && defaultFilterName && !activeFilterName) {
-          const defaultFilter = response.data.find((filter: SavedFilter) => filter.name === defaultFilterName);
+          const defaultFilter = filters.find((filter: SavedFilter) => filter != null && filter.name === defaultFilterName);
           if (defaultFilter) {
             onSelectFilter(defaultFilter.conditions, defaultFilter.operators);
           }
@@ -171,7 +173,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const refreshFilters = async () => {
     try {
       const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId));
-      setSavedFilters(response.data);
+      // Sicherstellen, dass response.data ein Array ist
+      const filters = Array.isArray(response.data) ? response.data.filter(f => f != null) : [];
+      setSavedFilters(filters);
     } catch (error) {
       console.error('Fehler beim Neuladen der Filter:', error);
     }
@@ -280,20 +284,21 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     if (tableId === 'consultations-table') {
       console.log('🔧 SavedFilterTags: Sorting filters...');
       console.log('📋 SavedFilterTags: recentClientNames:', recentClientNames);
-      console.log('🗂️ SavedFilterTags: savedFilters:', savedFilters.map(f => f.name));
+      console.log('🗂️ SavedFilterTags: savedFilters:', savedFilters.filter(f => f != null).map(f => f.name));
 
-      const heute = savedFilters.find(f => f.name === 'Heute');
-      const woche = savedFilters.find(f => f.name === 'Woche');
-      const archiv = savedFilters.find(f => f.name === 'Archiv');
+      const heute = savedFilters.find(f => f != null && f.name === 'Heute');
+      const woche = savedFilters.find(f => f != null && f.name === 'Woche');
+      const archiv = savedFilters.find(f => f != null && f.name === 'Archiv');
       
       // Recent Client Filter in der exakten Reihenfolge der Recent Clients API sortieren
       const sortedRecentClientFilters = recentClientNames
-        .map(clientName => savedFilters.find(f => f.name === clientName))
-        .filter(filter => filter !== undefined) as SavedFilter[];
+        .map(clientName => savedFilters.find(f => f != null && f.name === clientName))
+        .filter(filter => filter != null) as SavedFilter[];
       
       console.log('✅ SavedFilterTags: sortedRecentClientFilters:', sortedRecentClientFilters.map(f => f.name));
       
       const customFilters = savedFilters.filter(f => 
+        f != null && 
         !['Heute', 'Woche', 'Archiv'].includes(f.name) && 
         !recentClientNames.includes(f.name)
       );
@@ -315,12 +320,12 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
 
     // Sortierung für Requests/Tasks - Aktuell zuerst, dann Archiv
     if (tableId === 'requests-table' || tableId === 'worktracker-todos') {
-      const aktuell = savedFilters.find(f => f.name === 'Aktuell');
-      const archiv = savedFilters.find(f => f.name === 'Archiv');
+      const aktuell = savedFilters.find(f => f != null && f.name === 'Aktuell');
+      const archiv = savedFilters.find(f => f != null && f.name === 'Archiv');
       
       // Rest der Filter (außer Aktuell und Archiv)
       const customFilters = savedFilters.filter(f => 
-        f.name !== 'Aktuell' && f.name !== 'Archiv'
+        f != null && f.name !== 'Aktuell' && f.name !== 'Archiv'
       );
       
       const orderedFilters: SavedFilter[] = [];
@@ -354,18 +359,20 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     }));
   }, [showOptimisticFilters, tableId]);
 
-  const displayFilters = showOptimisticFilters ? optimisticFilters : sortedFilters;
+  const displayFilters = showOptimisticFilters ? optimisticFilters : sortedFilters.filter(f => f != null);
   const currentVisibleCount = showOptimisticFilters ? optimisticFilters.length : visibleTagCount;
 
   // Optimierte Tag-Breiten-Berechnung mit useMemo
   const averageTagWidth = useMemo(() => {
     if (sortedFilters.length === 0) return 75; // Mittelwert zwischen 70 und 80
     
-    return sortedFilters.reduce((sum, filter) => {
-      // Ausgewogene Schätzung: ~6.5px pro Zeichen + 28px Padding + optional Delete-Button
-      const deleteButtonWidth = !isStandardFilter(filter.name) ? 18 : 0;
-      return sum + (filter.name.length * 6.5 + 28 + deleteButtonWidth);
-    }, 0) / sortedFilters.length;
+    return sortedFilters
+      .filter(filter => filter != null)
+      .reduce((sum, filter) => {
+        // Ausgewogene Schätzung: ~6.5px pro Zeichen + 28px Padding + optional Delete-Button
+        const deleteButtonWidth = !isStandardFilter(filter.name) ? 18 : 0;
+        return sum + (filter.name.length * 6.5 + 28 + deleteButtonWidth);
+      }, 0) / sortedFilters.filter(filter => filter != null).length;
   }, [sortedFilters]);
 
   // Optimierte Sichtbarkeits-Berechnung mit useCallback

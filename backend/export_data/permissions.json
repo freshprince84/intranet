@@ -1,0 +1,2342 @@
+[
+  {
+    "id": 245,
+    "roleId": 4,
+    "entity": "dashboard",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 246,
+    "roleId": 4,
+    "entity": "worktracker",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 247,
+    "roleId": 4,
+    "entity": "workcenter",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 248,
+    "roleId": 4,
+    "entity": "organization",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 249,
+    "roleId": 4,
+    "entity": "organization_management",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 250,
+    "roleId": 4,
+    "entity": "requests",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 251,
+    "roleId": 4,
+    "entity": "cerebro",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 252,
+    "roleId": 4,
+    "entity": "settings",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 253,
+    "roleId": 4,
+    "entity": "payroll",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 254,
+    "roleId": 4,
+    "entity": "team_worktime_control",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 255,
+    "roleId": 4,
+    "entity": "identification_documents",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 256,
+    "roleId": 4,
+    "entity": "document_recognition",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 257,
+    "roleId": 4,
+    "entity": "consultations",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 258,
+    "roleId": 4,
+    "entity": "consultation_invoices",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 259,
+    "roleId": 4,
+    "entity": "monthly_reports",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 260,
+    "roleId": 4,
+    "entity": "users",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 261,
+    "roleId": 4,
+    "entity": "roles",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 262,
+    "roleId": 4,
+    "entity": "branches",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 263,
+    "roleId": 4,
+    "entity": "requests",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 264,
+    "roleId": 4,
+    "entity": "tasks",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 265,
+    "roleId": 4,
+    "entity": "worktime",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 266,
+    "roleId": 4,
+    "entity": "payrolls",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 267,
+    "roleId": 4,
+    "entity": "cerebro_articles",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 268,
+    "roleId": 4,
+    "entity": "consultations",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 269,
+    "roleId": 4,
+    "entity": "consultation_invoices",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 270,
+    "roleId": 4,
+    "entity": "identification_documents",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 271,
+    "roleId": 4,
+    "entity": "organization_join_requests",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 272,
+    "roleId": 4,
+    "entity": "organization_users",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 273,
+    "roleId": 4,
+    "entity": "database_reset_table",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 274,
+    "roleId": 4,
+    "entity": "database_logs",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 275,
+    "roleId": 4,
+    "entity": "invoice_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 276,
+    "roleId": 4,
+    "entity": "invoice_download",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 277,
+    "roleId": 4,
+    "entity": "invoice_mark_paid",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 278,
+    "roleId": 4,
+    "entity": "invoice_settings",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 279,
+    "roleId": 4,
+    "entity": "todo_create",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 280,
+    "roleId": 4,
+    "entity": "todo_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 281,
+    "roleId": 4,
+    "entity": "todo_delete",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 282,
+    "roleId": 4,
+    "entity": "task_create",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 283,
+    "roleId": 4,
+    "entity": "task_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 284,
+    "roleId": 4,
+    "entity": "task_delete",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 285,
+    "roleId": 4,
+    "entity": "user_create",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 286,
+    "roleId": 4,
+    "entity": "user_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 287,
+    "roleId": 4,
+    "entity": "user_delete",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 288,
+    "roleId": 4,
+    "entity": "role_assign",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 289,
+    "roleId": 4,
+    "entity": "role_create",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 290,
+    "roleId": 4,
+    "entity": "role_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 291,
+    "roleId": 4,
+    "entity": "role_delete",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 292,
+    "roleId": 4,
+    "entity": "worktime_start",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 293,
+    "roleId": 4,
+    "entity": "worktime_stop",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 294,
+    "roleId": 4,
+    "entity": "worktime_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 295,
+    "roleId": 4,
+    "entity": "worktime_delete",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 296,
+    "roleId": 4,
+    "entity": "cerebro",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 297,
+    "roleId": 4,
+    "entity": "consultation_start",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 298,
+    "roleId": 4,
+    "entity": "consultation_stop",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 299,
+    "roleId": 4,
+    "entity": "consultation_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 300,
+    "roleId": 4,
+    "entity": "client_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 301,
+    "roleId": 4,
+    "entity": "client_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 302,
+    "roleId": 4,
+    "entity": "client_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 303,
+    "roleId": 4,
+    "entity": "settings_system",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 304,
+    "roleId": 4,
+    "entity": "settings_notifications",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 305,
+    "roleId": 4,
+    "entity": "settings_profile",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 306,
+    "roleId": 4,
+    "entity": "payroll_generate",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 307,
+    "roleId": 4,
+    "entity": "payroll_export",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 308,
+    "roleId": 4,
+    "entity": "payroll_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.857Z",
+    "updatedAt": "2025-11-04T16:26:44.857Z"
+  },
+  {
+    "id": 309,
+    "roleId": 5,
+    "entity": "dashboard",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 310,
+    "roleId": 5,
+    "entity": "worktracker",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 311,
+    "roleId": 5,
+    "entity": "workcenter",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 312,
+    "roleId": 5,
+    "entity": "organization",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 314,
+    "roleId": 5,
+    "entity": "requests",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 315,
+    "roleId": 5,
+    "entity": "cerebro",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 316,
+    "roleId": 5,
+    "entity": "settings",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 317,
+    "roleId": 5,
+    "entity": "payroll",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 318,
+    "roleId": 5,
+    "entity": "team_worktime_control",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 319,
+    "roleId": 5,
+    "entity": "identification_documents",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 320,
+    "roleId": 5,
+    "entity": "document_recognition",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 321,
+    "roleId": 5,
+    "entity": "consultations",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 322,
+    "roleId": 5,
+    "entity": "consultation_invoices",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 323,
+    "roleId": 5,
+    "entity": "monthly_reports",
+    "entityType": "page",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 324,
+    "roleId": 5,
+    "entity": "users",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 325,
+    "roleId": 5,
+    "entity": "roles",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 326,
+    "roleId": 5,
+    "entity": "branches",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 327,
+    "roleId": 5,
+    "entity": "requests",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 328,
+    "roleId": 5,
+    "entity": "tasks",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 329,
+    "roleId": 5,
+    "entity": "worktime",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 330,
+    "roleId": 5,
+    "entity": "payrolls",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 331,
+    "roleId": 5,
+    "entity": "cerebro_articles",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 332,
+    "roleId": 5,
+    "entity": "consultations",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 333,
+    "roleId": 5,
+    "entity": "consultation_invoices",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 334,
+    "roleId": 5,
+    "entity": "identification_documents",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 335,
+    "roleId": 5,
+    "entity": "organization_join_requests",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 336,
+    "roleId": 5,
+    "entity": "organization_users",
+    "entityType": "table",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 337,
+    "roleId": 5,
+    "entity": "database_reset_table",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 338,
+    "roleId": 5,
+    "entity": "database_logs",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 339,
+    "roleId": 5,
+    "entity": "invoice_create",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 340,
+    "roleId": 5,
+    "entity": "invoice_download",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 341,
+    "roleId": 5,
+    "entity": "invoice_mark_paid",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 342,
+    "roleId": 5,
+    "entity": "invoice_settings",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 343,
+    "roleId": 5,
+    "entity": "todo_create",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 344,
+    "roleId": 5,
+    "entity": "todo_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 345,
+    "roleId": 5,
+    "entity": "todo_delete",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 346,
+    "roleId": 5,
+    "entity": "task_create",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 347,
+    "roleId": 5,
+    "entity": "task_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 348,
+    "roleId": 5,
+    "entity": "task_delete",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 349,
+    "roleId": 5,
+    "entity": "user_create",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 350,
+    "roleId": 5,
+    "entity": "user_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 351,
+    "roleId": 5,
+    "entity": "user_delete",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 352,
+    "roleId": 5,
+    "entity": "role_assign",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 353,
+    "roleId": 5,
+    "entity": "role_create",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 354,
+    "roleId": 5,
+    "entity": "role_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 355,
+    "roleId": 5,
+    "entity": "role_delete",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 356,
+    "roleId": 5,
+    "entity": "worktime_start",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 357,
+    "roleId": 5,
+    "entity": "worktime_stop",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 358,
+    "roleId": 5,
+    "entity": "worktime_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 359,
+    "roleId": 5,
+    "entity": "worktime_delete",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 360,
+    "roleId": 5,
+    "entity": "cerebro",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 361,
+    "roleId": 5,
+    "entity": "consultation_start",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 362,
+    "roleId": 5,
+    "entity": "consultation_stop",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 363,
+    "roleId": 5,
+    "entity": "consultation_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 364,
+    "roleId": 5,
+    "entity": "client_create",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 365,
+    "roleId": 5,
+    "entity": "client_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 366,
+    "roleId": 5,
+    "entity": "client_delete",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 367,
+    "roleId": 5,
+    "entity": "settings_system",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 368,
+    "roleId": 5,
+    "entity": "settings_notifications",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 369,
+    "roleId": 5,
+    "entity": "settings_profile",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 370,
+    "roleId": 5,
+    "entity": "payroll_generate",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 371,
+    "roleId": 5,
+    "entity": "payroll_export",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 372,
+    "roleId": 5,
+    "entity": "payroll_edit",
+    "entityType": "button",
+    "accessLevel": "none",
+    "createdAt": "2025-11-04T16:26:44.866Z",
+    "updatedAt": "2025-11-04T16:26:44.866Z"
+  },
+  {
+    "id": 482,
+    "roleId": 3,
+    "entity": "dashboard",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 483,
+    "roleId": 3,
+    "entity": "worktracker",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 484,
+    "roleId": 3,
+    "entity": "consultations",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 485,
+    "roleId": 3,
+    "entity": "team_worktime_control",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 486,
+    "roleId": 3,
+    "entity": "payroll",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 488,
+    "roleId": 3,
+    "entity": "organization_management",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 489,
+    "roleId": 3,
+    "entity": "cerebro",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 490,
+    "roleId": 3,
+    "entity": "settings",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 491,
+    "roleId": 3,
+    "entity": "profile",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 492,
+    "roleId": 3,
+    "entity": "requests",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 493,
+    "roleId": 3,
+    "entity": "tasks",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 494,
+    "roleId": 3,
+    "entity": "users",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 495,
+    "roleId": 3,
+    "entity": "roles",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 496,
+    "roleId": 3,
+    "entity": "organization",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 497,
+    "roleId": 3,
+    "entity": "organization_join_requests",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 498,
+    "roleId": 3,
+    "entity": "organization_users",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 499,
+    "roleId": 3,
+    "entity": "worktime",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 500,
+    "roleId": 3,
+    "entity": "consultation_invoices",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 501,
+    "roleId": 3,
+    "entity": "branches",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 502,
+    "roleId": 3,
+    "entity": "database_reset_table",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 503,
+    "roleId": 3,
+    "entity": "database_logs",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 504,
+    "roleId": 3,
+    "entity": "invoice_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 505,
+    "roleId": 3,
+    "entity": "invoice_download",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 506,
+    "roleId": 3,
+    "entity": "invoice_mark_paid",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 507,
+    "roleId": 3,
+    "entity": "invoice_settings",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 508,
+    "roleId": 3,
+    "entity": "todo_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 509,
+    "roleId": 3,
+    "entity": "todo_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 510,
+    "roleId": 3,
+    "entity": "todo_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 511,
+    "roleId": 3,
+    "entity": "task_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 512,
+    "roleId": 3,
+    "entity": "task_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 513,
+    "roleId": 3,
+    "entity": "task_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 514,
+    "roleId": 3,
+    "entity": "user_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 515,
+    "roleId": 3,
+    "entity": "user_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 516,
+    "roleId": 3,
+    "entity": "user_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 517,
+    "roleId": 3,
+    "entity": "role_assign",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 518,
+    "roleId": 3,
+    "entity": "role_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 519,
+    "roleId": 3,
+    "entity": "role_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 520,
+    "roleId": 3,
+    "entity": "role_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 521,
+    "roleId": 3,
+    "entity": "organization_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 522,
+    "roleId": 3,
+    "entity": "organization_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 523,
+    "roleId": 3,
+    "entity": "organization_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 524,
+    "roleId": 3,
+    "entity": "worktime_start",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 525,
+    "roleId": 3,
+    "entity": "worktime_stop",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 526,
+    "roleId": 3,
+    "entity": "worktime_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 527,
+    "roleId": 3,
+    "entity": "worktime_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 528,
+    "roleId": 3,
+    "entity": "cerebro",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 529,
+    "roleId": 3,
+    "entity": "consultation_start",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 530,
+    "roleId": 3,
+    "entity": "consultation_stop",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 531,
+    "roleId": 3,
+    "entity": "consultation_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 532,
+    "roleId": 3,
+    "entity": "client_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 533,
+    "roleId": 3,
+    "entity": "client_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 534,
+    "roleId": 3,
+    "entity": "client_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 535,
+    "roleId": 3,
+    "entity": "settings_system",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 536,
+    "roleId": 3,
+    "entity": "settings_notifications",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 537,
+    "roleId": 3,
+    "entity": "settings_profile",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 538,
+    "roleId": 3,
+    "entity": "payroll_generate",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 539,
+    "roleId": 3,
+    "entity": "payroll_export",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 540,
+    "roleId": 3,
+    "entity": "payroll_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-05T16:24:58.954Z",
+    "updatedAt": "2025-11-05T16:24:58.954Z"
+  },
+  {
+    "id": 546,
+    "roleId": 3,
+    "entity": "team_worktime",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T04:33:06.911Z",
+    "updatedAt": "2025-11-06T04:33:06.911Z"
+  },
+  {
+    "id": 627,
+    "roleId": 8,
+    "entity": "dashboard",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 628,
+    "roleId": 8,
+    "entity": "worktracker",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 629,
+    "roleId": 8,
+    "entity": "consultations",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 630,
+    "roleId": 8,
+    "entity": "team_worktime_control",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 631,
+    "roleId": 8,
+    "entity": "payroll",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 632,
+    "roleId": 8,
+    "entity": "organization_management",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 633,
+    "roleId": 8,
+    "entity": "cerebro",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 634,
+    "roleId": 8,
+    "entity": "settings",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 635,
+    "roleId": 8,
+    "entity": "profile",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 636,
+    "roleId": 8,
+    "entity": "requests",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 637,
+    "roleId": 8,
+    "entity": "tasks",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 638,
+    "roleId": 8,
+    "entity": "users",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 639,
+    "roleId": 8,
+    "entity": "roles",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 640,
+    "roleId": 8,
+    "entity": "organization",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 641,
+    "roleId": 8,
+    "entity": "team_worktime",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 642,
+    "roleId": 8,
+    "entity": "worktime",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 643,
+    "roleId": 8,
+    "entity": "clients",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 644,
+    "roleId": 8,
+    "entity": "consultation_invoices",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 645,
+    "roleId": 8,
+    "entity": "branches",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 646,
+    "roleId": 8,
+    "entity": "notifications",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 647,
+    "roleId": 8,
+    "entity": "settings",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 648,
+    "roleId": 8,
+    "entity": "monthly_reports",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 649,
+    "roleId": 8,
+    "entity": "organization_join_requests",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 650,
+    "roleId": 8,
+    "entity": "organization_users",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 651,
+    "roleId": 8,
+    "entity": "database_reset_table",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 652,
+    "roleId": 8,
+    "entity": "database_logs",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 653,
+    "roleId": 8,
+    "entity": "invoice_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 654,
+    "roleId": 8,
+    "entity": "invoice_download",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 655,
+    "roleId": 8,
+    "entity": "invoice_mark_paid",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 656,
+    "roleId": 8,
+    "entity": "invoice_settings",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 657,
+    "roleId": 8,
+    "entity": "todo_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 658,
+    "roleId": 8,
+    "entity": "todo_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 659,
+    "roleId": 8,
+    "entity": "todo_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 660,
+    "roleId": 8,
+    "entity": "task_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 661,
+    "roleId": 8,
+    "entity": "task_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 662,
+    "roleId": 8,
+    "entity": "task_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 663,
+    "roleId": 8,
+    "entity": "user_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 664,
+    "roleId": 8,
+    "entity": "user_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 665,
+    "roleId": 8,
+    "entity": "user_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 666,
+    "roleId": 8,
+    "entity": "role_assign",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 667,
+    "roleId": 8,
+    "entity": "role_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 668,
+    "roleId": 8,
+    "entity": "role_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 669,
+    "roleId": 8,
+    "entity": "role_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 670,
+    "roleId": 8,
+    "entity": "organization_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 671,
+    "roleId": 8,
+    "entity": "organization_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 672,
+    "roleId": 8,
+    "entity": "organization_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 673,
+    "roleId": 8,
+    "entity": "worktime_start",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 674,
+    "roleId": 8,
+    "entity": "worktime_stop",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 675,
+    "roleId": 8,
+    "entity": "worktime_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 676,
+    "roleId": 8,
+    "entity": "worktime_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 677,
+    "roleId": 8,
+    "entity": "cerebro",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 678,
+    "roleId": 8,
+    "entity": "consultation_start",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 679,
+    "roleId": 8,
+    "entity": "consultation_stop",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 680,
+    "roleId": 8,
+    "entity": "consultation_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 681,
+    "roleId": 8,
+    "entity": "client_create",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 682,
+    "roleId": 8,
+    "entity": "client_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 683,
+    "roleId": 8,
+    "entity": "client_delete",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 684,
+    "roleId": 8,
+    "entity": "settings_system",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 685,
+    "roleId": 8,
+    "entity": "settings_notifications",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 686,
+    "roleId": 8,
+    "entity": "settings_profile",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 687,
+    "roleId": 8,
+    "entity": "payroll_generate",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 688,
+    "roleId": 8,
+    "entity": "payroll_export",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 689,
+    "roleId": 8,
+    "entity": "payroll_edit",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:41:48.770Z",
+    "updatedAt": "2025-11-06T07:41:48.770Z"
+  },
+  {
+    "id": 690,
+    "roleId": 9,
+    "entity": "dashboard",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:49:52.605Z",
+    "updatedAt": "2025-11-06T07:49:52.605Z"
+  },
+  {
+    "id": 691,
+    "roleId": 9,
+    "entity": "worktracker",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:49:52.605Z",
+    "updatedAt": "2025-11-06T07:49:52.605Z"
+  },
+  {
+    "id": 692,
+    "roleId": 9,
+    "entity": "cerebro",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:49:52.605Z",
+    "updatedAt": "2025-11-06T07:49:52.605Z"
+  },
+  {
+    "id": 693,
+    "roleId": 9,
+    "entity": "settings",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:49:52.605Z",
+    "updatedAt": "2025-11-06T07:49:52.605Z"
+  },
+  {
+    "id": 694,
+    "roleId": 9,
+    "entity": "profile",
+    "entityType": "page",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:49:52.605Z",
+    "updatedAt": "2025-11-06T07:49:52.605Z"
+  },
+  {
+    "id": 695,
+    "roleId": 9,
+    "entity": "requests",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:49:52.605Z",
+    "updatedAt": "2025-11-06T07:49:52.605Z"
+  },
+  {
+    "id": 696,
+    "roleId": 9,
+    "entity": "tasks",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:49:52.605Z",
+    "updatedAt": "2025-11-06T07:49:52.605Z"
+  },
+  {
+    "id": 697,
+    "roleId": 9,
+    "entity": "worktime",
+    "entityType": "table",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:49:52.605Z",
+    "updatedAt": "2025-11-06T07:49:52.605Z"
+  },
+  {
+    "id": 698,
+    "roleId": 9,
+    "entity": "worktime_stop",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:49:52.605Z",
+    "updatedAt": "2025-11-06T07:49:52.605Z"
+  },
+  {
+    "id": 699,
+    "roleId": 9,
+    "entity": "cerebro",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:49:52.605Z",
+    "updatedAt": "2025-11-06T07:49:52.605Z"
+  },
+  {
+    "id": 700,
+    "roleId": 9,
+    "entity": "settings_profile",
+    "entityType": "button",
+    "accessLevel": "both",
+    "createdAt": "2025-11-06T07:49:52.605Z",
+    "updatedAt": "2025-11-06T07:49:52.605Z"
+  }
+]

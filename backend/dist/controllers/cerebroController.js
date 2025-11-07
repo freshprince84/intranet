@@ -14,6 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.searchArticles = exports.deleteArticle = exports.updateArticle = exports.createArticle = exports.getArticlesStructure = exports.getArticleBySlug = exports.getArticleById = exports.getAllArticles = void 0;
 const client_1 = require("@prisma/client");
+const organization_1 = require("../middleware/organization");
 const slugify_1 = __importDefault(require("slugify"));
 const prisma = new client_1.PrismaClient();
 /**
@@ -41,8 +42,11 @@ const createUniqueSlug = (title) => __awaiter(void 0, void 0, void 0, function* 
  */
 const getAllArticles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
+        const articleFilter = (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle');
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const articles = yield prisma.cerebroCarticle.findMany({
+            where: articleFilter,
             include: {
                 createdBy: {
                     select: {
@@ -103,9 +107,11 @@ const getArticleById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (isNaN(articleId)) {
             return res.status(400).json({ message: 'Ungültige Artikel-ID' });
         }
+        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
+        const articleFilter = (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle');
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
-        const article = yield prisma.cerebroCarticle.findUnique({
-            where: { id: articleId },
+        const article = yield prisma.cerebroCarticle.findFirst({
+            where: Object.assign({ id: articleId }, articleFilter),
             include: {
                 createdBy: {
                     select: {
@@ -164,9 +170,11 @@ const getArticleBySlug = (req, res) => __awaiter(void 0, void 0, void 0, functio
     var _a, _b, _c, _d, _e, _f, _g, _h;
     try {
         const { slug } = req.params;
+        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
+        const articleFilter = (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle');
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
-        const article = yield prisma.cerebroCarticle.findUnique({
-            where: { slug },
+        const article = yield prisma.cerebroCarticle.findFirst({
+            where: Object.assign({ slug }, articleFilter),
             include: {
                 createdBy: {
                     select: {
@@ -228,8 +236,11 @@ exports.getArticleBySlug = getArticleBySlug;
  */
 const getArticlesStructure = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
+        const articleFilter = (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle');
         // Jetzt mit Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const articles = yield prisma.cerebroCarticle.findMany({
+            where: articleFilter,
             select: {
                 id: true,
                 title: true,
@@ -305,8 +316,8 @@ const createArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         // Artikel erstellen
         const newArticle = yield prisma.$queryRaw `
-            INSERT INTO "CerebroCarticle" (title, content, slug, "parentId", "createdById", "updatedById", "isPublished", "createdAt", "updatedAt")
-            VALUES (${title}, ${content || ''}, ${slug}, ${parentId || null}, ${userId}, ${userId}, ${isPublished}, NOW(), NOW())
+            INSERT INTO "CerebroCarticle" (title, content, slug, "parentId", "createdById", "updatedById", "isPublished", "organizationId", "createdAt", "updatedAt")
+            VALUES (${title}, ${content || ''}, ${slug}, ${parentId || null}, ${userId}, ${userId}, ${isPublished}, ${req.organizationId || null}, NOW(), NOW())
             RETURNING *
         `;
         // Benachrichtigung erstellen
@@ -526,10 +537,11 @@ const searchArticles = (req, res) => __awaiter(void 0, void 0, void 0, function*
             return res.status(400).json({ message: 'Suchbegriff ist erforderlich' });
         }
         const searchTerm = q;
+        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
+        const articleFilter = (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle');
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const articles = yield prisma.cerebroCarticle.findMany({
-            where: {
-                OR: [
+            where: Object.assign(Object.assign({}, articleFilter), { OR: [
                     {
                         title: {
                             contains: searchTerm,
@@ -552,8 +564,7 @@ const searchArticles = (req, res) => __awaiter(void 0, void 0, void 0, function*
                             }
                         }
                     }
-                ]
-            },
+                ] }),
             include: {
                 createdBy: {
                     select: {

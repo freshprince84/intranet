@@ -9,6 +9,12 @@ export interface MetadataItem {
   value: string | React.ReactNode;
   className?: string;
   descriptionContent?: string; // Für expandierbare Beschreibung
+  attachmentMetadata?: Array<{
+    id: number;
+    fileName: string;
+    fileType: string;
+    url: string;
+  }>; // Attachment-Metadaten für Vorschau
   section?: 'left' | 'main' | 'main-second' | 'right' | 'right-inline' | 'full'; // Position im Layout
 }
 
@@ -52,12 +58,14 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
       .replace(/^#+\s+/gm, '') // Headers
       .replace(/\*\*([^*]+)\*\*/g, '$1') // Bold
       .replace(/\*([^*]+)\*/g, '$1') // Italic
-      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // Bilder komplett entfernen (nicht nur alt-Text)
-      .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Links - nur alt-Text behalten
+      .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // Bilder komplett entfernen
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, '') // Links komplett entfernen (nicht nur alt-Text)
       .replace(/```[\s\S]*?```/g, '') // Code blocks
       .replace(/`([^`]+)`/g, '$1') // Inline code
       .replace(/^\s*[-*+]\s+/gm, '') // List items
       .replace(/^\s*\d+\.\s+/gm, '') // Numbered list
+      // Entferne verbleibende Dateinamen, die wie Attachment-Dateinamen aussehen
+      .replace(/\b\d{4}-\d{2}-\d{2}_\d{2}h\d{2}_\d{2}\.\w+\b/g, '')
       .replace(/\s+/g, ' ') // Mehrfache Leerzeichen zu einem
       .trim();
     
@@ -67,19 +75,34 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
   const fullText = getPlainTextPreview(item.descriptionContent || '');
   
   // Erste Zeile extrahieren (ungefähr die ersten 150 Zeichen oder bis zum ersten Zeilenumbruch)
+  // Versucht nach einem Wortende zu schneiden, nicht mitten im Wort
   const getFirstLine = (text: string): string => {
     const firstNewline = text.indexOf('\n');
     if (firstNewline > 0 && firstNewline < 150) {
       return text.substring(0, firstNewline);
     }
-    return text.length > 150 ? text.substring(0, 150) : text;
+    if (text.length > 150) {
+      // Suche nach einem guten Schnittpunkt (nach einem Leerzeichen oder Satzzeichen)
+      let cutPoint = 150;
+      for (let i = 150; i > 100; i--) {
+        if (text[i] === ' ' || text[i] === '.' || text[i] === ',' || text[i] === '!' || text[i] === '?') {
+          cutPoint = i + 1;
+          break;
+        }
+      }
+      return text.substring(0, cutPoint);
+    }
+    return text;
   };
   
   const firstLine = getFirstLine(fullText);
+  // Prüfe ob mehr Content vorhanden ist (Text länger als erste Zeile ODER Zeilenumbruch vorhanden)
   const hasMoreContent = fullText.length > firstLine.length || fullText.includes('\n');
   
   // Rest-Text extrahieren (alles nach der ersten Zeile)
   const getRemainingText = (text: string, firstLineText: string): string => {
+    if (!text || !firstLineText) return '';
+    
     const firstLineIndex = text.indexOf(firstLineText);
     if (firstLineIndex === -1) {
       // Fallback: Versuche Zeilenumbruch zu finden
@@ -87,6 +110,7 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
       if (firstNewline > 0) {
         return text.substring(firstNewline + 1).trim();
       }
+      // Wenn kein Zeilenumbruch, nimm Rest nach der ersten Zeile
       return text.length > firstLineText.length ? text.substring(firstLineText.length).trim() : '';
     }
     
@@ -97,12 +121,26 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
     }
     
     // Wenn keine Zeilenumbruch, nimm Rest nach der ersten Zeile
-    return text.length > firstLineIndex + firstLineText.length 
-      ? text.substring(firstLineIndex + firstLineText.length).trim() 
+    const remainingStart = firstLineIndex + firstLineText.length;
+    return text.length > remainingStart 
+      ? text.substring(remainingStart).trim() 
       : '';
   };
   
   const remainingPlainText = hasMoreContent ? getRemainingText(fullText, firstLine) : '';
+  
+  // Debug: Aktivieren für Troubleshooting (NACH remainingPlainText Initialisierung)
+  // console.log('DescriptionMetadataItem:', {
+  //   firstLine,
+  //   fullText,
+  //   hasMoreContent,
+  //   fullTextLength: fullText.length,
+  //   firstLineLength: firstLine.length,
+  //   hasNewline: fullText.includes('\n'),
+  //   remainingPlainText,
+  //   remainingMarkdown,
+  //   descriptionContent: item.descriptionContent
+  // });
   
   // Prüfe ob Text mehr als eine Zeile benötigt (nach dem ersten Render)
   useEffect(() => {
@@ -129,46 +167,80 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
   
   // Rest-Markdown extrahieren (für die Anzeige beim Aufklappen)
   const getRemainingMarkdown = (markdown: string, firstLinePlain: string): string => {
-    // Finde die Position der ersten Zeile im Plain Text
-    const plainText = getPlainTextPreview(markdown);
-    const firstLineIndex = plainText.indexOf(firstLinePlain);
+    if (!markdown) return '';
     
-    if (firstLineIndex === -1) {
-      // Fallback: Versuche Zeilenumbruch zu finden
-      const firstNewline = markdown.indexOf('\n');
-      if (firstNewline > 0) {
-        return markdown.substring(firstNewline + 1).trim();
-      }
-      return '';
-    }
-    
-    // Finde den ersten Zeilenumbruch nach der ersten Zeile
-    const firstNewline = markdown.indexOf('\n', 0);
+    // Versuche zuerst nach Zeilenumbruch zu schneiden
+    const firstNewline = markdown.indexOf('\n');
     if (firstNewline > 0) {
       return markdown.substring(firstNewline + 1).trim();
     }
     
-    // Wenn kein Zeilenumbruch, müssen wir schätzen wo im Markdown die erste Zeile endet
-    // Vereinfachter Ansatz: Versuche nach ~150 Zeichen zu schneiden
-    if (markdown.length > 150) {
-      // Suche nach einem guten Schnittpunkt (nach einem Leerzeichen oder Satzzeichen)
-      let cutPoint = 150;
-      for (let i = 150; i < markdown.length && i < 200; i++) {
-        if (markdown[i] === ' ' || markdown[i] === '.' || markdown[i] === '\n') {
-          cutPoint = i + 1;
-          break;
+    // Wenn kein Zeilenumbruch, finde die Position der ersten Zeile im Plain Text
+    const plainText = getPlainTextPreview(markdown);
+    const firstLineIndex = plainText.indexOf(firstLinePlain);
+    
+    if (firstLineIndex >= 0 && plainText.length > firstLineIndex + firstLinePlain.length) {
+      // Berechne wie viele Zeichen im Markdown der ersten Zeile entsprechen
+      // Vereinfachter Ansatz: Wenn Plain Text länger ist, schneide Markdown entsprechend
+      const remainingPlainLength = plainText.length - (firstLineIndex + firstLinePlain.length);
+      if (remainingPlainLength > 0 && markdown.length > firstLinePlain.length) {
+        // Suche nach einem guten Schnittpunkt im Markdown (nach der ersten Zeile)
+        // Versuche nach ~150 Zeichen oder nach der ersten Zeile zu schneiden
+        let cutPoint = Math.min(150, markdown.length);
+        
+        // Suche rückwärts nach einem Wortende
+        for (let i = cutPoint; i > 100 && i < markdown.length; i--) {
+          if (markdown[i] === ' ' || markdown[i] === '.' || markdown[i] === ',' || markdown[i] === '\n') {
+            cutPoint = i + 1;
+            break;
+          }
+        }
+        
+        // Wenn die erste Zeile länger ist als der Schnittpunkt, verwende die Länge der ersten Zeile
+        if (firstLinePlain.length > cutPoint) {
+          cutPoint = firstLinePlain.length;
+          // Suche nach einem Wortende nach der ersten Zeile
+          for (let i = cutPoint; i < markdown.length && i < cutPoint + 50; i++) {
+            if (markdown[i] === ' ' || markdown[i] === '.' || markdown[i] === ',' || markdown[i] === '\n') {
+              cutPoint = i + 1;
+              break;
+            }
+          }
+        }
+        
+        if (markdown.length > cutPoint) {
+          return markdown.substring(cutPoint).trim();
         }
       }
-      return markdown.substring(cutPoint).trim();
     }
     
     return '';
   };
   
-  const remainingMarkdown = isExpanded && hasMoreContent ? getRemainingMarkdown(item.descriptionContent || '', firstLine) : '';
+  // Berechne remainingMarkdown immer (nicht nur wenn expanded), damit wir es für die Bedingung verwenden können
+  const remainingMarkdown = hasMoreContent ? getRemainingMarkdown(item.descriptionContent || '', firstLine) : '';
   
   // Extrahiere Anhänge aus dem gesamten descriptionContent (nicht nur aus remainingMarkdown)
   const fullDescriptionContent = item.descriptionContent || '';
+  
+  // Debug: Aktivieren für Troubleshooting (NACH allen Initialisierungen)
+  // console.log('DescriptionMetadataItem:', {
+  //   firstLine,
+  //   fullText,
+  //   hasMoreContent,
+  //   fullTextLength: fullText.length,
+  //   firstLineLength: firstLine.length,
+  //   hasNewline: fullText.includes('\n'),
+  //   remainingPlainText,
+  //   remainingMarkdown,
+  //   descriptionContent: item.descriptionContent
+  // });
+  
+  // Prüfe, ob Bilder im gesamten Text vorhanden sind (unabhängig von remainingMarkdown)
+  const hasImages = /!\[([^\]]*)\]\([^)]+\)/.test(fullDescriptionContent);
+  
+  // Pfeil soll NUR erscheinen, wenn mehr Text vorhanden ist (nicht nur wegen Bilder)
+  const shouldShowExpandButton = hasMoreContent && needsExpansion;
   
   return (
     <div className={`text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 ${item.className || ''}`}>
@@ -182,8 +254,8 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
         >
           {firstLine}
         </span>
-        {/* Pfeil rechts, nach dem Text */}
-        {(hasMoreContent && needsExpansion && !isExpanded) && (
+        {/* Pfeil rechts, nach dem Text - erscheint wenn mehr Text ODER Bilder vorhanden */}
+        {shouldShowExpandButton && !isExpanded && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -208,30 +280,54 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
           </button>
         )}
       </div>
-      {/* Anhänge IMMER direkt unter dem Text anzeigen */}
-      {fullDescriptionContent && (
+      {/* Bilder IMMER anzeigen (auch wenn nicht expanded) */}
+      {/* Wenn kein Text vorhanden ist, Bild auf Höhe des Labels positionieren */}
+      {hasImages && (
         <div 
-          className="mt-2" 
+          className={firstLine.trim() === '' ? '-mt-6' : 'mt-2'} 
           style={{ 
             marginLeft: labelRef.current ? `${labelRef.current.offsetWidth + 8}px` : 'calc(0.75rem * 5 + 0.5rem)'
           }}
         >
-          <MarkdownPreview content={fullDescriptionContent} onlyAttachments={true} />
+          <MarkdownPreview 
+            content={fullDescriptionContent} 
+            showImagePreview={true}
+            attachmentMetadata={item.attachmentMetadata || []}
+          />
         </div>
       )}
-      {/* Container für expandierten Text-Inhalt - unter den Anhängen */}
-      {isExpanded && hasMoreContent && remainingMarkdown && (
-        <div 
-          className="mt-1" 
-          style={{ 
-            marginLeft: labelRef.current ? `${labelRef.current.offsetWidth + 8}px` : 'calc(0.75rem * 5 + 0.5rem)'
-          }}
-        >
-          <div className="dark:text-gray-200 whitespace-pre-wrap break-words">
-            {remainingPlainText}
-          </div>
-        </div>
-      )}
+      {/* REST-TEXT NUR wenn expanded UND es gibt mehr Text (Bilder werden bereits oben angezeigt) */}
+      {isExpanded && hasMoreContent && (() => {
+        // Vereinfachte Logik: Zeige einfach den REST-Text nach der ersten Zeile
+        let restContent = '';
+        
+        // Versuche zuerst remainingPlainText (einfachste Methode)
+        if (remainingPlainText && remainingPlainText.trim() !== '') {
+          restContent = remainingPlainText;
+        }
+        // Fallback: Schneide einfach nach firstLine.length im Plain Text
+        else if (fullText.length > firstLine.length) {
+          restContent = fullText.substring(firstLine.length).trim();
+        }
+        
+        // Zeige REST-Text wenn vorhanden
+        if (restContent && restContent.trim() !== '') {
+          return (
+            <div 
+              className="mt-1" 
+              style={{ 
+                marginLeft: labelRef.current ? `${labelRef.current.offsetWidth + 8}px` : 'calc(0.75rem * 5 + 0.5rem)'
+              }}
+            >
+              <div className="dark:text-gray-200 break-words text-gray-900 dark:text-white">
+                {restContent.trim()}
+              </div>
+            </div>
+          );
+        }
+        
+        return null;
+      })()}
     </div>
   );
 };
@@ -416,10 +512,10 @@ const DataCard: React.FC<DataCardProps> = ({
           ) : (
             <div />
           )}
-          {/* Buttons rechts - immer sichtbar wenn vorhanden, feste Position */}
+          {/* Buttons rechts - immer an der unteren rechten Ecke */}
           {actions ? (
             <div
-              className="flex items-center space-x-2 flex-shrink-0"
+              className="flex items-center space-x-2 flex-shrink-0 self-end"
               onClick={(e) => e.stopPropagation()}
             >
               {actions}

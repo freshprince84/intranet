@@ -44,6 +44,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateMonthlyReportPDF = exports.checkUnbilledConsultations = exports.deleteMonthlyReport = exports.updateReportStatus = exports.generateAutomaticMonthlyReport = exports.generateMonthlyReport = exports.getMonthlyReportById = exports.getMonthlyReports = void 0;
 const client_1 = require("@prisma/client");
+const organization_1 = require("../middleware/organization");
 const date_fns_1 = require("date-fns");
 const prisma = new client_1.PrismaClient();
 // Alle Monatsberichte des Benutzers abrufen
@@ -53,8 +54,10 @@ const getMonthlyReports = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
+        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
+        const reportFilter = (0, organization_1.getDataIsolationFilter)(req, 'monthlyReport');
         const reports = yield prisma.monthlyConsultationReport.findMany({
-            where: { userId },
+            where: reportFilter,
             include: {
                 items: {
                     include: {
@@ -197,7 +200,8 @@ const generateMonthlyReport = (req, res) => __awaiter(void 0, void 0, void 0, fu
                     recipient,
                     totalHours,
                     currency: 'CHF',
-                    status: 'GENERATED'
+                    status: 'GENERATED',
+                    organizationId: req.organizationId || null
                 }
             });
             // Erstelle Report Items

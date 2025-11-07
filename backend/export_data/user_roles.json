@@ -1,0 +1,982 @@
+[
+  {
+    "userId": 2,
+    "roleId": 4,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T00:18:22.964Z",
+    "updatedAt": "2025-11-06T00:51:13.125Z"
+  },
+  {
+    "userId": 3,
+    "roleId": 7,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.200Z",
+    "updatedAt": "2025-11-06T07:50:29.466Z"
+  },
+  {
+    "userId": 3,
+    "roleId": 8,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.205Z",
+    "updatedAt": "2025-11-06T07:50:29.467Z"
+  },
+  {
+    "userId": 3,
+    "roleId": 9,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.206Z",
+    "updatedAt": "2025-11-06T07:50:29.466Z"
+  },
+  {
+    "userId": 3,
+    "roleId": 10,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.209Z",
+    "updatedAt": "2025-11-06T07:50:29.466Z"
+  },
+  {
+    "userId": 3,
+    "roleId": 11,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.214Z",
+    "updatedAt": "2025-11-06T07:50:29.466Z"
+  },
+  {
+    "userId": 3,
+    "roleId": 12,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.216Z",
+    "updatedAt": "2025-11-06T07:50:29.466Z"
+  },
+  {
+    "userId": 3,
+    "roleId": 13,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.217Z",
+    "updatedAt": "2025-11-06T07:50:29.466Z"
+  },
+  {
+    "userId": 3,
+    "roleId": 14,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.220Z",
+    "updatedAt": "2025-11-06T07:50:29.466Z"
+  },
+  {
+    "userId": 3,
+    "roleId": 15,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.221Z",
+    "updatedAt": "2025-11-06T07:50:29.466Z"
+  },
+  {
+    "userId": 3,
+    "roleId": 16,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.223Z",
+    "updatedAt": "2025-11-06T07:50:29.466Z"
+  },
+  {
+    "userId": 3,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.224Z",
+    "updatedAt": "2025-11-06T07:50:29.466Z"
+  },
+  {
+    "userId": 4,
+    "roleId": 8,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.229Z",
+    "updatedAt": "2025-11-06T07:01:38.229Z"
+  },
+  {
+    "userId": 4,
+    "roleId": 9,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.231Z",
+    "updatedAt": "2025-11-06T07:01:38.231Z"
+  },
+  {
+    "userId": 4,
+    "roleId": 10,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.233Z",
+    "updatedAt": "2025-11-06T07:01:38.233Z"
+  },
+  {
+    "userId": 4,
+    "roleId": 11,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.234Z",
+    "updatedAt": "2025-11-06T07:01:38.234Z"
+  },
+  {
+    "userId": 4,
+    "roleId": 12,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.238Z",
+    "updatedAt": "2025-11-06T07:01:38.238Z"
+  },
+  {
+    "userId": 4,
+    "roleId": 13,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.239Z",
+    "updatedAt": "2025-11-06T07:01:38.239Z"
+  },
+  {
+    "userId": 4,
+    "roleId": 14,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.241Z",
+    "updatedAt": "2025-11-06T07:01:38.241Z"
+  },
+  {
+    "userId": 4,
+    "roleId": 15,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.245Z",
+    "updatedAt": "2025-11-06T07:01:38.245Z"
+  },
+  {
+    "userId": 4,
+    "roleId": 16,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.247Z",
+    "updatedAt": "2025-11-06T07:01:38.247Z"
+  },
+  {
+    "userId": 4,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.249Z",
+    "updatedAt": "2025-11-06T07:01:38.249Z"
+  },
+  {
+    "userId": 5,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.251Z",
+    "updatedAt": "2025-11-06T07:01:38.251Z"
+  },
+  {
+    "userId": 5,
+    "roleId": 11,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.253Z",
+    "updatedAt": "2025-11-06T07:01:38.253Z"
+  },
+  {
+    "userId": 6,
+    "roleId": 9,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.254Z",
+    "updatedAt": "2025-11-06T07:01:38.254Z"
+  },
+  {
+    "userId": 6,
+    "roleId": 11,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.256Z",
+    "updatedAt": "2025-11-06T07:01:38.256Z"
+  },
+  {
+    "userId": 7,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.258Z",
+    "updatedAt": "2025-11-06T07:01:38.258Z"
+  },
+  {
+    "userId": 7,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.263Z",
+    "updatedAt": "2025-11-06T07:01:38.263Z"
+  },
+  {
+    "userId": 8,
+    "roleId": 8,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.264Z",
+    "updatedAt": "2025-11-06T07:01:38.264Z"
+  },
+  {
+    "userId": 8,
+    "roleId": 9,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.266Z",
+    "updatedAt": "2025-11-06T07:01:38.266Z"
+  },
+  {
+    "userId": 8,
+    "roleId": 11,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.268Z",
+    "updatedAt": "2025-11-06T07:01:38.268Z"
+  },
+  {
+    "userId": 9,
+    "roleId": 10,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.270Z",
+    "updatedAt": "2025-11-06T07:01:38.270Z"
+  },
+  {
+    "userId": 9,
+    "roleId": 12,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.271Z",
+    "updatedAt": "2025-11-06T07:01:38.271Z"
+  },
+  {
+    "userId": 10,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.273Z",
+    "updatedAt": "2025-11-06T07:01:38.273Z"
+  },
+  {
+    "userId": 10,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.274Z",
+    "updatedAt": "2025-11-06T07:01:38.274Z"
+  },
+  {
+    "userId": 11,
+    "roleId": 10,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.279Z",
+    "updatedAt": "2025-11-06T07:01:38.279Z"
+  },
+  {
+    "userId": 11,
+    "roleId": 12,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.281Z",
+    "updatedAt": "2025-11-06T07:01:38.281Z"
+  },
+  {
+    "userId": 12,
+    "roleId": 12,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.282Z",
+    "updatedAt": "2025-11-06T07:01:38.282Z"
+  },
+  {
+    "userId": 12,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.283Z",
+    "updatedAt": "2025-11-06T07:01:38.283Z"
+  },
+  {
+    "userId": 13,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.285Z",
+    "updatedAt": "2025-11-06T07:01:38.285Z"
+  },
+  {
+    "userId": 13,
+    "roleId": 11,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.286Z",
+    "updatedAt": "2025-11-06T07:01:38.286Z"
+  },
+  {
+    "userId": 14,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.287Z",
+    "updatedAt": "2025-11-06T07:01:38.287Z"
+  },
+  {
+    "userId": 15,
+    "roleId": 13,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.288Z",
+    "updatedAt": "2025-11-06T07:01:38.288Z"
+  },
+  {
+    "userId": 15,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.290Z",
+    "updatedAt": "2025-11-06T07:01:38.290Z"
+  },
+  {
+    "userId": 16,
+    "roleId": 10,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.295Z",
+    "updatedAt": "2025-11-06T07:01:38.295Z"
+  },
+  {
+    "userId": 16,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.297Z",
+    "updatedAt": "2025-11-06T07:01:38.297Z"
+  },
+  {
+    "userId": 17,
+    "roleId": 10,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.299Z",
+    "updatedAt": "2025-11-06T07:01:38.299Z"
+  },
+  {
+    "userId": 17,
+    "roleId": 12,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.301Z",
+    "updatedAt": "2025-11-06T07:01:38.301Z"
+  },
+  {
+    "userId": 18,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.302Z",
+    "updatedAt": "2025-11-06T07:01:38.302Z"
+  },
+  {
+    "userId": 18,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.303Z",
+    "updatedAt": "2025-11-06T07:01:38.303Z"
+  },
+  {
+    "userId": 19,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.306Z",
+    "updatedAt": "2025-11-06T07:01:38.306Z"
+  },
+  {
+    "userId": 19,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.308Z",
+    "updatedAt": "2025-11-06T07:01:38.308Z"
+  },
+  {
+    "userId": 20,
+    "roleId": 11,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.313Z",
+    "updatedAt": "2025-11-06T07:01:38.313Z"
+  },
+  {
+    "userId": 20,
+    "roleId": 13,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.314Z",
+    "updatedAt": "2025-11-06T07:01:38.314Z"
+  },
+  {
+    "userId": 20,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.315Z",
+    "updatedAt": "2025-11-06T07:01:38.315Z"
+  },
+  {
+    "userId": 21,
+    "roleId": 11,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.316Z",
+    "updatedAt": "2025-11-06T07:01:38.316Z"
+  },
+  {
+    "userId": 21,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.317Z",
+    "updatedAt": "2025-11-06T07:01:38.317Z"
+  },
+  {
+    "userId": 22,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.319Z",
+    "updatedAt": "2025-11-06T07:01:38.319Z"
+  },
+  {
+    "userId": 22,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.321Z",
+    "updatedAt": "2025-11-06T07:01:38.321Z"
+  },
+  {
+    "userId": 23,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.323Z",
+    "updatedAt": "2025-11-06T07:01:38.323Z"
+  },
+  {
+    "userId": 24,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.324Z",
+    "updatedAt": "2025-11-06T07:01:38.324Z"
+  },
+  {
+    "userId": 24,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.328Z",
+    "updatedAt": "2025-11-06T07:01:38.328Z"
+  },
+  {
+    "userId": 25,
+    "roleId": 17,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.330Z",
+    "updatedAt": "2025-11-06T07:01:38.330Z"
+  },
+  {
+    "userId": 26,
+    "roleId": 17,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.333Z",
+    "updatedAt": "2025-11-06T07:01:38.333Z"
+  },
+  {
+    "userId": 27,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.334Z",
+    "updatedAt": "2025-11-06T07:01:38.334Z"
+  },
+  {
+    "userId": 28,
+    "roleId": 15,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.338Z",
+    "updatedAt": "2025-11-06T07:01:38.338Z"
+  },
+  {
+    "userId": 29,
+    "roleId": 9,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.340Z",
+    "updatedAt": "2025-11-06T07:01:38.340Z"
+  },
+  {
+    "userId": 29,
+    "roleId": 17,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.341Z",
+    "updatedAt": "2025-11-06T07:01:38.341Z"
+  },
+  {
+    "userId": 30,
+    "roleId": 17,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.345Z",
+    "updatedAt": "2025-11-06T07:01:38.345Z"
+  },
+  {
+    "userId": 31,
+    "roleId": 17,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.347Z",
+    "updatedAt": "2025-11-06T07:01:38.347Z"
+  },
+  {
+    "userId": 32,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.348Z",
+    "updatedAt": "2025-11-06T07:01:38.348Z"
+  },
+  {
+    "userId": 33,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.350Z",
+    "updatedAt": "2025-11-06T07:01:38.350Z"
+  },
+  {
+    "userId": 33,
+    "roleId": 15,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.352Z",
+    "updatedAt": "2025-11-06T07:01:38.352Z"
+  },
+  {
+    "userId": 33,
+    "roleId": 16,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.354Z",
+    "updatedAt": "2025-11-06T07:01:38.354Z"
+  },
+  {
+    "userId": 34,
+    "roleId": 10,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.355Z",
+    "updatedAt": "2025-11-06T07:01:38.355Z"
+  },
+  {
+    "userId": 34,
+    "roleId": 12,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.357Z",
+    "updatedAt": "2025-11-06T07:01:38.357Z"
+  },
+  {
+    "userId": 35,
+    "roleId": 11,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.362Z",
+    "updatedAt": "2025-11-06T07:01:38.362Z"
+  },
+  {
+    "userId": 36,
+    "roleId": 12,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.363Z",
+    "updatedAt": "2025-11-06T07:01:38.363Z"
+  },
+  {
+    "userId": 36,
+    "roleId": 17,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.365Z",
+    "updatedAt": "2025-11-06T07:01:38.365Z"
+  },
+  {
+    "userId": 37,
+    "roleId": 8,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.367Z",
+    "updatedAt": "2025-11-06T07:01:38.367Z"
+  },
+  {
+    "userId": 37,
+    "roleId": 9,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.370Z",
+    "updatedAt": "2025-11-06T07:01:38.370Z"
+  },
+  {
+    "userId": 37,
+    "roleId": 13,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.372Z",
+    "updatedAt": "2025-11-06T07:01:38.372Z"
+  },
+  {
+    "userId": 37,
+    "roleId": 14,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.375Z",
+    "updatedAt": "2025-11-06T07:01:38.375Z"
+  },
+  {
+    "userId": 38,
+    "roleId": 9,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.380Z",
+    "updatedAt": "2025-11-06T07:01:38.380Z"
+  },
+  {
+    "userId": 38,
+    "roleId": 17,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.383Z",
+    "updatedAt": "2025-11-06T07:01:38.383Z"
+  },
+  {
+    "userId": 39,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.386Z",
+    "updatedAt": "2025-11-06T07:01:38.386Z"
+  },
+  {
+    "userId": 39,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.389Z",
+    "updatedAt": "2025-11-06T07:01:38.389Z"
+  },
+  {
+    "userId": 40,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.390Z",
+    "updatedAt": "2025-11-06T07:01:38.390Z"
+  },
+  {
+    "userId": 40,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.392Z",
+    "updatedAt": "2025-11-06T07:01:38.392Z"
+  },
+  {
+    "userId": 41,
+    "roleId": 9,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.396Z",
+    "updatedAt": "2025-11-06T07:01:38.396Z"
+  },
+  {
+    "userId": 41,
+    "roleId": 17,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.398Z",
+    "updatedAt": "2025-11-06T07:01:38.398Z"
+  },
+  {
+    "userId": 42,
+    "roleId": 13,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.400Z",
+    "updatedAt": "2025-11-06T07:01:38.400Z"
+  },
+  {
+    "userId": 43,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.402Z",
+    "updatedAt": "2025-11-06T07:01:38.402Z"
+  },
+  {
+    "userId": 43,
+    "roleId": 12,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.403Z",
+    "updatedAt": "2025-11-06T07:01:38.403Z"
+  },
+  {
+    "userId": 43,
+    "roleId": 13,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.405Z",
+    "updatedAt": "2025-11-06T07:01:38.405Z"
+  },
+  {
+    "userId": 44,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.406Z",
+    "updatedAt": "2025-11-06T07:01:38.406Z"
+  },
+  {
+    "userId": 45,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.407Z",
+    "updatedAt": "2025-11-06T07:01:38.407Z"
+  },
+  {
+    "userId": 46,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.412Z",
+    "updatedAt": "2025-11-06T07:01:38.412Z"
+  },
+  {
+    "userId": 47,
+    "roleId": 15,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.414Z",
+    "updatedAt": "2025-11-06T07:01:38.414Z"
+  },
+  {
+    "userId": 47,
+    "roleId": 16,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.416Z",
+    "updatedAt": "2025-11-06T07:01:38.416Z"
+  },
+  {
+    "userId": 48,
+    "roleId": 12,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.420Z",
+    "updatedAt": "2025-11-06T07:01:38.420Z"
+  },
+  {
+    "userId": 49,
+    "roleId": 8,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.422Z",
+    "updatedAt": "2025-11-06T07:01:38.422Z"
+  },
+  {
+    "userId": 49,
+    "roleId": 9,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.423Z",
+    "updatedAt": "2025-11-06T07:01:38.423Z"
+  },
+  {
+    "userId": 49,
+    "roleId": 13,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.424Z",
+    "updatedAt": "2025-11-06T07:01:38.424Z"
+  },
+  {
+    "userId": 49,
+    "roleId": 14,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.429Z",
+    "updatedAt": "2025-11-06T07:01:38.429Z"
+  },
+  {
+    "userId": 49,
+    "roleId": 15,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.431Z",
+    "updatedAt": "2025-11-06T07:01:38.431Z"
+  },
+  {
+    "userId": 50,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.432Z",
+    "updatedAt": "2025-11-06T07:01:38.432Z"
+  },
+  {
+    "userId": 51,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.434Z",
+    "updatedAt": "2025-11-06T07:01:38.434Z"
+  },
+  {
+    "userId": 51,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.435Z",
+    "updatedAt": "2025-11-06T07:01:38.435Z"
+  },
+  {
+    "userId": 52,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.436Z",
+    "updatedAt": "2025-11-06T07:01:38.436Z"
+  },
+  {
+    "userId": 53,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.438Z",
+    "updatedAt": "2025-11-06T07:01:38.438Z"
+  },
+  {
+    "userId": 54,
+    "roleId": 12,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.440Z",
+    "updatedAt": "2025-11-06T07:01:38.440Z"
+  },
+  {
+    "userId": 55,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.441Z",
+    "updatedAt": "2025-11-06T07:01:38.441Z"
+  },
+  {
+    "userId": 55,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.446Z",
+    "updatedAt": "2025-11-06T07:01:38.446Z"
+  },
+  {
+    "userId": 56,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.448Z",
+    "updatedAt": "2025-11-06T07:01:38.448Z"
+  },
+  {
+    "userId": 56,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.450Z",
+    "updatedAt": "2025-11-06T07:01:38.450Z"
+  },
+  {
+    "userId": 57,
+    "roleId": 12,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.451Z",
+    "updatedAt": "2025-11-06T07:01:38.451Z"
+  },
+  {
+    "userId": 58,
+    "roleId": 12,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.452Z",
+    "updatedAt": "2025-11-06T07:01:38.452Z"
+  },
+  {
+    "userId": 59,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.453Z",
+    "updatedAt": "2025-11-06T07:01:38.453Z"
+  },
+  {
+    "userId": 60,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.454Z",
+    "updatedAt": "2025-11-06T07:01:38.454Z"
+  },
+  {
+    "userId": 60,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.455Z",
+    "updatedAt": "2025-11-06T07:01:38.455Z"
+  },
+  {
+    "userId": 61,
+    "roleId": 11,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.456Z",
+    "updatedAt": "2025-11-06T07:01:38.456Z"
+  },
+  {
+    "userId": 62,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.457Z",
+    "updatedAt": "2025-11-06T07:01:38.457Z"
+  },
+  {
+    "userId": 63,
+    "roleId": 12,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.458Z",
+    "updatedAt": "2025-11-06T07:01:38.458Z"
+  },
+  {
+    "userId": 64,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.462Z",
+    "updatedAt": "2025-11-06T07:01:38.462Z"
+  },
+  {
+    "userId": 64,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.464Z",
+    "updatedAt": "2025-11-06T07:01:38.464Z"
+  },
+  {
+    "userId": 65,
+    "roleId": 13,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.465Z",
+    "updatedAt": "2025-11-06T07:01:38.465Z"
+  },
+  {
+    "userId": 65,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.467Z",
+    "updatedAt": "2025-11-06T07:01:38.467Z"
+  },
+  {
+    "userId": 66,
+    "roleId": 13,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.468Z",
+    "updatedAt": "2025-11-06T07:01:38.468Z"
+  },
+  {
+    "userId": 66,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.469Z",
+    "updatedAt": "2025-11-06T07:01:38.469Z"
+  },
+  {
+    "userId": 67,
+    "roleId": 13,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.470Z",
+    "updatedAt": "2025-11-06T07:01:38.470Z"
+  },
+  {
+    "userId": 67,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.471Z",
+    "updatedAt": "2025-11-06T07:01:38.471Z"
+  },
+  {
+    "userId": 68,
+    "roleId": 13,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.472Z",
+    "updatedAt": "2025-11-06T07:01:38.472Z"
+  },
+  {
+    "userId": 68,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.474Z",
+    "updatedAt": "2025-11-06T07:01:38.474Z"
+  },
+  {
+    "userId": 69,
+    "roleId": 13,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.475Z",
+    "updatedAt": "2025-11-06T07:01:38.475Z"
+  },
+  {
+    "userId": 69,
+    "roleId": 17,
+    "lastUsed": false,
+    "createdAt": "2025-11-06T07:01:38.481Z",
+    "updatedAt": "2025-11-06T07:01:38.481Z"
+  },
+  {
+    "userId": 70,
+    "roleId": 12,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.483Z",
+    "updatedAt": "2025-11-06T07:01:38.483Z"
+  },
+  {
+    "userId": 71,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.484Z",
+    "updatedAt": "2025-11-06T07:01:38.484Z"
+  },
+  {
+    "userId": 72,
+    "roleId": 9,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.485Z",
+    "updatedAt": "2025-11-06T07:01:38.485Z"
+  },
+  {
+    "userId": 73,
+    "roleId": 12,
+    "lastUsed": true,
+    "createdAt": "2025-11-06T07:01:38.486Z",
+    "updatedAt": "2025-11-06T07:01:38.486Z"
+  }
+]
