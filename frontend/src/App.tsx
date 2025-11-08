@@ -21,6 +21,8 @@ import LoadingScreen from './components/LoadingScreen.tsx';
 // Lazy Loading für Page-Komponenten
 const Login = React.lazy(() => import('./pages/Login.tsx'));
 const Register = React.lazy(() => import('./pages/Register.tsx'));
+const ForgotPassword = React.lazy(() => import('./pages/ForgotPassword.tsx'));
+const ResetPassword = React.lazy(() => import('./pages/ResetPassword.tsx'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard.tsx'));
 const Settings = React.lazy(() => import('./pages/Settings.tsx'));
 const MobileAppLanding = React.lazy(() => import('./pages/MobileAppLanding.tsx'));
@@ -67,6 +69,20 @@ const App: React.FC = () => {
                                                         <PublicRoute>
                                                             <Suspense fallback={<LoadingScreen />}>
                                                                 <Register />
+                                                            </Suspense>
+                                                        </PublicRoute>
+                                                    } />
+                                                    <Route path="/forgot-password" element={
+                                                        <PublicRoute>
+                                                            <Suspense fallback={<LoadingScreen />}>
+                                                                <ForgotPassword />
+                                                            </Suspense>
+                                                        </PublicRoute>
+                                                    } />
+                                                    <Route path="/reset-password" element={
+                                                        <PublicRoute>
+                                                            <Suspense fallback={<LoadingScreen />}>
+                                                                <ResetPassword />
                                                             </Suspense>
                                                         </PublicRoute>
                                                     } />

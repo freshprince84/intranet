@@ -233,6 +233,126 @@ export const formatDateTimeForCerebro = (dateTimeString: string): string => {
 };
 
 /**
+ * Berechnet die Quinzena (15-Tage-Periode) für ein gegebenes Datum.
+ * Quinzenas sind monatsbasiert:
+ * - Erste Quinzena: 1.-15. des Monats
+ * - Zweite Quinzena: 16. bis letzter Tag des Monats
+ * @param date Datum im Format YYYY-MM-DD
+ * @returns Quinzena-String im Format YYYY-MM-Qq (z.B. "2025-01-Q1" für erste Quinzena Januar)
+ */
+export const getQuinzenaFromDate = (date: string): string => {
+    try {
+        const dateObj = new Date(date + 'T12:00:00');
+        const year = dateObj.getFullYear();
+        const month = dateObj.getMonth() + 1; // 1-12
+        const day = dateObj.getDate();
+        
+        // Erste Quinzena: 1.-15., Zweite Quinzena: 16.-Monatsende
+        const quinzena = day <= 15 ? 1 : 2;
+        
+        return `${year}-${String(month).padStart(2, '0')}-Q${quinzena}`;
+    } catch (error) {
+        console.error('Fehler beim Berechnen der Quinzena:', error);
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = today.getMonth() + 1;
+        return `${year}-${String(month).padStart(2, '0')}-Q1`;
+    }
+};
+
+/**
+ * Konvertiert eine Quinzena (YYYY-MM-Qq) in das Startdatum (erster Tag der Quinzena).
+ * @param quinzenaString Quinzena im Format YYYY-MM-Qq (z.B. "2025-01-Q1")
+ * @returns Datum des ersten Tages der Quinzena im Format YYYY-MM-DD
+ */
+export const convertQuinzenaToDate = (quinzenaString: string): string => {
+    try {
+        // Format: YYYY-MM-Qq oder YYYY-Qqq (für Rückwärtskompatibilität)
+        let year: number, month: number, quinzena: number;
+        
+        if (quinzenaString.includes('-Q')) {
+            // Format: YYYY-MM-Qq oder YYYY-Qqq
+            const parts = quinzenaString.split('-Q');
+            const datePart = parts[0];
+            quinzena = parseInt(parts[1]);
+            
+            if (datePart.includes('-')) {
+                // Format: YYYY-MM-Qq
+                const dateParts = datePart.split('-');
+                year = parseInt(dateParts[0]);
+                month = parseInt(dateParts[1]);
+            } else {
+                // Format: YYYY-Qqq (Rückwärtskompatibilität - berechne Monat basierend auf Quinzena)
+                year = parseInt(datePart);
+                // Für alte Format: Q1 = Jan, Q2 = Feb, etc. (vereinfacht)
+                month = Math.ceil(quinzena / 2);
+            }
+        } else {
+            throw new Error('Ungültiges Quinzena-Format');
+        }
+        
+        // Erste Quinzena beginnt am 1., zweite am 16.
+        const startDay = quinzena === 1 ? 1 : 16;
+        
+        const quinzenaStart = new Date(Date.UTC(year, month - 1, startDay, 12, 0, 0));
+        return format(quinzenaStart, 'yyyy-MM-dd');
+    } catch (error) {
+        console.error('Fehler beim Konvertieren der Quinzena:', error);
+        const fallback = startOfWeek(new Date(), { weekStartsOn: 1 });
+        return format(fallback, 'yyyy-MM-dd');
+    }
+};
+
+/**
+ * Berechnet alle Tage einer Quinzena basierend auf einem Startdatum.
+ * Erste Quinzena: 15 Tage (1.-15.), Zweite Quinzena: variabel (16.-Monatsende)
+ * @param quinzenaStartDate Erster Tag der Quinzena im Format YYYY-MM-DD
+ * @returns Array von Objekten mit date und day Eigenschaften
+ */
+export const getQuinzenaDays = (quinzenaStartDate: string): Array<{ date: string; day: string }> => {
+    if (!quinzenaStartDate) return [];
+    
+    const start = new Date(quinzenaStartDate);
+    const year = start.getFullYear();
+    const month = start.getMonth(); // 0-11
+    const day = start.getDate();
+    
+    // Bestimme Anzahl der Tage in der Quinzena
+    let daysCount: number;
+    if (day === 1) {
+        // Erste Quinzena: immer 15 Tage
+        daysCount = 15;
+    } else {
+        // Zweite Quinzena: 16. bis Monatsende
+        // Berechne letzter Tag des Monats
+        const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+        daysCount = lastDayOfMonth - 15; // 16. bis Monatsende
+    }
+    
+    const quinzenaDays: Array<{ date: string; day: string }> = [];
+    
+    for (let i = 0; i < daysCount; i++) {
+        const currentDay = addDays(start, i);
+        const dayInfo = {
+            date: format(currentDay, 'yyyy-MM-dd'),
+            day: format(currentDay, 'EEEE', { locale: de })
+        };
+        quinzenaDays.push(dayInfo);
+    }
+    
+    return quinzenaDays;
+};
+
+/**
+ * Berechnet die aktuelle Quinzena im Format YYYY-MM-Qq.
+ * @returns Quinzena-String im Format YYYY-MM-Qq (z.B. "2025-01-Q1")
+ */
+export const getCurrentQuinzena = (): string => {
+    const today = new Date();
+    return getQuinzenaFromDate(format(today, 'yyyy-MM-dd'));
+};
+
+/**
  * Hilfsfunktionen für die Datumsbehandlung im Frontend
  */
 

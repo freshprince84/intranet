@@ -1,0 +1,783 @@
+import { PrismaClient, EmployeeStatus, SocialSecurityStatus } from '@prisma/client';
+import { TaskAutomationService } from './taskAutomationService';
+import { DocumentService } from './documentService';
+
+const prisma = new PrismaClient();
+
+/**
+ * Service für Mitarbeiterlebenszyklus-Verwaltung
+ */
+export class LifecycleService {
+  /**
+   * Ruft den Lebenszyklus-Status eines Users ab
+   */
+  static async getLifecycle(userId: number) {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId },
+      include: {
+        lifecycleEvents: {
+          orderBy: { createdAt: 'desc' },
+          take: 10
+        },
+        employmentCertificates: {
+          where: { isLatest: true },
+          orderBy: { createdAt: 'desc' }
+        },
+        employmentContracts: {
+          where: { isLatest: true },
+          orderBy: { createdAt: 'desc' }
+        },
+        socialSecurityRegistrations: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    if (!lifecycle) {
+      return null;
+    }
+
+    // Berechne Onboarding-Progress
+    const progress = this.calculateProgress(lifecycle);
+
+    return {
+      lifecycle,
+      progress
+    };
+  }
+
+  /**
+   * Erstellt einen neuen Lebenszyklus für einen User
+   */
+  static async createLifecycle(userId: number, organizationId: number) {
+    // Prüfe ob bereits ein Lebenszyklus existiert
+    const existing = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (existing) {
+      return existing;
+    }
+
+    // Erstelle neuen Lebenszyklus
+    const lifecycle = await prisma.employeeLifecycle.create({
+      data: {
+        userId,
+        organizationId,
+        status: 'onboarding',
+        onboardingStartedAt: new Date()
+      }
+    });
+
+    // Erstelle Event
+    await prisma.lifecycleEvent.create({
+      data: {
+        lifecycleId: lifecycle.id,
+        eventType: 'onboarding_started',
+        eventData: {
+          organizationId,
+          createdAt: new Date().toISOString()
+        }
+      }
+    });
+
+    // Erstelle automatisch Onboarding-Tasks für Sozialversicherungen
+    try {
+      await TaskAutomationService.createOnboardingTasks(userId, organizationId);
+    } catch (error) {
+      // Logge Fehler, aber breche nicht ab
+      console.error('Fehler beim Erstellen der Onboarding-Tasks:', error);
+    }
+
+    return lifecycle;
+  }
+
+  /**
+   * Aktualisiert den Status eines Lebenszyklus
+   */
+  static async updateStatus(
+    userId: number,
+    status: EmployeeStatus,
+    data?: {
+      contractStartDate?: Date;
+      contractEndDate?: Date;
+      contractType?: string;
+      exitDate?: Date;
+      exitReason?: string;
+    }
+  ) {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (!lifecycle) {
+      throw new Error('Lebenszyklus nicht gefunden');
+    }
+
+    const updateData: any = {
+      status
+    };
+
+    // Status-spezifische Updates
+    if (status === 'onboarding' && !lifecycle.onboardingStartedAt) {
+      updateData.onboardingStartedAt = new Date();
+    }
+
+    if (status === 'active' && !lifecycle.onboardingCompletedAt) {
+      updateData.onboardingCompletedAt = new Date();
+    }
+
+    if (status === 'offboarding' && !lifecycle.offboardingStartedAt) {
+      updateData.offboardingStartedAt = new Date();
+      
+      // Erstelle automatisch Offboarding-Tasks
+      try {
+        await TaskAutomationService.createOffboardingTasks(userId, lifecycle.organizationId);
+      } catch (error) {
+        // Logge Fehler, aber breche nicht ab
+        console.error('Fehler beim Erstellen der Offboarding-Tasks:', error);
+      }
+    }
+
+    if (status === 'archived' && !lifecycle.offboardingCompletedAt) {
+      updateData.offboardingCompletedAt = new Date();
+    }
+
+    // Zusätzliche Daten
+    if (data) {
+      if (data.contractStartDate) updateData.contractStartDate = data.contractStartDate;
+      if (data.contractEndDate) updateData.contractEndDate = data.contractEndDate;
+      if (data.contractType) updateData.contractType = data.contractType;
+      if (data.exitDate) updateData.exitDate = data.exitDate;
+      if (data.exitReason) updateData.exitReason = data.exitReason;
+    }
+
+    const updated = await prisma.employeeLifecycle.update({
+      where: { userId },
+      data: updateData
+    });
+
+    // Erstelle Event
+    await prisma.lifecycleEvent.create({
+      data: {
+        lifecycleId: updated.id,
+        eventType: `status_changed_to_${status}`,
+        eventData: {
+          previousStatus: lifecycle.status,
+          newStatus: status,
+          ...data
+        }
+      }
+    });
+
+    return updated;
+  }
+
+  /**
+   * Berechnet den Onboarding-Progress
+   */
+  static calculateProgress(lifecycle: any): {
+    completed: number;
+    total: number;
+    percent: number;
+  } {
+    const steps = [
+      { key: 'passport', check: () => true }, // Passport wird über IdentificationDocument geprüft
+      { key: 'arl', check: () => lifecycle.arlStatus === 'registered' },
+      { key: 'eps', check: () => !lifecycle.epsRequired || lifecycle.epsStatus === 'registered' },
+      { key: 'pension', check: () => lifecycle.pensionStatus === 'registered' },
+      { key: 'caja', check: () => lifecycle.cajaStatus === 'registered' }
+    ];
+
+    const completed = steps.filter(step => step.check()).length;
+    const total = steps.length;
+    const percent = Math.round((completed / total) * 100);
+
+    return { completed, total, percent };
+  }
+
+  /**
+   * Ruft den Status einer Sozialversicherung ab
+   */
+  static async getSocialSecurityStatus(userId: number, type: 'arl' | 'eps' | 'pension' | 'caja') {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (!lifecycle) {
+      return null;
+    }
+
+    // Hole aus EmployeeLifecycle oder SocialSecurityRegistration
+    const registration = await prisma.socialSecurityRegistration.findUnique({
+      where: {
+        lifecycleId_registrationType: {
+          lifecycleId: lifecycle.id,
+          registrationType: type
+        }
+      }
+    });
+
+    if (registration) {
+      return {
+        type,
+        status: registration.status,
+        number: registration.registrationNumber,
+        provider: registration.provider,
+        registeredAt: registration.registrationDate,
+        notes: registration.notes
+      };
+    }
+
+    // Fallback zu EmployeeLifecycle-Feldern
+    const statusField = `${type}Status` as keyof typeof lifecycle;
+    const numberField = `${type}Number` as keyof typeof lifecycle;
+    const providerField = `${type}Provider` as keyof typeof lifecycle;
+    const registeredAtField = `${type}RegisteredAt` as keyof typeof lifecycle;
+
+    return {
+      type,
+      status: lifecycle[statusField] as SocialSecurityStatus,
+      number: lifecycle[numberField] as string | null,
+      provider: lifecycle[providerField] as string | null,
+      registeredAt: lifecycle[registeredAtField] as Date | null,
+      notes: null
+    };
+  }
+
+  /**
+   * Aktualisiert den Status einer Sozialversicherung
+   */
+  static async updateSocialSecurityStatus(
+    userId: number,
+    type: 'arl' | 'eps' | 'pension' | 'caja',
+    data: {
+      status: SocialSecurityStatus;
+      number?: string;
+      provider?: string;
+      registrationDate?: Date;
+      notes?: string;
+    },
+    completedBy?: number
+  ) {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (!lifecycle) {
+      throw new Error('Lebenszyklus nicht gefunden');
+    }
+
+    // Update EmployeeLifecycle-Felder
+    const updateData: any = {};
+    updateData[`${type}Status`] = data.status;
+    if (data.number) updateData[`${type}Number`] = data.number;
+    if (data.provider) updateData[`${type}Provider`] = data.provider;
+    if (data.registrationDate) updateData[`${type}RegisteredAt`] = data.registrationDate;
+
+    await prisma.employeeLifecycle.update({
+      where: { userId },
+      data: updateData
+    });
+
+    // Update oder erstelle SocialSecurityRegistration
+    await prisma.socialSecurityRegistration.upsert({
+      where: {
+        lifecycleId_registrationType: {
+          lifecycleId: lifecycle.id,
+          registrationType: type
+        }
+      },
+      create: {
+        lifecycleId: lifecycle.id,
+        registrationType: type,
+        status: data.status,
+        registrationNumber: data.number,
+        provider: data.provider,
+        registrationDate: data.registrationDate,
+        notes: data.notes,
+        completedBy,
+        completedAt: data.status === 'registered' ? new Date() : null
+      },
+      update: {
+        status: data.status,
+        registrationNumber: data.number,
+        provider: data.provider,
+        registrationDate: data.registrationDate,
+        notes: data.notes,
+        completedBy,
+        completedAt: data.status === 'registered' ? new Date() : null
+      }
+    });
+
+    // Erstelle Event
+    await prisma.lifecycleEvent.create({
+      data: {
+        lifecycleId: lifecycle.id,
+        eventType: `${type}_status_updated`,
+        eventData: {
+          type,
+          status: data.status,
+          number: data.number,
+          provider: data.provider
+        },
+        triggeredBy: completedBy
+      }
+    });
+
+    return this.getSocialSecurityStatus(userId, type);
+  }
+
+  /**
+   * Ruft alle Arbeitszeugnisse eines Users ab
+   */
+  static async getCertificates(userId: number) {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (!lifecycle) {
+      return null;
+    }
+
+    const certificates = await prisma.employmentCertificate.findMany({
+      where: { lifecycleId: lifecycle.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        generatedByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+
+    return certificates;
+  }
+
+  /**
+   * Ruft ein einzelnes Arbeitszeugnis ab
+   */
+  static async getCertificate(userId: number, certificateId: number) {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (!lifecycle) {
+      return null;
+    }
+
+    const certificate = await prisma.employmentCertificate.findFirst({
+      where: {
+        id: certificateId,
+        lifecycleId: lifecycle.id
+      },
+      include: {
+        generatedByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+
+    return certificate;
+  }
+
+  /**
+   * Erstellt ein neues Arbeitszeugnis
+   * Generiert automatisch ein PDF, falls pdfPath nicht angegeben ist
+   */
+  static async createCertificate(
+    userId: number,
+    data: {
+      certificateType?: string;
+      templateUsed?: string;
+      templateVersion?: string;
+      pdfPath?: string; // Optional: Falls angegeben, wird dieses verwendet, sonst wird PDF generiert
+      customText?: string; // Optional: Vom HR bearbeiteter Text
+    },
+    generatedBy: number
+  ) {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (!lifecycle) {
+      throw new Error('Lebenszyklus nicht gefunden');
+    }
+
+    // Setze alle anderen Certificates auf isLatest = false
+    await prisma.employmentCertificate.updateMany({
+      where: {
+        lifecycleId: lifecycle.id,
+        isLatest: true
+      },
+      data: {
+        isLatest: false
+      }
+    });
+
+    // Generiere PDF falls nicht angegeben
+    let pdfPath = data.pdfPath;
+    if (!pdfPath) {
+      pdfPath = await DocumentService.generateCertificate(
+        {
+          userId,
+          certificateType: data.certificateType,
+          templateUsed: data.templateUsed,
+          templateVersion: data.templateVersion,
+          customText: data.customText
+        },
+        generatedBy
+      );
+    }
+
+    // Erstelle neues Certificate
+    const certificate = await prisma.employmentCertificate.create({
+      data: {
+        lifecycleId: lifecycle.id,
+        certificateType: data.certificateType || 'employment',
+        pdfPath,
+        templateUsed: data.templateUsed || 'default',
+        templateVersion: data.templateVersion || '1.0',
+        generatedBy,
+        isLatest: true
+      },
+      include: {
+        generatedByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+
+    // Erstelle Event
+    await prisma.lifecycleEvent.create({
+      data: {
+        lifecycleId: lifecycle.id,
+        eventType: 'certificate_created',
+        eventData: {
+          certificateId: certificate.id,
+          certificateType: certificate.certificateType
+        },
+        triggeredBy: generatedBy
+      }
+    });
+
+    return certificate;
+  }
+
+  /**
+   * Aktualisiert ein Arbeitszeugnis (nur für neue Versionen)
+   */
+  static async updateCertificate(
+    userId: number,
+    certificateId: number,
+    data: {
+      pdfPath?: string;
+      templateVersion?: string;
+    },
+    updatedBy: number
+  ) {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (!lifecycle) {
+      throw new Error('Lebenszyklus nicht gefunden');
+    }
+
+    const certificate = await prisma.employmentCertificate.findFirst({
+      where: {
+        id: certificateId,
+        lifecycleId: lifecycle.id
+      }
+    });
+
+    if (!certificate) {
+      throw new Error('Arbeitszeugnis nicht gefunden');
+    }
+
+    const updated = await prisma.employmentCertificate.update({
+      where: { id: certificateId },
+      data: {
+        pdfPath: data.pdfPath || certificate.pdfPath,
+        templateVersion: data.templateVersion || certificate.templateVersion
+      },
+      include: {
+        generatedByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+
+    // Erstelle Event
+    await prisma.lifecycleEvent.create({
+      data: {
+        lifecycleId: lifecycle.id,
+        eventType: 'certificate_updated',
+        eventData: {
+          certificateId: certificate.id
+        },
+        triggeredBy: updatedBy
+      }
+    });
+
+    return updated;
+  }
+
+  /**
+   * Ruft alle Arbeitsverträge eines Users ab
+   */
+  static async getContracts(userId: number) {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (!lifecycle) {
+      return null;
+    }
+
+    const contracts = await prisma.employmentContract.findMany({
+      where: { lifecycleId: lifecycle.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        generatedByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        contractDocuments: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    return contracts;
+  }
+
+  /**
+   * Ruft einen einzelnen Arbeitsvertrag ab
+   */
+  static async getContract(userId: number, contractId: number) {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (!lifecycle) {
+      return null;
+    }
+
+    const contract = await prisma.employmentContract.findFirst({
+      where: {
+        id: contractId,
+        lifecycleId: lifecycle.id
+      },
+      include: {
+        generatedByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        },
+        contractDocuments: {
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    return contract;
+  }
+
+  /**
+   * Erstellt einen neuen Arbeitsvertrag
+   * Generiert automatisch ein PDF, falls pdfPath nicht angegeben ist
+   */
+  static async createContract(
+    userId: number,
+    data: {
+      contractType?: string;
+      startDate: Date;
+      endDate?: Date;
+      salary?: number;
+      workingHours?: number;
+      position?: string;
+      templateUsed?: string;
+      templateVersion?: string;
+      pdfPath?: string; // Optional: Falls angegeben, wird dieses verwendet, sonst wird PDF generiert
+      customText?: string; // Optional: Vom HR bearbeiteter Text
+    },
+    generatedBy: number
+  ) {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (!lifecycle) {
+      throw new Error('Lebenszyklus nicht gefunden');
+    }
+
+    // Setze alle anderen Contracts auf isLatest = false
+    await prisma.employmentContract.updateMany({
+      where: {
+        lifecycleId: lifecycle.id,
+        isLatest: true
+      },
+      data: {
+        isLatest: false
+      }
+    });
+
+    // Generiere PDF falls nicht angegeben
+    let pdfPath = data.pdfPath;
+    if (!pdfPath) {
+      pdfPath = await DocumentService.generateContract(
+        {
+          userId,
+          contractType: data.contractType || 'employment',
+          startDate: data.startDate,
+          endDate: data.endDate,
+          salary: data.salary,
+          workingHours: data.workingHours,
+          position: data.position,
+          templateUsed: data.templateUsed,
+          templateVersion: data.templateVersion,
+          customText: data.customText
+        },
+        generatedBy
+      );
+    }
+
+    // Erstelle neuen Contract
+    const contract = await prisma.employmentContract.create({
+      data: {
+        lifecycleId: lifecycle.id,
+        contractType: data.contractType || 'employment',
+        startDate: data.startDate,
+        endDate: data.endDate,
+        salary: data.salary,
+        workingHours: data.workingHours,
+        position: data.position,
+        pdfPath,
+        templateUsed: data.templateUsed || 'default',
+        templateVersion: data.templateVersion || '1.0',
+        generatedBy,
+        isLatest: true
+      },
+      include: {
+        generatedByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+
+    // Erstelle Event
+    await prisma.lifecycleEvent.create({
+      data: {
+        lifecycleId: lifecycle.id,
+        eventType: 'contract_created',
+        eventData: {
+          contractId: contract.id,
+          contractType: contract.contractType
+        },
+        triggeredBy: generatedBy
+      }
+    });
+
+    return contract;
+  }
+
+  /**
+   * Aktualisiert einen Arbeitsvertrag (nur für neue Versionen)
+   */
+  static async updateContract(
+    userId: number,
+    contractId: number,
+    data: {
+      startDate?: Date;
+      endDate?: Date;
+      salary?: number;
+      workingHours?: number;
+      position?: string;
+      pdfPath?: string;
+      templateVersion?: string;
+    },
+    updatedBy: number
+  ) {
+    const lifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (!lifecycle) {
+      throw new Error('Lebenszyklus nicht gefunden');
+    }
+
+    const contract = await prisma.employmentContract.findFirst({
+      where: {
+        id: contractId,
+        lifecycleId: lifecycle.id
+      }
+    });
+
+    if (!contract) {
+      throw new Error('Arbeitsvertrag nicht gefunden');
+    }
+
+    const updateData: any = {};
+    if (data.startDate) updateData.startDate = data.startDate;
+    if (data.endDate !== undefined) updateData.endDate = data.endDate;
+    if (data.salary !== undefined) updateData.salary = data.salary;
+    if (data.workingHours !== undefined) updateData.workingHours = data.workingHours;
+    if (data.position) updateData.position = data.position;
+    if (data.pdfPath) updateData.pdfPath = data.pdfPath;
+    if (data.templateVersion) updateData.templateVersion = data.templateVersion;
+
+    const updated = await prisma.employmentContract.update({
+      where: { id: contractId },
+      data: updateData,
+      include: {
+        generatedByUser: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true
+          }
+        }
+      }
+    });
+
+    // Erstelle Event
+    await prisma.lifecycleEvent.create({
+      data: {
+        lifecycleId: lifecycle.id,
+        eventType: 'contract_updated',
+        eventData: {
+          contractId: contract.id
+        },
+        triggeredBy: updatedBy
+      }
+    });
+
+    return updated;
+  }
+}
+

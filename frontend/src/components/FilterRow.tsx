@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { XMarkIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 
@@ -157,7 +157,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
         // Request-Status-Optionen
         return (
           <select
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             value={value as string || ''}
             onChange={(e) => onChange(e.target.value)}
           >
@@ -172,7 +172,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
         // Task-Status-Optionen
         return (
           <select
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             value={value as string || ''}
             onChange={(e) => onChange(e.target.value)}
           >
@@ -188,7 +188,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
         // Invoice-Status-Optionen
         return (
           <select
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             value={value as string || ''}
             onChange={(e) => onChange(e.target.value)}
           >
@@ -204,7 +204,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
         // Fallback für andere Tabellen mit Status
         return (
           <select
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             value={value as string || ''}
             onChange={(e) => onChange(e.target.value)}
           >
@@ -221,7 +221,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
     if (columnId === 'responsible' || columnId === 'responsibleAndQualityControl') {
       return (
         <select
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           value={value as string || ''}
           onChange={(e) => onChange(e.target.value)}
           disabled={loadingUsers || loadingRoles}
@@ -259,7 +259,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
     if (columnId === 'qualityControl') {
       return (
         <select
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
           value={value as string || ''}
           onChange={(e) => onChange(e.target.value)}
           disabled={loadingUsers}
@@ -311,7 +311,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
           {!isVariable && (
             <input
               type="date"
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
               value={value as string || ''}
               onChange={(e) => onChange(e.target.value)}
             />
@@ -319,7 +319,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
           
           {/* Variable-Anzeige */}
           {isVariable && (
-            <div className="px-3 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-blue-700 dark:text-blue-300 text-sm">
+            <div className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md text-blue-700 dark:text-blue-300 text-xs">
               📅 {t('filter.row.dynamicDay')}
             </div>
           )}
@@ -331,7 +331,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
     return (
       <input
         type="text"
-        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
+        className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
         value={value as string || ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={t('filter.row.enterValue')}
@@ -340,11 +340,11 @@ const FilterRow: React.FC<FilterRowProps> = ({
   };
   
   return (
-    <div className="flex items-center space-x-2 mb-2">
+    <div className="flex items-center space-x-2 mb-0">
       {/* Spalten-Auswahl */}
       <div className="w-1/3">
         <select
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
+          className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
           value={condition.column}
           onChange={(e) => onChange({ 
             ...condition, 
@@ -365,7 +365,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
       {/* Operator-Auswahl */}
       <div className="w-1/4">
         <select
-          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
+          className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
           value={condition.operator}
           onChange={(e) => onChange({ ...condition, operator: e.target.value })}
         >
@@ -388,16 +388,16 @@ const FilterRow: React.FC<FilterRowProps> = ({
       </div>
       
       {/* Aktions-Buttons */}
-      <div className="flex space-x-1">
+      <div className="flex gap-1">
         {/* Löschen-Button (nicht für die erste Zeile, wenn sie die einzige ist) */}
         <button
           type="button"
           onClick={onDelete}
-          className="p-2 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500 rounded-md"
+          className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500 rounded-md transition-colors"
           disabled={isFirst && !isLast}
           title={t('filter.row.removeCondition')}
         >
-          <XMarkIcon className="h-5 w-5" />
+          <TrashIcon className="h-4 w-4" />
         </button>
         
         {/* Hinzufügen-Button (nur in der letzten Zeile) */}
@@ -405,10 +405,10 @@ const FilterRow: React.FC<FilterRowProps> = ({
           <button
             type="button"
             onClick={onAdd}
-            className="p-2 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 rounded-md"
+            className="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 rounded-md transition-colors"
             title={t('filter.row.addCondition')}
           >
-            <PlusIcon className="h-5 w-5" />
+            <PlusCircleIcon className="h-4 w-4" />
           </button>
         )}
       </div>

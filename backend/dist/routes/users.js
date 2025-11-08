@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const userController_1 = require("../controllers/userController");
+const lifecycleController_1 = require("../controllers/lifecycleController");
 const auth_1 = require("../middleware/auth");
 const organization_1 = require("../middleware/organization");
 const router = (0, express_1.Router)();
@@ -23,5 +24,22 @@ router.post('/', userController_1.createUser); // Neue Benutzer erstellen (nur f
 router.get('/:id', userController_1.getUserById);
 router.put('/:id', userController_1.updateUserById);
 router.put('/:id/roles', userController_1.updateUserRoles);
+// Lebenszyklus-Routen
+router.get('/:id/lifecycle', lifecycleController_1.getLifecycle);
+router.put('/:id/lifecycle/status', lifecycleController_1.updateStatus);
+router.get('/:id/lifecycle/social-security/:type', lifecycleController_1.getSocialSecurity);
+router.put('/:id/lifecycle/social-security/:type', lifecycleController_1.updateSocialSecurity);
+// Certificate-Routen
+router.get('/:id/lifecycle/certificates', lifecycleController_1.getCertificates);
+router.get('/:id/lifecycle/certificates/:certId', lifecycleController_1.getCertificate);
+router.post('/:id/lifecycle/certificates', lifecycleController_1.createCertificate);
+router.put('/:id/lifecycle/certificates/:certId', lifecycleController_1.updateCertificate);
+router.get('/:id/lifecycle/certificates/:certId/download', lifecycleController_1.downloadCertificate);
+// Contract-Routen
+router.get('/:id/lifecycle/contracts', lifecycleController_1.getContracts);
+router.get('/:id/lifecycle/contracts/:contractId', lifecycleController_1.getContract);
+router.post('/:id/lifecycle/contracts', lifecycleController_1.createContract);
+router.put('/:id/lifecycle/contracts/:contractId', lifecycleController_1.updateContract);
+router.get('/:id/lifecycle/contracts/:contractId/download', lifecycleController_1.downloadContract);
 exports.default = router;
 //# sourceMappingURL=users.js.map

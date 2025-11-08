@@ -62,6 +62,11 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [CONSULTATION_MODULE_IMPLEMENTATION_PART2.md](docs/implementation_plans/CONSULTATION_MODULE_IMPLEMENTATION_PART2.md) - Teil 2: Frontend-Implementierung
 - [CONSULTATION_MODULE_IMPLEMENTATION_PART3.md](docs/implementation_plans/CONSULTATION_MODULE_IMPLEMENTATION_PART3.md) - Teil 3: Erweiterte Features
 - [CONSULTATION_INVOICE_IMPLEMENTATION.md](docs/implementation_plans/CONSULTATION_INVOICE_IMPLEMENTATION.md) - Abrechnungsmodul für Beratungsstunden
+- [MITARBEITERLEBENSZYKLUS_IMPLEMENTATION.md](docs/implementation_plans/MITARBEITERLEBENSZYKLUS_IMPLEMENTATION.md) - **NEU**: Vollständiger Mitarbeiterlebenszyklus (Onboarding bis Offboarding) für Kolumbien
+- [MITARBEITERLEBENSZYKLUS_FORTSCHRITT.md](docs/implementation_plans/MITARBEITERLEBENSZYKLUS_FORTSCHRITT.md) - Fortschritts-Tracking für Mitarbeiterlebenszyklus
+- [MITARBEITERLEBENSZYKLUS_PROZESS.md](docs/implementation_plans/MITARBEITERLEBENSZYKLUS_PROZESS.md) - Detaillierte Prozessbeschreibung (Schritt für Schritt)
+- [MITARBEITERLEBENSZYKLUS_ZUSAMMENFASSUNG.md](docs/implementation_plans/MITARBEITERLEBENSZYKLUS_ZUSAMMENFASSUNG.md) - Prozess-Zusammenfassung (User-Flows, Komponenten-Übersicht)
+- [MITARBEITERLEBENSZYKLUS_DETAILLIERT.md](docs/implementation_plans/MITARBEITERLEBENSZYKLUS_DETAILLIERT.md) - **NEU**: Detaillierte Komponenten-Spezifikationen mit Code-Integration
 
 ## Claude-spezifische Dokumentation
 - [claude/README.md](docs/claude/README.md) - Übersicht der speziell für Claude optimierten Ressourcen

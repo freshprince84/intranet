@@ -3,10 +3,12 @@ import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth.tsx';
-import { UserCircleIcon, PencilIcon, DocumentTextIcon, XMarkIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { UserCircleIcon, PencilIcon, DocumentTextIcon, XMarkIcon, CheckIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import { API_URL } from '../config/api.ts';
 import useMessage from '../hooks/useMessage.ts';
 import IdentificationDocumentList from '../components/IdentificationDocumentList.tsx';
+import LifecycleTab from '../components/LifecycleTab.tsx';
+import MyDocumentsTab from '../components/MyDocumentsTab.tsx';
 
 interface UserProfile {
   id: number;
@@ -49,7 +51,7 @@ const Profile: React.FC = () => {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
-  const [activeTab, setActiveTab] = useState<'profile' | 'documents'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'documents' | 'lifecycle' | 'myDocuments'>('profile');
 
   // Länder für die Auswahl (dynamisch aus Übersetzungen)
   const COUNTRIES = [
@@ -248,6 +250,28 @@ const Profile: React.FC = () => {
             >
               <DocumentTextIcon className="h-5 w-5 inline mr-2" />
               {t('profile.documents')}
+            </button>
+            <button
+              onClick={() => setActiveTab('lifecycle')}
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                activeTab === 'lifecycle'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <BuildingOfficeIcon className="h-5 w-5 inline mr-2" />
+              Lebenszyklus
+            </button>
+            <button
+              onClick={() => setActiveTab('myDocuments')}
+              className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                activeTab === 'myDocuments'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              <DocumentTextIcon className="h-5 w-5 inline mr-2" />
+              Meine Dokumente
             </button>
           </nav>
         </div>
@@ -535,6 +559,14 @@ const Profile: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           <IdentificationDocumentList userId={user.id} />
         </div>
+      )}
+
+      {activeTab === 'lifecycle' && user && (
+        <LifecycleTab userId={user.id} />
+      )}
+
+      {activeTab === 'myDocuments' && user && (
+        <MyDocumentsTab userId={user.id} />
       )}
     </div>
     </div>

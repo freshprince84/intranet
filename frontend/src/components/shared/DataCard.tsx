@@ -49,7 +49,6 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
   const [isExpanded, setIsExpanded] = useState(false);
   const [needsExpansion, setNeedsExpansion] = useState(false);
   const firstLineRef = useRef<HTMLParagraphElement>(null);
-  const labelRef = useRef<HTMLSpanElement>(null);
   
   // Beschreibung als Plain Text (ohne Markdown) für die Vorschau extrahieren
   const getPlainTextPreview = (markdown: string): string => {
@@ -244,9 +243,8 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
   
   return (
     <div className={`text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 ${item.className || ''}`}>
-      {/* Hauptzeile: Label, Text, Pfeil rechts */}
+      {/* Hauptzeile: Text, Pfeil rechts (ohne Label) */}
       <div className="flex items-center gap-1 sm:gap-1.5">
-        <span ref={labelRef} className="font-medium mr-1 sm:mr-2 whitespace-nowrap flex-shrink-0">{item.label}:</span>
         {/* Text - kann umbrechen, keine line-clamp mehr */}
         <span 
           ref={firstLineRef}
@@ -281,14 +279,8 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
         )}
       </div>
       {/* Bilder IMMER anzeigen (auch wenn nicht expanded) */}
-      {/* Wenn kein Text vorhanden ist, Bild auf Höhe des Labels positionieren */}
       {hasImages && (
-        <div 
-          className={firstLine.trim() === '' ? '-mt-6' : 'mt-2'} 
-          style={{ 
-            marginLeft: labelRef.current ? `${labelRef.current.offsetWidth + 8}px` : 'calc(0.75rem * 5 + 0.5rem)'
-          }}
-        >
+        <div className={firstLine.trim() === '' ? 'mt-0' : 'mt-2'}>
           <MarkdownPreview 
             content={fullDescriptionContent} 
             showImagePreview={true}
@@ -313,12 +305,7 @@ const DescriptionMetadataItem: React.FC<{ item: MetadataItem }> = ({ item }) => 
         // Zeige REST-Text wenn vorhanden
         if (restContent && restContent.trim() !== '') {
           return (
-            <div 
-              className="mt-1" 
-              style={{ 
-                marginLeft: labelRef.current ? `${labelRef.current.offsetWidth + 8}px` : 'calc(0.75rem * 5 + 0.5rem)'
-              }}
-            >
+            <div className="mt-1">
               <div className="dark:text-gray-200 break-words text-gray-900 dark:text-white">
                 {restContent.trim()}
               </div>
@@ -355,87 +342,72 @@ const DataCard: React.FC<DataCardProps> = ({
       className={`bg-white dark:bg-gray-800 rounded-lg ${borderClass} p-3 sm:p-4 md:p-5 lg:p-6 shadow-sm hover:shadow-md transition-shadow ${onClick ? 'cursor-pointer' : ''} w-full overflow-hidden ${className}`}
       onClick={onClick}
     >
-      {/* Container für Titel links und alle Metadaten rechts - Grid-Layout mit 2 Spalten */}
-      <div className="grid items-start gap-4 mb-2 min-w-0" style={{ gridTemplateColumns: '1fr auto' }}>
-        {/* Titel links - flexibel, nimmt nur benötigten Platz, kann umbrechen */}
-        <div className="min-w-0 pr-2">
-          {typeof title === 'string' ? (
-            <h3 className="font-semibold text-gray-900 dark:text-white break-words" style={{ fontSize: 'clamp(0.9375rem, 1.2vw + 0.5rem, 1.25rem)', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
-              {title}
-            </h3>
-          ) : (
-            title
-          )}
-          {subtitle && (
-            <p className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-500 dark:text-gray-400 mt-1 break-words">
-              {subtitle}
-            </p>
-          )}
+      {/* Mobile Layout (sm und kleiner) */}
+      <div className="block sm:hidden">
+        {/* Zeile 1: Resp/QC links, Datum rechts (50:50) */}
+        <div className="flex items-center justify-between gap-2 mb-2">
+          {/* Links: Resp und QC nebeneinander */}
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            {/* Resp (main) */}
+            {metadata.filter(item => item.section === 'main' || (!item.section && (item.label === 'Angefragt von' || item.label === 'Verantwortlicher'))).map((item, index) => {
+              if (item.descriptionContent) return null;
+              return (
+                <div key={index} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0">
+                  {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                  <span className="font-medium whitespace-nowrap">{item.label}:</span>
+                  <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
+                    {typeof item.value === 'string' ? item.value : item.value}
+                  </span>
+                </div>
+              );
+            })}
+            {/* QC (main-second) */}
+            {metadata.filter(item => item.section === 'main-second' || (!item.section && item.label === 'Qualitätskontrolle')).map((item, index) => {
+              if (item.descriptionContent) return null;
+              return (
+                <div key={index} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0">
+                  {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                  <span className="font-medium whitespace-nowrap">{item.label}:</span>
+                  <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
+                    {typeof item.value === 'string' ? item.value : item.value}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+          {/* Rechts: Datum (50%) */}
+          <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0" style={{ width: '50%', justifyContent: 'flex-end' }}>
+            {metadata.filter(item => item.section === 'right-inline').map((item, index) => (
+              <React.Fragment key={index}>
+                {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
+                  {typeof item.value === 'string' ? item.value : item.value}
+                </span>
+              </React.Fragment>
+            ))}
+          </div>
         </div>
         
-        {/* Rechts: Alle Metadaten zusammen (Solicitado por, Responsable, Datum, Status) - rechtsbündig ausgerichtet, feste Breite für Bündigkeit */}
-        <div className="flex items-start justify-end gap-3 sm:gap-4 flex-nowrap flex-shrink-0 min-w-[220px]">
-          {/* Container für Solicitado por + Responsable (untereinander) */}
-          <div className="flex flex-col gap-1 sm:gap-1.5 flex-shrink-0">
-            {/* Solicitado por (erste Zeile) */}
-            {metadata.filter(item => item.section === 'main' || (!item.section && item.label === 'Angefragt von')).length > 0 && (
-              <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                {metadata
-                  .filter(item => item.section === 'main' || (!item.section && item.label === 'Angefragt von'))
-                  .map((item, index) => {
-                    if (item.descriptionContent) return null;
-                    
-                    return (
-                      <React.Fragment key={index}>
-                        {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                        <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>
-                        <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
-                          {typeof item.value === 'string' ? item.value : item.value}
-                        </span>
-                      </React.Fragment>
-                    );
-                  })}
-              </div>
+        {/* Zeile 2: Titel (60-70%) | Status (30-40%) */}
+        <div className="flex items-start justify-between gap-2 mb-2">
+          {/* Titel links (60-70%) */}
+          <div className="flex-1 min-w-0" style={{ flex: '0 0 65%' }}>
+            {typeof title === 'string' ? (
+              <h3 className="font-semibold text-gray-900 dark:text-white break-words text-sm" style={{ wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                {title}
+              </h3>
+            ) : (
+              title
             )}
-            
-            {/* Responsable (zweite Zeile, bündig unter Solicitado por) */}
-            {metadata.filter(item => item.section === 'main-second' || (!item.section && item.label === 'Verantwortlicher')).length > 0 && (
-              <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                {metadata
-                  .filter(item => item.section === 'main-second' || (!item.section && item.label === 'Verantwortlicher'))
-                  .map((item, index) => {
-                    if (item.descriptionContent) return null;
-                    
-                    return (
-                      <React.Fragment key={index}>
-                        {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                        <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>
-                        <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
-                          {typeof item.value === 'string' ? item.value : item.value}
-                        </span>
-                      </React.Fragment>
-                    );
-                  })}
-              </div>
+            {subtitle && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words">
+                {subtitle}
+              </p>
             )}
           </div>
-          
-          {/* Datum (right-inline) */}
-          {metadata.filter(item => item.section === 'right-inline').map((item, index) => (
-            <div
-              key={index}
-              className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 flex-shrink-0 whitespace-nowrap"
-            >
-              {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-              <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
-                {typeof item.value === 'string' ? item.value : item.value}
-              </span>
-            </div>
-          ))}
-          
-          {/* Status - sicherstellen dass innerhalb der Card bleibt */}
+          {/* Status rechts (30-40%) */}
           {status && (
-            <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0 min-w-0">
+            <div className="flex items-center gap-0.5 flex-shrink-0" style={{ flex: '0 0 35%', justifyContent: 'flex-end' }}>
               {/* Status-Shift-Button (links) */}
               {status.onPreviousClick ? (
                 <button
@@ -443,13 +415,13 @@ const DataCard: React.FC<DataCardProps> = ({
                     e.stopPropagation();
                     status.onPreviousClick?.();
                   }}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
                   title="Vorheriger Status"
                 >
-                  <ChevronLeftIcon className="h-6 w-6" />
+                  <ChevronLeftIcon className="h-4 w-4" />
                 </button>
               ) : null}
-              <span className={`px-1.5 sm:px-2 md:px-2.5 py-0.5 sm:py-0.5 md:py-1 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-medium rounded-full ${status.color} ${status.className || ''} whitespace-nowrap flex-shrink-0`}>
+              <span className={`px-1.5 py-0.5 text-xs font-medium rounded-full ${status.color} ${status.className || ''} whitespace-nowrap flex-shrink-0`}>
                 {status.label}
               </span>
               {/* Status-Shift-Button (rechts) */}
@@ -459,14 +431,132 @@ const DataCard: React.FC<DataCardProps> = ({
                     e.stopPropagation();
                     status.onNextClick?.();
                   }}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
                   title="Nächster Status"
                 >
-                  <ChevronRightIcon className="h-6 w-6" />
+                  <ChevronRightIcon className="h-4 w-4" />
                 </button>
               ) : null}
             </div>
           )}
+        </div>
+      </div>
+      
+      {/* Desktop Layout (sm und größer) */}
+      <div className="hidden sm:block">
+        {/* Container für Titel links und alle Metadaten rechts - Grid-Layout mit 2 Spalten */}
+        <div className="grid items-start gap-4 mb-2 min-w-0" style={{ gridTemplateColumns: '1fr auto' }}>
+          {/* Titel links - flexibel, nimmt nur benötigten Platz, kann umbrechen */}
+          <div className="min-w-0 pr-2">
+            {typeof title === 'string' ? (
+              <h3 className="font-semibold text-gray-900 dark:text-white break-words" style={{ fontSize: 'clamp(0.9375rem, 1.2vw + 0.5rem, 1.25rem)', wordBreak: 'break-word', overflowWrap: 'break-word' }}>
+                {title}
+              </h3>
+            ) : (
+              title
+            )}
+            {subtitle && (
+              <p className="text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-500 dark:text-gray-400 mt-1 break-words">
+                {subtitle}
+              </p>
+            )}
+          </div>
+          
+          {/* Rechts: Alle Metadaten zusammen (Solicitado por, Responsable, Datum, Status) - rechtsbündig ausgerichtet, feste Breite für Bündigkeit */}
+          <div className="flex items-start justify-end gap-3 sm:gap-4 flex-nowrap flex-shrink-0 min-w-[220px]">
+            {/* Container für Solicitado por + Responsable (untereinander) */}
+            <div className="flex flex-col gap-1 sm:gap-1.5 flex-shrink-0">
+              {/* Solicitado por (erste Zeile) */}
+              {metadata.filter(item => item.section === 'main' || (!item.section && item.label === 'Angefragt von')).length > 0 && (
+                <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  {metadata
+                    .filter(item => item.section === 'main' || (!item.section && item.label === 'Angefragt von'))
+                    .map((item, index) => {
+                      if (item.descriptionContent) return null;
+                      
+                      return (
+                        <React.Fragment key={index}>
+                          {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                          <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>
+                          <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
+                            {typeof item.value === 'string' ? item.value : item.value}
+                          </span>
+                        </React.Fragment>
+                      );
+                    })}
+                </div>
+              )}
+              
+              {/* Responsable (zweite Zeile, bündig unter Solicitado por) */}
+              {metadata.filter(item => item.section === 'main-second' || (!item.section && item.label === 'Verantwortlicher')).length > 0 && (
+                <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                  {metadata
+                    .filter(item => item.section === 'main-second' || (!item.section && item.label === 'Verantwortlicher'))
+                    .map((item, index) => {
+                      if (item.descriptionContent) return null;
+                      
+                      return (
+                        <React.Fragment key={index}>
+                          {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                          <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>
+                          <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
+                            {typeof item.value === 'string' ? item.value : item.value}
+                          </span>
+                        </React.Fragment>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+            
+            {/* Datum (right-inline) */}
+            {metadata.filter(item => item.section === 'right-inline').map((item, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 flex-shrink-0 whitespace-nowrap"
+              >
+                {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
+                <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
+                  {typeof item.value === 'string' ? item.value : item.value}
+                </span>
+              </div>
+            ))}
+            
+            {/* Status - sicherstellen dass innerhalb der Card bleibt */}
+            {status && (
+              <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0 min-w-0">
+                {/* Status-Shift-Button (links) */}
+                {status.onPreviousClick ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      status.onPreviousClick?.();
+                    }}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
+                    title="Vorheriger Status"
+                  >
+                    <ChevronLeftIcon className="h-6 w-6" />
+                  </button>
+                ) : null}
+                <span className={`px-1.5 sm:px-2 md:px-2.5 py-0.5 sm:py-0.5 md:py-1 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl font-medium rounded-full ${status.color} ${status.className || ''} whitespace-nowrap flex-shrink-0`}>
+                  {status.label}
+                </span>
+                {/* Status-Shift-Button (rechts) */}
+                {status.onNextClick ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      status.onNextClick?.();
+                    }}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
+                    title="Nächster Status"
+                  >
+                    <ChevronRightIcon className="h-6 w-6" />
+                  </button>
+                ) : null}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       
@@ -499,31 +589,55 @@ const DataCard: React.FC<DataCardProps> = ({
         </div>
       )}
 
-      {/* Beschreibung und Buttons in einer Zeile - Grid-Layout für feste Positionen */}
+      {/* Beschreibung und Buttons - Mobile: Beschreibung 100%, Buttons darunter | Desktop: Grid-Layout */}
       {(metadata.filter(item => item.section === 'full' && item.descriptionContent).length > 0 || actions) && (
-        <div className="grid items-start gap-3 sm:gap-4 mt-2 sm:mt-2.5 mb-3 sm:mb-4" style={{ gridTemplateColumns: '1fr auto' }}>
-          {/* Beschreibung links - nimmt verfügbaren Platz */}
-          {metadata.filter(item => item.section === 'full' && item.descriptionContent).length > 0 ? (
-            <div className="flex-1 min-w-0">
-              {metadata.filter(item => item.section === 'full' && item.descriptionContent).map((item, index) => (
-                <DescriptionMetadataItem key={index} item={item} />
-              ))}
-            </div>
-          ) : (
-            <div />
-          )}
-          {/* Buttons rechts - immer an der unteren rechten Ecke */}
-          {actions ? (
-            <div
-              className="flex items-center space-x-2 flex-shrink-0 self-end"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {actions}
-            </div>
-          ) : (
-            <div />
-          )}
-        </div>
+        <>
+          {/* Mobile Layout: Beschreibung 100% Breite, Buttons darunter */}
+          <div className="block sm:hidden">
+            {/* Zeile 3: Beschreibung (100%) */}
+            {metadata.filter(item => item.section === 'full' && item.descriptionContent).length > 0 && (
+              <div className="w-full mb-2">
+                {metadata.filter(item => item.section === 'full' && item.descriptionContent).map((item, index) => (
+                  <DescriptionMetadataItem key={index} item={item} />
+                ))}
+              </div>
+            )}
+            {/* Buttons unter der Beschreibung */}
+            {actions && (
+              <div
+                className="flex items-center space-x-2 flex-wrap justify-end mt-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {actions}
+              </div>
+            )}
+          </div>
+          
+          {/* Desktop Layout: Grid-Layout für feste Positionen */}
+          <div className="hidden sm:grid items-start gap-3 sm:gap-4 mt-2 sm:mt-2.5 mb-3 sm:mb-4" style={{ gridTemplateColumns: '1fr auto' }}>
+            {/* Beschreibung links - nimmt verfügbaren Platz */}
+            {metadata.filter(item => item.section === 'full' && item.descriptionContent).length > 0 ? (
+              <div className="flex-1 min-w-0">
+                {metadata.filter(item => item.section === 'full' && item.descriptionContent).map((item, index) => (
+                  <DescriptionMetadataItem key={index} item={item} />
+                ))}
+              </div>
+            ) : (
+              <div />
+            )}
+            {/* Buttons rechts - immer an der unteren rechten Ecke */}
+            {actions ? (
+              <div
+                className="flex items-center space-x-2 flex-shrink-0 self-end"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {actions}
+              </div>
+            ) : (
+              <div />
+            )}
+          </div>
+        </>
       )}
 
       {/* Metadaten - strukturiertes Layout (für andere Komponenten) */}

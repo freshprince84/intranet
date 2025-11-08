@@ -5,6 +5,7 @@ import { organizationService } from '../../services/organizationService.ts';
 import { Organization } from '../../types/organization.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import useMessage from '../../hooks/useMessage.ts';
+import { useOrganization } from '../../contexts/OrganizationContext.tsx';
 import CreateOrganizationModal from './CreateOrganizationModal.tsx';
 import JoinOrganizationModal from './JoinOrganizationModal.tsx';
 import EditOrganizationModal from './EditOrganizationModal.tsx';
@@ -34,6 +35,7 @@ const OrganizationSettings: React.FC = () => {
   const { canViewOrganization, canManageOrganization, loading: permissionsLoading } = usePermissions();
   const { showMessage } = useMessage();
   const { t } = useTranslation();
+  const { refreshOrganization } = useOrganization();
 
   const fetchOrganization = useCallback(async () => {
     try {
@@ -101,6 +103,8 @@ const OrganizationSettings: React.FC = () => {
 
   const handleEditSuccess = () => {
     fetchOrganization();
+    // Aktualisiere auch den OrganizationContext
+    refreshOrganization();
   };
 
   if (permissionsLoading) {

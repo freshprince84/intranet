@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CheckIcon, XMarkIcon, ArrowPathIcon, BookmarkIcon } from '@heroicons/react/24/outline';
 import FilterRow, { FilterCondition } from './FilterRow.tsx';
 import FilterLogicalOperator from './FilterLogicalOperator.tsx';
 import axiosInstance from '../config/axios.ts';
@@ -189,7 +190,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   };
   
   return (
-    <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+    <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg">
       <h3 className="text-base font-medium text-gray-700 dark:text-gray-200 mb-3">{t('filter.title')}</h3>
       
       <div className="space-y-0">
@@ -228,36 +229,41 @@ const FilterPane: React.FC<FilterPaneProps> = ({
           />
           <button
             onClick={handleSaveFilter}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none"
+            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
+            title={t('filter.saveFilter')}
           >
-            {t('filter.saveFilter')}
+            <BookmarkIcon className="h-5 w-5" />
           </button>
           <button
             onClick={() => setShowSaveInput(false)}
-            className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className="p-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors"
+            title={t('filter.cancel')}
           >
-            {t('filter.cancel')}
+            <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
       ) : (
-        <div className="flex justify-end gap-3 mt-4">
+        <div className="flex justify-end gap-2 mt-4">
           <button
             onClick={handleResetFilters}
-            className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            className="p-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors"
+            title={t('filter.reset')}
           >
-            {t('filter.reset')}
+            <ArrowPathIcon className="h-5 w-5" />
           </button>
           <button
             onClick={() => setShowSaveInput(true)}
-            className="px-4 py-2 text-sm text-green-700 dark:text-green-500 hover:text-green-900 dark:hover:text-green-400"
+            className="p-2 bg-white text-gray-700 border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-700 transition-colors"
+            title={t('filter.save')}
           >
-            {t('filter.save')}
+            <BookmarkIcon className="h-5 w-5" />
           </button>
           <button
             onClick={handleApplyFilters}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none"
+            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
+            title={t('filter.apply')}
           >
-            {t('filter.apply')}
+            <CheckIcon className="h-5 w-5" />
           </button>
         </div>
       )}

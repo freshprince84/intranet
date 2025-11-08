@@ -7,6 +7,8 @@ import { UpdateOrganizationRequest, Organization } from '../../types/organizatio
 import useMessage from '../../hooks/useMessage.ts';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 import { useLanguage } from '../../hooks/useLanguage.ts';
+import RoleConfigurationTab from './RoleConfigurationTab.tsx';
+import DocumentConfigurationTab from './DocumentConfigurationTab.tsx';
 
 interface Props {
   isOpen: boolean;
@@ -20,8 +22,10 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
   const [formData, setFormData] = useState<UpdateOrganizationRequest>({
     displayName: '',
     domain: '',
-    logo: ''
+    logo: '',
+    settings: {}
   });
+  const [selectedCountry, setSelectedCountry] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
@@ -31,16 +35,29 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
   const { organizationLanguage, setOrganizationLanguage } = useLanguage();
   const [selectedOrgLanguage, setSelectedOrgLanguage] = useState<string>('');
   const [savingOrgLanguage, setSavingOrgLanguage] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<'general' | 'roles' | 'documents'>('general');
+
+  // Länder-Liste
+  const COUNTRIES = [
+    { code: 'CO', name: t('countries.CO') },
+    { code: 'CH', name: t('countries.CH') },
+    { code: 'DE', name: t('countries.DE') },
+    { code: 'AT', name: t('countries.AT') }
+  ];
 
   // Lade Organisations-Daten wenn Modal geöffnet wird
   useEffect(() => {
     if (isOpen && organization) {
+      const orgSettings = organization.settings || {};
       setFormData({
         displayName: organization.displayName || '',
         domain: organization.domain || '',
         logo: organization.logo || '',
-        settings: organization.settings
+        settings: orgSettings
       });
+      
+      // Setze Land aus settings
+      setSelectedCountry(orgSettings.country || '');
       
       // Lade Organisation-Sprache
       const loadOrgLanguage = async () => {
@@ -55,7 +72,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
       
       loadOrgLanguage();
     }
-  }, [isOpen, organization]);
+  }, [isOpen, organization, t]);
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -84,9 +101,20 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
     };
   }, [isOpen, openSidepane, closeSidepane]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    if (name === 'country') {
+      setSelectedCountry(value);
+      setFormData(prev => ({
+        ...prev,
+        settings: {
+          ...(prev.settings || {}),
+          ...(value ? { country: value } : {})
+        }
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
     // Fehler für dieses Feld löschen
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
@@ -117,12 +145,14 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
   const handleClose = () => {
     // Formular zurücksetzen
     if (organization) {
+      const orgSettings = organization.settings || {};
       setFormData({
         displayName: organization.displayName || '',
         domain: organization.domain || '',
         logo: organization.logo || '',
-        settings: organization.settings
+        settings: orgSettings
       });
+      setSelectedCountry(orgSettings.country || '');
     }
     setErrors({});
     onClose();
@@ -212,6 +242,30 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                     onChange={handleChange}
                     className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
                   />
+                </div>
+
+                {/* Land */}
+                <div className="border-t pt-4">
+                  <label 
+                    htmlFor="country" 
+                    className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                  >
+                    {t('organization.country')}
+                  </label>
+                  <select
+                    id="country"
+                    name="country"
+                    value={selectedCountry}
+                    onChange={handleChange}
+                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                  >
+                    <option value="">{t('organization.selectCountry')}</option>
+                    {COUNTRIES.map((country) => (
+                      <option key={country.code} value={country.code}>
+                        {country.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 {/* Organisation-Sprache */}
@@ -324,6 +378,45 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
           </button>
         </div>
 
+        {/* Tabs Navigation */}
+        <div className="border-b border-gray-200 dark:border-gray-700">
+          <nav className="-mb-px flex space-x-4 px-4" aria-label="Tabs">
+            <button
+              type="button"
+              onClick={() => setActiveTab('general')}
+              className={`${
+                activeTab === 'general'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
+            >
+              {t('organization.tabs.general') || 'Allgemein'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('roles')}
+              className={`${
+                activeTab === 'roles'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
+            >
+              {t('organization.tabs.roles') || 'Rollen'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('documents')}
+              className={`${
+                activeTab === 'documents'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
+            >
+              {t('organization.tabs.documents') || 'Dokumente'}
+            </button>
+          </nav>
+        </div>
+
         <div className="p-4 overflow-y-auto flex-1 min-h-0">
           {errors.submit && (
             <div className="mb-4 p-2 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded">
@@ -331,7 +424,8 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {activeTab === 'general' && (
+            <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label 
                 htmlFor="displayName" 
@@ -390,6 +484,30 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
               />
             </div>
 
+            {/* Land */}
+            <div className="border-t pt-4">
+              <label 
+                htmlFor="country" 
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                {t('organization.country')}
+              </label>
+              <select
+                id="country"
+                name="country"
+                value={selectedCountry}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+              >
+                <option value="">{t('organization.selectCountry')}</option>
+                {COUNTRIES.map((country) => (
+                  <option key={country.code} value={country.code}>
+                    {country.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             {/* Organisation-Sprache */}
             <div className="border-t pt-4">
               <label 
@@ -430,29 +548,52 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
               </select>
             </div>
 
-            <div className="flex justify-end pt-4 gap-2">
-              <button
-                type="button"
-                onClick={handleClose}
-                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                title={t('common.cancel')}
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                title={loading ? t('organization.saving') : t('common.save')}
-              >
-                {loading ? (
-                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                ) : (
-                  <CheckIcon className="h-5 w-5" />
-                )}
-              </button>
-            </div>
-          </form>
+              <div className="flex justify-end pt-4 gap-2">
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                  title={t('common.cancel')}
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={loading ? t('organization.saving') : t('common.save')}
+                >
+                  {loading ? (
+                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <CheckIcon className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+
+          {activeTab === 'roles' && (
+            <RoleConfigurationTab 
+              organization={organization}
+              onSave={() => {
+                if (onSuccess) {
+                  onSuccess();
+                }
+              }}
+            />
+          )}
+
+          {activeTab === 'documents' && (
+            <DocumentConfigurationTab 
+              organization={organization}
+              onSave={() => {
+                if (onSuccess) {
+                  onSuccess();
+                }
+              }}
+            />
+          )}
         </div>
       </div>
     </>

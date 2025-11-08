@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
+import i18n from '../i18n/config.ts';
 import authService from '../services/authService.ts';
+import LanguageSelector from '../components/LanguageSelector.tsx';
 
 const Register: React.FC = () => {
   const { t } = useTranslation();
@@ -39,9 +41,13 @@ const Register: React.FC = () => {
     
     setLoading(true);
     try {
+      // Aktuelle Sprache aus i18n nehmen
+      const currentLanguage = i18n.language || 'de';
+      
       await authService.register({
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        language: currentLanguage
       });
       navigate('/dashboard');
     } catch (err: any) {
@@ -53,7 +59,10 @@ const Register: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center dark:bg-gray-900">
+    <div className="min-h-screen flex items-center justify-center dark:bg-gray-900 relative">
+      <div className="fixed top-2 right-2 z-50">
+        <LanguageSelector />
+      </div>
       <div className="max-w-md w-full space-y-8 p-8 bg-white dark:bg-gray-800 rounded-lg shadow">
         <div>
           <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white">

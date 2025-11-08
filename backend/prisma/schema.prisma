@@ -57,6 +57,11 @@ model User {
   branches                 UsersBranches[]
   workTimes                WorkTime[]
   taskStatusChanges        TaskStatusHistory[]         @relation("task_status_changes")
+  employeeLifecycle        EmployeeLifecycle?
+  lifecycleEventsTriggered LifecycleEvent[]            @relation("LifecycleEventTriggerer")
+  certificatesGenerated    EmploymentCertificate[]     @relation("CertificateGenerator")
+  contractsGenerated       EmploymentContract[]        @relation("ContractGenerator")
+  passwordResetTokens      PasswordResetToken[]
 }
 
 model Organization {
@@ -83,6 +88,7 @@ model Organization {
   consultationInvoices ConsultationInvoice[]
   monthlyReports       MonthlyConsultationReport[]
   carticles            CerebroCarticle[]
+  employeeLifecycles   EmployeeLifecycle[]
 }
 
 model OrganizationJoinRequest {
@@ -750,4 +756,187 @@ enum SubscriptionPlan {
   pro
   enterprise
   trial
+}
+
+// ============================================
+// EMPLOYEE LIFECYCLE MODELS
+// ============================================
+
+enum EmployeeStatus {
+  onboarding // User wurde hinzugefügt, Onboarding läuft
+  active // User ist aktiv beschäftigt
+  contract_change // Vertragsänderung läuft
+  offboarding // Austritt läuft
+  archived // User ist ausgetreten, Daten archiviert
+}
+
+enum SocialSecurityStatus {
+  not_required // Nicht erforderlich (z.B. EPS bei bestehender Versicherung)
+  pending // Anmeldung läuft
+  registered // Erfolgreich registriert
+  failed // Anmeldung fehlgeschlagen
+  deregistered // Abgemeldet
+}
+
+model EmployeeLifecycle {
+  id             Int            @id @default(autoincrement())
+  userId         Int            @unique
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId Int
+  organization   Organization   @relation(fields: [organizationId], references: [id])
+  status         EmployeeStatus @default(onboarding)
+
+  // Onboarding-Daten
+  onboardingStartedAt   DateTime?
+  onboardingCompletedAt DateTime?
+
+  // Vertragsdaten
+  contractStartDate DateTime?
+  contractEndDate   DateTime?
+  contractType      String? // "indefinite", "fixed_term", "temporary", etc.
+
+  // Sozialversicherungen (Kolumbien)
+  arlStatus       SocialSecurityStatus @default(pending)
+  arlRegisteredAt DateTime?
+  arlNumber       String?
+  arlProvider     String? // Name der ARL-Versicherung
+
+  epsStatus       SocialSecurityStatus @default(not_required)
+  epsRequired     Boolean              @default(false)
+  epsRegisteredAt DateTime?
+  epsNumber       String?
+  epsProvider     String?
+
+  pensionStatus       SocialSecurityStatus @default(pending)
+  pensionRegisteredAt DateTime?
+  pensionNumber       String?
+  pensionProvider     String?
+
+  cajaStatus       SocialSecurityStatus @default(pending)
+  cajaRegisteredAt DateTime?
+  cajaNumber       String?
+  cajaProvider     String?
+
+  // Offboarding-Daten
+  exitDate               DateTime?
+  exitReason             String? // "resignation", "termination", "contract_end", etc.
+  offboardingStartedAt   DateTime?
+  offboardingCompletedAt DateTime?
+
+  // Metadaten
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Beziehungen
+  lifecycleEvents             LifecycleEvent[]
+  employmentCertificates      EmploymentCertificate[]
+  employmentContracts         EmploymentContract[]
+  socialSecurityRegistrations SocialSecurityRegistration[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model LifecycleEvent {
+  id              Int               @id @default(autoincrement())
+  lifecycleId     Int
+  lifecycle       EmployeeLifecycle @relation(fields: [lifecycleId], references: [id], onDelete: Cascade)
+  eventType       String // "onboarding_started", "document_uploaded", "arl_registered", etc.
+  eventData       Json? // Zusätzliche Event-Daten
+  triggeredBy     Int? // User-ID, der das Event ausgelöst hat
+  triggeredByUser User?             @relation("LifecycleEventTriggerer", fields: [triggeredBy], references: [id])
+  createdAt       DateTime          @default(now())
+
+  @@index([lifecycleId])
+  @@index([eventType])
+}
+
+model EmploymentCertificate {
+  id              Int               @id @default(autoincrement())
+  lifecycleId     Int
+  lifecycle       EmployeeLifecycle @relation(fields: [lifecycleId], references: [id], onDelete: Cascade)
+  certificateType String            @default("employment") // "employment", "salary", "work_experience", etc.
+  issueDate       DateTime          @default(now())
+  pdfPath         String
+  templateUsed    String? // Name des verwendeten Templates
+  templateVersion String? // Version des Templates (für Nachverfolgbarkeit)
+  generatedBy     Int? // User-ID, der das Zertifikat generiert hat
+  generatedByUser User?             @relation("CertificateGenerator", fields: [generatedBy], references: [id])
+  isLatest        Boolean           @default(true) // Ist dies die neueste Version?
+  createdAt       DateTime          @default(now())
+
+  @@index([lifecycleId])
+  @@index([isLatest])
+}
+
+model EmploymentContract {
+  id              Int               @id @default(autoincrement())
+  lifecycleId     Int
+  lifecycle       EmployeeLifecycle @relation(fields: [lifecycleId], references: [id], onDelete: Cascade)
+  contractType    String            @default("employment") // "employment", "amendment", "extension", etc.
+  startDate       DateTime
+  endDate         DateTime?
+  salary          Float?
+  workingHours    Float?
+  position        String?
+  pdfPath         String
+  templateUsed    String?
+  templateVersion String?
+  generatedBy     Int?
+  generatedByUser User?             @relation("ContractGenerator", fields: [generatedBy], references: [id])
+  isLatest        Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+
+  // Beziehungen
+  contractDocuments ContractDocument[]
+
+  @@index([lifecycleId])
+  @@index([isLatest])
+}
+
+model ContractDocument {
+  id            Int                @id @default(autoincrement())
+  contractId    Int
+  contract      EmploymentContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  documentType  String // "original", "amendment", "extension", etc.
+  pdfPath       String
+  effectiveDate DateTime?
+  createdAt     DateTime           @default(now())
+
+  @@index([contractId])
+}
+
+model SocialSecurityRegistration {
+  id                 Int                  @id @default(autoincrement())
+  lifecycleId        Int
+  lifecycle          EmployeeLifecycle    @relation(fields: [lifecycleId], references: [id], onDelete: Cascade)
+  registrationType   String // "arl", "eps", "pension", "caja"
+  registrationNumber String?
+  provider           String? // Name des Providers
+  registrationDate   DateTime?
+  status             SocialSecurityStatus @default(pending)
+  notes              String?
+  completedBy        Int? // User-ID, der die Anmeldung abgeschlossen hat
+  completedAt        DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@unique([lifecycleId, registrationType])
+  @@index([lifecycleId])
+  @@index([registrationType])
+}
+
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
 }

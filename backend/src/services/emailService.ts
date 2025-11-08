@@ -434,3 +434,341 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
   }
 };
 
+/**
+ * Sendet eine Passwort-Reset-E-Mail mit Reset-Link
+ * @param email E-Mail-Adresse des Benutzers
+ * @param username Benutzername
+ * @param resetLink URL zum Zurücksetzen des Passworts (mit Token)
+ * @param organizationId Optional: ID der Organisation (für org-spezifische SMTP-Einstellungen)
+ */
+export const sendPasswordResetEmail = async (
+  email: string,
+  username: string,
+  resetLink: string,
+  organizationId?: number
+): Promise<boolean> => {
+  // Versuche zuerst Mailtrap API (falls konfiguriert)
+  const apiSuccess = await sendPasswordResetViaMailtrapAPI(email, username, resetLink);
+  if (apiSuccess) {
+    return true;
+  }
+
+  // Fallback zu SMTP
+  try {
+    const transporter = await createTransporter(organizationId);
+    
+    if (!transporter) {
+      console.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
+      return false;
+    }
+
+    const mailOptions = {
+      from: process.env.SMTP_USER || 'noreply@intranet.local',
+      to: email,
+      subject: 'Passwort zurücksetzen - Intranet',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background-color: #2563eb;
+              color: white;
+              padding: 20px;
+              text-align: center;
+              border-radius: 8px 8px 0 0;
+            }
+            .content {
+              background-color: #f9fafb;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+              border-radius: 0 0 8px 8px;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 24px;
+              background-color: #2563eb;
+              color: white;
+              text-decoration: none;
+              border-radius: 6px;
+              margin: 20px 0;
+            }
+            .button:hover {
+              background-color: #1d4ed8;
+            }
+            .warning {
+              background-color: #fef3c7;
+              border-left: 4px solid #f59e0b;
+              padding: 15px;
+              margin: 20px 0;
+              border-radius: 4px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              color: #6b7280;
+              font-size: 12px;
+            }
+            .link-fallback {
+              word-break: break-all;
+              color: #2563eb;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Passwort zurücksetzen</h1>
+          </div>
+          <div class="content">
+            <p>Hallo ${username},</p>
+            <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.</p>
+            
+            <p>Klicken Sie auf den folgenden Button, um ein neues Passwort festzulegen:</p>
+            
+            <div style="text-align: center;">
+              <a href="${resetLink}" class="button">Passwort zurücksetzen</a>
+            </div>
+            
+            <p>Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:</p>
+            <p class="link-fallback">${resetLink}</p>
+
+            <div class="warning">
+              <strong>⚠️ Wichtig:</strong>
+              <ul>
+                <li>Dieser Link ist nur 1 Stunde gültig</li>
+                <li>Der Link kann nur einmal verwendet werden</li>
+                <li>Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail</li>
+              </ul>
+            </div>
+
+            <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+          </div>
+          <div class="footer">
+            <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.</p>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+Passwort zurücksetzen - Intranet
+
+Hallo ${username},
+
+Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.
+
+Klicken Sie auf den folgenden Link, um ein neues Passwort festzulegen:
+
+${resetLink}
+
+WICHTIG:
+- Dieser Link ist nur 1 Stunde gültig
+- Der Link kann nur einmal verwendet werden
+- Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail
+
+Bei Fragen stehen wir Ihnen gerne zur Verfügung.
+
+Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Passwort-Reset-E-Mail versendet:', info.messageId);
+    return true;
+  } catch (error) {
+    console.error('❌ Fehler beim Versenden der Passwort-Reset-E-Mail:', error);
+    return false;
+  }
+};
+
+/**
+ * Sendet Passwort-Reset-E-Mail über Mailtrap API (falls konfiguriert)
+ */
+const sendPasswordResetViaMailtrapAPI = async (
+  email: string,
+  username: string,
+  resetLink: string
+): Promise<boolean> => {
+  const mailtrapApiToken = process.env.MAILTRAP_API_TOKEN;
+  const mailtrapTestInboxId = process.env.MAILTRAP_TEST_INBOX_ID;
+
+  if (!mailtrapApiToken || !mailtrapTestInboxId) {
+    return false; // API nicht konfiguriert
+  }
+
+  try {
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .header {
+            background-color: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+          }
+          .content {
+            background-color: #f9fafb;
+            padding: 30px;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+          }
+          .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 20px 0;
+          }
+          .warning {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #6b7280;
+            font-size: 12px;
+          }
+          .link-fallback {
+            word-break: break-all;
+            color: #2563eb;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Passwort zurücksetzen</h1>
+        </div>
+        <div class="content">
+          <p>Hallo ${username},</p>
+          <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.</p>
+          
+          <p>Klicken Sie auf den folgenden Button, um ein neues Passwort festzulegen:</p>
+          
+          <div style="text-align: center;">
+            <a href="${resetLink}" class="button">Passwort zurücksetzen</a>
+          </div>
+          
+          <p>Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:</p>
+          <p class="link-fallback">${resetLink}</p>
+
+          <div class="warning">
+            <strong>⚠️ Wichtig:</strong>
+            <ul>
+              <li>Dieser Link ist nur 1 Stunde gültig</li>
+              <li>Der Link kann nur einmal verwendet werden</li>
+              <li>Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail</li>
+            </ul>
+          </div>
+
+          <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+        </div>
+        <div class="footer">
+          <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const textContent = `
+Passwort zurücksetzen - Intranet
+
+Hallo ${username},
+
+Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.
+
+Klicken Sie auf den folgenden Link, um ein neues Passwort festzulegen:
+
+${resetLink}
+
+WICHTIG:
+- Dieser Link ist nur 1 Stunde gültig
+- Der Link kann nur einmal verwendet werden
+- Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail
+
+Bei Fragen stehen wir Ihnen gerne zur Verfügung.
+
+Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.
+    `;
+
+    // Versuche Transactional Email API (versendet echte E-Mails)
+    const mailtrapTransactionalToken = process.env.MAILTRAP_TRANSACTIONAL_TOKEN || mailtrapApiToken;
+    
+    let response;
+    try {
+      response = await axios.post(
+        'https://send.api.mailtrap.io/api/send',
+        {
+          from: { email: 'noreply@intranet.local', name: 'Intranet' },
+          to: [{ email }],
+          subject: 'Passwort zurücksetzen - Intranet',
+          html: htmlContent,
+          text: textContent,
+          category: 'PasswordReset'
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${mailtrapTransactionalToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+    } catch (transactionalError: any) {
+      // Falls Transactional Email nicht funktioniert, nutze Sandbox (nur für Tests)
+      if (transactionalError.response?.status === 401 || transactionalError.response?.status === 403) {
+        response = await axios.post(
+          `https://sandbox.api.mailtrap.io/api/send/${mailtrapTestInboxId}`,
+          {
+            from: { email: 'noreply@intranet.local', name: 'Intranet' },
+            to: [{ email }],
+            subject: 'Passwort zurücksetzen - Intranet',
+            html: htmlContent,
+            text: textContent,
+            category: 'PasswordReset'
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${mailtrapApiToken}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+      } else {
+        throw transactionalError;
+      }
+    }
+
+    return true;
+  } catch (error) {
+    console.error('❌ Fehler beim Versenden über Mailtrap API:', error);
+    return false;
+  }
+};
+

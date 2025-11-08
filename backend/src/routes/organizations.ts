@@ -10,7 +10,9 @@ import {
   searchOrganizations,
   getOrganizationStats,
   getOrganizationLanguage,
-  updateOrganizationLanguage
+  updateOrganizationLanguage,
+  getLifecycleRoles,
+  updateLifecycleRoles
 } from '../controllers/organizationController';
 import { 
   createJoinRequest,
@@ -53,6 +55,10 @@ router.put('/current', updateCurrentOrganization);
 // Join Request Routen
 router.get('/join-requests', getJoinRequests);
 router.patch('/join-requests/:id', processJoinRequest);
+
+// Lebenszyklus-Rollen-Konfiguration
+router.get('/current/lifecycle-roles', getLifecycleRoles);
+router.put('/current/lifecycle-roles', updateLifecycleRoles);
 
 // Suche
 router.get('/search', searchOrganizations);

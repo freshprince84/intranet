@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Role, Permission, AccessLevel } from '../types/interfaces';
 import { useAuth } from './useAuth.tsx';
+import axiosInstance from '../config/axios.ts';
 
 /**
  * WICHTIG: Berechtigungssystem
@@ -62,6 +63,7 @@ export const usePermissions = () => {
     const [permissions, setPermissions] = useState<Permission[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [lifecycleRoles, setLifecycleRoles] = useState<any>(null);
 
     useEffect(() => {
         // Warten auf Auth-Completion, bevor Berechtigungen geladen werden
@@ -72,6 +74,28 @@ export const usePermissions = () => {
         
         loadPermissions();
     }, [user, isLoading]);
+
+    // Lade Lebenszyklus-Rollen-Konfiguration (wird nach loadPermissions aufgerufen)
+    useEffect(() => {
+        if (currentRole && user) {
+            loadLifecycleRoles();
+        }
+    }, [currentRole, user]);
+
+    const loadLifecycleRoles = async () => {
+        try {
+            if (!user || !currentRole) {
+                setLifecycleRoles(null);
+                return;
+            }
+
+            const response = await axiosInstance.get('/organizations/current/lifecycle-roles');
+            setLifecycleRoles(response.data.lifecycleRoles);
+        } catch (error) {
+            console.error('Fehler beim Laden der Lebenszyklus-Rollen:', error);
+            setLifecycleRoles(null);
+        }
+    };
 
     const loadPermissions = () => {
         try {
@@ -177,6 +201,64 @@ export const usePermissions = () => {
         return hasPermission('organization_invitations', 'read', 'table');
     };
 
+    /**
+     * Prüft Standard-Rollen (Fallback)
+     */
+    const checkDefaultLifecycleRole = (role: Role | null, roleType: 'admin' | 'hr' | 'legal'): boolean => {
+        // Wenn keine Rolle vorhanden ist, gibt es keine Berechtigung
+        if (!role || !role.name) {
+            return false;
+        }
+
+        const roleName = role.name.toLowerCase();
+
+        if (roleType === 'admin' || roleType === 'hr') {
+            return roleName.includes('admin') || roleName.includes('administrator');
+        }
+
+        if (roleType === 'legal') {
+            return roleName === 'derecho';
+        }
+
+        return false;
+    };
+
+    /**
+     * Prüft ob User eine Lebenszyklus-Rolle hat
+     * Nutzt lifecycleRoles-Konfiguration oder Fallback zu Standard-Rollen
+     */
+    const hasLifecycleRole = useCallback((roleType: 'admin' | 'hr' | 'legal'): boolean => {
+        // Wenn keine Rolle vorhanden ist, gibt es keine Berechtigung
+        if (!user || !currentRole) {
+            return false;
+        }
+
+        // Wenn lifecycleRoles nicht geladen sind, verwende Fallback
+        if (!lifecycleRoles) {
+            return checkDefaultLifecycleRole(currentRole, roleType);
+        }
+
+        const targetRoleId = lifecycleRoles[`${roleType}RoleId`];
+        if (!targetRoleId) {
+            // Fallback: Standard-Prüfung
+            return checkDefaultLifecycleRole(currentRole, roleType);
+        }
+
+        // Prüfe ob aktive Rolle die Ziel-Rolle ist
+        return currentRole.id === targetRoleId;
+    }, [user, currentRole, lifecycleRoles]);
+
+    /**
+     * Convenience-Funktionen für Lebenszyklus-Rollen
+     */
+    const isHR = useCallback((): boolean => {
+        return hasLifecycleRole('hr') || hasLifecycleRole('admin');
+    }, [hasLifecycleRole]);
+
+    const isLegal = useCallback((): boolean => {
+        return hasLifecycleRole('legal') || hasLifecycleRole('admin');
+    }, [hasLifecycleRole]);
+
     return {
         currentRole,
         permissions,
@@ -192,7 +274,11 @@ export const usePermissions = () => {
         canManageOrganizationUsers,
         canViewOrganizationUsers,
         canManageInvitations,
-        canViewInvitations
+        canViewInvitations,
+        // Lebenszyklus-Rollen
+        hasLifecycleRole,
+        isHR,
+        isLegal
     };
 };
 

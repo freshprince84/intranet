@@ -34,6 +34,9 @@ router.put('/current', organizationController_1.updateCurrentOrganization);
 // Join Request Routen
 router.get('/join-requests', organizationController_1.getJoinRequests);
 router.patch('/join-requests/:id', joinRequestController_1.processJoinRequest);
+// Lebenszyklus-Rollen-Konfiguration
+router.get('/current/lifecycle-roles', organizationController_1.getLifecycleRoles);
+router.put('/current/lifecycle-roles', organizationController_1.updateLifecycleRoles);
 // Suche
 router.get('/search', organizationController_1.searchOrganizations);
 exports.default = router;

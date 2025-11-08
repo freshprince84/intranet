@@ -46,6 +46,7 @@ exports.checkAndStopExceededWorktimes = exports.getActiveWorktime = exports.expo
 const client_1 = require("@prisma/client");
 const ExcelJS = __importStar(require("exceljs"));
 const date_fns_1 = require("date-fns");
+const locale_1 = require("date-fns/locale");
 const notificationController_1 = require("./notificationController");
 const organization_1 = require("../middleware/organization");
 const prisma = new client_1.PrismaClient();
@@ -396,73 +397,71 @@ const updateWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function*
 exports.updateWorktime = updateWorktime;
 const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { week } = req.query;
+        const { week, quinzena } = req.query;
         const userId = req.userId;
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        // Teste, ob für diesen userId überhaupt Einträge existieren
-        const totalUserEntries = yield prisma.workTime.count({
-            where: {
-                userId: Number(userId)
-            }
-        });
-        // Hole alle Einträge für diesen Benutzer, um sie zu diagnostizieren
-        if (totalUserEntries > 0) {
-            const recentEntries = yield prisma.workTime.findMany({
-                where: {
-                    userId: Number(userId),
-                    endTime: {
-                        not: null
-                    }
-                },
-                orderBy: {
-                    startTime: 'desc'
-                },
-                take: 3
-            });
-            recentEntries.forEach((entry, index) => {
-                var _a;
-                console.log(`  Eintrag ${index + 1}:`, {
-                    id: entry.id,
-                    startTime: entry.startTime.toISOString(),
-                    endTime: (_a = entry.endTime) === null || _a === void 0 ? void 0 : _a.toISOString(),
-                    // Lokale Zeit-Komponenten
-                    startDate: `${entry.startTime.getFullYear()}-${String(entry.startTime.getMonth() + 1).padStart(2, '0')}-${String(entry.startTime.getDate()).padStart(2, '0')}`,
-                    startHour: entry.startTime.getHours(),
-                    startMinute: entry.startTime.getMinutes()
-                });
-            });
-        }
-        // Verwende das empfangene Datum direkt
-        // Das Frontend sendet bereits den korrekten Montag der Woche
-        let weekDateString = week;
-        if (!weekDateString) {
-            // Nur im Fallback-Fall: Aktuelles Datum verwenden und Montag der Woche berechnen
+        // Bestimme Periodentyp und Startdatum
+        const isQuinzena = !!quinzena;
+        let periodStartStr = (quinzena || week);
+        // Fallback: Aktuelle Woche/Quinzena berechnen
+        if (!periodStartStr) {
             const today = new Date();
-            const monday = (0, date_fns_1.startOfWeek)(today, { weekStartsOn: 1 });
-            weekDateString = (0, date_fns_1.format)(monday, 'yyyy-MM-dd');
+            if (isQuinzena) {
+                // Berechne aktuelle Quinzena
+                const day = today.getDate();
+                const quinzenaStart = day <= 15
+                    ? new Date(today.getFullYear(), today.getMonth(), 1)
+                    : new Date(today.getFullYear(), today.getMonth(), 16);
+                periodStartStr = (0, date_fns_1.format)(quinzenaStart, 'yyyy-MM-dd');
+            }
+            else {
+                const monday = (0, date_fns_1.startOfWeek)(today, { weekStartsOn: 1 });
+                periodStartStr = (0, date_fns_1.format)(monday, 'yyyy-MM-dd');
+            }
         }
-        // Berechne das Ende der Woche (7 Tage später)
-        // Der Datumstring für den Wochenanfang
-        const weekStartStr = weekDateString;
-        // Konvertiere zum Date-Objekt für die Berechnung des Wochenendes
-        const tempDate = new Date(weekDateString);
-        tempDate.setDate(tempDate.getDate() + 7); // Ende der Woche ist 6 Tage später (Sonntag)
-        const weekEndStr = (0, date_fns_1.format)(tempDate, 'yyyy-MM-dd');
-        // DIE UNIVERSELLE LÖSUNG: Wir arbeiten mit UTC-Zeitgrenzen als Referenzpunkte
-        // Für "Montag 00:00" bis "Sonntag 23:59:59" der ausgewählten Woche, WELTWEIT KONSISTENT
-        // Setze Uhrzeiten auf 00:00:00 und 23:59:59 für Anfang und Ende der Woche
-        // Explizit im UTC-Format, damit es überall identisch interpretiert wird
-        const weekStartUtc = new Date(`${weekStartStr}T00:00:00.000Z`); // Z = UTC!
-        const weekEndUtc = new Date(`${weekEndStr}T23:59:59.999Z`); // Z = UTC!
+        // Berechne Periodenende und Anzahl der Tage
+        let periodEndStr;
+        let daysInPeriod;
+        if (isQuinzena) {
+            // Quinzena: monatsbasiert
+            // Parse periodStartStr sicher (YYYY-MM-DD) um Zeitzonenprobleme zu vermeiden
+            const [startYear, startMonth, startDay] = periodStartStr.split('-').map(Number);
+            const year = startYear;
+            const month = startMonth - 1; // 0-11
+            const day = startDay;
+            if (day === 1) {
+                // Erste Quinzena: 1.-15.
+                const endDate = new Date(year, month, 15);
+                periodEndStr = (0, date_fns_1.format)(endDate, 'yyyy-MM-dd');
+                daysInPeriod = 15;
+            }
+            else {
+                // Zweite Quinzena: 16.-Monatsende
+                const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+                const endDate = new Date(year, month, lastDayOfMonth);
+                periodEndStr = (0, date_fns_1.format)(endDate, 'yyyy-MM-dd');
+                daysInPeriod = lastDayOfMonth - 15;
+            }
+        }
+        else {
+            // Woche: 7 Tage
+            const tempDate = new Date(periodStartStr);
+            tempDate.setDate(tempDate.getDate() + 6); // Sonntag
+            periodEndStr = (0, date_fns_1.format)(tempDate, 'yyyy-MM-dd');
+            daysInPeriod = 7;
+        }
+        // UTC-Zeitgrenzen für Datenbankabfrage
+        const periodStartUtc = new Date(`${periodStartStr}T00:00:00.000Z`);
+        const periodEndUtc = new Date(`${periodEndStr}T23:59:59.999Z`);
         // Direkte Suche nach den Einträgen mit universellen UTC-Grenzen
         const entries = yield prisma.workTime.findMany({
             where: {
                 userId: Number(userId),
                 startTime: {
-                    gte: weekStartUtc,
-                    lte: weekEndUtc
+                    gte: periodStartUtc,
+                    lte: periodEndUtc
                 },
                 endTime: {
                     not: null
@@ -472,21 +471,48 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 user: true,
             },
         });
-        console.log(`Gefundene Einträge mit universellen UTC-Grenzen: ${entries.length}`);
+        console.log(`Gefundene Einträge (${isQuinzena ? 'Quinzena' : 'Woche'}): ${entries.length}`);
         if (entries.length > 0) {
             console.log(`Erster Eintrag - startTime: ${entries[0].startTime.toISOString()}, endTime: ${entries[0].endTime.toISOString()}`);
         }
-        // Erstelle ein Objekt mit den Wochentagen (Montag bis Sonntag)
-        const weekDays = {
-            "Montag": 0,
-            "Dienstag": 0,
-            "Mittwoch": 0,
-            "Donnerstag": 0,
-            "Freitag": 0,
-            "Samstag": 0,
-            "Sonntag": 0,
-        };
-        // Berechne die Gesamtstunden und verteile sie auf die Wochentage
+        // Erstelle Tagesdaten-Struktur
+        let periodData;
+        if (isQuinzena) {
+            // Quinzena: Erstelle Array für alle Tage
+            periodData = [];
+            // Parse periodStartStr sicher (YYYY-MM-DD)
+            const [startYear, startMonth, startDay] = periodStartStr.split('-').map(Number);
+            for (let i = 0; i < daysInPeriod; i++) {
+                // Verwende UTC-Datum um Zeitzonenprobleme zu vermeiden
+                const currentDate = new Date(Date.UTC(startYear, startMonth - 1, startDay + i, 12, 0, 0));
+                const dateStr = (0, date_fns_1.format)(currentDate, 'yyyy-MM-dd');
+                const dayName = (0, date_fns_1.format)(currentDate, 'EEEE', { locale: locale_1.de }); // Wochentag
+                periodData.push({
+                    day: dayName,
+                    hours: 0,
+                    date: dateStr
+                });
+            }
+            console.log(`Quinzena periodData erstellt: ${periodData.length} Tage von ${periodStartStr} bis ${periodEndStr}`);
+            console.log('PeriodData:', periodData.map(d => `${d.date}: ${d.day}`));
+        }
+        else {
+            // Woche: Wochentage (bestehend)
+            periodData = [
+                { day: "Montag", hours: 0, date: "" },
+                { day: "Dienstag", hours: 0, date: "" },
+                { day: "Mittwoch", hours: 0, date: "" },
+                { day: "Donnerstag", hours: 0, date: "" },
+                { day: "Freitag", hours: 0, date: "" },
+                { day: "Samstag", hours: 0, date: "" },
+                { day: "Sonntag", hours: 0, date: "" }
+            ];
+            // Berechne Datum für jeden Wochentag
+            periodData.forEach((dayData, index) => {
+                dayData.date = calculateDateFromWeekStart(periodStartStr, index);
+            });
+        }
+        // Berechne die Gesamtstunden und verteile sie auf die Tage
         let totalHours = 0;
         let daysWorked = 0;
         // Für jeden Zeiteintrag berechnen wir die Arbeitszeit in Stunden
@@ -496,59 +522,37 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 const workTime = entry.endTime.getTime() - entry.startTime.getTime();
                 // Umrechnung in Stunden
                 const hoursWorked = workTime / (1000 * 60 * 60);
-                // Bestimme den Wochentag BASIEREND AUF DEM DATUM RELATIV ZUR WOCHE
-                // so dass die Woche 11 immer Mo-So ist, egal in welcher Zeitzone
+                // Extrahiere das Datum im UTC-Format
                 const date = entry.startTime;
-                // Extrahiere das Datum im UTC-Format, nicht in lokaler Zeit
-                // Verwende die UTC-Methoden statt format, um Zeitzonenprobleme zu vermeiden
                 const year = date.getUTCFullYear();
                 const month = String(date.getUTCMonth() + 1).padStart(2, '0');
                 const dayOfMonth = String(date.getUTCDate()).padStart(2, '0');
                 const dateString = `${year}-${month}-${dayOfMonth}`;
-                console.log(`Extrahiertes UTC-Datum aus Eintrag (${date.toISOString()}): ${dateString}`);
-                // Berechne die Differenz in Tagen vom Wochenanfang
-                const dayIndex = calculateDayIndex(weekStartStr, dateString);
-                // Mappe auf den Wochentag
-                const weekdayNames = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"];
-                const weekDay = dayIndex >= 0 && dayIndex < 7 ? weekdayNames[dayIndex] : null;
-                if (weekDay) {
-                    console.log(`Eintrag für ${dateString} erkannt als ${weekDay} (Tag ${dayIndex} der Woche): +${hoursWorked} Stunden`);
-                    // Füge die Stunden zum entsprechenden Wochentag hinzu
-                    weekDays[weekDay] += hoursWorked;
-                    // Aktualisiere die Gesamtstunden
+                // Finde entsprechenden Tag in periodData
+                const dayEntry = periodData.find(d => d.date === dateString);
+                if (dayEntry) {
+                    const oldHours = dayEntry.hours;
+                    dayEntry.hours += hoursWorked;
                     totalHours += hoursWorked;
-                    // Wenn an diesem Tag gearbeitet wurde, erhöhe daysWorked
-                    if (hoursWorked > 0 && weekDays[weekDay] === hoursWorked) {
+                    // Tage mit Arbeit zählen (nur wenn vorher 0 Stunden waren)
+                    if (hoursWorked > 0 && oldHours === 0) {
                         daysWorked++;
                     }
                 }
                 else {
-                    console.error(`Datum ${dateString} liegt nicht in der Woche von ${weekStartStr} bis ${weekEndStr}!`);
+                    console.error(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
+                    if (isQuinzena) {
+                        console.error(`Verfügbare Daten in periodData:`, periodData.map(d => d.date));
+                    }
                 }
             }
         });
-        // Erstelle ein Array mit den Wochentagen und Stunden für das Frontend
-        // Füge auch das Datum für jeden Tag hinzu
-        const weeklyData = Object.entries(weekDays).map(([day, hours]) => {
-            // Bestimme den korrekten Index basierend auf dem Tag
-            const dayIndexMap = {
-                "Montag": 0,
-                "Dienstag": 1,
-                "Mittwoch": 2,
-                "Donnerstag": 3,
-                "Freitag": 4,
-                "Samstag": 5,
-                "Sonntag": 6
-            };
-            // Berechne das Datum direkt aus dem Wochenstart-String
-            const dayIndex = dayIndexMap[day];
-            const date = calculateDateFromWeekStart(weekStartStr, dayIndex);
-            return {
-                day,
-                hours: Math.round(hours * 10) / 10, // Auf eine Dezimalstelle runden
-                date
-            };
+        // Runden und Formatieren
+        periodData.forEach(day => {
+            day.hours = Math.round(day.hours * 10) / 10;
         });
+        // Für Frontend-Kompatibilität: weeklyData verwenden
+        const weeklyData = periodData;
         console.log("Berechnete weeklyData:", weeklyData);
         // Berechne den Durchschnitt der Arbeitsstunden pro Tag
         const averageHoursPerDay = daysWorked > 0 ? Math.round((totalHours / daysWorked) * 10) / 10 : 0;

@@ -50,6 +50,11 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 },
                 branch: {
                     select: branchSelect
+                },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
                 }
             }
         });
@@ -87,6 +92,11 @@ const getTaskById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 },
                 branch: {
                     select: branchSelect
+                },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
                 }
             }
         });
@@ -438,6 +448,14 @@ const deleteTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (!task) {
             return res.status(404).json({ error: 'Task nicht gefunden' });
         }
+        // Lösche abhängige Datensätze vor dem Löschen des Tasks
+        // TaskCerebroCarticle und WorkTimeTask haben keine Cascade Delete
+        yield prisma.taskCerebroCarticle.deleteMany({
+            where: { taskId: taskId }
+        });
+        yield prisma.workTimeTask.deleteMany({
+            where: { taskId: taskId }
+        });
         yield prisma.task.delete({
             where: { id: taskId }
         });
