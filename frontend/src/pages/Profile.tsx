@@ -260,7 +260,7 @@ const Profile: React.FC = () => {
               }`}
             >
               <BuildingOfficeIcon className="h-5 w-5 inline mr-2" />
-              Lebenszyklus
+              {t('lifecycle.tabTitle')}
             </button>
             <button
               onClick={() => setActiveTab('myDocuments')}
@@ -271,7 +271,7 @@ const Profile: React.FC = () => {
               }`}
             >
               <DocumentTextIcon className="h-5 w-5 inline mr-2" />
-              Meine Dokumente
+              {t('lifecycle.myDocumentsTab')}
             </button>
           </nav>
         </div>

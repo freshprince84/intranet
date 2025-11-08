@@ -18,6 +18,7 @@ export interface User {
   identificationNumber?: string | null;
   taxIdentificationNumber?: string | null;
   employeeNumber?: string | null;
+  active?: boolean;
   roles: UserRole[];
   identificationDocuments?: IdentificationDocument[];
   settings?: Settings;

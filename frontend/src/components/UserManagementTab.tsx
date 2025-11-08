@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { userApi, roleApi } from '../api/apiClient.ts';
 import { User, Role } from '../types/interfaces.ts';
-import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, ShieldCheckIcon, XMarkIcon, ArrowPathIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, ShieldCheckIcon, XMarkIcon, ArrowPathIcon, BuildingOfficeIcon, UserMinusIcon, UserPlusIcon } from '@heroicons/react/24/outline';
 import useMessage from '../hooks/useMessage.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import IdentificationDocumentList from './IdentificationDocumentList.tsx';
@@ -174,6 +174,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       
       const userData = {
         ...response.data,
+        active: response.data.active !== undefined ? response.data.active : true,
         birthday: response.data.birthday ? new Date(response.data.birthday).toISOString().split('T')[0] : null
       };
       
@@ -372,6 +373,70 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
     }
   };
 
+  // Benutzer aktivieren/deaktivieren
+  const handleToggleActive = async () => {
+    if (!selectedUser || !selectedUser.id) {
+      showMessage('Kein Benutzer ausgewählt', 'error');
+      return;
+    }
+
+    // Verhindere, dass der Admin-Benutzer sich selbst deaktiviert
+    const currentUserId = parseInt(localStorage.getItem('userId') || '0', 10);
+    if (selectedUser.id === currentUserId) {
+      showMessage('Du kannst dich nicht selbst deaktivieren', 'warning');
+      return;
+    }
+
+    try {
+      // Aktueller Status: wenn undefined, dann true (Default)
+      const currentActiveStatus = selectedUser.active !== undefined ? selectedUser.active : true;
+      const newActiveStatus = !currentActiveStatus;
+      
+      console.log('Toggle active:', { currentActiveStatus, newActiveStatus, selectedUser });
+      
+      // Update Benutzer
+      const response = await userApi.update(selectedUser.id, { active: newActiveStatus });
+
+      if (response.data) {
+        const updatedData = {
+          ...response.data,
+          active: response.data.active !== undefined ? response.data.active : true,
+          birthday: response.data.birthday ? new Date(response.data.birthday).toISOString().split('T')[0] : null
+        };
+        
+        console.log('Updated user data:', updatedData);
+        
+        setSelectedUser(updatedData);
+        setUserFormData({
+          ...updatedData,
+          birthday: updatedData.birthday ? new Date(updatedData.birthday).toISOString().split('T')[0] : null
+        });
+        
+        // Optimistisches Update: User in Liste aktualisieren
+        setUsers(prevUsers => 
+          prevUsers.map(user => 
+            user.id === updatedData.id ? updatedData : user
+          )
+        );
+        
+        // Benutzerliste neu laden, um sicherzustellen, dass alles synchron ist
+        await fetchUsers();
+        
+        showMessage(
+          newActiveStatus 
+            ? 'Benutzer erfolgreich aktiviert' 
+            : 'Benutzer erfolgreich deaktiviert',
+          'success'
+        );
+      }
+    } catch (err) {
+      console.error('Fehler beim Aktivieren/Deaktivieren des Benutzers:', err);
+      handleError(err);
+      // Bei Fehler: Benutzerliste neu laden
+      await fetchUsers();
+    }
+  };
+
   // Toggle Rolle für einen Benutzer (hinzufügen/entfernen)
   const toggleRole = async (roleId: number) => {
     if (!roleId || !selectedUser) return;
@@ -532,9 +597,43 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       {selectedUser && (
         <div>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold dark:text-white">
-              {t('users.title')}: {selectedUser.firstName} {selectedUser.lastName}
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-xl font-semibold dark:text-white">
+                {t('users.title')}: {selectedUser.firstName} {selectedUser.lastName}
+              </h2>
+              {selectedUser.active !== undefined && (
+                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                  selectedUser.active 
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
+                    : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+                }`}>
+                  {selectedUser.active ? t('users.active') : t('users.inactive')}
+                </span>
+              )}
+            </div>
+            {isAdmin && (
+              <button
+                onClick={handleToggleActive}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                  selectedUser.active
+                    ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30'
+                    : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30'
+                }`}
+                title={selectedUser.active ? t('users.deactivate') : t('users.activate')}
+              >
+                {selectedUser.active ? (
+                  <>
+                    <UserMinusIcon className="h-5 w-5" />
+                    {t('users.deactivate')}
+                  </>
+                ) : (
+                  <>
+                    <UserPlusIcon className="h-5 w-5" />
+                    {t('users.activate')}
+                  </>
+                )}
+              </button>
+            )}
           </div>
 
           {/* Tabs für Benutzerdetails, Dokumente und Rollen */}

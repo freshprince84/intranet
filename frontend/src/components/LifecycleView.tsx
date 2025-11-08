@@ -187,19 +187,19 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { color: string; label: string }> = {
-      onboarding: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300', label: 'Onboarding' },
-      active: { color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300', label: 'Aktiv' },
-      contract_change: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300', label: 'Vertragsänderung' },
-      offboarding: { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300', label: 'Offboarding' },
-      archived: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', label: 'Archiviert' }
+    const statusConfig: Record<string, { color: string; labelKey: string }> = {
+      onboarding: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300', labelKey: 'lifecycle.status.onboarding' },
+      active: { color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300', labelKey: 'lifecycle.status.active' },
+      contract_change: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300', labelKey: 'lifecycle.status.contract_change' },
+      offboarding: { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300', labelKey: 'lifecycle.status.offboarding' },
+      archived: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', labelKey: 'lifecycle.status.archived' }
     };
 
-    const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', label: status };
+    const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', labelKey: status };
     
     return (
       <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
-        {config.label}
+        {t(config.labelKey) || status}
       </span>
     );
   };
@@ -235,7 +235,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
   if (!lifecycleData) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-        <p className="text-gray-500 dark:text-gray-400">Keine Lebenszyklus-Daten verfügbar</p>
+        <p className="text-gray-500 dark:text-gray-400">{t('lifecycle.noData') || 'Keine Lebenszyklus-Daten verfügbar'}</p>
       </div>
     );
   }
@@ -249,7 +249,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold dark:text-white flex items-center">
             <BuildingOfficeIcon className="h-5 w-5 mr-2" />
-            Lebenszyklus-Status
+            {t('lifecycle.statusTitle')}
           </h3>
           {getStatusBadge(lifecycle.status)}
         </div>
@@ -257,7 +257,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         <div className="space-y-2 text-sm">
           {lifecycle.onboardingStartedAt && (
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Onboarding gestartet:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.onboardingStarted')}</span>
               <span className="dark:text-white">
                 {new Date(lifecycle.onboardingStartedAt).toLocaleDateString('de-DE')}
               </span>
@@ -265,7 +265,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
           )}
           {lifecycle.onboardingCompletedAt && (
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Onboarding abgeschlossen:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.onboardingCompleted')}</span>
               <span className="dark:text-white">
                 {new Date(lifecycle.onboardingCompletedAt).toLocaleDateString('de-DE')}
               </span>
@@ -273,7 +273,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
           )}
           {lifecycle.contractStartDate && (
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Vertragsbeginn:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.contractStart')}</span>
               <span className="dark:text-white">
                 {new Date(lifecycle.contractStartDate).toLocaleDateString('de-DE')}
               </span>
@@ -281,7 +281,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
           )}
           {lifecycle.contractEndDate && (
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Vertragsende:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.contractEnd')}</span>
               <span className="dark:text-white">
                 {new Date(lifecycle.contractEndDate).toLocaleDateString('de-DE')}
               </span>
@@ -293,11 +293,11 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
       {/* Progress-Bar */}
       {lifecycle.status === 'onboarding' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold dark:text-white mb-4">Onboarding-Fortschritt</h3>
+          <h3 className="text-lg font-semibold dark:text-white mb-4">{t('lifecycle.progressTitle')}</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm mb-2">
               <span className="text-gray-600 dark:text-gray-400">
-                {progress.completed} von {progress.total} Schritten abgeschlossen
+                {t('lifecycle.progressSteps', { completed: progress.completed, total: progress.total })}
               </span>
               <span className="font-medium dark:text-white">{progress.percent}%</span>
             </div>
@@ -316,15 +316,17 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold dark:text-white flex items-center">
             <DocumentTextIcon className="h-5 w-5 mr-2" />
-            Arbeitszeugnisse
+            {t('lifecycle.certificates')}
           </h3>
           {isHR() && (
             <button
               onClick={() => setIsCertificateCreateModalOpen(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+              className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
+              style={{ width: '30.19px', height: '30.19px' }}
+              title={t('lifecycle.createCertificate')}
+              aria-label={t('lifecycle.createCertificate')}
             >
-              <PlusIcon className="h-5 w-5" />
-              <span>Erstellen</span>
+              <PlusIcon className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -332,7 +334,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         {certificates.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <DocumentTextIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p>Keine Arbeitszeugnisse verfügbar</p>
+            <p>{t('lifecycle.noCertificates')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -345,26 +347,26 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <h4 className="font-medium dark:text-white">
-                        Arbeitszeugnis
+                        {t('lifecycle.certificate')}
                         {cert.certificateType !== 'employment' && ` (${cert.certificateType})`}
                       </h4>
                       {cert.isLatest && (
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 flex items-center">
                           <CheckCircleIcon className="h-3 w-3 mr-1" />
-                          Aktuell
+                          {t('lifecycle.current')}
                         </span>
                       )}
                     </div>
                     <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                       <div className="flex items-center space-x-2">
                         <CalendarIcon className="h-4 w-4" />
-                        <span>Ausgestellt am: {formatDate(cert.issueDate)}</span>
+                        <span>{t('lifecycle.issuedOn')} {formatDate(cert.issueDate)}</span>
                       </div>
                       {cert.generatedByUser && (
                         <div className="flex items-center space-x-2">
                           <UserIcon className="h-4 w-4" />
                           <span>
-                            Erstellt von: {cert.generatedByUser.firstName} {cert.generatedByUser.lastName}
+                            {t('lifecycle.createdBy')} {cert.generatedByUser.firstName} {cert.generatedByUser.lastName}
                           </span>
                         </div>
                       )}
@@ -375,7 +377,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                       <button
                         onClick={() => setEditingCertificate(cert)}
                         className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
-                        title="Bearbeiten"
+                        title={t('lifecycle.edit')}
                       >
                         <PencilIcon className="h-5 w-5" />
                       </button>
@@ -384,7 +386,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                       onClick={() => handleDownloadCertificate(cert.id)}
                       disabled={downloadingCertId === cert.id}
                       className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Herunterladen"
+                      title={t('lifecycle.download')}
                     >
                       {downloadingCertId === cert.id ? (
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
@@ -405,15 +407,17 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold dark:text-white flex items-center">
             <DocumentTextIcon className="h-5 w-5 mr-2" />
-            Arbeitsverträge
+            {t('lifecycle.contracts')}
           </h3>
           {isHR() && (
             <button
               onClick={() => setIsContractCreateModalOpen(true)}
-              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+              className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
+              style={{ width: '30.19px', height: '30.19px' }}
+              title={t('lifecycle.createContract')}
+              aria-label={t('lifecycle.createContract')}
             >
-              <PlusIcon className="h-5 w-5" />
-              <span>Erstellen</span>
+              <PlusIcon className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -421,7 +425,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         {contracts.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <DocumentTextIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p>Keine Arbeitsverträge verfügbar</p>
+            <p>{t('lifecycle.noContracts')}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -434,13 +438,13 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <h4 className="font-medium dark:text-white">
-                        Arbeitsvertrag
+                        {t('lifecycle.contract')}
                         {contract.contractType !== 'employment' && ` (${contract.contractType})`}
                       </h4>
                       {contract.isLatest && (
                         <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 flex items-center">
                           <CheckCircleIcon className="h-3 w-3 mr-1" />
-                          Aktuell
+                          {t('lifecycle.current')}
                         </span>
                       )}
                     </div>
@@ -453,19 +457,19 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                         </span>
                       </div>
                       {contract.position && (
-                        <div>Position: {contract.position}</div>
+                        <div>{t('lifecycle.position')} {contract.position}</div>
                       )}
                       {contract.salary && (
-                        <div>Gehalt: {contract.salary.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</div>
+                        <div>{t('lifecycle.salary')} {contract.salary.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</div>
                       )}
                       {contract.workingHours && (
-                        <div>Arbeitsstunden: {contract.workingHours}h/Woche</div>
+                        <div>{t('lifecycle.workingHours')} {contract.workingHours}h/Woche</div>
                       )}
                       {contract.generatedByUser && (
                         <div className="flex items-center space-x-2">
                           <UserIcon className="h-4 w-4" />
                           <span>
-                            Erstellt von: {contract.generatedByUser.firstName} {contract.generatedByUser.lastName}
+                            {t('lifecycle.createdBy')} {contract.generatedByUser.firstName} {contract.generatedByUser.lastName}
                           </span>
                         </div>
                       )}
@@ -476,7 +480,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                       <button
                         onClick={() => setEditingContract(contract)}
                         className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
-                        title="Bearbeiten"
+                        title={t('lifecycle.edit')}
                       >
                         <PencilIcon className="h-5 w-5" />
                       </button>
@@ -485,7 +489,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                       onClick={() => handleDownloadContract(contract.id)}
                       disabled={downloadingContractId === contract.id}
                       className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      title="Herunterladen"
+                      title={t('lifecycle.download')}
                     >
                       {downloadingContractId === contract.id ? (
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
@@ -506,7 +510,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold dark:text-white mb-4 flex items-center">
             <DocumentTextIcon className="h-5 w-5 mr-2" />
-            Sozialversicherungen
+            {t('lifecycle.socialSecurity')}
           </h3>
           <div className="space-y-3">
             {socialSecurityRegistrations.map((registration) => (
@@ -539,10 +543,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                   </div>
                 </div>
                 <span className="text-sm font-medium dark:text-white">
-                  {registration.status === 'registered' ? 'Registriert' :
-                   registration.status === 'pending' ? 'Ausstehend' :
-                   registration.status === 'failed' ? 'Fehlgeschlagen' :
-                   registration.status === 'not_required' ? 'Nicht erforderlich' : registration.status}
+                  {t(`lifecycle.socialSecurityStatus.${registration.status}`) || registration.status}
                 </span>
               </div>
             ))}

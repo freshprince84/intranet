@@ -423,9 +423,14 @@ export const downloadCertificate = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'PDF-Datei nicht gefunden' });
     }
 
-    // PDF als Download bereitstellen
+    // PDF bereitstellen - inline für Vorschau, attachment für Download
+    const isPreview = req.query.preview === 'true';
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="arbeitszeugnis-${certificateId}.pdf"`);
+    if (isPreview) {
+      res.setHeader('Content-Disposition', `inline; filename="arbeitszeugnis-${certificateId}.pdf"`);
+    } else {
+      res.setHeader('Content-Disposition', `attachment; filename="arbeitszeugnis-${certificateId}.pdf"`);
+    }
     fs.createReadStream(filePath).pipe(res);
   } catch (error) {
     console.error('Error in downloadCertificate:', error);
@@ -677,9 +682,14 @@ export const downloadContract = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'PDF-Datei nicht gefunden' });
     }
 
-    // PDF als Download bereitstellen
+    // PDF bereitstellen - inline für Vorschau, attachment für Download
+    const isPreview = req.query.preview === 'true';
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="arbeitsvertrag-${contractId}.pdf"`);
+    if (isPreview) {
+      res.setHeader('Content-Disposition', `inline; filename="arbeitsvertrag-${contractId}.pdf"`);
+    } else {
+      res.setHeader('Content-Disposition', `attachment; filename="arbeitsvertrag-${contractId}.pdf"`);
+    }
     fs.createReadStream(filePath).pipe(res);
   } catch (error) {
     console.error('Error in downloadContract:', error);
