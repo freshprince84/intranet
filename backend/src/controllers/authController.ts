@@ -379,10 +379,21 @@ export const requestPasswordReset = async (req: Request<{}, {}, RequestPasswordR
             return res.status(400).json({ message: 'Ungültiges E-Mail-Format' });
         }
 
-        // Finde den Benutzer anhand der E-Mail-Adresse (case-insensitive)
+        // Finde den Benutzer anhand der E-Mail-Adresse (case-insensitive) mit Rollen/Organisation
         const user = await prisma.user.findFirst({
             where: {
                 email: { equals: email, mode: 'insensitive' }
+            },
+            include: {
+                roles: {
+                    include: {
+                        role: {
+                            include: {
+                                organization: true
+                            }
+                        }
+                    }
+                }
             }
         });
 
@@ -412,13 +423,24 @@ export const requestPasswordReset = async (req: Request<{}, {}, RequestPasswordR
             }
         });
 
+        // Finde die Organisation des Benutzers (erste aktive Rolle oder erste Rolle)
+        let organizationId: number | undefined = undefined;
+        const activeRole = user.roles.find(r => r.lastUsed === true);
+        if (activeRole?.role?.organization) {
+            organizationId = activeRole.role.organization.id;
+            console.log(`[PASSWORD_RESET] Verwende Organisation ${organizationId} für SMTP-Einstellungen`);
+        } else if (user.roles.length > 0 && user.roles[0]?.role?.organization) {
+            organizationId = user.roles[0].role.organization.id;
+            console.log(`[PASSWORD_RESET] Verwende Organisation ${organizationId} für SMTP-Einstellungen (erste Rolle)`);
+        }
+
         // Generiere Reset-Link
         // Frontend-URL aus Umgebungsvariable oder Standardwert
         const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
         const resetLink = `${frontendUrl}/reset-password?token=${token}`;
 
-        // Sende E-Mail (asynchron, blockiert nicht die Response)
-        sendPasswordResetEmail(user.email, user.username, resetLink).catch((error) => {
+        // Sende E-Mail (asynchron, blockiert nicht die Response) mit organisationId
+        sendPasswordResetEmail(user.email, user.username, resetLink, organizationId).catch((error) => {
             console.error('Fehler beim Versenden der Passwort-Reset-E-Mail:', error);
             // E-Mail-Fehler blockieren nicht die Response
         });

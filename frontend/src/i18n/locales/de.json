@@ -410,6 +410,10 @@
     "create": "Benutzer erstellen",
     "edit": "Benutzer bearbeiten",
     "delete": "Benutzer löschen",
+    "active": "Aktiv",
+    "inactive": "Inaktiv",
+    "activate": "Aktivieren",
+    "deactivate": "Deaktivieren",
     "form": {
       "username": "Benutzername",
       "email": "E-Mail",
@@ -904,7 +908,33 @@
     "tabs": {
       "general": "Allgemein",
       "roles": "Rollen",
-      "documents": "Dokumente"
+      "documents": "Dokumente",
+      "smtp": "SMTP"
+    },
+    "smtp": {
+      "title": "SMTP-Einstellungen",
+      "description": "Konfigurieren Sie einen eigenen SMTP-Server für diese Organisation. E-Mails werden dann von dieser Organisation gesendet.",
+      "host": "SMTP-Host",
+      "hostHint": "z.B. smtp.lafamilia-hostal.com oder smtp.gmail.com",
+      "port": "SMTP-Port",
+      "portHint": "Standard: 587 (TLS) oder 465 (SSL)",
+      "user": "SMTP-Benutzername",
+      "userHint": "E-Mail-Adresse oder Benutzername für die SMTP-Authentifizierung",
+      "password": "SMTP-Passwort",
+      "passwordHint": "Passwort für die SMTP-Authentifizierung",
+      "fromSettings": "Absender-Einstellungen",
+      "fromEmail": "Absender-E-Mail",
+      "fromEmailHint": "E-Mail-Adresse, die als Absender angezeigt wird (z.B. noreply@lafamilia-hostal.com)",
+      "fromName": "Absender-Name",
+      "fromNameHint": "Name, der als Absender angezeigt wird (z.B. La Familia Hostel)",
+      "infoTitle": "ℹ️ Wichtige Hinweise:",
+      "info1": "Wenn keine SMTP-Einstellungen konfiguriert sind, werden die globalen Einstellungen aus der .env Datei verwendet",
+      "info2": "Die Absender-E-Mail sollte zu Ihrer Domain gehören, um Spam-Filter zu vermeiden",
+      "info3": "Für Gmail müssen Sie ein App-Passwort verwenden, nicht Ihr normales Passwort",
+      "saveSuccess": "SMTP-Einstellungen erfolgreich gespeichert",
+      "saveError": "Fehler beim Speichern der SMTP-Einstellungen",
+      "requiredFields": "Bitte füllen Sie alle Pflichtfelder aus (Host, Port, Benutzer, Passwort)",
+      "clear": "Zurücksetzen"
     },
     "lifecycleRoles": {
       "title": "Lebenszyklus-Rollen",
@@ -915,6 +945,7 @@
     },
     "documentTemplates": "Dokumenten-Templates",
     "documentSettings": "Dokumenten-Einstellungen",
+    "templateSystemNotice": "⚠️ Hinweis: Das Template-System ist noch nicht vollständig implementiert. Hochgeladene Templates werden aktuell nicht gespeichert oder verwendet. Dokumente werden mit einer Standard-Vorlage generiert.",
     "createOrJoinHint": "Erstellen Sie eine neue Organisation oder treten Sie einer bestehenden bei.",
     "edit": {
       "title": "Organisation bearbeiten"
@@ -1638,6 +1669,61 @@
     "deleteError": "Fehler beim Löschen",
     "loadTemplatesError": "Fehler beim Laden der Templates",
     "certificate": "Arbeitszeugnis",
-    "contract": "Arbeitsvertrag"
+    "contract": "Arbeitsvertrag",
+    "tabTitle": "Lebenszyklus",
+    "myDocumentsTab": "Meine Dokumente",
+    "statusTitle": "Lebenszyklus-Status",
+    "status": {
+      "onboarding": "Onboarding",
+      "active": "Aktiv",
+      "contract_change": "Vertragsänderung",
+      "offboarding": "Offboarding",
+      "archived": "Archiviert"
+    },
+    "onboardingStarted": "Onboarding gestartet:",
+    "onboardingCompleted": "Onboarding abgeschlossen:",
+    "contractStart": "Vertragsbeginn:",
+    "contractEnd": "Vertragsende:",
+    "progressTitle": "Onboarding-Fortschritt",
+    "progressSteps": "{{completed}} von {{total}} Schritten abgeschlossen",
+    "stepsDetail": "Schritte im Detail:",
+    "steps": {
+      "passport": "Passport/Identitätsdokument",
+      "arl": "ARL-Anmeldung",
+      "eps": "EPS-Anmeldung",
+      "pension": "Pension-Anmeldung",
+      "caja": "Caja-Anmeldung"
+    },
+    "completed": "✓ Abgeschlossen",
+    "socialSecurity": "Sozialversicherungen",
+    "socialSecurityStatus": {
+      "registered": "Registriert",
+      "pending": "Ausstehend",
+      "failed": "Fehlgeschlagen",
+      "not_required": "Nicht erforderlich",
+      "deregistered": "Abgemeldet"
+    },
+    "certificates": "Arbeitszeugnisse",
+    "contracts": "Arbeitsverträge",
+    "noCertificates": "Keine Arbeitszeugnisse verfügbar",
+    "noContracts": "Keine Arbeitsverträge verfügbar",
+    "certificatesInfo": "Dokumente werden von HR oder Admin erstellt. Kontaktieren Sie HR, um ein Arbeitszeugnis anzufordern.",
+    "contractsInfo": "Dokumente werden von HR oder Admin erstellt. Kontaktieren Sie HR, um einen Arbeitsvertrag anzufordern.",
+    "generateTemplate": "Vorlage generieren",
+    "generating": "Generiere...",
+    "issuedOn": "Ausgestellt am:",
+    "createdBy": "Erstellt von:",
+    "templateVersion": "Template-Version:",
+    "current": "Aktuell",
+    "position": "Position:",
+    "salary": "Gehalt:",
+    "workingHours": "Arbeitsstunden:",
+    "downloadCertificate": "Arbeitszeugnis herunterladen",
+    "downloadContract": "Arbeitsvertrag herunterladen",
+    "createCertificate": "Arbeitszeugnis erstellen",
+    "createContract": "Arbeitsvertrag erstellen",
+    "edit": "Bearbeiten",
+    "download": "Herunterladen",
+    "noData": "Keine Lebenszyklus-Daten verfügbar"
   }
 }

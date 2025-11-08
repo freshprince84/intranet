@@ -97,19 +97,19 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
   const { lifecycle, progress, socialSecurityRegistrations = [] } = lifecycleData;
 
   const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { color: string; label: string }> = {
-      onboarding: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300', label: 'Onboarding' },
-      active: { color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300', label: 'Aktiv' },
-      contract_change: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300', label: 'Vertragsänderung' },
-      offboarding: { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300', label: 'Offboarding' },
-      archived: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', label: 'Archiviert' }
+    const statusConfig: Record<string, { color: string; labelKey: string }> = {
+      onboarding: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300', labelKey: 'lifecycle.status.onboarding' },
+      active: { color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300', labelKey: 'lifecycle.status.active' },
+      contract_change: { color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300', labelKey: 'lifecycle.status.contract_change' },
+      offboarding: { color: 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300', labelKey: 'lifecycle.status.offboarding' },
+      archived: { color: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300', labelKey: 'lifecycle.status.archived' }
     };
 
-    const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', label: status };
+    const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', labelKey: status };
     
     return (
       <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
-        {config.label}
+        {t(config.labelKey) || status}
       </span>
     );
   };
@@ -130,14 +130,8 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
   };
 
   const getSocialSecurityStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      registered: 'Registriert',
-      pending: 'Ausstehend',
-      failed: 'Fehlgeschlagen',
-      not_required: 'Nicht erforderlich',
-      deregistered: 'Abgemeldet'
-    };
-    return labels[status] || status;
+    const labelKey = `lifecycle.socialSecurityStatus.${status}`;
+    return t(labelKey) || status;
   };
 
   return (
@@ -147,7 +141,7 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold dark:text-white flex items-center">
             <BuildingOfficeIcon className="h-5 w-5 mr-2" />
-            Lebenszyklus-Status
+            {t('lifecycle.statusTitle')}
           </h3>
           {getStatusBadge(lifecycle.status)}
         </div>
@@ -155,7 +149,7 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
         <div className="space-y-2 text-sm">
           {lifecycle.onboardingStartedAt && (
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Onboarding gestartet:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.onboardingStarted')}</span>
               <span className="dark:text-white">
                 {new Date(lifecycle.onboardingStartedAt).toLocaleDateString('de-DE')}
               </span>
@@ -163,7 +157,7 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
           )}
           {lifecycle.onboardingCompletedAt && (
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Onboarding abgeschlossen:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.onboardingCompleted')}</span>
               <span className="dark:text-white">
                 {new Date(lifecycle.onboardingCompletedAt).toLocaleDateString('de-DE')}
               </span>
@@ -171,7 +165,7 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
           )}
           {lifecycle.contractStartDate && (
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Vertragsbeginn:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.contractStart')}</span>
               <span className="dark:text-white">
                 {new Date(lifecycle.contractStartDate).toLocaleDateString('de-DE')}
               </span>
@@ -179,7 +173,7 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
           )}
           {lifecycle.contractEndDate && (
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">Vertragsende:</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.contractEnd')}</span>
               <span className="dark:text-white">
                 {new Date(lifecycle.contractEndDate).toLocaleDateString('de-DE')}
               </span>
@@ -191,11 +185,11 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
       {/* Progress-Bar */}
       {lifecycle.status === 'onboarding' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold dark:text-white mb-4">Onboarding-Fortschritt</h3>
+          <h3 className="text-lg font-semibold dark:text-white mb-4">{t('lifecycle.progressTitle')}</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-sm mb-2">
               <span className="text-gray-600 dark:text-gray-400">
-                {progress.completed} von {progress.total} Schritten abgeschlossen
+                {t('lifecycle.progressSteps', { completed: progress.completed, total: progress.total })}
               </span>
               <span className="font-medium dark:text-white">{progress.percent}%</span>
             </div>
@@ -209,14 +203,14 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
             {/* Detaillierte Schritt-Liste */}
             <div className="mt-4 space-y-2">
               <div className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Schritte im Detail:
+                {t('lifecycle.stepsDetail')}
               </div>
               {[
-                { key: 'passport', label: 'Passport/Identitätsdokument', completed: true }, // TODO: Prüfe ob Dokument vorhanden
-                { key: 'arl', label: 'ARL-Anmeldung', completed: lifecycle.arlStatus === 'registered' },
-                { key: 'eps', label: 'EPS-Anmeldung', completed: !lifecycle.epsRequired || lifecycle.epsStatus === 'registered' },
-                { key: 'pension', label: 'Pension-Anmeldung', completed: lifecycle.pensionStatus === 'registered' },
-                { key: 'caja', label: 'Caja-Anmeldung', completed: lifecycle.cajaStatus === 'registered' }
+                { key: 'passport', completed: true }, // TODO: Prüfe ob Dokument vorhanden
+                { key: 'arl', completed: lifecycle.arlStatus === 'registered' },
+                { key: 'eps', completed: !lifecycle.epsRequired || lifecycle.epsStatus === 'registered' },
+                { key: 'pension', completed: lifecycle.pensionStatus === 'registered' },
+                { key: 'caja', completed: lifecycle.cajaStatus === 'registered' }
               ].map((step) => (
                 <div key={step.key} className="flex items-center space-x-2 text-sm">
                   {step.completed ? (
@@ -225,10 +219,10 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
                     <ClockIcon className="h-5 w-5 text-yellow-500" />
                   )}
                   <span className={step.completed ? 'text-gray-600 dark:text-gray-400 line-through' : 'text-gray-900 dark:text-white font-medium'}>
-                    {step.label}
+                    {t(`lifecycle.steps.${step.key}`)}
                   </span>
                   {step.completed && (
-                    <span className="text-xs text-green-600 dark:text-green-400">✓ Abgeschlossen</span>
+                    <span className="text-xs text-green-600 dark:text-green-400">{t('lifecycle.completed')}</span>
                   )}
                 </div>
               ))}
@@ -242,7 +236,7 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold dark:text-white mb-4 flex items-center">
             <DocumentTextIcon className="h-5 w-5 mr-2" />
-            Sozialversicherungen
+            {t('lifecycle.socialSecurity')}
           </h3>
           <div className="space-y-3">
             {socialSecurityRegistrations.map((registration) => (

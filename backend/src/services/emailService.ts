@@ -21,13 +21,28 @@ const createTransporter = async (organizationId?: number) => {
 
       if (organization?.settings && typeof organization.settings === 'object') {
         const orgSettings = organization.settings as any;
+        console.log(`[EMAIL] Org ${organizationId} Settings gefunden:`, JSON.stringify(orgSettings, null, 2));
         if (orgSettings.smtpHost && orgSettings.smtpUser && orgSettings.smtpPass) {
           smtpHost = orgSettings.smtpHost;
-          smtpPort = orgSettings.smtpPort ? parseInt(orgSettings.smtpPort) : 587;
+          // Port kann als String oder Number gespeichert sein
+          const portValue = orgSettings.smtpPort;
+          smtpPort = typeof portValue === 'number' ? portValue : (portValue ? parseInt(String(portValue)) : 587);
           smtpUser = orgSettings.smtpUser;
           smtpPass = orgSettings.smtpPass;
           console.log(`📧 Nutze Organisation-spezifische SMTP-Einstellungen für Org ${organizationId}`);
+          console.log(`📧 SMTP Host: ${smtpHost}, Port: ${smtpPort}, User: ${smtpUser}`);
+          // Speichere auch From-Einstellungen für späteren Gebrauch
+          if (orgSettings.smtpFromEmail || orgSettings.smtpFromName) {
+            console.log(`📧 Org ${organizationId} hat From-Einstellungen: ${orgSettings.smtpFromEmail || 'nicht gesetzt'}, ${orgSettings.smtpFromName || 'nicht gesetzt'}`);
+          }
+        } else {
+          console.log(`⚠️ Org ${organizationId} hat SMTP-Einstellungen, aber nicht alle erforderlichen Felder sind gesetzt:`);
+          console.log(`   smtpHost: ${orgSettings.smtpHost ? '✅' : '❌'}`);
+          console.log(`   smtpUser: ${orgSettings.smtpUser ? '✅' : '❌'}`);
+          console.log(`   smtpPass: ${orgSettings.smtpPass ? '✅' : '❌'}`);
         }
+      } else {
+        console.log(`⚠️ Org ${organizationId} hat keine Settings oder Settings sind kein Objekt`);
       }
     } catch (error) {
       console.warn('⚠️ Fehler beim Laden der Organisation-SMTP-Einstellungen:', error);
@@ -447,11 +462,19 @@ export const sendPasswordResetEmail = async (
   resetLink: string,
   organizationId?: number
 ): Promise<boolean> => {
+  console.log(`[EMAIL] Starte Versand der Passwort-Reset-E-Mail für: ${username} (${email})`);
+  if (organizationId) {
+    console.log(`[EMAIL] Verwende Organisation-ID: ${organizationId}`);
+  }
+  
   // Versuche zuerst Mailtrap API (falls konfiguriert)
-  const apiSuccess = await sendPasswordResetViaMailtrapAPI(email, username, resetLink);
+  const apiSuccess = await sendPasswordResetViaMailtrapAPI(email, username, resetLink, organizationId);
   if (apiSuccess) {
+    console.log(`[EMAIL] E-Mail erfolgreich über Mailtrap API versendet`);
     return true;
   }
+  
+  console.log(`[EMAIL] Mailtrap API nicht verfügbar oder fehlgeschlagen, versuche SMTP...`);
 
   // Fallback zu SMTP
   try {
@@ -462,8 +485,38 @@ export const sendPasswordResetEmail = async (
       return false;
     }
 
+    // Lade From-Einstellungen aus Organisation-Settings (falls vorhanden)
+    let fromEmail = process.env.SMTP_USER || 'noreply@intranet.local';
+    let fromName = 'Intranet';
+    
+    if (organizationId) {
+      try {
+        const organization = await prisma.organization.findUnique({
+          where: { id: organizationId },
+          select: { settings: true, displayName: true }
+        });
+        
+        if (organization?.settings && typeof organization.settings === 'object') {
+          const orgSettings = organization.settings as any;
+          if (orgSettings.smtpFromEmail) {
+            fromEmail = orgSettings.smtpFromEmail;
+          }
+          if (orgSettings.smtpFromName) {
+            fromName = orgSettings.smtpFromName;
+          } else if (organization.displayName) {
+            fromName = organization.displayName;
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Fehler beim Laden der From-Einstellungen:', error);
+      }
+    }
+
+    // Formatiere From-String für nodemailer
+    const fromString = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
+
     const mailOptions = {
-      from: process.env.SMTP_USER || 'noreply@intranet.local',
+      from: fromString,
       to: email,
       subject: 'Passwort zurücksetzen - Intranet',
       html: `
@@ -581,11 +634,32 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
       `,
     };
 
+    console.log(`[EMAIL] Sende E-Mail über SMTP...`);
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Passwort-Reset-E-Mail versendet:', info.messageId);
+    console.log('✅ Passwort-Reset-E-Mail erfolgreich über SMTP versendet!');
+    console.log(`[EMAIL] Message ID: ${info.messageId}`);
+    console.log(`[EMAIL] E-Mail gesendet an: ${email}`);
+    console.log(`[EMAIL] Von: ${fromString}`);
     return true;
-  } catch (error) {
-    console.error('❌ Fehler beim Versenden der Passwort-Reset-E-Mail:', error);
+  } catch (error: any) {
+    console.error('❌ Fehler beim Versenden der Passwort-Reset-E-Mail über SMTP:');
+    console.error(`[EMAIL] Fehler-Typ: ${error.constructor.name}`);
+    if (error.response) {
+      console.error(`[EMAIL] SMTP Fehler-Response: ${error.response.status}`, error.response.data);
+    }
+    if (error.code) {
+      console.error(`[EMAIL] SMTP Fehler-Code: ${error.code}`);
+    }
+    if (error.message) {
+      console.error(`[EMAIL] SMTP Fehler-Message: ${error.message}`);
+    }
+    if (error.command) {
+      console.error(`[EMAIL] SMTP Fehler-Command: ${error.command}`);
+    }
+    if (error.responseCode) {
+      console.error(`[EMAIL] SMTP Response-Code: ${error.responseCode}`);
+    }
+    console.error(`[EMAIL] Vollständiger Fehler:`, error);
     return false;
   }
 };
@@ -596,13 +670,50 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
 const sendPasswordResetViaMailtrapAPI = async (
   email: string,
   username: string,
-  resetLink: string
+  resetLink: string,
+  organizationId?: number
 ): Promise<boolean> => {
   const mailtrapApiToken = process.env.MAILTRAP_API_TOKEN;
   const mailtrapTestInboxId = process.env.MAILTRAP_TEST_INBOX_ID;
 
   if (!mailtrapApiToken || !mailtrapTestInboxId) {
+    console.log('[EMAIL] Mailtrap API nicht konfiguriert (Token oder Inbox-ID fehlt), versuche SMTP');
     return false; // API nicht konfiguriert
+  }
+
+  // Wenn Organisation-ID vorhanden ist, sollte SMTP verwendet werden, nicht Mailtrap
+  if (organizationId) {
+    console.log(`[EMAIL] Organisation-ID vorhanden (${organizationId}), überspringe Mailtrap API und verwende SMTP`);
+    return false;
+  }
+
+  console.log(`[EMAIL] Versuche Passwort-Reset-E-Mail über Mailtrap API zu senden an: ${email}`);
+
+  // Lade From-Einstellungen aus Organisation-Settings (falls vorhanden)
+  let fromEmail = 'noreply@intranet.local';
+  let fromName = 'Intranet';
+  
+  if (organizationId) {
+    try {
+      const organization = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { settings: true, displayName: true }
+      });
+      
+      if (organization?.settings && typeof organization.settings === 'object') {
+        const orgSettings = organization.settings as any;
+        if (orgSettings.smtpFromEmail) {
+          fromEmail = orgSettings.smtpFromEmail;
+        }
+        if (orgSettings.smtpFromName) {
+          fromName = orgSettings.smtpFromName;
+        } else if (organization.displayName) {
+          fromName = organization.displayName;
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Fehler beim Laden der From-Einstellungen für Mailtrap:', error);
+    }
   }
 
   try {
@@ -726,7 +837,7 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
       response = await axios.post(
         'https://send.api.mailtrap.io/api/send',
         {
-          from: { email: 'noreply@intranet.local', name: 'Intranet' },
+          from: { email: fromEmail, name: fromName },
           to: [{ email }],
           subject: 'Passwort zurücksetzen - Intranet',
           html: htmlContent,
@@ -746,7 +857,7 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
         response = await axios.post(
           `https://sandbox.api.mailtrap.io/api/send/${mailtrapTestInboxId}`,
           {
-            from: { email: 'noreply@intranet.local', name: 'Intranet' },
+            from: { email: fromEmail, name: fromName },
             to: [{ email }],
             subject: 'Passwort zurücksetzen - Intranet',
             html: htmlContent,

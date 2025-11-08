@@ -242,7 +242,8 @@
       "employees": "Roles de Empleados"
     },
     "documentTemplates": "Plantillas de Documentos",
-    "documentSettings": "Configuración de Documentos"
+    "documentSettings": "Configuración de Documentos",
+    "templateSystemNotice": "⚠️ Nota: El sistema de plantillas aún no está completamente implementado. Las plantillas subidas actualmente no se guardan ni se utilizan. Los documentos se generan con una plantilla estándar."
   },
   "tasks": {
     "title": "Tareas",
@@ -445,6 +446,10 @@
     "create": "Crear usuario",
     "edit": "Editar usuario",
     "delete": "Eliminar usuario",
+    "active": "Activo",
+    "inactive": "Inactivo",
+    "activate": "Activar",
+    "deactivate": "Desactivar",
     "form": {
       "username": "Nombre de usuario",
       "email": "Correo electrónico",
@@ -1707,6 +1712,76 @@
     "deleteError": "Error al eliminar",
     "loadTemplatesError": "Error al cargar plantillas",
     "certificate": "Certificado de Empleo",
-    "contract": "Contrato de Empleo"
+    "contract": "Contrato de Empleo",
+    "tabTitle": "Ciclo de Vida",
+    "myDocumentsTab": "Mis Documentos",
+    "statusTitle": "Estado del Ciclo de Vida",
+    "status": {
+      "onboarding": "Incorporación",
+      "active": "Activo",
+      "contract_change": "Cambio de Contrato",
+      "offboarding": "Desvinculación",
+      "archived": "Archivado"
+    },
+    "onboardingStarted": "Incorporación iniciada:",
+    "onboardingCompleted": "Incorporación completada:",
+    "contractStart": "Inicio del contrato:",
+    "contractEnd": "Fin del contrato:",
+    "progressTitle": "Progreso de Incorporación",
+    "progressSteps": "{{completed}} de {{total}} pasos completados",
+    "stepsDetail": "Pasos en detalle:",
+    "steps": {
+      "passport": "Pasaporte/Documento de Identidad",
+      "arl": "Registro ARL",
+      "eps": "Registro EPS",
+      "pension": "Registro de Pensión",
+      "caja": "Registro Caja"
+    },
+    "completed": "✓ Completado",
+    "socialSecurity": "Seguridad Social",
+    "socialSecurityStatus": {
+      "registered": "Registrado",
+      "pending": "Pendiente",
+      "failed": "Fallido",
+      "not_required": "No Requerido",
+      "deregistered": "Dado de Baja"
+    },
+    "certificates": "Certificados de Empleo",
+    "contracts": "Contratos de Empleo",
+    "noCertificates": "No hay certificados de empleo disponibles",
+    "noContracts": "No hay contratos de empleo disponibles",
+    "certificatesInfo": "Los documentos son creados por RRHH o Administrador. Contacte a RRHH para solicitar un certificado de empleo.",
+    "contractsInfo": "Los documentos son creados por RRHH o Administrador. Contacte a RRHH para solicitar un contrato de empleo.",
+    "generateTemplate": "Generar Plantilla",
+    "generating": "Generando...",
+    "issuedOn": "Emitido el:",
+    "createdBy": "Creado por:",
+    "templateVersion": "Versión de Plantilla:",
+    "current": "Actual",
+    "position": "Posición:",
+    "salary": "Salario:",
+    "workingHours": "Horas de Trabajo:",
+    "downloadCertificate": "Descargar Certificado de Empleo",
+    "downloadContract": "Descargar Contrato de Empleo",
+    "createCertificate": "Crear Certificado de Empleo",
+    "createContract": "Crear Contrato de Empleo",
+    "edit": "Editar",
+    "download": "Descargar",
+    "noData": "No hay datos del ciclo de vida disponibles",
+    "organization": {
+      "editTitle": "Editar Organización",
+      "tabs": {
+        "general": "General",
+        "roles": "Roles",
+        "documents": "Documentos"
+      },
+      "lifecycleRoles": {
+        "title": "Roles del Ciclo de Vida",
+        "admin": "Rol de Administrador",
+        "hr": "Rol de RRHH",
+        "legal": "Rol Legal"
+      },
+      "documentTemplates": "Plantillas de Documentos"
+    }
   }
 }

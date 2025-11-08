@@ -250,7 +250,8 @@ async function importUsers(stats: ImportStats) {
             monthlySalary: user.monthlySalary,
             employeeNumber: user.employeeNumber,
             identificationNumber: user.identificationNumber,
-            taxIdentificationNumber: user.taxIdentificationNumber
+            taxIdentificationNumber: user.taxIdentificationNumber,
+            active: user.active !== undefined ? user.active : true
           }
         });
         idMappings.users.set(user.id, existing.id);
@@ -279,7 +280,8 @@ async function importUsers(stats: ImportStats) {
             monthlySalary: user.monthlySalary,
             employeeNumber: user.employeeNumber,
             identificationNumber: user.identificationNumber,
-            taxIdentificationNumber: user.taxIdentificationNumber
+            taxIdentificationNumber: user.taxIdentificationNumber,
+            active: user.active !== undefined ? user.active : true
           }
         });
         idMappings.users.set(user.id, created.id);

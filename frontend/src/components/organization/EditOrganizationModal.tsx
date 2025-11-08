@@ -9,6 +9,7 @@ import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 import { useLanguage } from '../../hooks/useLanguage.ts';
 import RoleConfigurationTab from './RoleConfigurationTab.tsx';
 import DocumentConfigurationTab from './DocumentConfigurationTab.tsx';
+import SMTPConfigurationTab from './SMTPConfigurationTab.tsx';
 
 interface Props {
   isOpen: boolean;
@@ -35,7 +36,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
   const { organizationLanguage, setOrganizationLanguage } = useLanguage();
   const [selectedOrgLanguage, setSelectedOrgLanguage] = useState<string>('');
   const [savingOrgLanguage, setSavingOrgLanguage] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'roles' | 'documents'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'roles' | 'documents' | 'smtp'>('general');
 
   // Länder-Liste
   const COUNTRIES = [
@@ -414,6 +415,17 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
             >
               {t('organization.tabs.documents') || 'Dokumente'}
             </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('smtp')}
+              className={`${
+                activeTab === 'smtp'
+                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+              } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
+            >
+              {t('organization.tabs.smtp') || 'SMTP'}
+            </button>
           </nav>
         </div>
 
@@ -586,6 +598,17 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
 
           {activeTab === 'documents' && (
             <DocumentConfigurationTab 
+              organization={organization}
+              onSave={() => {
+                if (onSuccess) {
+                  onSuccess();
+                }
+              }}
+            />
+          )}
+
+          {activeTab === 'smtp' && (
+            <SMTPConfigurationTab 
               organization={organization}
               onSave={() => {
                 if (onSuccess) {

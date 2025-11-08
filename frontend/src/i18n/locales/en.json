@@ -242,7 +242,8 @@
       "employees": "Employee Roles"
     },
     "documentTemplates": "Document Templates",
-    "documentSettings": "Document Settings"
+    "documentSettings": "Document Settings",
+    "templateSystemNotice": "⚠️ Notice: The template system is not yet fully implemented. Uploaded templates are currently not saved or used. Documents are generated with a standard template."
   },
   "tasks": {
     "title": "To Do's",
@@ -444,6 +445,10 @@
     "create": "Create user",
     "edit": "Edit user",
     "delete": "Delete user",
+    "active": "Active",
+    "inactive": "Inactive",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
     "form": {
       "username": "Username",
       "email": "Email",
@@ -1706,6 +1711,76 @@
     "deleteError": "Error deleting",
     "loadTemplatesError": "Error loading templates",
     "certificate": "Employment Certificate",
-    "contract": "Employment Contract"
+    "contract": "Employment Contract",
+    "tabTitle": "Lifecycle",
+    "myDocumentsTab": "My Documents",
+    "statusTitle": "Lifecycle Status",
+    "status": {
+      "onboarding": "Onboarding",
+      "active": "Active",
+      "contract_change": "Contract Change",
+      "offboarding": "Offboarding",
+      "archived": "Archived"
+    },
+    "onboardingStarted": "Onboarding started:",
+    "onboardingCompleted": "Onboarding completed:",
+    "contractStart": "Contract start:",
+    "contractEnd": "Contract end:",
+    "progressTitle": "Onboarding Progress",
+    "progressSteps": "{{completed}} of {{total}} steps completed",
+    "stepsDetail": "Steps in detail:",
+    "steps": {
+      "passport": "Passport/Identity Document",
+      "arl": "ARL Registration",
+      "eps": "EPS Registration",
+      "pension": "Pension Registration",
+      "caja": "Caja Registration"
+    },
+    "completed": "✓ Completed",
+    "socialSecurity": "Social Security",
+    "socialSecurityStatus": {
+      "registered": "Registered",
+      "pending": "Pending",
+      "failed": "Failed",
+      "not_required": "Not Required",
+      "deregistered": "Deregistered"
+    },
+    "certificates": "Employment Certificates",
+    "contracts": "Employment Contracts",
+    "noCertificates": "No employment certificates available",
+    "noContracts": "No employment contracts available",
+    "certificatesInfo": "Documents are created by HR or Admin. Contact HR to request an employment certificate.",
+    "contractsInfo": "Documents are created by HR or Admin. Contact HR to request an employment contract.",
+    "generateTemplate": "Generate Template",
+    "generating": "Generating...",
+    "issuedOn": "Issued on:",
+    "createdBy": "Created by:",
+    "templateVersion": "Template Version:",
+    "current": "Current",
+    "position": "Position:",
+    "salary": "Salary:",
+    "workingHours": "Working Hours:",
+    "downloadCertificate": "Download Employment Certificate",
+    "downloadContract": "Download Employment Contract",
+    "createCertificate": "Create Employment Certificate",
+    "createContract": "Create Employment Contract",
+    "edit": "Edit",
+    "download": "Download",
+    "noData": "No lifecycle data available",
+    "organization": {
+      "editTitle": "Edit Organization",
+      "tabs": {
+        "general": "General",
+        "roles": "Roles",
+        "documents": "Documents"
+      },
+      "lifecycleRoles": {
+        "title": "Lifecycle Roles",
+        "admin": "Admin Role",
+        "hr": "HR Role",
+        "legal": "Legal Role"
+      },
+      "documentTemplates": "Document Templates"
+    }
   }
 }

@@ -102,10 +102,13 @@ export const getAllUsers = async (req: Request, res: Response) => {
 // Alle Benutzer für Dropdowns abrufen (nur User der Organisation)
 export const getAllUsersForDropdown = async (req: Request, res: Response) => {
     try {
-        // Für Dropdowns: Nur User der Organisation (oder nur eigene wenn standalone)
+        // Für Dropdowns: Nur User der Organisation (oder nur eigene wenn standalone) und nur aktive Benutzer
         const userFilter = getUserOrganizationFilter(req);
         const users = await prisma.user.findMany({
-            where: userFilter,
+            where: {
+                ...userFilter,
+                active: true
+            },
             select: {
                 id: true,
                 username: true,
@@ -1142,7 +1145,7 @@ export const updateUser = async (req: Request, res: Response) => {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
 
-        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary } = req.body;
+        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary, active } = req.body;
 
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
@@ -1174,7 +1177,8 @@ export const updateUser = async (req: Request, res: Response) => {
             ...(birthday && { birthday: new Date(birthday) }),
             ...(bankDetails && { bankDetails }),
             ...(contract && { contract }),
-            ...(salary && { salary: parseFloat(salary.toString()) })
+            ...(salary && { salary: parseFloat(salary.toString()) }),
+            ...(active !== undefined && { active })
         };
 
         const updatedUser = await prisma.user.update({
