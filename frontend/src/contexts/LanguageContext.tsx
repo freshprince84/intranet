@@ -60,15 +60,26 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
           setIsLoading(false);
         }
       } else {
-        // Kein User: Fallback
-        setActiveLanguage('de');
-        document.documentElement.lang = 'de';
+        // Kein User: Browser-Sprache verwenden (i18n LanguageDetector hat diese bereits erkannt)
+        const browserLanguage = i18n.language || 'de';
+        // Validiere, dass es eine unterstützte Sprache ist
+        const supportedLanguages = ['de', 'es', 'en'];
+        const validLanguage = supportedLanguages.includes(browserLanguage) ? browserLanguage : 'de';
+        
+        setActiveLanguage(validLanguage);
+        document.documentElement.lang = validLanguage;
+        
+        // Stelle sicher, dass i18n die richtige Sprache verwendet
+        if (i18n.language !== validLanguage) {
+          i18n.changeLanguage(validLanguage);
+        }
+        
         setIsLoading(false);
       }
     };
 
     loadLanguage();
-  }, [user]);
+  }, [user, i18n]);
   
   // Aktualisiere HTML lang Attribut wenn sich die aktive Sprache ändert
   useEffect(() => {

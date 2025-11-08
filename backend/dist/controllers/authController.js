@@ -23,7 +23,7 @@ const emailService_1 = require("../services/emailService");
 const prisma = new client_1.PrismaClient();
 const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { email, password, username, first_name, last_name } = req.body;
+        const { email, password, username, first_name, last_name, language } = req.body;
         // Email als Username verwenden wenn kein Username angegeben
         const finalUsername = username || email;
         // Finde die User-Rolle mit ID 2 (Standard-Rolle für neue Benutzer)
@@ -48,6 +48,9 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         }
         // Hash das Passwort
         const hashedPassword = yield bcrypt_1.default.hash(password, 10);
+        // Validiere Sprache (nur unterstützte Sprachen erlauben)
+        const supportedLanguages = ['de', 'es', 'en'];
+        const validLanguage = language && supportedLanguages.includes(language) ? language : 'es'; // Default: es
         // Erstelle den Benutzer
         const user = yield prisma.user.create({
             data: {
@@ -56,6 +59,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 password: hashedPassword,
                 firstName: first_name || null,
                 lastName: last_name || null,
+                language: validLanguage,
                 roles: {
                     create: {
                         role: {
@@ -125,12 +129,12 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         // Whitespace entfernen
         username = username === null || username === void 0 ? void 0 : username.trim();
         password = password === null || password === void 0 ? void 0 : password.trim();
-        // Finde den Benutzer mit Rollen
+        // Finde den Benutzer mit Rollen (case-insensitive für username und email)
         const user = yield prisma.user.findFirst({
             where: {
                 OR: [
-                    { username },
-                    { email: username }
+                    { username: { equals: username, mode: 'insensitive' } },
+                    { email: { equals: username, mode: 'insensitive' } }
                 ]
             },
             include: {

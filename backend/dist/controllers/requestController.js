@@ -49,6 +49,11 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 },
                 branch: {
                     select: branchSelect
+                },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
                 }
             },
             orderBy: {
@@ -67,7 +72,15 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
             requestedBy: request.requester,
             responsible: request.responsible,
             branch: request.branch,
-            createTodo: request.createTodo
+            createTodo: request.createTodo,
+            attachments: request.attachments.map(att => ({
+                id: att.id,
+                fileName: att.fileName,
+                fileType: att.fileType,
+                fileSize: att.fileSize,
+                filePath: att.filePath,
+                uploadedAt: att.uploadedAt
+            }))
         }));
         res.json(formattedRequests);
     }
@@ -94,6 +107,11 @@ const getRequestById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 },
                 branch: {
                     select: branchSelect
+                },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
                 }
             }
         });
@@ -112,7 +130,15 @@ const getRequestById = (req, res) => __awaiter(void 0, void 0, void 0, function*
             requestedBy: request.requester,
             responsible: request.responsible,
             branch: request.branch,
-            createTodo: request.createTodo
+            createTodo: request.createTodo,
+            attachments: request.attachments.map(att => ({
+                id: att.id,
+                fileName: att.fileName,
+                fileType: att.fileType,
+                fileSize: att.fileSize,
+                filePath: att.filePath,
+                uploadedAt: att.uploadedAt
+            }))
         };
         res.json(formattedRequest);
     }

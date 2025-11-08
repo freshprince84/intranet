@@ -9,8 +9,9 @@ import WorktimeList from './WorktimeList.tsx';
 import axios from 'axios';
 import axiosInstance from '../config/axios.ts';
 import { WorktimeModal } from './WorktimeModal.tsx';
-import { convertWeekToDate, getWeekDays } from '../utils/dateUtils.ts';
+import { convertWeekToDate, getWeekDays, getQuinzenaFromDate, convertQuinzenaToDate, getQuinzenaDays, getCurrentQuinzena } from '../utils/dateUtils.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
+import { useOrganization } from '../contexts/OrganizationContext.tsx';
 
 // Neue Schnittstelle für das WorktimeModal mit selectedDate
 interface WorktimeModalProps {
@@ -34,10 +35,52 @@ const WorktimeStats: React.FC = () => {
     const { t, i18n } = useTranslation();
     const { activeLanguage } = useLanguage();
     const { user } = useAuth();
+    const { organization } = useOrganization();
     const [stats, setStats] = useState<WorktimeStats | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [maxHours, setMaxHours] = useState<number>(8); // Standard 8 Stunden
+    
+    // Prüfe ob Organisation oder User aus Kolumbien kommt
+    const isColombia = useMemo(() => {
+        // Prüfe zuerst User-Land, dann Organisation (falls vorhanden)
+        const userIsColombia = user?.country === 'CO';
+        const orgIsColombia = (organization?.settings as any)?.country === 'CO';
+        const result = userIsColombia || orgIsColombia;
+        console.log('Quinzena-Check:', { 
+            userCountry: user?.country, 
+            orgSettings: organization?.settings,
+            isColombia: result 
+        });
+        return result;
+    }, [user?.country, organization]);
+    
+    // State für Woche/Quinzena-Modus
+    // Initial: basierend auf isColombia (kann auch user?.country prüfen, bevor organization geladen ist)
+    const [useQuinzena, setUseQuinzena] = useState<boolean>(() => {
+        // Initial: Prüfe user?.country, da organization möglicherweise noch nicht geladen ist
+        return user?.country === 'CO';
+    });
+    
+    // Aktualisiere useQuinzena wenn isColombia sich ändert
+    useEffect(() => {
+        if (isColombia) {
+            if (!useQuinzena) {
+                // Nur setzen wenn noch nicht gesetzt, um unnötige Re-Renders zu vermeiden
+                setUseQuinzena(true);
+            }
+            // Setze sofort das Quinzena-Datum (auch wenn useQuinzena bereits true ist)
+            const currentQuinzena = getCurrentQuinzena();
+            setSelectedQuinzenaInput(currentQuinzena);
+            const quinzenaDate = convertQuinzenaToDate(currentQuinzena);
+            setSelectedQuinzenaDate(quinzenaDate);
+        } else {
+            if (useQuinzena) {
+                // Nur setzen wenn noch nicht false, um unnötige Re-Renders zu vermeiden
+                setUseQuinzena(false);
+            }
+        }
+    }, [isColombia, useQuinzena]);
     
     // Dynamisches Locale basierend auf aktueller Sprache
     const dateLocale = useMemo(() => {
@@ -49,106 +92,168 @@ const WorktimeStats: React.FC = () => {
         }
     }, [activeLanguage, i18n.language]);
     
-    // Aktuelle Woche im Format YYYY-Www für das Input-Element - aktualisiert sich bei Sprachänderung
+    // Aktuelle Woche/Quinzena im Format YYYY-Www oder YYYY-Qq für das Input-Element
     const today = new Date();
     
     const currentWeekInput = useMemo(() => {
         return `${getYear(today)}-W${String(getWeek(today, { locale: dateLocale })).padStart(2, '0')}`;
     }, [dateLocale]);
     
+    const currentQuinzenaInput = useMemo(() => {
+        return getCurrentQuinzena();
+    }, []);
+    
     const [selectedWeekInput, setSelectedWeekInput] = useState<string>(currentWeekInput);
+    const [selectedQuinzenaInput, setSelectedQuinzenaInput] = useState<string>(currentQuinzenaInput);
     
-    // Aktualisiere selectedWeekInput wenn sich die Sprache ändert (und damit currentWeekInput)
+    // Aktualisiere selectedWeekInput/selectedQuinzenaInput wenn sich die Sprache ändert
     useEffect(() => {
-        setSelectedWeekInput(currentWeekInput);
-    }, [currentWeekInput]);
+        if (useQuinzena) {
+            setSelectedQuinzenaInput(currentQuinzenaInput);
+        } else {
+            setSelectedWeekInput(currentWeekInput);
+        }
+    }, [currentWeekInput, currentQuinzenaInput, useQuinzena]);
     
-    // Berechne das Datum des Montags der aktuellen Woche
+    // Berechne das Datum des Montags der aktuellen Woche oder Start der Quinzena
     const currentMonday = startOfWeek(today, { weekStartsOn: 1 });
+    const currentQuinzenaStart = convertQuinzenaToDate(currentQuinzenaInput);
     
     const [selectedWeekDate, setSelectedWeekDate] = useState<string>(format(currentMonday, 'yyyy-MM-dd'));
+    const [selectedQuinzenaDate, setSelectedQuinzenaDate] = useState<string>(currentQuinzenaStart);
+    
+    // Sicherstellen, dass selectedDate immer korrekt ist (MUSS vor useEffect definiert werden)
+    const selectedDate = useMemo(() => {
+        const result = useQuinzena 
+            ? (selectedQuinzenaDate || convertQuinzenaToDate(getCurrentQuinzena()))
+            : (selectedWeekDate || format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd'));
+        console.log('selectedDate calculated:', { useQuinzena, selectedQuinzenaDate, selectedWeekDate, result });
+        return result;
+    }, [useQuinzena, selectedQuinzenaDate, selectedWeekDate]);
     
     // State für das WorktimeModal
     const [showWorkTimeModal, setShowWorkTimeModal] = useState(false);
     const [selectedDateForModal, setSelectedDateForModal] = useState<string>('');
 
     // useEffect-Hook für das Laden der Statistikdaten
+    // Warte bis user geladen ist, bevor wir Daten laden (um isColombia korrekt zu prüfen)
     useEffect(() => {
+        // Warte bis user geladen ist (um isColombia korrekt zu prüfen)
+        if (!user) {
+            return;
+        }
         fetchStats();
-    }, [selectedWeekDate, user]);
+    }, [selectedDate, user, useQuinzena]);
 
     const fetchStats = async () => {
         try {
+            setLoading(true);
             const token = localStorage.getItem('token');
             
-            // WICHTIGES FIX: Wenn wir selectedWeekDate verwenden, müssen wir NICHTS mehr berechnen,
-            // da es bereits der Montag der Woche ist (berechnet von convertWeekToDate)
-            const dateToSend = selectedWeekDate;
+            // Verwende selectedDate (entweder Woche oder Quinzena)
+            const dateToSend = selectedDate;
+            
+            if (!dateToSend) {
+                console.error('Kein Datum zum Senden verfügbar');
+                setError('Kein Datum verfügbar');
+                setLoading(false);
+                return;
+            }
+            
+            console.log('Fetch Stats:', { useQuinzena, dateToSend, selectedDate });
             
             // Verwende axiosInstance statt fetch
-            const response = await axiosInstance.get(`${API_ENDPOINTS.WORKTIME.STATS}?week=${dateToSend}`);
+            // Für Quinzenas müssen wir möglicherweise einen anderen Endpoint verwenden oder den Parameter anpassen
+            const endpoint = useQuinzena 
+                ? `${API_ENDPOINTS.WORKTIME.STATS}?quinzena=${dateToSend}`
+                : `${API_ENDPOINTS.WORKTIME.STATS}?week=${dateToSend}`;
+            
+            console.log('API Endpoint:', endpoint);
+            
+            const response = await axiosInstance.get(endpoint);
             
             // Direkt auf response.data zugreifen statt response.json() zu verwenden
             const data = response.data;
             
+            console.log('API Response:', data);
+            
             // Wichtig: Stelle sicher, dass die weeklyData das richtige date-Format haben
             if (data && data.weeklyData) {
-                // Benutze direkt das selectedWeekDate als Start der Woche (Montag)
-                // Behalte das originale Mapping (1-basiert)
-                // Übersetze deutsche Wochentage vom Backend zu englischen Keys
-                const weekdayMapping: Record<string, number> = {
-                    "Montag": 1,
-                    "Dienstag": 2,
-                    "Mittwoch": 3,
-                    "Donnerstag": 4,
-                    "Freitag": 5,
-                    "Samstag": 6,
-                    "Sonntag": 7,
-                    // Fallback für andere Sprachen (wenn Backend später mehrsprachig wird)
-                    [t('worktime.days.monday')]: 1,
-                    [t('worktime.days.tuesday')]: 2,
-                    [t('worktime.days.wednesday')]: 3,
-                    [t('worktime.days.thursday')]: 4,
-                    [t('worktime.days.friday')]: 5,
-                    [t('worktime.days.saturday')]: 6,
-                    [t('worktime.days.sunday')]: 7
-                };
-                
-                // Berechne die Tagesdaten basierend auf selectedWeekDate
-                // Wir brauchen keine Date-Objekte, wir können direkt die Tage berechnen
-                const weekDates = [
-                    selectedWeekDate, // Montag (Index 0)
-                    // Berechne die nächsten Tage durch einfaches Inkrementieren des Datums
-                    incrementDateString(selectedWeekDate, 1), // Dienstag (Index 1)
-                    incrementDateString(selectedWeekDate, 2), // Mittwoch (Index 2)
-                    incrementDateString(selectedWeekDate, 3), // Donnerstag (Index 3)
-                    incrementDateString(selectedWeekDate, 4), // Freitag (Index 4)
-                    incrementDateString(selectedWeekDate, 5), // Samstag (Index 5)
-                    incrementDateString(selectedWeekDate, 6)  // Sonntag (Index 6)
-                ];
-                
-                // Konvertiere die Wochentage in Daten im YYYY-MM-DD Format
-                const enrichedData = {
-                    ...data,
-                    weeklyData: data.weeklyData.map((item) => {
-                        // Finde den korrekten Index für den Wochentag
-                        const dayIndex = weekdayMapping[item.day as keyof typeof weekdayMapping];
-                        if (dayIndex === undefined) {
-                            console.error(`Unbekannter Wochentag: ${item.day}`);
-                            return item; // Bei unbekanntem Wochentag, Eintrag unverändert zurückgeben
-                        }
-                        
-                        // Benutze direkt das berechnete Datum aus dem Array
-                        // Da unser weekdayMapping bei 1 beginnt, müssen wir 1 subtrahieren
-                        const formattedDate = weekDates[dayIndex - 1];
-                        return {
-                            ...item,
-                            date: formattedDate
-                        };
-                    })
-                };
-                
-                setStats(enrichedData);
+                if (useQuinzena) {
+                    // Für Quinzenas: Backend gibt bereits korrekte Daten mit date zurück
+                    // Prüfe ob alle Daten korrekt sind
+                    console.log('Quinzena-Daten vom Backend:', {
+                        totalHours: data.totalHours,
+                        weeklyDataLength: data.weeklyData.length,
+                        weeklyData: data.weeklyData
+                    });
+                    
+                    // Stelle sicher, dass alle Einträge ein date-Feld haben und sortiere nach Datum
+                    const validatedData = {
+                        ...data,
+                        weeklyData: data.weeklyData
+                            .map(item => ({
+                                ...item,
+                                date: item.date || '',
+                                hours: item.hours || 0
+                            }))
+                            .sort((a, b) => {
+                                // Sortiere nach Datum
+                                if (a.date && b.date) {
+                                    return a.date.localeCompare(b.date);
+                                }
+                                return 0;
+                            })
+                    };
+                    console.log('Validierte Quinzena-Daten:', validatedData);
+                    setStats(validatedData);
+                } else {
+                    // Für Wochen: Mappe Wochentage zu Daten
+                    const weekdayMapping: Record<string, number> = {
+                        "Montag": 1,
+                        "Dienstag": 2,
+                        "Mittwoch": 3,
+                        "Donnerstag": 4,
+                        "Freitag": 5,
+                        "Samstag": 6,
+                        "Sonntag": 7,
+                        // Fallback für andere Sprachen
+                        [t('worktime.days.monday')]: 1,
+                        [t('worktime.days.tuesday')]: 2,
+                        [t('worktime.days.wednesday')]: 3,
+                        [t('worktime.days.thursday')]: 4,
+                        [t('worktime.days.friday')]: 5,
+                        [t('worktime.days.saturday')]: 6,
+                        [t('worktime.days.sunday')]: 7
+                    };
+                    
+                    // Berechne die Tagesdaten für die Woche (7 Tage)
+                    const periodDates: string[] = [];
+                    for (let i = 0; i < 7; i++) {
+                        periodDates.push(incrementDateString(selectedDate, i));
+                    }
+                    
+                    // Konvertiere die Wochentage in Daten im YYYY-MM-DD Format
+                    const enrichedData = {
+                        ...data,
+                        weeklyData: data.weeklyData.map((item) => {
+                            const dayIndex = weekdayMapping[item.day as keyof typeof weekdayMapping];
+                            if (dayIndex === undefined) {
+                                console.error(`Unbekannter Wochentag: ${item.day}`);
+                                return item;
+                            }
+                            
+                            // Für Wochen: Da unser weekdayMapping bei 1 beginnt, müssen wir 1 subtrahieren
+                            const formattedDate = periodDates[dayIndex - 1];
+                            return {
+                                ...item,
+                                date: formattedDate
+                            };
+                        })
+                    };
+                    
+                    setStats(enrichedData);
+                }
             } else {
                 setStats(data);
             }
@@ -194,6 +299,35 @@ const WorktimeStats: React.FC = () => {
         const newWeekDate = convertWeekToDate(newWeekInput);
         setSelectedWeekDate(newWeekDate);
     };
+    
+    const handleQuinzenaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newQuinzenaInput = e.target.value;
+        if (!newQuinzenaInput) return;
+        
+        setSelectedQuinzenaInput(newQuinzenaInput);
+        
+        // Konvertiere das Quinzena-Format in ein Datum für die API
+        const newQuinzenaDate = convertQuinzenaToDate(newQuinzenaInput);
+        setSelectedQuinzenaDate(newQuinzenaDate);
+    };
+    
+    // Radio-Buttons steuern useQuinzena direkt - setze Datum wenn sich useQuinzena ändert
+    useEffect(() => {
+        // Setze das entsprechende Datum basierend auf dem Modus
+        // WICHTIG: Nur wenn sich useQuinzena ändert (nicht beim initialen Laden durch isColombia)
+        if (useQuinzena) {
+            const currentQuinzena = getCurrentQuinzena();
+            setSelectedQuinzenaInput(currentQuinzena);
+            const quinzenaDate = convertQuinzenaToDate(currentQuinzena);
+            console.log('Setting Quinzena date:', { currentQuinzena, quinzenaDate });
+            setSelectedQuinzenaDate(quinzenaDate);
+        } else {
+            setSelectedWeekInput(currentWeekInput);
+            const weekDate = convertWeekToDate(currentWeekInput);
+            console.log('Setting Week date:', { currentWeekInput, weekDate });
+            setSelectedWeekDate(weekDate);
+        }
+    }, [useQuinzena, currentWeekInput]);
 
     // Funktion zum Öffnen des Modals für den ausgewählten Tag
     const openWorkTimeModal = (date: string) => {
@@ -238,7 +372,7 @@ const WorktimeStats: React.FC = () => {
     if (error) return <div className="p-4 text-red-600">{error}</div>;
     if (!stats) return null;
 
-    const weekDays = getWeekDays(selectedWeekDate);
+    const periodDays = useQuinzena ? getQuinzenaDays(selectedQuinzenaDate) : getWeekDays(selectedWeekDate);
     
     // Finde den höchsten Stundenwert für die Skalierung
     // Der scaleMax-Wert wird aus dem State-maxHours berechnet
@@ -255,13 +389,60 @@ const WorktimeStats: React.FC = () => {
                     <h2 className="text-xl font-semibold dark:text-white">{t('worktime.stats.title')}</h2>
                 </div>
                 <div className="flex items-center space-x-4">
-                    <input
-                        type="week"
-                        value={selectedWeekInput}
-                        onChange={handleWeekChange}
-                        max={currentWeekInput}
-                        className="border border-gray-300 dark:border-gray-600 rounded-md text-base sm:text-sm h-8 sm:h-10 px-3 dark:bg-gray-700 dark:text-white"
-                    />
+                    {/* Radio-Buttons für Woche/Quinzena - nur anzeigen wenn Kolumbien */}
+                    {isColombia && (
+                        <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="periodType"
+                                    checked={!useQuinzena}
+                                    onChange={() => setUseQuinzena(false)}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                                />
+                                <span className="text-sm dark:text-white">{t('worktime.stats.week')}</span>
+                            </label>
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="radio"
+                                    name="periodType"
+                                    checked={useQuinzena}
+                                    onChange={() => setUseQuinzena(true)}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                                />
+                                <span className="text-sm dark:text-white">{t('worktime.stats.quinzena')}</span>
+                            </label>
+                        </div>
+                    )}
+                    {useQuinzena ? (
+                        <input
+                            type="text"
+                            pattern="\d{4}-\d{2}-Q[12]"
+                            placeholder="YYYY-MM-Q1"
+                            value={selectedQuinzenaInput}
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                // Format: YYYY-MM-Q1 oder YYYY-MM-Q2
+                                if (/^\d{4}-\d{2}-Q[12]$/.test(value) || value === '') {
+                                    setSelectedQuinzenaInput(value);
+                                    if (value.match(/^\d{4}-\d{2}-Q[12]$/)) {
+                                        const newDate = convertQuinzenaToDate(value);
+                                        setSelectedQuinzenaDate(newDate);
+                                    }
+                                }
+                            }}
+                            className="border border-gray-300 dark:border-gray-600 rounded-md text-base sm:text-sm h-8 sm:h-10 px-3 dark:bg-gray-700 dark:text-white w-28"
+                            title={t('worktime.stats.quinzenaFormat')}
+                        />
+                    ) : (
+                        <input
+                            type="week"
+                            value={selectedWeekInput}
+                            onChange={handleWeekChange}
+                            max={currentWeekInput}
+                            className="border border-gray-300 dark:border-gray-600 rounded-md text-base sm:text-sm h-8 sm:h-10 px-3 dark:bg-gray-700 dark:text-white"
+                        />
+                    )}
                     <button
                         onClick={handleExport}
                         className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center min-w-8 min-h-8 w-8 h-8"
@@ -290,7 +471,9 @@ const WorktimeStats: React.FC = () => {
             </div>
 
             <div className="mt-8">
-                <h3 className="text-lg font-medium mb-4 dark:text-white">{t('worktime.stats.weeklyProgress')}</h3>
+                <h3 className="text-lg font-medium mb-4 dark:text-white">
+                    {useQuinzena ? t('worktime.stats.quinzenaProgress') : t('worktime.stats.weeklyProgress')}
+                </h3>
                 
                 {/* Chart Container */}
                 <div className="relative" style={{ height: '200px' }}>
@@ -312,28 +495,30 @@ const WorktimeStats: React.FC = () => {
                         <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
                     </div>
                     
-                    {/* Sollarbeitszeit-Linie */}
-                    <div 
-                        className="absolute w-full border-t-2 border-red-600 dark:border-red-500 z-10 pr-8"
-                        style={{ 
-                            bottom: `${(targetWorkHours / scaleMax) * 100}%`,
-                            borderStyle: 'dashed'
-                        }}
-                    >
-                        <span className="absolute -top-3 right-8 text-xs text-red-600 dark:text-red-500 font-medium">
-                            {t('worktime.stats.target')}: {targetWorkHours}{t('worktime.stats.hourShort')}
-                        </span>
-                    </div>
+                    {/* Sollarbeitszeit-Linie - nur anzeigen wenn sie ins Diagramm passt */}
+                    {targetWorkHours <= scaleMax && (
+                        <div 
+                            className="absolute w-full border-t-2 border-red-600 dark:border-red-500 z-10 pr-8"
+                            style={{ 
+                                bottom: `${(targetWorkHours / scaleMax) * 100}%`,
+                                borderStyle: 'dashed'
+                            }}
+                        >
+                            <span className="absolute -top-3 right-8 text-xs text-red-600 dark:text-red-500 font-medium">
+                                {t('worktime.stats.target')}: {targetWorkHours}{t('worktime.stats.hourShort')}
+                            </span>
+                        </div>
+                    )}
                     
                     {/* Legende */}
                     <div className="absolute top-0 left-0 text-xs flex items-center gap-2">
                         <div className="flex items-center">
                             <div className="w-3 h-3 bg-blue-100 dark:bg-blue-900/50 border-2 border-blue-600 dark:border-blue-400 rounded-sm mr-1"></div>
-                            <span className="text-blue-600 dark:text-blue-400">{t('worktime.stats.belowTarget', { target: targetWorkHours })}</span>
+                            <span className="text-blue-600 dark:text-blue-400">≤ {targetWorkHours}{t('worktime.stats.hourShort')}</span>
                         </div>
                         <div className="flex items-center">
                             <div className="w-3 h-3 bg-red-100 dark:bg-red-900/50 border-2 border-red-600 dark:border-red-400 rounded-sm mr-1"></div>
-                            <span className="text-red-600 dark:text-red-400">{t('worktime.stats.aboveTarget', { target: targetWorkHours })}</span>
+                            <span className="text-red-600 dark:text-red-400">&gt; {targetWorkHours}{t('worktime.stats.hourShort')}</span>
                         </div>
                     </div>
                     
@@ -355,17 +540,22 @@ const WorktimeStats: React.FC = () => {
                                 // Verwende das bereits berechnete Datum aus weeklyData - keine weitere Berechnung notwendig!
                                 const formattedDate = dayData.date;
                                 
+                                // Für Quinzenas: dynamische Breite basierend auf Anzahl der Tage
+                                const quinzenaDaysCount = useQuinzena ? getQuinzenaDays(selectedQuinzenaDate).length : 7;
+                                const containerWidth = useQuinzena ? `${100 / quinzenaDaysCount}%` : '13%';
+                                const barWidth = useQuinzena ? 'w-3/12' : 'w-5/12';
+                                
                                 return (
-                                    <div key={index} className="flex flex-col items-center" style={{ width: '13%' }}>
+                                    <div key={index} className="flex flex-col items-center" style={{ width: containerWidth }}>
                                         <div 
-                                            className="relative w-5/12 h-full flex flex-col justify-end cursor-pointer" 
-                                            onClick={() => openWorkTimeModal(formattedDate)}
+                                            className={`relative ${barWidth} h-full flex flex-col justify-end cursor-pointer`}
                                             title={t('worktime.stats.clickToView')}
                                         >
                                             {/* Teil über der Sollarbeitszeit (rot) */}
                                             {overTargetHeight > 0 && (
                                                 <div 
-                                                    className="w-full bg-red-100 dark:bg-red-900/50 border-2 border-red-600 dark:border-red-400 hover:bg-red-200 dark:hover:bg-red-900/70"
+                                                    className="w-full bg-red-100 dark:bg-red-900/50 border-2 border-red-600 dark:border-red-400 hover:bg-red-200 dark:hover:bg-red-900/70 cursor-pointer"
+                                                    onClick={() => openWorkTimeModal(formattedDate)}
                                                     style={{ 
                                                         height: `${overTargetHeight}%`,
                                                         minHeight: '2px',
@@ -378,7 +568,8 @@ const WorktimeStats: React.FC = () => {
                                             {/* Teil unter der Sollarbeitszeit (blau) */}
                                             {normalHeight > 0 && (
                                                 <div 
-                                                    className="w-full bg-blue-100 dark:bg-blue-900/50 border-2 border-blue-600 dark:border-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/70"
+                                                    className="w-full bg-blue-100 dark:bg-blue-900/50 border-2 border-blue-600 dark:border-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/70 cursor-pointer"
+                                                    onClick={() => openWorkTimeModal(formattedDate)}
                                                     style={{ 
                                                         height: `${normalHeight}%`,
                                                         minHeight: hours > 0 ? '4px' : '0',
@@ -399,27 +590,31 @@ const WorktimeStats: React.FC = () => {
                     
                     {/* X-Achse Beschriftungen */}
                     <div className="absolute bottom-0 left-0 right-8 pt-8 flex justify-between">
-                        {stats.weeklyData.map((dayData, index) => (
-                            <div key={index} className="flex flex-col items-center" style={{ width: '13%' }}>
-                                <div className="text-sm text-gray-600 dark:text-gray-400">
-                                    {(() => {
-                                        // Übersetze deutschen Wochentag vom Backend
-                                        const dayLower = dayData.day.toLowerCase();
-                                        if (dayLower.includes('montag') || dayLower.includes('mo')) return t('worktime.days.monday');
-                                        if (dayLower.includes('dienstag') || dayLower.includes('di')) return t('worktime.days.tuesday');
-                                        if (dayLower.includes('mittwoch') || dayLower.includes('mi')) return t('worktime.days.wednesday');
-                                        if (dayLower.includes('donnerstag') || dayLower.includes('do')) return t('worktime.days.thursday');
-                                        if (dayLower.includes('freitag') || dayLower.includes('fr')) return t('worktime.days.friday');
-                                        if (dayLower.includes('samstag') || dayLower.includes('sa')) return t('worktime.days.saturday');
-                                        if (dayLower.includes('sonntag') || dayLower.includes('so')) return t('worktime.days.sunday');
-                                        return dayData.day.substring(0, 2);
-                                    })()}
+                        {stats.weeklyData.map((dayData, index) => {
+                            const quinzenaDaysCount = useQuinzena ? getQuinzenaDays(selectedQuinzenaDate).length : 7;
+                            const widthPercent = useQuinzena ? `${100 / quinzenaDaysCount}%` : '13%';
+                            return (
+                                <div key={index} className="flex flex-col items-center" style={{ width: widthPercent }}>
+                                    <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                                        {(() => {
+                                            // Übersetze deutschen Wochentag vom Backend
+                                            const dayLower = dayData.day.toLowerCase();
+                                            if (dayLower.includes('montag') || dayLower.includes('mo')) return t('worktime.days.monday').substring(0, 2);
+                                            if (dayLower.includes('dienstag') || dayLower.includes('di')) return t('worktime.days.tuesday').substring(0, 2);
+                                            if (dayLower.includes('mittwoch') || dayLower.includes('mi')) return t('worktime.days.wednesday').substring(0, 2);
+                                            if (dayLower.includes('donnerstag') || dayLower.includes('do')) return t('worktime.days.thursday').substring(0, 2);
+                                            if (dayLower.includes('freitag') || dayLower.includes('fr')) return t('worktime.days.friday').substring(0, 2);
+                                            if (dayLower.includes('samstag') || dayLower.includes('sa')) return t('worktime.days.saturday').substring(0, 2);
+                                            if (dayLower.includes('sonntag') || dayLower.includes('so')) return t('worktime.days.sunday').substring(0, 2);
+                                            return dayData.day.substring(0, 2);
+                                        })()}
+                                    </div>
+                                    <div className="text-xs sm:text-sm font-medium dark:text-gray-300">
+                                        {dayData.hours.toFixed(1)}{t('worktime.stats.hourShort')}
+                                    </div>
                                 </div>
-                                <div className="text-sm font-medium dark:text-gray-300">
-                                    {dayData.hours.toFixed(1)}{t('worktime.stats.hourShort')}
-                                </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </div>

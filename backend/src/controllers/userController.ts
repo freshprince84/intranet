@@ -7,6 +7,7 @@ import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { createNotificationIfEnabled } from './notificationController';
 import { organizationMiddleware, getUserOrganizationFilter, getDataIsolationFilter } from '../middleware/organization';
+import { LifecycleService } from '../services/lifecycleService';
 
 const prisma = new PrismaClient();
 
@@ -1093,6 +1094,16 @@ export const createUser = async (req: Request, res: Response) => {
                 relatedEntityId: user.id,
                 relatedEntityType: 'create'
             });
+        }
+
+        // Automatisch Lebenszyklus erstellen (für Organisationen)
+        if (organizationId) {
+            try {
+                await LifecycleService.createLifecycle(user.id, organizationId);
+            } catch (lifecycleError) {
+                // Logge Fehler, aber breche nicht ab
+                console.error('Fehler beim Erstellen des Lebenszyklus:', lifecycleError);
+            }
         }
 
         // Entferne Passwort aus der Response

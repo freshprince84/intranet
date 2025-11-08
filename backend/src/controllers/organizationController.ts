@@ -22,7 +22,8 @@ const updateOrganizationSchema = z.object({
   subscriptionPlan: z.enum(['basic', 'pro', 'enterprise', 'trial']).optional(),
   isActive: z.boolean().optional(),
   domain: z.string().optional(),
-  logo: z.string().optional()
+  logo: z.string().optional(),
+  settings: z.record(z.any()).optional()
 });
 
 const languageSchema = z.enum(['es', 'de', 'en']);
@@ -1127,10 +1128,17 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
 
     const organization = userRole.role.organization;
 
+    // Wenn settings aktualisiert werden, merge sie mit bestehenden settings
+    let updateData = { ...validatedData };
+    if (validatedData.settings !== undefined) {
+      const currentSettings = (organization.settings as any) || {};
+      updateData.settings = { ...currentSettings, ...validatedData.settings };
+    }
+
     // Aktualisiere Organisation
     const updatedOrganization = await prisma.organization.update({
       where: { id: organization.id },
-      data: validatedData,
+      data: updateData,
       select: {
         id: true,
         name: true,
@@ -1159,6 +1167,129 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
     res.status(500).json({ 
       message: 'Fehler beim Aktualisieren der Organisation', 
       error: error instanceof Error ? error.message : 'Unbekannter Fehler' 
+    });
+  }
+};
+
+// Lebenszyklus-Rollen-Konfiguration abrufen
+export const getLifecycleRoles = async (req: Request, res: Response) => {
+  try {
+    if (!req.organizationId) {
+      return res.status(400).json({ message: 'Keine Organisation gefunden' });
+    }
+
+    const organization = await prisma.organization.findUnique({
+      where: { id: req.organizationId },
+      select: { settings: true }
+    });
+
+    if (!organization) {
+      return res.status(404).json({ message: 'Organisation nicht gefunden' });
+    }
+
+    const settings = organization.settings as any;
+    const lifecycleRoles = settings?.lifecycleRoles || null;
+
+    // Hole alle verfügbaren Rollen der Organisation
+    const roles = await prisma.role.findMany({
+      where: { organizationId: req.organizationId },
+      select: {
+        id: true,
+        name: true,
+        description: true
+      },
+      orderBy: { name: 'asc' }
+    });
+
+    res.json({
+      lifecycleRoles,
+      availableRoles: roles
+    });
+  } catch (error) {
+    console.error('Error in getLifecycleRoles:', error);
+    res.status(500).json({
+      message: 'Fehler beim Abrufen der Lebenszyklus-Rollen',
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+    });
+  }
+};
+
+// Lebenszyklus-Rollen-Konfiguration aktualisieren
+export const updateLifecycleRoles = async (req: Request, res: Response) => {
+  try {
+    if (!req.organizationId) {
+      return res.status(400).json({ message: 'Keine Organisation gefunden' });
+    }
+
+    const { adminRoleId, hrRoleId, legalRoleId, employeeRoleIds } = req.body;
+
+    // Validiere Rollen-IDs (nur wenn sie gesetzt sind)
+    const roleIds = [
+      adminRoleId ? parseInt(String(adminRoleId), 10) : null,
+      hrRoleId ? parseInt(String(hrRoleId), 10) : null,
+      legalRoleId ? parseInt(String(legalRoleId), 10) : null,
+      ...(employeeRoleIds || []).map((id: any) => parseInt(String(id), 10))
+    ].filter((id): id is number => id !== null && !isNaN(id));
+    
+    if (roleIds.length > 0) {
+      const validRoles = await prisma.role.findMany({
+        where: {
+          id: { in: roleIds },
+          organizationId: req.organizationId
+        }
+      });
+
+      if (validRoles.length !== roleIds.length) {
+        return res.status(400).json({ 
+          message: 'Eine oder mehrere Rollen gehören nicht zu dieser Organisation',
+          details: { 
+            requested: roleIds, 
+            found: validRoles.map(r => r.id),
+            organizationId: req.organizationId
+          }
+        });
+      }
+    }
+
+    // Hole aktuelle Organisation
+    const organization = await prisma.organization.findUnique({
+      where: { id: req.organizationId },
+      select: { settings: true }
+    });
+
+    if (!organization) {
+      return res.status(404).json({ message: 'Organisation nicht gefunden' });
+    }
+
+    const settings = (organization.settings as any) || {};
+    settings.lifecycleRoles = {
+      adminRoleId: adminRoleId || null,
+      hrRoleId: hrRoleId || null,
+      legalRoleId: legalRoleId || null,
+      employeeRoleIds: employeeRoleIds || []
+    };
+
+    // Aktualisiere Organisation
+    const updated = await prisma.organization.update({
+      where: { id: req.organizationId },
+      data: { settings },
+      select: {
+        id: true,
+        name: true,
+        displayName: true,
+        settings: true
+      }
+    });
+
+    res.json({
+      lifecycleRoles: (updated.settings as any)?.lifecycleRoles,
+      message: 'Lebenszyklus-Rollen erfolgreich aktualisiert'
+    });
+  } catch (error) {
+    console.error('Error in updateLifecycleRoles:', error);
+    res.status(500).json({
+      message: 'Fehler beim Aktualisieren der Lebenszyklus-Rollen',
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler'
     });
   }
 }; 

@@ -5,8 +5,9 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 import { PrismaClient, Prisma } from '@prisma/client';
-import { sendRegistrationEmail } from '../services/emailService';
+import { sendRegistrationEmail, sendPasswordResetEmail } from '../services/emailService';
 
 const prisma = new PrismaClient();
 
@@ -17,6 +18,7 @@ interface RegisterRequest {
     username?: string;
     first_name?: string;
     last_name?: string;
+    language?: string;
 }
 
 interface LoginRequest {
@@ -53,7 +55,7 @@ interface AuthenticatedRequest extends Request {
 
 export const register = async (req: Request<{}, {}, RegisterRequest>, res: Response) => {
     try {
-        const { email, password, username, first_name, last_name } = req.body;
+        const { email, password, username, first_name, last_name, language } = req.body;
         
         // Email als Username verwenden wenn kein Username angegeben
         const finalUsername = username || email;
@@ -85,6 +87,10 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
         // Hash das Passwort
         const hashedPassword = await bcrypt.hash(password, 10);
         
+        // Validiere Sprache (nur unterstützte Sprachen erlauben)
+        const supportedLanguages = ['de', 'es', 'en'];
+        const validLanguage = language && supportedLanguages.includes(language) ? language : 'es'; // Default: es
+        
         // Erstelle den Benutzer
         const user = await prisma.user.create({
             data: {
@@ -93,6 +99,7 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
                 password: hashedPassword,
                 firstName: first_name || null,
                 lastName: last_name || null,
+                language: validLanguage,
                 roles: {
                     create: {
                         role: {
@@ -171,12 +178,12 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
         username = username?.trim();
         password = password?.trim();
         
-        // Finde den Benutzer mit Rollen
+        // Finde den Benutzer mit Rollen (case-insensitive für username und email)
         const user = await prisma.user.findFirst({
             where: { 
                 OR: [
-                    { username },
-                    { email: username }
+                    { username: { equals: username, mode: 'insensitive' } },
+                    { email: { equals: username, mode: 'insensitive' } }
                 ]
             },
             include: {
@@ -340,6 +347,152 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
         console.error('getCurrentUser Fehler:', error);
         res.status(500).json({ 
             message: 'Fehler beim Abrufen des Benutzers', 
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+};
+
+interface RequestPasswordResetRequest {
+    email: string;
+}
+
+interface ResetPasswordRequest {
+    token: string;
+    password: string;
+}
+
+/**
+ * Anfrage zum Zurücksetzen des Passworts
+ * Sendet eine E-Mail mit Reset-Link an die hinterlegte E-Mail-Adresse des Benutzers
+ */
+export const requestPasswordReset = async (req: Request<{}, {}, RequestPasswordResetRequest>, res: Response) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.status(400).json({ message: 'E-Mail-Adresse ist erforderlich' });
+        }
+
+        // Validiere E-Mail-Format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: 'Ungültiges E-Mail-Format' });
+        }
+
+        // Finde den Benutzer anhand der E-Mail-Adresse (case-insensitive)
+        const user = await prisma.user.findFirst({
+            where: {
+                email: { equals: email, mode: 'insensitive' }
+            }
+        });
+
+        // WICHTIG: Immer die gleiche Erfolgsmeldung zurückgeben, auch wenn der Benutzer nicht existiert
+        // Dies verhindert, dass Angreifer herausfinden können, welche E-Mail-Adressen im System registriert sind
+        const successMessage = 'Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet.';
+
+        if (!user) {
+            // Logge intern, aber sende keine Fehlermeldung
+            console.log(`[PASSWORD_RESET] Passwort-Reset-Anfrage für nicht existierende E-Mail: ${email}`);
+            return res.status(200).json({ message: successMessage });
+        }
+
+        // Generiere einen sicheren Token (32 Bytes = 44 Zeichen Base64)
+        const token = crypto.randomBytes(32).toString('base64url');
+        
+        // Setze Ablaufzeit auf 1 Stunde
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 1);
+
+        // Speichere Token in der Datenbank
+        await prisma.passwordResetToken.create({
+            data: {
+                userId: user.id,
+                token: token,
+                expiresAt: expiresAt
+            }
+        });
+
+        // Generiere Reset-Link
+        // Frontend-URL aus Umgebungsvariable oder Standardwert
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+
+        // Sende E-Mail (asynchron, blockiert nicht die Response)
+        sendPasswordResetEmail(user.email, user.username, resetLink).catch((error) => {
+            console.error('Fehler beim Versenden der Passwort-Reset-E-Mail:', error);
+            // E-Mail-Fehler blockieren nicht die Response
+        });
+
+        console.log(`[PASSWORD_RESET] Passwort-Reset-Token erstellt für Benutzer: ${user.username} (${user.email})`);
+
+        res.status(200).json({ message: successMessage });
+    } catch (error) {
+        console.error('[PASSWORD_RESET] Fehler bei Passwort-Reset-Anfrage:', error);
+        // Auch bei Fehlern die gleiche Erfolgsmeldung zurückgeben (Sicherheit)
+        res.status(200).json({ 
+            message: 'Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet.'
+        });
+    }
+};
+
+/**
+ * Setzt das Passwort mit einem gültigen Token zurück
+ */
+export const resetPassword = async (req: Request<{}, {}, ResetPasswordRequest>, res: Response) => {
+    try {
+        const { token, password } = req.body;
+
+        if (!token || !password) {
+            return res.status(400).json({ message: 'Token und Passwort sind erforderlich' });
+        }
+
+        // Validiere Passwort (Mindestlänge 8 Zeichen)
+        if (password.length < 8) {
+            return res.status(400).json({ message: 'Passwort muss mindestens 8 Zeichen lang sein' });
+        }
+
+        // Finde Token in der Datenbank
+        const resetToken = await prisma.passwordResetToken.findUnique({
+            where: { token: token },
+            include: { user: true }
+        });
+
+        if (!resetToken) {
+            return res.status(400).json({ message: 'Ungültiger oder abgelaufener Token' });
+        }
+
+        // Prüfe, ob Token bereits verwendet wurde
+        if (resetToken.used) {
+            return res.status(400).json({ message: 'Dieser Token wurde bereits verwendet' });
+        }
+
+        // Prüfe, ob Token abgelaufen ist
+        if (resetToken.expiresAt < new Date()) {
+            return res.status(400).json({ message: 'Ungültiger oder abgelaufener Token' });
+        }
+
+        // Hash das neue Passwort
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Aktualisiere das Passwort und markiere Token als verwendet (in einer Transaktion)
+        await prisma.$transaction([
+            prisma.user.update({
+                where: { id: resetToken.userId },
+                data: { password: hashedPassword }
+            }),
+            prisma.passwordResetToken.update({
+                where: { id: resetToken.id },
+                data: { used: true }
+            })
+        ]);
+
+        console.log(`[PASSWORD_RESET] Passwort erfolgreich zurückgesetzt für Benutzer: ${resetToken.user.username} (${resetToken.user.email})`);
+
+        res.status(200).json({ message: 'Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt mit dem neuen Passwort anmelden.' });
+    } catch (error) {
+        console.error('[PASSWORD_RESET] Fehler beim Zurücksetzen des Passworts:', error);
+        res.status(500).json({ 
+            message: 'Fehler beim Zurücksetzen des Passworts', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
         });
     }

@@ -200,6 +200,22 @@ export const API_ENDPOINTS = {
     // Sprache
     LANGUAGE: {
         ACTIVE: '/users/active-language'
+    },
+    // Employee Lifecycle
+    LIFECYCLE: {
+        BY_USER: (userId: number) => `/users/${userId}/lifecycle`,
+        STATUS: (userId: number) => `/users/${userId}/lifecycle/status`,
+        SOCIAL_SECURITY: (userId: number, type: string) => `/users/${userId}/lifecycle/social-security/${type}`,
+        CERTIFICATES: (userId: number) => `/users/${userId}/lifecycle/certificates`,
+        CERTIFICATE: (userId: number, certId: number) => `/users/${userId}/lifecycle/certificates/${certId}`,
+        CERTIFICATE_DOWNLOAD: (userId: number, certId: number) => `/users/${userId}/lifecycle/certificates/${certId}/download`,
+        CONTRACTS: (userId: number) => `/users/${userId}/lifecycle/contracts`,
+        CONTRACT: (userId: number, contractId: number) => `/users/${userId}/lifecycle/contracts/${contractId}`,
+        CONTRACT_DOWNLOAD: (userId: number, contractId: number) => `/users/${userId}/lifecycle/contracts/${contractId}/download`
+    },
+    // Organization Lifecycle Settings
+    ORGANIZATION_LIFECYCLE: {
+        LIFECYCLE_ROLES: '/organizations/current/lifecycle-roles'
     }
 };
 

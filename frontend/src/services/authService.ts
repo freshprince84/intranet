@@ -10,6 +10,7 @@ interface LoginData {
 interface RegisterData {
   email: string;
   password: string;
+  language?: string;
 }
 
 interface AuthResponse {

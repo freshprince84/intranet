@@ -207,6 +207,8 @@
     "displayName": "Display Name",
     "domain": "Domain",
     "logoUrl": "Logo URL",
+    "country": "Country",
+    "selectCountry": "Select Country",
     "createOrganization": "Create new organization",
     "joinOrganization": "Join organization",
     "statistics": "Statistics",
@@ -226,7 +228,21 @@
     "noPermissionEdit": "You do not have permission to edit the organization",
     "saving": "Saving...",
     "notFound": "No organization found",
-    "createOrJoinHint": "You don't have an organization yet. Please create one or join one."
+    "createOrJoinHint": "You don't have an organization yet. Please create one or join one.",
+    "tabs": {
+      "general": "General",
+      "roles": "Roles",
+      "documents": "Documents"
+    },
+    "lifecycleRoles": {
+      "title": "Lifecycle Roles",
+      "admin": "Admin Role",
+      "hr": "HR Role",
+      "legal": "Legal Role",
+      "employees": "Employee Roles"
+    },
+    "documentTemplates": "Document Templates",
+    "documentSettings": "Document Settings"
   },
   "tasks": {
     "title": "To Do's",
@@ -551,6 +567,10 @@
       "averagePerDay": "Average/Day",
       "workDays": "Work Days",
       "weeklyProgress": "Weekly Progress",
+      "quinzenaProgress": "Quinzena Progress",
+      "week": "Week",
+      "quinzena": "Quinzena",
+      "quinzenaFormat": "Format: YYYY-MM-Q1 (e.g. 2025-01-Q1)",
       "export": "Export",
       "exportTitle": "Export work times",
       "clickToView": "Click to view time entries for this day",
@@ -821,6 +841,8 @@
     "displayName": "Display Name",
     "domain": "Domain",
     "logoUrl": "Logo URL",
+    "country": "Country",
+    "selectCountry": "Select Country",
     "createOrganization": "Create new organization",
     "joinOrganization": "Join organization",
     "statistics": "Statistics",
@@ -1561,6 +1583,48 @@
       "cancelled": "Cancelled"
     }
   },
+  "login": {
+    "title": "Login",
+    "username": "Username or Email",
+    "password": "Password",
+    "submit": "Login",
+    "submitting": "Logging in...",
+    "noAccount": "Don't have an account yet?",
+    "register": "Register",
+    "forgotPassword": "Forgot password?",
+    "loginFailed": "Login failed. Please check your credentials."
+  },
+  "forgotPassword": {
+    "title": "Reset password",
+    "description": "Enter your email address. We will send you a link to reset your password.",
+    "email": "Email address",
+    "emailPlaceholder": "your.email@example.com",
+    "submit": "Send link",
+    "submitting": "Sending...",
+    "success": "If an account with this email address exists, an email with instructions to reset your password has been sent.",
+    "checkEmail": "Please check your inbox and follow the instructions.",
+    "backToLogin": "Back to login",
+    "error": "Error sending email. Please try again."
+  },
+  "resetPassword": {
+    "title": "Set new password",
+    "description": "Enter your new password.",
+    "newPassword": "New password",
+    "passwordPlaceholder": "At least 8 characters",
+    "passwordHint": "The password must be at least 8 characters long.",
+    "confirmPassword": "Confirm password",
+    "confirmPasswordPlaceholder": "Repeat password",
+    "submit": "Reset password",
+    "submitting": "Resetting...",
+    "success": "Password reset successfully. You will be redirected to the login page shortly.",
+    "redirecting": "Redirecting to login page...",
+    "backToLogin": "Back to login",
+    "noToken": "Invalid or missing token. Please request a new link.",
+    "requestNewLink": "Request new link",
+    "passwordsDoNotMatch": "Passwords do not match.",
+    "passwordTooShort": "Password must be at least 8 characters long.",
+    "error": "Error resetting password. Please try again."
+  },
   "register": {
     "title": "Registration",
     "subtitle": "Create your account with email and password",
@@ -1622,5 +1686,26 @@
       "success": "Success",
       "error": "Error"
     }
+  },
+  "lifecycle": {
+    "assignStandardRoles": "Assign Standard Roles",
+    "rolesSaved": "Role configuration saved successfully",
+    "saveError": "Error saving",
+    "loadRolesError": "Error loading roles",
+    "loadLifecycleRolesError": "Error loading configuration",
+    "standardRolesAssigned": "Standard roles assigned",
+    "uploadTemplate": "Upload Template",
+    "noTemplates": "No templates available",
+    "uploadFirstTemplate": "Upload your first template",
+    "documentSettingsInfo": "Additional settings for document generation will be configured here.",
+    "onlyPdfAllowed": "Only PDF files are allowed",
+    "templateUploaded": "Template uploaded successfully",
+    "uploadError": "Error uploading",
+    "deleteTemplateConfirm": "Really delete template?",
+    "templateDeleted": "Template deleted successfully",
+    "deleteError": "Error deleting",
+    "loadTemplatesError": "Error loading templates",
+    "certificate": "Employment Certificate",
+    "contract": "Employment Contract"
   }
 }

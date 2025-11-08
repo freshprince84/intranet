@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateCurrentOrganization = exports.updateOrganizationLanguage = exports.getOrganizationLanguage = exports.searchOrganizations = exports.processJoinRequest = exports.getJoinRequests = exports.createJoinRequest = exports.getCurrentOrganization = exports.getOrganizationStats = exports.deleteOrganization = exports.updateOrganization = exports.createOrganization = exports.getOrganizationById = exports.getAllOrganizations = void 0;
+exports.updateLifecycleRoles = exports.getLifecycleRoles = exports.updateCurrentOrganization = exports.updateOrganizationLanguage = exports.getOrganizationLanguage = exports.searchOrganizations = exports.processJoinRequest = exports.getJoinRequests = exports.createJoinRequest = exports.getCurrentOrganization = exports.getOrganizationStats = exports.deleteOrganization = exports.updateOrganization = exports.createOrganization = exports.getOrganizationById = exports.getAllOrganizations = void 0;
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
 const prisma = new client_1.PrismaClient();
@@ -27,7 +27,8 @@ const updateOrganizationSchema = zod_1.z.object({
     subscriptionPlan: zod_1.z.enum(['basic', 'pro', 'enterprise', 'trial']).optional(),
     isActive: zod_1.z.boolean().optional(),
     domain: zod_1.z.string().optional(),
-    logo: zod_1.z.string().optional()
+    logo: zod_1.z.string().optional(),
+    settings: zod_1.z.record(zod_1.z.any()).optional()
 });
 const languageSchema = zod_1.z.enum(['es', 'de', 'en']);
 // Alle Organisationen abrufen
@@ -1017,10 +1018,16 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
             return res.status(404).json({ message: 'Keine Organisation gefunden' });
         }
         const organization = userRole.role.organization;
+        // Wenn settings aktualisiert werden, merge sie mit bestehenden settings
+        let updateData = Object.assign({}, validatedData);
+        if (validatedData.settings !== undefined) {
+            const currentSettings = organization.settings || {};
+            updateData.settings = Object.assign(Object.assign({}, currentSettings), validatedData.settings);
+        }
         // Aktualisiere Organisation
         const updatedOrganization = yield prisma.organization.update({
             where: { id: organization.id },
-            data: validatedData,
+            data: updateData,
             select: {
                 id: true,
                 name: true,
@@ -1052,4 +1059,104 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
     }
 });
 exports.updateCurrentOrganization = updateCurrentOrganization;
+// Lebenszyklus-Rollen-Konfiguration abrufen
+const getLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!req.organizationId) {
+            return res.status(400).json({ message: 'Keine Organisation gefunden' });
+        }
+        const organization = yield prisma.organization.findUnique({
+            where: { id: req.organizationId },
+            select: { settings: true }
+        });
+        if (!organization) {
+            return res.status(404).json({ message: 'Organisation nicht gefunden' });
+        }
+        const settings = organization.settings;
+        const lifecycleRoles = (settings === null || settings === void 0 ? void 0 : settings.lifecycleRoles) || null;
+        // Hole alle verfügbaren Rollen der Organisation
+        const roles = yield prisma.role.findMany({
+            where: { organizationId: req.organizationId },
+            select: {
+                id: true,
+                name: true,
+                description: true
+            },
+            orderBy: { name: 'asc' }
+        });
+        res.json({
+            lifecycleRoles,
+            availableRoles: roles
+        });
+    }
+    catch (error) {
+        console.error('Error in getLifecycleRoles:', error);
+        res.status(500).json({
+            message: 'Fehler beim Abrufen der Lebenszyklus-Rollen',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.getLifecycleRoles = getLifecycleRoles;
+// Lebenszyklus-Rollen-Konfiguration aktualisieren
+const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        if (!req.organizationId) {
+            return res.status(400).json({ message: 'Keine Organisation gefunden' });
+        }
+        const { adminRoleId, hrRoleId, legalRoleId, employeeRoleIds } = req.body;
+        // Validiere Rollen-IDs
+        const roleIds = [adminRoleId, hrRoleId, legalRoleId, ...(employeeRoleIds || [])].filter(Boolean);
+        if (roleIds.length > 0) {
+            const validRoles = yield prisma.role.findMany({
+                where: {
+                    id: { in: roleIds },
+                    organizationId: req.organizationId
+                }
+            });
+            if (validRoles.length !== roleIds.length) {
+                return res.status(400).json({ message: 'Eine oder mehrere Rollen gehören nicht zu dieser Organisation' });
+            }
+        }
+        // Hole aktuelle Organisation
+        const organization = yield prisma.organization.findUnique({
+            where: { id: req.organizationId },
+            select: { settings: true }
+        });
+        if (!organization) {
+            return res.status(404).json({ message: 'Organisation nicht gefunden' });
+        }
+        const settings = organization.settings || {};
+        settings.lifecycleRoles = {
+            adminRoleId: adminRoleId || null,
+            hrRoleId: hrRoleId || null,
+            legalRoleId: legalRoleId || null,
+            employeeRoleIds: employeeRoleIds || []
+        };
+        // Aktualisiere Organisation
+        const updated = yield prisma.organization.update({
+            where: { id: req.organizationId },
+            data: { settings },
+            select: {
+                id: true,
+                name: true,
+                displayName: true,
+                settings: true
+            }
+        });
+        res.json({
+            lifecycleRoles: (_a = updated.settings) === null || _a === void 0 ? void 0 : _a.lifecycleRoles,
+            message: 'Lebenszyklus-Rollen erfolgreich aktualisiert'
+        });
+    }
+    catch (error) {
+        console.error('Error in updateLifecycleRoles:', error);
+        res.status(500).json({
+            message: 'Fehler beim Aktualisieren der Lebenszyklus-Rollen',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.updateLifecycleRoles = updateLifecycleRoles;
 //# sourceMappingURL=organizationController.js.map

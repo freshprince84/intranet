@@ -51,7 +51,7 @@ const LoginScreen = () => {
         </View>
 
         <TextInput
-          label="Benutzername"
+          label="Benutzername oder E-Mail"
           value={username}
           onChangeText={setUsername}
           style={styles.input}

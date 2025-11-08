@@ -60,6 +60,11 @@ const getTodosByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0, fu
                                 id: true,
                                 name: true
                             }
+                        },
+                        attachments: {
+                            orderBy: {
+                                uploadedAt: 'desc'
+                            }
                         }
                     }
                 },
@@ -90,6 +95,11 @@ const getTodosByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0, fu
                             select: {
                                 id: true,
                                 name: true
+                            }
+                        },
+                        attachments: {
+                            orderBy: {
+                                uploadedAt: 'desc'
                             }
                         }
                     }
@@ -176,6 +186,11 @@ const getRequestsByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0,
                                 id: true,
                                 name: true
                             }
+                        },
+                        attachments: {
+                            orderBy: {
+                                uploadedAt: 'desc'
+                            }
                         }
                     }
                 },
@@ -196,6 +211,11 @@ const getRequestsByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0,
                             select: {
                                 id: true,
                                 name: true
+                            }
+                        },
+                        attachments: {
+                            orderBy: {
+                                uploadedAt: 'desc'
                             }
                         }
                     }
@@ -343,6 +363,11 @@ const getTodosChronological = (req, res) => __awaiter(void 0, void 0, void 0, fu
                         name: true
                     }
                 },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
+                    }
+                },
                 statusHistory: {
                     where: {
                         changedAt: {
@@ -452,6 +477,11 @@ const getRequestsChronological = (req, res) => __awaiter(void 0, void 0, void 0,
                     select: {
                         id: true,
                         name: true
+                    }
+                },
+                attachments: {
+                    orderBy: {
+                        uploadedAt: 'desc'
                     }
                 }
             },

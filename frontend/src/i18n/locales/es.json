@@ -207,6 +207,8 @@
     "displayName": "Nombre para mostrar",
     "domain": "Dominio",
     "logoUrl": "URL del logo",
+    "country": "País",
+    "selectCountry": "Seleccionar país",
     "createOrganization": "Crear nueva organización",
     "joinOrganization": "Unirse a organización",
     "statistics": "Estadísticas",
@@ -226,7 +228,21 @@
     "noPermissionEdit": "No tiene permiso para editar la organización",
     "saving": "Guardando...",
     "notFound": "No se encontró organización",
-    "createOrJoinHint": "Aún no tiene una organización. Por favor, cree una o únase a una."
+    "createOrJoinHint": "Aún no tiene una organización. Por favor, cree una o únase a una.",
+    "tabs": {
+      "general": "General",
+      "roles": "Roles",
+      "documents": "Documentos"
+    },
+    "lifecycleRoles": {
+      "title": "Roles del Ciclo de Vida",
+      "admin": "Rol de Administrador",
+      "hr": "Rol de RRHH",
+      "legal": "Rol Legal",
+      "employees": "Roles de Empleados"
+    },
+    "documentTemplates": "Plantillas de Documentos",
+    "documentSettings": "Configuración de Documentos"
   },
   "tasks": {
     "title": "Tareas",
@@ -552,6 +568,10 @@
       "averagePerDay": "Promedio/Día",
       "workDays": "Días trabajados",
       "weeklyProgress": "Progreso semanal",
+      "quinzenaProgress": "Progreso quinzenal",
+      "week": "Semana",
+      "quinzena": "Quinzena",
+      "quinzenaFormat": "Formato: YYYY-MM-Q1 (ej. 2025-01-Q1)",
       "export": "Exportar",
       "exportTitle": "Exportar tiempos de trabajo",
       "clickToView": "Haga clic para ver entradas de tiempo para este día",
@@ -822,6 +842,8 @@
     "displayName": "Nombre para mostrar",
     "domain": "Dominio",
     "logoUrl": "URL del logo",
+    "country": "País",
+    "selectCountry": "Seleccionar país",
     "createOrganization": "Crear nueva organización",
     "joinOrganization": "Unirse a organización",
     "statistics": "Estadísticas",
@@ -1562,6 +1584,48 @@
       "cancelled": "Cancelado"
     }
   },
+  "login": {
+    "title": "Iniciar sesión",
+    "username": "Nombre de usuario o correo electrónico",
+    "password": "Contraseña",
+    "submit": "Iniciar sesión",
+    "submitting": "Iniciando sesión...",
+    "noAccount": "¿Aún no tienes una cuenta?",
+    "register": "Registrarse",
+    "forgotPassword": "¿Olvidaste tu contraseña?",
+    "loginFailed": "Inicio de sesión fallido. Por favor verifique sus credenciales."
+  },
+  "forgotPassword": {
+    "title": "Restablecer contraseña",
+    "description": "Ingrese su dirección de correo electrónico. Le enviaremos un enlace para restablecer su contraseña.",
+    "email": "Dirección de correo electrónico",
+    "emailPlaceholder": "su.correo@ejemplo.com",
+    "submit": "Enviar enlace",
+    "submitting": "Enviando...",
+    "success": "Si existe una cuenta con esta dirección de correo electrónico, se ha enviado un correo electrónico con instrucciones para restablecer la contraseña.",
+    "checkEmail": "Por favor revise su bandeja de entrada y siga las instrucciones.",
+    "backToLogin": "Volver al inicio de sesión",
+    "error": "Error al enviar el correo electrónico. Por favor intente nuevamente."
+  },
+  "resetPassword": {
+    "title": "Establecer nueva contraseña",
+    "description": "Ingrese su nueva contraseña.",
+    "newPassword": "Nueva contraseña",
+    "passwordPlaceholder": "Mínimo 8 caracteres",
+    "passwordHint": "La contraseña debe tener al menos 8 caracteres.",
+    "confirmPassword": "Confirmar contraseña",
+    "confirmPasswordPlaceholder": "Repetir contraseña",
+    "submit": "Restablecer contraseña",
+    "submitting": "Restableciendo...",
+    "success": "Contraseña restablecida exitosamente. Será redirigido a la página de inicio de sesión en breve.",
+    "redirecting": "Redirigiendo a la página de inicio de sesión...",
+    "backToLogin": "Volver al inicio de sesión",
+    "noToken": "Token inválido o faltante. Por favor solicite un nuevo enlace.",
+    "requestNewLink": "Solicitar nuevo enlace",
+    "passwordsDoNotMatch": "Las contraseñas no coinciden.",
+    "passwordTooShort": "La contraseña debe tener al menos 8 caracteres.",
+    "error": "Error al restablecer la contraseña. Por favor intente nuevamente."
+  },
   "register": {
     "title": "Registro",
     "subtitle": "Cree su cuenta con correo electrónico y contraseña",
@@ -1623,5 +1687,26 @@
       "success": "Éxito",
       "error": "Error"
     }
+  },
+  "lifecycle": {
+    "assignStandardRoles": "Asignar Roles Estándar",
+    "rolesSaved": "Configuración de roles guardada exitosamente",
+    "saveError": "Error al guardar",
+    "loadRolesError": "Error al cargar roles",
+    "loadLifecycleRolesError": "Error al cargar configuración",
+    "standardRolesAssigned": "Roles estándar asignados",
+    "uploadTemplate": "Subir Plantilla",
+    "noTemplates": "No hay plantillas disponibles",
+    "uploadFirstTemplate": "Suba su primera plantilla",
+    "documentSettingsInfo": "Aquí se configurarán ajustes adicionales para la generación de documentos.",
+    "onlyPdfAllowed": "Solo se permiten archivos PDF",
+    "templateUploaded": "Plantilla subida exitosamente",
+    "uploadError": "Error al subir",
+    "deleteTemplateConfirm": "¿Realmente eliminar plantilla?",
+    "templateDeleted": "Plantilla eliminada exitosamente",
+    "deleteError": "Error al eliminar",
+    "loadTemplatesError": "Error al cargar plantillas",
+    "certificate": "Certificado de Empleo",
+    "contract": "Contrato de Empleo"
   }
 }

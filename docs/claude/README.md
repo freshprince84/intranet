@@ -71,5 +71,10 @@ F체r die strukturierte Umsetzung neuer Module existieren detaillierte Schritt-f�
 
 - **Consultation-Modul** - Vollst채ndig in 3 Teilen dokumentiert
 - **Abrechnungsmodul** - Plan f체r Swiss QR-Rechnungen mit Zahlungsverfolgung
+- **Mitarbeiterlebenszyklus** - Vollst채ndiger Lebenszyklus (Onboarding bis Offboarding) f체r Kolumbien
+  - [MITARBEITERLEBENSZYKLUS_IMPLEMENTATION.md](../implementation_plans/MITARBEITERLEBENSZYKLUS_IMPLEMENTATION.md) - Haupt-Implementierungsplan
+  - [MITARBEITERLEBENSZYKLUS_PROZESS.md](../implementation_plans/MITARBEITERLEBENSZYKLUS_PROZESS.md) - Detaillierte Prozessbeschreibung
+  - [MITARBEITERLEBENSZYKLUS_ZUSAMMENFASSUNG.md](../implementation_plans/MITARBEITERLEBENSZYKLUS_ZUSAMMENFASSUNG.md) - Prozess-Zusammenfassung
+  - [MITARBEITERLEBENSZYKLUS_DETAILLIERT.md](../implementation_plans/MITARBEITERLEBENSZYKLUS_DETAILLIERT.md) - Detaillierte Komponenten-Spezifikationen
 
 Details zu allen Pl채nen siehe `/docs/implementation_plans/` 

@@ -9,6 +9,9 @@ import { XMarkIcon, TrashIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react
 import { useAuth } from '../hooks/useAuth.tsx';
 import MarkdownPreview from './MarkdownPreview.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
+import TaskDataBox from './TaskDataBox.tsx';
+import EmailTemplateBox from './EmailTemplateBox.tsx';
+import SocialSecurityCompletionBox from './SocialSecurityCompletionBox.tsx';
 
 interface User {
     id: number;
@@ -960,6 +963,27 @@ const EditTaskModal: React.FC<EditTaskModalProps> = ({ isOpen, onClose, onTaskUp
                         onArticleRemove={handleRemoveArticle}
                     />
                 </div>
+            )}
+
+            {/* Lifecycle Task Boxes - nur für Lebenszyklus-Tasks */}
+            {activeTab === 'data' && (task.title?.includes('ARL') || 
+                                      task.title?.includes('EPS') || 
+                                      task.title?.includes('Pension') || 
+                                      task.title?.includes('Caja') ||
+                                      task.description?.includes('lifecycle')) && (
+                <>
+                    <TaskDataBox task={task} />
+                    <EmailTemplateBox task={task} />
+                    <SocialSecurityCompletionBox 
+                        task={task} 
+                        onComplete={() => {
+                            // Optional: Task neu laden oder Status aktualisieren
+                            if (onTaskUpdated) {
+                                // Task wird automatisch aktualisiert wenn Modal geschlossen wird
+                            }
+                        }} 
+                    />
+                </>
             )}
                 
             <div className="flex justify-between pt-4">

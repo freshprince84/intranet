@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { userApi, roleApi } from '../api/apiClient.ts';
 import { User, Role } from '../types/interfaces.ts';
-import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, ShieldCheckIcon, XMarkIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, ShieldCheckIcon, XMarkIcon, ArrowPathIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import useMessage from '../hooks/useMessage.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import IdentificationDocumentList from './IdentificationDocumentList.tsx';
+import LifecycleView from './LifecycleView.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 
 interface UserManagementTabProps {
@@ -77,7 +78,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   const [loadingRoles, setLoadingRoles] = useState(false);
   
   // Neuer State für die aktive Unterseite
-  const [activeUserTab, setActiveUserTab] = useState<'details' | 'documents' | 'roles'>('details');
+  const [activeUserTab, setActiveUserTab] = useState<'details' | 'documents' | 'roles' | 'lifecycle'>('details');
   
   // State für Benutzererstellung
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -573,6 +574,17 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   <ShieldCheckIcon className="h-5 w-5 inline mr-2" />
                   {t('roles.title')}
                 </button>
+                <button
+                  onClick={() => setActiveUserTab('lifecycle')}
+                  className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                    activeUserTab === 'lifecycle'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <BuildingOfficeIcon className="h-5 w-5 inline mr-2" />
+                  Lebenszyklus
+                </button>
               </nav>
             </div>
           </div>
@@ -976,6 +988,14 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                 </div>
               )}
             </div>
+          )}
+
+          {/* Lebenszyklus Tab */}
+          {activeUserTab === 'lifecycle' && selectedUser && (
+            <LifecycleView 
+              userId={selectedUser.id} 
+              userName={`${selectedUser.firstName} ${selectedUser.lastName}`}
+            />
           )}
         </div>
       )}

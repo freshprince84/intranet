@@ -20,6 +20,7 @@ const client_1 = require("@prisma/client");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const notificationController_1 = require("./notificationController");
 const organization_1 = require("../middleware/organization");
+const lifecycleService_1 = require("../services/lifecycleService");
 const prisma = new client_1.PrismaClient();
 // Alle Benutzer abrufen
 const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -873,6 +874,16 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 relatedEntityId: user.id,
                 relatedEntityType: 'create'
             });
+        }
+        // Automatisch Lebenszyklus erstellen (für Organisationen)
+        if (organizationId) {
+            try {
+                yield lifecycleService_1.LifecycleService.createLifecycle(user.id, organizationId);
+            }
+            catch (lifecycleError) {
+                // Logge Fehler, aber breche nicht ab
+                console.error('Fehler beim Erstellen des Lebenszyklus:', lifecycleError);
+            }
         }
         // Entferne Passwort aus der Response
         const userResponse = Object.assign(Object.assign({}, user), { password: undefined });
