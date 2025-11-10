@@ -15,9 +15,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCurrentUser = exports.logout = exports.login = exports.register = void 0;
+exports.resetPassword = exports.requestPasswordReset = exports.getCurrentUser = exports.logout = exports.login = exports.register = void 0;
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const crypto_1 = __importDefault(require("crypto"));
 const client_1 = require("@prisma/client");
 const emailService_1 = require("../services/emailService");
 const prisma = new client_1.PrismaClient();
@@ -288,4 +289,151 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.getCurrentUser = getCurrentUser;
+/**
+ * Anfrage zum Zurücksetzen des Passworts
+ * Sendet eine E-Mail mit Reset-Link an die hinterlegte E-Mail-Adresse des Benutzers
+ */
+const requestPasswordReset = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c;
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ message: 'E-Mail-Adresse ist erforderlich' });
+        }
+        // Validiere E-Mail-Format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ message: 'Ungültiges E-Mail-Format' });
+        }
+        // Finde den Benutzer anhand der E-Mail-Adresse (case-insensitive) mit Rollen/Organisation
+        const user = yield prisma.user.findFirst({
+            where: {
+                email: { equals: email, mode: 'insensitive' }
+            },
+            include: {
+                roles: {
+                    include: {
+                        role: {
+                            include: {
+                                organization: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        // WICHTIG: Immer die gleiche Erfolgsmeldung zurückgeben, auch wenn der Benutzer nicht existiert
+        // Dies verhindert, dass Angreifer herausfinden können, welche E-Mail-Adressen im System registriert sind
+        const successMessage = 'Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet.';
+        if (!user) {
+            // Logge intern, aber sende keine Fehlermeldung
+            console.log(`[PASSWORD_RESET] Passwort-Reset-Anfrage für nicht existierende E-Mail: ${email}`);
+            return res.status(200).json({ message: successMessage });
+        }
+        // Generiere einen sicheren Token (32 Bytes = 44 Zeichen Base64)
+        const token = crypto_1.default.randomBytes(32).toString('base64url');
+        // Setze Ablaufzeit auf 1 Stunde
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 1);
+        // Speichere Token in der Datenbank
+        yield prisma.passwordResetToken.create({
+            data: {
+                userId: user.id,
+                token: token,
+                expiresAt: expiresAt
+            }
+        });
+        // Finde die Organisation des Benutzers (erste aktive Rolle oder erste Rolle)
+        let organizationId = undefined;
+        console.log(`[PASSWORD_RESET] Benutzer hat ${user.roles.length} Rolle(n)`);
+        const activeRole = user.roles.find(r => r.lastUsed === true);
+        if ((_a = activeRole === null || activeRole === void 0 ? void 0 : activeRole.role) === null || _a === void 0 ? void 0 : _a.organization) {
+            organizationId = activeRole.role.organization.id;
+            console.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (aktive Rolle)`);
+        }
+        else if (user.roles.length > 0 && ((_c = (_b = user.roles[0]) === null || _b === void 0 ? void 0 : _b.role) === null || _c === void 0 ? void 0 : _c.organization)) {
+            organizationId = user.roles[0].role.organization.id;
+            console.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (erste Rolle)`);
+        }
+        else {
+            console.log(`[PASSWORD_RESET] ⚠️ Keine Organisation gefunden für Benutzer ${user.id}`);
+            if (user.roles.length > 0) {
+                console.log(`[PASSWORD_RESET] Rollen vorhanden, aber keine Organisation zugeordnet`);
+            }
+        }
+        // Generiere Reset-Link
+        // Frontend-URL aus Umgebungsvariable oder Standardwert
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const resetLink = `${frontendUrl}/reset-password?token=${token}`;
+        // Sende E-Mail (asynchron, blockiert nicht die Response) mit organisationId
+        (0, emailService_1.sendPasswordResetEmail)(user.email, user.username, resetLink, organizationId).catch((error) => {
+            console.error('Fehler beim Versenden der Passwort-Reset-E-Mail:', error);
+            // E-Mail-Fehler blockieren nicht die Response
+        });
+        console.log(`[PASSWORD_RESET] Passwort-Reset-Token erstellt für Benutzer: ${user.username} (${user.email})`);
+        res.status(200).json({ message: successMessage });
+    }
+    catch (error) {
+        console.error('[PASSWORD_RESET] Fehler bei Passwort-Reset-Anfrage:', error);
+        // Auch bei Fehlern die gleiche Erfolgsmeldung zurückgeben (Sicherheit)
+        res.status(200).json({
+            message: 'Falls ein Konto mit dieser E-Mail-Adresse existiert, wurde eine E-Mail mit Anweisungen zum Zurücksetzen des Passworts gesendet.'
+        });
+    }
+});
+exports.requestPasswordReset = requestPasswordReset;
+/**
+ * Setzt das Passwort mit einem gültigen Token zurück
+ */
+const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { token, password } = req.body;
+        if (!token || !password) {
+            return res.status(400).json({ message: 'Token und Passwort sind erforderlich' });
+        }
+        // Validiere Passwort (Mindestlänge 8 Zeichen)
+        if (password.length < 8) {
+            return res.status(400).json({ message: 'Passwort muss mindestens 8 Zeichen lang sein' });
+        }
+        // Finde Token in der Datenbank
+        const resetToken = yield prisma.passwordResetToken.findUnique({
+            where: { token: token },
+            include: { user: true }
+        });
+        if (!resetToken) {
+            return res.status(400).json({ message: 'Ungültiger oder abgelaufener Token' });
+        }
+        // Prüfe, ob Token bereits verwendet wurde
+        if (resetToken.used) {
+            return res.status(400).json({ message: 'Dieser Token wurde bereits verwendet' });
+        }
+        // Prüfe, ob Token abgelaufen ist
+        if (resetToken.expiresAt < new Date()) {
+            return res.status(400).json({ message: 'Ungültiger oder abgelaufener Token' });
+        }
+        // Hash das neue Passwort
+        const hashedPassword = yield bcrypt_1.default.hash(password, 10);
+        // Aktualisiere das Passwort und markiere Token als verwendet (in einer Transaktion)
+        yield prisma.$transaction([
+            prisma.user.update({
+                where: { id: resetToken.userId },
+                data: { password: hashedPassword }
+            }),
+            prisma.passwordResetToken.update({
+                where: { id: resetToken.id },
+                data: { used: true }
+            })
+        ]);
+        console.log(`[PASSWORD_RESET] Passwort erfolgreich zurückgesetzt für Benutzer: ${resetToken.user.username} (${resetToken.user.email})`);
+        res.status(200).json({ message: 'Passwort wurde erfolgreich zurückgesetzt. Sie können sich jetzt mit dem neuen Passwort anmelden.' });
+    }
+    catch (error) {
+        console.error('[PASSWORD_RESET] Fehler beim Zurücksetzen des Passworts:', error);
+        res.status(500).json({
+            message: 'Fehler beim Zurücksetzen des Passworts',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.resetPassword = resetPassword;
 //# sourceMappingURL=authController.js.map

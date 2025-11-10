@@ -72,7 +72,12 @@ export const API_ENDPOINTS = {
     // Niederlassungen
     BRANCHES: {
         BASE: '/branches',
-        BY_ID: (id: number) => `/branches/${id}`
+        BY_ID: (id: number) => `/branches/${id}`,
+        USER: '/branches/user',
+        SWITCH: '/branches/switch',
+        CREATE: '/branches',
+        UPDATE: (id: number) => `/branches/${id}`,
+        DELETE: (id: number) => `/branches/${id}`
     },
     // Benutzer
     USERS: {
@@ -135,7 +140,15 @@ export const API_ENDPOINTS = {
     SAVED_FILTERS: {
         BASE: '/saved-filters',
         BY_TABLE: (tableId: string) => `/saved-filters/${tableId}`,
-        BY_ID: (id: number) => `/saved-filters/${id}`
+        BY_ID: (id: number) => `/saved-filters/${id}`,
+        GROUPS: {
+            CREATE: '/saved-filters/groups',
+            BY_TABLE: (tableId: string) => `/saved-filters/groups/${tableId}`,
+            UPDATE: (groupId: number) => `/saved-filters/groups/${groupId}`,
+            DELETE: (groupId: number) => `/saved-filters/groups/${groupId}`,
+            ADD_FILTER: (filterId: number, groupId: number) => `/saved-filters/${filterId}/group/${groupId}`,
+            REMOVE_FILTER: (filterId: number) => `/saved-filters/${filterId}/group`
+        }
     },
     // Clients
     CLIENTS: {
@@ -215,7 +228,33 @@ export const API_ENDPOINTS = {
     },
     // Organization Lifecycle Settings
     ORGANIZATION_LIFECYCLE: {
-        LIFECYCLE_ROLES: '/organizations/current/lifecycle-roles'
+        LIFECYCLE_ROLES: '/organizations/current/lifecycle-roles',
+        DOCUMENT_TEMPLATES: '/organizations/current/document-templates',
+        UPLOAD_TEMPLATE: '/organizations/current/document-templates/upload',
+        DOCUMENT_SIGNATURES: '/organizations/current/document-signatures',
+        UPLOAD_SIGNATURE: '/organizations/current/document-signatures/upload'
+    },
+    // LobbyPMS / Reservierungen
+    RESERVATIONS: {
+        BASE: '/lobby-pms/reservations',
+        BY_ID: (id: number) => `/lobby-pms/reservations/${id}`,
+        CHECK_IN: (id: number) => `/lobby-pms/reservations/${id}/check-in`,
+        SYNC: '/lobby-pms/sync',
+        VALIDATE: '/lobby-pms/validate',
+        REGISTER_SIRE: (id: number) => `/lobby-pms/reservations/${id}/register-sire`,
+        SIRE_STATUS: (id: number) => `/lobby-pms/reservations/${id}/sire-status`
+    },
+    // TTLock (Türsystem)
+    TTLOCK: {
+        LOCKS: '/ttlock/locks',
+        LOCK_INFO: (lockId: string) => `/ttlock/locks/${lockId}/info`,
+        CREATE_PASSCODE: '/ttlock/passcodes',
+        DELETE_PASSCODE: (passcodeId: string) => `/ttlock/passcodes/${passcodeId}`
+    },
+    // Bold Payment
+    BOLD_PAYMENT: {
+        WEBHOOK: '/bold-payment/webhook',
+        PAYMENT_STATUS: (paymentId: string) => `/bold-payment/payments/${paymentId}`
     }
 };
 

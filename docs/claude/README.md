@@ -39,6 +39,8 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 
 ### UI-Standards und Container-Strukturen
 - **[container-structures.md](docs/container-structures.md)** - Konsistente Container-Strukturen für Seiten und Boxen - **MUSS bei neuen Seiten befolgt werden!**
+- **[DESIGN_STANDARDS.md](../core/DESIGN_STANDARDS.md)** - **⚠️ KRITISCH: Button-Design-Regel - KEIN TEXT IN BUTTONS!** Siehe Abschnitt "Buttons und Aktionselemente"
+- **[CODING_STANDARDS.md](../core/CODING_STANDARDS.md)** - **⚠️ KRITISCH: Button-Implementierung - KEIN TEXT IN BUTTONS!** Siehe Abschnitt "Button-Implementierung"
 
 ## Memory Anchors
 

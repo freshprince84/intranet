@@ -104,7 +104,8 @@ export class LifecycleService {
       contractType?: string;
       exitDate?: Date;
       exitReason?: string;
-    }
+    },
+    generatedBy?: number
   ) {
     const lifecycle = await prisma.employeeLifecycle.findUnique({
       where: { userId }
@@ -141,6 +142,94 @@ export class LifecycleService {
 
     if (status === 'archived' && !lifecycle.offboardingCompletedAt) {
       updateData.offboardingCompletedAt = new Date();
+      
+      // Erstelle automatisch Arbeitszeugnis, falls noch keines existiert
+      try {
+        const existingCertificates = await prisma.employmentCertificate.findMany({
+          where: { lifecycleId: lifecycle.id }
+        });
+        
+        // Nur erstellen, wenn noch kein Zertifikat existiert
+        if (existingCertificates.length === 0 && generatedBy) {
+          await this.createCertificate(
+            userId,
+            {
+              certificateType: 'employment',
+              templateUsed: 'default',
+              templateVersion: '1.0'
+            },
+            generatedBy
+          );
+          console.log(`✅ Automatisch Arbeitszeugnis erstellt für User ${userId} beim Offboarding-Abschluss`);
+        }
+      } catch (error) {
+        // Logge Fehler, aber breche nicht ab
+        console.error('Fehler beim automatischen Erstellen des Arbeitszeugnisses:', error);
+      }
+      
+      // Deaktiviere User (nicht löschen!)
+      try {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { active: false }
+        });
+        console.log(`✅ User ${userId} wurde deaktiviert beim Archivieren`);
+      } catch (error) {
+        // Logge Fehler, aber breche nicht ab
+        console.error('Fehler beim Deaktivieren des Users:', error);
+      }
+      
+      // Optional: Prüfe, ob alle Offboarding-Tasks abgeschlossen sind (nur Warnung)
+      // Suche Tasks, die für diesen User erstellt wurden (über Branch oder Rolle)
+      try {
+        // Hole User mit Branch-Informationen
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          include: {
+            branches: {
+              take: 1,
+              include: {
+                branch: true
+              }
+            }
+          }
+        });
+        
+        if (user && user.branches.length > 0) {
+          const branchId = user.branches[0].branch.id;
+          
+          const offboardingTasks = await prisma.task.findMany({
+            where: {
+              branchId: branchId,
+              title: {
+                in: [
+                  'Crear certificado laboral',
+                  'Realizar liquidación final',
+                  'Desafiliar de seguridad social'
+                ]
+              },
+              // Prüfe, ob Task-Beschreibung den User-Namen enthält
+              description: {
+                contains: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
+              }
+            }
+          });
+          
+          const completedTasks = offboardingTasks.filter(
+            task => task.status === 'done'
+          );
+          
+          if (offboardingTasks.length > 0 && completedTasks.length < offboardingTasks.length) {
+            console.warn(
+              `⚠️ User ${userId} wird archiviert, aber nicht alle Offboarding-Tasks sind abgeschlossen ` +
+              `(${completedTasks.length}/${offboardingTasks.length})`
+            );
+          }
+        }
+      } catch (error) {
+        // Logge Fehler, aber breche nicht ab
+        console.error('Fehler beim Prüfen der Offboarding-Tasks:', error);
+      }
     }
 
     // Zusätzliche Daten
@@ -687,6 +776,16 @@ export class LifecycleService {
             lastName: true
           }
         }
+      }
+    });
+
+    // Aktualisiere contractStartDate und contractEndDate im Lifecycle
+    await prisma.employeeLifecycle.update({
+      where: { id: lifecycle.id },
+      data: {
+        contractStartDate: data.startDate,
+        contractEndDate: data.endDate || null,
+        contractType: data.contractType || lifecycle.contractType
       }
     });
 

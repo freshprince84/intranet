@@ -177,14 +177,14 @@ const ClientSelectModal: React.FC<ClientSelectModalProps> = ({
                           <button
                             onClick={(e) => handleEdit(client, e)}
                             className="p-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition-colors"
-                            title="Client bearbeiten"
+                            title={t('clients.edit')}
                           >
                             <PencilIcon className="h-5 w-5" />
                           </button>
                           <button
                             onClick={(e) => handleDelete(client, e)}
                             className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                            title="Client löschen"
+                            title={t('clients.delete')}
                           >
                             <TrashIcon className="h-5 w-5" />
                           </button>

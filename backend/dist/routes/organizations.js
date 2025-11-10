@@ -37,6 +37,12 @@ router.patch('/join-requests/:id', joinRequestController_1.processJoinRequest);
 // Lebenszyklus-Rollen-Konfiguration
 router.get('/current/lifecycle-roles', organizationController_1.getLifecycleRoles);
 router.put('/current/lifecycle-roles', organizationController_1.updateLifecycleRoles);
+// Dokumenten-Templates
+router.get('/current/document-templates', organizationController_1.getDocumentTemplates);
+router.post('/current/document-templates/upload', organizationController_1.uploadTemplateMiddleware, organizationController_1.uploadDocumentTemplate);
+// Dokumenten-Signaturen
+router.get('/current/document-signatures', organizationController_1.getDocumentSignatures);
+router.post('/current/document-signatures/upload', organizationController_1.uploadSignatureMiddleware, organizationController_1.uploadDocumentSignature);
 // Suche
 router.get('/search', organizationController_1.searchOrganizations);
 exports.default = router;

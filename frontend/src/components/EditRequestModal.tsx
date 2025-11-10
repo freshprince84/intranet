@@ -13,6 +13,8 @@ interface Request {
   id: number;
   title: string;
   status: 'approval' | 'approved' | 'to_improve' | 'denied';
+  type?: 'vacation' | 'improvement_suggestion' | 'sick_leave' | 'employment_certificate' | 'other';
+  isPrivate?: boolean;
   requestedBy: {
     id: number;
     username: string;
@@ -107,6 +109,8 @@ const EditRequestModal = ({
   const [description, setDescription] = useState(removeImageMarkdown(request.description || ''));
   const [responsibleId, setResponsibleId] = useState(request.responsible.id);
   const [branchId, setBranchId] = useState(request.branch.id);
+  const [type, setType] = useState<'vacation' | 'improvement_suggestion' | 'sick_leave' | 'employment_certificate' | 'other'>(request.type || 'other');
+  const [isPrivate, setIsPrivate] = useState(request.isPrivate || false);
   const [dueDate, setDueDate] = useState(request.dueDate ? request.dueDate.split('T')[0] : '');
   const [createTodo, setCreateTodo] = useState(request.createTodo);
   const [users, setUsers] = useState<User[]>([]);
@@ -182,8 +186,17 @@ const EditRequestModal = ({
     if (isOpen) {
       fetchData();
       fetchAttachments();
+      // Aktualisiere State wenn Request-Props sich ändern
+      setTitle(request.title);
+      setDescription(removeImageMarkdown(request.description || ''));
+      setResponsibleId(request.responsible.id);
+      setBranchId(request.branch.id);
+      setType((request as any).type || 'other');
+      setIsPrivate((request as any).isPrivate || false);
+      setDueDate(request.dueDate ? request.dueDate.split('T')[0] : '');
+      setCreateTodo(request.createTodo);
     }
-  }, [isOpen]);
+  }, [isOpen, request]);
 
   const fetchData = async () => {
     try {
@@ -195,7 +208,7 @@ const EditRequestModal = ({
       }
 
       const [usersResponse, branchesResponse] = await Promise.all([
-        axiosInstance.get(API_ENDPOINTS.USERS.BASE),
+        axiosInstance.get(API_ENDPOINTS.USERS.DROPDOWN),
         axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE)
       ]);
 
@@ -478,6 +491,8 @@ const EditRequestModal = ({
         description: finalDescription,
         responsible_id: responsibleId,
         branch_id: branchId,
+        type: type,
+        is_private: isPrivate,
         due_date: dueDate || null,
         create_todo: createTodo,
       });
@@ -881,6 +896,21 @@ const EditRequestModal = ({
       </div>
 
       <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.editRequest.form.type')}</label>
+        <select
+          className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+          value={type}
+          onChange={(e) => setType(e.target.value as any)}
+        >
+          <option value="vacation">{t('requests.types.vacation')}</option>
+          <option value="improvement_suggestion">{t('requests.types.improvement_suggestion')}</option>
+          <option value="sick_leave">{t('requests.types.sick_leave')}</option>
+          <option value="employment_certificate">{t('requests.types.employment_certificate')}</option>
+          <option value="other">{t('requests.types.other')}</option>
+        </select>
+      </div>
+
+      <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.editRequest.form.dueDate')}</label>
         <input
           type="date"
@@ -888,6 +918,19 @@ const EditRequestModal = ({
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
         />
+      </div>
+
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="is_private_edit"
+          className="rounded border-gray-300 text-blue-600 dark:bg-gray-700 dark:border-gray-600"
+          checked={isPrivate}
+          onChange={(e) => setIsPrivate(e.target.checked)}
+        />
+        <label htmlFor="is_private_edit" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+          {t('createRequest.editRequest.form.isPrivate')}
+        </label>
       </div>
 
       <div className="flex items-center">

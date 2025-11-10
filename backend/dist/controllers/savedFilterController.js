@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteFilter = exports.saveFilter = exports.getUserSavedFilters = void 0;
+exports.removeFilterFromGroup = exports.addFilterToGroup = exports.deleteFilterGroup = exports.updateFilterGroup = exports.getFilterGroups = exports.createFilterGroup = exports.deleteFilter = exports.saveFilter = exports.getUserSavedFilters = void 0;
 const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 // Funktion zum Abrufen aller gespeicherten Filter eines Benutzers für eine Tabelle
@@ -39,6 +39,8 @@ const getUserSavedFilters = (req, res) => __awaiter(void 0, void 0, void 0, func
                 name: filter.name,
                 conditions: JSON.parse(filter.conditions),
                 operators: JSON.parse(filter.operators),
+                groupId: filter.groupId,
+                order: filter.order,
                 createdAt: filter.createdAt,
                 updatedAt: filter.updatedAt
             }));
@@ -115,6 +117,8 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 name: filter.name,
                 conditions: JSON.parse(filter.conditions),
                 operators: JSON.parse(filter.operators),
+                groupId: filter.groupId,
+                order: filter.order,
                 createdAt: filter.createdAt,
                 updatedAt: filter.updatedAt
             };
@@ -173,4 +177,428 @@ const deleteFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.deleteFilter = deleteFilter;
+// ========== FILTER GROUP FUNCTIONS ==========
+// Funktion zum Erstellen einer Filter-Gruppe
+const createFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const { tableId, name } = req.body;
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        if (!tableId) {
+            return res.status(400).json({ message: 'Table ID ist erforderlich' });
+        }
+        if (!name) {
+            return res.status(400).json({ message: 'Gruppen-Name ist erforderlich' });
+        }
+        try {
+            // Prüfe, ob bereits eine Gruppe mit diesem Namen existiert
+            const existingGroup = yield prisma.filterGroup.findFirst({
+                where: {
+                    userId,
+                    tableId,
+                    name
+                }
+            });
+            if (existingGroup) {
+                return res.status(400).json({ message: 'Eine Gruppe mit diesem Namen existiert bereits' });
+            }
+            // Finde die höchste order-Nummer für diese Tabelle
+            const maxOrder = yield prisma.filterGroup.findFirst({
+                where: {
+                    userId,
+                    tableId
+                },
+                orderBy: {
+                    order: 'desc'
+                },
+                select: {
+                    order: true
+                }
+            });
+            const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+            // Erstelle neue Gruppe
+            const group = yield prisma.filterGroup.create({
+                data: {
+                    userId,
+                    tableId,
+                    name,
+                    order: newOrder
+                }
+            });
+            return res.status(200).json({
+                id: group.id,
+                userId: group.userId,
+                tableId: group.tableId,
+                name: group.name,
+                order: group.order,
+                filters: [],
+                createdAt: group.createdAt,
+                updatedAt: group.updatedAt
+            });
+        }
+        catch (prismaError) {
+            console.error('Prisma-Fehler beim Erstellen der Gruppe:', prismaError);
+            return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
+        }
+    }
+    catch (error) {
+        console.error('Fehler beim Erstellen der Filter-Gruppe:', error);
+        return res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+exports.createFilterGroup = createFilterGroup;
+// Funktion zum Abrufen aller Filter-Gruppen eines Benutzers für eine Tabelle
+const getFilterGroups = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const { tableId } = req.params;
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        if (!tableId) {
+            return res.status(400).json({ message: 'Table ID ist erforderlich' });
+        }
+        try {
+            const groups = yield prisma.filterGroup.findMany({
+                where: {
+                    userId,
+                    tableId
+                },
+                include: {
+                    filters: {
+                        orderBy: {
+                            order: 'asc'
+                        }
+                    }
+                },
+                orderBy: {
+                    order: 'asc'
+                }
+            });
+            // Parse die JSON-Strings der Filter zurück in Arrays
+            const parsedGroups = groups.map(group => ({
+                id: group.id,
+                userId: group.userId,
+                tableId: group.tableId,
+                name: group.name,
+                order: group.order,
+                filters: group.filters.map(filter => ({
+                    id: filter.id,
+                    userId: filter.userId,
+                    tableId: filter.tableId,
+                    name: filter.name,
+                    conditions: JSON.parse(filter.conditions),
+                    operators: JSON.parse(filter.operators),
+                    groupId: filter.groupId,
+                    order: filter.order,
+                    createdAt: filter.createdAt,
+                    updatedAt: filter.updatedAt
+                })),
+                createdAt: group.createdAt,
+                updatedAt: group.updatedAt
+            }));
+            return res.status(200).json(parsedGroups);
+        }
+        catch (prismaError) {
+            console.error('Prisma-Fehler beim Abrufen der Gruppen:', prismaError);
+            return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
+        }
+    }
+    catch (error) {
+        console.error('Fehler beim Abrufen der Filter-Gruppen:', error);
+        return res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+exports.getFilterGroups = getFilterGroups;
+// Funktion zum Aktualisieren einer Filter-Gruppe (umbenennen)
+const updateFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const groupId = parseInt(req.params.id, 10);
+        const { name } = req.body;
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        if (isNaN(groupId)) {
+            return res.status(400).json({ message: 'Ungültige Gruppen-ID' });
+        }
+        if (!name) {
+            return res.status(400).json({ message: 'Gruppen-Name ist erforderlich' });
+        }
+        try {
+            // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
+            const existingGroup = yield prisma.filterGroup.findFirst({
+                where: {
+                    id: groupId,
+                    userId
+                }
+            });
+            if (!existingGroup) {
+                return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
+            }
+            // Prüfe, ob bereits eine andere Gruppe mit diesem Namen existiert
+            const nameExists = yield prisma.filterGroup.findFirst({
+                where: {
+                    userId,
+                    tableId: existingGroup.tableId,
+                    name,
+                    id: {
+                        not: groupId
+                    }
+                }
+            });
+            if (nameExists) {
+                return res.status(400).json({ message: 'Eine Gruppe mit diesem Namen existiert bereits' });
+            }
+            // Aktualisiere die Gruppe
+            const updatedGroup = yield prisma.filterGroup.update({
+                where: {
+                    id: groupId
+                },
+                data: {
+                    name
+                },
+                include: {
+                    filters: {
+                        orderBy: {
+                            order: 'asc'
+                        }
+                    }
+                }
+            });
+            // Parse die JSON-Strings der Filter zurück in Arrays
+            const parsedGroup = {
+                id: updatedGroup.id,
+                userId: updatedGroup.userId,
+                tableId: updatedGroup.tableId,
+                name: updatedGroup.name,
+                order: updatedGroup.order,
+                filters: updatedGroup.filters.map(filter => ({
+                    id: filter.id,
+                    userId: filter.userId,
+                    tableId: filter.tableId,
+                    name: filter.name,
+                    conditions: JSON.parse(filter.conditions),
+                    operators: JSON.parse(filter.operators),
+                    groupId: filter.groupId,
+                    order: filter.order,
+                    createdAt: filter.createdAt,
+                    updatedAt: filter.updatedAt
+                })),
+                createdAt: updatedGroup.createdAt,
+                updatedAt: updatedGroup.updatedAt
+            };
+            return res.status(200).json(parsedGroup);
+        }
+        catch (prismaError) {
+            console.error('Prisma-Fehler beim Aktualisieren der Gruppe:', prismaError);
+            return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
+        }
+    }
+    catch (error) {
+        console.error('Fehler beim Aktualisieren der Filter-Gruppe:', error);
+        return res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+exports.updateFilterGroup = updateFilterGroup;
+// Funktion zum Löschen einer Filter-Gruppe
+const deleteFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const groupId = parseInt(req.params.id, 10);
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        if (isNaN(groupId)) {
+            return res.status(400).json({ message: 'Ungültige Gruppen-ID' });
+        }
+        try {
+            // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
+            const existingGroup = yield prisma.filterGroup.findFirst({
+                where: {
+                    id: groupId,
+                    userId
+                },
+                include: {
+                    filters: true
+                }
+            });
+            if (!existingGroup) {
+                return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
+            }
+            // Entferne alle Filter aus der Gruppe (setze groupId = null)
+            yield prisma.savedFilter.updateMany({
+                where: {
+                    groupId: groupId
+                },
+                data: {
+                    groupId: null,
+                    order: 0
+                }
+            });
+            // Lösche die Gruppe
+            yield prisma.filterGroup.delete({
+                where: {
+                    id: groupId
+                }
+            });
+            return res.status(200).json({ message: 'Gruppe erfolgreich gelöscht' });
+        }
+        catch (prismaError) {
+            console.error('Prisma-Fehler beim Löschen der Gruppe:', prismaError);
+            return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
+        }
+    }
+    catch (error) {
+        console.error('Fehler beim Löschen der Filter-Gruppe:', error);
+        return res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+exports.deleteFilterGroup = deleteFilterGroup;
+// Funktion zum Hinzufügen eines Filters zu einer Gruppe
+const addFilterToGroup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const filterId = parseInt(req.params.filterId, 10);
+        const groupId = parseInt(req.params.groupId, 10);
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        if (isNaN(filterId)) {
+            return res.status(400).json({ message: 'Ungültige Filter-ID' });
+        }
+        if (isNaN(groupId)) {
+            return res.status(400).json({ message: 'Ungültige Gruppen-ID' });
+        }
+        try {
+            // Prüfe, ob der Filter existiert und dem Benutzer gehört
+            const filter = yield prisma.savedFilter.findFirst({
+                where: {
+                    id: filterId,
+                    userId
+                }
+            });
+            if (!filter) {
+                return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung' });
+            }
+            // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
+            const group = yield prisma.filterGroup.findFirst({
+                where: {
+                    id: groupId,
+                    userId,
+                    tableId: filter.tableId // Gruppe muss zur gleichen Tabelle gehören
+                }
+            });
+            if (!group) {
+                return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
+            }
+            // Finde die höchste order-Nummer in der Gruppe
+            const maxOrder = yield prisma.savedFilter.findFirst({
+                where: {
+                    groupId: groupId
+                },
+                orderBy: {
+                    order: 'desc'
+                },
+                select: {
+                    order: true
+                }
+            });
+            const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+            // Füge Filter zur Gruppe hinzu
+            const updatedFilter = yield prisma.savedFilter.update({
+                where: {
+                    id: filterId
+                },
+                data: {
+                    groupId: groupId,
+                    order: newOrder
+                }
+            });
+            // Parse die JSON-Strings zurück in Arrays
+            const parsedFilter = {
+                id: updatedFilter.id,
+                userId: updatedFilter.userId,
+                tableId: updatedFilter.tableId,
+                name: updatedFilter.name,
+                conditions: JSON.parse(updatedFilter.conditions),
+                operators: JSON.parse(updatedFilter.operators),
+                groupId: updatedFilter.groupId,
+                order: updatedFilter.order,
+                createdAt: updatedFilter.createdAt,
+                updatedAt: updatedFilter.updatedAt
+            };
+            return res.status(200).json(parsedFilter);
+        }
+        catch (prismaError) {
+            console.error('Prisma-Fehler beim Hinzufügen des Filters zur Gruppe:', prismaError);
+            return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
+        }
+    }
+    catch (error) {
+        console.error('Fehler beim Hinzufügen des Filters zur Gruppe:', error);
+        return res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+exports.addFilterToGroup = addFilterToGroup;
+// Funktion zum Entfernen eines Filters aus einer Gruppe
+const removeFilterFromGroup = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const filterId = parseInt(req.params.filterId, 10);
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        if (isNaN(filterId)) {
+            return res.status(400).json({ message: 'Ungültige Filter-ID' });
+        }
+        try {
+            // Prüfe, ob der Filter existiert und dem Benutzer gehört
+            const filter = yield prisma.savedFilter.findFirst({
+                where: {
+                    id: filterId,
+                    userId
+                }
+            });
+            if (!filter) {
+                return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung' });
+            }
+            // Entferne Filter aus der Gruppe
+            const updatedFilter = yield prisma.savedFilter.update({
+                where: {
+                    id: filterId
+                },
+                data: {
+                    groupId: null,
+                    order: 0
+                }
+            });
+            // Parse die JSON-Strings zurück in Arrays
+            const parsedFilter = {
+                id: updatedFilter.id,
+                userId: updatedFilter.userId,
+                tableId: updatedFilter.tableId,
+                name: updatedFilter.name,
+                conditions: JSON.parse(updatedFilter.conditions),
+                operators: JSON.parse(updatedFilter.operators),
+                groupId: updatedFilter.groupId,
+                order: updatedFilter.order,
+                createdAt: updatedFilter.createdAt,
+                updatedAt: updatedFilter.updatedAt
+            };
+            return res.status(200).json(parsedFilter);
+        }
+        catch (prismaError) {
+            console.error('Prisma-Fehler beim Entfernen des Filters aus der Gruppe:', prismaError);
+            return res.status(500).json({ message: 'Fehler beim Zugriff auf die Datenbank' });
+        }
+    }
+    catch (error) {
+        console.error('Fehler beim Entfernen des Filters aus der Gruppe:', error);
+        return res.status(500).json({ message: 'Interner Serverfehler' });
+    }
+});
+exports.removeFilterFromGroup = removeFilterFromGroup;
 //# sourceMappingURL=savedFilterController.js.map

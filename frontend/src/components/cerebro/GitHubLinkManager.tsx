@@ -190,12 +190,12 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
       
       {/* Liste der vorhandenen GitHub-Links */}
       <div className="space-y-3">
-        <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">Verknüpfte Markdown-Dateien</h4>
+        <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">{t('cerebro.linkedMarkdownFiles')}</h4>
         
         {loading && links.length === 0 ? (
-          <div className="text-gray-500 dark:text-gray-400 italic">Lade GitHub-Links...</div>
+          <div className="text-gray-500 dark:text-gray-400 italic">{t('cerebro.loadingGitHubLinks')}</div>
         ) : links.length === 0 ? (
-          <div className="text-gray-500 dark:text-gray-400 italic">Keine GitHub-Links vorhanden</div>
+          <div className="text-gray-500 dark:text-gray-400 italic">{t('cerebro.noGitHubLinks')}</div>
         ) : (
           links.map((link) => (
             <div key={link.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-md dark:bg-gray-800">
@@ -213,10 +213,10 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
               <button
                 onClick={() => removeLink(link.id)}
                 className="ml-2 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                title="GitHub-Link entfernen"
+                title={t('cerebro.removeGitHubLink')}
                 disabled={loading}
               >
-                Entfernen
+                {t('cerebro.remove')}
               </button>
             </div>
           ))

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { useBranch } from '../contexts/BranchContext.tsx';
 import NotificationBell from './NotificationBell.tsx';
-import { API_URL } from '../config/api.ts';
+import { API_URL, API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import HeaderMessage from './HeaderMessage.tsx';
 
@@ -12,7 +12,7 @@ const Header: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { user, logout, switchRole } = useAuth();
-    const { branches, selectedBranch, setSelectedBranch } = useBranch();
+    const { branches, selectedBranch, setSelectedBranch, loadBranches } = useBranch();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isRoleSubMenuOpen, setIsRoleSubMenuOpen] = useState(false);
@@ -96,6 +96,8 @@ const Header: React.FC = () => {
     const handleRoleSwitch = async (roleId: number) => {
         try {
             await switchRole(roleId);
+            // Branches neu laden, da sich die verfügbaren Branches durch Rollenwechsel ändern können
+            await loadBranches();
             setIsRoleSubMenuOpen(false);
             setIsProfileMenuOpen(false);
         } catch (error) {
@@ -103,13 +105,27 @@ const Header: React.FC = () => {
         }
     };
 
-    const handleBranchSwitch = (branchId: number) => {
+    const handleBranchSwitch = async (branchId: number) => {
         try {
-            setSelectedBranch(branchId);
-            setIsBranchSubMenuOpen(false);
-            setIsProfileMenuOpen(false);
-        } catch (error) {
+            // API-Call zum Backend, um Branch-Wechsel zu persistieren
+            const response = await axiosInstance.post(API_ENDPOINTS.BRANCHES.SWITCH, { branchId });
+            
+            if (response.data && response.data.success) {
+                // Branch-Wechsel erfolgreich - aktualisiere Context
+                setSelectedBranch(branchId);
+                
+                // Lade Branches neu, um lastUsed-Flag zu aktualisieren
+                await loadBranches();
+                
+                setIsBranchSubMenuOpen(false);
+                setIsProfileMenuOpen(false);
+            } else {
+                throw new Error('Branch-Wechsel fehlgeschlagen');
+            }
+        } catch (error: any) {
             console.error('Fehler beim Standortwechsel:', error);
+            // Zeige Fehlermeldung dem Benutzer
+            alert(error.response?.data?.message || 'Fehler beim Wechseln der Niederlassung');
         }
     };
 

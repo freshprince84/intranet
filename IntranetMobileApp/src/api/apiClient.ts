@@ -480,8 +480,16 @@ class UserApiService extends BaseApiService<User> {
     super('/users');
   }
   
+  // Überschreibe getAll() um nur aktive Benutzer zu laden
+  async getAll(filters?: FilterOptions): Promise<User[]> {
+    // Verwende /users/dropdown für nur aktive Benutzer
+    const response = await this.api.get<User[]>(`${this.endpoint}/dropdown`, { params: filters });
+    return response.data;
+  }
+  
   async getAllUsers(): Promise<User[]> {
-    const response = await this.api.get<User[]>(this.endpoint);
+    // Verwende /users/dropdown für nur aktive Benutzer
+    const response = await this.api.get<User[]>(`${this.endpoint}/dropdown`);
     return response.data;
   }
 

@@ -456,6 +456,73 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
  * @param resetLink URL zum Zurücksetzen des Passworts (mit Token)
  * @param organizationId Optional: ID der Organisation (für org-spezifische SMTP-Einstellungen)
  */
+/**
+ * Generische Funktion zum Versenden von E-Mails
+ * @param email E-Mail-Adresse des Empfängers
+ * @param subject Betreff der E-Mail
+ * @param html HTML-Inhalt der E-Mail
+ * @param text Text-Inhalt der E-Mail (optional)
+ * @param organizationId Optional: ID der Organisation (für org-spezifische SMTP-Einstellungen)
+ */
+export const sendEmail = async (
+  email: string,
+  subject: string,
+  html: string,
+  text?: string,
+  organizationId?: number
+): Promise<boolean> => {
+  try {
+    const transporter = await createTransporter(organizationId);
+    
+    if (!transporter) {
+      console.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
+      return false;
+    }
+
+    // Lade From-Einstellungen aus Organisation-Settings (falls vorhanden)
+    let fromEmail = process.env.SMTP_USER || 'noreply@intranet.local';
+    let fromName = 'Intranet';
+    
+    if (organizationId) {
+      try {
+        const organization = await prisma.organization.findUnique({
+          where: { id: organizationId },
+          select: { settings: true, displayName: true }
+        });
+        
+        if (organization?.settings && typeof organization.settings === 'object') {
+          const orgSettings = organization.settings as any;
+          if (orgSettings.smtpFromEmail) {
+            fromEmail = orgSettings.smtpFromEmail;
+          }
+          if (orgSettings.smtpFromName) {
+            fromName = orgSettings.smtpFromName;
+          } else if (organization.displayName) {
+            fromName = organization.displayName;
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Fehler beim Laden der Organisation-From-Einstellungen:', error);
+      }
+    }
+
+    const mailOptions = {
+      from: `${fromName} <${fromEmail}>`,
+      to: email,
+      subject: subject,
+      html: html,
+      text: text || html.replace(/<[^>]*>/g, ''), // Fallback: HTML ohne Tags
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ E-Mail versendet:', info.messageId);
+    return true;
+  } catch (error) {
+    console.error('❌ Fehler beim Versenden der E-Mail:', error);
+    return false;
+  }
+};
+
 export const sendPasswordResetEmail = async (
   email: string,
   username: string,
@@ -514,6 +581,8 @@ export const sendPasswordResetEmail = async (
 
     // Formatiere From-String für nodemailer
     const fromString = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
+    
+    console.log(`[EMAIL] 📧 Versende E-Mail von: ${fromString} an: ${email}`);
 
     const mailOptions = {
       from: fromString,

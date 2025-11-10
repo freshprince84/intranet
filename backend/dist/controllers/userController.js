@@ -43,7 +43,11 @@ const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                         branch: true
                     }
                 }
-            }
+            },
+            orderBy: [
+                { username: 'asc' },
+                { firstName: 'asc' }
+            ]
         });
         res.json(users);
     }
@@ -59,10 +63,10 @@ exports.getAllUsers = getAllUsers;
 // Alle Benutzer für Dropdowns abrufen (nur User der Organisation)
 const getAllUsersForDropdown = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Für Dropdowns: Nur User der Organisation (oder nur eigene wenn standalone)
+        // Für Dropdowns: Nur User der Organisation (oder nur eigene wenn standalone) und nur aktive Benutzer
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
         const users = yield prisma.user.findMany({
-            where: userFilter,
+            where: Object.assign(Object.assign({}, userFilter), { active: true }),
             select: {
                 id: true,
                 username: true,
@@ -82,8 +86,8 @@ const getAllUsersForDropdown = (req, res) => __awaiter(void 0, void 0, void 0, f
                 }
             },
             orderBy: [
-                { firstName: 'asc' },
-                { lastName: 'asc' }
+                { username: 'asc' },
+                { firstName: 'asc' }
             ]
         });
         res.json(users);
@@ -210,7 +214,9 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Zusätzliche Lohnabrechnung-Felder
         payrollCountry, hourlyRate, contractType, monthlySalary, 
         // Arbeitszeit-Felder
-        normalWorkingHours } = req.body;
+        normalWorkingHours, active } = req.body;
+        console.log('updateUserById - Received body:', req.body);
+        console.log('updateUserById - Active value:', active, 'Type:', typeof active);
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
             const existingUser = yield prisma.user.findFirst({
@@ -236,7 +242,7 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 message: 'Ungültiges E-Mail-Format'
             });
         }
-        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary !== undefined && { salary: salary === null ? null : parseFloat(salary.toString()) })), (payrollCountry && { payrollCountry })), (hourlyRate !== undefined && { hourlyRate: hourlyRate === null ? null : hourlyRate })), (contractType !== undefined && { contractType })), (monthlySalary !== undefined && { monthlySalary: monthlySalary === null ? null : parseFloat(monthlySalary.toString()) })), (normalWorkingHours !== undefined && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) }));
+        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary !== undefined && { salary: salary === null ? null : parseFloat(salary.toString()) })), (payrollCountry && { payrollCountry })), (hourlyRate !== undefined && { hourlyRate: hourlyRate === null ? null : hourlyRate })), (contractType !== undefined && { contractType })), (monthlySalary !== undefined && { monthlySalary: monthlySalary === null ? null : parseFloat(monthlySalary.toString()) })), (normalWorkingHours !== undefined && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (active !== undefined && active !== null && { active: Boolean(active) }));
         console.log('Updating user with data:', updateData);
         const updatedUser = yield prisma.user.update({
             where: { id: userId },
@@ -801,19 +807,34 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         // Hash das Passwort
         const hashedPassword = yield bcrypt_1.default.hash(password, 10);
-        // Finde die "User"-Rolle der Organisation (oder erstes verfügbare Rolle)
-        const userRole = yield prisma.role.findFirst({
+        // Finde die "Hamburger"-Rolle der Organisation (Standard-Rolle für neue Benutzer)
+        const hamburgerRole = yield prisma.role.findFirst({
             where: {
                 organizationId: organizationId,
-                name: 'User'
+                name: 'Hamburger'
             }
         });
-        // Falls keine "User"-Rolle existiert, nehme die erste verfügbare Rolle der Organisation
-        let roleToAssign = userRole;
+        // Falls keine "Hamburger"-Rolle existiert, suche nach "User"-Rolle
+        let roleToAssign = hamburgerRole;
         if (!roleToAssign) {
             roleToAssign = yield prisma.role.findFirst({
                 where: {
-                    organizationId: organizationId
+                    organizationId: organizationId,
+                    name: 'User'
+                }
+            });
+        }
+        // Falls immer noch keine Rolle gefunden, nehme die erste verfügbare Rolle der Organisation (außer Admin)
+        if (!roleToAssign) {
+            roleToAssign = yield prisma.role.findFirst({
+                where: {
+                    organizationId: organizationId,
+                    name: {
+                        not: 'Admin'
+                    }
+                },
+                orderBy: {
+                    id: 'asc'
                 }
             });
         }
@@ -915,7 +936,9 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (!currentUser) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
-        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary } = req.body;
+        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary, active } = req.body;
+        console.log('Updating user with data:', req.body);
+        console.log('Active value:', active, 'Type:', typeof active);
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
             const existingUser = yield prisma.user.findFirst({
@@ -936,7 +959,8 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
         }
         // Aktualisiere den Benutzer
-        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary && { salary: parseFloat(salary.toString()) }));
+        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary && { salary: parseFloat(salary.toString()) })), (active !== undefined && active !== null && { active: Boolean(active) }));
+        console.log('Update data to be applied:', updateData);
         const updatedUser = yield prisma.user.update({
             where: { id: userId },
             data: updateData,

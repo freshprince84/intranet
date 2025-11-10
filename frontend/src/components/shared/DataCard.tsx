@@ -15,7 +15,7 @@ export interface MetadataItem {
     fileType: string;
     url: string;
   }>; // Attachment-Metadaten für Vorschau
-  section?: 'left' | 'main' | 'main-second' | 'right' | 'right-inline' | 'full'; // Position im Layout
+  section?: 'left' | 'main' | 'main-second' | 'main-third' | 'right' | 'right-inline' | 'full'; // Position im Layout
 }
 
 export interface DataCardProps {
@@ -354,7 +354,7 @@ const DataCard: React.FC<DataCardProps> = ({
               return (
                 <div key={index} className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 flex-shrink-0">
                   {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                  <span className="font-medium whitespace-nowrap">{item.label}:</span>
+                  {item.label && <span className="font-medium whitespace-nowrap">{item.label}:</span>}
                   <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
                     {typeof item.value === 'string' ? item.value : item.value}
                   </span>
@@ -416,7 +416,7 @@ const DataCard: React.FC<DataCardProps> = ({
                     status.onPreviousClick?.();
                   }}
                   className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                  title="Vorheriger Status"
+                  title={t('dataCard.previousStatus')}
                 >
                   <ChevronLeftIcon className="h-4 w-4" />
                 </button>
@@ -445,7 +445,7 @@ const DataCard: React.FC<DataCardProps> = ({
       {/* Desktop Layout (sm und größer) */}
       <div className="hidden sm:block">
         {/* Container für Titel links und alle Metadaten rechts - Grid-Layout mit 2 Spalten */}
-        <div className="grid items-start gap-4 mb-2 min-w-0" style={{ gridTemplateColumns: '1fr auto' }}>
+        <div className="grid items-center gap-4 mb-2 min-w-0" style={{ gridTemplateColumns: '1fr auto' }}>
           {/* Titel links - flexibel, nimmt nur benötigten Platz, kann umbrechen */}
           <div className="min-w-0 pr-2">
             {typeof title === 'string' ? (
@@ -462,22 +462,41 @@ const DataCard: React.FC<DataCardProps> = ({
             )}
           </div>
           
-          {/* Rechts: Alle Metadaten zusammen (Solicitado por, Responsable, Datum, Status) - rechtsbündig ausgerichtet, feste Breite für Bündigkeit */}
-          <div className="flex items-start justify-end gap-3 sm:gap-4 flex-nowrap flex-shrink-0 min-w-[220px]">
+          {/* Rechts: Alle Metadaten zusammen (Typ, Solicitado por, Responsable, Datum, Status) - rechtsbündig ausgerichtet, feste Breite für Bündigkeit */}
+          <div className="flex items-center justify-end gap-3 sm:gap-4 flex-nowrap flex-shrink-0 min-w-[220px]">
+            {/* Typ (erste Zeile, auf gleicher Höhe wie Titel) */}
+            {metadata.filter(item => item.section === 'main' && !item.label).length > 0 && (
+              <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                {metadata
+                  .filter(item => item.section === 'main' && !item.label)
+                  .map((item, index) => {
+                    if (item.descriptionContent) return null;
+                    
+                    return (
+                      <React.Fragment key={index}>
+                        <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
+                          {typeof item.value === 'string' ? item.value : item.value}
+                        </span>
+                      </React.Fragment>
+                    );
+                  })}
+              </div>
+            )}
+            
             {/* Container für Solicitado por + Responsable (untereinander) */}
             <div className="flex flex-col gap-1 sm:gap-1.5 flex-shrink-0">
               {/* Solicitado por (erste Zeile) */}
-              {metadata.filter(item => item.section === 'main' || (!item.section && item.label === 'Angefragt von')).length > 0 && (
+              {metadata.filter(item => (item.section === 'main-second' && item.label) || (!item.section && item.label === 'Angefragt von')).length > 0 && (
                 <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
                   {metadata
-                    .filter(item => item.section === 'main' || (!item.section && item.label === 'Angefragt von'))
+                    .filter(item => (item.section === 'main-second' && item.label) || (!item.section && item.label === 'Angefragt von'))
                     .map((item, index) => {
                       if (item.descriptionContent) return null;
                       
                       return (
                         <React.Fragment key={index}>
                           {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                          <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>
+                          {item.label && <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>}
                           <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
                             {typeof item.value === 'string' ? item.value : item.value}
                           </span>
@@ -488,17 +507,17 @@ const DataCard: React.FC<DataCardProps> = ({
               )}
               
               {/* Responsable (zweite Zeile, bündig unter Solicitado por) */}
-              {metadata.filter(item => item.section === 'main-second' || (!item.section && item.label === 'Verantwortlicher')).length > 0 && (
+              {metadata.filter(item => item.section === 'main-third' || (!item.section && item.label === 'Verantwortlicher')).length > 0 && (
                 <div className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm md:text-base lg:text-lg xl:text-xl 2xl:text-2xl text-gray-600 dark:text-gray-400 whitespace-nowrap">
                   {metadata
-                    .filter(item => item.section === 'main-second' || (!item.section && item.label === 'Verantwortlicher'))
+                    .filter(item => item.section === 'main-third' || (!item.section && item.label === 'Verantwortlicher'))
                     .map((item, index) => {
                       if (item.descriptionContent) return null;
                       
                       return (
                         <React.Fragment key={index}>
                           {item.icon && <span className="flex-shrink-0">{item.icon}</span>}
-                          <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>
+                          {item.label && <span className="font-medium mr-1 whitespace-nowrap">{item.label}:</span>}
                           <span className={`${item.className || 'text-gray-900 dark:text-white'} whitespace-nowrap`}>
                             {typeof item.value === 'string' ? item.value : item.value}
                           </span>
@@ -533,7 +552,7 @@ const DataCard: React.FC<DataCardProps> = ({
                       status.onPreviousClick?.();
                     }}
                     className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                    title="Vorheriger Status"
+                    title={t('dataCard.previousStatus')}
                   >
                     <ChevronLeftIcon className="h-6 w-6" />
                   </button>
@@ -549,7 +568,7 @@ const DataCard: React.FC<DataCardProps> = ({
                       status.onNextClick?.();
                     }}
                     className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                    title="Nächster Status"
+                    title={t('dataCard.nextStatus')}
                   >
                     <ChevronRightIcon className="h-6 w-6" />
                   </button>

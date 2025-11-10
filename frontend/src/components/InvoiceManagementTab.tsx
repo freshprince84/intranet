@@ -1073,7 +1073,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                       <button
                         onClick={() => handleMarkAsPaid(invoice.id)}
                         className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
-                        title="Als bezahlt markieren"
+                        title={t('invoices.markAsPaid')}
                       >
                         <CurrencyDollarIcon className="h-5 w-5" />
                       </button>

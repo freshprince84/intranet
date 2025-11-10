@@ -83,11 +83,19 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Konvertiere zu Number oder null (verhindert, dass 0 oder undefined als String gesendet wird)
+      const prepareRoleId = (id: number | null | undefined): number | null => {
+        if (id === null || id === undefined || id === 0) {
+          return null;
+        }
+        return Number(id);
+      };
+
       await axiosInstance.put(API_ENDPOINTS.ORGANIZATION_LIFECYCLE.LIFECYCLE_ROLES, {
-        adminRoleId: lifecycleRoles.adminRoleId || null,
-        hrRoleId: lifecycleRoles.hrRoleId || null,
-        legalRoleId: lifecycleRoles.legalRoleId || null,
-        employeeRoleIds: lifecycleRoles.employeeRoleIds || []
+        adminRoleId: prepareRoleId(lifecycleRoles.adminRoleId),
+        hrRoleId: prepareRoleId(lifecycleRoles.hrRoleId),
+        legalRoleId: prepareRoleId(lifecycleRoles.legalRoleId),
+        employeeRoleIds: (lifecycleRoles.employeeRoleIds || []).map(prepareRoleId).filter((id): id is number => id !== null)
       });
       showMessage(
         t('lifecycle.rolesSaved') || 'Rollen-Konfiguration erfolgreich gespeichert',
@@ -156,14 +164,17 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
             </label>
             <select
               value={lifecycleRoles.adminRoleId || ''}
-              onChange={(e) => setLifecycleRoles({ 
+              onChange={(e) => {
+                const value = e.target.value;
+                setLifecycleRoles({ 
                 ...lifecycleRoles, 
-                adminRoleId: e.target.value ? parseInt(e.target.value, 10) : null 
-              })}
+                  adminRoleId: (value && value !== '' && !isNaN(parseInt(value, 10))) ? parseInt(value, 10) : null 
+                });
+              }}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={loadingRoles}
             >
-              <option value="">{t('common.select') || 'Bitte wählen...'}</option>
+              <option value="">{t('common.select')}</option>
               {roles.map(role => (
                 <option key={role.id} value={role.id}>
                   {role.name}
@@ -178,14 +189,17 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
             </label>
             <select
               value={lifecycleRoles.hrRoleId || ''}
-              onChange={(e) => setLifecycleRoles({ 
+              onChange={(e) => {
+                const value = e.target.value;
+                setLifecycleRoles({ 
                 ...lifecycleRoles, 
-                hrRoleId: e.target.value ? parseInt(e.target.value, 10) : null 
-              })}
+                  hrRoleId: (value && value !== '' && !isNaN(parseInt(value, 10))) ? parseInt(value, 10) : null 
+                });
+              }}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={loadingRoles}
             >
-              <option value="">{t('common.select') || 'Bitte wählen...'}</option>
+              <option value="">{t('common.select')}</option>
               {roles.map(role => (
                 <option key={role.id} value={role.id}>
                   {role.name}
@@ -200,14 +214,17 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
             </label>
             <select
               value={lifecycleRoles.legalRoleId || ''}
-              onChange={(e) => setLifecycleRoles({ 
+              onChange={(e) => {
+                const value = e.target.value;
+                setLifecycleRoles({ 
                 ...lifecycleRoles, 
-                legalRoleId: e.target.value ? parseInt(e.target.value, 10) : null 
-              })}
+                  legalRoleId: (value && value !== '' && !isNaN(parseInt(value, 10))) ? parseInt(value, 10) : null 
+                });
+              }}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={loadingRoles}
             >
-              <option value="">{t('common.select') || 'Bitte wählen...'}</option>
+              <option value="">{t('common.select')}</option>
               {roles.map(role => (
                 <option key={role.id} value={role.id}>
                   {role.name}

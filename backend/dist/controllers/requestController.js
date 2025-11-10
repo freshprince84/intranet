@@ -36,10 +36,26 @@ const branchSelect = {
 // Alle Requests abrufen
 const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Datenisolation: Standalone User sehen nur ihre eigenen Requests
+        const userId = parseInt(req.userId, 10);
+        const organizationId = req.organizationId;
+        // Basis-Filter: Datenisolation (Standalone vs. Organisation)
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
+        // Erweitere Filter um private/öffentliche Logik
+        // Private Requests: Nur für requesterId und responsibleId sichtbar
+        // Öffentliche Requests: Für alle User der Organisation sichtbar
+        const whereClause = Object.assign(Object.assign({}, isolationFilter), { OR: [
+                Object.assign({ isPrivate: false }, (organizationId ? { organizationId } : {})),
+                // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                {
+                    isPrivate: true,
+                    OR: [
+                        { requesterId: userId },
+                        { responsibleId: userId }
+                    ]
+                }
+            ] });
         const requests = yield prisma.request.findMany({
-            where: isolationFilter,
+            where: whereClause,
             include: {
                 requester: {
                     select: userSelect
@@ -66,6 +82,8 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
             title: request.title,
             description: request.description,
             status: request.status,
+            type: request.type,
+            isPrivate: request.isPrivate,
             dueDate: request.dueDate,
             createdAt: request.createdAt,
             updatedAt: request.updatedAt,
@@ -94,10 +112,24 @@ exports.getAllRequests = getAllRequests;
 const getRequestById = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        // Datenisolation: Prüfe ob User Zugriff auf diesen Request hat
+        const userId = parseInt(req.userId, 10);
+        const organizationId = req.organizationId;
+        // Basis-Filter: Datenisolation
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
+        // Erweitere Filter um private/öffentliche Logik
+        const whereClause = Object.assign(Object.assign({ id: parseInt(id) }, isolationFilter), { OR: [
+                Object.assign({ isPrivate: false }, (organizationId ? { organizationId } : {})),
+                // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                {
+                    isPrivate: true,
+                    OR: [
+                        { requesterId: userId },
+                        { responsibleId: userId }
+                    ]
+                }
+            ] });
         const request = yield prisma.request.findFirst({
-            where: Object.assign({ id: parseInt(id) }, isolationFilter),
+            where: whereClause,
             include: {
                 requester: {
                     select: userSelect
@@ -124,6 +156,8 @@ const getRequestById = (req, res) => __awaiter(void 0, void 0, void 0, function*
             title: request.title,
             description: request.description,
             status: request.status,
+            type: request.type,
+            isPrivate: request.isPrivate,
             dueDate: request.dueDate,
             createdAt: request.createdAt,
             updatedAt: request.updatedAt,
@@ -151,7 +185,7 @@ exports.getRequestById = getRequestById;
 // Neuen Request erstellen
 const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { title, description, requested_by_id, responsible_id, branch_id, status = 'approval', due_date, create_todo = false } = req.body;
+        const { title, description, requested_by_id, responsible_id, branch_id, status = 'approval', type = 'other', is_private = false, due_date, create_todo = false } = req.body;
         if (!title || !requested_by_id || !responsible_id || !branch_id) {
             return res.status(400).json({ message: 'Fehlende erforderliche Felder' });
         }
@@ -177,6 +211,8 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 title,
                 description: description || '',
                 status: status,
+                type: type,
+                isPrivate: is_private,
                 requesterId,
                 responsibleId,
                 branchId,
@@ -202,6 +238,8 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             title: request.title,
             description: request.description,
             status: request.status,
+            type: request.type,
+            isPrivate: request.isPrivate,
             dueDate: request.dueDate,
             createdAt: request.createdAt,
             updatedAt: request.updatedAt,
@@ -242,7 +280,7 @@ exports.createRequest = createRequest;
 const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
-        const { title, description, requested_by_id, responsible_id, branch_id, status, due_date, create_todo } = req.body;
+        const { title, description, requested_by_id, responsible_id, branch_id, status, type, is_private, due_date, create_todo } = req.body;
         // Prüfe, ob der Request existiert und zur Organisation gehört
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
         const existingRequest = yield prisma.request.findFirst({
@@ -291,6 +329,8 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 responsibleId: req.body.responsible_id ? parseInt(req.body.responsible_id, 10) : undefined,
                 branchId: req.body.branch_id ? parseInt(req.body.branch_id, 10) : undefined,
                 status: status,
+                type: type,
+                isPrivate: is_private !== undefined ? is_private : undefined,
                 dueDate: due_date ? new Date(due_date) : undefined,
                 createTodo: create_todo
             },
@@ -374,6 +414,8 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             title: updatedRequest.title,
             description: updatedRequest.description,
             status: updatedRequest.status,
+            type: updatedRequest.type,
+            isPrivate: updatedRequest.isPrivate,
             dueDate: updatedRequest.dueDate,
             createdAt: updatedRequest.createdAt,
             updatedAt: updatedRequest.updatedAt,

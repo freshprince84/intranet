@@ -620,6 +620,92 @@ export const StatusBadge = ({ status, processType }: { status: string, processTy
 );
 ```
 
+### ⚠️ KRITISCH: Button-Implementierung - KEIN TEXT IN BUTTONS!
+
+**WICHTIGSTE REGEL FÜR ALLE BUTTON-IMPLEMENTIERUNGEN:**
+- **Buttons müssen IMMER Icon-only sein (OHNE sichtbaren Text)!**
+- **Text gehört NUR ins `title` Attribut für Tooltips!**
+- **Diese Regel gilt für ALLE Buttons: Modals, Sidepanes, Dropdowns, Tabellen, Formulare, überall!**
+
+**Vor JEDER Button-Implementierung prüfen:**
+1. ✅ Hat der Button sichtbaren Text? → **ENTFERNEN!**
+2. ✅ Ist ein passendes Icon vorhanden? → **HINZUFÜGEN!**
+3. ✅ Ist der Text im `title` Attribut? → **HINZUFÜGEN!**
+4. ✅ Entspricht der Style dem Standard? → **ANPASSEN!**
+
+### ⚠️ KRITISCH: Übersetzungen - IMMER bei neuen Features hinzufügen!
+
+**WICHTIGSTE REGEL FÜR ALLE NEUEN FEATURES:**
+- **Übersetzungen sind TEIL DER IMPLEMENTIERUNG, nicht optional!**
+- **JEDE neue Komponente/Seite/Feature MUSS Übersetzungen in ALLEN Sprachen haben (de, en, es)!**
+- **Diese Regel gilt für ALLE neuen Features: Komponenten, Seiten, Modals, Tabs, Formulare, überall!**
+
+**Vor JEDER Feature-Implementierung prüfen:**
+1. ✅ Welche Texte werden angezeigt? → **ALLE identifizieren!**
+2. ✅ Sind Übersetzungen in `de.json` vorhanden? → **HINZUFÜGEN!**
+3. ✅ Sind Übersetzungen in `en.json` vorhanden? → **HINZUFÜGEN!**
+4. ✅ Sind Übersetzungen in `es.json` vorhanden? → **HINZUFÜGEN!**
+5. ✅ Werden `t()` Funktionen verwendet statt Hardcoded-Text? → **ANPASSEN!**
+
+**Standard-Übersetzungsstruktur:**
+```json
+// frontend/src/i18n/locales/de.json
+{
+  "featureName": {
+    "title": "Titel",
+    "create": "Erstellen",
+    "edit": "Bearbeiten",
+    "name": "Name",
+    "noItems": "Keine Einträge vorhanden",
+    "deleteConfirm": "Wirklich löschen?"
+  }
+}
+```
+
+**Verwendung in Komponenten:**
+```tsx
+// ✅ RICHTIG: Übersetzungen verwenden
+const { t } = useTranslation();
+<h2>{t('featureName.title')}</h2>
+<button>{t('featureName.create')}</button>
+
+// ❌ FALSCH: Hardcoded-Text
+<h2>Titel</h2>
+<button>Erstellen</button>
+```
+
+**Dateien für Übersetzungen:**
+- `frontend/src/i18n/locales/de.json` - Deutsch
+- `frontend/src/i18n/locales/en.json` - Englisch
+- `frontend/src/i18n/locales/es.json` - Spanisch
+
+**Standard-Button-Style:**
+```tsx
+// ✅ RICHTIG: Icon-only Button
+<button
+  onClick={handleAction}
+  className="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+  title="Aktionsbeschreibung"
+>
+  <CheckIcon className="h-4 w-4" />
+</button>
+
+// ❌ FALSCH: Button mit Text
+<button onClick={handleAction} className="px-2 py-1 bg-blue-600 text-white rounded">
+  Speichern
+</button>
+```
+
+**Standard-Icons:**
+- Speichern: `CheckIcon`
+- Abbrechen: `XMarkIcon`
+- Löschen: `TrashIcon`
+- Bearbeiten: `PencilIcon`
+- Umbenennen: `PencilIcon`
+- Hinzufügen: `PlusIcon`
+
+**Siehe auch:** `docs/core/DESIGN_STANDARDS.md` - Abschnitt "Buttons und Aktionselemente"
+
 #### Aktions-Buttons in Tabellen
 
 Für Aktions-Buttons (Bearbeiten, Löschen, Anzeigen) sollte ebenfalls eine wiederverwendbare Komponente erstellt werden:

@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DocumentTextIcon, ArrowPathIcon, CheckIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../../config/axios.ts';
+import { API_ENDPOINTS } from '../../config/api.ts';
 import useMessage from '../../hooks/useMessage.ts';
+import { organizationService } from '../../services/organizationService.ts';
 
 interface Organization {
   id: number;
@@ -34,6 +36,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [templateType, setTemplateType] = useState<'certificate' | 'contract'>('certificate');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -45,12 +48,29 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
   const loadTemplates = async () => {
     setLoading(true);
     try {
-      // TODO: Endpoint implementieren wenn Backend bereit ist
-      // const response = await axiosInstance.get('/organizations/current/document-templates');
-      // setTemplates(response.data.templates || []);
+      const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATION_LIFECYCLE.DOCUMENT_TEMPLATES);
+      const documentTemplates = response.data.documentTemplates || {};
       
-      // Temporär: Leere Liste
-      setTemplates([]);
+      // Konvertiere zu Template-Array
+      const templatesList: DocumentTemplate[] = [];
+      if (documentTemplates.employmentCertificate) {
+        templatesList.push({
+          name: 'Arbeitszeugnis',
+          type: 'certificate',
+          filePath: documentTemplates.employmentCertificate.path,
+          version: documentTemplates.employmentCertificate.version
+        });
+      }
+      if (documentTemplates.employmentContract) {
+        templatesList.push({
+          name: 'Arbeitsvertrag',
+          type: 'contract',
+          filePath: documentTemplates.employmentContract.path,
+          version: documentTemplates.employmentContract.version
+        });
+      }
+      
+      setTemplates(templatesList);
     } catch (error: any) {
       console.error('Fehler beim Laden der Templates:', error);
       if (error.response?.status !== 404) {
@@ -59,6 +79,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
           'error'
         );
       }
+      setTemplates([]);
     } finally {
       setLoading(false);
     }
@@ -81,18 +102,18 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('type', 'certificate'); // TODO: Aus UI auswählbar machen
+      formData.append('type', templateType === 'certificate' ? 'employmentCertificate' : 'employmentContract');
 
-      // TODO: Endpoint implementieren wenn Backend bereit ist
-      // const response = await axiosInstance.post('/organizations/current/document-templates', formData, {
-      //   headers: { 'Content-Type': 'multipart/form-data' }
-      // });
-      
-      // Temporär: Simuliere Upload
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await axiosInstance.post(
+        API_ENDPOINTS.ORGANIZATION_LIFECYCLE.UPLOAD_TEMPLATE,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        }
+      );
       
       showMessage(
-        t('lifecycle.templateUploaded') || 'Template erfolgreich hochgeladen',
+        response.data.message || t('lifecycle.templateUploaded') || 'Template erfolgreich hochgeladen',
         'success'
       );
       
@@ -112,14 +133,26 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
     }
   };
 
-  const handleDeleteTemplate = async (templateId: number) => {
+  const handleDeleteTemplate = async (templateType: 'certificate' | 'contract') => {
     if (!window.confirm(t('lifecycle.deleteTemplateConfirm') || 'Template wirklich löschen?')) {
       return;
     }
 
     try {
-      // TODO: Endpoint implementieren wenn Backend bereit ist
-      // await axiosInstance.delete(`/organizations/current/document-templates/${templateId}`);
+      // Hole aktuelle Organisation
+      const orgResponse = await axiosInstance.get(API_ENDPOINTS.ORGANIZATIONS.CURRENT);
+      const settings = orgResponse.data.settings || {};
+      
+      // Entferne Template
+      if (settings.documentTemplates) {
+        const typeKey = templateType === 'certificate' ? 'employmentCertificate' : 'employmentContract';
+        delete settings.documentTemplates[typeKey];
+        
+        // Aktualisiere Organisation
+        await axiosInstance.put(API_ENDPOINTS.ORGANIZATIONS.CURRENT, {
+          settings
+        });
+      }
       
       showMessage(
         t('lifecycle.templateDeleted') || 'Template erfolgreich gelöscht',
@@ -153,18 +186,28 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
             <DocumentTextIcon className="h-5 w-5 mr-2" />
             {t('organization.documentTemplates') || 'Dokumenten-Templates'}
           </h3>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title={uploading ? (t('common.uploading') || 'Lade hoch...') : (t('lifecycle.uploadTemplate') || 'Template hochladen')}
-          >
-            {uploading ? (
-              <ArrowPathIcon className="h-5 w-5 animate-spin" />
-            ) : (
-              <PlusIcon className="h-5 w-5" />
-            )}
-          </button>
+          <div className="flex items-center space-x-2">
+            <select
+              value={templateType}
+              onChange={(e) => setTemplateType(e.target.value as 'certificate' | 'contract')}
+              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm"
+            >
+              <option value="certificate">Arbeitszeugnis</option>
+              <option value="contract">Arbeitsvertrag</option>
+            </select>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+              className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              title={uploading ? (t('common.uploading') || 'Lade hoch...') : (t('lifecycle.uploadTemplate') || 'Template hochladen')}
+            >
+              {uploading ? (
+                <ArrowPathIcon className="h-5 w-5 animate-spin" />
+              ) : (
+                <PlusIcon className="h-5 w-5" />
+              )}
+            </button>
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -172,13 +215,6 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
             onChange={handleFileUpload}
             className="hidden"
           />
-        </div>
-        
-        {/* Hinweis: Template-System noch nicht vollständig implementiert */}
-        <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md">
-          <p className="text-sm text-yellow-800 dark:text-yellow-300">
-            {t('organization.templateSystemNotice') || '⚠️ Hinweis: Das Template-System ist noch nicht vollständig implementiert. Hochgeladene Templates werden aktuell nicht gespeichert oder verwendet. Dokumente werden mit einer Standard-Vorlage generiert.'}
-          </p>
         </div>
         
         {templates.length === 0 ? (
@@ -191,7 +227,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
           <div className="space-y-2">
             {templates.map((template) => (
               <div
-                key={template.id || template.name}
+                key={template.type}
                 className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
               >
                 <div>
@@ -202,9 +238,14 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
                       : (t('lifecycle.contract') || 'Arbeitsvertrag')}
                     {template.version && ` - Version ${template.version}`}
                   </div>
+                  {template.filePath && (
+                    <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      {template.filePath}
+                    </div>
+                  )}
                 </div>
                 <button
-                  onClick={() => template.id && handleDeleteTemplate(template.id)}
+                  onClick={() => handleDeleteTemplate(template.type)}
                   className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 rounded-md"
                   title={t('common.delete') || 'Löschen'}
                 >
@@ -217,14 +258,681 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
       </div>
       
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-        <h3 className="text-lg font-semibold mb-4 dark:text-white">
-          {t('organization.documentSettings') || 'Dokumenten-Einstellungen'}
-        </h3>
-        <div className="space-y-4">
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            {t('lifecycle.documentSettingsInfo') || 'Weitere Einstellungen für die Dokumenten-Generierung werden hier konfiguriert.'}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold flex items-center dark:text-white">
+            <DocumentTextIcon className="h-5 w-5 mr-2" />
+            {t('organization.documentSignatures') || 'Dokumenten-Signaturen'}
+          </h3>
+        </div>
+        
+        <SignatureUploadSection 
+          organization={organization}
+          onUpload={loadTemplates}
+        />
+      </div>
+      
+      <FieldPositionConfiguration 
+        organization={organization}
+        onSave={onSave}
+      />
+    </div>
+  );
+};
+
+interface SignatureUploadSectionProps {
+  organization: Organization | null;
+  onUpload: () => void;
+}
+
+const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
+  organization,
+  onUpload
+}) => {
+  const { t } = useTranslation();
+  const { showMessage } = useMessage();
+  const [signatures, setSignatures] = useState<Array<{
+    type: 'certificate' | 'contract';
+    signerName: string;
+    signerPosition?: string;
+    path: string;
+    position?: {
+      x: number;
+      y: number;
+      page: number;
+    };
+  }>>([]);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [signatureType, setSignatureType] = useState<'certificate' | 'contract'>('certificate');
+  const [signerName, setSignerName] = useState('');
+  const [signerPosition, setSignerPosition] = useState('');
+  const [positionX, setPositionX] = useState<string>('400');
+  const [positionY, setPositionY] = useState<string>('100');
+  const [positionPage, setPositionPage] = useState<string>('1');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (organization) {
+      loadSignatures();
+    }
+  }, [organization]);
+
+  const loadSignatures = async () => {
+    setLoading(true);
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATION_LIFECYCLE.DOCUMENT_SIGNATURES);
+      const documentSignatures = response.data.documentSignatures || {};
+      
+      const signaturesList: Array<{
+        type: 'certificate' | 'contract';
+        signerName: string;
+        signerPosition?: string;
+        path: string;
+        position?: {
+          x: number;
+          y: number;
+          page: number;
+        };
+      }> = [];
+      
+      if (documentSignatures.employmentCertificate) {
+        signaturesList.push({
+          type: 'certificate',
+          signerName: documentSignatures.employmentCertificate.signerName,
+          signerPosition: documentSignatures.employmentCertificate.signerPosition,
+          path: documentSignatures.employmentCertificate.path,
+          position: documentSignatures.employmentCertificate.position
+        });
+      }
+      if (documentSignatures.employmentContract) {
+        signaturesList.push({
+          type: 'contract',
+          signerName: documentSignatures.employmentContract.signerName,
+          signerPosition: documentSignatures.employmentContract.signerPosition,
+          path: documentSignatures.employmentContract.path,
+          position: documentSignatures.employmentContract.position
+        });
+      }
+      
+      setSignatures(signaturesList);
+    } catch (error: any) {
+      console.error('Fehler beim Laden der Signaturen:', error);
+      if (error.response?.status !== 404) {
+        showMessage(
+          error.response?.data?.message || t('lifecycle.loadSignaturesError') || 'Fehler beim Laden der Signaturen',
+          'error'
+        );
+      }
+      setSignatures([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Prüfe Dateityp
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+    if (!allowedTypes.includes(file.type)) {
+      showMessage(
+        t('lifecycle.onlyImageOrPdfAllowed') || 'Nur Bilder (JPEG, PNG, GIF) oder PDF-Dateien sind erlaubt',
+        'error'
+      );
+      return;
+    }
+
+    if (!signerName.trim()) {
+      showMessage(
+        t('lifecycle.signerNameRequired') || 'Name des Unterzeichners ist erforderlich',
+        'error'
+      );
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', signatureType === 'certificate' ? 'employmentCertificate' : 'employmentContract');
+      formData.append('signerName', signerName);
+      if (signerPosition) {
+        formData.append('signerPosition', signerPosition);
+      }
+      // Positionen hinzufügen
+      formData.append('positionX', positionX || '400');
+      formData.append('positionY', positionY || '100');
+      formData.append('page', positionPage || '1');
+
+      const response = await axiosInstance.post(
+        API_ENDPOINTS.ORGANIZATION_LIFECYCLE.UPLOAD_SIGNATURE,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        }
+      );
+      
+      showMessage(
+        response.data.message || t('lifecycle.signatureUploaded') || 'Signatur erfolgreich hochgeladen',
+        'success'
+      );
+      
+      // Reset form
+      setSignerName('');
+      setSignerPosition('');
+      setPositionX('400');
+      setPositionY('100');
+      setPositionPage('1');
+      
+      // Lade Signaturen neu
+      loadSignatures();
+      onUpload();
+    } catch (error: any) {
+      console.error('Fehler beim Hochladen:', error);
+      showMessage(
+        error.response?.data?.message || t('lifecycle.uploadError') || 'Fehler beim Hochladen',
+        'error'
+      );
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleDeleteSignature = async (signatureType: 'certificate' | 'contract') => {
+    if (!window.confirm(t('lifecycle.deleteSignatureConfirm') || 'Signatur wirklich löschen?')) {
+      return;
+    }
+
+    try {
+      const orgResponse = await axiosInstance.get(API_ENDPOINTS.ORGANIZATIONS.CURRENT);
+      const settings = orgResponse.data.settings || {};
+      
+      if (settings.documentSignatures) {
+        const typeKey = signatureType === 'certificate' ? 'employmentCertificate' : 'employmentContract';
+        delete settings.documentSignatures[typeKey];
+        
+        await axiosInstance.put(API_ENDPOINTS.ORGANIZATIONS.CURRENT, {
+          settings
+        });
+      }
+      
+      showMessage(
+        t('lifecycle.signatureDeleted') || 'Signatur erfolgreich gelöscht',
+        'success'
+      );
+      
+      loadSignatures();
+    } catch (error: any) {
+      console.error('Fehler beim Löschen:', error);
+      showMessage(
+        error.response?.data?.message || t('lifecycle.deleteError') || 'Fehler beim Löschen',
+        'error'
+      );
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-4">
+        <ArrowPathIcon className="h-5 w-5 animate-spin text-gray-400" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="border border-gray-300 dark:border-gray-600 rounded-lg p-4">
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('lifecycle.signatureType') || 'Signatur-Typ'}
+            </label>
+            <select
+              value={signatureType}
+              onChange={(e) => setSignatureType(e.target.value as 'certificate' | 'contract')}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+            >
+              <option value="certificate">{t('lifecycle.certificate') || 'Arbeitszeugnis'}</option>
+              <option value="contract">{t('lifecycle.contract') || 'Arbeitsvertrag'}</option>
+            </select>
           </div>
-          {/* TODO: Weitere Einstellungen hinzufügen wenn Backend bereit ist */}
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('lifecycle.signerName') || 'Name des Unterzeichners'} <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={signerName}
+              onChange={(e) => setSignerName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+              placeholder={t('lifecycle.signerNamePlaceholder') || 'z.B. Stefan Bossart'}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('lifecycle.signerPosition') || 'Position'}
+            </label>
+            <input
+              type="text"
+              value={signerPosition}
+              onChange={(e) => setSignerPosition(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+              placeholder={t('lifecycle.signerPositionPlaceholder') || 'z.B. Geschäftsführer'}
+            />
+          </div>
+          
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
+              {t('lifecycle.signaturePosition') || 'Signatur-Position im PDF'}
+            </h4>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  {t('lifecycle.positionX') || 'X (horizontal)'}
+                </label>
+                <input
+                  type="number"
+                  value={positionX}
+                  onChange={(e) => setPositionX(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm"
+                  placeholder="400"
+                  min="0"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {t('lifecycle.positionXHint') || '0 = links'}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  {t('lifecycle.positionY') || 'Y (vertikal)'}
+                </label>
+                <input
+                  type="number"
+                  value={positionY}
+                  onChange={(e) => setPositionY(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm"
+                  placeholder="100"
+                  min="0"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {t('lifecycle.positionYHint') || '0 = unten'}
+                </p>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                  {t('lifecycle.positionPage') || 'Seite'}
+                </label>
+                <input
+                  type="number"
+                  value={positionPage}
+                  onChange={(e) => setPositionPage(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm"
+                  placeholder="1"
+                  min="1"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {t('lifecycle.positionPageHint') || 'Seitennummer'}
+                </p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              {t('lifecycle.signaturePositionHint') || 'Koordinaten in PDF-Punkten (1 Punkt = 1/72 Zoll). A4: 595 x 842 Punkte. Standard: X=400, Y=100, Seite=1'}
+            </p>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              {t('lifecycle.signatureFile') || 'Signatur-Datei'} <span className="text-red-500">*</span>
+            </label>
+            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/gif,application/pdf"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading || !signerName.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {uploading ? (
+                  <span className="flex items-center space-x-2">
+                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                    <span>{t('common.uploading') || 'Lade hoch...'}</span>
+                  </span>
+                ) : (
+                  t('lifecycle.selectSignatureFile') || 'Datei auswählen'
+                )}
+              </button>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                {t('lifecycle.signatureFileHint') || 'JPEG, PNG, GIF oder PDF (max. 5MB)'}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {signatures.length > 0 && (
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t('lifecycle.uploadedSignatures') || 'Hochgeladene Signaturen'}
+          </h4>
+          {signatures.map((signature) => (
+            <div
+              key={signature.type}
+              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700 rounded-lg"
+            >
+              <div>
+                <div className="font-medium dark:text-white">
+                  {signature.type === 'certificate' 
+                    ? (t('lifecycle.certificate') || 'Arbeitszeugnis')
+                    : (t('lifecycle.contract') || 'Arbeitsvertrag')}
+                </div>
+                <div className="text-sm text-gray-500 dark:text-gray-400">
+                  {signature.signerName}
+                  {signature.signerPosition && ` - ${signature.signerPosition}`}
+                </div>
+                {signature.position && (
+                  <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    {t('lifecycle.position') || 'Position'}: X={signature.position.x}, Y={signature.position.y}, {t('lifecycle.page') || 'Seite'} {signature.position.page}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => handleDeleteSignature(signature.type)}
+                className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 rounded-md"
+                title={t('common.delete') || 'Löschen'}
+              >
+                <TrashIcon className="h-5 w-5" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface FieldPositionConfigurationProps {
+  organization: Organization | null;
+  onSave?: () => void;
+}
+
+const FieldPositionConfiguration: React.FC<FieldPositionConfigurationProps> = ({
+  organization,
+  onSave
+}) => {
+  const { t } = useTranslation();
+  const { showMessage } = useMessage();
+  const [templateType, setTemplateType] = useState<'certificate' | 'contract'>('certificate');
+  const [fields, setFields] = useState<Record<string, { x: number; y: number; fontSize?: number }>>({});
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Standard-Felder für Certificate und Contract
+  const certificateFields = ['userName', 'organizationName', 'currentDate', 'identificationNumber', 'startDate', 'endDate'];
+  const contractFields = ['userName', 'organizationName', 'currentDate', 'identificationNumber', 'startDate', 'endDate', 'position', 'salary', 'workingHours'];
+
+  useEffect(() => {
+    if (organization) {
+      loadFields();
+    }
+  }, [organization, templateType]);
+
+  const loadFields = async () => {
+    try {
+      const settings = organization?.settings as any;
+      const templateSettings = settings?.documentTemplates?.[templateType === 'certificate' ? 'employmentCertificate' : 'employmentContract'];
+      const savedFields = templateSettings?.fields || {};
+      
+      // Standard-Positionen (A4: 595.28 x 841.89 Punkte)
+      // Y-Koordinate: 0 ist unten, 841.89 ist oben (PDF-Koordinatensystem)
+      const pageHeight = 841.89;
+      const margin = 50;
+      const lineHeight = 20;
+      let currentY = pageHeight - margin - 30;
+      
+      // Lade gespeicherte Felder oder verwende Standard-Werte (synchronisiert mit Backend)
+      const defaultFields: Record<string, { x: number; y: number; fontSize?: number }> = {};
+      const fieldList = templateType === 'certificate' ? certificateFields : contractFields;
+      
+      // Standard-Positionen (wie im Backend getDefaultFieldPositions)
+      const defaultPositions: Record<string, { x: number; y: number; fontSize?: number }> = {
+        userName: { x: margin, y: currentY, fontSize: 14 },
+        organizationName: { x: margin, y: currentY - lineHeight, fontSize: 12 },
+        currentDate: { x: margin, y: currentY - lineHeight * 2, fontSize: 12 },
+        identificationNumber: { x: margin, y: currentY - lineHeight * 3, fontSize: 12 },
+        startDate: { x: margin, y: currentY - lineHeight * 4, fontSize: 12 },
+        endDate: { x: margin, y: currentY - lineHeight * 5, fontSize: 12 }
+      };
+      
+      if (templateType === 'contract') {
+        defaultPositions.position = { x: margin, y: currentY - lineHeight * 6, fontSize: 12 };
+        defaultPositions.salary = { x: margin, y: currentY - lineHeight * 7, fontSize: 12 };
+        defaultPositions.workingHours = { x: margin, y: currentY - lineHeight * 8, fontSize: 12 };
+      }
+      
+      fieldList.forEach((fieldName) => {
+        defaultFields[fieldName] = savedFields[fieldName] || defaultPositions[fieldName] || {
+          x: margin,
+          y: currentY,
+          fontSize: fieldName === 'userName' ? 14 : 12
+        };
+      });
+      
+      setFields(defaultFields);
+    } catch (error) {
+      console.error('Fehler beim Laden der Felder:', error);
+    }
+  };
+
+  const handleFieldChange = (fieldName: string, property: 'x' | 'y' | 'fontSize', value: string) => {
+    setFields(prev => ({
+      ...prev,
+      [fieldName]: {
+        ...prev[fieldName],
+        [property]: property === 'fontSize' ? parseFloat(value) || 12 : parseFloat(value) || 0
+      }
+    }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const orgResponse = await axiosInstance.get(API_ENDPOINTS.ORGANIZATIONS.CURRENT);
+      const currentSettings = orgResponse.data.settings || {};
+      
+      if (!currentSettings.documentTemplates) {
+        currentSettings.documentTemplates = {};
+      }
+      
+      const typeKey = templateType === 'certificate' ? 'employmentCertificate' : 'employmentContract';
+      if (!currentSettings.documentTemplates[typeKey]) {
+        currentSettings.documentTemplates[typeKey] = {};
+      }
+      
+      currentSettings.documentTemplates[typeKey].fields = fields;
+      
+      await organizationService.updateOrganization({
+        settings: currentSettings
+      });
+      
+      showMessage(
+        t('lifecycle.fieldPositionsSaved') || 'Feld-Positionen erfolgreich gespeichert',
+        'success'
+      );
+      
+      if (onSave) {
+        onSave();
+      }
+    } catch (error: any) {
+      console.error('Fehler beim Speichern:', error);
+      showMessage(
+        error.response?.data?.message || t('lifecycle.saveError') || 'Fehler beim Speichern',
+        'error'
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (window.confirm(t('lifecycle.resetFieldPositionsConfirm') || 'Positionen auf Standardwerte zurücksetzen?')) {
+      // Setze Felder auf Standard-Werte zurück
+      const pageHeight = 841.89;
+      const margin = 50;
+      const lineHeight = 20;
+      let currentY = pageHeight - margin - 30;
+      
+      const defaultPositions: Record<string, { x: number; y: number; fontSize?: number }> = {
+        userName: { x: margin, y: currentY, fontSize: 14 },
+        organizationName: { x: margin, y: currentY - lineHeight, fontSize: 12 },
+        currentDate: { x: margin, y: currentY - lineHeight * 2, fontSize: 12 },
+        identificationNumber: { x: margin, y: currentY - lineHeight * 3, fontSize: 12 },
+        startDate: { x: margin, y: currentY - lineHeight * 4, fontSize: 12 },
+        endDate: { x: margin, y: currentY - lineHeight * 5, fontSize: 12 }
+      };
+      
+      if (templateType === 'contract') {
+        defaultPositions.position = { x: margin, y: currentY - lineHeight * 6, fontSize: 12 };
+        defaultPositions.salary = { x: margin, y: currentY - lineHeight * 7, fontSize: 12 };
+        defaultPositions.workingHours = { x: margin, y: currentY - lineHeight * 8, fontSize: 12 };
+      }
+      
+      const fieldList = templateType === 'certificate' ? certificateFields : contractFields;
+      const resetFields: Record<string, { x: number; y: number; fontSize?: number }> = {};
+      
+      fieldList.forEach((fieldName) => {
+        resetFields[fieldName] = defaultPositions[fieldName] || {
+          x: margin,
+          y: currentY,
+          fontSize: fieldName === 'userName' ? 14 : 12
+        };
+      });
+      
+      setFields(resetFields);
+    }
+  };
+
+  const fieldList = templateType === 'certificate' ? certificateFields : contractFields;
+  const fieldLabels: Record<string, string> = {
+    userName: t('lifecycle.fieldUserName') || 'Benutzername',
+    organizationName: t('lifecycle.fieldOrganizationName') || 'Organisationsname',
+    currentDate: t('lifecycle.fieldCurrentDate') || 'Aktuelles Datum',
+    identificationNumber: t('lifecycle.fieldIdentificationNumber') || 'Ausweisnummer',
+    startDate: t('lifecycle.fieldStartDate') || 'Startdatum',
+    endDate: t('lifecycle.fieldEndDate') || 'Enddatum',
+    position: t('lifecycle.fieldPosition') || 'Position',
+    salary: t('lifecycle.fieldSalary') || 'Gehalt',
+    workingHours: t('lifecycle.fieldWorkingHours') || 'Arbeitsstunden'
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-semibold dark:text-white">
+          {t('organization.fieldPositions') || 'Feld-Positionen konfigurieren'}
+        </h3>
+        <div className="flex items-center space-x-2">
+          <select
+            value={templateType}
+            onChange={(e) => setTemplateType(e.target.value as 'certificate' | 'contract')}
+            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm"
+          >
+            <option value="certificate">{t('lifecycle.certificate') || 'Certificado Laboral'}</option>
+            <option value="contract">{t('lifecycle.contract') || 'Contrato de Trabajo'}</option>
+          </select>
+        </div>
+      </div>
+      
+      <div className="space-y-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+          <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
+            {t('lifecycle.fieldPositionsInfo') || 'Konfigurieren Sie die Positionen der Felder im Template-PDF.'}
+          </p>
+          <p className="text-xs text-blue-700 dark:text-blue-300">
+            {t('lifecycle.fieldPositionsHint') || 'Koordinaten in PDF-Punkten. A4: 595 x 842 Punkte. Y=0 ist unten, Y=842 ist oben. X=0 ist links, X=595 ist rechts.'}
+          </p>
+        </div>
+        
+        <div className="space-y-3 max-h-96 overflow-y-auto">
+          {fieldList.map((fieldName) => (
+            <div key={fieldName} className="border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+              <div className="font-medium text-sm dark:text-white mb-2">
+                {fieldLabels[fieldName] || fieldName}
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    X
+                  </label>
+                  <input
+                    type="number"
+                    value={fields[fieldName]?.x || 0}
+                    onChange={(e) => handleFieldChange(fieldName, 'x', e.target.value)}
+                    className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    Y
+                  </label>
+                  <input
+                    type="number"
+                    value={fields[fieldName]?.y || 0}
+                    onChange={(e) => handleFieldChange(fieldName, 'y', e.target.value)}
+                    className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm"
+                    min="0"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
+                    {t('lifecycle.fontSize') || 'Schriftgröße'}
+                  </label>
+                  <input
+                    type="number"
+                    value={fields[fieldName]?.fontSize || 12}
+                    onChange={(e) => handleFieldChange(fieldName, 'fontSize', e.target.value)}
+                    className="w-full px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm"
+                    min="8"
+                    max="72"
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="flex items-center justify-end space-x-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+          <button
+            onClick={handleReset}
+            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
+          >
+            {t('common.reset') || 'Zurücksetzen'}
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-800"
+          >
+            {saving ? (
+              <span className="flex items-center space-x-2">
+                <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                <span>{t('common.saving') || 'Speichern...'}</span>
+              </span>
+            ) : (
+              t('common.save') || 'Speichern'
+            )}
+          </button>
         </div>
       </div>
     </div>

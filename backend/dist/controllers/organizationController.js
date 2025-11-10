@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,10 +41,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateLifecycleRoles = exports.getLifecycleRoles = exports.updateCurrentOrganization = exports.updateOrganizationLanguage = exports.getOrganizationLanguage = exports.searchOrganizations = exports.processJoinRequest = exports.getJoinRequests = exports.createJoinRequest = exports.getCurrentOrganization = exports.getOrganizationStats = exports.deleteOrganization = exports.updateOrganization = exports.createOrganization = exports.getOrganizationById = exports.getAllOrganizations = void 0;
+exports.uploadSignatureMiddleware = exports.uploadTemplateMiddleware = exports.uploadDocumentSignature = exports.getDocumentSignatures = exports.uploadDocumentTemplate = exports.getDocumentTemplates = exports.updateLifecycleRoles = exports.getLifecycleRoles = exports.updateCurrentOrganization = exports.updateOrganizationLanguage = exports.getOrganizationLanguage = exports.searchOrganizations = exports.processJoinRequest = exports.getJoinRequests = exports.createJoinRequest = exports.getCurrentOrganization = exports.getOrganizationStats = exports.deleteOrganization = exports.updateOrganization = exports.createOrganization = exports.getOrganizationById = exports.getAllOrganizations = void 0;
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
+const multer_1 = __importDefault(require("multer"));
+const path = __importStar(require("path"));
+const fs = __importStar(require("fs"));
+const encryption_1 = require("../utils/encryption");
+const urlValidation_1 = require("../utils/urlValidation");
+const organizationSettingsSchema_1 = require("../validation/organizationSettingsSchema");
+const auditService_1 = require("../services/auditService");
 const prisma = new client_1.PrismaClient();
 // Validation Schemas
 const createOrganizationSchema = zod_1.z.object({
@@ -28,7 +71,7 @@ const updateOrganizationSchema = zod_1.z.object({
     isActive: zod_1.z.boolean().optional(),
     domain: zod_1.z.string().optional(),
     logo: zod_1.z.string().optional(),
-    settings: zod_1.z.record(zod_1.z.any()).optional()
+    settings: zod_1.z.record(zod_1.z.any()).optional() // Wird in updateCurrentOrganization spezifisch validiert
 });
 const languageSchema = zod_1.z.enum(['es', 'de', 'en']);
 // Alle Organisationen abrufen
@@ -666,7 +709,12 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
                 hint: 'Sie haben noch keine Organisation. Bitte erstellen Sie eine oder treten Sie einer bei.'
             });
         }
-        res.json(userRole.role.organization);
+        const organization = userRole.role.organization;
+        // ✅ ENTschlüssele Settings für Response (Frontend braucht entschlüsselte Werte)
+        if (organization.settings) {
+            organization.settings = (0, encryption_1.decryptApiSettings)(organization.settings);
+        }
+        res.json(organization);
     }
     catch (error) {
         console.error('Fehler beim Abrufen der Organisation:', error);
@@ -1000,7 +1048,7 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
         }
         // Validiere Eingabedaten
         const validatedData = updateOrganizationSchema.parse(req.body);
-        // Hole die aktuelle Organisation des Users
+        // Hole die aktuelle Organisation des Users mit Berechtigungen
         const userRole = yield prisma.userRole.findFirst({
             where: {
                 userId: Number(userId),
@@ -1009,7 +1057,8 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
             include: {
                 role: {
                     include: {
-                        organization: true
+                        organization: true,
+                        permissions: true
                     }
                 }
             }
@@ -1018,11 +1067,61 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
             return res.status(404).json({ message: 'Keine Organisation gefunden' });
         }
         const organization = userRole.role.organization;
-        // Wenn settings aktualisiert werden, merge sie mit bestehenden settings
+        // 🔒 BERECHTIGUNGSPRÜFUNG: Prüfe ob User Settings ändern darf
+        const hasPermission = userRole.role.permissions.some(p => p.entity === 'organization_management' &&
+            ['both', 'write'].includes(p.accessLevel));
+        if (!hasPermission) {
+            return res.status(403).json({ message: 'Keine Berechtigung, Organisation-Einstellungen zu ändern' });
+        }
+        // Wenn settings aktualisiert werden, validiere und verschlüssele sie
         let updateData = Object.assign({}, validatedData);
         if (validatedData.settings !== undefined) {
             const currentSettings = organization.settings || {};
-            updateData.settings = Object.assign(Object.assign({}, currentSettings), validatedData.settings);
+            const newSettings = Object.assign(Object.assign({}, currentSettings), validatedData.settings);
+            // ✅ LobbyPMS: Setze feste URL wenn nicht vorhanden
+            if (newSettings.lobbyPms && !newSettings.lobbyPms.apiUrl) {
+                newSettings.lobbyPms.apiUrl = 'https://app.lobbypms.com/api';
+            }
+            // ✅ VALIDIERUNG: Validiere API-Settings-Struktur
+            try {
+                (0, organizationSettingsSchema_1.validateApiSettings)(newSettings);
+            }
+            catch (validationError) {
+                if (validationError instanceof zod_1.z.ZodError) {
+                    return res.status(400).json({
+                        message: 'Validierungsfehler bei API-Einstellungen',
+                        errors: validationError.errors
+                    });
+                }
+                throw validationError;
+            }
+            // ✅ URL-VALIDIERUNG: Prüfe alle API-URLs gegen Whitelist
+            const urlErrors = (0, urlValidation_1.validateAllApiUrls)(newSettings);
+            if (urlErrors.length > 0) {
+                return res.status(400).json({
+                    message: 'Ungültige API-URLs',
+                    errors: urlErrors
+                });
+            }
+            // ✅ VERSCHLÜSSELUNG: Verschlüssele alle API-Keys vor dem Speichern
+            try {
+                const encryptedSettings = (0, encryption_1.encryptApiSettings)(newSettings);
+                updateData.settings = encryptedSettings;
+            }
+            catch (encryptionError) {
+                console.error('Error encrypting API settings:', encryptionError);
+                // Wenn ENCRYPTION_KEY nicht gesetzt ist, speichere unverschlüsselt (für Migration)
+                // TODO: Später sollte dies ein Fehler sein
+                if (encryptionError instanceof Error && encryptionError.message.includes('ENCRYPTION_KEY')) {
+                    console.warn('⚠️ ENCRYPTION_KEY nicht gesetzt - speichere unverschlüsselt (nur für Migration!)');
+                    updateData.settings = newSettings;
+                }
+                else {
+                    throw encryptionError;
+                }
+            }
+            // ✅ AUDIT-LOG: Protokolliere Settings-Änderungen
+            yield (0, auditService_1.logSettingsChange)(organization.id, Number(userId), currentSettings, newSettings, req.ip, req.get('user-agent'));
         }
         // Aktualisiere Organisation
         const updatedOrganization = yield prisma.organization.update({
@@ -1042,6 +1141,17 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                 updatedAt: true
             }
         });
+        // ✅ ENTschlüssele Settings für Response (Frontend braucht entschlüsselte Werte)
+        if (updatedOrganization.settings) {
+            try {
+                updatedOrganization.settings = (0, encryption_1.decryptApiSettings)(updatedOrganization.settings);
+            }
+            catch (decryptionError) {
+                console.error('Error decrypting API settings:', decryptionError);
+                // Bei Fehler: Settings bleiben verschlüsselt (für Migration)
+                // Frontend zeigt dann verschlüsselte Werte, aber das ist OK für Migration
+            }
+        }
         res.json(updatedOrganization);
     }
     catch (error) {
@@ -1052,9 +1162,15 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
             });
         }
         console.error('Error in updateCurrentOrganization:', error);
+        console.error('Error details:', {
+            message: error instanceof Error ? error.message : 'Unbekannter Fehler',
+            stack: error instanceof Error ? error.stack : undefined,
+            name: error instanceof Error ? error.name : undefined
+        });
         res.status(500).json({
             message: 'Fehler beim Aktualisieren der Organisation',
-            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler',
+            details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : undefined) : undefined
         });
     }
 });
@@ -1100,23 +1216,95 @@ const getLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, functi
 exports.getLifecycleRoles = getLifecycleRoles;
 // Lebenszyklus-Rollen-Konfiguration aktualisieren
 const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     try {
         if (!req.organizationId) {
             return res.status(400).json({ message: 'Keine Organisation gefunden' });
         }
         const { adminRoleId, hrRoleId, legalRoleId, employeeRoleIds } = req.body;
-        // Validiere Rollen-IDs
-        const roleIds = [adminRoleId, hrRoleId, legalRoleId, ...(employeeRoleIds || [])].filter(Boolean);
+        console.log('[updateLifecycleRoles] Request body:', { adminRoleId, hrRoleId, legalRoleId, employeeRoleIds });
+        console.log('[updateLifecycleRoles] Organization ID:', req.organizationId);
+        // Validiere Rollen-IDs (nur wenn sie gesetzt sind und > 0)
+        // Konvertiere zu Number und prüfe, ob gültig
+        const parseRoleId = (id) => {
+            if (id === null || id === undefined || id === '' || id === 'null' || id === 'undefined') {
+                return null;
+            }
+            const parsed = parseInt(String(id), 10);
+            return (!isNaN(parsed) && parsed > 0) ? parsed : null;
+        };
+        const parsedAdminRoleId = parseRoleId(adminRoleId);
+        const parsedHrRoleId = parseRoleId(hrRoleId);
+        const parsedLegalRoleId = parseRoleId(legalRoleId);
+        const parsedEmployeeRoleIds = (employeeRoleIds || []).map(parseRoleId).filter((id) => id !== null);
+        console.log('[updateLifecycleRoles] Parsed role IDs:', {
+            admin: parsedAdminRoleId,
+            hr: parsedHrRoleId,
+            legal: parsedLegalRoleId,
+            employees: parsedEmployeeRoleIds
+        });
+        // Prüfe auf doppelte Rollen (Admin, HR, Legal müssen unterschiedlich sein)
+        const uniqueRoleIds = new Set();
+        const duplicates = [];
+        if (parsedAdminRoleId) {
+            if (parsedAdminRoleId === parsedHrRoleId && parsedHrRoleId !== null) {
+                duplicates.push('Admin und HR dürfen nicht die gleiche Rolle verwenden');
+            }
+            if (parsedAdminRoleId === parsedLegalRoleId && parsedLegalRoleId !== null) {
+                duplicates.push('Admin und Legal dürfen nicht die gleiche Rolle verwenden');
+            }
+            uniqueRoleIds.add(parsedAdminRoleId);
+        }
+        if (parsedHrRoleId) {
+            if (parsedHrRoleId === parsedLegalRoleId && parsedLegalRoleId !== null) {
+                duplicates.push('HR und Legal dürfen nicht die gleiche Rolle verwenden');
+            }
+            uniqueRoleIds.add(parsedHrRoleId);
+        }
+        if (parsedLegalRoleId) {
+            uniqueRoleIds.add(parsedLegalRoleId);
+        }
+        if (duplicates.length > 0) {
+            return res.status(400).json({
+                message: 'Rollen-Konfiguration ungültig',
+                details: duplicates
+            });
+        }
+        const roleIds = [
+            parsedAdminRoleId,
+            parsedHrRoleId,
+            parsedLegalRoleId,
+            ...parsedEmployeeRoleIds
+        ].filter((id) => id !== null);
         if (roleIds.length > 0) {
+            // Hole ALLE Rollen der Organisation für Debugging
+            const allOrgRoles = yield prisma.role.findMany({
+                where: { organizationId: req.organizationId },
+                select: { id: true, name: true }
+            });
+            console.log('[updateLifecycleRoles] All roles in organization:', allOrgRoles);
             const validRoles = yield prisma.role.findMany({
                 where: {
                     id: { in: roleIds },
                     organizationId: req.organizationId
-                }
+                },
+                select: { id: true, name: true, organizationId: true }
             });
+            console.log('[updateLifecycleRoles] Valid roles found:', validRoles);
+            console.log('[updateLifecycleRoles] Requested role IDs:', roleIds);
             if (validRoles.length !== roleIds.length) {
-                return res.status(400).json({ message: 'Eine oder mehrere Rollen gehören nicht zu dieser Organisation' });
+                const missingRoleIds = roleIds.filter(id => !validRoles.some(r => r.id === id));
+                console.error('[updateLifecycleRoles] Missing roles:', missingRoleIds);
+                return res.status(400).json({
+                    message: 'Eine oder mehrere Rollen gehören nicht zu dieser Organisation',
+                    details: {
+                        requested: roleIds,
+                        found: validRoles.map(r => r.id),
+                        missing: missingRoleIds,
+                        organizationId: req.organizationId,
+                        allOrgRoles: allOrgRoles.map(r => ({ id: r.id, name: r.name }))
+                    }
+                });
             }
         }
         // Hole aktuelle Organisation
@@ -1128,12 +1316,31 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
             return res.status(404).json({ message: 'Organisation nicht gefunden' });
         }
         const settings = organization.settings || {};
-        settings.lifecycleRoles = {
-            adminRoleId: adminRoleId || null,
-            hrRoleId: hrRoleId || null,
-            legalRoleId: legalRoleId || null,
-            employeeRoleIds: employeeRoleIds || []
+        // Konvertiere zu Number oder null (verhindert, dass 0 als gültige ID gespeichert wird)
+        const normalizeRoleId = (id) => {
+            if (id === null || id === undefined || id === '' || id === 'null' || id === 'undefined') {
+                return null;
+            }
+            const parsed = parseInt(String(id), 10);
+            return (!isNaN(parsed) && parsed > 0) ? parsed : null;
         };
+        const normalizedAdminRoleId = normalizeRoleId(adminRoleId);
+        const normalizedHrRoleId = normalizeRoleId(hrRoleId);
+        const normalizedLegalRoleId = normalizeRoleId(legalRoleId);
+        const normalizedEmployeeRoleIds = (employeeRoleIds || []).map(normalizeRoleId).filter((id) => id !== null);
+        console.log('[updateLifecycleRoles] Normalized role IDs:', {
+            admin: normalizedAdminRoleId,
+            hr: normalizedHrRoleId,
+            legal: normalizedLegalRoleId,
+            employees: normalizedEmployeeRoleIds
+        });
+        settings.lifecycleRoles = {
+            adminRoleId: normalizedAdminRoleId,
+            hrRoleId: normalizedHrRoleId,
+            legalRoleId: normalizedLegalRoleId,
+            employeeRoleIds: normalizedEmployeeRoleIds
+        };
+        console.log('[updateLifecycleRoles] Settings to save:', JSON.stringify(settings.lifecycleRoles, null, 2));
         // Aktualisiere Organisation
         const updated = yield prisma.organization.update({
             where: { id: req.organizationId },
@@ -1145,8 +1352,9 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
                 settings: true
             }
         });
+        console.log('[updateLifecycleRoles] Organization updated successfully. Saved lifecycleRoles:', (_a = updated.settings) === null || _a === void 0 ? void 0 : _a.lifecycleRoles);
         res.json({
-            lifecycleRoles: (_a = updated.settings) === null || _a === void 0 ? void 0 : _a.lifecycleRoles,
+            lifecycleRoles: (_b = updated.settings) === null || _b === void 0 ? void 0 : _b.lifecycleRoles,
             message: 'Lebenszyklus-Rollen erfolgreich aktualisiert'
         });
     }
@@ -1159,4 +1367,239 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
     }
 });
 exports.updateLifecycleRoles = updateLifecycleRoles;
+// Multer-Konfiguration für Template-Uploads
+const TEMPLATES_DIR = path.join(__dirname, '../../uploads/document-templates');
+const SIGNATURES_DIR = path.join(__dirname, '../../uploads/document-signatures');
+// Stelle sicher, dass die Verzeichnisse existieren
+if (!fs.existsSync(TEMPLATES_DIR)) {
+    fs.mkdirSync(TEMPLATES_DIR, { recursive: true });
+}
+if (!fs.existsSync(SIGNATURES_DIR)) {
+    fs.mkdirSync(SIGNATURES_DIR, { recursive: true });
+}
+const templateStorage = multer_1.default.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, TEMPLATES_DIR);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, `template-${uniqueSuffix}${ext}`);
+    }
+});
+const signatureStorage = multer_1.default.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, SIGNATURES_DIR);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = path.extname(file.originalname);
+        cb(null, `signature-${uniqueSuffix}${ext}`);
+    }
+});
+const templateUpload = (0, multer_1.default)({
+    storage: templateStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype === 'application/pdf') {
+            cb(null, true);
+        }
+        else {
+            cb(new Error('Nur PDF-Dateien sind erlaubt'));
+        }
+    }
+});
+const signatureUpload = (0, multer_1.default)({
+    storage: signatureStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
+        if (allowedTypes.includes(file.mimetype)) {
+            cb(null, true);
+        }
+        else {
+            cb(new Error('Nur Bilder (JPEG, PNG, GIF) oder PDFs sind erlaubt'));
+        }
+    }
+});
+// Dokumenten-Templates abrufen
+const getDocumentTemplates = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!req.organizationId) {
+            return res.status(400).json({ message: 'Keine Organisation gefunden' });
+        }
+        const organization = yield prisma.organization.findUnique({
+            where: { id: req.organizationId },
+            select: { settings: true }
+        });
+        if (!organization) {
+            return res.status(404).json({ message: 'Organisation nicht gefunden' });
+        }
+        const settings = organization.settings || {};
+        const documentTemplates = settings.documentTemplates || {};
+        res.json({
+            documentTemplates: {
+                employmentCertificate: documentTemplates.employmentCertificate || null,
+                employmentContract: documentTemplates.employmentContract || null
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error in getDocumentTemplates:', error);
+        res.status(500).json({
+            message: 'Fehler beim Abrufen der Dokumenten-Templates',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.getDocumentTemplates = getDocumentTemplates;
+// Template hochladen
+const uploadDocumentTemplate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!req.organizationId) {
+            return res.status(400).json({ message: 'Keine Organisation gefunden' });
+        }
+        if (!req.file) {
+            return res.status(400).json({ message: 'Keine Datei hochgeladen' });
+        }
+        const { type } = req.body; // 'employmentCertificate' oder 'employmentContract'
+        if (!type || !['employmentCertificate', 'employmentContract'].includes(type)) {
+            return res.status(400).json({ message: 'Ungültiger Template-Typ' });
+        }
+        // Hole aktuelle Organisation
+        const organization = yield prisma.organization.findUnique({
+            where: { id: req.organizationId },
+            select: { settings: true }
+        });
+        if (!organization) {
+            return res.status(404).json({ message: 'Organisation nicht gefunden' });
+        }
+        const settings = organization.settings || {};
+        if (!settings.documentTemplates) {
+            settings.documentTemplates = {};
+        }
+        // Speichere Template-Informationen
+        const relativePath = `document-templates/${req.file.filename}`;
+        const existingTemplate = settings.documentTemplates[type];
+        const newVersion = (existingTemplate === null || existingTemplate === void 0 ? void 0 : existingTemplate.version)
+            ? `${parseFloat(existingTemplate.version) + 0.1}.0`
+            : '1.0';
+        settings.documentTemplates[type] = {
+            path: relativePath,
+            version: newVersion,
+            uploadDate: new Date().toISOString()
+        };
+        // Aktualisiere Organisation
+        yield prisma.organization.update({
+            where: { id: req.organizationId },
+            data: { settings }
+        });
+        res.json({
+            message: 'Template erfolgreich hochgeladen',
+            template: settings.documentTemplates[type]
+        });
+    }
+    catch (error) {
+        console.error('Error in uploadDocumentTemplate:', error);
+        res.status(500).json({
+            message: 'Fehler beim Hochladen des Templates',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.uploadDocumentTemplate = uploadDocumentTemplate;
+// Dokumenten-Signaturen abrufen
+const getDocumentSignatures = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!req.organizationId) {
+            return res.status(400).json({ message: 'Keine Organisation gefunden' });
+        }
+        const organization = yield prisma.organization.findUnique({
+            where: { id: req.organizationId },
+            select: { settings: true }
+        });
+        if (!organization) {
+            return res.status(404).json({ message: 'Organisation nicht gefunden' });
+        }
+        const settings = organization.settings || {};
+        const documentSignatures = settings.documentSignatures || {};
+        res.json({
+            documentSignatures: {
+                employmentCertificate: documentSignatures.employmentCertificate || null,
+                employmentContract: documentSignatures.employmentContract || null
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error in getDocumentSignatures:', error);
+        res.status(500).json({
+            message: 'Fehler beim Abrufen der Dokumenten-Signaturen',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.getDocumentSignatures = getDocumentSignatures;
+// Signatur hochladen
+const uploadDocumentSignature = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        if (!req.organizationId) {
+            return res.status(400).json({ message: 'Keine Organisation gefunden' });
+        }
+        if (!req.file) {
+            return res.status(400).json({ message: 'Keine Datei hochgeladen' });
+        }
+        const { type, signerName, signerPosition, positionX, positionY, page } = req.body;
+        if (!type || !['employmentCertificate', 'employmentContract'].includes(type)) {
+            return res.status(400).json({ message: 'Ungültiger Signatur-Typ' });
+        }
+        if (!signerName) {
+            return res.status(400).json({ message: 'Name des Unterzeichners ist erforderlich' });
+        }
+        // Hole aktuelle Organisation
+        const organization = yield prisma.organization.findUnique({
+            where: { id: req.organizationId },
+            select: { settings: true }
+        });
+        if (!organization) {
+            return res.status(404).json({ message: 'Organisation nicht gefunden' });
+        }
+        const settings = organization.settings || {};
+        if (!settings.documentSignatures) {
+            settings.documentSignatures = {};
+        }
+        // Speichere Signatur-Informationen
+        const relativePath = `document-signatures/${req.file.filename}`;
+        settings.documentSignatures[type] = {
+            path: relativePath,
+            signerName,
+            signerPosition: signerPosition || null,
+            position: {
+                x: positionX ? parseFloat(positionX) : 400,
+                y: positionY ? parseFloat(positionY) : 100,
+                page: page ? parseInt(page, 10) : 1
+            },
+            uploadDate: new Date().toISOString()
+        };
+        // Aktualisiere Organisation
+        yield prisma.organization.update({
+            where: { id: req.organizationId },
+            data: { settings }
+        });
+        res.json({
+            message: 'Signatur erfolgreich hochgeladen',
+            signature: settings.documentSignatures[type]
+        });
+    }
+    catch (error) {
+        console.error('Error in uploadDocumentSignature:', error);
+        res.status(500).json({
+            message: 'Fehler beim Hochladen der Signatur',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.uploadDocumentSignature = uploadDocumentSignature;
+// Multer-Middleware exportieren
+exports.uploadTemplateMiddleware = templateUpload.single('file');
+exports.uploadSignatureMiddleware = signatureUpload.single('file');
 //# sourceMappingURL=organizationController.js.map

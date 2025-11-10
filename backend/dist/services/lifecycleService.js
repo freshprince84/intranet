@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LifecycleService = void 0;
 const client_1 = require("@prisma/client");
 const taskAutomationService_1 = require("./taskAutomationService");
+const documentService_1 = require("./documentService");
 const prisma = new client_1.PrismaClient();
 /**
  * Service für Mitarbeiterlebenszyklus-Verwaltung
@@ -99,7 +100,7 @@ class LifecycleService {
     /**
      * Aktualisiert den Status eines Lebenszyklus
      */
-    static updateStatus(userId, status, data) {
+    static updateStatus(userId, status, data, generatedBy) {
         return __awaiter(this, void 0, void 0, function* () {
             const lifecycle = yield prisma.employeeLifecycle.findUnique({
                 where: { userId }
@@ -130,6 +131,81 @@ class LifecycleService {
             }
             if (status === 'archived' && !lifecycle.offboardingCompletedAt) {
                 updateData.offboardingCompletedAt = new Date();
+                // Erstelle automatisch Arbeitszeugnis, falls noch keines existiert
+                try {
+                    const existingCertificates = yield prisma.employmentCertificate.findMany({
+                        where: { lifecycleId: lifecycle.id }
+                    });
+                    // Nur erstellen, wenn noch kein Zertifikat existiert
+                    if (existingCertificates.length === 0 && generatedBy) {
+                        yield this.createCertificate(userId, {
+                            certificateType: 'employment',
+                            templateUsed: 'default',
+                            templateVersion: '1.0'
+                        }, generatedBy);
+                        console.log(`✅ Automatisch Arbeitszeugnis erstellt für User ${userId} beim Offboarding-Abschluss`);
+                    }
+                }
+                catch (error) {
+                    // Logge Fehler, aber breche nicht ab
+                    console.error('Fehler beim automatischen Erstellen des Arbeitszeugnisses:', error);
+                }
+                // Deaktiviere User (nicht löschen!)
+                try {
+                    yield prisma.user.update({
+                        where: { id: userId },
+                        data: { active: false }
+                    });
+                    console.log(`✅ User ${userId} wurde deaktiviert beim Archivieren`);
+                }
+                catch (error) {
+                    // Logge Fehler, aber breche nicht ab
+                    console.error('Fehler beim Deaktivieren des Users:', error);
+                }
+                // Optional: Prüfe, ob alle Offboarding-Tasks abgeschlossen sind (nur Warnung)
+                // Suche Tasks, die für diesen User erstellt wurden (über Branch oder Rolle)
+                try {
+                    // Hole User mit Branch-Informationen
+                    const user = yield prisma.user.findUnique({
+                        where: { id: userId },
+                        include: {
+                            branches: {
+                                take: 1,
+                                include: {
+                                    branch: true
+                                }
+                            }
+                        }
+                    });
+                    if (user && user.branches.length > 0) {
+                        const branchId = user.branches[0].branch.id;
+                        const offboardingTasks = yield prisma.task.findMany({
+                            where: {
+                                branchId: branchId,
+                                title: {
+                                    in: [
+                                        'Crear certificado laboral',
+                                        'Realizar liquidación final',
+                                        'Desafiliar de seguridad social'
+                                    ]
+                                },
+                                // Prüfe, ob Task-Beschreibung den User-Namen enthält
+                                description: {
+                                    contains: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email
+                                }
+                            }
+                        });
+                        const completedTasks = offboardingTasks.filter(task => task.status === 'done');
+                        if (offboardingTasks.length > 0 && completedTasks.length < offboardingTasks.length) {
+                            console.warn(`⚠️ User ${userId} wird archiviert, aber nicht alle Offboarding-Tasks sind abgeschlossen ` +
+                                `(${completedTasks.length}/${offboardingTasks.length})`);
+                        }
+                    }
+                }
+                catch (error) {
+                    // Logge Fehler, aber breche nicht ab
+                    console.error('Fehler beim Prüfen der Offboarding-Tasks:', error);
+                }
             }
             // Zusätzliche Daten
             if (data) {
@@ -348,7 +424,7 @@ class LifecycleService {
     }
     /**
      * Erstellt ein neues Arbeitszeugnis
-     * TODO: PDF-Generierung wird später implementiert (documentService)
+     * Generiert automatisch ein PDF, falls pdfPath nicht angegeben ist
      */
     static createCertificate(userId, data, generatedBy) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -368,14 +444,25 @@ class LifecycleService {
                     isLatest: false
                 }
             });
+            // Generiere PDF falls nicht angegeben
+            let pdfPath = data.pdfPath;
+            if (!pdfPath) {
+                pdfPath = yield documentService_1.DocumentService.generateCertificate({
+                    userId,
+                    certificateType: data.certificateType,
+                    templateUsed: data.templateUsed,
+                    templateVersion: data.templateVersion,
+                    customText: data.customText
+                }, generatedBy);
+            }
             // Erstelle neues Certificate
             const certificate = yield prisma.employmentCertificate.create({
                 data: {
                     lifecycleId: lifecycle.id,
                     certificateType: data.certificateType || 'employment',
-                    pdfPath: data.pdfPath,
-                    templateUsed: data.templateUsed,
-                    templateVersion: data.templateVersion,
+                    pdfPath,
+                    templateUsed: data.templateUsed || 'default',
+                    templateVersion: data.templateVersion || '1.0',
                     generatedBy,
                     isLatest: true
                 },
@@ -518,7 +605,7 @@ class LifecycleService {
     }
     /**
      * Erstellt einen neuen Arbeitsvertrag
-     * TODO: PDF-Generierung wird später implementiert (documentService)
+     * Generiert automatisch ein PDF, falls pdfPath nicht angegeben ist
      */
     static createContract(userId, data, generatedBy) {
         return __awaiter(this, void 0, void 0, function* () {
@@ -538,6 +625,22 @@ class LifecycleService {
                     isLatest: false
                 }
             });
+            // Generiere PDF falls nicht angegeben
+            let pdfPath = data.pdfPath;
+            if (!pdfPath) {
+                pdfPath = yield documentService_1.DocumentService.generateContract({
+                    userId,
+                    contractType: data.contractType || 'employment',
+                    startDate: data.startDate,
+                    endDate: data.endDate,
+                    salary: data.salary,
+                    workingHours: data.workingHours,
+                    position: data.position,
+                    templateUsed: data.templateUsed,
+                    templateVersion: data.templateVersion,
+                    customText: data.customText
+                }, generatedBy);
+            }
             // Erstelle neuen Contract
             const contract = yield prisma.employmentContract.create({
                 data: {
@@ -548,9 +651,9 @@ class LifecycleService {
                     salary: data.salary,
                     workingHours: data.workingHours,
                     position: data.position,
-                    pdfPath: data.pdfPath,
-                    templateUsed: data.templateUsed,
-                    templateVersion: data.templateVersion,
+                    pdfPath,
+                    templateUsed: data.templateUsed || 'default',
+                    templateVersion: data.templateVersion || '1.0',
                     generatedBy,
                     isLatest: true
                 },

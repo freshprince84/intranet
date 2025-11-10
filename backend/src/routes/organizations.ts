@@ -12,7 +12,13 @@ import {
   getOrganizationLanguage,
   updateOrganizationLanguage,
   getLifecycleRoles,
-  updateLifecycleRoles
+  updateLifecycleRoles,
+  getDocumentTemplates,
+  uploadDocumentTemplate,
+  uploadTemplateMiddleware,
+  getDocumentSignatures,
+  uploadDocumentSignature,
+  uploadSignatureMiddleware
 } from '../controllers/organizationController';
 import { 
   createJoinRequest,
@@ -59,6 +65,14 @@ router.patch('/join-requests/:id', processJoinRequest);
 // Lebenszyklus-Rollen-Konfiguration
 router.get('/current/lifecycle-roles', getLifecycleRoles);
 router.put('/current/lifecycle-roles', updateLifecycleRoles);
+
+// Dokumenten-Templates
+router.get('/current/document-templates', getDocumentTemplates);
+router.post('/current/document-templates/upload', uploadTemplateMiddleware, uploadDocumentTemplate);
+
+// Dokumenten-Signaturen
+router.get('/current/document-signatures', getDocumentSignatures);
+router.post('/current/document-signatures/upload', uploadSignatureMiddleware, uploadDocumentSignature);
 
 // Suche
 router.get('/search', searchOrganizations);

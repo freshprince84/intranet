@@ -26,9 +26,13 @@ import monthlyConsultationReportsRoutes from './routes/monthlyConsultationReport
 import databaseRoutes from './routes/database';
 import claudeRoutes from './routes/claudeRoutes';
 import organizationRoutes from './routes/organizations';
+import lobbyPmsRoutes from './routes/lobbyPms';
+import boldPaymentRoutes from './routes/boldPayment';
+import ttlockRoutes from './routes/ttlock';
 import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 import { checkAndGenerateMonthlyReports, triggerMonthlyReportCheck } from './services/monthlyReportScheduler';
+import { ReservationScheduler } from './services/reservationScheduler';
 
 const app = express();
 
@@ -129,6 +133,9 @@ setInterval(async () => {
   }
 }, MONTHLY_REPORT_CHECK_INTERVAL_MS);
 
+// Starte Reservation Scheduler
+ReservationScheduler.start();
+
 // Eine direkte Test-Route für die Diagnose
 app.get('/api/test-route', (req: Request, res: Response) => {
   res.json({ 
@@ -147,6 +154,24 @@ app.post('/api/admin/trigger-monthly-reports', async (req: Request, res: Respons
     console.error('Fehler beim manuellen Auslösen der Monatsabrechnungsprüfung:', error);
     res.status(500).json({ 
       message: 'Fehler beim Auslösen der Monatsabrechnungsprüfung',
+      error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+    });
+  }
+});
+
+// Test-Route für manuelle Auslösung der Check-in-Einladungen
+app.post('/api/admin/trigger-check-in-invitations', async (req: Request, res: Response) => {
+  try {
+    await ReservationScheduler.triggerManually();
+    res.json({ 
+      success: true,
+      message: 'Check-in-Einladungen erfolgreich versendet'
+    });
+  } catch (error) {
+    console.error('Fehler beim manuellen Auslösen der Check-in-Einladungen:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Fehler beim Auslösen der Check-in-Einladungen',
       error: error instanceof Error ? error.message : 'Unbekannter Fehler'
     });
   }
@@ -194,6 +219,9 @@ app.use('/api/monthly-consultation-reports', monthlyConsultationReportsRoutes);
 app.use('/api/database', databaseRoutes);
 app.use('/api/claude', claudeRoutes);
 app.use('/api/organizations', organizationRoutes);
+app.use('/api/lobby-pms', lobbyPmsRoutes);
+app.use('/api/bold-payment', boldPaymentRoutes);
+app.use('/api/ttlock', ttlockRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

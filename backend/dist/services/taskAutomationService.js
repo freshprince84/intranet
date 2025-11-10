@@ -73,34 +73,97 @@ class TaskAutomationService {
                 }
                 // Wenn keine Legal-Rolle gefunden, keine Tasks erstellen
                 if (!legalRoleId) {
-                    console.warn(`Keine Legal-Rolle gefunden für Organisation ${organizationId}. Onboarding-Tasks werden nicht erstellt.`);
+                    console.warn(`[createOnboardingTasks] Keine Legal-Rolle gefunden für Organisation ${organizationId}. Onboarding-Tasks werden nicht erstellt.`);
+                    console.warn(`[createOnboardingTasks] LifecycleRoles config:`, JSON.stringify(lifecycleRoles, null, 2));
+                    // Debug: Zeige alle Rollen der Organisation
+                    const allRoles = yield prisma.role.findMany({
+                        where: { organizationId },
+                        select: { id: true, name: true }
+                    });
+                    console.warn(`[createOnboardingTasks] Verfügbare Rollen in Organisation ${organizationId}:`, allRoles);
                     return [];
                 }
+                console.log(`[createOnboardingTasks] Legal-Rolle gefunden: ID=${legalRoleId} für Organisation ${organizationId}`);
+                // Bestimme Admin-User für Quality Control
+                let adminUserId = null;
+                if (lifecycleRoles === null || lifecycleRoles === void 0 ? void 0 : lifecycleRoles.adminRoleId) {
+                    const adminUser = yield prisma.user.findFirst({
+                        where: {
+                            roles: {
+                                some: {
+                                    roleId: lifecycleRoles.adminRoleId,
+                                    lastUsed: true
+                                }
+                            }
+                        }
+                    });
+                    if (adminUser) {
+                        adminUserId = adminUser.id;
+                    }
+                }
+                // Fallback: Suche nach Admin-Rolle und ersten Admin-User
+                if (!adminUserId) {
+                    const adminRole = yield prisma.role.findFirst({
+                        where: {
+                            organizationId,
+                            name: {
+                                contains: 'Admin',
+                                mode: 'insensitive'
+                            }
+                        }
+                    });
+                    if (adminRole) {
+                        const adminUser = yield prisma.user.findFirst({
+                            where: {
+                                roles: {
+                                    some: {
+                                        roleId: adminRole.id,
+                                        lastUsed: true
+                                    }
+                                }
+                            }
+                        });
+                        if (adminUser) {
+                            adminUserId = adminUser.id;
+                        }
+                    }
+                }
                 // Hole erste Branch des Users (für Tasks)
-                const userBranch = (_a = user.branches[0]) === null || _a === void 0 ? void 0 : _a.branch;
+                let userBranch = (_a = user.branches[0]) === null || _a === void 0 ? void 0 : _a.branch;
+                // Fallback: Wenn User keine Branch hat, verwende erste Branch der Organisation
                 if (!userBranch) {
-                    throw new Error('User hat keine Niederlassung zugewiesen');
+                    console.warn(`[createOnboardingTasks] User ${userId} hat keine Niederlassung zugewiesen. Verwende erste Branch der Organisation.`);
+                    const firstOrgBranch = yield prisma.branch.findFirst({
+                        where: { organizationId },
+                        orderBy: { id: 'asc' }
+                    });
+                    if (!firstOrgBranch) {
+                        console.error(`[createOnboardingTasks] Keine Branch in Organisation ${organizationId} gefunden. Tasks können nicht erstellt werden.`);
+                        throw new Error('Organisation hat keine Niederlassung. Bitte erstellen Sie zuerst eine Niederlassung.');
+                    }
+                    userBranch = firstOrgBranch;
+                    console.log(`[createOnboardingTasks] Verwende Branch "${userBranch.name}" (ID: ${userBranch.id}) als Fallback.`);
                 }
                 // Definiere Tasks für Sozialversicherungen (Kolumbien)
                 const socialSecurityTasks = [
                     {
-                        title: 'ARL-Anmeldung durchführen',
-                        description: `ARL-Anmeldung für ${user.firstName} ${user.lastName} durchführen. Erforderliche Daten werden automatisch generiert.`,
+                        title: 'Realizar afiliación ARL',
+                        description: `Realizar afiliación ARL para ${user.firstName} ${user.lastName}. Los datos requeridos se generarán automáticamente.`,
                         type: 'arl'
                     },
                     {
-                        title: 'EPS-Anmeldung prüfen/ durchführen',
-                        description: `EPS-Anmeldung für ${user.firstName} ${user.lastName} prüfen. Falls erforderlich, Anmeldung durchführen.`,
+                        title: 'Revisar/realizar afiliación EPS',
+                        description: `Revisar afiliación EPS para ${user.firstName} ${user.lastName}. Si es necesario, realizar la afiliación.`,
                         type: 'eps'
                     },
                     {
-                        title: 'Pension-Anmeldung durchführen',
-                        description: `Pension-Anmeldung für ${user.firstName} ${user.lastName} durchführen. Erforderliche Daten werden automatisch generiert.`,
+                        title: 'Realizar afiliación Pensión',
+                        description: `Realizar afiliación Pensión para ${user.firstName} ${user.lastName}. Los datos requeridos se generarán automáticamente.`,
                         type: 'pension'
                     },
                     {
-                        title: 'Caja-Anmeldung durchführen',
-                        description: `Caja-Anmeldung für ${user.firstName} ${user.lastName} durchführen. Erforderliche Daten werden automatisch generiert.`,
+                        title: 'Realizar afiliación Caja',
+                        description: `Realizar afiliación Caja para ${user.firstName} ${user.lastName}. Los datos requeridos se generarán automáticamente.`,
                         type: 'caja'
                     }
                 ];
@@ -108,17 +171,28 @@ class TaskAutomationService {
                 // Erstelle Tasks
                 for (const taskData of socialSecurityTasks) {
                     try {
+                        const taskDataToCreate = {
+                            title: taskData.title,
+                            description: taskData.description,
+                            status: 'open',
+                            roleId: legalRoleId,
+                            branchId: userBranch.id,
+                            organizationId: organizationId || undefined,
+                            // Setze Fälligkeitsdatum auf 7 Tage in der Zukunft
+                            dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                        };
+                        // Füge qualityControlId nur hinzu, wenn ein Admin-User gefunden wurde
+                        if (adminUserId) {
+                            taskDataToCreate.qualityControlId = adminUserId;
+                        }
+                        console.log(`[createOnboardingTasks] Erstelle Task "${taskData.title}" mit Daten:`, {
+                            roleId: legalRoleId,
+                            qualityControlId: adminUserId,
+                            organizationId: organizationId,
+                            branchId: userBranch.id
+                        });
                         const task = yield prisma.task.create({
-                            data: {
-                                title: taskData.title,
-                                description: taskData.description,
-                                status: 'open',
-                                roleId: legalRoleId,
-                                branchId: userBranch.id,
-                                organizationId: organizationId || undefined,
-                                // Setze Fälligkeitsdatum auf 7 Tage in der Zukunft
-                                dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-                            },
+                            data: taskDataToCreate,
                             include: {
                                 role: {
                                     select: {
@@ -128,6 +202,7 @@ class TaskAutomationService {
                                 }
                             }
                         });
+                        console.log(`[createOnboardingTasks] Task erstellt: ID=${task.id}, Title="${task.title}", RoleId=${task.roleId}, OrganizationId=${task.organizationId}`);
                         createdTasks.push(task);
                         // Erstelle Lifecycle-Event
                         const lifecycle = yield prisma.employeeLifecycle.findUnique({
@@ -250,18 +325,18 @@ class TaskAutomationService {
                 // Definiere Offboarding-Tasks
                 const offboardingTasks = [
                     {
-                        title: 'Arbeitszeugnis erstellen',
-                        description: `Arbeitszeugnis für ${user.firstName} ${user.lastName} erstellen.`,
+                        title: 'Crear certificado laboral',
+                        description: `Crear certificado laboral para ${user.firstName} ${user.lastName}.`,
                         type: 'certificate'
                     },
                     {
-                        title: 'Finale Abrechnung durchführen',
-                        description: `Finale Abrechnung für ${user.firstName} ${user.lastName} durchführen.`,
+                        title: 'Realizar liquidación final',
+                        description: `Realizar liquidación final para ${user.firstName} ${user.lastName}.`,
                         type: 'payroll'
                     },
                     {
-                        title: 'Sozialversicherungen abmelden',
-                        description: `Sozialversicherungen (ARL, EPS, Pension, Caja) für ${user.firstName} ${user.lastName} abmelden.`,
+                        title: 'Desafiliar de seguridad social',
+                        description: `Desafiliar de seguridad social (ARL, EPS, Pensión, Caja) para ${user.firstName} ${user.lastName}.`,
                         type: 'social_security'
                     }
                 ];
@@ -399,15 +474,15 @@ class TaskAutomationService {
                     throw new Error('User hat keine Niederlassung zugewiesen');
                 }
                 const taskTitles = {
-                    arl: 'ARL-Anmeldung durchführen',
-                    eps: 'EPS-Anmeldung prüfen/durchführen',
-                    pension: 'Pension-Anmeldung durchführen',
-                    caja: 'Caja-Anmeldung durchführen'
+                    arl: 'Realizar afiliación ARL',
+                    eps: 'Revisar/realizar afiliación EPS',
+                    pension: 'Realizar afiliación Pensión',
+                    caja: 'Realizar afiliación Caja'
                 };
                 const task = yield prisma.task.create({
                     data: {
                         title: taskTitles[type],
-                        description: `${taskTitles[type]} für ${user.firstName} ${user.lastName}. Erforderliche Daten werden automatisch generiert.`,
+                        description: `${taskTitles[type]} para ${user.firstName} ${user.lastName}. Los datos requeridos se generarán automáticamente.`,
                         status: 'open',
                         roleId: legalRoleId,
                         branchId: userBranch.id,
@@ -465,6 +540,142 @@ class TaskAutomationService {
             }
             catch (error) {
                 console.error(`Fehler beim Erstellen des Sozialversicherungs-Tasks (${type}):`, error);
+                throw error;
+            }
+        });
+    }
+    /**
+     * Erstellt automatisch einen Task für eine Reservierung
+     * Wird aufgerufen, wenn eine neue Reservierung synchronisiert wird
+     *
+     * @param reservation - Reservierung
+     * @param organizationId - ID der Organisation
+     * @returns Erstellter Task
+     */
+    static createReservationTask(reservation, organizationId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // Hole Organisation Settings
+                const organization = yield prisma.organization.findUnique({
+                    where: { id: organizationId },
+                    select: { settings: true }
+                });
+                if (!organization) {
+                    throw new Error('Organisation nicht gefunden');
+                }
+                const settings = organization.settings;
+                const lobbyPmsSettings = settings === null || settings === void 0 ? void 0 : settings.lobbyPms;
+                // Prüfe ob automatische Task-Erstellung aktiviert ist
+                if (!(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.autoCreateTasks)) {
+                    console.log(`[TaskAutomation] Automatische Task-Erstellung ist für Organisation ${organizationId} deaktiviert`);
+                    return null;
+                }
+                // Bestimme zuständige Rolle (z.B. "Rezeption")
+                let receptionRoleId = null;
+                // Suche nach "Rezeption" oder ähnlicher Rolle
+                const receptionRole = yield prisma.role.findFirst({
+                    where: {
+                        organizationId,
+                        name: {
+                            in: ['Rezeption', 'Reception', 'Front Desk', 'Recepcion'],
+                            mode: 'insensitive'
+                        }
+                    }
+                });
+                if (receptionRole) {
+                    receptionRoleId = receptionRole.id;
+                }
+                else {
+                    // Fallback: Verwende erste verfügbare Rolle der Organisation
+                    const firstRole = yield prisma.role.findFirst({
+                        where: { organizationId }
+                    });
+                    if (firstRole) {
+                        receptionRoleId = firstRole.id;
+                    }
+                }
+                if (!receptionRoleId) {
+                    console.warn(`[TaskAutomation] Keine Rolle gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
+                    return null;
+                }
+                // Hole erste Branch der Organisation (für Task)
+                const branch = yield prisma.branch.findFirst({
+                    where: { organizationId }
+                });
+                if (!branch) {
+                    console.warn(`[TaskAutomation] Keine Branch gefunden für Organisation ${organizationId}. Task wird nicht erstellt.`);
+                    return null;
+                }
+                // Prüfe ob bereits ein Task für diese Reservierung existiert
+                const existingTask = yield prisma.task.findUnique({
+                    where: { reservationId: reservation.id }
+                });
+                if (existingTask) {
+                    console.log(`[TaskAutomation] Task für Reservierung ${reservation.id} existiert bereits`);
+                    return existingTask;
+                }
+                // Erstelle Task
+                const taskTitle = `Check-in: ${reservation.guestName} - ${reservation.checkInDate.toLocaleDateString('de-DE')}`;
+                const taskDescription = `
+Reservierungsdetails:
+- Gast: ${reservation.guestName}
+- E-Mail: ${reservation.guestEmail || 'N/A'}
+- Telefon: ${reservation.guestPhone || 'N/A'}
+- Check-in: ${reservation.checkInDate.toLocaleDateString('de-DE')}
+- Check-out: ${reservation.checkOutDate.toLocaleDateString('de-DE')}
+- Zimmer: ${reservation.roomNumber || 'Noch nicht zugewiesen'}
+- Status: ${reservation.status}
+- Zahlungsstatus: ${reservation.paymentStatus}
+${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleTimeString('de-DE')}` : ''}
+      `.trim();
+                const task = yield prisma.task.create({
+                    data: {
+                        title: taskTitle,
+                        description: taskDescription,
+                        status: 'open',
+                        roleId: receptionRoleId,
+                        branchId: branch.id,
+                        organizationId: organizationId,
+                        reservationId: reservation.id,
+                        dueDate: reservation.checkInDate,
+                        qualityControlId: 1 // TODO: Bestimme Quality Control User
+                    },
+                    include: {
+                        role: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        },
+                        reservation: true
+                    }
+                });
+                console.log(`[TaskAutomation] Task ${task.id} für Reservierung ${reservation.id} erstellt`);
+                // Benachrichtigung für alle User mit Rezeption-Rolle
+                const receptionUsers = yield prisma.user.findMany({
+                    where: {
+                        roles: {
+                            some: {
+                                roleId: receptionRoleId,
+                                lastUsed: true
+                            }
+                        }
+                    }
+                });
+                for (const receptionUser of receptionUsers) {
+                    yield (0, notificationController_1.createNotificationIfEnabled)({
+                        userId: receptionUser.id,
+                        title: 'Neue Reservierung',
+                        message: `Neue Reservierung für Check-in: ${reservation.guestName}`,
+                        type: client_2.NotificationType.task,
+                        relatedEntityId: task.id,
+                        relatedEntityType: 'create'
+                    });
+                }
+                return task;
+            }
+            catch (error) {
+                console.error(`[TaskAutomation] Fehler beim Erstellen des Reservierungs-Tasks:`, error);
                 throw error;
             }
         });
