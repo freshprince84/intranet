@@ -236,9 +236,9 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
                   onChange={(e) => setContractType(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="employment">{t('contracts.employment')}</option>
-                  <option value="amendment">{t('contracts.amendment')}</option>
-                  <option value="extension">{t('contracts.extension')}</option>
+                  <option value="employment">Arbeitsvertrag</option>
+                  <option value="amendment">Vertragsänderung</option>
+                  <option value="extension">Vertragsverlängerung</option>
                 </select>
               </div>
 

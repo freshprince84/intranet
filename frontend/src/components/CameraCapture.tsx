@@ -90,7 +90,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
   if (!isMobile()) {
     return (
       <div className="p-4 text-center dark:bg-gray-800 dark:text-white">
-        <p className="mb-4">{t('camera.mobileOnly')}</p>
+        <p className="mb-4">Kamerafunktion ist nur auf mobilen Geräten verfügbar.</p>
         <button 
           className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
           onClick={onCancel}

@@ -296,7 +296,7 @@ const ArticleEdit: React.FC = () => {
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">{t('cerebro.noParentArticle')}</option>
+              <option value="">Kein Elternartikel (Root)</option>
               {articles
                 .filter(article => article.id !== articleId) // Sich selbst ausschließen
                 .map(article => (

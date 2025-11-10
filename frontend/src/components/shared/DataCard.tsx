@@ -416,7 +416,7 @@ const DataCard: React.FC<DataCardProps> = ({
                     status.onPreviousClick?.();
                   }}
                   className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                  title={t('dataCard.previousStatus')}
+                  title="Vorheriger Status"
                 >
                   <ChevronLeftIcon className="h-4 w-4" />
                 </button>
@@ -552,7 +552,7 @@ const DataCard: React.FC<DataCardProps> = ({
                       status.onPreviousClick?.();
                     }}
                     className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                    title={t('dataCard.previousStatus')}
+                    title="Vorheriger Status"
                   >
                     <ChevronLeftIcon className="h-6 w-6" />
                   </button>
@@ -568,7 +568,7 @@ const DataCard: React.FC<DataCardProps> = ({
                       status.onNextClick?.();
                     }}
                     className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                    title={t('dataCard.nextStatus')}
+                    title="Nächster Status"
                   >
                     <ChevronRightIcon className="h-6 w-6" />
                   </button>

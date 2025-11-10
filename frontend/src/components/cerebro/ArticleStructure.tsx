@@ -249,7 +249,7 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
         <button 
           className="fixed top-[85px] left-4 z-40 p-2 rounded-full text-gray-600 hover:bg-gray-100 md:hidden"
           onClick={toggleSidebar}
-          aria-label={sidebarOpen ? t('cerebro.menuClose') : t('cerebro.menuOpen')}
+          aria-label={sidebarOpen ? "Menü schließen" : "Menü öffnen"}
         >
           {sidebarOpen ? <XMarkIcon className="h-5 w-5" /> : <Bars3Icon className="h-5 w-5" />}
         </button>

@@ -999,7 +999,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                             className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                             required
                         >
-                            <option value="">{t('common.select')}</option>
+                            <option value="">Bitte wählen</option>
                             {Array.isArray(branches) && branches.map(branch => (
                                 <option key={branch.id} value={branch.id}>
                                     {branch.name}
@@ -1027,7 +1027,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             {activeTab === 'cerebro' && (
                 <div>
                     <div className="mb-4">
-                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('cerebro.linkedCerebroArticles')}</h3>
+                        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">Verknüpfte Cerebro-Artikel</h3>
                         
                         {selectedArticles.length > 0 ? (
                             <ul className="mt-2 space-y-2">

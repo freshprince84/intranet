@@ -912,33 +912,7 @@
     "fileView": {
       "fileNotFound": "File not found",
       "fileNotFoundDescription": "The requested Markdown file could not be found."
-    },
-    "linkedTasks": "Linked Tasks",
-    "noLinkedTasks": "No tasks linked.",
-    "linkedRequests": "Linked Requests",
-    "noLinkedRequests": "No requests linked.",
-    "noMedia": "No media available.",
-    "externalLinks": "External Links",
-    "noExternalLinks": "No external links available.",
-    "addExternalLink": "Add external link",
-    "addMedia": "Add media",
-    "addLink": "Add link",
-    "addGitHubMarkdown": "Add GitHub Markdown",
-    "noParentArticle": "No parent article (Root)",
-    "linkedMarkdownFiles": "Linked Markdown files",
-    "loadingGitHubLinks": "Loading GitHub links...",
-    "noGitHubLinks": "No GitHub links available",
-    "removeGitHubLink": "Remove GitHub link",
-    "remove": "Remove",
-    "addGitHubLink": "Add GitHub link",
-    "selectArticle": "-- Select article --",
-    "link": "Link",
-    "loadingArticle": "Loading article...",
-    "noContentAvailable": "No content available",
-    "clickToSelectFile": "Click to select a file",
-    "menuClose": "Close menu",
-    "menuOpen": "Open menu",
-    "linkedCerebroArticles": "Linked Cerebro articles"
+    }
   },
   "organization": {
     "title": "Organization",
@@ -2016,87 +1990,5 @@
     "onlineCheckInCompleted": "Online check-in completed",
     "notFound": "Reservation not found",
     "checkInDate": "Check-in Date"
-  },
-  "filterTags": {
-    "save": "Save",
-    "cancel": "Cancel",
-    "renameGroup": "Rename group",
-    "ungroup": "Ungroup",
-    "deleteFilter": "Delete filter",
-    "showMoreFilters": "Show more filters"
-  },
-  "notifications": {
-    "noNotifications": "No notifications available",
-    "markAsRead": "Mark as read",
-    "deleteNotification": "Delete notification",
-    "deleteAllNotifications": "Delete all notifications"
-  },
-  "requests": {
-    "noRequestsFound": "No requests found"
-  },
-  "tasks": {
-    "noTodosFound": "No to-dos found"
-  },
-  "lifecycle": {
-    "noDataAvailable": "No lifecycle data available"
-  },
-  "roles": {
-    "noRolesFound": "No roles found. Create a new role with the button above."
-  },
-  "teamWorktime": {
-    "tableHint": "Note: You can customize the table by clicking on the column headers to sort. You can also rearrange columns by dragging and dropping.",
-    "missingPermissionPage": "Missing permission: team_worktime_control (Page)",
-    "missingPermissionTable": "Missing permission: team_worktime (Table)"
-  },
-  "camera": {
-    "mobileOnly": "Camera function is only available on mobile devices"
-  },
-  "error": {
-    "close": "Close"
-  },
-  "contracts": {
-    "employment": "Employment contract",
-    "amendment": "Contract amendment",
-    "extension": "Contract extension"
-  },
-  "users": {
-    "pleaseSelect": "Please select"
-  },
-  "dataCard": {
-    "previousStatus": "Previous status",
-    "nextStatus": "Next status"
-  },
-  "clients": {
-    "edit": "Edit client",
-    "delete": "Delete client"
-  },
-  "invoices": {
-    "markAsPaid": "Mark as paid"
-  },
-  "analytics": {
-    "showStatusHistory": "Show status history",
-    "noTodosFound": "No to-dos found"
-  },
-  "roleManagement": {
-    "loadingPermissions": "Loading permissions..."
-  },
-  "monthlyReport": {
-    "recipient": "Recipient",
-    "preview": "Preview:",
-    "billingPeriod": "Billing period:",
-    "exampleAddress": "e.g.\nCompany XY AG\nExample Street 1\n8000 Zurich",
-    "recipientDescription": "Full address of the recipient (employer) for monthly billing"
-  },
-  "socialSecurity": {
-    "additionalInfoPlaceholder": "Additional information, contact details, etc."
-  },
-  "organization": {
-    "tabs": {
-      "general": "General",
-      "roles": "Roles",
-      "documents": "Documents",
-      "smtp": "SMTP",
-      "api": "API"
-    }
   }
 }

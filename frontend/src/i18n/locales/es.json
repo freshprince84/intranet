@@ -836,33 +836,7 @@
     "fileView": {
       "fileNotFound": "Archivo no encontrado",
       "fileNotFoundDescription": "No se pudo encontrar el archivo Markdown solicitado."
-    },
-    "linkedTasks": "Tareas vinculadas",
-    "noLinkedTasks": "No hay tareas vinculadas.",
-    "linkedRequests": "Solicitudes vinculadas",
-    "noLinkedRequests": "No hay solicitudes vinculadas.",
-    "noMedia": "No hay medios disponibles.",
-    "externalLinks": "Enlaces externos",
-    "noExternalLinks": "No hay enlaces externos disponibles.",
-    "addExternalLink": "Agregar enlace externo",
-    "addMedia": "Agregar medios",
-    "addLink": "Agregar enlace",
-    "addGitHubMarkdown": "Agregar GitHub Markdown",
-    "noParentArticle": "Sin artículo padre (Raíz)",
-    "linkedMarkdownFiles": "Archivos Markdown vinculados",
-    "loadingGitHubLinks": "Cargando enlaces de GitHub...",
-    "noGitHubLinks": "No hay enlaces de GitHub disponibles",
-    "removeGitHubLink": "Eliminar enlace de GitHub",
-    "remove": "Eliminar",
-    "addGitHubLink": "Agregar enlace de GitHub",
-    "selectArticle": "-- Seleccionar artículo --",
-    "link": "Vincular",
-    "loadingArticle": "Cargando artículo...",
-    "noContentAvailable": "No hay contenido disponible",
-    "clickToSelectFile": "Haga clic para seleccionar un archivo",
-    "menuClose": "Cerrar menú",
-    "menuOpen": "Abrir menú",
-    "linkedCerebroArticles": "Artículos de Cerebro vinculados"
+    }
   },
   "organization": {
     "title": "Organización",
@@ -1808,86 +1782,6 @@
         "legal": "Rol Legal"
       },
       "documentTemplates": "Plantillas de Documentos"
-    },
-    "tabs": {
-      "general": "General",
-      "roles": "Roles",
-      "documents": "Documentos",
-      "smtp": "SMTP",
-      "api": "API"
     }
-  },
-  "filterTags": {
-    "save": "Guardar",
-    "cancel": "Cancelar",
-    "renameGroup": "Renombrar grupo",
-    "ungroup": "Desagrupar",
-    "deleteFilter": "Eliminar filtro",
-    "showMoreFilters": "Mostrar más filtros"
-  },
-  "notifications": {
-    "noNotifications": "No hay notificaciones disponibles",
-    "markAsRead": "Marcar como leído",
-    "deleteNotification": "Eliminar notificación",
-    "deleteAllNotifications": "Eliminar todas las notificaciones"
-  },
-  "requests": {
-    "noRequestsFound": "No se encontraron solicitudes"
-  },
-  "tasks": {
-    "noTodosFound": "No se encontraron tareas pendientes"
-  },
-  "lifecycle": {
-    "noDataAvailable": "No hay datos del ciclo de vida disponibles"
-  },
-  "roles": {
-    "noRolesFound": "No se encontraron roles. Cree un nuevo rol con el botón de arriba."
-  },
-  "teamWorktime": {
-    "tableHint": "Nota: Puede personalizar la tabla haciendo clic en los encabezados de las columnas para ordenar. También puede reorganizar las columnas arrastrando y soltando.",
-    "missingPermissionPage": "Permiso faltante: team_worktime_control (Página)",
-    "missingPermissionTable": "Permiso faltante: team_worktime (Tabla)"
-  },
-  "camera": {
-    "mobileOnly": "La función de cámara solo está disponible en dispositivos móviles"
-  },
-  "error": {
-    "close": "Cerrar"
-  },
-  "contracts": {
-    "employment": "Contrato de trabajo",
-    "amendment": "Modificación del contrato",
-    "extension": "Prolongación del contrato"
-  },
-  "users": {
-    "pleaseSelect": "Por favor seleccione"
-  },
-  "dataCard": {
-    "previousStatus": "Estado anterior",
-    "nextStatus": "Estado siguiente"
-  },
-  "clients": {
-    "edit": "Editar cliente",
-    "delete": "Eliminar cliente"
-  },
-  "invoices": {
-    "markAsPaid": "Marcar como pagado"
-  },
-  "analytics": {
-    "showStatusHistory": "Mostrar historial de estado",
-    "noTodosFound": "No se encontraron tareas pendientes"
-  },
-  "roleManagement": {
-    "loadingPermissions": "Cargando permisos..."
-  },
-  "monthlyReport": {
-    "recipient": "Destinatario",
-    "preview": "Vista previa:",
-    "billingPeriod": "Período de facturación:",
-    "exampleAddress": "p. ej.\nEmpresa XY AG\nCalle Ejemplo 1\n8000 Zúrich",
-    "recipientDescription": "Dirección completa del destinatario (empleador) para la facturación mensual"
-  },
-  "socialSecurity": {
-    "additionalInfoPlaceholder": "Información adicional, datos de contacto, etc."
   }
 }

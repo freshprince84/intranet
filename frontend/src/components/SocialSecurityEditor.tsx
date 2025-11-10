@@ -453,7 +453,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                       rows={3}
-                      placeholder={t('socialSecurity.additionalInfoPlaceholder')}
+                      placeholder="Zusätzliche Informationen, Kontaktdaten, etc."
                     />
                   </div>
 

@@ -35,7 +35,7 @@ const GitHubLinkManagerWrapper: React.FC = () => {
   return (
     <div className="w-full p-4">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h1 className="text-xl font-semibold mb-4 dark:text-white">{t('cerebro.addGitHubLink')}</h1>
+        <h1 className="text-xl font-semibold mb-4 dark:text-white">GitHub-Link hinzufügen</h1>
         <GitHubLinkManager 
           articleSlug={slug} 
           onLinkAdded={handleLinkAdded}

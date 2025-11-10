@@ -1085,7 +1085,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     if (roles.length === 0) {
       return (
         <div className="p-4 bg-gray-50 rounded text-center">
-          <p>{t('roles.noRolesFound')}</p>
+          <p>Keine Rollen gefunden. Erstellen Sie eine neue Rolle mit dem Button oben.</p>
         </div>
       );
     }
