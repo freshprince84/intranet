@@ -36,6 +36,11 @@ export const getAllTasks = async (req: Request, res: Response) => {
         // Datenisolation: Standalone User sehen nur ihre eigenen Tasks
         const isolationFilter = getDataIsolationFilter(req, 'task');
         
+        console.log('[getAllTasks] User ID:', req.userId);
+        console.log('[getAllTasks] Organization ID:', req.organizationId);
+        console.log('[getAllTasks] User Role:', req.userRole?.role?.id, req.userRole?.role?.name);
+        console.log('[getAllTasks] Isolation Filter:', JSON.stringify(isolationFilter, null, 2));
+        
         const tasks = await prisma.task.findMany({
             where: isolationFilter,
             include: {
@@ -58,6 +63,10 @@ export const getAllTasks = async (req: Request, res: Response) => {
                 }
             }
         });
+        
+        console.log('[getAllTasks] Found tasks:', tasks.length);
+        console.log('[getAllTasks] Task roleIds:', tasks.map(t => ({ id: t.id, roleId: t.roleId, roleName: t.role?.name, title: t.title })));
+        
         res.json(tasks);
     } catch (error) {
         console.error('Fehler beim Abrufen der Tasks:', error);

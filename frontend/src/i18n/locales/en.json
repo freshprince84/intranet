@@ -194,6 +194,11 @@
     "identificationExpiryDate": "Expiry Date",
     "selectCountry": "Select a country",
     "selectLanguage": "Select a language",
+    "gender": "Gender",
+    "selectGender": "Select gender",
+    "genderMale": "Male",
+    "genderFemale": "Female",
+    "genderOther": "Other",
     "profileIncomplete": "Your profile is incomplete.",
     "completeProfile": "Please complete your profile by filling in all required fields.",
     "documents": "Identification Documents"
@@ -209,6 +214,9 @@
     "logoUrl": "Logo URL",
     "country": "Country",
     "selectCountry": "Select Country",
+    "nit": "NIT",
+    "nitDescription": "Tax Identification Number (only for Colombia)",
+    "nitRequired": "NIT is required for Colombia",
     "createOrganization": "Create new organization",
     "joinOrganization": "Join organization",
     "statistics": "Statistics",
@@ -232,7 +240,64 @@
     "tabs": {
       "general": "General",
       "roles": "Roles",
-      "documents": "Documents"
+      "documents": "Documents",
+      "smtp": "SMTP",
+      "api": "API"
+    },
+    "api": {
+      "title": "API Configurations",
+      "description": "Configure API access for LobbyPMS, TTLock, SIRE and Bold Payment. These settings are only available for organizations from Colombia.",
+      "saveSuccess": "API settings saved successfully",
+      "saveError": "Error saving API settings",
+      "lobbyPms": {
+        "title": "LobbyPMS",
+        "apiUrl": "API URL",
+        "apiKey": "API Token",
+        "propertyId": "Property ID",
+        "syncEnabled": "Enable synchronization",
+        "autoCreateTasks": "Automatically create tasks",
+        "lateCheckInThreshold": "Late check-in time (e.g. 22:00)"
+      },
+      "ttlock": {
+        "title": "TTLock (Door System)",
+        "apiUrl": "API URL",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret"
+      },
+      "sire": {
+        "title": "SIRE (Migration)",
+        "apiUrl": "API URL",
+        "apiKey": "API Key",
+        "apiSecret": "API Secret",
+        "propertyCode": "Property Code",
+        "enabled": "Enable SIRE registration",
+        "autoRegisterOnCheckIn": "Automatically register on check-in"
+      },
+      "boldPayment": {
+        "title": "Bold Payment",
+        "apiKey": "API Key",
+        "merchantId": "Merchant ID",
+        "environment": "Environment",
+        "sandbox": "Sandbox (Test)",
+        "production": "Production (Live)"
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "provider": "Provider",
+        "providerTwilio": "Twilio",
+        "providerBusinessApi": "WhatsApp Business API",
+        "apiKey": "API Key / Access Token",
+        "apiSecret": "API Secret",
+        "phoneNumberId": "Phone Number ID"
+      },
+      "validation": {
+        "apiUrlRequired": "API URL is required when synchronization is enabled",
+        "apiKeyRequired": "API Key is required when synchronization is enabled",
+        "invalidUrl": "Invalid URL. Please use only allowed API domains",
+        "invalidTimeFormat": "Invalid time format (expected: HH:MM, e.g. 22:00)"
+      },
+      "clear": "Clear",
+      "noPermission": "You do not have permission to change API settings"
     },
     "lifecycleRoles": {
       "title": "Lifecycle Roles",
@@ -285,6 +350,7 @@
     "columns": {
       "title": "Title",
       "status": "Status",
+      "type": "Type",
       "requestedByResponsible": "Requested by / Responsible",
       "requestedBy": "Requested by",
       "responsible": "Responsible",
@@ -310,6 +376,13 @@
     "filters": {
       "archiv": "Archive",
       "aktuell": "Current"
+    },
+    "types": {
+      "vacation": "Vacation Request",
+      "improvement_suggestion": "Improvement Suggestion",
+      "sick_leave": "Sick Leave",
+      "employment_certificate": "Employment Certificate",
+      "other": "Other"
     }
   },
   "tasks": {
@@ -672,6 +745,8 @@
       "descriptionPlaceholder": "Insert text, images or files here...",
       "responsible": "Responsible",
       "branch": "Branch",
+      "type": "Type",
+      "isPrivate": "Private",
       "dueDate": "Due Date",
       "createTodo": "Automatically create task",
       "select": "Please select...",
@@ -704,6 +779,8 @@
         "description": "Description",
         "responsible": "Responsible",
         "branch": "Branch",
+        "type": "Type",
+        "isPrivate": "Private",
         "dueDate": "Due Date",
         "createTodo": "Automatically create task",
         "fileUpload": "Add file",
@@ -835,7 +912,33 @@
     "fileView": {
       "fileNotFound": "File not found",
       "fileNotFoundDescription": "The requested Markdown file could not be found."
-    }
+    },
+    "linkedTasks": "Linked Tasks",
+    "noLinkedTasks": "No tasks linked.",
+    "linkedRequests": "Linked Requests",
+    "noLinkedRequests": "No requests linked.",
+    "noMedia": "No media available.",
+    "externalLinks": "External Links",
+    "noExternalLinks": "No external links available.",
+    "addExternalLink": "Add external link",
+    "addMedia": "Add media",
+    "addLink": "Add link",
+    "addGitHubMarkdown": "Add GitHub Markdown",
+    "noParentArticle": "No parent article (Root)",
+    "linkedMarkdownFiles": "Linked Markdown files",
+    "loadingGitHubLinks": "Loading GitHub links...",
+    "noGitHubLinks": "No GitHub links available",
+    "removeGitHubLink": "Remove GitHub link",
+    "remove": "Remove",
+    "addGitHubLink": "Add GitHub link",
+    "selectArticle": "-- Select article --",
+    "link": "Link",
+    "loadingArticle": "Loading article...",
+    "noContentAvailable": "No content available",
+    "clickToSelectFile": "Click to select a file",
+    "menuClose": "Close menu",
+    "menuOpen": "Open menu",
+    "linkedCerebroArticles": "Linked Cerebro articles"
   },
   "organization": {
     "title": "Organization",
@@ -848,6 +951,9 @@
     "logoUrl": "Logo URL",
     "country": "Country",
     "selectCountry": "Select Country",
+    "nit": "NIT",
+    "nitDescription": "Tax Identification Number (only for Colombia)",
+    "nitRequired": "NIT is required for Colombia",
     "createOrganization": "Create new organization",
     "joinOrganization": "Join organization",
     "statistics": "Statistics",
@@ -1075,7 +1181,8 @@
     "noPermissionForPage": "No permission for this page.",
     "proFeature": {
       "users": "User management is a PRO feature. Please upgrade your subscription to use this feature.",
-      "roles": "Role management is a PRO feature. Please upgrade your subscription to use this feature."
+      "roles": "Role management is a PRO feature. Please upgrade your subscription to use this feature.",
+      "branches": "Branch management is a PRO feature. Please upgrade your subscription to use this feature."
     },
     "createUser": {
       "title": "Create New User",
@@ -1085,6 +1192,14 @@
       "lastName": "Last Name",
       "create": "Create"
     }
+  },
+  "branches": {
+    "title": "Branches",
+    "create": "New Branch",
+    "edit": "Edit Branch",
+    "name": "Name",
+    "noBranches": "No branches available",
+    "deleteConfirm": "Do you really want to delete this branch?"
   },
   "roles": {
     "title": "Roles",
@@ -1762,25 +1877,226 @@
     "workingHours": "Working Hours:",
     "downloadCertificate": "Download Employment Certificate",
     "downloadContract": "Download Employment Contract",
+    "previewError": "Preview could not be loaded",
     "createCertificate": "Create Employment Certificate",
     "createContract": "Create Employment Contract",
     "edit": "Edit",
     "download": "Download",
     "noData": "No lifecycle data available",
-    "organization": {
-      "editTitle": "Edit Organization",
-      "tabs": {
-        "general": "General",
-        "roles": "Roles",
-        "documents": "Documents"
-      },
-      "lifecycleRoles": {
-        "title": "Lifecycle Roles",
-        "admin": "Admin Role",
-        "hr": "HR Role",
-        "legal": "Legal Role"
-      },
-      "documentTemplates": "Document Templates"
+    "autoGeneratedData": "Auto-generated data",
+    "taskType": "Task type / To-Do name",
+    "cop": "COP",
+    "emailTemplate": "Email template",
+    "noTemplate": "No template available",
+    "generateTemplate": "Generate template",
+    "completeRegistration": "Complete registration",
+    "registrationNumber": "Registration number",
+    "registrationNumberPlaceholder": "e.g. 123456789",
+    "provider": "Provider",
+    "providerPlaceholder": "e.g. ARL Sura, EPS Sanitas",
+    "registrationDate": "Registration date",
+    "registrationDatePlaceholder": "dd.mm.yyyy",
+    "fieldPositionsInfo": "Configure the positions of fields in the template PDF.",
+    "fieldPositionsHint": "Coordinates in PDF points. A4: 595 x 842 points. Y=0 is bottom, Y=842 is top. X=0 is left, X=595 is right.",
+    "fieldPositionsSaved": "Field positions saved successfully",
+    "resetFieldPositionsConfirm": "Reset positions to default values?",
+    "fieldUserName": "Username",
+    "fieldOrganizationName": "Organization name",
+    "fieldCurrentDate": "Current date",
+    "fieldIdentificationNumber": "Identification number",
+    "fieldStartDate": "Start date",
+    "fieldEndDate": "End date",
+    "fieldPosition": "Position",
+    "fieldSalary": "Salary",
+    "fieldWorkingHours": "Working hours",
+    "fontSize": "Font size",
+    "offboarding": {
+      "startTitle": "Start offboarding",
+      "startButton": "Start offboarding",
+      "started": "Offboarding started successfully",
+      "startError": "Error starting offboarding",
+      "warningTitle": "Important notice",
+      "warningText": "Starting the offboarding process will automatically create tasks. This action cannot be undone.",
+      "user": "Employee",
+      "exitDate": "Exit date",
+      "exitDateRequired": "Exit date is required",
+      "exitDateTooFar": "Exit date cannot be more than 1 year in the future",
+      "exitDateHint": "The date when the employee leaves the organization",
+      "exitReason": "Exit reason",
+      "exitReasonRequired": "Exit reason is required",
+      "exitReasonTooShort": "Exit reason must be at least 10 characters long",
+      "exitReasonPlaceholder": "e.g. Resignation, contract end, etc.",
+      "exitReasonHint": "At least 10 characters. Describe the reason for leaving.",
+      "progressTitle": "Offboarding Progress",
+      "progressSteps": "{{completed}} of {{total}} steps completed",
+      "tasksTitle": "Offboarding Tasks",
+      "complete": {
+        "title": "Complete Offboarding",
+        "button": "Complete Offboarding",
+        "user": "Employee",
+        "tasksStatus": "Status of Offboarding Tasks",
+        "warningTitle": "Not all tasks completed",
+        "warningText": "Not all offboarding tasks are completed yet. You can still complete the offboarding, but it is recommended to complete all tasks first.",
+        "allTasksCompleted": "All tasks completed",
+        "allTasksCompletedText": "All offboarding tasks are completed. You can now complete the offboarding.",
+        "confirmLabel": "Confirm by entering the name: \"{{userName}}\"",
+        "confirmHint": "Enter the full name of the employee to complete the offboarding",
+        "confirmTextMismatch": "Confirmation text does not match",
+        "finalWarningTitle": "Important Notice",
+        "finalWarningText": "By completing the offboarding, the employee will be archived. This action cannot be undone.",
+        "success": "Offboarding completed successfully",
+        "error": "Error completing offboarding"
+      }
+    },
+    "offboardingStarted": "Offboarding started",
+    "exitDate": "Exit date",
+    "exitReason": "Exit reason",
+    "signatureType": "Signature Type",
+    "signerName": "Signer Name",
+    "signerNamePlaceholder": "e.g. John Doe",
+    "signerNameRequired": "Signer name is required",
+    "signerPosition": "Position",
+    "signerPositionPlaceholder": "e.g. CEO",
+    "signaturePosition": "Signature Position in PDF",
+    "positionX": "X (horizontal)",
+    "positionXHint": "0 = left",
+    "positionY": "Y (vertical)",
+    "positionYHint": "0 = bottom",
+    "positionPage": "Page",
+    "positionPageHint": "1 = first page"
+  },
+  "reservations": {
+    "title": "Reservations",
+    "description": "Manage all reservations and check-ins",
+    "loadError": "Error loading reservations",
+    "sync": "Sync",
+    "syncing": "Syncing...",
+    "syncSuccess": "Reservations synced successfully",
+    "syncError": "Error syncing",
+    "searchPlaceholder": "Search by guest, email, phone...",
+    "noReservations": "No reservations",
+    "noResults": "No reservations found",
+    "resultCount": "{{count}} of {{total}} reservations",
+    "status": "Status",
+    "status.confirmed": "Confirmed",
+    "status.checkedIn": "Checked In",
+    "status.checkedOut": "Checked Out",
+    "status.cancelled": "Cancelled",
+    "status.noShow": "No Show",
+    "paymentStatus": "Payment Status",
+    "paymentStatus.pending": "Pending",
+    "paymentStatus.paid": "Paid",
+    "paymentStatus.partiallyPaid": "Partially Paid",
+    "paymentStatus.refunded": "Refunded",
+    "checkIn": "Check-in",
+    "checkInSuccess": "Check-in completed successfully",
+    "checkInError": "Error performing check-in",
+    "checkOut": "Check-out",
+    "guest": "Guest",
+    "guestInfo": "Guest Information",
+    "reservationInfo": "Reservation Information",
+    "additionalInfo": "Additional Information",
+    "email": "Email",
+    "phone": "Phone",
+    "nationality": "Nationality",
+    "room": "Room",
+    "roomNumber": "Room Number",
+    "roomNumberRequired": "Room number is required",
+    "roomNumberPlaceholder": "e.g. 101",
+    "roomDescription": "Room Description",
+    "roomDescriptionPlaceholder": "Optional room description",
+    "doorPin": "Door PIN",
+    "pin": "PIN",
+    "app": "App",
+    "paymentLink": "Payment Link",
+    "openPaymentLink": "Open Link",
+    "sireStatus": "SIRE Status",
+    "sireRegistered": "Registered with SIRE",
+    "onlineCheckIn": "Online",
+    "onlineCheckInCompleted": "Online check-in completed",
+    "notFound": "Reservation not found",
+    "checkInDate": "Check-in Date"
+  },
+  "filterTags": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "renameGroup": "Rename group",
+    "ungroup": "Ungroup",
+    "deleteFilter": "Delete filter",
+    "showMoreFilters": "Show more filters"
+  },
+  "notifications": {
+    "noNotifications": "No notifications available",
+    "markAsRead": "Mark as read",
+    "deleteNotification": "Delete notification",
+    "deleteAllNotifications": "Delete all notifications"
+  },
+  "requests": {
+    "noRequestsFound": "No requests found"
+  },
+  "tasks": {
+    "noTodosFound": "No to-dos found"
+  },
+  "lifecycle": {
+    "noDataAvailable": "No lifecycle data available"
+  },
+  "roles": {
+    "noRolesFound": "No roles found. Create a new role with the button above."
+  },
+  "teamWorktime": {
+    "tableHint": "Note: You can customize the table by clicking on the column headers to sort. You can also rearrange columns by dragging and dropping.",
+    "missingPermissionPage": "Missing permission: team_worktime_control (Page)",
+    "missingPermissionTable": "Missing permission: team_worktime (Table)"
+  },
+  "camera": {
+    "mobileOnly": "Camera function is only available on mobile devices"
+  },
+  "error": {
+    "close": "Close"
+  },
+  "contracts": {
+    "employment": "Employment contract",
+    "amendment": "Contract amendment",
+    "extension": "Contract extension"
+  },
+  "users": {
+    "pleaseSelect": "Please select"
+  },
+  "dataCard": {
+    "previousStatus": "Previous status",
+    "nextStatus": "Next status"
+  },
+  "clients": {
+    "edit": "Edit client",
+    "delete": "Delete client"
+  },
+  "invoices": {
+    "markAsPaid": "Mark as paid"
+  },
+  "analytics": {
+    "showStatusHistory": "Show status history",
+    "noTodosFound": "No to-dos found"
+  },
+  "roleManagement": {
+    "loadingPermissions": "Loading permissions..."
+  },
+  "monthlyReport": {
+    "recipient": "Recipient",
+    "preview": "Preview:",
+    "billingPeriod": "Billing period:",
+    "exampleAddress": "e.g.\nCompany XY AG\nExample Street 1\n8000 Zurich",
+    "recipientDescription": "Full address of the recipient (employer) for monthly billing"
+  },
+  "socialSecurity": {
+    "additionalInfoPlaceholder": "Additional information, contact details, etc."
+  },
+  "organization": {
+    "tabs": {
+      "general": "General",
+      "roles": "Roles",
+      "documents": "Documents",
+      "smtp": "SMTP",
+      "api": "API"
     }
   }
 }

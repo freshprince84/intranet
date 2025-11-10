@@ -1065,7 +1065,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                                       <button
                                         onClick={() => toggleTodoExpand(todo.id)}
                                         className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                        title="Status-Historie anzeigen"
+                                        title={t('analytics.showStatusHistory')}
                                       >
                                         {isExpanded ? (
                                           <ChevronUpIcon className="h-4 w-4" />
@@ -1160,7 +1160,7 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
           {filteredTodos.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
               <ClipboardDocumentListIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />
-              <div className="text-sm">Keine To-Dos gefunden</div>
+              <div className="text-sm">{t('analytics.noTodosFound')}</div>
             </div>
           ) : (
             <CardGrid>

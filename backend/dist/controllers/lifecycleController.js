@@ -64,6 +64,7 @@ if (!fs.existsSync(CONTRACTS_DIR)) {
  * GET /api/users/:id/lifecycle
  */
 const getLifecycle = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const userId = parseInt(req.params.id);
         const currentUserId = parseInt(req.userId || '0');
@@ -74,9 +75,44 @@ const getLifecycle = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 return res.status(403).json({ message: 'Keine Berechtigung' });
             }
         }
-        const result = yield lifecycleService_1.LifecycleService.getLifecycle(userId);
+        let result = yield lifecycleService_1.LifecycleService.getLifecycle(userId);
+        // Falls kein Lifecycle existiert, erstelle einen automatisch
         if (!result) {
-            return res.status(404).json({ message: 'Lebenszyklus nicht gefunden' });
+            try {
+                // Hole organizationId vom User
+                const user = yield prisma.user.findUnique({
+                    where: { id: userId },
+                    include: {
+                        roles: {
+                            where: { lastUsed: true },
+                            take: 1,
+                            include: {
+                                role: {
+                                    include: {
+                                        organization: {
+                                            select: { id: true }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                if (user && user.roles.length > 0) {
+                    const organizationId = (_a = user.roles[0].role.organization) === null || _a === void 0 ? void 0 : _a.id;
+                    if (organizationId) {
+                        yield lifecycleService_1.LifecycleService.createLifecycle(userId, organizationId);
+                        result = yield lifecycleService_1.LifecycleService.getLifecycle(userId);
+                    }
+                }
+            }
+            catch (createError) {
+                console.error('Error creating lifecycle:', createError);
+                // Fall through to return 404
+            }
+        }
+        if (!result) {
+            return res.status(404).json({ message: 'Lebenszyklus nicht gefunden. Bitte kontaktieren Sie HR.' });
         }
         res.json(result);
     }
@@ -96,6 +132,7 @@ exports.getLifecycle = getLifecycle;
 const updateStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.params.id);
+        const currentUserId = parseInt(req.userId || '0');
         // Prüfe Berechtigung: Nur HR oder Admin
         const hasAccess = yield (0, lifecycleRoles_1.isHROrAdmin)(req);
         if (!hasAccess) {
@@ -111,7 +148,8 @@ const updateStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             contractType,
             exitDate: exitDate ? new Date(exitDate) : undefined,
             exitReason
-        });
+        }, currentUserId // Übergebe currentUserId für automatische Zertifikats-Generierung
+        );
         res.json(updated);
     }
     catch (error) {
@@ -136,10 +174,11 @@ const getSocialSecurity = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!['arl', 'eps', 'pension', 'caja'].includes(type)) {
             return res.status(400).json({ message: 'Ungültiger Typ' });
         }
-        // Prüfe Berechtigung: User selbst oder HR/Admin
+        // Prüfe Berechtigung: User selbst, HR, Legal oder Admin
         if (userId !== currentUserId) {
-            const hasAccess = yield (0, lifecycleRoles_1.isHROrAdmin)(req);
-            if (!hasAccess) {
+            const isHR = yield (0, lifecycleRoles_1.isHROrAdmin)(req);
+            const isLegal = yield (0, lifecycleRoles_1.isLegalOrAdmin)(req);
+            if (!isHR && !isLegal) {
                 return res.status(403).json({ message: 'Keine Berechtigung' });
             }
         }
@@ -203,6 +242,7 @@ exports.updateSocialSecurity = updateSocialSecurity;
  * GET /api/users/:id/lifecycle/certificates
  */
 const getCertificates = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const userId = parseInt(req.params.id);
         const currentUserId = parseInt(req.userId || '0');
@@ -213,9 +253,42 @@ const getCertificates = (req, res) => __awaiter(void 0, void 0, void 0, function
                 return res.status(403).json({ message: 'Keine Berechtigung' });
             }
         }
-        const certificates = yield lifecycleService_1.LifecycleService.getCertificates(userId);
+        let certificates = yield lifecycleService_1.LifecycleService.getCertificates(userId);
+        // Falls kein Lifecycle existiert, erstelle einen automatisch
         if (certificates === null) {
-            return res.status(404).json({ message: 'Lebenszyklus nicht gefunden' });
+            try {
+                const user = yield prisma.user.findUnique({
+                    where: { id: userId },
+                    include: {
+                        roles: {
+                            where: { lastUsed: true },
+                            take: 1,
+                            include: {
+                                role: {
+                                    include: {
+                                        organization: {
+                                            select: { id: true }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                if (user && user.roles.length > 0) {
+                    const organizationId = (_a = user.roles[0].role.organization) === null || _a === void 0 ? void 0 : _a.id;
+                    if (organizationId) {
+                        yield lifecycleService_1.LifecycleService.createLifecycle(userId, organizationId);
+                        certificates = yield lifecycleService_1.LifecycleService.getCertificates(userId);
+                    }
+                }
+            }
+            catch (createError) {
+                console.error('Error creating lifecycle:', createError);
+            }
+        }
+        if (certificates === null) {
+            return res.status(404).json({ message: 'Lebenszyklus nicht gefunden. Bitte kontaktieren Sie HR.' });
         }
         res.json({ certificates });
     }
@@ -272,15 +345,14 @@ const createCertificate = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!hasAccess) {
             return res.status(403).json({ message: 'Keine Berechtigung - nur HR oder Admin' });
         }
-        const { certificateType, templateUsed, templateVersion, pdfPath } = req.body;
-        if (!pdfPath) {
-            return res.status(400).json({ message: 'PDF-Pfad ist erforderlich' });
-        }
+        const { certificateType, templateUsed, templateVersion, pdfPath, customText } = req.body;
+        // pdfPath ist jetzt optional - wird automatisch generiert falls nicht angegeben
         const certificate = yield lifecycleService_1.LifecycleService.createCertificate(userId, {
             certificateType,
             templateUsed,
             templateVersion,
-            pdfPath
+            pdfPath, // Optional: Falls angegeben, wird dieses verwendet
+            customText // Optional: Vom HR bearbeiteter Text
         }, currentUserId);
         res.status(201).json(certificate);
     }
@@ -347,9 +419,15 @@ const downloadCertificate = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({ message: 'PDF-Datei nicht gefunden' });
         }
-        // PDF als Download bereitstellen
+        // PDF bereitstellen - inline für Vorschau, attachment für Download
+        const isPreview = req.query.preview === 'true';
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="arbeitszeugnis-${certificateId}.pdf"`);
+        if (isPreview) {
+            res.setHeader('Content-Disposition', `inline; filename="certificado-laboral-${certificateId}.pdf"`);
+        }
+        else {
+            res.setHeader('Content-Disposition', `attachment; filename="certificado-laboral-${certificateId}.pdf"`);
+        }
         fs.createReadStream(filePath).pipe(res);
     }
     catch (error) {
@@ -366,6 +444,7 @@ exports.downloadCertificate = downloadCertificate;
  * GET /api/users/:id/lifecycle/contracts
  */
 const getContracts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const userId = parseInt(req.params.id);
         const currentUserId = parseInt(req.userId || '0');
@@ -376,9 +455,42 @@ const getContracts = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 return res.status(403).json({ message: 'Keine Berechtigung' });
             }
         }
-        const contracts = yield lifecycleService_1.LifecycleService.getContracts(userId);
+        let contracts = yield lifecycleService_1.LifecycleService.getContracts(userId);
+        // Falls kein Lifecycle existiert, erstelle einen automatisch
         if (contracts === null) {
-            return res.status(404).json({ message: 'Lebenszyklus nicht gefunden' });
+            try {
+                const user = yield prisma.user.findUnique({
+                    where: { id: userId },
+                    include: {
+                        roles: {
+                            where: { lastUsed: true },
+                            take: 1,
+                            include: {
+                                role: {
+                                    include: {
+                                        organization: {
+                                            select: { id: true }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                if (user && user.roles.length > 0) {
+                    const organizationId = (_a = user.roles[0].role.organization) === null || _a === void 0 ? void 0 : _a.id;
+                    if (organizationId) {
+                        yield lifecycleService_1.LifecycleService.createLifecycle(userId, organizationId);
+                        contracts = yield lifecycleService_1.LifecycleService.getContracts(userId);
+                    }
+                }
+            }
+            catch (createError) {
+                console.error('Error creating lifecycle:', createError);
+            }
+        }
+        if (contracts === null) {
+            return res.status(404).json({ message: 'Lebenszyklus nicht gefunden. Bitte kontaktieren Sie HR.' });
         }
         res.json({ contracts });
     }
@@ -435,10 +547,11 @@ const createContract = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!hasAccess) {
             return res.status(403).json({ message: 'Keine Berechtigung - nur HR oder Admin' });
         }
-        const { contractType, startDate, endDate, salary, workingHours, position, templateUsed, templateVersion, pdfPath } = req.body;
-        if (!startDate || !pdfPath) {
-            return res.status(400).json({ message: 'Startdatum und PDF-Pfad sind erforderlich' });
+        const { contractType, startDate, endDate, salary, workingHours, position, templateUsed, templateVersion, pdfPath, customText } = req.body;
+        if (!startDate) {
+            return res.status(400).json({ message: 'Startdatum ist erforderlich' });
         }
+        // pdfPath ist jetzt optional - wird automatisch generiert falls nicht angegeben
         const contract = yield lifecycleService_1.LifecycleService.createContract(userId, {
             contractType,
             startDate: new Date(startDate),
@@ -448,7 +561,8 @@ const createContract = (req, res) => __awaiter(void 0, void 0, void 0, function*
             position,
             templateUsed,
             templateVersion,
-            pdfPath
+            pdfPath, // Optional: Falls angegeben, wird dieses verwendet
+            customText // Optional: Vom HR bearbeiteter Text
         }, currentUserId);
         res.status(201).json(contract);
     }
@@ -520,9 +634,15 @@ const downloadContract = (req, res) => __awaiter(void 0, void 0, void 0, functio
         if (!fs.existsSync(filePath)) {
             return res.status(404).json({ message: 'PDF-Datei nicht gefunden' });
         }
-        // PDF als Download bereitstellen
+        // PDF bereitstellen - inline für Vorschau, attachment für Download
+        const isPreview = req.query.preview === 'true';
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="arbeitsvertrag-${contractId}.pdf"`);
+        if (isPreview) {
+            res.setHeader('Content-Disposition', `inline; filename="contrato-trabajo-${contractId}.pdf"`);
+        }
+        else {
+            res.setHeader('Content-Disposition', `attachment; filename="contrato-trabajo-${contractId}.pdf"`);
+        }
         fs.createReadStream(filePath).pipe(res);
     }
     catch (error) {

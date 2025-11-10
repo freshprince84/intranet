@@ -3,7 +3,7 @@
 // Die aktuellen Linter-Fehler entstehen durch nicht aktualisierte Types
 
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, RequestStatus, NotificationType } from '@prisma/client';
+import { PrismaClient, Prisma, RequestStatus, RequestType, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 import path from 'path';
@@ -23,6 +23,8 @@ interface CreateRequestBody {
     responsible_id: string;
     branch_id: string;
     status?: RequestStatus;
+    type?: RequestType;
+    is_private?: boolean;
     due_date?: string;
     create_todo?: boolean;
 }
@@ -34,6 +36,8 @@ interface UpdateRequestBody {
     responsible_id?: string;
     branch_id?: string;
     status?: RequestStatus;
+    type?: RequestType;
+    is_private?: boolean;
     due_date?: string;
     create_todo?: boolean;
 }
@@ -53,11 +57,36 @@ const branchSelect = {
 // Alle Requests abrufen
 export const getAllRequests = async (req: Request, res: Response) => {
     try {
-        // Datenisolation: Standalone User sehen nur ihre eigenen Requests
+        const userId = parseInt(req.userId as string, 10);
+        const organizationId = (req as any).organizationId;
+        
+        // Basis-Filter: Datenisolation (Standalone vs. Organisation)
         const isolationFilter = getDataIsolationFilter(req as any, 'request');
         
+        // Erweitere Filter um private/öffentliche Logik
+        // Private Requests: Nur für requesterId und responsibleId sichtbar
+        // Öffentliche Requests: Für alle User der Organisation sichtbar
+        const whereClause: Prisma.RequestWhereInput = {
+            ...isolationFilter,
+            OR: [
+                // Öffentliche Requests (isPrivate = false) innerhalb der Organisation
+                {
+                    isPrivate: false,
+                    ...(organizationId ? { organizationId } : {})
+                },
+                // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                {
+                    isPrivate: true,
+                    OR: [
+                        { requesterId: userId },
+                        { responsibleId: userId }
+                    ]
+                }
+            ]
+        };
+        
         const requests = await prisma.request.findMany({
-            where: isolationFilter,
+            where: whereClause,
             include: {
                 requester: {
                     select: userSelect
@@ -85,6 +114,8 @@ export const getAllRequests = async (req: Request, res: Response) => {
             title: request.title,
             description: request.description,
             status: request.status,
+            type: request.type,
+            isPrivate: request.isPrivate,
             dueDate: request.dueDate,
             createdAt: request.createdAt,
             updatedAt: request.updatedAt,
@@ -113,15 +144,35 @@ export const getAllRequests = async (req: Request, res: Response) => {
 export const getRequestById = async (req: Request<{ id: string }>, res: Response) => {
     try {
         const { id } = req.params;
+        const userId = parseInt(req.userId as string, 10);
+        const organizationId = (req as any).organizationId;
         
-        // Datenisolation: Prüfe ob User Zugriff auf diesen Request hat
+        // Basis-Filter: Datenisolation
         const isolationFilter = getDataIsolationFilter(req as any, 'request');
         
+        // Erweitere Filter um private/öffentliche Logik
+        const whereClause: Prisma.RequestWhereInput = {
+            id: parseInt(id),
+            ...isolationFilter,
+            OR: [
+                // Öffentliche Requests
+                {
+                    isPrivate: false,
+                    ...(organizationId ? { organizationId } : {})
+                },
+                // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                {
+                    isPrivate: true,
+                    OR: [
+                        { requesterId: userId },
+                        { responsibleId: userId }
+                    ]
+                }
+            ]
+        };
+        
         const request = await prisma.request.findFirst({
-            where: {
-                id: parseInt(id),
-                ...isolationFilter
-            },
+            where: whereClause,
             include: {
                 requester: {
                     select: userSelect
@@ -150,6 +201,8 @@ export const getRequestById = async (req: Request<{ id: string }>, res: Response
             title: request.title,
             description: request.description,
             status: request.status,
+            type: request.type,
+            isPrivate: request.isPrivate,
             dueDate: request.dueDate,
             createdAt: request.createdAt,
             updatedAt: request.updatedAt,
@@ -184,6 +237,8 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
             responsible_id,
             branch_id,
             status = 'approval',
+            type = 'other',
+            is_private = false,
             due_date,
             create_todo = false
         } = req.body;
@@ -224,6 +279,8 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
                 title,
                 description: description || '',
                 status: status as RequestStatus,
+                type: type as RequestType,
+                isPrivate: is_private,
                 requesterId,
                 responsibleId,
                 branchId,
@@ -250,6 +307,8 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
             title: request.title,
             description: request.description,
             status: request.status,
+            type: request.type,
+            isPrivate: request.isPrivate,
             dueDate: request.dueDate,
             createdAt: request.createdAt,
             updatedAt: request.updatedAt,
@@ -299,6 +358,8 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
             responsible_id,
             branch_id,
             status,
+            type,
+            is_private,
             due_date,
             create_todo
         } = req.body;
@@ -364,6 +425,8 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
                 responsibleId: req.body.responsible_id ? parseInt(req.body.responsible_id, 10) : undefined,
                 branchId: req.body.branch_id ? parseInt(req.body.branch_id, 10) : undefined,
                 status: status as RequestStatus | undefined,
+                type: type as RequestType | undefined,
+                isPrivate: is_private !== undefined ? is_private : undefined,
                 dueDate: due_date ? new Date(due_date) : undefined,
                 createTodo: create_todo
             },
@@ -454,6 +517,8 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
             title: updatedRequest.title,
             description: updatedRequest.description,
             status: updatedRequest.status,
+            type: updatedRequest.type,
+            isPrivate: updatedRequest.isPrivate,
             dueDate: updatedRequest.dueDate,
             createdAt: updatedRequest.createdAt,
             updatedAt: updatedRequest.updatedAt,

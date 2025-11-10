@@ -36,6 +36,11 @@ interface UserRoleWithPermissions {
             entityType: string;
             accessLevel: string;
         }>;
+        organization: {
+            id: number;
+            name: string;
+            displayName: string | null;
+        } | null;
     };
     lastUsed?: boolean;
 }
@@ -116,7 +121,14 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -144,7 +156,12 @@ export const register = async (req: Request<{}, {}, RegisterRequest>, res: Respo
                 role: {
                     id: r.role.id,
                     name: r.role.name,
-                    permissions: r.role.permissions
+                    permissions: r.role.permissions,
+                    organization: r.role.organization ? {
+                        id: r.role.organization.id,
+                        name: r.role.organization.name,
+                        displayName: r.role.organization.displayName
+                    } : null
                 },
                 lastUsed: r.lastUsed
             }))
@@ -191,7 +208,14 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -267,7 +291,12 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
                 role: {
                     id: r.role.id,
                     name: r.role.name,
-                    permissions: r.role.permissions
+                    permissions: r.role.permissions,
+                    organization: r.role.organization ? {
+                        id: r.role.organization.id,
+                        name: r.role.organization.name,
+                        displayName: r.role.organization.displayName
+                    } : null
                 },
                 lastUsed: r.lastUsed
             }))
@@ -314,7 +343,14 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -336,7 +372,12 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                 role: {
                     id: r.role.id,
                     name: r.role.name,
-                    permissions: r.role.permissions
+                    permissions: r.role.permissions,
+                    organization: r.role.organization ? {
+                        id: r.role.organization.id,
+                        name: r.role.organization.name,
+                        displayName: r.role.organization.displayName
+                    } : null
                 },
                 lastUsed: r.lastUsed
             }))
@@ -425,13 +466,19 @@ export const requestPasswordReset = async (req: Request<{}, {}, RequestPasswordR
 
         // Finde die Organisation des Benutzers (erste aktive Rolle oder erste Rolle)
         let organizationId: number | undefined = undefined;
+        console.log(`[PASSWORD_RESET] Benutzer hat ${user.roles.length} Rolle(n)`);
         const activeRole = user.roles.find(r => r.lastUsed === true);
         if (activeRole?.role?.organization) {
             organizationId = activeRole.role.organization.id;
-            console.log(`[PASSWORD_RESET] Verwende Organisation ${organizationId} für SMTP-Einstellungen`);
+            console.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (aktive Rolle)`);
         } else if (user.roles.length > 0 && user.roles[0]?.role?.organization) {
             organizationId = user.roles[0].role.organization.id;
-            console.log(`[PASSWORD_RESET] Verwende Organisation ${organizationId} für SMTP-Einstellungen (erste Rolle)`);
+            console.log(`[PASSWORD_RESET] ✅ Verwende Organisation ${organizationId} für SMTP-Einstellungen (erste Rolle)`);
+        } else {
+            console.log(`[PASSWORD_RESET] ⚠️ Keine Organisation gefunden für Benutzer ${user.id}`);
+            if (user.roles.length > 0) {
+                console.log(`[PASSWORD_RESET] Rollen vorhanden, aber keine Organisation zugeordnet`);
+            }
         }
 
         // Generiere Reset-Link

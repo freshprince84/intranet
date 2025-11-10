@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { userApi, roleApi } from '../api/apiClient.ts';
 import { User, Role } from '../types/interfaces.ts';
-import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, ShieldCheckIcon, XMarkIcon, ArrowPathIcon, BuildingOfficeIcon, UserMinusIcon, UserPlusIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, ShieldCheckIcon, XMarkIcon, ArrowPathIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
 import useMessage from '../hooks/useMessage.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import IdentificationDocumentList from './IdentificationDocumentList.tsx';
@@ -80,6 +80,9 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   // Neuer State für die aktive Unterseite
   const [activeUserTab, setActiveUserTab] = useState<'details' | 'documents' | 'roles' | 'lifecycle'>('details');
   
+  // State für Active/Inactive Filter
+  const [userFilterTab, setUserFilterTab] = useState<'active' | 'inactive'>('active');
+  
   // State für Benutzererstellung
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 640);
@@ -116,20 +119,58 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
     };
   }, [isCreateModalOpen, openSidepane, closeSidepane]);
 
+  // Alle Benutzer (für Filterung)
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+
   // Initialisierung - Laden von Benutzern
   useEffect(() => {
-    fetchUsers();
+    fetchAllUsers();
   }, []);
 
   // Benutzerdaten laden - Verwende gefilterten Endpoint, damit nur Benutzer der eigenen Organisation angezeigt werden
-  const fetchUsers = async () => {
+  const fetchAllUsers = async () => {
     try {
       const response = await userApi.getAll();
-      setUsers(response.data);
+      setAllUsers(response.data);
+      // Initial: Nur aktive Benutzer anzeigen
+      filterUsersByActiveStatus('active', response.data);
     } catch (err) {
       handleError(err);
     }
   };
+
+  // Benutzer nach Active/Inactive filtern und alphabetisch sortieren
+  const filterUsersByActiveStatus = (status: 'active' | 'inactive', usersToFilter: User[] = allUsers) => {
+    const filtered = usersToFilter.filter(user => {
+      const isActive = user.active !== undefined ? user.active : true; // Default: true
+      return status === 'active' ? isActive : !isActive;
+    });
+    
+    // Alphabetisch sortieren nach username, dann firstName
+    const sorted = filtered.sort((a, b) => {
+      const aUsername = (a.username || '').toLowerCase();
+      const bUsername = (b.username || '').toLowerCase();
+      const aFirstName = (a.firstName || '').toLowerCase();
+      const bFirstName = (b.firstName || '').toLowerCase();
+      
+      // Zuerst nach username sortieren
+      if (aUsername !== bUsername) {
+        return aUsername.localeCompare(bUsername);
+      }
+      // Wenn username gleich, nach Vorname sortieren
+      return aFirstName.localeCompare(bFirstName);
+    });
+    
+    setUsers(sorted);
+  };
+
+  // Wenn Filter-Tab wechselt, Benutzerliste neu filtern
+  useEffect(() => {
+    if (allUsers.length > 0) {
+      filterUsersByActiveStatus(userFilterTab, allUsers);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userFilterTab]);
   
   // Rollen laden - Wird erst aufgerufen, wenn ein Benutzer ausgewählt wurde
   const fetchRoles = async () => {
@@ -345,21 +386,25 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
           birthday: updatedData.birthday ? new Date(updatedData.birthday).toISOString().split('T')[0] : null
         });
         
-        // Optimistisches Update: User in Liste aktualisieren statt vollständigem Reload
-        setUsers(prevUsers => 
+        // Optimistisches Update: User in allUsers und users aktualisieren
+        setAllUsers(prevUsers => 
           prevUsers.map(user => 
             user.id === updatedData.id ? updatedData : user
           )
         );
         
+        // Benutzerliste neu filtern basierend auf aktuellem Tab
+        filterUsersByActiveStatus(userFilterTab, allUsers.map(user => 
+          user.id === updatedData.id ? updatedData : user
+        ));
+        
         showMessage('Benutzerprofil erfolgreich aktualisiert', 'success');
         setIsEditingUser(false);
-        // fetchUsers() entfernt - kein vollständiger Reload mehr
       }
     } catch (err) {
       console.error('Fehler beim Speichern der Benutzerdaten:', err);
       // Bei Fehler: Rollback durch vollständiges Reload
-      fetchUsers();
+      await fetchAllUsers();
       if (err.response?.status === 400) {
         const errorMsg = `Validierungsfehler: ${err.response?.data?.message || 'Bitte überprüfe die eingegebenen Daten'}`;
         onError(errorMsg);
@@ -392,10 +437,21 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       const currentActiveStatus = selectedUser.active !== undefined ? selectedUser.active : true;
       const newActiveStatus = !currentActiveStatus;
       
-      console.log('Toggle active:', { currentActiveStatus, newActiveStatus, selectedUser });
+      console.log('Toggle active:', { 
+        currentActiveStatus, 
+        newActiveStatus, 
+        selectedUser,
+        selectedUserActive: selectedUser.active,
+        userId: selectedUser.id
+      });
+      
+      const updatePayload = { active: newActiveStatus };
+      console.log('Sending update payload:', updatePayload, 'Type of active:', typeof newActiveStatus);
       
       // Update Benutzer
-      const response = await userApi.update(selectedUser.id, { active: newActiveStatus });
+      const response = await userApi.update(selectedUser.id, updatePayload);
+      
+      console.log('Update response:', response.data);
 
       if (response.data) {
         const updatedData = {
@@ -412,15 +468,20 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
           birthday: updatedData.birthday ? new Date(updatedData.birthday).toISOString().split('T')[0] : null
         });
         
-        // Optimistisches Update: User in Liste aktualisieren
-        setUsers(prevUsers => 
+        // Optimistisches Update: User in allUsers und users aktualisieren
+        setAllUsers(prevUsers => 
           prevUsers.map(user => 
             user.id === updatedData.id ? updatedData : user
           )
         );
         
+        // Benutzerliste neu filtern basierend auf aktuellem Tab
+        filterUsersByActiveStatus(userFilterTab, allUsers.map(user => 
+          user.id === updatedData.id ? updatedData : user
+        ));
+        
         // Benutzerliste neu laden, um sicherzustellen, dass alles synchron ist
-        await fetchUsers();
+        await fetchAllUsers();
         
         showMessage(
           newActiveStatus 
@@ -433,7 +494,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       console.error('Fehler beim Aktivieren/Deaktivieren des Benutzers:', err);
       handleError(err);
       // Bei Fehler: Benutzerliste neu laden
-      await fetchUsers();
+      await fetchAllUsers();
     }
   };
 
@@ -523,9 +584,18 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
     try {
       const response = await userApi.create(newUserFormData);
       
-      // Optimistisches Update: User zur Liste hinzufügen statt vollständigem Reload
+      // Optimistisches Update: User zu allUsers hinzufügen
       if (response.data) {
-        setUsers(prevUsers => [response.data, ...prevUsers]);
+        const newUser = {
+          ...response.data,
+          active: response.data.active !== undefined ? response.data.active : true
+        };
+        setAllUsers(prevUsers => [newUser, ...prevUsers]);
+        
+        // Wenn aktueller Tab "active" ist und neuer User aktiv ist, auch zu users hinzufügen
+        if (userFilterTab === 'active' && newUser.active) {
+          setUsers(prevUsers => [newUser, ...prevUsers]);
+        }
       }
       
       showMessage('Benutzer erfolgreich erstellt', 'success');
@@ -536,10 +606,9 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
         firstName: '',
         lastName: ''
       });
-      // fetchUsers() entfernt - kein vollständiger Reload mehr
     } catch (err: any) {
       // Bei Fehler: Rollback durch vollständiges Reload
-      fetchUsers();
+      await fetchAllUsers();
       const errorMessage = err.response?.data?.message || 'Fehler beim Erstellen des Benutzers';
       showMessage(errorMessage, 'error');
       onError(errorMessage);
@@ -573,11 +642,38 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
             )}
           </div>
           
-          {/* Rechts: Benutzer-Dropdown */}
+          {/* Rechts: Benutzer-Dropdown mit Active/Inactive Tabs */}
           <div className="flex-1">
             <label htmlFor="userSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               {t('users.title')}
             </label>
+            
+            {/* Active/Inactive Tabs */}
+            <div className="flex gap-2 mb-2">
+              <button
+                type="button"
+                onClick={() => setUserFilterTab('active')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  userFilterTab === 'active'
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                }`}
+              >
+                {t('users.active')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setUserFilterTab('inactive')}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  userFilterTab === 'inactive'
+                    ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
+                }`}
+              >
+                {t('users.inactive')}
+              </button>
+            </div>
+            
             <select
               id="userSelect"
               onChange={handleUserSelect}
@@ -611,7 +707,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                 </span>
               )}
             </div>
-            {isAdmin && (
+            {isAdmin() && (
               <button
                 onClick={handleToggleActive}
                 className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
@@ -623,12 +719,12 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
               >
                 {selectedUser.active ? (
                   <>
-                    <UserMinusIcon className="h-5 w-5" />
+                    <XMarkIcon className="h-5 w-5" />
                     {t('users.deactivate')}
                   </>
                 ) : (
                   <>
-                    <UserPlusIcon className="h-5 w-5" />
+                    <CheckIcon className="h-5 w-5" />
                     {t('users.activate')}
                   </>
                 )}
@@ -883,7 +979,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                         onChange={handleUserInputChange}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                       >
-                        <option value="">Bitte auswählen</option>
+                        <option value="">{t('users.pleaseSelect')}</option>
                         {CONTRACT_TYPES.map(type => (
                           <option key={type.code} value={type.code}>
                             {type.name}

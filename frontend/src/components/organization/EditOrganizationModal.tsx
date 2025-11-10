@@ -10,6 +10,7 @@ import { useLanguage } from '../../hooks/useLanguage.ts';
 import RoleConfigurationTab from './RoleConfigurationTab.tsx';
 import DocumentConfigurationTab from './DocumentConfigurationTab.tsx';
 import SMTPConfigurationTab from './SMTPConfigurationTab.tsx';
+import ApiConfigurationTab from './ApiConfigurationTab.tsx';
 
 interface Props {
   isOpen: boolean;
@@ -24,9 +25,12 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
     displayName: '',
     domain: '',
     logo: '',
+    country: null,
+    nit: null,
     settings: {}
   });
   const [selectedCountry, setSelectedCountry] = useState<string>('');
+  const [nit, setNit] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
@@ -36,7 +40,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
   const { organizationLanguage, setOrganizationLanguage } = useLanguage();
   const [selectedOrgLanguage, setSelectedOrgLanguage] = useState<string>('');
   const [savingOrgLanguage, setSavingOrgLanguage] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'roles' | 'documents' | 'smtp'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'roles' | 'documents' | 'smtp' | 'api'>('general');
 
   // Länder-Liste
   const COUNTRIES = [
@@ -54,11 +58,14 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
         displayName: organization.displayName || '',
         domain: organization.domain || '',
         logo: organization.logo || '',
+        country: organization.country || null,
+        nit: organization.nit || null,
         settings: orgSettings
       });
       
-      // Setze Land aus settings
-      setSelectedCountry(orgSettings.country || '');
+      // Setze Land direkt aus organization (statt aus settings)
+      setSelectedCountry(organization.country || '');
+      setNit(organization.nit || '');
       
       // Lade Organisation-Sprache
       const loadOrgLanguage = async () => {
@@ -108,10 +115,21 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
       setSelectedCountry(value);
       setFormData(prev => ({
         ...prev,
-        settings: {
-          ...(prev.settings || {}),
-          ...(value ? { country: value } : {})
-        }
+        country: value || null
+      }));
+      // Wenn Country nicht "CO" ist, NIT zurücksetzen
+      if (value !== 'CO') {
+        setNit('');
+        setFormData(prev => ({
+          ...prev,
+          nit: null
+        }));
+      }
+    } else if (name === 'nit') {
+      setNit(value);
+      setFormData(prev => ({
+        ...prev,
+        nit: value || null
       }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
@@ -151,9 +169,12 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
         displayName: organization.displayName || '',
         domain: organization.domain || '',
         logo: organization.logo || '',
+        country: organization.country || null,
+        nit: organization.nit || null,
         settings: orgSettings
       });
-      setSelectedCountry(orgSettings.country || '');
+      setSelectedCountry(organization.country || '');
+      setNit(organization.nit || '');
     }
     setErrors({});
     onClose();
@@ -391,7 +412,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
             >
-              {t('organization.tabs.general') || 'Allgemein'}
+              {t('organization.tabs.general')}
             </button>
             <button
               type="button"
@@ -402,7 +423,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
             >
-              {t('organization.tabs.roles') || 'Rollen'}
+              {t('organization.tabs.roles')}
             </button>
             <button
               type="button"
@@ -413,7 +434,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
             >
-              {t('organization.tabs.documents') || 'Dokumente'}
+              {t('organization.tabs.documents')}
             </button>
             <button
               type="button"
@@ -424,8 +445,21 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
             >
-              {t('organization.tabs.smtp') || 'SMTP'}
+              {t('organization.tabs.smtp')}
             </button>
+            {selectedCountry === 'CO' && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('api')}
+                className={`${
+                  activeTab === 'api'
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
+              >
+                {t('organization.tabs.api')}
+              </button>
+            )}
           </nav>
         </div>
 
@@ -520,6 +554,30 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
               </select>
             </div>
 
+            {/* NIT (nur für Kolumbien) */}
+            {selectedCountry === 'CO' && (
+              <div>
+                <label 
+                  htmlFor="nit" 
+                  className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                >
+                  {t('organization.nit')}
+                </label>
+                <input
+                  type="text"
+                  id="nit"
+                  name="nit"
+                  value={nit}
+                  onChange={handleChange}
+                  placeholder={t('organization.nitDescription')}
+                  className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {t('organization.nitDescription')}
+                </p>
+              </div>
+            )}
+
             {/* Organisation-Sprache */}
             <div className="border-t pt-4">
               <label 
@@ -609,6 +667,17 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
 
           {activeTab === 'smtp' && (
             <SMTPConfigurationTab 
+              organization={organization}
+              onSave={() => {
+                if (onSuccess) {
+                  onSuccess();
+                }
+              }}
+            />
+          )}
+
+          {activeTab === 'api' && selectedCountry === 'CO' && (
+            <ApiConfigurationTab 
               organization={organization}
               onSave={() => {
                 if (onSuccess) {

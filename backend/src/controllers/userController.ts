@@ -26,6 +26,7 @@ interface UpdateProfileRequest {
     contract?: string;
     salary?: string;
     normalWorkingHours?: number;
+    gender?: string | null; // "male", "female", "other", oder null
 }
 
 // Interface für die Aktualisierung der Benutzereinstellungen
@@ -87,7 +88,11 @@ export const getAllUsers = async (req: Request, res: Response) => {
                         branch: true
                     }
                 }
-            }
+            },
+            orderBy: [
+                { username: 'asc' },
+                { firstName: 'asc' }
+            ]
         });
         res.json(users);
     } catch (error) {
@@ -128,8 +133,8 @@ export const getAllUsersForDropdown = async (req: Request, res: Response) => {
                 }
             },
             orderBy: [
-                { firstName: 'asc' },
-                { lastName: 'asc' }
+                { username: 'asc' },
+                { firstName: 'asc' }
             ]
         });
         res.json(users);
@@ -209,6 +214,7 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                 contract: true,
                 salary: true,
                 normalWorkingHours: true,
+                gender: true,
                 settings: true,
                 invoiceSettings: true,
                 roles: {
@@ -280,8 +286,12 @@ export const updateUserById = async (req: Request, res: Response) => {
             contractType,
             monthlySalary,
             // Arbeitszeit-Felder
-            normalWorkingHours
+            normalWorkingHours,
+            active
         } = req.body;
+
+        console.log('updateUserById - Received body:', req.body);
+        console.log('updateUserById - Active value:', active, 'Type:', typeof active);
 
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
@@ -326,7 +336,9 @@ export const updateUserById = async (req: Request, res: Response) => {
             ...(contractType !== undefined && { contractType }),
             ...(monthlySalary !== undefined && { monthlySalary: monthlySalary === null ? null : parseFloat(monthlySalary.toString()) }),
             // Arbeitszeit-Felder
-            ...(normalWorkingHours !== undefined && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })
+            ...(normalWorkingHours !== undefined && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) }),
+            // Active-Status
+            ...(active !== undefined && active !== null && { active: Boolean(active) })
         };
 
         console.log('Updating user with data:', updateData);
@@ -383,7 +395,8 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             bankDetails,
             contract,
             salary,
-            normalWorkingHours
+            normalWorkingHours,
+            gender
         } = req.body;
 
         const userId = parseInt(req.userId, 10);
@@ -419,6 +432,13 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             });
         }
 
+        // Validiere gender-Wert falls vorhanden
+        if (gender && !['male', 'female', 'other'].includes(gender)) {
+            return res.status(400).json({
+                message: 'Ungültiger gender-Wert. Erlaubt: male, female, other'
+            });
+        }
+
         const updateData: Prisma.UserUpdateInput = {
             ...(username && { username }),
             ...(email && { email }),
@@ -428,7 +448,8 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             ...(bankDetails && { bankDetails }),
             ...(contract && { contract }),
             ...(salary && { salary: parseFloat(salary) }),
-            ...(normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })
+            ...(normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) }),
+            ...(gender !== undefined && { gender: gender || null })
         };
 
         const updatedUser = await prisma.user.update({
@@ -445,6 +466,7 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                 contract: true,
                 salary: true,
                 normalWorkingHours: true,
+                gender: true,
                 roles: {
                     include: {
                         role: {
@@ -1019,20 +1041,36 @@ export const createUser = async (req: Request, res: Response) => {
         // Hash das Passwort
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Finde die "User"-Rolle der Organisation (oder erstes verfügbare Rolle)
-        const userRole = await prisma.role.findFirst({
+        // Finde die "Hamburger"-Rolle der Organisation (Standard-Rolle für neue Benutzer)
+        const hamburgerRole = await prisma.role.findFirst({
             where: {
                 organizationId: organizationId,
-                name: 'User'
+                name: 'Hamburger'
             }
         });
 
-        // Falls keine "User"-Rolle existiert, nehme die erste verfügbare Rolle der Organisation
-        let roleToAssign = userRole;
+        // Falls keine "Hamburger"-Rolle existiert, suche nach "User"-Rolle
+        let roleToAssign = hamburgerRole;
         if (!roleToAssign) {
             roleToAssign = await prisma.role.findFirst({
                 where: {
-                    organizationId: organizationId
+                    organizationId: organizationId,
+                    name: 'User'
+                }
+            });
+        }
+
+        // Falls immer noch keine Rolle gefunden, nehme die erste verfügbare Rolle der Organisation (außer Admin)
+        if (!roleToAssign) {
+            roleToAssign = await prisma.role.findFirst({
+                where: {
+                    organizationId: organizationId,
+                    name: {
+                        not: 'Admin'
+                    }
+                },
+                orderBy: {
+                    id: 'asc'
                 }
             });
         }
@@ -1147,6 +1185,9 @@ export const updateUser = async (req: Request, res: Response) => {
 
         const { username, email, firstName, lastName, birthday, bankDetails, contract, salary, active } = req.body;
 
+        console.log('Updating user with data:', req.body);
+        console.log('Active value:', active, 'Type:', typeof active);
+
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
             const existingUser = await prisma.user.findFirst({
@@ -1178,8 +1219,10 @@ export const updateUser = async (req: Request, res: Response) => {
             ...(bankDetails && { bankDetails }),
             ...(contract && { contract }),
             ...(salary && { salary: parseFloat(salary.toString()) }),
-            ...(active !== undefined && { active })
+            ...(active !== undefined && active !== null && { active: Boolean(active) })
         };
+
+        console.log('Update data to be applied:', updateData);
 
         const updatedUser = await prisma.user.update({
             where: { id: userId },

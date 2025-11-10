@@ -715,6 +715,56 @@ async function main() {
     }
     console.log(`✅ Org 2 Hamburger-Rolle: ${org2HamburgerRole.name} (ID: ${org2HamburgerRole.id})`);
 
+    // Org 1 Legal-Rolle (Derecho)
+    let org1LegalRole = await prisma.role.findFirst({
+      where: {
+        name: 'Derecho',
+        organizationId: org1.id
+      }
+    });
+    if (!org1LegalRole) {
+      org1LegalRole = await prisma.role.create({
+        data: {
+          name: 'Derecho',
+          description: 'Legal-Rolle für Sozialversicherungen (La Familia Hostel)',
+          organizationId: org1.id
+        }
+      });
+    } else {
+      org1LegalRole = await prisma.role.update({
+        where: { id: org1LegalRole.id },
+        data: {
+          description: 'Legal-Rolle für Sozialversicherungen (La Familia Hostel)'
+        }
+      });
+    }
+    console.log(`✅ Org 1 Legal-Rolle (Derecho): ${org1LegalRole.name} (ID: ${org1LegalRole.id})`);
+
+    // Org 2 Legal-Rolle (Derecho)
+    let org2LegalRole = await prisma.role.findFirst({
+      where: {
+        name: 'Derecho',
+        organizationId: org2.id
+      }
+    });
+    if (!org2LegalRole) {
+      org2LegalRole = await prisma.role.create({
+        data: {
+          name: 'Derecho',
+          description: 'Legal-Rolle für Sozialversicherungen (Mosaik)',
+          organizationId: org2.id
+        }
+      });
+    } else {
+      org2LegalRole = await prisma.role.update({
+        where: { id: org2LegalRole.id },
+        data: {
+          description: 'Legal-Rolle für Sozialversicherungen (Mosaik)'
+        }
+      });
+    }
+    console.log(`✅ Org 2 Legal-Rolle (Derecho): ${org2LegalRole.name} (ID: ${org2LegalRole.id})`);
+
     // Standard-Organisation Rollen (für Rückwärtskompatibilität)
     let orgAdminRole = await prisma.role.findFirst({
       where: {
@@ -756,6 +806,14 @@ async function main() {
     // Org 1 Hamburger: gleiche Berechtigungen wie Hamburger
     await ensureAllPermissionsForRole(org1HamburgerRole.id, hamburgerPermissionMap);
 
+    // Org 1 Legal (Derecho): Basis-Berechtigungen + organization_management (read) für Zugriff auf UserManagementTab
+    const legalPermissionMap: Record<string, AccessLevel> = {
+      ...hamburgerPermissionMap, // Basis-Berechtigungen
+      'page_organization_management': 'read', // Zugriff auf Organisation-Seite
+      'table_organization_users': 'read' // Zugriff auf User-Tabelle (nur Lesen)
+    };
+    await ensureAllPermissionsForRole(org1LegalRole.id, legalPermissionMap);
+
     // Org 2 Admin: alle Berechtigungen
     const org2AdminPermissionMap: Record<string, AccessLevel> = {};
     ALL_PAGES.forEach(page => org2AdminPermissionMap[`page_${page}`] = 'both');
@@ -768,6 +826,9 @@ async function main() {
 
     // Org 2 Hamburger: gleiche Berechtigungen wie Hamburger
     await ensureAllPermissionsForRole(org2HamburgerRole.id, hamburgerPermissionMap);
+
+    // Org 2 Legal (Derecho): Basis-Berechtigungen + organization_management (read) für Zugriff auf UserManagementTab
+    await ensureAllPermissionsForRole(org2LegalRole.id, legalPermissionMap);
 
     // Standard-Organisation Admin: alle Berechtigungen
     const orgAdminPermissionMap: Record<string, AccessLevel> = {};

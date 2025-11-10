@@ -110,10 +110,10 @@ const FilterRow: React.FC<FilterRowProps> = ({
       if (!token) return;
       
       if (condition.column === 'responsible' || condition.column === 'qualityControl' || condition.column === 'responsibleAndQualityControl') {
-        // Benutzer laden
+        // Benutzer laden (nur aktive Benutzer)
         setLoadingUsers(true);
         try {
-          const response = await axiosInstance.get('/users');
+          const response = await axiosInstance.get('/users/dropdown');
           setUsers(response.data);
         } catch (error) {
           console.error('Fehler beim Laden der Benutzer:', error);

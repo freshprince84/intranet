@@ -66,58 +66,126 @@ const JoinRequestsList: React.FC = () => {
   const mountedRef = useRef(true);
   const hasInitialLoadRef = useRef(false);
 
+  // Debug: Log permissionsLoading Änderungen
   useEffect(() => {
+    console.log('[JoinRequestsList] permissionsLoading geändert:', permissionsLoading);
+  }, [permissionsLoading]);
+
+  // Reset beim Mount - wichtig für Neuladen wenn Komponente neu gemountet wird
+  useEffect(() => {
+    console.log('[JoinRequestsList] Component mounted, reset hasInitialLoadRef');
+    hasInitialLoadRef.current = false;
+    mountedRef.current = true;
+    
     return () => {
+      console.log('[JoinRequestsList] Component unmounting');
       mountedRef.current = false;
     };
   }, []);
 
   useEffect(() => {
+    console.log('[JoinRequestsList] useEffect triggered', { 
+      permissionsLoading, 
+      hasInitialLoad: hasInitialLoadRef.current,
+      joinRequestsCount: joinRequests.length 
+    });
+    
     // Warte bis Berechtigungen geladen sind
     if (permissionsLoading) {
-      return;
-    }
-
-    // Nur einmal beim initialen Load ausführen
-    if (hasInitialLoadRef.current) {
+      console.log('[JoinRequestsList] Warte auf Berechtigungen...');
       return;
     }
 
     // Prüfe Berechtigung direkt
     const hasPermission = canViewJoinRequests();
+    console.log('[JoinRequestsList] Berechtigung geprüft:', hasPermission);
+    
     if (!hasPermission) {
+      console.log('[JoinRequestsList] Keine Berechtigung zum Anzeigen');
       setError(t('joinRequestsList.noPermission'));
       setLoading(false);
       hasInitialLoadRef.current = true;
       return;
     }
 
-    // Markiere als geladen, BEVOR der Request startet
-    hasInitialLoadRef.current = true;
+    // WICHTIG: Nur laden wenn noch nicht erfolgreich geladen wurde
+    // Das verhindert unnötige Re-Fetches bei jedem permissionsLoading-Change
+    if (hasInitialLoadRef.current) {
+      console.log('[JoinRequestsList] Bereits geladen, überspringe Fetch');
+      return;
+    }
+
+    console.log('[JoinRequestsList] Starte Fetch der Join Requests...');
     
     const fetchJoinRequests = async () => {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        console.log('[JoinRequestsList] Component unmounted, breche ab');
+        return;
+      }
       
       try {
+        console.log('[JoinRequestsList] Setze loading auf true');
         setLoading(true);
         setError(null);
+        
+        console.log('[JoinRequestsList] Rufe organizationService.getJoinRequests() auf...');
+        console.log('[JoinRequestsList] API Endpoint:', API_ENDPOINTS.ORGANIZATIONS.JOIN_REQUESTS);
+        
         const requests = await organizationService.getJoinRequests();
         
-        if (!mountedRef.current) return;
+        console.log('[JoinRequestsList] Antwort erhalten:', requests);
+        console.log('[JoinRequestsList] Antwort Typ:', typeof requests);
+        console.log('[JoinRequestsList] Ist Array:', Array.isArray(requests));
+        console.log('[JoinRequestsList] Ist null/undefined:', requests === null || requests === undefined);
         
+        if (!mountedRef.current) {
+          console.log('[JoinRequestsList] Component während Request unmounted');
+          return;
+        }
+        
+        // Validiere, dass die Antwort vorhanden ist
+        if (requests === null || requests === undefined) {
+          console.error('[JoinRequestsList] ❌ Antwort ist null oder undefined!');
+          throw new Error('Ungültige Antwort vom Server: Antwort ist null oder undefined');
+        }
+        
+        // Validiere, dass die Antwort ein Array ist
+        if (!Array.isArray(requests)) {
+          console.error('[JoinRequestsList] ❌ Antwort ist kein Array!', requests);
+          throw new Error('Ungültige Antwort vom Server: Erwartetes Array, erhalten: ' + typeof requests);
+        }
+        
+        console.log('[JoinRequestsList] ✅ Setze', requests.length, 'Join Requests');
         setJoinRequests(requests);
+        setError(null); // Fehler zurücksetzen bei Erfolg
+        hasInitialLoadRef.current = true; // Nur bei Erfolg setzen
       } catch (err: any) {
-        if (!mountedRef.current) return;
+        console.error('[JoinRequestsList] ❌ Fehler beim Laden:', err);
+        console.error('[JoinRequestsList] Fehler Details:', {
+          message: err.message,
+          response: err.response,
+          status: err.response?.status,
+          data: err.response?.data,
+          stack: err.stack
+        });
         
-        const errorMessage = err.response?.data?.message || t('joinRequestsList.loadError');
+        if (!mountedRef.current) {
+          console.log('[JoinRequestsList] Component während Error-Handling unmounted');
+          return;
+        }
+        
+        const errorMessage = err.response?.data?.message || err.message || t('joinRequestsList.loadError') || 'Fehler beim Laden der Beitrittsanfragen';
+        console.log('[JoinRequestsList] Zeige Fehlermeldung:', errorMessage);
         setError(errorMessage);
         // showMessage nur außerhalb useEffect verwenden, um Re-Renders zu vermeiden
         // Verwende setTimeout, um es asynchron auszuführen
         setTimeout(() => {
           showMessage(errorMessage, 'error');
         }, 0);
+        // Bei Fehler NICHT hasInitialLoadRef setzen, damit bei nächstem permissionsLoading-Change neu geladen wird
       } finally {
         if (mountedRef.current) {
+          console.log('[JoinRequestsList] Setze loading auf false');
           setLoading(false);
         }
       }
@@ -125,7 +193,7 @@ const JoinRequestsList: React.FC = () => {
 
     fetchJoinRequests();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [permissionsLoading]);
+  }, [permissionsLoading]); // canViewJoinRequests ist eine Funktion, nicht als Dependency
 
   const handleOpenProcessModal = (request: OrganizationJoinRequest) => {
     if (!canManageJoinRequests()) {

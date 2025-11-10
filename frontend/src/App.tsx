@@ -34,6 +34,8 @@ const NotificationList = React.lazy(() => import('./components/NotificationList.
 const Cerebro = React.lazy(() => import('./pages/Cerebro.tsx'));
 const Payroll = React.lazy(() => import('./pages/Payroll.tsx'));
 const Consultations = React.lazy(() => import('./pages/Consultations.tsx'));
+const ReservationsPage = React.lazy(() => import('./pages/ReservationsPage.tsx'));
+const ReservationDetails = React.lazy(() => import('./components/reservations/ReservationDetails.tsx'));
 
 const App: React.FC = () => {
     // Claude Console initialisieren
@@ -115,6 +117,20 @@ const App: React.FC = () => {
                                                             <ProtectedRoute>
                                                                 <Suspense fallback={<LoadingScreen />}>
                                                                     <Consultations />
+                                                                </Suspense>
+                                                            </ProtectedRoute>
+                                                        } />
+                                                        <Route path="/reservations" element={
+                                                            <ProtectedRoute>
+                                                                <Suspense fallback={<LoadingScreen />}>
+                                                                    <ReservationsPage />
+                                                                </Suspense>
+                                                            </ProtectedRoute>
+                                                        } />
+                                                        <Route path="/reservations/:id" element={
+                                                            <ProtectedRoute>
+                                                                <Suspense fallback={<LoadingScreen />}>
+                                                                    <ReservationDetails />
                                                                 </Suspense>
                                                             </ProtectedRoute>
                                                         } />

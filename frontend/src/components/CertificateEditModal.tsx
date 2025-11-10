@@ -48,6 +48,8 @@ const CertificateEditModal: React.FC<CertificateEditModalProps> = ({
   );
   const [certificateType, setCertificateType] = useState(certificate.certificateType || 'employment');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [existingPdfUrl, setExistingPdfUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Prüfe Berechtigung
@@ -73,6 +75,10 @@ const CertificateEditModal: React.FC<CertificateEditModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       openSidepane();
+      // Lade bestehende PDF-URL wenn vorhanden
+      if (certificate.id) {
+        setExistingPdfUrl(API_ENDPOINTS.LIFECYCLE.CERTIFICATE_DOWNLOAD(userId, certificate.id));
+      }
     } else {
       closeSidepane();
     }
@@ -80,7 +86,16 @@ const CertificateEditModal: React.FC<CertificateEditModalProps> = ({
     return () => {
       closeSidepane();
     };
-  }, [isOpen, openSidepane, closeSidepane]);
+  }, [isOpen, openSidepane, closeSidepane, certificate.id, userId]);
+
+  // Cleanup: Revoke Object URL beim Unmount oder wenn Datei entfernt wird
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+      }
+    };
+  }, [pdfPreviewUrl]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -94,6 +109,10 @@ const CertificateEditModal: React.FC<CertificateEditModalProps> = ({
         return;
       }
       setPdfFile(file);
+      // Erstelle Preview-URL für neue Datei
+      const url = URL.createObjectURL(file);
+      setPdfPreviewUrl(url);
+      setExistingPdfUrl(null); // Verstecke bestehende PDF wenn neue hochgeladen wird
     }
   };
 
@@ -125,6 +144,10 @@ const CertificateEditModal: React.FC<CertificateEditModalProps> = ({
       onClose();
       
       // Reset form
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+        setPdfPreviewUrl(null);
+      }
       setPdfFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -192,9 +215,35 @@ const CertificateEditModal: React.FC<CertificateEditModalProps> = ({
                 <input
                   type="date"
                   value={issueDate}
-                  onChange={(e) => setIssueDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setIssueDate(value);
+                    // Validierung: Datum darf nicht in der Zukunft liegen
+                    if (value && new Date(value) > new Date()) {
+                      setError('Ausstellungsdatum darf nicht in der Zukunft liegen');
+                    } else {
+                      setError(null); // Clear error when valid
+                    }
+                  }}
+                  max={new Date().toISOString().split('T')[0]}
+                  className={`w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white ${
+                    error && issueDate && new Date(issueDate) > new Date()
+                      ? 'border-red-500 dark:border-red-500' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                  aria-invalid={issueDate && new Date(issueDate) > new Date() ? true : undefined}
+                  aria-describedby={issueDate && new Date(issueDate) > new Date() ? "issueDate-error" : undefined}
                 />
+                {error && issueDate && new Date(issueDate) > new Date() && (
+                  <p id="issueDate-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
+                    {error}
+                  </p>
+                )}
+                {!error && (
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Das Datum darf nicht in der Zukunft liegen
+                  </p>
+                )}
               </div>
 
               <div>
@@ -252,6 +301,11 @@ const CertificateEditModal: React.FC<CertificateEditModalProps> = ({
                         type="button"
                         onClick={() => {
                           setPdfFile(null);
+                          if (pdfPreviewUrl) {
+                            URL.revokeObjectURL(pdfPreviewUrl);
+                            setPdfPreviewUrl(null);
+                          }
+                          setExistingPdfUrl(API_ENDPOINTS.LIFECYCLE.CERTIFICATE_DOWNLOAD(userId, certificate.id));
                           if (fileInputRef.current) {
                             fileInputRef.current.value = '';
                           }
@@ -263,6 +317,23 @@ const CertificateEditModal: React.FC<CertificateEditModalProps> = ({
                     </div>
                   )}
                 </div>
+
+                {/* PDF-Vorschau */}
+                {(pdfPreviewUrl || existingPdfUrl) && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      PDF-Vorschau
+                    </label>
+                    <div className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                      <iframe 
+                        src={`${pdfPreviewUrl || existingPdfUrl}${pdfPreviewUrl ? '#view=FitH' : '?preview=true#view=FitH'}`}
+                        className="w-full rounded border dark:border-gray-600"
+                        style={{ height: '400px' }}
+                        title="PDF-Vorschau"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4">

@@ -52,7 +52,11 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
   const [issueDate, setIssueDate] = useState(new Date().toISOString().split('T')[0]);
   const [certificateType, setCertificateType] = useState('employment');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [availableTemplates, setAvailableTemplates] = useState<Array<{type: string; version: string; path: string}>>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [useTemplate, setUseTemplate] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Prüfe Berechtigung (nur wenn Berechtigungen geladen sind)
@@ -83,6 +87,7 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
     if (isOpen) {
       openSidepane();
       fetchUserData();
+      fetchTemplates();
     } else {
       closeSidepane();
     }
@@ -91,6 +96,31 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
       closeSidepane();
     };
   }, [isOpen, openSidepane, closeSidepane]);
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATION_LIFECYCLE.DOCUMENT_TEMPLATES);
+      const documentTemplates = response.data.documentTemplates || {};
+      const templates: Array<{type: string; version: string; path: string}> = [];
+      
+      if (documentTemplates.employmentCertificate) {
+        templates.push({
+          type: 'employmentCertificate',
+          version: documentTemplates.employmentCertificate.version,
+          path: documentTemplates.employmentCertificate.path
+        });
+      }
+      
+      setAvailableTemplates(templates);
+      if (templates.length > 0) {
+        setSelectedTemplate(templates[0].type);
+        setUseTemplate(true);
+      }
+    } catch (err: any) {
+      console.error('Fehler beim Laden der Templates:', err);
+      // Kein Fehler anzeigen, Templates sind optional
+    }
+  };
 
   const fetchUserData = async () => {
     try {
@@ -102,7 +132,7 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
       const user = userResponse.data;
       const lifecycle = lifecycleResponse.data.lifecycle;
 
-      setUserData({
+      const userDataObj = {
         firstName: user.firstName || '',
         lastName: user.lastName || '',
         identificationNumber: user.identificationNumber || null,
@@ -111,7 +141,14 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
         contractType: lifecycle?.contractType || null,
         salary: user.salary || null,
         position: null // TODO: Aus Rollen ableiten
-      });
+      };
+
+      setUserData(userDataObj);
+
+      // Automatische Vorausfüllung: Ausstellungsdatum auf heute setzen (wenn noch nicht gesetzt)
+      if (!issueDate || issueDate === new Date().toISOString().split('T')[0]) {
+        setIssueDate(new Date().toISOString().split('T')[0]);
+      }
     } catch (err: any) {
       console.error('Fehler beim Laden der User-Daten:', err);
       setError('Fehler beim Laden der Daten');
@@ -130,14 +167,47 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
         return;
       }
       setPdfFile(file);
+      setUseTemplate(false); // Deaktiviere Template wenn PDF hochgeladen wird
+      // Erstelle Preview-URL
+      const url = URL.createObjectURL(file);
+      setPdfPreviewUrl(url);
     }
+  };
+
+  // Cleanup: Revoke Object URL beim Unmount oder wenn Datei entfernt wird
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+      }
+    };
+  }, [pdfPreviewUrl]);
+
+  const validateForm = (): string | null => {
+    if (!useTemplate && !pdfFile) {
+      return 'Bitte wählen Sie ein Template oder laden Sie eine PDF-Datei hoch';
+    }
+    if (!issueDate) {
+      return 'Bitte geben Sie ein Ausstellungsdatum an';
+    }
+    const issueDateObj = new Date(issueDate);
+    if (isNaN(issueDateObj.getTime())) {
+      return 'Ungültiges Ausstellungsdatum';
+    }
+    if (issueDateObj > new Date()) {
+      return 'Ausstellungsdatum darf nicht in der Zukunft liegen';
+    }
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!pdfFile) {
-      showMessage('Bitte wählen Sie eine PDF-Datei aus', 'error');
+    // Client-seitige Validierung
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      showMessage(validationError, 'error');
       return;
     }
 
@@ -145,23 +215,33 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
     setError(null);
 
     try {
-      // Upload PDF
-      const formData = new FormData();
-      formData.append('file', pdfFile);
-      
-      // TODO: Temporär - später wird PDF generiert
-      // Für jetzt: Upload zu einem temporären Endpoint oder direkt speichern
-      // Da wir noch keinen Upload-Endpoint haben, müssen wir das PDF erstmal als Base64 speichern
-      // oder einen Upload-Endpoint erstellen
-      
-      // Workaround: Erstelle Certificate mit temporärem pdfPath
-      // In Phase 5 wird das durch PDF-Generierung ersetzt
+      let pdfPath: string | undefined = undefined;
+      let templateUsed: string | null = null;
+      let templateVersion: string | null = null;
+
+      // Wenn Template verwendet werden soll und kein PDF hochgeladen wurde
+      if (useTemplate && selectedTemplate && !pdfFile) {
+        const template = availableTemplates.find(t => t.type === selectedTemplate);
+        if (template) {
+          templateUsed = template.type;
+          templateVersion = template.version;
+          // PDF wird vom Backend generiert
+        }
+      } else if (pdfFile) {
+        // PDF wurde hochgeladen - verwende dieses
+        pdfPath = `temp-${Date.now()}-${pdfFile.name}`; // Temporär
+      } else {
+        showMessage('Bitte wählen Sie ein Template oder laden Sie eine PDF-Datei hoch', 'error');
+        setLoading(false);
+        return;
+      }
+
       const certificateData = {
         certificateType,
         issueDate: new Date(issueDate),
-        pdfPath: `temp-${Date.now()}-${pdfFile.name}`, // Temporär
-        templateUsed: null,
-        templateVersion: null
+        pdfPath,
+        templateUsed,
+        templateVersion
       };
 
       await axiosInstance.post(
@@ -174,6 +254,10 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
       onClose();
       
       // Reset form
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+        setPdfPreviewUrl(null);
+      }
       setPdfFile(null);
       setIssueDate(new Date().toISOString().split('T')[0]);
       if (fileInputRef.current) {
@@ -321,24 +405,54 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Ausstellungsdatum
+                    Ausstellungsdatum <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
                     value={issueDate}
-                    onChange={(e) => setIssueDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setIssueDate(value);
+                      // Validierung: Datum darf nicht in der Zukunft liegen
+                      if (value && new Date(value) > new Date()) {
+                        setError('Ausstellungsdatum darf nicht in der Zukunft liegen');
+                      } else {
+                        setError(null); // Clear error when valid
+                      }
+                    }}
+                    max={new Date().toISOString().split('T')[0]}
+                    className={`w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white ${
+                      error && issueDate && new Date(issueDate) > new Date()
+                        ? 'border-red-500 dark:border-red-500' 
+                        : error && !issueDate
+                        ? 'border-red-500 dark:border-red-500'
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                    required
+                    aria-invalid={(!issueDate || (issueDate && new Date(issueDate) > new Date())) ? true : undefined}
+                    aria-describedby={(!issueDate || (issueDate && new Date(issueDate) > new Date())) ? "issueDate-error" : undefined}
                   />
+                  {error && (!issueDate || (issueDate && new Date(issueDate) > new Date())) && (
+                    <p id="issueDate-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
+                      {error}
+                    </p>
+                  )}
+                  {!error && (
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                      Das Datum darf nicht in der Zukunft liegen
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Zertifikat-Typ
+                    Zertifikat-Typ <span className="text-red-500">*</span>
                   </label>
                   <select
                     value={certificateType}
                     onChange={(e) => setCertificateType(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    required
                   >
                     <option value="employment">Arbeitszeugnis</option>
                     <option value="salary">Gehaltsbescheinigung</option>
@@ -350,9 +464,52 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
 
             {activeTab === 'text' && (
               <div className="space-y-4">
+                {/* Template-Auswahl */}
+                {availableTemplates.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Template verwenden
+                    </label>
+                    <div className="flex items-center space-x-3 mb-4">
+                      <input
+                        type="checkbox"
+                        checked={useTemplate}
+                        onChange={(e) => {
+                          setUseTemplate(e.target.checked);
+                          if (e.target.checked && pdfFile) {
+                            // Wenn Template aktiviert wird, entferne PDF
+                            setPdfFile(null);
+                            if (pdfPreviewUrl) {
+                              URL.revokeObjectURL(pdfPreviewUrl);
+                              setPdfPreviewUrl(null);
+                            }
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label className="text-sm text-gray-700 dark:text-gray-300">
+                        Template für automatische PDF-Generierung verwenden
+                      </label>
+                    </div>
+                    {useTemplate && (
+                      <select
+                        value={selectedTemplate || ''}
+                        onChange={(e) => setSelectedTemplate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white mb-4"
+                      >
+                        {availableTemplates.map((template) => (
+                          <option key={template.type} value={template.type}>
+                            Arbeitszeugnis (Version {template.version})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    PDF-Datei hochladen
+                    {useTemplate ? 'ODER PDF-Datei hochladen' : 'PDF-Datei hochladen'} {!useTemplate && <span className="text-red-500">*</span>}
                   </label>
                   <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
                     <input
@@ -390,6 +547,10 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
                           type="button"
                           onClick={() => {
                             setPdfFile(null);
+                            if (pdfPreviewUrl) {
+                              URL.revokeObjectURL(pdfPreviewUrl);
+                              setPdfPreviewUrl(null);
+                            }
                             if (fileInputRef.current) {
                               fileInputRef.current.value = '';
                             }
@@ -403,12 +564,23 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4">
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    <strong>Hinweis:</strong> Die PDF-Generierung wird in Phase 5 implementiert. 
-                    Aktuell können Sie eine PDF-Datei hochladen.
-                  </p>
-                </div>
+                {/* PDF-Vorschau */}
+                {pdfPreviewUrl && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      PDF-Vorschau
+                    </label>
+                    <div className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                      <iframe 
+                        src={`${pdfPreviewUrl}#view=FitH`}
+                        className="w-full rounded border dark:border-gray-600"
+                        style={{ height: '400px' }}
+                        title="PDF-Vorschau"
+                      />
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
           </div>
@@ -425,7 +597,7 @@ const CertificateCreationModal: React.FC<CertificateCreationModalProps> = ({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={loading || !pdfFile}
+              disabled={loading || (!pdfFile && !useTemplate)}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {loading ? (

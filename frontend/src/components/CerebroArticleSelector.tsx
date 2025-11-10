@@ -115,7 +115,7 @@ const CerebroArticleSelector: React.FC<CerebroArticleSelectorProps> = ({
             value={selectedArticleId || ''}
             onChange={handleArticleSelect}
           >
-            <option value="">-- Artikel auswählen --</option>
+            <option value="">{t('cerebro.selectArticle')}</option>
             {articles.map((article) => (
               <option key={article.id} value={article.id}>
                 {article.title}
@@ -129,13 +129,13 @@ const CerebroArticleSelector: React.FC<CerebroArticleSelectorProps> = ({
             disabled={selectedArticleId === null}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Verknüpfen
+            {t('cerebro.link')}
           </button>
         </div>
 
         {loading && (
           <div className="text-sm text-gray-500">
-            Lade Artikel...
+            {t('cerebro.loadingArticle')}
           </div>
         )}
         
@@ -155,7 +155,7 @@ const CerebroArticleSelector: React.FC<CerebroArticleSelectorProps> = ({
                   {selectedArticlePreview.content.length > 300 && '...'}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500 italic">Kein Inhalt verfügbar</p>
+                <p className="text-sm text-gray-500 italic">{t('cerebro.noContentAvailable')}</p>
               )}
             </div>
             <div className="mt-2">

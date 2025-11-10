@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -20,6 +20,9 @@ import CertificateCreationModal from './CertificateCreationModal.tsx';
 import ContractCreationModal from './ContractCreationModal.tsx';
 import CertificateEditModal from './CertificateEditModal.tsx';
 import ContractEditModal from './ContractEditModal.tsx';
+import SocialSecurityEditor from './SocialSecurityEditor.tsx';
+import OffboardingStartModal from './OffboardingStartModal.tsx';
+import OffboardingCompleteModal from './OffboardingCompleteModal.tsx';
 
 interface LifecycleViewProps {
   userId: number;
@@ -34,6 +37,10 @@ interface LifecycleData {
     onboardingCompletedAt: string | null;
     contractStartDate: string | null;
     contractEndDate: string | null;
+    exitDate: string | null;
+    exitReason: string | null;
+    offboardingStartedAt: string | null;
+    offboardingCompletedAt: string | null;
   };
   progress: {
     completed: number;
@@ -48,6 +55,15 @@ interface LifecycleData {
     provider: string | null;
     registrationDate: string | null;
   }>;
+}
+
+interface Task {
+  id: number;
+  title: string;
+  description: string | null;
+  status: string;
+  dueDate: string | null;
+  createdAt: string;
 }
 
 interface Certificate {
@@ -88,12 +104,13 @@ interface Contract {
 
 const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
   const { t } = useTranslation();
-  const { isHR } = usePermissions();
+  const { isHR, isAdmin } = usePermissions();
   const { showMessage } = useMessage();
   
   const [lifecycleData, setLifecycleData] = useState<LifecycleData | null>(null);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
+  const [offboardingTasks, setOffboardingTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -105,23 +122,46 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
   
   const [downloadingCertId, setDownloadingCertId] = useState<number | null>(null);
   const [downloadingContractId, setDownloadingContractId] = useState<number | null>(null);
+  const [isOffboardingStartModalOpen, setIsOffboardingStartModalOpen] = useState(false);
+  const [isOffboardingCompleteModalOpen, setIsOffboardingCompleteModalOpen] = useState(false);
+  const [isEditContractDatesModalOpen, setIsEditContractDatesModalOpen] = useState(false);
+  const [editingContractStartDate, setEditingContractStartDate] = useState<string>('');
+  const [editingContractEndDate, setEditingContractEndDate] = useState<string>('');
 
-  useEffect(() => {
-    fetchData();
-  }, [userId]);
+  const fetchDataRef = useRef(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    // Verhindere mehrfaches gleichzeitiges Laden
+    if (fetchDataRef.current) {
+      return;
+    }
+    
     try {
+      fetchDataRef.current = true;
       setLoading(true);
-      const [lifecycleResponse, certsResponse, contractsResponse] = await Promise.all([
+      const [lifecycleResponse, certsResponse, contractsResponse, tasksResponse] = await Promise.all([
         axiosInstance.get(API_ENDPOINTS.LIFECYCLE.BY_USER(userId)),
         axiosInstance.get(API_ENDPOINTS.LIFECYCLE.CERTIFICATES(userId)),
-        axiosInstance.get(API_ENDPOINTS.LIFECYCLE.CONTRACTS(userId))
+        axiosInstance.get(API_ENDPOINTS.LIFECYCLE.CONTRACTS(userId)),
+        axiosInstance.get(API_ENDPOINTS.TASKS.BY_USER(userId)).catch(() => ({ data: [] })) // Optional, falls fehlschlägt
       ]);
       
       setLifecycleData(lifecycleResponse.data);
       setCertificates(certsResponse.data?.certificates || []);
       setContracts(contractsResponse.data?.contracts || []);
+      
+      // Filtere Offboarding-Tasks (die 3 spezifischen Tasks)
+      const allTasks = tasksResponse.data || [];
+      const offboardingTaskTitles = [
+        'Crear certificado laboral',
+        'Realizar liquidación final',
+        'Desafiliar de seguridad social'
+      ];
+      const filteredTasks = allTasks.filter((task: Task) => 
+        offboardingTaskTitles.includes(task.title)
+      );
+      setOffboardingTasks(filteredTasks);
+      
       setError(null);
     } catch (err: any) {
       console.error('Fehler beim Laden der Lebenszyklus-Daten:', err);
@@ -129,8 +169,14 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
       showMessage('Fehler beim Laden der Daten', 'error');
     } finally {
       setLoading(false);
+      fetchDataRef.current = false;
     }
-  };
+  }, [userId]); // showMessage entfernt, da es sich ändern kann
+
+  useEffect(() => {
+    fetchDataRef.current = false; // Reset beim userId-Wechsel
+    fetchData();
+  }, [fetchData]);
 
   const handleDownloadCertificate = async (certId: number) => {
     setDownloadingCertId(certId);
@@ -156,6 +202,39 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
       showMessage('Fehler beim Herunterladen des Arbeitszeugnisses', 'error');
     } finally {
       setDownloadingCertId(null);
+    }
+  };
+
+  const handleEditContractDates = () => {
+    if (!lifecycleData?.lifecycle) return;
+    
+    setEditingContractStartDate(
+      lifecycleData.lifecycle.contractStartDate 
+        ? new Date(lifecycleData.lifecycle.contractStartDate).toISOString().split('T')[0]
+        : ''
+    );
+    setEditingContractEndDate(
+      lifecycleData.lifecycle.contractEndDate 
+        ? new Date(lifecycleData.lifecycle.contractEndDate).toISOString().split('T')[0]
+        : ''
+    );
+    setIsEditContractDatesModalOpen(true);
+  };
+
+  const handleSaveContractDates = async () => {
+    try {
+      await axiosInstance.put(API_ENDPOINTS.LIFECYCLE.STATUS(userId), {
+        status: lifecycleData?.lifecycle.status || 'active',
+        contractStartDate: editingContractStartDate || null,
+        contractEndDate: editingContractEndDate || null
+      });
+      
+      showMessage('Vertragsdaten erfolgreich aktualisiert', 'success');
+      setIsEditContractDatesModalOpen(false);
+      fetchData();
+    } catch (err: any) {
+      console.error('Fehler beim Speichern der Vertragsdaten:', err);
+      showMessage('Fehler beim Speichern der Vertragsdaten', 'error');
     }
   };
 
@@ -251,7 +330,27 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
             <BuildingOfficeIcon className="h-5 w-5 mr-2" />
             {t('lifecycle.statusTitle')}
           </h3>
+          <div className="flex items-center space-x-3">
           {getStatusBadge(lifecycle.status)}
+            {/* Offboarding-Start-Button (nur für HR/Admin, nur wenn Status = "active") */}
+            {(isHR() || isAdmin()) && lifecycle.status === 'active' && (
+              <button
+                onClick={() => setIsOffboardingStartModalOpen(true)}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-orange-600 dark:bg-orange-700 rounded-md hover:bg-orange-700 dark:hover:bg-orange-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+              >
+                {t('lifecycle.offboarding.startButton') || 'Offboarding starten'}
+              </button>
+            )}
+            {/* Offboarding-Abschluss-Button (nur für HR/Admin, nur wenn Status = "offboarding") */}
+            {(isHR() || isAdmin()) && lifecycle.status === 'offboarding' && (
+              <button
+                onClick={() => setIsOffboardingCompleteModalOpen(true)}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 dark:bg-red-700 rounded-md hover:bg-red-700 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              >
+                {t('lifecycle.offboarding.complete.button') || 'Offboarding abschließen'}
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="space-y-2 text-sm">
@@ -271,26 +370,74 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
               </span>
             </div>
           )}
-          {lifecycle.contractStartDate && (
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.contractStart')}</span>
+            <div className="flex items-center space-x-2">
+              {lifecycle.contractStartDate ? (
+                <span className="dark:text-white">
+                  {new Date(lifecycle.contractStartDate).toLocaleDateString('de-DE')}
+                </span>
+              ) : (
+                <span className="text-gray-400 italic text-sm">{t('lifecycle.notSet') || 'Nicht gesetzt'}</span>
+              )}
+              {(isHR() || isAdmin()) && (
+                <button
+                  onClick={() => handleEditContractDates()}
+                  className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition"
+                  title={t('lifecycle.edit') || 'Bearbeiten'}
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.contractEnd')}</span>
+            <div className="flex items-center space-x-2">
+              {lifecycle.contractEndDate ? (
+                <span className="dark:text-white">
+                  {new Date(lifecycle.contractEndDate).toLocaleDateString('de-DE')}
+                </span>
+              ) : (
+                <span className="text-gray-400 italic text-sm">{t('lifecycle.notSet') || 'Nicht gesetzt'}</span>
+              )}
+              {(isHR() || isAdmin()) && (
+                <button
+                  onClick={() => handleEditContractDates()}
+                  className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition"
+                  title={t('lifecycle.edit') || 'Bearbeiten'}
+                >
+                  <PencilIcon className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+          {lifecycle.offboardingStartedAt && (
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.contractStart')}</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.offboardingStarted')}</span>
               <span className="dark:text-white">
-                {new Date(lifecycle.contractStartDate).toLocaleDateString('de-DE')}
+                {new Date(lifecycle.offboardingStartedAt).toLocaleDateString('de-DE')}
               </span>
             </div>
           )}
-          {lifecycle.contractEndDate && (
+          {lifecycle.exitDate && (
             <div className="flex justify-between">
-              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.contractEnd')}</span>
+              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.exitDate')}</span>
               <span className="dark:text-white">
-                {new Date(lifecycle.contractEndDate).toLocaleDateString('de-DE')}
+                {new Date(lifecycle.exitDate).toLocaleDateString('de-DE')}
               </span>
+            </div>
+          )}
+          {lifecycle.exitReason && (
+            <div className="flex justify-between">
+              <span className="text-gray-600 dark:text-gray-400">{t('lifecycle.exitReason')}</span>
+              <span className="dark:text-white">{lifecycle.exitReason}</span>
             </div>
           )}
         </div>
       </div>
 
-      {/* Progress-Bar */}
+      {/* Progress-Bar - Onboarding */}
       {lifecycle.status === 'onboarding' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold dark:text-white mb-4">{t('lifecycle.progressTitle')}</h3>
@@ -307,6 +454,87 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                 style={{ width: `${progress.percent}%` }}
               ></div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Progress-Bar - Offboarding */}
+      {lifecycle.status === 'offboarding' && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+          <h3 className="text-lg font-semibold dark:text-white mb-4">{t('lifecycle.offboarding.progressTitle') || 'Offboarding-Fortschritt'}</h3>
+          <div className="space-y-4">
+            {/* Progress-Bar */}
+            {(() => {
+              const completedTasks = offboardingTasks.filter(task => task.status === 'done').length;
+              const totalTasks = offboardingTasks.length || 3; // Fallback: 3 Tasks
+              const percent = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+              
+              return (
+                <>
+                  <div className="flex justify-between text-sm mb-2">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {t('lifecycle.offboarding.progressSteps', { completed: completedTasks, total: totalTasks }) || `${completedTasks} von ${totalTasks} Schritten abgeschlossen`}
+                    </span>
+                    <span className="font-medium dark:text-white">{percent}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+                    <div
+                      className="bg-orange-600 h-3 rounded-full transition-all duration-300"
+                      style={{ width: `${percent}%` }}
+                    ></div>
+                  </div>
+                </>
+              );
+            })()}
+            
+            {/* Offboarding-Tasks Liste */}
+            {offboardingTasks.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('lifecycle.offboarding.tasksTitle') || 'Offboarding-Aufgaben'}
+                </h4>
+                {offboardingTasks.map((task) => {
+                  const isCompleted = task.status === 'done';
+                  return (
+                    <div
+                      key={task.id}
+                      className={`flex items-center justify-between p-3 rounded-lg border ${
+                        isCompleted
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                          : 'bg-gray-50 dark:bg-gray-700/50 border-gray-200 dark:border-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3 flex-1">
+                        {isCompleted ? (
+                          <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0" />
+                        ) : (
+                          <ClockIcon className="h-5 w-5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className={`text-sm font-medium ${isCompleted ? 'text-green-800 dark:text-green-200' : 'text-gray-800 dark:text-gray-200'}`}>
+                            {task.title}
+                          </p>
+                          {task.description && (
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 truncate">
+                              {task.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded ${
+                        isCompleted
+                          ? 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200'
+                          : 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200'
+                      }`}>
+                        {isCompleted
+                          ? t('common.done') || 'Abgeschlossen'
+                          : t('common.open') || 'Offen'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -505,7 +733,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         )}
       </div>
 
-      {/* Social Security Status */}
+      {/* Social Security Status - Anzeige für alle */}
       {socialSecurityRegistrations.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold dark:text-white mb-4 flex items-center">
@@ -549,6 +777,15 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
             ))}
           </div>
         </div>
+      )}
+
+      {/* Social Security Editor - Nur für Legal/Admin */}
+      {lifecycleData?.lifecycle && (
+        <SocialSecurityEditor
+          userId={userId}
+          lifecycleId={lifecycleData.lifecycle.id}
+          onUpdate={fetchData}
+        />
       )}
 
       {/* Modals */}
@@ -598,6 +835,88 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
           userId={userId}
           contract={editingContract}
         />
+      )}
+
+      {/* Offboarding-Start-Modal */}
+      <OffboardingStartModal
+        isOpen={isOffboardingStartModalOpen}
+        onClose={() => setIsOffboardingStartModalOpen(false)}
+        onOffboardingStarted={() => {
+          fetchData();
+          setIsOffboardingStartModalOpen(false);
+        }}
+        userId={userId}
+        userName={userName}
+      />
+      
+      {/* Offboarding-Abschluss-Modal */}
+      <OffboardingCompleteModal
+        isOpen={isOffboardingCompleteModalOpen}
+        onClose={() => setIsOffboardingCompleteModalOpen(false)}
+        onOffboardingCompleted={() => {
+          fetchData();
+          setIsOffboardingCompleteModalOpen(false);
+        }}
+        userId={userId}
+        userName={userName}
+        offboardingTasks={offboardingTasks}
+      />
+
+      {/* Modal zum Bearbeiten der Vertragsdaten */}
+      {isEditContractDatesModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
+            <h2 className="text-xl font-semibold dark:text-white mb-4">
+              {t('lifecycle.editContractDates') || 'Vertragsdaten bearbeiten'}
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('lifecycle.contractStart') || 'Vertragsbeginn'} *
+                </label>
+                <input
+                  type="date"
+                  value={editingContractStartDate}
+                  onChange={(e) => setEditingContractStartDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('lifecycle.contractEnd') || 'Vertragsende'} (optional)
+                </label>
+                <input
+                  type="date"
+                  value={editingContractEndDate}
+                  onChange={(e) => setEditingContractEndDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {t('lifecycle.contractEndHint') || 'Nur bei befristeten Verträgen ausfüllen'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex justify-end space-x-3 mt-6">
+              <button
+                onClick={() => setIsEditContractDatesModalOpen(false)}
+                className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition"
+              >
+                {t('common.cancel') || 'Abbrechen'}
+              </button>
+              <button
+                onClick={handleSaveContractDates}
+                disabled={!editingContractStartDate}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {t('common.save') || 'Speichern'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -23,6 +23,7 @@ interface UserProfile {
   normalWorkingHours: number;
   country: string;
   language: string;
+  gender: string | null; // "male", "female", "other"
   // Neue Felder für Identifikationsdokumente
   identificationNumber: string | null;
   identificationType: string | null;
@@ -83,6 +84,7 @@ const Profile: React.FC = () => {
         normalWorkingHours: 7.6,
         country: 'CO',
         language: 'es',
+        gender: null,
         identificationNumber: null,
         identificationType: null,
         identificationExpiryDate: null,
@@ -111,6 +113,7 @@ const Profile: React.FC = () => {
           normalWorkingHours: response.data.normalWorkingHours || 7.6,
           country: response.data.country || 'CO',
           language: response.data.language || 'es',
+          gender: response.data.gender || null,
           identificationExpiryDate: response.data.identificationExpiryDate ? new Date(response.data.identificationExpiryDate).toISOString().split('T')[0] : null
         };
         setUser(profileData);
@@ -159,6 +162,7 @@ const Profile: React.FC = () => {
         salary: formData.salary ? parseFloat(formData.salary.toString()) : null,
         normalWorkingHours: formData.normalWorkingHours ? parseFloat(formData.normalWorkingHours.toString()) : 7.6,
         birthday: formData.birthday || null,
+        gender: formData.gender || null,
         identificationExpiryDate: formData.identificationExpiryDate || null
       };
 
@@ -459,6 +463,24 @@ const Profile: React.FC = () => {
                       {language.name}
                     </option>
                   ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('profile.gender')}
+                </label>
+                <select
+                  name="gender"
+                  value={isEditing ? formData.gender || '' : user.gender || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="">{t('profile.selectGender')}</option>
+                  <option value="male">{t('profile.genderMale')}</option>
+                  <option value="female">{t('profile.genderFemale')}</option>
+                  <option value="other">{t('profile.genderOther')}</option>
                 </select>
               </div>
 

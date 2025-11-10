@@ -192,7 +192,7 @@ const AddMedia: React.FC = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Medien hinzufügen</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('cerebro.addMedia')}</h1>
       
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -212,7 +212,7 @@ const AddMedia: React.FC = () => {
             >
               <div className="text-gray-500">
                 <div className="text-4xl mb-2">+</div>
-                <p>Klicken Sie, um eine Datei auszuwählen</p>
+                <p>{t('cerebro.clickToSelectFile')}</p>
                 <p className="text-sm mt-1">
                   Unterstützte Dateitypen: JPG, PNG, GIF, WEBP, PDF, MP4, WEBM
                 </p>

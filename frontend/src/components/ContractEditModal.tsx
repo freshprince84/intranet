@@ -58,6 +58,8 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
   const [workingHours, setWorkingHours] = useState(contract.workingHours ? contract.workingHours.toString() : '');
   const [position, setPosition] = useState(contract.position || '');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [existingPdfUrl, setExistingPdfUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Prüfe Berechtigung
@@ -83,6 +85,10 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       openSidepane();
+      // Lade bestehende PDF-URL wenn vorhanden
+      if (contract.id) {
+        setExistingPdfUrl(API_ENDPOINTS.LIFECYCLE.CONTRACT_DOWNLOAD(userId, contract.id));
+      }
     } else {
       closeSidepane();
     }
@@ -90,7 +96,16 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
     return () => {
       closeSidepane();
     };
-  }, [isOpen, openSidepane, closeSidepane]);
+  }, [isOpen, openSidepane, closeSidepane, contract.id, userId]);
+
+  // Cleanup: Revoke Object URL beim Unmount oder wenn Datei entfernt wird
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+      }
+    };
+  }, [pdfPreviewUrl]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -104,6 +119,10 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
         return;
       }
       setPdfFile(file);
+      // Erstelle Preview-URL für neue Datei
+      const url = URL.createObjectURL(file);
+      setPdfPreviewUrl(url);
+      setExistingPdfUrl(null); // Verstecke bestehende PDF wenn neue hochgeladen wird
     }
   };
 
@@ -144,6 +163,10 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
       onClose();
       
       // Reset form
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+        setPdfPreviewUrl(null);
+      }
       setPdfFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -213,9 +236,9 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
                   onChange={(e) => setContractType(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 >
-                  <option value="employment">Arbeitsvertrag</option>
-                  <option value="amendment">Vertragsänderung</option>
-                  <option value="extension">Vertragsverlängerung</option>
+                  <option value="employment">{t('contracts.employment')}</option>
+                  <option value="amendment">{t('contracts.amendment')}</option>
+                  <option value="extension">{t('contracts.extension')}</option>
                 </select>
               </div>
 
@@ -226,10 +249,30 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setStartDate(value);
+                    // Wenn Enddatum gesetzt ist, prüfe ob es nach Startdatum liegt
+                    if (endDate && value && new Date(endDate) < new Date(value)) {
+                      setError('Enddatum muss nach dem Startdatum liegen');
+                    } else {
+                      setError(null); // Clear error when valid
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white ${
+                    error && !startDate 
+                      ? 'border-red-500 dark:border-red-500' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   required
+                  aria-invalid={!startDate ? true : undefined}
+                  aria-describedby={!startDate ? "startDate-error" : undefined}
                 />
+                {error && !startDate && (
+                  <p id="startDate-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
+                    {error}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -239,9 +282,30 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setEndDate(value);
+                    // Wenn Enddatum gesetzt wird, prüfe ob es nach Startdatum liegt
+                    if (value && startDate && new Date(value) < new Date(startDate)) {
+                      setError('Enddatum muss nach dem Startdatum liegen');
+                    } else {
+                      setError(null); // Clear error when valid
+                    }
+                  }}
+                  min={startDate || undefined}
+                  className={`w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white ${
+                    error && endDate && startDate && new Date(endDate) < new Date(startDate)
+                      ? 'border-red-500 dark:border-red-500' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
+                  aria-invalid={endDate && startDate && new Date(endDate) < new Date(startDate) ? true : undefined}
+                  aria-describedby={endDate && startDate && new Date(endDate) < new Date(startDate) ? "endDate-error" : undefined}
                 />
+                {error && endDate && startDate && new Date(endDate) < new Date(startDate) && (
+                  <p id="endDate-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
+                    {error}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -266,12 +330,33 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
                   <input
                     type="number"
                     value={salary}
-                    onChange={(e) => setSalary(e.target.value)}
-                    className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSalary(value);
+                      // Validierung: Gehalt darf nicht negativ sein
+                      if (value && parseFloat(value) < 0) {
+                        setError('Gehalt darf nicht negativ sein');
+                      } else {
+                        setError(null); // Clear error when valid
+                      }
+                    }}
+                    className={`w-full pl-10 pr-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white ${
+                      error && salary && parseFloat(salary) < 0
+                        ? 'border-red-500 dark:border-red-500' 
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                     placeholder="0.00"
                     step="0.01"
+                    min="0"
+                    aria-invalid={salary && parseFloat(salary) < 0 ? true : undefined}
+                    aria-describedby={salary && parseFloat(salary) < 0 ? "salary-error" : undefined}
                   />
                 </div>
+                {error && salary && parseFloat(salary) < 0 && (
+                  <p id="salary-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
+                    {error}
+                  </p>
+                )}
               </div>
 
               <div>
@@ -281,11 +366,36 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
                 <input
                   type="number"
                   value={workingHours}
-                  onChange={(e) => setWorkingHours(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setWorkingHours(value);
+                    // Validierung: Arbeitsstunden müssen zwischen 0 und 168 liegen
+                    if (value && (parseFloat(value) < 0 || parseFloat(value) > 168)) {
+                      setError('Arbeitsstunden müssen zwischen 0 und 168 liegen');
+                    } else {
+                      setError(null); // Clear error when valid
+                    }
+                  }}
+                  className={`w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white ${
+                    error && workingHours && (parseFloat(workingHours) < 0 || parseFloat(workingHours) > 168)
+                      ? 'border-red-500 dark:border-red-500' 
+                      : 'border-gray-300 dark:border-gray-600'
+                  }`}
                   placeholder="40"
                   step="0.1"
+                  min="0"
+                  max="168"
+                  aria-invalid={workingHours && (parseFloat(workingHours) < 0 || parseFloat(workingHours) > 168) ? true : undefined}
+                  aria-describedby={workingHours && (parseFloat(workingHours) < 0 || parseFloat(workingHours) > 168) ? "workingHours-error" : undefined}
                 />
+                {error && workingHours && (parseFloat(workingHours) < 0 || parseFloat(workingHours) > 168) && (
+                  <p id="workingHours-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
+                    {error}
+                  </p>
+                )}
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Maximal 168 Stunden pro Woche (24h × 7 Tage)
+                </p>
               </div>
 
               <div>
@@ -328,6 +438,11 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
                         type="button"
                         onClick={() => {
                           setPdfFile(null);
+                          if (pdfPreviewUrl) {
+                            URL.revokeObjectURL(pdfPreviewUrl);
+                            setPdfPreviewUrl(null);
+                          }
+                          setExistingPdfUrl(API_ENDPOINTS.LIFECYCLE.CONTRACT_DOWNLOAD(userId, contract.id));
                           if (fileInputRef.current) {
                             fileInputRef.current.value = '';
                           }
@@ -339,6 +454,23 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
                     </div>
                   )}
                 </div>
+
+                {/* PDF-Vorschau */}
+                {(pdfPreviewUrl || existingPdfUrl) && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      PDF-Vorschau
+                    </label>
+                    <div className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                      <iframe 
+                        src={`${pdfPreviewUrl || existingPdfUrl}${pdfPreviewUrl ? '#view=FitH' : '?preview=true#view=FitH'}`}
+                        className="w-full rounded border dark:border-gray-600"
+                        style={{ height: '400px' }}
+                        title="PDF-Vorschau"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4">

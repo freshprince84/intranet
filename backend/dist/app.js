@@ -40,8 +40,12 @@ const monthlyConsultationReports_1 = __importDefault(require("./routes/monthlyCo
 const database_1 = __importDefault(require("./routes/database"));
 const claudeRoutes_1 = __importDefault(require("./routes/claudeRoutes"));
 const organizations_1 = __importDefault(require("./routes/organizations"));
+const lobbyPms_1 = __importDefault(require("./routes/lobbyPms"));
+const boldPayment_1 = __importDefault(require("./routes/boldPayment"));
+const ttlock_1 = __importDefault(require("./routes/ttlock"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const monthlyReportScheduler_1 = require("./services/monthlyReportScheduler");
+const reservationScheduler_1 = require("./services/reservationScheduler");
 const app = (0, express_1.default)();
 // Middleware
 app.use(express_1.default.json({ limit: '50mb' })); // Größere JSON-Payload für Bilder erlauben
@@ -125,6 +129,8 @@ setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
         }
     }
 }), MONTHLY_REPORT_CHECK_INTERVAL_MS);
+// Starte Reservation Scheduler
+reservationScheduler_1.ReservationScheduler.start();
 // Eine direkte Test-Route für die Diagnose
 app.get('/api/test-route', (req, res) => {
     res.json({
@@ -143,6 +149,24 @@ app.post('/api/admin/trigger-monthly-reports', (req, res) => __awaiter(void 0, v
         console.error('Fehler beim manuellen Auslösen der Monatsabrechnungsprüfung:', error);
         res.status(500).json({
             message: 'Fehler beim Auslösen der Monatsabrechnungsprüfung',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+}));
+// Test-Route für manuelle Auslösung der Check-in-Einladungen
+app.post('/api/admin/trigger-check-in-invitations', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        yield reservationScheduler_1.ReservationScheduler.triggerManually();
+        res.json({
+            success: true,
+            message: 'Check-in-Einladungen erfolgreich versendet'
+        });
+    }
+    catch (error) {
+        console.error('Fehler beim manuellen Auslösen der Check-in-Einladungen:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Fehler beim Auslösen der Check-in-Einladungen',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
         });
     }
@@ -188,6 +212,9 @@ app.use('/api/monthly-consultation-reports', monthlyConsultationReports_1.defaul
 app.use('/api/database', database_1.default);
 app.use('/api/claude', claudeRoutes_1.default);
 app.use('/api/organizations', organizations_1.default);
+app.use('/api/lobby-pms', lobbyPms_1.default);
+app.use('/api/bold-payment', boldPayment_1.default);
+app.use('/api/ttlock', ttlock_1.default);
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

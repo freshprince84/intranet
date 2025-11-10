@@ -8,7 +8,9 @@ export interface Organization {
   maxUsers: number;
   subscriptionPlan: 'basic' | 'pro' | 'enterprise' | 'trial';
   subscriptionEnd?: string | null;
-  settings?: any;
+  country?: string | null; // Land der Organisation (z.B. "CO" für Kolumbien)
+  nit?: string | null; // NIT (Número de Identificación Tributaria) für Kolumbien
+  settings?: OrganizationSettings;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,11 +51,73 @@ export interface CreateOrganizationRequest {
   domain?: string;
 }
 
+export interface OrganizationSettings {
+  // SMTP Settings (bestehend)
+  smtpHost?: string;
+  smtpPort?: number;
+  smtpUser?: string;
+  smtpPass?: string;
+  smtpFromEmail?: string;
+  smtpFromName?: string;
+  
+  // LobbyPMS Settings
+  lobbyPms?: {
+    apiUrl?: string;
+    apiKey?: string;
+    propertyId?: string;
+    syncEnabled?: boolean;
+    autoCreateTasks?: boolean;
+    lateCheckInThreshold?: string;
+    notificationChannels?: ('email' | 'whatsapp')[];
+  };
+  
+  // Door System Settings (TTLock)
+  doorSystem?: {
+    provider?: 'ttlock';
+    apiUrl?: string;
+    clientId?: string;
+    clientSecret?: string;
+    accessToken?: string;
+    lockIds?: string[];
+  };
+  
+  // SIRE Settings
+  sire?: {
+    apiUrl?: string;
+    apiKey?: string;
+    apiSecret?: string;
+    enabled?: boolean;
+    autoRegisterOnCheckIn?: boolean;
+    propertyCode?: string;
+  };
+  
+  // Bold Payment Settings
+  boldPayment?: {
+    apiKey?: string;
+    merchantId?: string;
+    environment?: 'sandbox' | 'production';
+  };
+  
+  // WhatsApp Settings
+  whatsapp?: {
+    provider?: 'twilio' | 'whatsapp-business-api';
+    apiKey?: string;
+    apiSecret?: string;
+    phoneNumberId?: string;
+    businessAccountId?: string;
+  };
+  
+  // Weitere Settings können hier hinzugefügt werden
+  [key: string]: any;
+}
+
 export interface UpdateOrganizationRequest {
   displayName?: string;
   domain?: string;
   logo?: string;
-  settings?: any;
+  country?: string | null;
+  nit?: string | null;
+  settings?: OrganizationSettings;
 }
 
 export interface CreateJoinRequestRequest {

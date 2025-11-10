@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
+import { useAuth } from '../hooks/useAuth.tsx';
 
 interface Branch {
     id: number;
     name: string;
+    lastUsed?: boolean;
 }
 
 interface BranchContextType {
@@ -24,8 +26,9 @@ const BranchContext = createContext<BranchContextType>({
 export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [selectedBranch, setSelectedBranch] = useState<number | null>(null);
+    const { user, isLoading } = useAuth();
 
-    // Funktion zum Laden der Niederlassungen
+    // Funktion zum Laden der Niederlassungen des Benutzers mit lastUsed-Flag
     const loadBranches = async () => {
         try {
             const token = localStorage.getItem('token');
@@ -34,38 +37,58 @@ export const BranchProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 return;
             }
             
-            const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
+            // Lade User-Branches mit lastUsed-Flag
+            const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.USER);
             const data = response.data;
             setBranches(data);
             
-            // Setze die erste Niederlassung als Standard, falls keine ausgewählt ist
-            if (data.length > 0 && !selectedBranch) {
-                setSelectedBranch(data[0].id);
+            // Setze den lastUsed-Branch als selectedBranch, falls vorhanden
+            if (data.length > 0) {
+                const lastUsedBranch = data.find((branch: Branch) => branch.lastUsed === true);
+                
+                if (lastUsedBranch) {
+                    // Verwende den lastUsed-Branch
+                    setSelectedBranch(lastUsedBranch.id);
+                } else if (!selectedBranch) {
+                    // Fallback: Erste Branch, falls keine lastUsed-Branch vorhanden
+                    setSelectedBranch(data[0].id);
+                }
+                // Wenn selectedBranch bereits gesetzt ist (z.B. aus localStorage), behalte ihn
+            } else {
+                // Keine Branches vorhanden
+                setSelectedBranch(null);
             }
         } catch (error) {
             console.error('Fehler beim Laden der Niederlassungen:', error);
+            // Bei Fehler: Fallback auf alle Branches (ohne lastUsed)
+            try {
+                const fallbackResponse = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
+                const fallbackData = fallbackResponse.data;
+                setBranches(fallbackData);
+                
+                // Setze erste Branch als Fallback
+                if (fallbackData.length > 0 && !selectedBranch) {
+                    setSelectedBranch(fallbackData[0].id);
+                }
+            } catch (fallbackError) {
+                console.error('Fehler beim Fallback-Laden der Niederlassungen:', fallbackError);
+            }
         }
     };
 
-    // Lade Niederlassungen beim ersten Rendern
+    // Lade Niederlassungen, sobald User geladen ist (nicht mehr isLoading)
     useEffect(() => {
-        loadBranches();
-    }, []);
+        if (!isLoading && user) {
+            loadBranches();
+        }
+    }, [isLoading, user]);
 
-    // Speichere die ausgewählte Niederlassung im localStorage
+    // Speichere die ausgewählte Niederlassung im localStorage (als Fallback)
     useEffect(() => {
         if (selectedBranch) {
             localStorage.setItem('selectedBranch', selectedBranch.toString());
         }
     }, [selectedBranch]);
-
-    // Lade die gespeicherte Niederlassung beim Start
-    useEffect(() => {
-        const savedBranch = localStorage.getItem('selectedBranch');
-        if (savedBranch) {
-            setSelectedBranch(Number(savedBranch));
-        }
-    }, []);
 
     return (
         <BranchContext.Provider value={{ branches, selectedBranch, setSelectedBranch, loadBranches }}>

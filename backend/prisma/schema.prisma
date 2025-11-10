@@ -31,6 +31,7 @@ model User {
   employeeNumber           String?
   identificationNumber     String?
   taxIdentificationNumber  String?
+  gender                   String?                     // "male", "female", "other"
   active                   Boolean                     @default(true)
   carticlesCreated         CerebroCarticle[]           @relation("CarticleCreator")
   carticlesUpdated         CerebroCarticle[]           @relation("CarticleUpdater")
@@ -49,6 +50,7 @@ model User {
   requestsRequester        Request[]                   @relation("requester")
   requestsResponsible      Request[]                   @relation("responsible")
   savedFilters             SavedFilter[]
+  filterGroups             FilterGroup[]
   settings                 Settings?
   tasksQualityControl      Task[]                      @relation("quality_control")
   tasksResponsible         Task[]                      @relation("responsible")
@@ -76,6 +78,8 @@ model Organization {
   subscriptionPlan     String                      @default("basic")
   subscriptionEnd      DateTime?
   settings             Json?
+  country              String?                     // Land der Organisation (z.B. "CO" für Kolumbien)
+  nit                  String?                     // NIT (Número de Identificación Tributaria) für Kolumbien
   createdAt            DateTime                    @default(now())
   updatedAt            DateTime                    @updatedAt
   invitations          OrganizationInvitation[]
@@ -90,6 +94,7 @@ model Organization {
   monthlyReports       MonthlyConsultationReport[]
   carticles            CerebroCarticle[]
   employeeLifecycles   EmployeeLifecycle[]
+  reservations         Reservation[]
 }
 
 model OrganizationJoinRequest {
@@ -237,6 +242,10 @@ model Task {
   carticles        TaskCerebroCarticle[]
   workTimeLinks    WorkTimeTask[]
   statusHistory    TaskStatusHistory[]
+  reservationId    Int?                  @unique
+  reservation      Reservation?          @relation(fields: [reservationId], references: [id])
+
+  @@index([reservationId])
 }
 
 model Request {
@@ -244,6 +253,8 @@ model Request {
   title          String
   description    String?
   status         RequestStatus            @default(approval)
+  type           RequestType              @default(other)
+  isPrivate      Boolean                  @default(false)
   requesterId    Int
   responsibleId  Int
   branchId       Int
@@ -285,6 +296,20 @@ model UserTableSettings {
   @@unique([userId, tableId])
 }
 
+model FilterGroup {
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  tableId    String
+  name       String
+  order      Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
+  filters    SavedFilter[]
+
+  @@unique([userId, tableId, name])
+}
+
 model SavedFilter {
   id         Int      @id @default(autoincrement())
   userId     Int
@@ -292,9 +317,12 @@ model SavedFilter {
   name       String
   conditions String
   operators  String
+  groupId    Int?
+  order      Int      @default(0)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   user       User     @relation(fields: [userId], references: [id])
+  group      FilterGroup? @relation(fields: [groupId], references: [id])
 
   @@unique([userId, tableId, name])
 }
@@ -709,6 +737,14 @@ enum RequestStatus {
   denied
 }
 
+enum RequestType {
+  vacation
+  improvement_suggestion
+  sick_leave
+  employment_certificate
+  other
+}
+
 enum AccessLevel {
   read
   write
@@ -757,6 +793,21 @@ enum SubscriptionPlan {
   pro
   enterprise
   trial
+}
+
+enum ReservationStatus {
+  confirmed
+  checked_in
+  checked_out
+  cancelled
+  no_show
+}
+
+enum PaymentStatus {
+  pending
+  paid
+  partially_paid
+  refunded
 }
 
 // ============================================
@@ -940,4 +991,64 @@ model PasswordResetToken {
   @@index([token])
   @@index([userId])
   @@index([expiresAt])
+}
+
+// ============================================
+// LOBBYPMS RESERVATION MODELS
+// ============================================
+
+model Reservation {
+  id                       Int                      @id @default(autoincrement())
+  lobbyReservationId       String?                  @unique // ID aus LobbyPMS
+  guestName                String
+  guestEmail               String?
+  guestPhone               String?
+  checkInDate              DateTime
+  checkOutDate             DateTime
+  arrivalTime              DateTime? // Geschätzte Ankunftszeit
+  roomNumber               String?
+  roomDescription          String?
+  status                   ReservationStatus        @default(confirmed)
+  paymentStatus            PaymentStatus            @default(pending)
+  paymentLink              String? // Bold Payment Link
+  doorPin                  String? // PIN für Türsystem
+  doorAppName              String? // App-Name (z.B. "TTLock")
+  ttlLockId                String? // TTLock Lock ID
+  ttlLockPassword          String? // TTLock Passcode/Password
+  onlineCheckInCompleted   Boolean                  @default(false)
+  onlineCheckInCompletedAt DateTime?
+  invitationSentAt         DateTime? // Wann wurde die Check-in-Einladung versendet
+  sireRegistered           Boolean                  @default(false)
+  sireRegistrationId       String? // ID der SIRE-Registrierung
+  sireRegisteredAt         DateTime?
+  sireRegistrationError    String? // Fehlermeldung bei fehlgeschlagener Registrierung
+  guestNationality         String? // Nationalität des Gastes (für SIRE)
+  guestPassportNumber      String? // Passnummer (für SIRE)
+  guestBirthDate           DateTime? // Geburtsdatum (für SIRE)
+  organizationId           Int
+  organization             Organization             @relation(fields: [organizationId], references: [id])
+  taskId                   Int? // Verknüpfter Task
+  task                     Task?                    @relation
+  createdAt                DateTime                 @default(now())
+  updatedAt                DateTime                 @updatedAt
+  syncHistory              ReservationSyncHistory[]
+
+  @@index([organizationId])
+  @@index([checkInDate])
+  @@index([status])
+  @@index([lobbyReservationId])
+  @@index([paymentStatus])
+}
+
+model ReservationSyncHistory {
+  id            Int         @id @default(autoincrement())
+  reservationId Int
+  reservation   Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  syncType      String // 'created', 'updated', 'status_changed'
+  syncData      Json? // Vollständige Daten zum Zeitpunkt der Synchronisation
+  syncedAt      DateTime    @default(now())
+  errorMessage  String?
+
+  @@index([reservationId])
+  @@index([syncedAt])
 }

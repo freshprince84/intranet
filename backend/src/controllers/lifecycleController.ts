@@ -95,6 +95,7 @@ export const getLifecycle = async (req: Request, res: Response) => {
 export const updateStatus = async (req: Request, res: Response) => {
   try {
     const userId = parseInt(req.params.id);
+    const currentUserId = parseInt(req.userId || '0');
 
     // Prüfe Berechtigung: Nur HR oder Admin
     const hasAccess = await isHROrAdmin(req);
@@ -108,13 +109,18 @@ export const updateStatus = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Status ist erforderlich' });
     }
 
-    const updated = await LifecycleService.updateStatus(userId, status, {
+    const updated = await LifecycleService.updateStatus(
+      userId, 
+      status, 
+      {
       contractStartDate: contractStartDate ? new Date(contractStartDate) : undefined,
       contractEndDate: contractEndDate ? new Date(contractEndDate) : undefined,
       contractType,
       exitDate: exitDate ? new Date(exitDate) : undefined,
       exitReason
-    });
+      },
+      currentUserId // Übergebe currentUserId für automatische Zertifikats-Generierung
+    );
 
     res.json(updated);
   } catch (error) {
@@ -141,10 +147,11 @@ export const getSocialSecurity = async (req: Request, res: Response) => {
       return res.status(400).json({ message: 'Ungültiger Typ' });
     }
 
-    // Prüfe Berechtigung: User selbst oder HR/Admin
+    // Prüfe Berechtigung: User selbst, HR, Legal oder Admin
     if (userId !== currentUserId) {
-      const hasAccess = await isHROrAdmin(req);
-      if (!hasAccess) {
+      const isHR = await isHROrAdmin(req);
+      const isLegal = await isLegalOrAdmin(req);
+      if (!isHR && !isLegal) {
         return res.status(403).json({ message: 'Keine Berechtigung' });
       }
     }
@@ -427,9 +434,9 @@ export const downloadCertificate = async (req: Request, res: Response) => {
     const isPreview = req.query.preview === 'true';
     res.setHeader('Content-Type', 'application/pdf');
     if (isPreview) {
-      res.setHeader('Content-Disposition', `inline; filename="arbeitszeugnis-${certificateId}.pdf"`);
+      res.setHeader('Content-Disposition', `inline; filename="certificado-laboral-${certificateId}.pdf"`);
     } else {
-      res.setHeader('Content-Disposition', `attachment; filename="arbeitszeugnis-${certificateId}.pdf"`);
+      res.setHeader('Content-Disposition', `attachment; filename="certificado-laboral-${certificateId}.pdf"`);
     }
     fs.createReadStream(filePath).pipe(res);
   } catch (error) {
@@ -686,9 +693,9 @@ export const downloadContract = async (req: Request, res: Response) => {
     const isPreview = req.query.preview === 'true';
     res.setHeader('Content-Type', 'application/pdf');
     if (isPreview) {
-      res.setHeader('Content-Disposition', `inline; filename="arbeitsvertrag-${contractId}.pdf"`);
+      res.setHeader('Content-Disposition', `inline; filename="contrato-trabajo-${contractId}.pdf"`);
     } else {
-      res.setHeader('Content-Disposition', `attachment; filename="arbeitsvertrag-${contractId}.pdf"`);
+      res.setHeader('Content-Disposition', `attachment; filename="contrato-trabajo-${contractId}.pdf"`);
     }
     fs.createReadStream(filePath).pipe(res);
   } catch (error) {

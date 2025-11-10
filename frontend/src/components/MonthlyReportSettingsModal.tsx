@@ -148,13 +148,13 @@ const MonthlyReportSettingsModal: React.FC<MonthlyReportSettingsModalProps> = ({
                                     }`}
                                     value={formData.monthlyReportRecipient}
                                     onChange={(e) => handleChange('monthlyReportRecipient', e.target.value)}
-                                    placeholder="z.B.&#10;Firma XY AG&#10;Musterstraße 1&#10;8000 Zürich"
+                                    placeholder={t('monthlyReport.exampleAddress')}
                                 />
                                 {errors.monthlyReportRecipient && (
                                     <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.monthlyReportRecipient}</p>
                                 )}
                                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                                    Vollständige Adresse des Empfängers (Arbeitgeber) für die monatliche Abrechnung
+                                    {t('monthlyReport.recipientDescription')}
                                 </p>
                             </div>
                         </div>
@@ -162,13 +162,13 @@ const MonthlyReportSettingsModal: React.FC<MonthlyReportSettingsModalProps> = ({
                         {/* Vorschau */}
                         {formData.monthlyReportRecipient.trim() && (
                             <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Vorschau:</h4>
+                                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">{t('monthlyReport.preview')}</h4>
                                 <div className="text-sm text-gray-600 dark:text-gray-400">
                                     <p>
-                                        📅 <strong>Abrechnungszeitraum:</strong> {formData.monthlyReportDay}. des Vormonats bis {formData.monthlyReportDay - 1}. des aktuellen Monats
+                                        📅 <strong>{t('monthlyReport.billingPeriod')}</strong> {formData.monthlyReportDay}. des Vormonats bis {formData.monthlyReportDay - 1}. des aktuellen Monats
                                     </p>
                                     <p className="mt-1">
-                                        📧 <strong>Empfänger:</strong>
+                                        📧 <strong>{t('monthlyReport.recipient')}:</strong>
                                     </p>
                                     <div className="ml-4 mt-1 font-mono text-xs bg-white dark:bg-gray-800 p-2 rounded border">
                                         {formData.monthlyReportRecipient.split('\n').map((line, index) => (

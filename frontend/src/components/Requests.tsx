@@ -40,10 +40,29 @@ import DataCard, { MetadataItem } from './shared/DataCard.tsx';
 import CardGrid from './shared/CardGrid.tsx';
 import { getExpiryStatus, getExpiryColorClasses, createDueDateMetadataItem } from '../utils/expiryUtils.ts';
 
+// Helper-Funktion für Request-Typ-Icons
+const getRequestTypeIcon = (type?: string): string => {
+  switch (type) {
+    case 'vacation':
+      return '🏖️';
+    case 'improvement_suggestion':
+      return '💡';
+    case 'sick_leave':
+      return '🤒';
+    case 'employment_certificate':
+      return '📄';
+    case 'other':
+    default:
+      return '📝';
+  }
+};
+
 interface Request {
   id: number;
   title: string;
   status: 'approval' | 'approved' | 'to_improve' | 'denied';
+  type?: 'vacation' | 'improvement_suggestion' | 'sick_leave' | 'employment_certificate' | 'other';
+  isPrivate?: boolean;
   requestedBy: {
     id: number;
     username: string;
@@ -75,14 +94,14 @@ interface Request {
 }
 
 interface SortConfig {
-  key: keyof Request | 'requestedBy.firstName' | 'responsible.firstName' | 'branch.name';
+  key: keyof Request | 'requestedBy.firstName' | 'responsible.firstName' | 'branch.name' | 'type';
   direction: 'asc' | 'desc';
 }
 
 // Definition der verfügbaren Spalten - werden dynamisch aus Übersetzungen geladen
 
 // Standardreihenfolge der Spalten
-const defaultColumnOrder = ['title', 'requestedByResponsible', 'status', 'dueDate', 'branch', 'actions'];
+const defaultColumnOrder = ['title', 'requestedByResponsible', 'status', 'type', 'dueDate', 'branch', 'actions'];
 
 // TableID für gespeicherte Filter
 const REQUESTS_TABLE_ID = 'requests-table';
@@ -92,6 +111,7 @@ const REQUESTS_TABLE_ID = 'requests-table';
 const tableToCardMapping: Record<string, string[]> = {
   'title': ['title'],
   'status': ['status'],
+  'type': ['type'],
   'requestedByResponsible': ['requestedBy', 'responsible'], // 1 Tabelle-Spalte -> 2 Card-Metadaten
   'branch': ['branch'],
   'dueDate': ['dueDate'],
@@ -103,6 +123,7 @@ const tableToCardMapping: Record<string, string[]> = {
 const cardToTableMapping: Record<string, string> = {
   'title': 'title',
   'status': 'status',
+  'type': 'type',
   'requestedBy': 'requestedByResponsible',
   'responsible': 'requestedByResponsible',
   'branch': 'branch',
@@ -111,11 +132,21 @@ const cardToTableMapping: Record<string, string> = {
 };
 
 // Helfer-Funktion: Tabellen-Spalte ausgeblendet -> Card-Metadaten ausblenden
+// WICHTIG: 'type' wird NICHT ausgeblendet, auch wenn die Tabellen-Spalte ausgeblendet ist
 const getHiddenCardMetadata = (hiddenTableColumns: string[]): Set<string> => {
   const hiddenCardMetadata = new Set<string>();
   hiddenTableColumns.forEach(tableCol => {
+    // 'type' wird immer angezeigt, auch wenn Tabellen-Spalte ausgeblendet ist
+    if (tableCol === 'type') {
+      return; // Überspringe 'type', damit es immer sichtbar bleibt
+    }
     const cardMetadata = tableToCardMapping[tableCol] || [];
-    cardMetadata.forEach(cardMeta => hiddenCardMetadata.add(cardMeta));
+    cardMetadata.forEach(cardMeta => {
+      // Auch hier: 'type' nicht ausblenden
+      if (cardMeta !== 'type') {
+        hiddenCardMetadata.add(cardMeta);
+      }
+    });
   });
   return hiddenCardMetadata;
 };
@@ -129,6 +160,10 @@ const getCardMetadataFromColumnOrder = (columnOrder: string[]): string[] => {
       cardMetadata.push(...cardMeta);
     }
   });
+  // Sicherstellen, dass 'type' immer verfügbar ist (auch wenn in Tabellen-Ansicht ausgeblendet)
+  if (!cardMetadata.includes('type')) {
+    cardMetadata.push('type');
+  }
   // Beschreibung hinzufügen, wenn nicht schon vorhanden
   if (!cardMetadata.includes('description')) {
     cardMetadata.push('description');
@@ -169,6 +204,7 @@ const Requests: React.FC = () => {
   const availableColumns = useMemo(() => [
     { id: 'title', label: t('requests.columns.title'), shortLabel: t('requests.columns.title') },
     { id: 'status', label: t('requests.columns.status'), shortLabel: t('requests.columns.status') },
+    { id: 'type', label: t('requests.columns.type'), shortLabel: t('requests.columns.type') },
     { id: 'requestedByResponsible', label: t('requests.columns.requestedByResponsible'), shortLabel: t('requests.columns.requestedByResponsible').split('/')[0] },
     { id: 'branch', label: t('requests.columns.branch'), shortLabel: t('requests.columns.branch').substring(0, 5) },
     { id: 'dueDate', label: t('requests.columns.dueDate'), shortLabel: t('requests.columns.dueDate').substring(0, 5) },
@@ -204,6 +240,7 @@ const Requests: React.FC = () => {
     const defaults: Record<string, 'asc' | 'desc'> = {
       title: 'asc',
       status: 'asc',
+      type: 'asc',
       requestedBy: 'asc',
       responsible: 'asc',
       branch: 'asc',
@@ -569,6 +606,12 @@ const Requests: React.FC = () => {
               if (cond.operator === 'notEquals') return req.status !== cond.value;
               return null;
             },
+            'type': (req: Request, cond: FilterCondition) => {
+              const requestType = req.type || 'other';
+              if (cond.operator === 'equals') return requestType === cond.value;
+              if (cond.operator === 'notEquals') return requestType !== cond.value;
+              return null;
+            },
             'requestedBy': (req: Request, cond: FilterCondition) => {
               const requestedByName = `${req.requestedBy.firstName} ${req.requestedBy.lastName}`.toLowerCase();
               const value = (cond.value as string || '').toLowerCase();
@@ -599,6 +642,7 @@ const Requests: React.FC = () => {
             switch (columnId) {
               case 'title': return req.title;
               case 'status': return req.status;
+              case 'type': return req.type || 'other';
               case 'requestedBy': return `${req.requestedBy.firstName} ${req.requestedBy.lastName}`;
               case 'responsible': return `${req.responsible.firstName} ${req.responsible.lastName}`;
               case 'branch': return req.branch.name;
@@ -648,6 +692,17 @@ const Requests: React.FC = () => {
                 aValue = statusOrder[a.status] ?? 999;
                 bValue = statusOrder[b.status] ?? 999;
                 break;
+              case 'type':
+                const typeOrder: Record<string, number> = {
+                  'vacation': 0,
+                  'improvement_suggestion': 1,
+                  'sick_leave': 2,
+                  'employment_certificate': 3,
+                  'other': 4
+                };
+                aValue = typeOrder[a.type || 'other'] ?? 999;
+                bValue = typeOrder[b.type || 'other'] ?? 999;
+                break;
               case 'requestedBy':
                 aValue = `${a.requestedBy.firstName} ${a.requestedBy.lastName}`.toLowerCase();
                 bValue = `${b.requestedBy.firstName} ${b.requestedBy.lastName}`.toLowerCase();
@@ -695,6 +750,16 @@ const Requests: React.FC = () => {
           } else if (sortConfig.key === 'branch.name') {
             aValue = a.branch.name;
             bValue = b.branch.name;
+          } else if (sortConfig.key === 'type') {
+            const typeOrder: Record<string, number> = {
+              'vacation': 0,
+              'improvement_suggestion': 1,
+              'sick_leave': 2,
+              'employment_certificate': 3,
+              'other': 4
+            };
+            aValue = typeOrder[(a as any).type || 'other'] ?? 999;
+            bValue = typeOrder[(b as any).type || 'other'] ?? 999;
           }
 
           if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
@@ -717,6 +782,8 @@ const Requests: React.FC = () => {
         title: `${request.title}-Kopie`,
         responsible_id: request.responsible.id,
         branch_id: request.branch.id,
+        type: request.type || 'other',
+        is_private: request.isPrivate || false,
         due_date: request.dueDate ? request.dueDate.split('T')[0] : '',
         create_todo: request.createTodo,
         requested_by_id: user.id
@@ -856,6 +923,7 @@ const Requests: React.FC = () => {
                   ? [
                       { id: 'title', label: t('requests.columns.title') },
                       { id: 'status', label: t('requests.columns.status') },
+                      { id: 'type', label: t('requests.columns.type') },
                       { id: 'requestedBy', label: t('requests.columns.requestedBy') },
                       { id: 'responsible', label: t('requests.columns.responsible') },
                       { id: 'branch', label: t('requests.columns.branch') },
@@ -960,6 +1028,7 @@ const Requests: React.FC = () => {
             columns={[
               { id: 'title', label: t('requests.columns.title') },
               { id: 'status', label: t('requests.columns.status') },
+              { id: 'type', label: t('requests.columns.type') },
               { id: 'requestedBy', label: t('requests.columns.requestedBy') },
               { id: 'responsible', label: t('requests.columns.responsible') },
               { id: 'branch', label: t('requests.columns.branch') },
@@ -1023,6 +1092,7 @@ const Requests: React.FC = () => {
                   let sortKey: SortConfig['key'] | undefined;
                   if (columnId === 'title') sortKey = 'title';
                   if (columnId === 'status') sortKey = 'status';
+                  if (columnId === 'type') sortKey = 'type';
                   if (columnId === 'branch') sortKey = 'branch.name';
                   if (columnId === 'dueDate') sortKey = 'dueDate';
 
@@ -1054,7 +1124,7 @@ const Requests: React.FC = () => {
                   <td colSpan={visibleColumnIds.length} className="px-3 py-4 text-center text-gray-500 dark:text-gray-400">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <DocumentTextIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
-                      <div className="text-sm">Keine Requests gefunden</div>
+                      <div className="text-sm">{t('requests.noRequestsFound')}</div>
                     </div>
                   </td>
                 </tr>
@@ -1101,6 +1171,18 @@ const Requests: React.FC = () => {
                                 <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(request.status, 'request')} dark:bg-opacity-30 status-col`}>
                                   {getStatusLabel(request.status)}
                                 </span>
+                              </td>
+                            );
+                          case 'type':
+                            return (
+                              <td key={columnId} className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center gap-2 text-sm text-gray-900 dark:text-gray-200">
+                                  <span className="text-lg">{getRequestTypeIcon(request.type)}</span>
+                                  <span>{request.type ? t(`requests.types.${request.type}`) : t('requests.types.other')}</span>
+                                  {request.isPrivate && (
+                                    <span className="ml-1 text-xs text-gray-500 dark:text-gray-400" title={t('createRequest.form.isPrivate')}>🔒</span>
+                                  )}
+                                </div>
                               </td>
                             );
                           case 'requestedByResponsible':
@@ -1256,7 +1338,18 @@ const Requests: React.FC = () => {
                     });
                   }
                   
-                  // Haupt-Metadaten: Ersteller (erste Zeile in der Mitte)
+                  // Haupt-Metadaten: Typ (ohne Label, nur Wert) - auf gleicher Zeile wie Titel, Datum, Status
+                  if (visibleCardMetadata.has('type')) {
+                    const typeIcon = getRequestTypeIcon(request.type);
+                    const typeLabel = request.type ? t(`requests.types.${request.type}`) : t('requests.types.other');
+                    metadata.push({
+                      label: '', // Kein Label, nur Wert
+                      value: `${typeIcon} ${typeLabel}${request.isPrivate ? ' 🔒' : ''}`,
+                      section: 'main'
+                    });
+                  }
+                  
+                  // Haupt-Metadaten: Ersteller (zweite Zeile, unter Typ)
                   if (visibleCardMetadata.has('requestedBy')) {
                     // Benutzernamen auf 4 Zeichen kürzen
                     const requestedByName = `${request.requestedBy.firstName} ${request.requestedBy.lastName}`;
@@ -1265,11 +1358,11 @@ const Requests: React.FC = () => {
                       icon: <UserIcon className="h-4 w-4" />,
                       label: t('requests.columns.requestedBy'),
                       value: shortenedName,
-                      section: 'main'
+                      section: 'main-second'
                     });
                   }
                   
-                  // Verantwortlicher (zweite Zeile in der Mitte)
+                  // Verantwortlicher (dritte Zeile, unter Ersteller)
                   if (visibleCardMetadata.has('responsible')) {
                     // Benutzernamen auf 4 Zeichen kürzen
                     const responsibleName = `${request.responsible.firstName} ${request.responsible.lastName}`;
@@ -1278,7 +1371,7 @@ const Requests: React.FC = () => {
                       icon: <UserIcon className="h-4 w-4" />,
                       label: t('requests.columns.responsible'),
                       value: shortenedName,
-                      section: 'main-second' // Neue Section für zweite Zeile
+                      section: 'main-third'
                     });
                   }
                   

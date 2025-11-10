@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import { UserGroupIcon, UserIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { UserGroupIcon, UserIcon, ShieldCheckIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import UserManagementTab from '../components/UserManagementTab.tsx';
 import RoleManagementTab from '../components/RoleManagementTab.tsx';
+import BranchManagementTab from '../components/BranchManagementTab.tsx';
 import useMessage from '../hooks/useMessage.ts';
 import OrganizationSettings from '../components/organization/OrganizationSettings.tsx';
 import JoinRequestsList from '../components/organization/JoinRequestsList.tsx';
@@ -25,19 +26,23 @@ const Organisation: React.FC = () => {
   const canViewOrganisation = hasPermission('organization_management', 'read', 'page');
   const canViewUsers = hasPermission('users', 'read', 'table');
   const canViewRoles = hasPermission('roles', 'read', 'table');
+  const canViewBranches = hasPermission('branches', 'read', 'table');
   const canViewOrg = canViewOrganization();
 
-  // Standard-Tab setzen: organization wenn verfügbar, sonst users wenn verfügbar, sonst roles
-  const defaultTab = canViewOrg ? 'organization' : (canViewUsers ? 'users' : (canViewRoles ? 'roles' : 'organization'));
-  const [activeTabState, setActiveTabState] = useState<'users' | 'roles' | 'organization'>(defaultTab);
+  // Standard-Tab setzen: organization wenn verfügbar, sonst users wenn verfügbar, sonst roles, sonst branches
+  const defaultTab = canViewOrg ? 'organization' : (canViewUsers ? 'users' : (canViewRoles ? 'roles' : (canViewBranches ? 'branches' : 'organization')));
+  const [activeTabState, setActiveTabState] = useState<'users' | 'roles' | 'branches' | 'organization'>(defaultTab);
 
   // Tab-Wechsel Handler - Fehler beim Wechsel zurücksetzen
-  const handleTabChange = (tab: 'users' | 'roles' | 'organization') => {
+  const handleTabChange = (tab: 'users' | 'roles' | 'branches' | 'organization') => {
     // Prüfe Berechtigung für den Tab
     if (tab === 'users' && !canViewUsers) {
       return; // Tab nicht aktivierbar
     }
     if (tab === 'roles' && !canViewRoles) {
+      return; // Tab nicht aktivierbar
+    }
+    if (tab === 'branches' && !canViewBranches) {
       return; // Tab nicht aktivierbar
     }
     if (tab === 'organization' && !canViewOrg) {
@@ -119,6 +124,27 @@ const Organisation: React.FC = () => {
                 )}
               </button>
 
+              {/* Branches Tab - immer sichtbar, aber mit Pro-Badge wenn nicht berechtigt */}
+              <button
+                className={`${
+                  activeTabState === 'branches' && canViewBranches
+                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                    : !canViewBranches
+                    ? 'border-transparent text-gray-400 dark:text-gray-500 cursor-not-allowed opacity-60'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
+                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center relative`}
+                onClick={() => canViewBranches && handleTabChange('branches')}
+                disabled={!canViewBranches}
+              >
+                <MapPinIcon className="h-5 w-5 mr-2" />
+                {t('organisation.tabs.branches') || 'Niederlassungen'}
+                {!canViewBranches && (
+                  <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
+                    PRO
+                  </span>
+                )}
+              </button>
+
               {/* Organization Tab - sichtbar wenn berechtigt */}
               {canViewOrg && (
                 <button
@@ -173,6 +199,21 @@ const Organisation: React.FC = () => {
                     </span>
                     <p className="text-gray-700 dark:text-gray-300 mt-4">
                       {t('organisation.proFeature.roles')}
+                    </p>
+                  </div>
+                </div>
+              )
+            ) : activeTabState === 'branches' ? (
+              canViewBranches ? (
+                <BranchManagementTab onError={handleError} />
+              ) : (
+                <div className="p-8 text-center">
+                  <div className="bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6">
+                    <span className="inline-block px-3 py-1 text-sm font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded mb-4">
+                      PRO
+                    </span>
+                    <p className="text-gray-700 dark:text-gray-300 mt-4">
+                      {t('organisation.proFeature.branches') || 'Niederlassungs-Verwaltung ist eine PRO-Funktion'}
                     </p>
                   </div>
                 </div>

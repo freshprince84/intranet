@@ -89,6 +89,7 @@ const getUserOrganizationFilter = (req) => {
 exports.getUserOrganizationFilter = getUserOrganizationFilter;
 // Neue Hilfsfunktion für Datenisolation je nach User-Typ
 const getDataIsolationFilter = (req, entity) => {
+    var _a, _b, _c, _d;
     // Konvertiere userId von String zu Integer
     const userId = Number(req.userId);
     if (isNaN(userId)) {
@@ -153,6 +154,43 @@ const getDataIsolationFilter = (req, entity) => {
     // User mit Organisation - Filter nach organizationId
     switch (entity) {
         case 'task':
+            // Tasks: Nach organizationId UND (responsibleId ODER roleId ODER qualityControlId)
+            // Wenn User eine Rolle hat, die einer Task-Rolle entspricht, soll er die Task sehen
+            const taskFilter = {};
+            // Nur organizationId hinzufügen, wenn es gesetzt ist
+            if (req.organizationId) {
+                taskFilter.organizationId = req.organizationId;
+            }
+            // Wenn User eine aktive Rolle hat, füge roleId-Filter hinzu
+            const userRoleId = (_b = (_a = req.userRole) === null || _a === void 0 ? void 0 : _a.role) === null || _b === void 0 ? void 0 : _b.id;
+            // Debug-Logging
+            console.log('[getDataIsolationFilter] Task filter:', {
+                userId,
+                organizationId: req.organizationId,
+                userRoleId,
+                userRoleName: (_d = (_c = req.userRole) === null || _c === void 0 ? void 0 : _c.role) === null || _d === void 0 ? void 0 : _d.name,
+                hasOrganization: !!req.organizationId
+            });
+            if (userRoleId) {
+                taskFilter.OR = [
+                    { responsibleId: userId },
+                    { qualityControlId: userId },
+                    { roleId: userRoleId }
+                ];
+            }
+            else {
+                // Fallback: Nur eigene Tasks
+                taskFilter.OR = [
+                    { responsibleId: userId },
+                    { qualityControlId: userId }
+                ];
+            }
+            // Wenn organizationId gesetzt ist, muss es in der OR-Bedingung auch berücksichtigt werden
+            // ABER: Prisma unterstützt keine verschachtelten OR-Bedingungen mit AND
+            // Lösung: organizationId wird als separate Bedingung hinzugefügt
+            // Das bedeutet: (organizationId = X) AND (responsibleId = Y OR roleId = Z OR qualityControlId = Y)
+            console.log('[getDataIsolationFilter] Final task filter:', JSON.stringify(taskFilter, null, 2));
+            return taskFilter;
         case 'request':
         case 'worktime':
         case 'client':

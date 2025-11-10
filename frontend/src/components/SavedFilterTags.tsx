@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useLayoutEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { XMarkIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ChevronDownIcon, PencilIcon, CheckIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { FilterCondition } from './FilterRow.tsx';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -12,6 +12,20 @@ interface SavedFilter {
   tableId: string;
   conditions: FilterCondition[];
   operators: ('AND' | 'OR')[];
+  groupId?: number | null;
+  order?: number;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface FilterGroup {
+  id: number;
+  name: string;
+  tableId: string;
+  order: number;
+  filters: SavedFilter[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface SavedFilterTagsProps {
@@ -53,6 +67,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   };
   
   const [savedFilters, setSavedFilters] = useState<SavedFilter[]>([]);
+  const [filterGroups, setFilterGroups] = useState<FilterGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [recentClientNames, setRecentClientNames] = useState<string[]>([]);
@@ -65,9 +80,39 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Dropdown State für überlaufende Tags
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  
+  // Drag & Drop States
+  const [draggedFilterId, setDraggedFilterId] = useState<number | null>(null);
+  const [dragOverFilterId, setDragOverFilterId] = useState<number | null>(null);
+  const [dragOverGroupId, setDragOverGroupId] = useState<number | 'new-group' | null>(null);
+  
+  // Gruppen-Dropdown States (pro Gruppe)
+  const [openGroupDropdowns, setOpenGroupDropdowns] = useState<Set<number>>(new Set());
+  
+  // Gruppen-Umbenennung States
+  const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
+  const [editingGroupName, setEditingGroupName] = useState<string>('');
+
+  // Refresh Filter-Liste und Gruppen (für external updates) - MUSS vor cleanupExcessiveClientFilters sein!
+  const refreshFilters = useCallback(async () => {
+    try {
+      const [filtersResponse, groupsResponse] = await Promise.all([
+        axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)),
+        axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.GROUPS.BY_TABLE(tableId))
+      ]);
+      
+      const filters = Array.isArray(filtersResponse.data) ? filtersResponse.data.filter(f => f != null) : [];
+      const groups = Array.isArray(groupsResponse.data) ? groupsResponse.data.filter(g => g != null) : [];
+      
+      setSavedFilters(filters);
+      setFilterGroups(groups);
+    } catch (error) {
+      console.error('Fehler beim Neuladen der Filter:', error);
+    }
+  }, [tableId]);
 
   // Bereinigungsfunktion für überschüssige Client-Filter
-  const cleanupExcessiveClientFilters = async (currentClientNames: string[]) => {
+  const cleanupExcessiveClientFilters = useCallback(async (currentClientNames: string[]) => {
     try {
       const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId));
       const existingFilters = response.data;
@@ -88,12 +133,12 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         }
         
         // Refresh die Filter-Liste
-        refreshFilters();
+        await refreshFilters();
       }
     } catch (error) {
       console.error('Fehler beim Bereinigen der Client-Filter:', error);
     }
-  };
+  }, [tableId, refreshFilters]);
 
   // Recent Clients laden (mit useCallback für stabilen Event-Listener)
   const loadRecentClients = useCallback(async () => {
@@ -113,7 +158,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         // Stille Behandlung - normale Situation wenn noch keine Clients beraten wurden
       }
     }
-  }, [tableId]);
+  }, [tableId, cleanupExcessiveClientFilters]);
 
   // Event-Listener für Consultation-Änderungen (z.B. neue Beratung gestartet)
   useEffect(() => {
@@ -134,9 +179,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     loadRecentClients();
   }, [loadRecentClients]);
 
-  // Lade gespeicherte Filter beim ersten Render
+  // Lade gespeicherte Filter und Gruppen beim ersten Render
   useEffect(() => {
-    const fetchSavedFilters = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         const token = localStorage.getItem('token');
@@ -146,10 +191,18 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           return;
         }
         
-        const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId));
+        // Lade Filter und Gruppen parallel
+        const [filtersResponse, groupsResponse] = await Promise.all([
+          axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId)),
+          axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.GROUPS.BY_TABLE(tableId))
+        ]);
+        
         // Sicherstellen, dass response.data ein Array ist
-        const filters = Array.isArray(response.data) ? response.data.filter(f => f != null) : [];
+        const filters = Array.isArray(filtersResponse.data) ? filtersResponse.data.filter(f => f != null) : [];
+        const groups = Array.isArray(groupsResponse.data) ? groupsResponse.data.filter(g => g != null) : [];
+        
         setSavedFilters(filters);
+        setFilterGroups(groups);
 
         // Nur Default-Filter anwenden wenn es eine uncontrolled component ist (legacy)
         if (!onFilterChange && defaultFilterName && !activeFilterName) {
@@ -166,20 +219,8 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       }
     };
     
-    fetchSavedFilters();
+    fetchData();
   }, [tableId]);
-
-  // Refresh Filter-Liste (für external updates)
-  const refreshFilters = async () => {
-    try {
-      const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(tableId));
-      // Sicherstellen, dass response.data ein Array ist
-      const filters = Array.isArray(response.data) ? response.data.filter(f => f != null) : [];
-      setSavedFilters(filters);
-    } catch (error) {
-      console.error('Fehler beim Neuladen der Filter:', error);
-    }
-  };
 
   // Expose refresh function für Parent-Komponenten
   useEffect(() => {
@@ -278,26 +319,29 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     return false;
   };
 
-  // Sortiere Filter nach gewünschter Reihenfolge
+  // Sortiere Filter nach gewünschter Reihenfolge (nur nicht-gruppierte Filter)
   const sortedFilters = useMemo(() => {
+    // Filtere nur nicht-gruppierte Filter heraus
+    const ungroupedFilters = savedFilters.filter(f => f != null && !f.groupId);
+    
     // Sortierung für Consultations
     if (tableId === 'consultations-table') {
       console.log('🔧 SavedFilterTags: Sorting filters...');
       console.log('📋 SavedFilterTags: recentClientNames:', recentClientNames);
-      console.log('🗂️ SavedFilterTags: savedFilters:', savedFilters.filter(f => f != null).map(f => f.name));
+      console.log('🗂️ SavedFilterTags: savedFilters:', ungroupedFilters.map(f => f.name));
 
-      const heute = savedFilters.find(f => f != null && f.name === 'Heute');
-      const woche = savedFilters.find(f => f != null && f.name === 'Woche');
-      const archiv = savedFilters.find(f => f != null && f.name === 'Archiv');
+      const heute = ungroupedFilters.find(f => f != null && f.name === 'Heute');
+      const woche = ungroupedFilters.find(f => f != null && f.name === 'Woche');
+      const archiv = ungroupedFilters.find(f => f != null && f.name === 'Archiv');
       
       // Recent Client Filter in der exakten Reihenfolge der Recent Clients API sortieren
       const sortedRecentClientFilters = recentClientNames
-        .map(clientName => savedFilters.find(f => f != null && f.name === clientName))
+        .map(clientName => ungroupedFilters.find(f => f != null && f.name === clientName))
         .filter(filter => filter != null) as SavedFilter[];
       
       console.log('✅ SavedFilterTags: sortedRecentClientFilters:', sortedRecentClientFilters.map(f => f.name));
       
-      const customFilters = savedFilters.filter(f => 
+      const customFilters = ungroupedFilters.filter(f => 
         f != null && 
         !['Heute', 'Woche', 'Archiv'].includes(f.name) && 
         !recentClientNames.includes(f.name)
@@ -320,11 +364,11 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
 
     // Sortierung für Requests/Tasks - Aktuell zuerst, dann Archiv
     if (tableId === 'requests-table' || tableId === 'worktracker-todos') {
-      const aktuell = savedFilters.find(f => f != null && f.name === 'Aktuell');
-      const archiv = savedFilters.find(f => f != null && f.name === 'Archiv');
+      const aktuell = ungroupedFilters.find(f => f != null && f.name === 'Aktuell');
+      const archiv = ungroupedFilters.find(f => f != null && f.name === 'Archiv');
       
       // Rest der Filter (außer Aktuell und Archiv)
-      const customFilters = savedFilters.filter(f => 
+      const customFilters = ungroupedFilters.filter(f => 
         f != null && f.name !== 'Aktuell' && f.name !== 'Archiv'
       );
       
@@ -341,7 +385,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     }
 
     // Für alle anderen Tabellen: Keine Sortierung
-    return savedFilters;
+    return ungroupedFilters;
   }, [savedFilters, recentClientNames, tableId]);
 
   // Optimistische Filter-Anzeige für bessere UX (MOVED BEFORE EARLY RETURNS)
@@ -445,6 +489,151 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     calculateVisibleTags();
   }, [calculateVisibleTags]);
 
+  // Sortiere Gruppen nach order (MUSS vor frühen Returns sein!)
+  const sortedGroups = useMemo(() => {
+    return [...filterGroups].sort((a, b) => a.order - b.order);
+  }, [filterGroups]);
+
+  // Drag & Drop Handler
+  const handleDragStart = (e: React.DragEvent, filterId: number) => {
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedFilterId(filterId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetId: number | 'new-group', type: 'filter' | 'group') => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (type === 'filter') {
+      setDragOverFilterId(targetId as number);
+    } else {
+      setDragOverGroupId(targetId);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedFilterId(null);
+    setDragOverFilterId(null);
+    setDragOverGroupId(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetId: number | 'new-group', type: 'filter' | 'group') => {
+    e.preventDefault();
+    
+    if (!draggedFilterId) return;
+    
+    // Verhindere, dass ein Filter auf sich selbst gezogen wird
+    if (type === 'filter' && draggedFilterId === targetId) {
+      handleDragEnd();
+      return;
+    }
+    
+    try {
+      if (type === 'group') {
+        // Filter auf Gruppe gezogen -> Zu Gruppe hinzufügen
+        await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.GROUPS.ADD_FILTER(draggedFilterId, targetId as number));
+        toast.success('Filter zur Gruppe hinzugefügt');
+      } else {
+        // Filter auf Filter gezogen -> Zu bestehender Gruppe hinzufügen oder neue erstellen
+        const targetFilter = savedFilters.find(f => f.id === targetId as number);
+        if (!targetFilter) {
+          handleDragEnd();
+          return;
+        }
+        
+        if (targetFilter.groupId) {
+          // Füge zu bestehender Gruppe hinzu
+          await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.GROUPS.ADD_FILTER(draggedFilterId, targetFilter.groupId));
+          toast.success('Filter zur Gruppe hinzugefügt');
+        } else {
+          // Erstelle neue Gruppe mit beiden Filtern
+          const groupName = `Gruppe ${filterGroups.length + 1}`;
+          const groupResponse = await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.GROUPS.CREATE, {
+            tableId,
+            name: groupName
+          });
+          
+          const newGroup = groupResponse.data;
+          
+          await Promise.all([
+            axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.GROUPS.ADD_FILTER(draggedFilterId, newGroup.id)),
+            axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.GROUPS.ADD_FILTER(targetFilter.id, newGroup.id))
+          ]);
+          
+          toast.success('Gruppe erstellt');
+        }
+      }
+      
+      // Refresh Filter-Liste
+      await refreshFilters();
+    } catch (err) {
+      console.error('Fehler beim Gruppieren der Filter:', err);
+      toast.error('Fehler beim Gruppieren der Filter');
+    } finally {
+      handleDragEnd();
+    }
+  };
+
+  // Gruppen-Management
+  const toggleGroupDropdown = (groupId: number) => {
+    setOpenGroupDropdowns(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupId)) {
+        newSet.delete(groupId);
+      } else {
+        newSet.add(groupId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleUngroupFilters = async (groupId: number) => {
+    try {
+      await axiosInstance.delete(API_ENDPOINTS.SAVED_FILTERS.GROUPS.DELETE(groupId));
+      toast.success('Gruppe aufgelöst');
+      await refreshFilters();
+      setOpenGroupDropdowns(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(groupId);
+        return newSet;
+      });
+    } catch (err) {
+      console.error('Fehler beim Auflösen der Gruppe:', err);
+      toast.error('Fehler beim Auflösen der Gruppe');
+    }
+  };
+
+  const handleStartEditGroup = (group: FilterGroup) => {
+    setEditingGroupId(group.id);
+    setEditingGroupName(group.name);
+  };
+
+  const handleCancelEditGroup = () => {
+    setEditingGroupId(null);
+    setEditingGroupName('');
+  };
+
+  const handleSaveGroupName = async (groupId: number) => {
+    if (!editingGroupName.trim()) {
+      toast.error('Gruppenname darf nicht leer sein');
+      return;
+    }
+
+    try {
+      await axiosInstance.put(API_ENDPOINTS.SAVED_FILTERS.GROUPS.UPDATE(groupId), {
+        name: editingGroupName.trim()
+      });
+      toast.success('Gruppe umbenannt');
+      await refreshFilters();
+      setEditingGroupId(null);
+      setEditingGroupName('');
+    } catch (err: any) {
+      console.error('Fehler beim Umbenennen der Gruppe:', err);
+      const errorMessage = err.response?.data?.message || 'Fehler beim Umbenennen der Gruppe';
+      toast.error(errorMessage);
+    }
+  };
+
   // Bestimme welcher Filter aktiv ist
   const getActiveFilterId = () => {
     if (onFilterChange) {
@@ -464,24 +653,151 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     return <div className="text-red-500 py-2">{error}</div>;
   }
   
-  if (savedFilters.length === 0) {
+  if (savedFilters.length === 0 && filterGroups.length === 0) {
     return null;
   }
-  
+
   return (
     <div ref={containerRef} className="flex items-center gap-2 mb-3 mt-1">
       {/* Dynamische Anzahl Filter inline anzeigen mit optimistischer Anzeige */}
       <div className="flex items-center gap-2 flex-1 min-w-0">
+        {/* Gruppen-Dropdowns */}
+        {sortedGroups.map(group => {
+          // Prüfe, ob ein Filter aus dieser Gruppe aktiv ist
+          const activeFilterInGroup = group.filters.find(f => getActiveFilterId() === f.id);
+          const displayName = activeFilterInGroup 
+            ? translateFilterName(activeFilterInGroup.name)
+            : `${group.name} (${group.filters.length})`;
+          
+          return (
+          <div key={group.id} className="relative flex-shrink-0">
+            <button
+              onClick={() => toggleGroupDropdown(group.id)}
+              onDragOver={(e) => handleDragOver(e, group.id, 'group')}
+              onDrop={(e) => handleDrop(e, group.id, 'group')}
+              className={`flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors ${
+                dragOverGroupId === group.id ? 'ring-2 ring-purple-500' : ''
+              } ${activeFilterInGroup ? 'ring-2 ring-purple-500' : ''}`}
+              title={activeFilterInGroup ? displayName : `${group.name} (${group.filters.length})`}
+            >
+              <span className="truncate max-w-[100px]">
+                {displayName}
+              </span>
+              <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${openGroupDropdowns.has(group.id) ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {/* Gruppen-Dropdown */}
+            {openGroupDropdowns.has(group.id) && (
+              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-50 min-w-[200px]">
+                {group.filters.map(filter => (
+                  <div
+                    key={filter.id}
+                    onClick={() => {
+                      handleSelectFilter(filter);
+                      toggleGroupDropdown(group.id);
+                    }}
+                    className={`flex items-center justify-between px-3 py-2 text-sm cursor-pointer transition-colors ${
+                      getActiveFilterId() === filter.id
+                        ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    } ${isStandardFilter(filter.name) ? 'font-bold' : ''}`}
+                    title={translateFilterName(filter.name)}
+                  >
+                    <span className="truncate flex-1">{translateFilterName(filter.name)}</span>
+                  </div>
+                ))}
+                <div className="border-t border-gray-200 dark:border-gray-700 mt-1 pt-1">
+                  {editingGroupId === group.id ? (
+                    <div className="px-3 py-2">
+                      <input
+                        type="text"
+                        value={editingGroupName}
+                        onChange={(e) => setEditingGroupName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleSaveGroupName(group.id);
+                          } else if (e.key === 'Escape') {
+                            handleCancelEditGroup();
+                          }
+                        }}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="flex gap-2 mt-2 justify-end">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSaveGroupName(group.id);
+                          }}
+                          className="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                          title={t('filterTags.save')}
+                        >
+                          <CheckIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCancelEditGroup();
+                          }}
+                          className="p-2 rounded-md bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                          title={t('filterTags.cancel')}
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartEditGroup(group);
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left transition-colors"
+                        title={t('filterTags.renameGroup')}
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleUngroupFilters(group.id);
+                        }}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left transition-colors"
+                        title={t('filterTags.ungroup')}
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          );
+        })}
+        
+        {/* Einzelne Filter-Tags */}
         {displayFilters.slice(0, currentVisibleCount).map(filter => (
           <div
             key={filter.id}
+            draggable={true}
+            onDragStart={(e) => handleDragStart(e, filter.id)}
+            onDragOver={(e) => handleDragOver(e, filter.id, 'filter')}
+            onDrop={(e) => handleDrop(e, filter.id, 'filter')}
+            onDragEnd={handleDragEnd}
             onClick={() => !filter.isPlaceholder && handleSelectFilter(filter)}
             className={`flex items-center px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors flex-shrink-0 ${
               filter.isPlaceholder
                 ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 animate-pulse cursor-default'
-                : getActiveFilterId() === filter.id
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
+                : draggedFilterId === filter.id
+                  ? 'opacity-50'
+                  : dragOverFilterId === filter.id
+                    ? 'ring-2 ring-blue-500'
+                    : getActiveFilterId() === filter.id
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
             } ${!filter.isPlaceholder && isStandardFilter(filter.name) ? 'font-bold' : ''}`}
             title={filter.isPlaceholder ? t('common.loading') : translateFilterName(filter.name)}
           >
@@ -496,7 +812,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
               <button
                 onClick={(e) => handleDeleteFilter(e, filter.id)}
                 className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
-                title="Filter löschen"
+                title={t('filterTags.deleteFilter')}
               >
                 <XMarkIcon className="h-4 w-4" />
               </button>
@@ -510,7 +826,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
-              title="Weitere Filter anzeigen"
+              title={t('filterTags.showMoreFilters')}
             >
               <span>+{sortedFilters.length - visibleTagCount}</span>
               <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -542,7 +858,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                           setIsDropdownOpen(false);
                         }}
                         className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none flex-shrink-0"
-                        title="Filter löschen"
+                        title={t('filterTags.deleteFilter')}
                       >
                         <XMarkIcon className="h-4 w-4" />
                       </button>

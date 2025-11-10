@@ -1569,6 +1569,56 @@ Alle Action-Buttons (`btn-action`) haben folgende Eigenschaften:
 - Runde Form (border-radius: 9999px)
 - Leichter Schatten für 3D-Effekt
 
+### ⚠️ KRITISCH: Button-Design-Regel - KEIN TEXT IN BUTTONS!
+
+**WICHTIGSTE REGEL FÜR ALLE BUTTONS:**
+- **Buttons müssen IMMER Icon-only sein (OHNE sichtbaren Text)!**
+- **Text gehört NUR ins `title` Attribut für Tooltips!**
+- **Ausnahmen sind EXTREM selten und müssen explizit begründet werden!**
+
+**Richtige Implementierung:**
+```jsx
+// ✅ RICHTIG: Icon-only Button mit Tooltip
+<button
+  onClick={handleSave}
+  className="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+  title="Speichern"
+>
+  <CheckIcon className="h-4 w-4" />
+</button>
+
+// ❌ FALSCH: Button mit sichtbarem Text
+<button
+  onClick={handleSave}
+  className="px-2 py-1 bg-blue-600 text-white rounded"
+>
+  Speichern
+</button>
+```
+
+**Standard-Icons für häufige Aktionen:**
+- **Speichern**: `CheckIcon` (grün/blau)
+- **Abbrechen**: `XMarkIcon` (grau)
+- **Löschen**: `TrashIcon` (rot)
+- **Bearbeiten**: `PencilIcon` (blau)
+- **Umbenennen**: `PencilIcon` (blau)
+- **Hinzufügen**: `PlusIcon` (blau)
+- **Entfernen**: `XMarkIcon` oder `TrashIcon` (rot)
+
+**Diese Regel gilt für ALLE Buttons im gesamten System!**
+- Modals
+- Sidepanes
+- Dropdown-Menüs
+- Tabellen-Aktionen
+- Formulare
+- Überall!
+
+**Bei jeder neuen Button-Implementierung:**
+1. Prüfe: Hat der Button sichtbaren Text? → ENTFERNEN!
+2. Prüfe: Ist ein passendes Icon vorhanden? → HINZUFÜGEN!
+3. Prüfe: Ist der Text im `title` Attribut? → HINZUFÜGEN!
+4. Prüfe: Entspricht der Style dem Standard? → ANPASSEN!
+
 ## Berechtigungsbasierte UI-Anpassung
 
 Die UI muss basierend auf den Berechtigungen des Benutzers angepasst werden. Verwende dafür den `hasPermission`-Hook:

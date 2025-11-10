@@ -60,10 +60,31 @@ const MyDocumentsTab: React.FC<MyDocumentsTabProps> = ({ userId }) => {
   const [error, setError] = useState<string | null>(null);
   const [downloadingCertId, setDownloadingCertId] = useState<number | null>(null);
   const [downloadingContractId, setDownloadingContractId] = useState<number | null>(null);
+  const [certPreviewUrls, setCertPreviewUrls] = useState<Record<number, string>>({});
+  const [contractPreviewUrls, setContractPreviewUrls] = useState<Record<number, string>>({});
+  const [loadingPreviews, setLoadingPreviews] = useState<Record<number, boolean>>({});
 
   useEffect(() => {
     fetchDocuments();
   }, [userId]);
+
+  // Cleanup: Revoke Object URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      setCertPreviewUrls(prev => {
+        Object.values(prev).forEach(url => {
+          if (url) window.URL.revokeObjectURL(url);
+        });
+        return {};
+      });
+      setContractPreviewUrls(prev => {
+        Object.values(prev).forEach(url => {
+          if (url) window.URL.revokeObjectURL(url);
+        });
+        return {};
+      });
+    };
+  }, []);
 
   const fetchDocuments = async () => {
     try {
@@ -72,9 +93,22 @@ const MyDocumentsTab: React.FC<MyDocumentsTabProps> = ({ userId }) => {
         axiosInstance.get(API_ENDPOINTS.LIFECYCLE.CERTIFICATES(userId)),
         axiosInstance.get(API_ENDPOINTS.LIFECYCLE.CONTRACTS(userId))
       ]);
-      setCertificates(certsResponse.data?.certificates || []);
-      setContracts(contractsResponse.data?.contracts || []);
+      const fetchedCerts = certsResponse.data?.certificates || [];
+      const fetchedContracts = contractsResponse.data?.contracts || [];
+      
+      setCertificates(fetchedCerts);
+      setContracts(fetchedContracts);
       setError(null);
+      
+      // Load PDF previews for certificates
+      fetchedCerts.forEach((cert: Certificate) => {
+        loadCertificatePreview(cert.id);
+      });
+      
+      // Load PDF previews for contracts
+      fetchedContracts.forEach((contract: Contract) => {
+        loadContractPreview(contract.id);
+      });
     } catch (err: any) {
       console.error('Fehler beim Laden der Dokumente:', err);
       if (err.response?.status === 404) {
@@ -88,6 +122,44 @@ const MyDocumentsTab: React.FC<MyDocumentsTabProps> = ({ userId }) => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCertificatePreview = async (certId: number) => {
+    try {
+      setLoadingPreviews(prev => ({ ...prev, [certId]: true }));
+      const response = await axiosInstance.get(
+        `${API_ENDPOINTS.LIFECYCLE.CERTIFICATE_DOWNLOAD(userId, certId)}?preview=true`,
+        { responseType: 'blob' }
+      );
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const previewUrl = window.URL.createObjectURL(blob);
+      
+      setCertPreviewUrls(prev => ({ ...prev, [certId]: previewUrl }));
+    } catch (err: any) {
+      console.error('Fehler beim Laden der PDF-Vorschau:', err);
+    } finally {
+      setLoadingPreviews(prev => ({ ...prev, [certId]: false }));
+    }
+  };
+
+  const loadContractPreview = async (contractId: number) => {
+    try {
+      setLoadingPreviews(prev => ({ ...prev, [contractId]: true }));
+      const response = await axiosInstance.get(
+        `${API_ENDPOINTS.LIFECYCLE.CONTRACT_DOWNLOAD(userId, contractId)}?preview=true`,
+        { responseType: 'blob' }
+      );
+      
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const previewUrl = window.URL.createObjectURL(blob);
+      
+      setContractPreviewUrls(prev => ({ ...prev, [contractId]: previewUrl }));
+    } catch (err: any) {
+      console.error('Fehler beim Laden der PDF-Vorschau:', err);
+    } finally {
+      setLoadingPreviews(prev => ({ ...prev, [contractId]: false }));
     }
   };
 
@@ -240,12 +312,22 @@ const MyDocumentsTab: React.FC<MyDocumentsTabProps> = ({ userId }) => {
                     </div>
                     {/* PDF-Vorschau */}
                     <div className="mt-3 border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
-                      <iframe 
-                        src={`${API_ENDPOINTS.LIFECYCLE.CERTIFICATE_DOWNLOAD(userId, cert.id)}?preview=true#view=FitH`}
-                        className="w-full rounded border dark:border-gray-600"
-                        style={{ height: '300px' }}
-                        title={t('lifecycle.certificate')}
-                      />
+                      {loadingPreviews[cert.id] ? (
+                        <div className="flex justify-center items-center" style={{ height: '400px' }}>
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                      ) : certPreviewUrls[cert.id] ? (
+                        <iframe 
+                          src={certPreviewUrls[cert.id]}
+                          className="w-full rounded border dark:border-gray-600"
+                          style={{ height: '400px' }}
+                          title={t('lifecycle.certificate')}
+                        />
+                      ) : (
+                        <div className="flex justify-center items-center text-gray-500 dark:text-gray-400" style={{ height: '400px' }}>
+                          <p>{t('lifecycle.previewError') || 'Vorschau konnte nicht geladen werden'}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button
@@ -338,12 +420,22 @@ const MyDocumentsTab: React.FC<MyDocumentsTabProps> = ({ userId }) => {
                     </div>
                     {/* PDF-Vorschau */}
                     <div className="mt-3 border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
-                      <iframe 
-                        src={`${API_ENDPOINTS.LIFECYCLE.CONTRACT_DOWNLOAD(userId, contract.id)}?preview=true#view=FitH`}
-                        className="w-full rounded border dark:border-gray-600"
-                        style={{ height: '300px' }}
-                        title={t('lifecycle.contract')}
-                      />
+                      {loadingPreviews[contract.id] ? (
+                        <div className="flex justify-center items-center" style={{ height: '400px' }}>
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                      ) : contractPreviewUrls[contract.id] ? (
+                        <iframe 
+                          src={contractPreviewUrls[contract.id]}
+                          className="w-full rounded border dark:border-gray-600"
+                          style={{ height: '400px' }}
+                          title={t('lifecycle.contract')}
+                        />
+                      ) : (
+                        <div className="flex justify-center items-center text-gray-500 dark:text-gray-400" style={{ height: '400px' }}>
+                          <p>{t('lifecycle.previewError') || 'Vorschau konnte nicht geladen werden'}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <button

@@ -194,6 +194,11 @@
     "identificationExpiryDate": "Ablaufdatum",
     "selectCountry": "Select a country",
     "selectLanguage": "Select a language",
+    "gender": "Geschlecht",
+    "selectGender": "Geschlecht auswählen",
+    "genderMale": "Männlich",
+    "genderFemale": "Weiblich",
+    "genderOther": "Andere",
     "profileIncomplete": "Ihr Profil ist unvollständig.",
     "completeProfile": "Bitte vervollständigen Sie Ihr Profil, indem Sie alle erforderlichen Felder ausfüllen.",
     "documents": "Identifikationsdokumente",
@@ -206,9 +211,10 @@
     "columns": {
       "title": "Titel",
       "status": "Status",
-      "requestedByResponsible": "Angefragt von / Verantwortlicher",
-      "requestedBy": "Angefragt von",
-      "responsible": "Verantwortlicher",
+      "type": "Typ",
+      "requestedByResponsible": "Von / Für",
+      "requestedBy": "Von",
+      "responsible": "Für",
       "branch": "Niederlassung",
       "dueDate": "Fälligkeit",
       "actions": "Aktionen"
@@ -232,6 +238,13 @@
       "archiv": "Archiv",
       "aktuell": "Aktuell"
     },
+    "types": {
+      "vacation": "Ferienantrag",
+      "improvement_suggestion": "Verbesserungsvorschlag",
+      "sick_leave": "Krankmeldung",
+      "employment_certificate": "Arbeitszeugnis",
+      "other": "Sonstiges"
+    },
     "createRequest": {
       "title": "Neuen Request erstellen",
       "form": {
@@ -240,6 +253,8 @@
         "descriptionPlaceholder": "Text, Bilder oder Dateien hier einfügen...",
         "responsible": "Verantwortlicher",
         "branch": "Niederlassung",
+        "type": "Typ",
+        "isPrivate": "Privat",
         "dueDate": "Fälligkeitsdatum",
         "createTodo": "Todo automatisch erstellen",
         "fileUpload": "Datei hinzufügen",
@@ -378,6 +393,7 @@
     "tabs": {
       "users": "Benutzer",
       "roles": "Rollen",
+      "branches": "Niederlassungen",
       "organization": "Organisation"
     },
     "noPermission": "Nur Administratoren haben Zugriff auf diese Seite.",
@@ -386,7 +402,8 @@
     "noPermissionForPage": "Keine Berechtigung für diese Seite.",
     "proFeature": {
       "users": "Die Benutzerverwaltung ist eine PRO-Funktion. Bitte upgraden Sie Ihr Abonnement, um diese Funktion zu nutzen.",
-      "roles": "Die Rollenverwaltung ist eine PRO-Funktion. Bitte upgraden Sie Ihr Abonnement, um diese Funktion zu nutzen."
+      "roles": "Die Rollenverwaltung ist eine PRO-Funktion. Bitte upgraden Sie Ihr Abonnement, um diese Funktion zu nutzen.",
+      "branches": "Die Niederlassungs-Verwaltung ist eine PRO-Funktion. Bitte upgraden Sie Ihr Abonnement, um diese Funktion zu nutzen."
     },
     "createUser": {
       "title": "Neuen Benutzer erstellen",
@@ -396,6 +413,14 @@
       "lastName": "Nachname",
       "create": "Erstellen"
     }
+  },
+  "branches": {
+    "title": "Niederlassungen",
+    "create": "Neue Niederlassung",
+    "edit": "Niederlassung bearbeiten",
+    "name": "Name",
+    "noBranches": "Keine Niederlassungen vorhanden",
+    "deleteConfirm": "Möchten Sie diese Niederlassung wirklich löschen?"
   },
   "users": {
     "title": "Benutzer",
@@ -692,6 +717,8 @@
         "description": "Beschreibung",
         "responsible": "Verantwortlicher",
         "branch": "Niederlassung",
+        "type": "Typ",
+        "isPrivate": "Privat",
         "dueDate": "Fälligkeitsdatum",
         "createTodo": "Todo automatisch erstellen",
         "fileUpload": "Datei hinzufügen",
@@ -877,6 +904,7 @@
   "organization": {
     "title": "Organisation",
     "settings": "Einstellungen",
+    "documentSignatures": "Dokumenten-Signaturen",
     "organizationSettings": "Organisationseinstellungen",
     "language": "Standard-Sprache",
     "languageDescription": "Diese Sprache wird für alle Benutzer verwendet, die keine eigene Spracheinstellung haben",
@@ -885,6 +913,9 @@
     "logoUrl": "Logo URL",
     "country": "Land",
     "selectCountry": "Land auswählen",
+    "nit": "NIT",
+    "nitDescription": "Número de Identificación Tributaria (nur für Kolumbien)",
+    "nitRequired": "NIT ist erforderlich für Kolumbien",
     "createOrganization": "Neue Organisation erstellen",
     "joinOrganization": "Organisation beitreten",
     "statistics": "Statistiken",
@@ -909,7 +940,8 @@
       "general": "Allgemein",
       "roles": "Rollen",
       "documents": "Dokumente",
-      "smtp": "SMTP"
+      "smtp": "SMTP",
+      "api": "API"
     },
     "smtp": {
       "title": "SMTP-Einstellungen",
@@ -935,6 +967,61 @@
       "saveError": "Fehler beim Speichern der SMTP-Einstellungen",
       "requiredFields": "Bitte füllen Sie alle Pflichtfelder aus (Host, Port, Benutzer, Passwort)",
       "clear": "Zurücksetzen"
+    },
+    "api": {
+      "title": "API-Konfigurationen",
+      "description": "Konfigurieren Sie die API-Zugänge für LobbyPMS, TTLock, SIRE und Bold Payment. Diese Einstellungen sind nur für Organisationen aus Kolumbien verfügbar.",
+      "saveSuccess": "API-Einstellungen erfolgreich gespeichert",
+      "saveError": "Fehler beim Speichern der API-Einstellungen",
+      "lobbyPms": {
+        "title": "LobbyPMS",
+        "apiUrl": "API URL",
+        "apiKey": "API Token",
+        "propertyId": "Property ID",
+        "syncEnabled": "Synchronisation aktivieren",
+        "autoCreateTasks": "Automatisch Tasks erstellen",
+        "lateCheckInThreshold": "Späte Check-in Zeit (z.B. 22:00)"
+      },
+      "ttlock": {
+        "title": "TTLock (Türsystem)",
+        "apiUrl": "API URL",
+        "clientId": "Client ID",
+        "clientSecret": "Client Secret"
+      },
+      "sire": {
+        "title": "SIRE (Migration)",
+        "apiUrl": "API URL",
+        "apiKey": "API Key",
+        "apiSecret": "API Secret",
+        "propertyCode": "Property Code",
+        "enabled": "SIRE-Registrierung aktivieren",
+        "autoRegisterOnCheckIn": "Automatisch bei Check-in registrieren"
+      },
+      "boldPayment": {
+        "title": "Bold Payment",
+        "apiKey": "API Key",
+        "merchantId": "Merchant ID",
+        "environment": "Umgebung",
+        "sandbox": "Sandbox (Test)",
+        "production": "Production (Live)"
+      },
+      "whatsapp": {
+        "title": "WhatsApp",
+        "provider": "Provider",
+        "providerTwilio": "Twilio",
+        "providerBusinessApi": "WhatsApp Business API",
+        "apiKey": "API Key / Access Token",
+        "apiSecret": "API Secret",
+        "phoneNumberId": "Phone Number ID"
+      },
+      "validation": {
+        "apiUrlRequired": "API URL ist erforderlich, wenn Synchronisation aktiviert ist",
+        "apiKeyRequired": "API Key ist erforderlich, wenn Synchronisation aktiviert ist",
+        "invalidUrl": "Ungültige URL. Bitte verwenden Sie nur erlaubte API-Domains",
+        "invalidTimeFormat": "Ungültiges Zeitformat (erwartet: HH:MM, z.B. 22:00)"
+      },
+      "clear": "Zurücksetzen",
+      "noPermission": "Sie haben keine Berechtigung, API-Einstellungen zu ändern"
     },
     "lifecycleRoles": {
       "title": "Lebenszyklus-Rollen",
@@ -1720,10 +1807,254 @@
     "workingHours": "Arbeitsstunden:",
     "downloadCertificate": "Arbeitszeugnis herunterladen",
     "downloadContract": "Arbeitsvertrag herunterladen",
+    "previewError": "Vorschau konnte nicht geladen werden",
     "createCertificate": "Arbeitszeugnis erstellen",
     "createContract": "Arbeitsvertrag erstellen",
     "edit": "Bearbeiten",
     "download": "Herunterladen",
-    "noData": "Keine Lebenszyklus-Daten verfügbar"
+    "noData": "Keine Lebenszyklus-Daten verfügbar",
+    "autoGeneratedData": "Automatisch generierte Daten",
+    "taskType": "Aufgabentyp / To-Do Name",
+    "cop": "COP",
+    "emailTemplate": "E-Mail-Vorlage",
+    "noTemplate": "Keine Vorlage vorhanden",
+    "generateTemplate": "Vorlage generieren",
+    "completeRegistration": "Anmeldung abschließen",
+    "registrationNumber": "Registrierungsnummer",
+    "registrationNumberPlaceholder": "z.B. 123456789",
+    "provider": "Anbieter",
+    "providerPlaceholder": "z.B. ARL Sura, EPS Sanitas",
+    "registrationDate": "Registrierungsdatum",
+    "registrationDatePlaceholder": "tt.mm.jjjj",
+    "fieldPositionsInfo": "Konfigurieren Sie die Positionen der Felder im Template-PDF.",
+    "fieldPositionsHint": "Koordinaten in PDF-Punkten. A4: 595 x 842 Punkte. Y=0 ist unten, Y=842 ist oben. X=0 ist links, X=595 ist rechts.",
+    "fieldPositionsSaved": "Feld-Positionen erfolgreich gespeichert",
+    "resetFieldPositionsConfirm": "Positionen auf Standardwerte zurücksetzen?",
+    "fieldUserName": "Benutzername",
+    "fieldOrganizationName": "Organisationsname",
+    "fieldCurrentDate": "Aktuelles Datum",
+    "fieldIdentificationNumber": "Ausweisnummer",
+    "fieldStartDate": "Startdatum",
+    "fieldEndDate": "Enddatum",
+    "fieldPosition": "Position",
+    "fieldSalary": "Gehalt",
+    "fieldWorkingHours": "Arbeitsstunden",
+    "fontSize": "Schriftgröße",
+    "offboarding": {
+      "startTitle": "Offboarding starten",
+      "startButton": "Offboarding starten",
+      "started": "Offboarding erfolgreich gestartet",
+      "startError": "Fehler beim Starten des Offboarding",
+      "warningTitle": "Wichtiger Hinweis",
+      "warningText": "Durch das Starten des Offboarding-Prozesses werden automatisch Tasks erstellt. Dieser Vorgang kann nicht rückgängig gemacht werden.",
+      "user": "Mitarbeiter",
+      "exitDate": "Austrittsdatum",
+      "exitDateRequired": "Austrittsdatum ist erforderlich",
+      "exitDateTooFar": "Austrittsdatum darf nicht mehr als 1 Jahr in der Zukunft liegen",
+      "exitDateHint": "Das Datum, an dem der Mitarbeiter die Organisation verlässt",
+      "exitReason": "Austrittsgrund",
+      "exitReasonRequired": "Austrittsgrund ist erforderlich",
+      "exitReasonTooShort": "Austrittsgrund muss mindestens 10 Zeichen lang sein",
+      "exitReasonPlaceholder": "z.B. Kündigung, Vertragsende, etc.",
+      "exitReasonHint": "Mindestens 10 Zeichen. Beschreiben Sie den Grund für den Austritt.",
+      "progressTitle": "Offboarding-Fortschritt",
+      "progressSteps": "{{completed}} von {{total}} Schritten abgeschlossen",
+      "tasksTitle": "Offboarding-Aufgaben",
+      "complete": {
+        "title": "Offboarding abschließen",
+        "button": "Offboarding abschließen",
+        "user": "Mitarbeiter",
+        "tasksStatus": "Status der Offboarding-Aufgaben",
+        "warningTitle": "Nicht alle Aufgaben abgeschlossen",
+        "warningText": "Es sind noch nicht alle Offboarding-Aufgaben abgeschlossen. Sie können das Offboarding trotzdem abschließen, aber es wird empfohlen, alle Aufgaben zuerst zu erledigen.",
+        "allTasksCompleted": "Alle Aufgaben abgeschlossen",
+        "allTasksCompletedText": "Alle Offboarding-Aufgaben sind abgeschlossen. Sie können das Offboarding jetzt abschließen.",
+        "confirmLabel": "Bestätigen Sie durch Eingabe des Namens: \"{{userName}}\"",
+        "confirmHint": "Geben Sie den vollständigen Namen des Mitarbeiters ein, um das Offboarding abzuschließen",
+        "confirmTextMismatch": "Bestätigungstext stimmt nicht überein",
+        "finalWarningTitle": "Wichtiger Hinweis",
+        "finalWarningText": "Durch das Abschließen des Offboarding wird der Mitarbeiter archiviert. Dieser Vorgang kann nicht rückgängig gemacht werden.",
+        "success": "Offboarding erfolgreich abgeschlossen",
+        "error": "Fehler beim Abschließen des Offboarding"
+      }
+    },
+    "offboardingStarted": "Offboarding gestartet",
+    "exitDate": "Austrittsdatum",
+    "exitReason": "Austrittsgrund",
+    "signatureType": "Signatur-Typ",
+    "signerName": "Name des Unterzeichners",
+    "signerNamePlaceholder": "z.B. Stefan Bossart",
+    "signerNameRequired": "Name des Unterzeichners ist erforderlich",
+    "signerPosition": "Position",
+    "signerPositionPlaceholder": "z.B. Geschäftsführer",
+    "signaturePosition": "Signatur-Position im PDF",
+    "positionX": "X (horizontal)",
+    "positionXHint": "0 = links",
+    "positionY": "Y (vertikal)",
+    "positionYHint": "0 = unten",
+    "positionPage": "Seite",
+    "positionPageHint": "1 = erste Seite"
+  },
+  "reservations": {
+    "title": "Reservierungen",
+    "description": "Verwalten Sie alle Reservierungen und Check-ins",
+    "loadError": "Fehler beim Laden der Reservierungen",
+    "sync": "Synchronisieren",
+    "syncing": "Synchronisiere...",
+    "syncSuccess": "Reservierungen erfolgreich synchronisiert",
+    "syncError": "Fehler beim Synchronisieren",
+    "searchPlaceholder": "Suche nach Gast, E-Mail, Telefon...",
+    "noReservations": "Keine Reservierungen vorhanden",
+    "noResults": "Keine Reservierungen gefunden",
+    "resultCount": "{{count}} von {{total}} Reservierungen",
+    "status": "Status",
+    "status.confirmed": "Bestätigt",
+    "status.checkedIn": "Eingecheckt",
+    "status.checkedOut": "Ausgecheckt",
+    "status.cancelled": "Storniert",
+    "status.noShow": "Nicht erschienen",
+    "paymentStatus": "Zahlungsstatus",
+    "paymentStatus.pending": "Ausstehend",
+    "paymentStatus.paid": "Bezahlt",
+    "paymentStatus.partiallyPaid": "Teilweise bezahlt",
+    "paymentStatus.refunded": "Erstattet",
+    "checkIn": "Check-in",
+    "checkInSuccess": "Check-in erfolgreich durchgeführt",
+    "checkInError": "Fehler beim Check-in",
+    "checkOut": "Check-out",
+    "guest": "Gast",
+    "guestInfo": "Gast-Informationen",
+    "reservationInfo": "Reservierungs-Informationen",
+    "additionalInfo": "Zusätzliche Informationen",
+    "email": "E-Mail",
+    "phone": "Telefon",
+    "nationality": "Nationalität",
+    "room": "Zimmer",
+    "roomNumber": "Zimmernummer",
+    "roomNumberRequired": "Zimmernummer ist erforderlich",
+    "roomNumberPlaceholder": "z.B. 101",
+    "roomDescription": "Zimmerbeschreibung",
+    "roomDescriptionPlaceholder": "Optionale Beschreibung des Zimmers",
+    "doorPin": "Tür-PIN",
+    "pin": "PIN",
+    "app": "App",
+    "paymentLink": "Zahlungslink",
+    "openPaymentLink": "Link öffnen",
+    "sireStatus": "SIRE-Status",
+    "sireRegistered": "SIRE registriert",
+    "onlineCheckIn": "Online",
+    "onlineCheckInCompleted": "Online Check-in abgeschlossen",
+    "notFound": "Reservierung nicht gefunden",
+    "checkInDate": "Check-in Datum"
+  },
+  "cerebro": {
+    "linkedTasks": "Verknüpfte Tasks",
+    "noLinkedTasks": "Keine Tasks verknüpft.",
+    "linkedRequests": "Verknüpfte Requests",
+    "noLinkedRequests": "Keine Requests verknüpft.",
+    "noMedia": "Keine Medien vorhanden.",
+    "externalLinks": "Externe Links",
+    "noExternalLinks": "Keine externen Links vorhanden.",
+    "addExternalLink": "Externen Link hinzufügen",
+    "addMedia": "Medien hinzufügen",
+    "addLink": "Link hinzufügen",
+    "addGitHubMarkdown": "GitHub Markdown hinzufügen",
+    "noParentArticle": "Kein Elternartikel (Root)",
+    "linkedMarkdownFiles": "Verknüpfte Markdown-Dateien",
+    "loadingGitHubLinks": "Lade GitHub-Links...",
+    "noGitHubLinks": "Keine GitHub-Links vorhanden",
+    "removeGitHubLink": "GitHub-Link entfernen",
+    "remove": "Entfernen",
+    "addGitHubLink": "GitHub-Link hinzufügen",
+    "selectArticle": "-- Artikel auswählen --",
+    "link": "Verknüpfen",
+    "loadingArticle": "Lade Artikel...",
+    "noContentAvailable": "Kein Inhalt verfügbar",
+    "clickToSelectFile": "Klicken Sie, um eine Datei auszuwählen",
+    "menuClose": "Menü schließen",
+    "menuOpen": "Menü öffnen",
+    "linkedCerebroArticles": "Verknüpfte Cerebro-Artikel"
+  },
+  "filterTags": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "renameGroup": "Gruppe umbenennen",
+    "ungroup": "Gruppe auflösen",
+    "deleteFilter": "Filter löschen",
+    "showMoreFilters": "Weitere Filter anzeigen"
+  },
+  "notifications": {
+    "noNotifications": "Keine Benachrichtigungen vorhanden",
+    "markAsRead": "Als gelesen markieren",
+    "deleteNotification": "Benachrichtigung löschen",
+    "deleteAllNotifications": "Alle Benachrichtigungen löschen"
+  },
+  "requests": {
+    "noRequestsFound": "Keine Requests gefunden"
+  },
+  "tasks": {
+    "noTodosFound": "Keine To Do's gefunden"
+  },
+  "lifecycle": {
+    "noDataAvailable": "Keine Lebenszyklus-Daten verfügbar"
+  },
+  "roles": {
+    "noRolesFound": "Keine Rollen gefunden. Erstellen Sie eine neue Rolle mit dem Button oben."
+  },
+  "teamWorktime": {
+    "tableHint": "Hinweis: Sie können die Tabelle anpassen, indem Sie auf die Spaltenüberschriften klicken, um zu sortieren. Außerdem können Sie die Spalten per Drag & Drop neu anordnen.",
+    "missingPermissionPage": "Fehlende Berechtigung: team_worktime_control (Seite)",
+    "missingPermissionTable": "Fehlende Berechtigung: team_worktime (Tabelle)"
+  },
+  "camera": {
+    "mobileOnly": "Kamerafunktion ist nur auf mobilen Geräten verfügbar"
+  },
+  "error": {
+    "close": "Schließen"
+  },
+  "contracts": {
+    "employment": "Arbeitsvertrag",
+    "amendment": "Vertragsänderung",
+    "extension": "Vertragsverlängerung"
+  },
+  "users": {
+    "pleaseSelect": "Bitte auswählen"
+  },
+  "dataCard": {
+    "previousStatus": "Vorheriger Status",
+    "nextStatus": "Nächster Status"
+  },
+  "clients": {
+    "edit": "Client bearbeiten",
+    "delete": "Client löschen"
+  },
+  "invoices": {
+    "markAsPaid": "Als bezahlt markieren"
+  },
+  "analytics": {
+    "showStatusHistory": "Status-Historie anzeigen",
+    "noTodosFound": "Keine To-Dos gefunden"
+  },
+  "roleManagement": {
+    "loadingPermissions": "Lade Berechtigungen..."
+  },
+  "monthlyReport": {
+    "recipient": "Empfänger",
+    "preview": "Vorschau:",
+    "billingPeriod": "Abrechnungszeitraum:",
+    "exampleAddress": "z.B.\nFirma XY AG\nMusterstraße 1\n8000 Zürich",
+    "recipientDescription": "Vollständige Adresse des Empfängers (Arbeitgeber) für die monatliche Abrechnung"
+  },
+  "socialSecurity": {
+    "additionalInfoPlaceholder": "Zusätzliche Informationen, Kontaktdaten, etc."
+  },
+  "organization": {
+    "tabs": {
+      "general": "Allgemein",
+      "roles": "Rollen",
+      "documents": "Dokumente",
+      "smtp": "SMTP",
+      "api": "API"
+    }
   }
 }

@@ -56,6 +56,10 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
   const [workingHours, setWorkingHours] = useState<string>('');
   const [position, setPosition] = useState<string>('');
   const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [availableTemplates, setAvailableTemplates] = useState<Array<{type: string; version: string; path: string}>>([]);
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [useTemplate, setUseTemplate] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Prüfe Berechtigung (nur wenn Berechtigungen geladen sind)
@@ -86,6 +90,7 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
     if (isOpen) {
       openSidepane();
       fetchUserData();
+      fetchTemplates();
     } else {
       closeSidepane();
     }
@@ -94,6 +99,31 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
       closeSidepane();
     };
   }, [isOpen, openSidepane, closeSidepane]);
+
+  const fetchTemplates = async () => {
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.ORGANIZATION_LIFECYCLE.DOCUMENT_TEMPLATES);
+      const documentTemplates = response.data.documentTemplates || {};
+      const templates: Array<{type: string; version: string; path: string}> = [];
+      
+      if (documentTemplates.employmentContract) {
+        templates.push({
+          type: 'employmentContract',
+          version: documentTemplates.employmentContract.version,
+          path: documentTemplates.employmentContract.path
+        });
+      }
+      
+      setAvailableTemplates(templates);
+      if (templates.length > 0) {
+        setSelectedTemplate(templates[0].type);
+        setUseTemplate(true);
+      }
+    } catch (err: any) {
+      console.error('Fehler beim Laden der Templates:', err);
+      // Kein Fehler anzeigen, Templates sind optional
+    }
+  };
 
   const fetchUserData = async () => {
     try {
@@ -149,19 +179,59 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
         return;
       }
       setPdfFile(file);
+      setUseTemplate(false); // Deaktiviere Template wenn PDF hochgeladen wird
+      // Erstelle Preview-URL
+      const url = URL.createObjectURL(file);
+      setPdfPreviewUrl(url);
     }
+  };
+
+  // Cleanup: Revoke Object URL beim Unmount oder wenn Datei entfernt wird
+  useEffect(() => {
+    return () => {
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+      }
+    };
+  }, [pdfPreviewUrl]);
+
+  const validateForm = (): string | null => {
+    if (!useTemplate && !pdfFile) {
+      return 'Bitte wählen Sie ein Template oder laden Sie eine PDF-Datei hoch';
+    }
+    if (!startDate) {
+      return 'Bitte geben Sie ein Startdatum an';
+    }
+    const startDateObj = new Date(startDate);
+    if (isNaN(startDateObj.getTime())) {
+      return 'Ungültiges Startdatum';
+    }
+    if (endDate) {
+      const endDateObj = new Date(endDate);
+      if (isNaN(endDateObj.getTime())) {
+        return 'Ungültiges Enddatum';
+      }
+      if (endDateObj < startDateObj) {
+        return 'Enddatum muss nach dem Startdatum liegen';
+      }
+    }
+    if (salary && parseFloat(salary) < 0) {
+      return 'Gehalt darf nicht negativ sein';
+    }
+    if (workingHours && (parseFloat(workingHours) < 0 || parseFloat(workingHours) > 168)) {
+      return 'Arbeitsstunden müssen zwischen 0 und 168 liegen';
+    }
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!pdfFile) {
-      showMessage('Bitte wählen Sie eine PDF-Datei aus', 'error');
-      return;
-    }
-
-    if (!startDate) {
-      showMessage('Bitte geben Sie ein Startdatum an', 'error');
+    // Client-seitige Validierung
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      showMessage(validationError, 'error');
       return;
     }
 
@@ -169,6 +239,27 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
     setError(null);
 
     try {
+      let pdfPath: string | undefined = undefined;
+      let templateUsed: string | null = null;
+      let templateVersion: string | null = null;
+
+      // Wenn Template verwendet werden soll und kein PDF hochgeladen wurde
+      if (useTemplate && selectedTemplate && !pdfFile) {
+        const template = availableTemplates.find(t => t.type === selectedTemplate);
+        if (template) {
+          templateUsed = template.type;
+          templateVersion = template.version;
+          // PDF wird vom Backend generiert
+        }
+      } else if (pdfFile) {
+        // PDF wurde hochgeladen - verwende dieses
+        pdfPath = `temp-${Date.now()}-${pdfFile.name}`; // Temporär
+      } else {
+        showMessage('Bitte wählen Sie ein Template oder laden Sie eine PDF-Datei hoch', 'error');
+        setLoading(false);
+        return;
+      }
+
       const contractData = {
         contractType,
         startDate: new Date(startDate),
@@ -176,9 +267,9 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
         salary: salary ? parseFloat(salary) : null,
         workingHours: workingHours ? parseFloat(workingHours) : null,
         position: position || null,
-        pdfPath: `temp-${Date.now()}-${pdfFile.name}`, // Temporär
-        templateUsed: null,
-        templateVersion: null
+        pdfPath,
+        templateUsed,
+        templateVersion
       };
 
       await axiosInstance.post(
@@ -191,6 +282,10 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
       onClose();
       
       // Reset form
+      if (pdfPreviewUrl) {
+        URL.revokeObjectURL(pdfPreviewUrl);
+        setPdfPreviewUrl(null);
+      }
       setPdfFile(null);
       setStartDate(new Date().toISOString().split('T')[0]);
       setEndDate('');
@@ -328,9 +423,9 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
                     onChange={(e) => setContractType(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   >
-                    <option value="employment">Arbeitsvertrag</option>
-                    <option value="amendment">Vertragsänderung</option>
-                    <option value="extension">Vertragsverlängerung</option>
+                    <option value="employment">{t('contracts.employment')}</option>
+                    <option value="amendment">{t('contracts.amendment')}</option>
+                    <option value="extension">{t('contracts.extension')}</option>
                   </select>
                 </div>
 
@@ -341,10 +436,24 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
                   <input
                     type="date"
                     value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => {
+                      setStartDate(e.target.value);
+                      setError(null); // Clear error when user starts typing
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white ${
+                      error && !startDate 
+                        ? 'border-red-500 dark:border-red-500' 
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                     required
+                    aria-invalid={!startDate}
+                    aria-describedby={!startDate ? "startDate-error" : undefined}
                   />
+                  {error && !startDate && (
+                    <p id="startDate-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
+                      {error}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -354,9 +463,29 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
                   <input
                     type="date"
                     value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => {
+                      setEndDate(e.target.value);
+                      // Wenn Enddatum gesetzt wird, prüfe ob es nach Startdatum liegt
+                      if (e.target.value && startDate && new Date(e.target.value) < new Date(startDate)) {
+                        setError('Enddatum muss nach dem Startdatum liegen');
+                      } else {
+                        setError(null); // Clear error when valid
+                      }
+                    }}
+                    min={startDate || undefined}
+                    className={`w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white ${
+                      error && endDate && startDate && new Date(endDate) < new Date(startDate)
+                        ? 'border-red-500 dark:border-red-500' 
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
+                    aria-invalid={endDate && startDate && new Date(endDate) < new Date(startDate) ? true : undefined}
+                    aria-describedby={endDate && startDate && new Date(endDate) < new Date(startDate) ? "endDate-error" : undefined}
                   />
+                  {error && endDate && startDate && new Date(endDate) < new Date(startDate) && (
+                    <p id="endDate-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
+                      {error}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -381,12 +510,33 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
                     <input
                       type="number"
                       value={salary}
-                      onChange={(e) => setSalary(e.target.value)}
-                      className="w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setSalary(value);
+                        // Validierung: Gehalt darf nicht negativ sein
+                        if (value && parseFloat(value) < 0) {
+                          setError('Gehalt darf nicht negativ sein');
+                        } else {
+                          setError(null); // Clear error when valid
+                        }
+                      }}
+                      className={`w-full pl-10 pr-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white ${
+                        error && salary && parseFloat(salary) < 0
+                          ? 'border-red-500 dark:border-red-500' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}
                       placeholder="0.00"
                       step="0.01"
+                      min="0"
+                      aria-invalid={salary && parseFloat(salary) < 0 ? true : undefined}
+                      aria-describedby={salary && parseFloat(salary) < 0 ? "salary-error" : undefined}
                     />
                   </div>
+                  {error && salary && parseFloat(salary) < 0 && (
+                    <p id="salary-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
+                      {error}
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -396,20 +546,88 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
                   <input
                     type="number"
                     value={workingHours}
-                    onChange={(e) => setWorkingHours(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setWorkingHours(value);
+                      // Validierung: Arbeitsstunden müssen zwischen 0 und 168 liegen
+                      if (value && (parseFloat(value) < 0 || parseFloat(value) > 168)) {
+                        setError('Arbeitsstunden müssen zwischen 0 und 168 liegen');
+                      } else {
+                        setError(null); // Clear error when valid
+                      }
+                    }}
+                    className={`w-full px-3 py-2 border rounded-md dark:bg-gray-700 dark:text-white ${
+                      error && workingHours && (parseFloat(workingHours) < 0 || parseFloat(workingHours) > 168)
+                        ? 'border-red-500 dark:border-red-500' 
+                        : 'border-gray-300 dark:border-gray-600'
+                    }`}
                     placeholder="40"
                     step="0.1"
+                    min="0"
+                    max="168"
+                    aria-invalid={workingHours && (parseFloat(workingHours) < 0 || parseFloat(workingHours) > 168) ? true : undefined}
+                    aria-describedby={workingHours && (parseFloat(workingHours) < 0 || parseFloat(workingHours) > 168) ? "workingHours-error" : undefined}
                   />
+                  {error && workingHours && (parseFloat(workingHours) < 0 || parseFloat(workingHours) > 168) && (
+                    <p id="workingHours-error" className="mt-1 text-xs text-red-600 dark:text-red-400">
+                      {error}
+                    </p>
+                  )}
+                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Maximal 168 Stunden pro Woche (24h × 7 Tage)
+                  </p>
                 </div>
               </div>
             )}
 
             {activeTab === 'text' && (
               <div className="space-y-4">
+                {/* Template-Auswahl */}
+                {availableTemplates.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Template verwenden
+                    </label>
+                    <div className="flex items-center space-x-3 mb-4">
+                      <input
+                        type="checkbox"
+                        checked={useTemplate}
+                        onChange={(e) => {
+                          setUseTemplate(e.target.checked);
+                          if (e.target.checked && pdfFile) {
+                            // Wenn Template aktiviert wird, entferne PDF
+                            setPdfFile(null);
+                            if (pdfPreviewUrl) {
+                              URL.revokeObjectURL(pdfPreviewUrl);
+                              setPdfPreviewUrl(null);
+                            }
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label className="text-sm text-gray-700 dark:text-gray-300">
+                        Template für automatische PDF-Generierung verwenden
+                      </label>
+                    </div>
+                    {useTemplate && (
+                      <select
+                        value={selectedTemplate || ''}
+                        onChange={(e) => setSelectedTemplate(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white mb-4"
+                      >
+                        {availableTemplates.map((template) => (
+                          <option key={template.type} value={template.type}>
+                            Arbeitsvertrag (Version {template.version})
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    PDF-Datei hochladen
+                    {useTemplate ? 'ODER PDF-Datei hochladen' : 'PDF-Datei hochladen'} {!useTemplate && <span className="text-red-500">*</span>}
                   </label>
                   <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-6 text-center">
                     <input
@@ -447,6 +665,10 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
                           type="button"
                           onClick={() => {
                             setPdfFile(null);
+                            if (pdfPreviewUrl) {
+                              URL.revokeObjectURL(pdfPreviewUrl);
+                              setPdfPreviewUrl(null);
+                            }
                             if (fileInputRef.current) {
                               fileInputRef.current.value = '';
                             }
@@ -460,12 +682,23 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 p-4">
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    <strong>Hinweis:</strong> Die PDF-Generierung wird in Phase 5 implementiert. 
-                    Aktuell können Sie eine PDF-Datei hochladen.
-                  </p>
-                </div>
+                {/* PDF-Vorschau */}
+                {pdfPreviewUrl && (
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      PDF-Vorschau
+                    </label>
+                    <div className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                      <iframe 
+                        src={`${pdfPreviewUrl}#view=FitH`}
+                        className="w-full rounded border dark:border-gray-600"
+                        style={{ height: '400px' }}
+                        title="PDF-Vorschau"
+                      />
+                    </div>
+                  </div>
+                )}
+
               </div>
             )}
           </div>
@@ -482,7 +715,7 @@ const ContractCreationModal: React.FC<ContractCreationModalProps> = ({
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={loading || !pdfFile || !startDate}
+              disabled={loading || (!pdfFile && !useTemplate) || !startDate}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
             >
               {loading ? (

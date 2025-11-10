@@ -73,6 +73,8 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
     description: '',
     responsible_id: '',
     branch_id: '',
+    type: 'other' as 'vacation' | 'improvement_suggestion' | 'sick_leave' | 'employment_certificate' | 'other',
+    is_private: false,
     due_date: '',
     create_todo: false
   });
@@ -404,6 +406,8 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
           responsible_id: responsibleId,
           branch_id: branchId,
           requested_by_id: user.id,
+          type: formData.type,
+          is_private: formData.is_private,
           due_date: formData.due_date || null,
           create_todo: formData.create_todo,
           status: 'approval'
@@ -425,6 +429,8 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
         description: '',
         responsible_id: '',
         branch_id: '',
+        type: 'other',
+        is_private: false,
         due_date: '',
         create_todo: false
       });
@@ -631,6 +637,22 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 </div>
 
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.type')}</label>
+                  <select
+                    required
+                    className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
+                    value={formData.type}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+                  >
+                    <option value="vacation">{t('requests.types.vacation')}</option>
+                    <option value="improvement_suggestion">{t('requests.types.improvement_suggestion')}</option>
+                    <option value="sick_leave">{t('requests.types.sick_leave')}</option>
+                    <option value="employment_certificate">{t('requests.types.employment_certificate')}</option>
+                    <option value="other">{t('requests.types.other')}</option>
+                  </select>
+                </div>
+
+                <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.dueDate')}</label>
                   <input
                     type="date"
@@ -638,6 +660,19 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                     value={formData.due_date}
                     onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
                   />
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="is_private"
+                    className="rounded border-gray-300 text-blue-600 dark:bg-gray-700 dark:text-gray-300"
+                    checked={formData.is_private}
+                    onChange={(e) => setFormData({ ...formData, is_private: e.target.checked })}
+                  />
+                  <label htmlFor="is_private" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                    {t('createRequest.form.isPrivate')}
+                  </label>
                 </div>
 
                 <div className="flex items-center">
@@ -829,6 +864,22 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.type')}</label>
+              <select
+                required
+                className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm"
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as any })}
+              >
+                <option value="vacation">{t('requests.types.vacation')}</option>
+                <option value="improvement_suggestion">{t('requests.types.improvement_suggestion')}</option>
+                <option value="sick_leave">{t('requests.types.sick_leave')}</option>
+                <option value="employment_certificate">{t('requests.types.employment_certificate')}</option>
+                <option value="other">{t('requests.types.other')}</option>
+              </select>
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.dueDate')}</label>
               <input
                 type="date"
@@ -836,6 +887,19 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 value={formData.due_date}
                 onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
               />
+            </div>
+
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="is_private_sidepane"
+                className="rounded border-gray-300 text-blue-600 dark:bg-gray-700 dark:text-gray-300"
+                checked={formData.is_private}
+                onChange={(e) => setFormData({ ...formData, is_private: e.target.checked })}
+              />
+              <label htmlFor="is_private_sidepane" className="ml-2 block text-sm text-gray-700 dark:text-gray-300">
+                {t('createRequest.form.isPrivate')}
+              </label>
             </div>
 
             <div className="flex items-center">

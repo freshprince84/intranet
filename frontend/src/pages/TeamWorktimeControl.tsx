@@ -152,10 +152,10 @@ const TeamWorktimeControl: React.FC = () => {
                 <p className="font-medium mb-2">Keine ausreichenden Berechtigungen</p>
                 <ul className="list-disc list-inside text-sm space-y-1">
                   {!hasPagePermission && (
-                    <li>Fehlende Berechtigung: team_worktime_control (Seite)</li>
+                    <li>{t('teamWorktime.missingPermissionPage')}</li>
                   )}
                   {!hasTablePermission && (
-                    <li>Fehlende Berechtigung: team_worktime (Tabelle)</li>
+                    <li>{t('teamWorktime.missingPermissionTable')}</li>
                   )}
                 </ul>
                 <p className="text-sm mt-2">Bitte kontaktieren Sie einen Administrator, um die erforderlichen Berechtigungen zu erhalten.</p>

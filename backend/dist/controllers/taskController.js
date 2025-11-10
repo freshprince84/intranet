@@ -33,9 +33,14 @@ const branchSelect = {
 };
 // Alle Tasks abrufen
 const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b, _c, _d;
     try {
         // Datenisolation: Standalone User sehen nur ihre eigenen Tasks
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
+        console.log('[getAllTasks] User ID:', req.userId);
+        console.log('[getAllTasks] Organization ID:', req.organizationId);
+        console.log('[getAllTasks] User Role:', (_b = (_a = req.userRole) === null || _a === void 0 ? void 0 : _a.role) === null || _b === void 0 ? void 0 : _b.id, (_d = (_c = req.userRole) === null || _c === void 0 ? void 0 : _c.role) === null || _d === void 0 ? void 0 : _d.name);
+        console.log('[getAllTasks] Isolation Filter:', JSON.stringify(isolationFilter, null, 2));
         const tasks = yield prisma.task.findMany({
             where: isolationFilter,
             include: {
@@ -58,6 +63,8 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 }
             }
         });
+        console.log('[getAllTasks] Found tasks:', tasks.length);
+        console.log('[getAllTasks] Task roleIds:', tasks.map(t => { var _a; return ({ id: t.id, roleId: t.roleId, roleName: (_a = t.role) === null || _a === void 0 ? void 0 : _a.name, title: t.title }); }));
         res.json(tasks);
     }
     catch (error) {

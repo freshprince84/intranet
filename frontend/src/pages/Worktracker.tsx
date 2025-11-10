@@ -1429,7 +1429,7 @@ const Worktracker: React.FC = () => {
                                     ) : filteredAndSortedTasks.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
                                             <ClipboardDocumentListIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />
-                                            <div className="text-sm">Keine To Do's gefunden</div>
+                                            <div className="text-sm">{t('tasks.noTodosFound')}</div>
                                         </div>
                                     ) : (
                                         <CardGrid>
@@ -1954,7 +1954,7 @@ const Worktracker: React.FC = () => {
                                     ) : filteredAndSortedTasks.length === 0 ? (
                                         <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
                                             <ClipboardDocumentListIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />
-                                            <div className="text-sm">Keine To Do's gefunden</div>
+                                            <div className="text-sm">{t('tasks.noTodosFound')}</div>
                                         </div>
                                     ) : (
                                         <CardGrid>

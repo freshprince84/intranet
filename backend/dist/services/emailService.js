@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendRegistrationEmail = void 0;
+exports.sendPasswordResetEmail = exports.sendEmail = exports.sendRegistrationEmail = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const axios_1 = __importDefault(require("axios"));
 const client_1 = require("@prisma/client");
@@ -32,13 +32,30 @@ const createTransporter = (organizationId) => __awaiter(void 0, void 0, void 0, 
             });
             if ((organization === null || organization === void 0 ? void 0 : organization.settings) && typeof organization.settings === 'object') {
                 const orgSettings = organization.settings;
+                console.log(`[EMAIL] Org ${organizationId} Settings gefunden:`, JSON.stringify(orgSettings, null, 2));
                 if (orgSettings.smtpHost && orgSettings.smtpUser && orgSettings.smtpPass) {
                     smtpHost = orgSettings.smtpHost;
-                    smtpPort = orgSettings.smtpPort ? parseInt(orgSettings.smtpPort) : 587;
+                    // Port kann als String oder Number gespeichert sein
+                    const portValue = orgSettings.smtpPort;
+                    smtpPort = typeof portValue === 'number' ? portValue : (portValue ? parseInt(String(portValue)) : 587);
                     smtpUser = orgSettings.smtpUser;
                     smtpPass = orgSettings.smtpPass;
                     console.log(`📧 Nutze Organisation-spezifische SMTP-Einstellungen für Org ${organizationId}`);
+                    console.log(`📧 SMTP Host: ${smtpHost}, Port: ${smtpPort}, User: ${smtpUser}`);
+                    // Speichere auch From-Einstellungen für späteren Gebrauch
+                    if (orgSettings.smtpFromEmail || orgSettings.smtpFromName) {
+                        console.log(`📧 Org ${organizationId} hat From-Einstellungen: ${orgSettings.smtpFromEmail || 'nicht gesetzt'}, ${orgSettings.smtpFromName || 'nicht gesetzt'}`);
+                    }
                 }
+                else {
+                    console.log(`⚠️ Org ${organizationId} hat SMTP-Einstellungen, aber nicht alle erforderlichen Felder sind gesetzt:`);
+                    console.log(`   smtpHost: ${orgSettings.smtpHost ? '✅' : '❌'}`);
+                    console.log(`   smtpUser: ${orgSettings.smtpUser ? '✅' : '❌'}`);
+                    console.log(`   smtpPass: ${orgSettings.smtpPass ? '✅' : '❌'}`);
+                }
+            }
+            else {
+                console.log(`⚠️ Org ${organizationId} hat keine Settings oder Settings sind kein Objekt`);
             }
         }
         catch (error) {
@@ -421,4 +438,466 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
     }
 });
 exports.sendRegistrationEmail = sendRegistrationEmail;
+/**
+ * Sendet eine Passwort-Reset-E-Mail mit Reset-Link
+ * @param email E-Mail-Adresse des Benutzers
+ * @param username Benutzername
+ * @param resetLink URL zum Zurücksetzen des Passworts (mit Token)
+ * @param organizationId Optional: ID der Organisation (für org-spezifische SMTP-Einstellungen)
+ */
+/**
+ * Generische Funktion zum Versenden von E-Mails
+ * @param email E-Mail-Adresse des Empfängers
+ * @param subject Betreff der E-Mail
+ * @param html HTML-Inhalt der E-Mail
+ * @param text Text-Inhalt der E-Mail (optional)
+ * @param organizationId Optional: ID der Organisation (für org-spezifische SMTP-Einstellungen)
+ */
+const sendEmail = (email, subject, html, text, organizationId) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const transporter = yield createTransporter(organizationId);
+        if (!transporter) {
+            console.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
+            return false;
+        }
+        // Lade From-Einstellungen aus Organisation-Settings (falls vorhanden)
+        let fromEmail = process.env.SMTP_USER || 'noreply@intranet.local';
+        let fromName = 'Intranet';
+        if (organizationId) {
+            try {
+                const organization = yield prisma.organization.findUnique({
+                    where: { id: organizationId },
+                    select: { settings: true, displayName: true }
+                });
+                if ((organization === null || organization === void 0 ? void 0 : organization.settings) && typeof organization.settings === 'object') {
+                    const orgSettings = organization.settings;
+                    if (orgSettings.smtpFromEmail) {
+                        fromEmail = orgSettings.smtpFromEmail;
+                    }
+                    if (orgSettings.smtpFromName) {
+                        fromName = orgSettings.smtpFromName;
+                    }
+                    else if (organization.displayName) {
+                        fromName = organization.displayName;
+                    }
+                }
+            }
+            catch (error) {
+                console.warn('⚠️ Fehler beim Laden der Organisation-From-Einstellungen:', error);
+            }
+        }
+        const mailOptions = {
+            from: `${fromName} <${fromEmail}>`,
+            to: email,
+            subject: subject,
+            html: html,
+            text: text || html.replace(/<[^>]*>/g, ''), // Fallback: HTML ohne Tags
+        };
+        const info = yield transporter.sendMail(mailOptions);
+        console.log('✅ E-Mail versendet:', info.messageId);
+        return true;
+    }
+    catch (error) {
+        console.error('❌ Fehler beim Versenden der E-Mail:', error);
+        return false;
+    }
+});
+exports.sendEmail = sendEmail;
+const sendPasswordResetEmail = (email, username, resetLink, organizationId) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log(`[EMAIL] Starte Versand der Passwort-Reset-E-Mail für: ${username} (${email})`);
+    if (organizationId) {
+        console.log(`[EMAIL] Verwende Organisation-ID: ${organizationId}`);
+    }
+    // Versuche zuerst Mailtrap API (falls konfiguriert)
+    const apiSuccess = yield sendPasswordResetViaMailtrapAPI(email, username, resetLink, organizationId);
+    if (apiSuccess) {
+        console.log(`[EMAIL] E-Mail erfolgreich über Mailtrap API versendet`);
+        return true;
+    }
+    console.log(`[EMAIL] Mailtrap API nicht verfügbar oder fehlgeschlagen, versuche SMTP...`);
+    // Fallback zu SMTP
+    try {
+        const transporter = yield createTransporter(organizationId);
+        if (!transporter) {
+            console.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
+            return false;
+        }
+        // Lade From-Einstellungen aus Organisation-Settings (falls vorhanden)
+        let fromEmail = process.env.SMTP_USER || 'noreply@intranet.local';
+        let fromName = 'Intranet';
+        if (organizationId) {
+            try {
+                const organization = yield prisma.organization.findUnique({
+                    where: { id: organizationId },
+                    select: { settings: true, displayName: true }
+                });
+                if ((organization === null || organization === void 0 ? void 0 : organization.settings) && typeof organization.settings === 'object') {
+                    const orgSettings = organization.settings;
+                    if (orgSettings.smtpFromEmail) {
+                        fromEmail = orgSettings.smtpFromEmail;
+                    }
+                    if (orgSettings.smtpFromName) {
+                        fromName = orgSettings.smtpFromName;
+                    }
+                    else if (organization.displayName) {
+                        fromName = organization.displayName;
+                    }
+                }
+            }
+            catch (error) {
+                console.warn('⚠️ Fehler beim Laden der From-Einstellungen:', error);
+            }
+        }
+        // Formatiere From-String für nodemailer
+        const fromString = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
+        console.log(`[EMAIL] 📧 Versende E-Mail von: ${fromString} an: ${email}`);
+        const mailOptions = {
+            from: fromString,
+            to: email,
+            subject: 'Passwort zurücksetzen - Intranet',
+            html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              background-color: #2563eb;
+              color: white;
+              padding: 20px;
+              text-align: center;
+              border-radius: 8px 8px 0 0;
+            }
+            .content {
+              background-color: #f9fafb;
+              padding: 30px;
+              border: 1px solid #e5e7eb;
+              border-top: none;
+              border-radius: 0 0 8px 8px;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 24px;
+              background-color: #2563eb;
+              color: white;
+              text-decoration: none;
+              border-radius: 6px;
+              margin: 20px 0;
+            }
+            .button:hover {
+              background-color: #1d4ed8;
+            }
+            .warning {
+              background-color: #fef3c7;
+              border-left: 4px solid #f59e0b;
+              padding: 15px;
+              margin: 20px 0;
+              border-radius: 4px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              color: #6b7280;
+              font-size: 12px;
+            }
+            .link-fallback {
+              word-break: break-all;
+              color: #2563eb;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1>Passwort zurücksetzen</h1>
+          </div>
+          <div class="content">
+            <p>Hallo ${username},</p>
+            <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.</p>
+            
+            <p>Klicken Sie auf den folgenden Button, um ein neues Passwort festzulegen:</p>
+            
+            <div style="text-align: center;">
+              <a href="${resetLink}" class="button">Passwort zurücksetzen</a>
+            </div>
+            
+            <p>Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:</p>
+            <p class="link-fallback">${resetLink}</p>
+
+            <div class="warning">
+              <strong>⚠️ Wichtig:</strong>
+              <ul>
+                <li>Dieser Link ist nur 1 Stunde gültig</li>
+                <li>Der Link kann nur einmal verwendet werden</li>
+                <li>Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail</li>
+              </ul>
+            </div>
+
+            <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+          </div>
+          <div class="footer">
+            <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.</p>
+          </div>
+        </body>
+        </html>
+      `,
+            text: `
+Passwort zurücksetzen - Intranet
+
+Hallo ${username},
+
+Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.
+
+Klicken Sie auf den folgenden Link, um ein neues Passwort festzulegen:
+
+${resetLink}
+
+WICHTIG:
+- Dieser Link ist nur 1 Stunde gültig
+- Der Link kann nur einmal verwendet werden
+- Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail
+
+Bei Fragen stehen wir Ihnen gerne zur Verfügung.
+
+Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.
+      `,
+        };
+        console.log(`[EMAIL] Sende E-Mail über SMTP...`);
+        const info = yield transporter.sendMail(mailOptions);
+        console.log('✅ Passwort-Reset-E-Mail erfolgreich über SMTP versendet!');
+        console.log(`[EMAIL] Message ID: ${info.messageId}`);
+        console.log(`[EMAIL] E-Mail gesendet an: ${email}`);
+        console.log(`[EMAIL] Von: ${fromString}`);
+        return true;
+    }
+    catch (error) {
+        console.error('❌ Fehler beim Versenden der Passwort-Reset-E-Mail über SMTP:');
+        console.error(`[EMAIL] Fehler-Typ: ${error.constructor.name}`);
+        if (error.response) {
+            console.error(`[EMAIL] SMTP Fehler-Response: ${error.response.status}`, error.response.data);
+        }
+        if (error.code) {
+            console.error(`[EMAIL] SMTP Fehler-Code: ${error.code}`);
+        }
+        if (error.message) {
+            console.error(`[EMAIL] SMTP Fehler-Message: ${error.message}`);
+        }
+        if (error.command) {
+            console.error(`[EMAIL] SMTP Fehler-Command: ${error.command}`);
+        }
+        if (error.responseCode) {
+            console.error(`[EMAIL] SMTP Response-Code: ${error.responseCode}`);
+        }
+        console.error(`[EMAIL] Vollständiger Fehler:`, error);
+        return false;
+    }
+});
+exports.sendPasswordResetEmail = sendPasswordResetEmail;
+/**
+ * Sendet Passwort-Reset-E-Mail über Mailtrap API (falls konfiguriert)
+ */
+const sendPasswordResetViaMailtrapAPI = (email, username, resetLink, organizationId) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
+    const mailtrapApiToken = process.env.MAILTRAP_API_TOKEN;
+    const mailtrapTestInboxId = process.env.MAILTRAP_TEST_INBOX_ID;
+    if (!mailtrapApiToken || !mailtrapTestInboxId) {
+        console.log('[EMAIL] Mailtrap API nicht konfiguriert (Token oder Inbox-ID fehlt), versuche SMTP');
+        return false; // API nicht konfiguriert
+    }
+    // Wenn Organisation-ID vorhanden ist, sollte SMTP verwendet werden, nicht Mailtrap
+    if (organizationId) {
+        console.log(`[EMAIL] Organisation-ID vorhanden (${organizationId}), überspringe Mailtrap API und verwende SMTP`);
+        return false;
+    }
+    console.log(`[EMAIL] Versuche Passwort-Reset-E-Mail über Mailtrap API zu senden an: ${email}`);
+    // Lade From-Einstellungen aus Organisation-Settings (falls vorhanden)
+    let fromEmail = 'noreply@intranet.local';
+    let fromName = 'Intranet';
+    if (organizationId) {
+        try {
+            const organization = yield prisma.organization.findUnique({
+                where: { id: organizationId },
+                select: { settings: true, displayName: true }
+            });
+            if ((organization === null || organization === void 0 ? void 0 : organization.settings) && typeof organization.settings === 'object') {
+                const orgSettings = organization.settings;
+                if (orgSettings.smtpFromEmail) {
+                    fromEmail = orgSettings.smtpFromEmail;
+                }
+                if (orgSettings.smtpFromName) {
+                    fromName = orgSettings.smtpFromName;
+                }
+                else if (organization.displayName) {
+                    fromName = organization.displayName;
+                }
+            }
+        }
+        catch (error) {
+            console.warn('⚠️ Fehler beim Laden der From-Einstellungen für Mailtrap:', error);
+        }
+    }
+    try {
+        const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+          }
+          .header {
+            background-color: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+          }
+          .content {
+            background-color: #f9fafb;
+            padding: 30px;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+          }
+          .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 20px 0;
+          }
+          .warning {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+          }
+          .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #6b7280;
+            font-size: 12px;
+          }
+          .link-fallback {
+            word-break: break-all;
+            color: #2563eb;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Passwort zurücksetzen</h1>
+        </div>
+        <div class="content">
+          <p>Hallo ${username},</p>
+          <p>Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.</p>
+          
+          <p>Klicken Sie auf den folgenden Button, um ein neues Passwort festzulegen:</p>
+          
+          <div style="text-align: center;">
+            <a href="${resetLink}" class="button">Passwort zurücksetzen</a>
+          </div>
+          
+          <p>Falls der Button nicht funktioniert, kopieren Sie diesen Link in Ihren Browser:</p>
+          <p class="link-fallback">${resetLink}</p>
+
+          <div class="warning">
+            <strong>⚠️ Wichtig:</strong>
+            <ul>
+              <li>Dieser Link ist nur 1 Stunde gültig</li>
+              <li>Der Link kann nur einmal verwendet werden</li>
+              <li>Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail</li>
+            </ul>
+          </div>
+
+          <p>Bei Fragen stehen wir Ihnen gerne zur Verfügung.</p>
+        </div>
+        <div class="footer">
+          <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.</p>
+        </div>
+      </body>
+      </html>
+    `;
+        const textContent = `
+Passwort zurücksetzen - Intranet
+
+Hallo ${username},
+
+Sie haben eine Anfrage zum Zurücksetzen Ihres Passworts gestellt.
+
+Klicken Sie auf den folgenden Link, um ein neues Passwort festzulegen:
+
+${resetLink}
+
+WICHTIG:
+- Dieser Link ist nur 1 Stunde gültig
+- Der Link kann nur einmal verwendet werden
+- Falls Sie diese Anfrage nicht gestellt haben, ignorieren Sie diese E-Mail
+
+Bei Fragen stehen wir Ihnen gerne zur Verfügung.
+
+Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.
+    `;
+        // Versuche Transactional Email API (versendet echte E-Mails)
+        const mailtrapTransactionalToken = process.env.MAILTRAP_TRANSACTIONAL_TOKEN || mailtrapApiToken;
+        let response;
+        try {
+            response = yield axios_1.default.post('https://send.api.mailtrap.io/api/send', {
+                from: { email: fromEmail, name: fromName },
+                to: [{ email }],
+                subject: 'Passwort zurücksetzen - Intranet',
+                html: htmlContent,
+                text: textContent,
+                category: 'PasswordReset'
+            }, {
+                headers: {
+                    'Authorization': `Bearer ${mailtrapTransactionalToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+        }
+        catch (transactionalError) {
+            // Falls Transactional Email nicht funktioniert, nutze Sandbox (nur für Tests)
+            if (((_a = transactionalError.response) === null || _a === void 0 ? void 0 : _a.status) === 401 || ((_b = transactionalError.response) === null || _b === void 0 ? void 0 : _b.status) === 403) {
+                response = yield axios_1.default.post(`https://sandbox.api.mailtrap.io/api/send/${mailtrapTestInboxId}`, {
+                    from: { email: fromEmail, name: fromName },
+                    to: [{ email }],
+                    subject: 'Passwort zurücksetzen - Intranet',
+                    html: htmlContent,
+                    text: textContent,
+                    category: 'PasswordReset'
+                }, {
+                    headers: {
+                        'Authorization': `Bearer ${mailtrapApiToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+            }
+            else {
+                throw transactionalError;
+            }
+        }
+        return true;
+    }
+    catch (error) {
+        console.error('❌ Fehler beim Versenden über Mailtrap API:', error);
+        return false;
+    }
+});
 //# sourceMappingURL=emailService.js.map

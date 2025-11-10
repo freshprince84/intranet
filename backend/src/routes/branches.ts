@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getTest, getAllBranches } from '../controllers/branchController';
+import { getTest, getAllBranches, getUserBranches, switchUserBranch, createBranch, updateBranch, deleteBranch } from '../controllers/branchController';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
 
@@ -19,5 +19,20 @@ router.use(organizationMiddleware);
 
 // Alle Niederlassungen abrufen - nur für authentifizierte User der Organisation
 router.get('/', getAllBranches);
+
+// Branches des aktuellen Benutzers mit lastUsed-Flag abrufen
+router.get('/user', getUserBranches);
+
+// Aktiven Branch des Benutzers wechseln
+router.post('/switch', switchUserBranch);
+
+// Branch erstellen
+router.post('/', createBranch);
+
+// Branch aktualisieren
+router.put('/:id', updateBranch);
+
+// Branch löschen
+router.delete('/:id', deleteBranch);
 
 export default router; 
