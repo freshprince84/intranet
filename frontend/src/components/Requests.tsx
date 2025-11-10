@@ -1124,7 +1124,7 @@ const Requests: React.FC = () => {
                   <td colSpan={visibleColumnIds.length} className="px-3 py-4 text-center text-gray-500 dark:text-gray-400">
                     <div className="flex flex-col items-center justify-center gap-4">
                       <DocumentTextIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
-                      <div className="text-sm">{t('requests.noRequestsFound')}</div>
+                      <div className="text-sm">Keine Requests gefunden</div>
                     </div>
                   </td>
                 </tr>

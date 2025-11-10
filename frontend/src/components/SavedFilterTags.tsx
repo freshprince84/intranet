@@ -731,7 +731,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                             handleSaveGroupName(group.id);
                           }}
                           className="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                          title={t('filterTags.save')}
+                          title="Speichern"
                         >
                           <CheckIcon className="h-4 w-4" />
                         </button>
@@ -741,7 +741,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                             handleCancelEditGroup();
                           }}
                           className="p-2 rounded-md bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
-                          title={t('filterTags.cancel')}
+                          title="Abbrechen"
                         >
                           <XMarkIcon className="h-4 w-4" />
                         </button>
@@ -755,7 +755,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                           handleStartEditGroup(group);
                         }}
                         className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left transition-colors"
-                        title={t('filterTags.renameGroup')}
+                        title="Gruppe umbenennen"
                       >
                         <PencilIcon className="h-4 w-4" />
                       </button>
@@ -765,7 +765,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                           handleUngroupFilters(group.id);
                         }}
                         className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left transition-colors"
-                        title={t('filterTags.ungroup')}
+                        title="Gruppe auflösen"
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -812,7 +812,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
               <button
                 onClick={(e) => handleDeleteFilter(e, filter.id)}
                 className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
-                title={t('filterTags.deleteFilter')}
+                title="Filter löschen"
               >
                 <XMarkIcon className="h-4 w-4" />
               </button>
@@ -826,7 +826,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
             <button
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
-              title={t('filterTags.showMoreFilters')}
+              title="Weitere Filter anzeigen"
             >
               <span>+{sortedFilters.length - visibleTagCount}</span>
               <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -858,7 +858,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                           setIsDropdownOpen(false);
                         }}
                         className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none flex-shrink-0"
-                        title={t('filterTags.deleteFilter')}
+                        title="Filter löschen"
                       >
                         <XMarkIcon className="h-4 w-4" />
                       </button>

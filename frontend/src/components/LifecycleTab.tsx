@@ -89,7 +89,7 @@ const LifecycleTab: React.FC<LifecycleTabProps> = ({ userId }) => {
   if (!lifecycleData) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-        <p className="text-gray-500 dark:text-gray-400">{t('lifecycle.noDataAvailable')}</p>
+        <p className="text-gray-500 dark:text-gray-400">Keine Lebenszyklus-Daten verfügbar</p>
       </div>
     );
   }

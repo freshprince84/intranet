@@ -572,7 +572,7 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
       
       {/* Legende */}
       <div className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-        <p>{t('teamWorktime.tableHint')}</p>
+        <p>Hinweis: Sie können die Tabelle anpassen, indem Sie auf die Spaltenüberschriften klicken, um zu sortieren. Außerdem können Sie die Spalten per Drag & Drop neu anordnen.</p>
       </div>
     </div>
   );

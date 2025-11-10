@@ -7,7 +7,7 @@ const RoleManagement: React.FC = () => {
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     if (loading) {
-        return <div className="p-4">{t('roleManagement.loadingPermissions')}</div>;
+        return <div className="p-4">Lade Berechtigungen...</div>;
     }
 
     if (!hasPermission('roles', 'read')) {

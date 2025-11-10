@@ -222,7 +222,7 @@ const NotificationList: React.FC = () => {
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
               <BellIcon className="h-16 w-16 mb-4 dark:text-gray-500" />
-              <p className="text-lg">{t('notifications.noNotifications')}</p>
+              <p className="text-lg">Keine Benachrichtigungen vorhanden</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -260,7 +260,7 @@ const NotificationList: React.FC = () => {
                     </div>
                     <div className="ml-4 flex-shrink-0 flex space-x-2">
                       {!notification.read && (
-                        <Tooltip title={t('notifications.markAsRead')}>
+                        <Tooltip title="Als gelesen markieren">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -272,7 +272,7 @@ const NotificationList: React.FC = () => {
                           </button>
                         </Tooltip>
                       )}
-                      <Tooltip title={t('notifications.deleteNotification')}>
+                      <Tooltip title="Löschen">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -317,7 +317,7 @@ const NotificationList: React.FC = () => {
             className: 'dark:bg-gray-800 dark:text-white'
           }}
         >
-          <DialogTitle className="dark:text-white">{t('notifications.deleteNotification')}</DialogTitle>
+          <DialogTitle className="dark:text-white">Benachrichtigung löschen</DialogTitle>
           <DialogContent>
             <DialogContentText className="dark:text-gray-300">
               Möchten Sie diese Benachrichtigung wirklich löschen?
@@ -340,7 +340,7 @@ const NotificationList: React.FC = () => {
             className: 'dark:bg-gray-800 dark:text-white'
           }}
         >
-          <DialogTitle className="dark:text-white">{t('notifications.deleteAllNotifications')}</DialogTitle>
+          <DialogTitle className="dark:text-white">Alle Benachrichtigungen löschen</DialogTitle>
           <DialogContent>
             <DialogContentText className="dark:text-gray-300">
               Möchten Sie wirklich alle Benachrichtigungen löschen? Diese Aktion kann nicht rückgängig gemacht werden.

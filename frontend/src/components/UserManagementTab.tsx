@@ -979,7 +979,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                         onChange={handleUserInputChange}
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                       >
-                        <option value="">{t('users.pleaseSelect')}</option>
+                        <option value="">Bitte auswählen</option>
                         {CONTRACT_TYPES.map(type => (
                           <option key={type.code} value={type.code}>
                             {type.name}
