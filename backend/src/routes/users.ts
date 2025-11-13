@@ -1,5 +1,24 @@
 import { Router } from 'express';
-import { getAllUsers, getAllUsersForDropdown, getCurrentUser, updateProfile, getUserById, updateUserRoles, updateUserById, updateUserSettings, updateInvoiceSettings, switchUserRole, createUser, getUserActiveLanguage } from '../controllers/userController';
+import { 
+  getAllUsers, 
+  getAllUsersForDropdown, 
+  getCurrentUser, 
+  updateProfile, 
+  getUserById, 
+  updateUserRoles, 
+  updateUserById, 
+  updateUserSettings, 
+  updateInvoiceSettings, 
+  switchUserRole, 
+  createUser, 
+  getUserActiveLanguage,
+  getOnboardingStatus,
+  updateOnboardingProgress,
+  completeOnboarding,
+  trackOnboardingEvent,
+  resetOnboarding,
+  getOnboardingAnalytics
+} from '../controllers/userController';
 import { 
   getLifecycle, 
   updateStatus, 
@@ -36,6 +55,14 @@ router.put('/profile', updateProfile);
 router.put('/settings', updateUserSettings);
 router.put('/invoice-settings', updateInvoiceSettings);
 router.put('/switch-role', switchUserRole);
+
+// Onboarding-Routen
+router.get('/onboarding/status', getOnboardingStatus);
+router.put('/onboarding/progress', updateOnboardingProgress);
+router.put('/onboarding/complete', completeOnboarding);
+router.post('/onboarding/event', trackOnboardingEvent);
+router.put('/onboarding/reset', resetOnboarding);
+router.get('/onboarding/analytics', getOnboardingAnalytics);
 
 // Neue Routen für Organisation
 router.post('/', createUser); // Neue Benutzer erstellen (nur für Admins einer Organisation)

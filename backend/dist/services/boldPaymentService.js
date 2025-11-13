@@ -60,18 +60,22 @@ class BoldPaymentService {
             this.merchantId = boldPaymentSettings.merchantId;
             this.environment = boldPaymentSettings.environment || 'sandbox';
             // Bestimme API URL basierend auf Environment
-            if (this.environment === 'production') {
-                this.apiUrl = 'https://api.bold.co';
-            }
-            else {
-                this.apiUrl = 'https://sandbox.bold.co';
-            }
+            // Bold Payment "API Link de pagos" (Botón de pagos) verwendet:
+            // - URL base: https://integrations.api.bold.co (für Sandbox und Production)
+            // - Authentifizierung: x-api-key Header mit <llave_de_identidad>
+            // Quelle: https://developers.bold.co/pagos-en-linea/api-link-de-pagos
+            this.apiUrl = 'https://integrations.api.bold.co';
             // Re-initialisiere Axios-Instanz mit korrekten Settings
             this.axiosInstance = this.createAxiosInstance();
         });
     }
     /**
      * Erstellt eine konfigurierte Axios-Instanz für Bold Payment API-Requests
+     *
+     * Bold Payment "API Link de pagos" (Botón de pagos) verwendet einfache API-Key-Authentifizierung:
+     * - Authorization: x-api-key <llave_de_identidad>
+     * - Die Llave de identidad (Identity Key / Merchant ID) wird direkt im Authorization Header verwendet
+     * Quelle: https://developers.bold.co/pagos-en-linea/api-link-de-pagos
      */
     createAxiosInstance() {
         const instance = axios_1.default.create({
@@ -79,16 +83,25 @@ class BoldPaymentService {
             timeout: 30000,
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${this.apiKey}`,
-                // Alternative: 'X-API-Key': this.apiKey (je nach Bold Payment API)
             }
         });
-        // Request Interceptor für Logging
-        instance.interceptors.request.use((config) => {
+        // Request Interceptor für API-Key-Authentifizierung
+        instance.interceptors.request.use((config) => __awaiter(this, void 0, void 0, function* () {
             var _a;
+            // Lade Settings falls noch nicht geladen
+            if (!this.merchantId) {
+                yield this.loadSettings();
+            }
+            // Bold Payment "API Link de pagos" verwendet:
+            // Authorization Header mit Wert: x-api-key <llave_de_identidad>
+            // Quelle: https://developers.bold.co/pagos-en-linea/api-link-de-pagos
+            if (!this.merchantId) {
+                throw new Error('Bold Payment Merchant ID (Llave de identidad) fehlt');
+            }
+            config.headers.set('Authorization', `x-api-key ${this.merchantId}`);
             console.log(`[Bold Payment] ${(_a = config.method) === null || _a === void 0 ? void 0 : _a.toUpperCase()} ${config.url}`);
             return config;
-        }, (error) => {
+        }), (error) => {
             console.error('[Bold Payment] Request Error:', error);
             return Promise.reject(error);
         });
@@ -108,6 +121,9 @@ class BoldPaymentService {
     /**
      * Erstellt einen Zahlungslink für eine Reservierung
      *
+     * Verwendet die "API Link de pagos" (Botón de pagos) von Bold Payment.
+     * Quelle: https://developers.bold.co/pagos-en-linea/api-link-de-pagos
+     *
      * @param reservation - Reservierung
      * @param amount - Betrag (in der Währung der Reservierung)
      * @param currency - Währung (z.B. "COP" für Kolumbien)
@@ -116,97 +132,119 @@ class BoldPaymentService {
      */
     createPaymentLink(reservation_1, amount_1) {
         return __awaiter(this, arguments, void 0, function* (reservation, amount, currency = 'COP', description) {
-            var _a, _b, _c, _d;
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j;
             // Lade Settings falls noch nicht geladen
-            if (!this.apiKey) {
+            if (!this.merchantId) {
                 yield this.loadSettings();
             }
             try {
-                const paymentDescription = description ||
-                    `Zahlung für Reservierung ${reservation.guestName} - Check-in: ${reservation.checkInDate.toLocaleDateString()}`;
+                // Beschreibung: min 2, max 100 Zeichen
+                const paymentDescription = (description ||
+                    `Reservierung ${reservation.guestName}`).substring(0, 100);
+                if (paymentDescription.length < 2) {
+                    throw new Error('Beschreibung muss mindestens 2 Zeichen lang sein');
+                }
+                // Reference: max 60 Zeichen, alphanumerisch, Unterstriche, Bindestriche
+                // Empfehlung: Timestamp hinzufügen um Duplikate zu vermeiden
+                const timestamp = Date.now();
+                const reference = `RES-${reservation.id}-${timestamp}`.substring(0, 60);
+                // Payload gemäß API Link de pagos Dokumentation
                 const payload = {
-                    merchant_id: this.merchantId,
-                    amount: amount,
-                    currency: currency,
-                    description: paymentDescription,
-                    reference: `RES-${reservation.id}`,
-                    customer: {
-                        name: reservation.guestName,
-                        email: reservation.guestEmail || undefined,
-                        phone: reservation.guestPhone || undefined
+                    amount_type: 'CLOSE', // Geschlossener Betrag (vom Merchant festgelegt)
+                    amount: {
+                        currency: currency,
+                        total_amount: amount,
+                        subtotal: amount, // TODO: Berechnung mit Steuern wenn nötig
+                        taxes: [], // TODO: Steuern hinzufügen wenn nötig
+                        tip_amount: 0
                     },
-                    callback_url: `${process.env.APP_URL || 'http://localhost:5000'}/api/bold-payment/webhook`,
-                    success_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reservations/${reservation.id}/payment-success`,
-                    cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reservations/${reservation.id}/payment-cancel`,
-                    metadata: {
-                        reservation_id: reservation.id.toString(),
-                        organization_id: reservation.organizationId.toString()
-                    }
+                    reference: reference,
+                    description: paymentDescription,
+                    // payment_methods: optional - Array von Methoden (z.B. ["PSE", "CREDIT_CARD"])
                 };
-                const response = yield this.axiosInstance.post('/payment-links', payload);
-                if (response.data.success && response.data.data) {
+                // callback_url ist optional, aber wenn gesetzt muss es https:// sein
+                // Die API akzeptiert keine http:// URLs (insbesondere nicht localhost)
+                const appUrl = process.env.APP_URL;
+                if (appUrl && appUrl.startsWith('https://')) {
+                    payload.callback_url = `${appUrl}/api/bold-payment/webhook`;
+                }
+                // Für Sandbox/Development ohne https:// URL wird callback_url weggelassen
+                // Endpoint: POST /online/link/v1
+                const response = yield this.axiosInstance.post('/online/link/v1', payload);
+                // Response-Struktur: { payload: { payment_link: "LNK_...", url: "https://..." }, errors: [] }
+                const paymentLinkUrl = (_a = response.data.payload) === null || _a === void 0 ? void 0 : _a.url;
+                const paymentLinkId = (_b = response.data.payload) === null || _b === void 0 ? void 0 : _b.payment_link;
+                if (paymentLinkUrl) {
                     // Speichere Payment Link in Reservierung
                     yield prisma.reservation.update({
                         where: { id: reservation.id },
-                        data: { paymentLink: response.data.data.url }
+                        data: {
+                            paymentLink: paymentLinkUrl,
+                            // Optional: paymentLinkId speichern falls Feld existiert
+                        }
                     });
-                    return response.data.data.url;
+                    return paymentLinkUrl;
                 }
-                // Fallback: Direktes Objekt
-                if (response.data && !response.data.success && response.data.url) {
-                    const paymentLink = response.data.url;
-                    yield prisma.reservation.update({
-                        where: { id: reservation.id },
-                        data: { paymentLink }
-                    });
-                    return paymentLink;
+                // Fehlerbehandlung
+                if (response.data.errors && response.data.errors.length > 0) {
+                    const errorMessages = response.data.errors.map((e) => e.message || JSON.stringify(e)).join(', ');
+                    throw new Error(`Bold Payment Fehler: ${errorMessages}`);
                 }
-                throw new Error(response.data.error || response.data.message || 'Fehler beim Erstellen des Zahlungslinks');
+                throw new Error('Ungültige Antwort von Bold Payment API');
             }
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
-                    throw new Error(((_b = (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.error) ||
-                        ((_d = (_c = axiosError.response) === null || _c === void 0 ? void 0 : _c.data) === null || _d === void 0 ? void 0 : _d.message) ||
-                        `Bold Payment API Fehler: ${axiosError.message}`);
+                    const status = (_c = axiosError.response) === null || _c === void 0 ? void 0 : _c.status;
+                    const errorMessage = ((_g = (_f = (_e = (_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.data) === null || _e === void 0 ? void 0 : _e.errors) === null || _f === void 0 ? void 0 : _f[0]) === null || _g === void 0 ? void 0 : _g.message) ||
+                        ((_j = (_h = axiosError.response) === null || _h === void 0 ? void 0 : _h.data) === null || _j === void 0 ? void 0 : _j.message) ||
+                        axiosError.message;
+                    // Spezifische Fehlermeldung für 403 Forbidden
+                    if (status === 403) {
+                        throw new Error(`Bold Payment API Fehler (403 Forbidden): ${errorMessage}\n` +
+                            `Bitte prüfen Sie im Bold Payment Dashboard:\n` +
+                            `1. Ist die "API Link de pagos" aktiviert?\n` +
+                            `2. Haben die Keys (Llave de identidad) die richtigen Berechtigungen?\n` +
+                            `3. Sind die Keys für die richtige Umgebung (Sandbox/Production) aktiviert?\n` +
+                            `4. Wird die "Llave de identidad" (Identity Key) korrekt verwendet?`);
+                    }
+                    throw new Error(`Bold Payment API Fehler: ${errorMessage}`);
                 }
                 throw error;
             }
         });
     }
     /**
-     * Ruft den Status einer Zahlung ab
+     * Ruft den Status eines Zahlungslinks ab
      *
-     * @param paymentId - Payment ID oder Payment Link ID
-     * @returns Payment Status
+     * Verwendet die "API Link de pagos" (Botón de pagos) von Bold Payment.
+     * Endpoint: GET /online/link/v1/{payment_link}
+     *
+     * @param paymentLinkId - Payment Link ID (z.B. "LNK_H7S4xxx")
+     * @returns Payment Link Status und Daten
      */
-    getPaymentStatus(paymentId) {
+    getPaymentStatus(paymentLinkId) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c, _d, _e;
+            var _a, _b, _c, _d, _e, _f, _g;
             // Lade Settings falls noch nicht geladen
-            if (!this.apiKey) {
+            if (!this.merchantId) {
                 yield this.loadSettings();
             }
             try {
-                const response = yield this.axiosInstance.get(`/payments/${paymentId}`);
-                if (response.data.success && response.data.data) {
-                    return response.data.data;
-                }
-                // Fallback: Direktes Objekt
-                if (response.data && !response.data.success && response.data.id) {
-                    return response.data;
-                }
-                throw new Error(response.data.error || response.data.message || 'Zahlung nicht gefunden');
+                // Endpoint: GET /online/link/v1/{payment_link}
+                const response = yield this.axiosInstance.get(`/online/link/v1/${paymentLinkId}`);
+                return response.data;
             }
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
                     if (((_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.status) === 404) {
-                        throw new Error('Zahlung nicht gefunden');
+                        throw new Error('Zahlungslink nicht gefunden');
                     }
-                    throw new Error(((_c = (_b = axiosError.response) === null || _b === void 0 ? void 0 : _b.data) === null || _c === void 0 ? void 0 : _c.error) ||
-                        ((_e = (_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.data) === null || _e === void 0 ? void 0 : _e.message) ||
-                        `Bold Payment API Fehler: ${axiosError.message}`);
+                    const errorMessage = ((_e = (_d = (_c = (_b = axiosError.response) === null || _b === void 0 ? void 0 : _b.data) === null || _c === void 0 ? void 0 : _c.errors) === null || _d === void 0 ? void 0 : _d[0]) === null || _e === void 0 ? void 0 : _e.message) ||
+                        ((_g = (_f = axiosError.response) === null || _f === void 0 ? void 0 : _f.data) === null || _g === void 0 ? void 0 : _g.message) ||
+                        axiosError.message;
+                    throw new Error(`Bold Payment API Fehler: ${errorMessage}`);
                 }
                 throw error;
             }

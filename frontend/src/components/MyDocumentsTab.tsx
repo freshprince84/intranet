@@ -325,7 +325,7 @@ const MyDocumentsTab: React.FC<MyDocumentsTabProps> = ({ userId }) => {
                         />
                       ) : (
                         <div className="flex justify-center items-center text-gray-500 dark:text-gray-400" style={{ height: '400px' }}>
-                          <p>{t('lifecycle.previewError') || 'Vorschau konnte nicht geladen werden'}</p>
+                          <p>{t('lifecycle.previewError', { defaultValue: 'Vorschau konnte nicht geladen werden' })}</p>
                         </div>
                       )}
                     </div>
@@ -433,7 +433,7 @@ const MyDocumentsTab: React.FC<MyDocumentsTabProps> = ({ userId }) => {
                         />
                       ) : (
                         <div className="flex justify-center items-center text-gray-500 dark:text-gray-400" style={{ height: '400px' }}>
-                          <p>{t('lifecycle.previewError') || 'Vorschau konnte nicht geladen werden'}</p>
+                          <p>{t('lifecycle.previewError', { defaultValue: 'Vorschau konnte nicht geladen werden' })}</p>
                         </div>
                       )}
                     </div>

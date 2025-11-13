@@ -1,5 +1,6 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import GitHubLinkManager from './GitHubLinkManager.tsx';
 import { CerebroExternalLink } from '../../api/cerebroApi.ts';
 
@@ -8,6 +9,7 @@ import { CerebroExternalLink } from '../../api/cerebroApi.ts';
  * Sie liest den slug-Parameter aus der URL und übergibt ihn an den GitHubLinkManager.
  */
 const GitHubLinkManagerWrapper: React.FC = () => {
+  const { t } = useTranslation();
   // URL-Parameter auslesen
   const { slug } = useParams<{ slug: string }>();
   
@@ -35,7 +37,7 @@ const GitHubLinkManagerWrapper: React.FC = () => {
   return (
     <div className="w-full p-4">
       <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <h1 className="text-xl font-semibold mb-4 dark:text-white">GitHub-Link hinzufügen</h1>
+        <h1 className="text-xl font-semibold mb-4 dark:text-white">{t('githubLink.addTitle')}</h1>
         <GitHubLinkManager 
           articleSlug={slug} 
           onLinkAdded={handleLinkAdded}

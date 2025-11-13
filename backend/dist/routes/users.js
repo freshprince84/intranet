@@ -19,6 +19,13 @@ router.put('/profile', userController_1.updateProfile);
 router.put('/settings', userController_1.updateUserSettings);
 router.put('/invoice-settings', userController_1.updateInvoiceSettings);
 router.put('/switch-role', userController_1.switchUserRole);
+// Onboarding-Routen
+router.get('/onboarding/status', userController_1.getOnboardingStatus);
+router.put('/onboarding/progress', userController_1.updateOnboardingProgress);
+router.put('/onboarding/complete', userController_1.completeOnboarding);
+router.post('/onboarding/event', userController_1.trackOnboardingEvent);
+router.put('/onboarding/reset', userController_1.resetOnboarding);
+router.get('/onboarding/analytics', userController_1.getOnboardingAnalytics);
 // Neue Routen für Organisation
 router.post('/', userController_1.createUser); // Neue Benutzer erstellen (nur für Admins einer Organisation)
 router.get('/:id', userController_1.getUserById);

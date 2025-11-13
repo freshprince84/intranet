@@ -1,9 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { cerebroApi } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
+import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 const AddMedia: React.FC = () => {
+  const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
@@ -36,7 +39,7 @@ const AddMedia: React.FC = () => {
     
     // Prüfen, ob der Dateityp unterstützt wird
     if (!isFileTypeSupported(file)) {
-      setError('Dieser Dateityp wird nicht unterstützt. Erlaubt sind Bilder, PDFs und Videos.');
+      setError(t('cerebroMedia.fileTypeNotSupported'));
     } else {
       setError(null);
     }
@@ -74,22 +77,22 @@ const AddMedia: React.FC = () => {
     e.preventDefault();
     
     if (!selectedFile) {
-      setError('Bitte wählen Sie eine Datei aus.');
+      setError(t('cerebroMedia.pleaseSelectFile'));
       return;
     }
     
     if (!fileName.trim()) {
-      setError('Bitte geben Sie einen Dateinamen ein.');
+      setError(t('cerebroMedia.pleaseEnterFileName'));
       return;
     }
     
     if (!slug) {
-      setError('Artikel-ID fehlt.');
+      setError(t('cerebroMedia.articleIdMissing'));
       return;
     }
     
     if (!isFileTypeSupported(selectedFile)) {
-      setError('Dieser Dateityp wird nicht unterstützt. Erlaubt sind Bilder, PDFs und Videos.');
+      setError(t('cerebroMedia.fileTypeNotSupported'));
       return;
     }
     
@@ -115,7 +118,7 @@ const AddMedia: React.FC = () => {
       navigate(`/cerebro/${slug}`);
     } catch (err) {
       console.error('Fehler beim Hochladen der Datei:', err);
-      setError('Fehler beim Hochladen der Datei. Bitte versuchen Sie es später erneut.');
+      setError(t('cerebroMedia.uploadError'));
       setLoading(false);
     }
   };
@@ -125,13 +128,13 @@ const AddMedia: React.FC = () => {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          Sie haben keine Berechtigung, Medien hinzuzufügen.
+          {t('cerebroMedia.noPermission')}
         </div>
         <button
           className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
           onClick={() => navigate(`/cerebro/${slug}`)}
         >
-          Zurück zum Artikel
+          {t('cerebroMedia.backToArticle')}
         </button>
       </div>
     );
@@ -174,7 +177,7 @@ const AddMedia: React.FC = () => {
             controls
             className="w-full h-auto max-h-60"
           >
-            Ihr Browser unterstützt das Video-Tag nicht.
+            {t('cerebroMedia.videoNotSupported')}
           </video>
         </div>
       );
@@ -192,7 +195,7 @@ const AddMedia: React.FC = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Medien hinzufügen</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('cerebroMedia.title')}</h1>
       
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -212,9 +215,9 @@ const AddMedia: React.FC = () => {
             >
               <div className="text-gray-500">
                 <div className="text-4xl mb-2">+</div>
-                <p>Klicken Sie, um eine Datei auszuwählen</p>
+                <p>{t('cerebroMedia.clickToSelectFile')}</p>
                 <p className="text-sm mt-1">
-                  Unterstützte Dateitypen: JPG, PNG, GIF, WEBP, PDF, MP4, WEBM
+                  {t('cerebroMedia.supportedFileTypes')}
                 </p>
               </div>
             </div>
@@ -232,7 +235,7 @@ const AddMedia: React.FC = () => {
           {/* Dateiname */}
           <div className="mb-4">
             <label htmlFor="fileName" className="block text-gray-700 font-medium mb-2">
-              Dateiname *
+              {t('cerebroMedia.fileNameRequired')}
             </label>
             <input
               type="text"
@@ -240,7 +243,7 @@ const AddMedia: React.FC = () => {
               value={fileName}
               onChange={handleFileNameChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Dateiname"
+              placeholder={t('cerebroMedia.fileName')}
               required
             />
           </div>
@@ -252,11 +255,11 @@ const AddMedia: React.FC = () => {
               onClick={handleSelectFile}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
             >
-              {selectedFile ? 'Andere Datei auswählen' : 'Datei auswählen'}
+              {selectedFile ? t('cerebroMedia.selectOtherFile') : t('cerebroMedia.selectFile')}
             </button>
             {selectedFile && (
               <span className="ml-2 text-sm text-gray-600">
-                Dateigröße: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                {t('cerebroMedia.fileSize')} {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
               </span>
             )}
           </div>
@@ -268,7 +271,7 @@ const AddMedia: React.FC = () => {
                 <div className="flex items-center justify-between mb-1">
                   <div>
                     <span className="text-xs font-semibold inline-block text-blue-600">
-                      Upload-Fortschritt
+                      {t('cerebroMedia.uploadProgress')}
                     </span>
                   </div>
                   <div className="text-right">
@@ -292,23 +295,22 @@ const AddMedia: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(`/cerebro/${slug}`)}
-              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              className="p-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
+              title={t('common.cancel')}
             >
-              Abbrechen
+              <XMarkIcon className="h-5 w-5" />
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading || !selectedFile}
+              title={loading ? t('cerebroMedia.uploading') : t('cerebroMedia.uploadFile')}
             >
               {loading ? (
-                <>
-                  <span className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></span>
-                  Hochladen...
-                </>
+                <ArrowPathIcon className="h-5 w-5 animate-spin" />
               ) : (
-                'Datei hochladen'
+                <PlusIcon className="h-5 w-5" />
               )}
             </button>
           </div>

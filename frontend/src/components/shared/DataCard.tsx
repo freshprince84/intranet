@@ -333,6 +333,7 @@ const DataCard: React.FC<DataCardProps> = ({
   highlightColor = 'green',
   children
 }) => {
+  const { t } = useTranslation();
   const borderClass = highlightBorder
     ? `border-2 border-${highlightColor}-500 dark:border-${highlightColor}-600`
     : 'border border-gray-300 dark:border-gray-700';
@@ -416,7 +417,7 @@ const DataCard: React.FC<DataCardProps> = ({
                     status.onPreviousClick?.();
                   }}
                   className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                  title="Vorheriger Status"
+                  title={t('dataCard.previousStatus')}
                 >
                   <ChevronLeftIcon className="h-4 w-4" />
                 </button>
@@ -432,7 +433,7 @@ const DataCard: React.FC<DataCardProps> = ({
                     status.onNextClick?.();
                   }}
                   className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                  title="Nächster Status"
+                  title={t('dataCard.nextStatus')}
                 >
                   <ChevronRightIcon className="h-4 w-4" />
                 </button>
@@ -552,7 +553,7 @@ const DataCard: React.FC<DataCardProps> = ({
                       status.onPreviousClick?.();
                     }}
                     className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                    title="Vorheriger Status"
+                    title={t('dataCard.previousStatus')}
                   >
                     <ChevronLeftIcon className="h-6 w-6" />
                   </button>
@@ -568,7 +569,7 @@ const DataCard: React.FC<DataCardProps> = ({
                       status.onNextClick?.();
                     }}
                     className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded transition-colors flex-shrink-0"
-                    title="Nächster Status"
+                    title={t('dataCard.nextStatus')}
                   >
                     <ChevronRightIcon className="h-6 w-6" />
                   </button>

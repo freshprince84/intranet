@@ -65,6 +65,11 @@ model User {
   certificatesGenerated    EmploymentCertificate[]     @relation("CertificateGenerator")
   contractsGenerated       EmploymentContract[]        @relation("ContractGenerator")
   passwordResetTokens      PasswordResetToken[]
+  onboardingCompleted      Boolean                     @default(false)
+  onboardingProgress        Json?                      // Speichert den Fortschritt: { currentStep: number, completedSteps: number[] }
+  onboardingStartedAt       DateTime?
+  onboardingCompletedAt     DateTime?
+  onboardingEvents          OnboardingEvent[]
 }
 
 model Organization {
@@ -991,6 +996,25 @@ model PasswordResetToken {
   @@index([token])
   @@index([userId])
   @@index([expiresAt])
+}
+
+// ============================================
+// ONBOARDING SYSTEM MODELS
+// ============================================
+
+model OnboardingEvent {
+  id          Int      @id @default(autoincrement())
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stepId      String   // ID des Onboarding-Schritts
+  stepTitle   String   // Titel des Schritts (für Reports)
+  action      String   // 'started', 'completed', 'skipped', 'cancelled'
+  duration    Int?     // Dauer in Sekunden (für 'completed')
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([stepId])
+  @@index([createdAt])
 }
 
 // ============================================

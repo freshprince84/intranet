@@ -174,7 +174,7 @@ const JoinRequestsList: React.FC = () => {
           return;
         }
         
-        const errorMessage = err.response?.data?.message || err.message || t('joinRequestsList.loadError') || 'Fehler beim Laden der Beitrittsanfragen';
+        const errorMessage = err.response?.data?.message || err.message || t('joinRequestsList.loadError', { defaultValue: 'Fehler beim Laden der Beitrittsanfragen' });
         console.log('[JoinRequestsList] Zeige Fehlermeldung:', errorMessage);
         setError(errorMessage);
         // showMessage nur außerhalb useEffect verwenden, um Re-Renders zu vermeiden
@@ -417,7 +417,7 @@ const JoinRequestsList: React.FC = () => {
           {/* Suchfeld */}
           <input
             type="text"
-            placeholder={t('common.search') || 'Suchen...'}
+            placeholder={t('common.search', { defaultValue: 'Suchen...' })}
             className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -446,7 +446,7 @@ const JoinRequestsList: React.FC = () => {
             columns={[
               { id: 'requester', label: t('joinRequestsList.filter.requester') },
               { id: 'message', label: t('joinRequestsList.filter.message') },
-              { id: 'status', label: t('joinRequestsList.status.title') || 'Status' }
+              { id: 'status', label: t('joinRequestsList.status.title', { defaultValue: 'Status' }) }
             ]}
             onApply={applyFilterConditions}
             onReset={resetFilterConditions}

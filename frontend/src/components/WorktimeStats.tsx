@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, getWeek, getYear, parse, addDays } from 'date-fns';
 import { de, es, enUS } from 'date-fns/locale';
@@ -45,15 +45,18 @@ const WorktimeStats: React.FC = () => {
     const isColombia = useMemo(() => {
         // Prüfe zuerst User-Land, dann Organisation (falls vorhanden)
         const userIsColombia = user?.country === 'CO';
-        const orgIsColombia = (organization?.settings as any)?.country === 'CO';
+        const orgIsColombia = organization?.country === 'CO'; // KORREKTUR: Direkt auf organization, nicht settings
         const result = userIsColombia || orgIsColombia;
         console.log('Quinzena-Check:', { 
             userCountry: user?.country, 
-            orgSettings: organization?.settings,
+            orgCountry: organization?.country, // KORREKTUR: Direkt auf organization
             isColombia: result 
         });
         return result;
-    }, [user?.country, organization]);
+    }, [user?.country, organization?.country]); // KORREKTUR: Spezifische Dependency
+    
+    // Ref um zu tracken, ob useQuinzena manuell geändert wurde (nicht durch isColombia)
+    const isManualPeriodChange = useRef(false);
     
     // State für Woche/Quinzena-Modus
     // Initial: basierend auf isColombia (kann auch user?.country prüfen, bevor organization geladen ist)
@@ -61,26 +64,6 @@ const WorktimeStats: React.FC = () => {
         // Initial: Prüfe user?.country, da organization möglicherweise noch nicht geladen ist
         return user?.country === 'CO';
     });
-    
-    // Aktualisiere useQuinzena wenn isColombia sich ändert
-    useEffect(() => {
-        if (isColombia) {
-            if (!useQuinzena) {
-                // Nur setzen wenn noch nicht gesetzt, um unnötige Re-Renders zu vermeiden
-                setUseQuinzena(true);
-            }
-            // Setze sofort das Quinzena-Datum (auch wenn useQuinzena bereits true ist)
-            const currentQuinzena = getCurrentQuinzena();
-            setSelectedQuinzenaInput(currentQuinzena);
-            const quinzenaDate = convertQuinzenaToDate(currentQuinzena);
-            setSelectedQuinzenaDate(quinzenaDate);
-        } else {
-            if (useQuinzena) {
-                // Nur setzen wenn noch nicht false, um unnötige Re-Renders zu vermeiden
-                setUseQuinzena(false);
-            }
-        }
-    }, [isColombia, useQuinzena]);
     
     // Dynamisches Locale basierend auf aktueller Sprache
     const dateLocale = useMemo(() => {
@@ -145,13 +128,10 @@ const WorktimeStats: React.FC = () => {
         fetchStats();
     }, [selectedDate, user, useQuinzena]);
 
-    const fetchStats = async () => {
+    // Neue Funktion: fetchStatsWithDate (kann mit explizitem Datum aufgerufen werden)
+    const fetchStatsWithDate = async (dateToSend: string, isQuinzena: boolean) => {
         try {
             setLoading(true);
-            const token = localStorage.getItem('token');
-            
-            // Verwende selectedDate (entweder Woche oder Quinzena)
-            const dateToSend = selectedDate;
             
             if (!dateToSend) {
                 console.error('Kein Datum zum Senden verfügbar');
@@ -160,28 +140,23 @@ const WorktimeStats: React.FC = () => {
                 return;
             }
             
-            console.log('Fetch Stats:', { useQuinzena, dateToSend, selectedDate });
+            console.log('Fetch Stats:', { isQuinzena, dateToSend });
             
-            // Verwende axiosInstance statt fetch
-            // Für Quinzenas müssen wir möglicherweise einen anderen Endpoint verwenden oder den Parameter anpassen
-            const endpoint = useQuinzena 
+            const endpoint = isQuinzena 
                 ? `${API_ENDPOINTS.WORKTIME.STATS}?quinzena=${dateToSend}`
                 : `${API_ENDPOINTS.WORKTIME.STATS}?week=${dateToSend}`;
             
             console.log('API Endpoint:', endpoint);
             
             const response = await axiosInstance.get(endpoint);
-            
-            // Direkt auf response.data zugreifen statt response.json() zu verwenden
             const data = response.data;
             
             console.log('API Response:', data);
             
             // Wichtig: Stelle sicher, dass die weeklyData das richtige date-Format haben
             if (data && data.weeklyData) {
-                if (useQuinzena) {
+                if (isQuinzena) {
                     // Für Quinzenas: Backend gibt bereits korrekte Daten mit date zurück
-                    // Prüfe ob alle Daten korrekt sind
                     console.log('Quinzena-Daten vom Backend:', {
                         totalHours: data.totalHours,
                         weeklyDataLength: data.weeklyData.length,
@@ -230,7 +205,7 @@ const WorktimeStats: React.FC = () => {
                     // Berechne die Tagesdaten für die Woche (7 Tage)
                     const periodDates: string[] = [];
                     for (let i = 0; i < 7; i++) {
-                        periodDates.push(incrementDateString(selectedDate, i));
+                        periodDates.push(incrementDateString(dateToSend, i));
                     }
                     
                     // Konvertiere die Wochentage in Daten im YYYY-MM-DD Format
@@ -267,6 +242,11 @@ const WorktimeStats: React.FC = () => {
         }
     };
 
+    // Alte fetchStats-Funktion bleibt für useEffect-Kompatibilität
+    const fetchStats = async () => {
+        fetchStatsWithDate(selectedDate, useQuinzena);
+    };
+
     const handleExport = async () => {
         try {
             const token = localStorage.getItem('token');
@@ -298,6 +278,11 @@ const WorktimeStats: React.FC = () => {
         // Konvertiere das Wochenformat in ein Datum für die API
         const newWeekDate = convertWeekToDate(newWeekInput);
         setSelectedWeekDate(newWeekDate);
+        
+        // Explizit Daten neu laden
+        queueMicrotask(() => {
+            fetchStatsWithDate(newWeekDate, false);
+        });
     };
     
     const handleQuinzenaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -309,25 +294,82 @@ const WorktimeStats: React.FC = () => {
         // Konvertiere das Quinzena-Format in ein Datum für die API
         const newQuinzenaDate = convertQuinzenaToDate(newQuinzenaInput);
         setSelectedQuinzenaDate(newQuinzenaDate);
+        
+        // Explizit Daten neu laden
+        queueMicrotask(() => {
+            fetchStatsWithDate(newQuinzenaDate, true);
+        });
     };
     
-    // Radio-Buttons steuern useQuinzena direkt - setze Datum wenn sich useQuinzena ändert
+    // Handler für Radio-Button-Wechsel zwischen Semana und Quinzena
+    const handlePeriodChange = (newUseQuinzena: boolean) => {
+        // Markiere als manuelle Änderung
+        isManualPeriodChange.current = true;
+        
+        // 1. Setze useQuinzena sofort
+        setUseQuinzena(newUseQuinzena);
+        
+        // 2. Berechne das korrekte Datum synchron
+        let newDate: string;
+        let newInput: string;
+        
+        if (newUseQuinzena) {
+            // Quinzena-Modus
+            const currentQuinzena = getCurrentQuinzena();
+            newInput = currentQuinzena;
+            newDate = convertQuinzenaToDate(currentQuinzena);
+            setSelectedQuinzenaInput(newInput);
+            setSelectedQuinzenaDate(newDate);
+        } else {
+            // Woche-Modus
+            newInput = currentWeekInput;
+            newDate = convertWeekToDate(currentWeekInput);
+            setSelectedWeekInput(newInput);
+            setSelectedWeekDate(newDate);
+        }
+        
+        // 3. Rufe fetchStatsWithDate explizit mit dem neuen Datum auf
+        // Verwende queueMicrotask, um sicherzustellen, dass State-Updates verarbeitet wurden
+        queueMicrotask(() => {
+            fetchStatsWithDate(newDate, newUseQuinzena);
+            // Reset nach kurzer Verzögerung
+            setTimeout(() => {
+                isManualPeriodChange.current = false;
+            }, 100);
+        });
+    };
+    
+    // useEffect für automatische isColombia-Änderungen (nicht für manuelle Radio-Button-Wechsel)
     useEffect(() => {
-        // Setze das entsprechende Datum basierend auf dem Modus
-        // WICHTIG: Nur wenn sich useQuinzena ändert (nicht beim initialen Laden durch isColombia)
-        if (useQuinzena) {
+        // Überspringe, wenn die Änderung manuell war
+        if (isManualPeriodChange.current) {
+            return;
+        }
+        
+        // Nur ausführen, wenn sich isColombia ändert (nicht bei manuellem Radio-Button-Klick)
+        if (isColombia && !useQuinzena) {
+            // Automatisch auf Quinzena umschalten wenn Kolumbien erkannt wird
             const currentQuinzena = getCurrentQuinzena();
             setSelectedQuinzenaInput(currentQuinzena);
             const quinzenaDate = convertQuinzenaToDate(currentQuinzena);
-            console.log('Setting Quinzena date:', { currentQuinzena, quinzenaDate });
             setSelectedQuinzenaDate(quinzenaDate);
-        } else {
-            setSelectedWeekInput(currentWeekInput);
+            setUseQuinzena(true);
+            // Daten neu laden
+            queueMicrotask(() => {
+                fetchStatsWithDate(quinzenaDate, true);
+            });
+        } else if (!isColombia && useQuinzena) {
+            // Automatisch auf Woche umschalten wenn nicht Kolumbien
             const weekDate = convertWeekToDate(currentWeekInput);
-            console.log('Setting Week date:', { currentWeekInput, weekDate });
+            setSelectedWeekInput(currentWeekInput);
             setSelectedWeekDate(weekDate);
+            setUseQuinzena(false);
+            // Daten neu laden
+            queueMicrotask(() => {
+                fetchStatsWithDate(weekDate, false);
+            });
         }
-    }, [useQuinzena, currentWeekInput]);
+    }, [isColombia, useQuinzena]); // isColombia UND useQuinzena als Dependencies, aber mit Ref-Check
 
     // Funktion zum Öffnen des Modals für den ausgewählten Tag
     const openWorkTimeModal = (date: string) => {
@@ -397,7 +439,7 @@ const WorktimeStats: React.FC = () => {
                                     type="radio"
                                     name="periodType"
                                     checked={!useQuinzena}
-                                    onChange={() => setUseQuinzena(false)}
+                                    onChange={() => handlePeriodChange(false)}
                                     className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
                                 />
                                 <span className="text-sm dark:text-white">{t('worktime.stats.week')}</span>
@@ -407,7 +449,7 @@ const WorktimeStats: React.FC = () => {
                                     type="radio"
                                     name="periodType"
                                     checked={useQuinzena}
-                                    onChange={() => setUseQuinzena(true)}
+                                    onChange={() => handlePeriodChange(true)}
                                     className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
                                 />
                                 <span className="text-sm dark:text-white">{t('worktime.stats.quinzena')}</span>
@@ -428,6 +470,10 @@ const WorktimeStats: React.FC = () => {
                                     if (value.match(/^\d{4}-\d{2}-Q[12]$/)) {
                                         const newDate = convertQuinzenaToDate(value);
                                         setSelectedQuinzenaDate(newDate);
+                                        // Explizit Daten neu laden
+                                        queueMicrotask(() => {
+                                            fetchStatsWithDate(newDate, true);
+                                        });
                                     }
                                 }
                             }}
@@ -441,6 +487,7 @@ const WorktimeStats: React.FC = () => {
                             onChange={handleWeekChange}
                             max={currentWeekInput}
                             className="border border-gray-300 dark:border-gray-600 rounded-md text-base sm:text-sm h-8 sm:h-10 px-3 dark:bg-gray-700 dark:text-white"
+                            title={t('worktime.stats.weekFormat')}
                         />
                     )}
                     <button
@@ -589,7 +636,7 @@ const WorktimeStats: React.FC = () => {
                     </div>
                     
                     {/* X-Achse Beschriftungen */}
-                    <div className="absolute bottom-0 left-0 right-8 pt-8 flex justify-between">
+                    <div className="absolute bottom-0 left-0 right-8 pt-8 flex justify-between pointer-events-none">
                         {stats.weeklyData.map((dayData, index) => {
                             const quinzenaDaysCount = useQuinzena ? getQuinzenaDays(selectedQuinzenaDate).length : 7;
                             const widthPercent = useQuinzena ? `${100 / quinzenaDaysCount}%` : '13%';

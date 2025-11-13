@@ -10,11 +10,13 @@ import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { toast } from 'react-toastify';
 import { useTheme } from '../contexts/ThemeContext.tsx';
-import { Cog6ToothIcon, UserCircleIcon, ComputerDesktopIcon, DocumentArrowUpIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { Cog6ToothIcon, UserCircleIcon, ComputerDesktopIcon, DocumentArrowUpIcon, CheckIcon, ArrowPathIcon, AcademicCapIcon } from '@heroicons/react/24/outline';
 import NotificationSettingsComponent from '../components/NotificationSettings.tsx';
 import MonthlyReportSettingsModal from '../components/MonthlyReportSettingsModal.tsx';
 import DatabaseManagement from '../components/DatabaseManagement.tsx';
 import { API_URL } from '../config/api.ts';
+import { useOnboarding } from '../contexts/OnboardingContext.tsx';
+import { useNavigate } from 'react-router-dom';
 
 const Settings: React.FC = () => {
     const { user } = useAuth();
@@ -23,6 +25,8 @@ const Settings: React.FC = () => {
     const { showMessage } = useMessage();
     const { t } = useTranslation();
     const { activeLanguage, organizationLanguage, setUserLanguage, isLoading: languageLoading } = useLanguage();
+    const { resetTour, startTour } = useOnboarding();
+    const navigate = useNavigate();
     const [selectedLanguage, setSelectedLanguage] = useState<string>('');
     const [savingLanguage, setSavingLanguage] = useState<boolean>(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -271,7 +275,7 @@ const Settings: React.FC = () => {
 
                 {/* Tab-Inhalte */}
                 {activeTab === 'personal' && (
-                    <div className="space-y-6">
+                    <div className="space-y-6" data-onboarding="settings-overview">
                         {/* Sprache */}
                         <div className="flex items-center justify-between border-b pb-6">
                             <div className="flex-1">
@@ -361,6 +365,41 @@ const Settings: React.FC = () => {
                                     </div>
                                 </div>
                             )}
+                        </div>
+
+                        {/* Onboarding-Tour */}
+                        <div className="border-t pt-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <AcademicCapIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                        <h3 className="text-lg font-medium dark:text-white">{t('settings.onboarding.restart')}</h3>
+                                    </div>
+                                    <p className="text-gray-600 dark:text-gray-400 text-sm">
+                                        {t('settings.onboarding.restartDescription')}
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await resetTour();
+                                            showMessage(t('settings.onboarding.restart'), 'success');
+                                            // Navigiere zum Dashboard, damit die Tour startet
+                                            navigate('/dashboard');
+                                            // Starte Tour nach kurzer Verzögerung
+                                            setTimeout(() => {
+                                                startTour();
+                                            }, 500);
+                                        } catch (error) {
+                                            console.error('Fehler beim Zurücksetzen der Tour:', error);
+                                            showMessage(t('errors.unknownError'), 'error');
+                                        }
+                                    }}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors dark:bg-blue-700 dark:hover:bg-blue-800"
+                                >
+                                    {t('onboarding.navigation.restart')}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}

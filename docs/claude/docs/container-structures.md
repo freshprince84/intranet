@@ -23,6 +23,7 @@ return (
 1. **Äußerer Wrapper**: `min-h-screen dark:bg-gray-900`
    - `min-h-screen`: Stellt sicher, dass die Seite mindestens die volle Bildschirmhöhe einnimmt
    - `dark:bg-gray-900`: Hintergrundfarbe für Dark Mode (konsistent mit der Top-Leiste)
+   - **WICHTIG**: Hintergrund ist IMMER einfarbig (`bg-white dark:bg-gray-900`), KEINE Gradienten! Gradienten verursachen vertikale Streifen und sind für Seitenhintergründe verboten.
 
 2. **Container**: `max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6`
    - `max-w-7xl`: Maximale Breite des Inhalts

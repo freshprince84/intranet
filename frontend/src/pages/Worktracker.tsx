@@ -1595,6 +1595,7 @@ const Worktracker: React.FC = () => {
                                             style={{ width: '30.19px', height: '30.19px' }}
                                             title={t('tasks.createTask')}
                                             aria-label={t('tasks.createTask')}
+                                            data-onboarding="create-task-button"
                                         >
                                             <PlusIcon className="h-4 w-4" />
                                         </button>
@@ -1750,7 +1751,7 @@ const Worktracker: React.FC = () => {
                             {viewMode === 'table' ? (
                                 /* Tabellen-Ansicht */
                                 <div className="overflow-x-auto">
-                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700" data-onboarding="task-list">
                                         <thead className="bg-gray-50 dark:bg-gray-700">
                                             <tr>
                                                 {visibleColumnIds.map((columnId) => {

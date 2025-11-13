@@ -137,7 +137,7 @@ const Organisation: React.FC = () => {
                 disabled={!canViewBranches}
               >
                 <MapPinIcon className="h-5 w-5 mr-2" />
-                {t('organisation.tabs.branches') || 'Niederlassungen'}
+                {t('organisation.tabs.branches', { defaultValue: 'Niederlassungen' })}
                 {!canViewBranches && (
                   <span className="ml-2 px-2 py-0.5 text-xs font-semibold bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 rounded">
                     PRO
@@ -213,7 +213,7 @@ const Organisation: React.FC = () => {
                       PRO
                     </span>
                     <p className="text-gray-700 dark:text-gray-300 mt-4">
-                      {t('organisation.proFeature.branches') || 'Niederlassungs-Verwaltung ist eine PRO-Funktion'}
+                      {t('organisation.proFeature.branches', { defaultValue: 'Niederlassungs-Verwaltung ist eine PRO-Funktion' })}
                     </p>
                   </div>
                 </div>

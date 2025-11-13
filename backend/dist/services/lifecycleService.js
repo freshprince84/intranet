@@ -667,6 +667,15 @@ class LifecycleService {
                     }
                 }
             });
+            // Aktualisiere contractStartDate und contractEndDate im Lifecycle
+            yield prisma.employeeLifecycle.update({
+                where: { id: lifecycle.id },
+                data: {
+                    contractStartDate: data.startDate,
+                    contractEndDate: data.endDate || null,
+                    contractType: data.contractType || lifecycle.contractType
+                }
+            });
             // Erstelle Event
             yield prisma.lifecycleEvent.create({
                 data: {

@@ -1,55 +1,6 @@
 {
   "common": {
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "edit": "Edit",
-    "create": "Create",
-    "loading": "Loading...",
-    "yes": "Yes",
-    "no": "No",
-    "close": "Close",
-    "back": "Back",
-    "next": "Next",
-    "search": "Search",
-    "filter": "Filter",
-    "reset": "Reset",
-    "apply": "Apply",
-    "copy": "Copy",
-    "download": "Download",
-    "upload": "Upload",
-    "select": "Select",
-    "confirm": "Confirm",
-    "actions": "Actions",
-    "viewAsCards": "View as cards",
-    "viewAsTable": "View as table",
-    "description": "Description",
-    "today": "Today",
-    "week": "Week",
-    "active": "Active",
-    "all": "All",
-    "showMore": "Show more",
-    "remaining": "remaining",
-    "loadingFilters": "Loading filters...",
-    "loadingPermissions": "Loading permissions...",
-    "loadingOrganization": "Loading organization...",
-    "loadingStatistics": "Loading statistics...",
-    "loadingSettings": "Loading settings...",
-    "saving": "Saving...",
-    "uploading": "Uploading...",
-    "error": "Error",
-    "force": "Force",
-    "previousDay": "Previous day",
-    "nextDay": "Next day",
-    "searchPlaceholder": "Search...",
-    "showFilter": "Show filter",
-    "collapse": "Collapse",
-    "expand": "Expand",
-    "close": "Close",
-    "unknown": "Unknown",
-    "refresh": "Refresh",
-    "loadingScreen": "Loading",
-    "loadingScreenSubtitle": "Almost done... just a moment more! ⚡"
+    "pleaseSelect": "Please select..."
   },
   "header": {
     "profile": "Profile",
@@ -58,8 +9,8 @@
     "logout": "Logout"
   },
   "dataCard": {
-    "expandDescription": "Expand description",
-    "collapseDescription": "Collapse description"
+    "nextStatus": "Next Status",
+    "previousStatus": "Previous Status"
   },
   "menu": {
     "dashboard": "Dashboard",
@@ -87,9 +38,36 @@
     "taskAttachmentsPath": "Directory for task attachments",
     "requestAttachmentsPath": "Directory for request attachments",
     "databaseManagement": "Database management",
+    "databaseManagementDescription": "Advanced functions for managing the database. Administrators only.",
     "monthlyReport": "Automatic monthly report",
     "monthlyReportDescription": "Automatically generate and send monthly reports",
-    "saveAllChanges": "Save all changes"
+    "saveAllChanges": "Save all changes",
+    "darkModeDescription": "Activate dark appearance",
+    "logoUploadDescription": "Upload a logo for your company",
+    "logoUploadButton": "Select file (PNG, JPEG, max. 5MB)",
+    "logoUploading": "Uploading...",
+    "logoPreview": "Preview:",
+    "taskAttachmentsPathPlaceholder": "e.g. uploads/task-attachments",
+    "taskAttachmentsPathDescription": "Relative path for saving task attachments",
+    "requestAttachmentsPathPlaceholder": "e.g. uploads/request-attachments",
+    "requestAttachmentsPathDescription": "Relative path for saving request attachments",
+    "saveDirectories": "Save",
+    "savingDirectories": "Saving...",
+    "saveDirectoriesSuccess": "Upload directories saved",
+    "saveDirectoriesError": "Error saving upload directories",
+    "monthlyReportEnabled": "Activated - Reports go to:",
+    "monthlyReportDisabled": "Automatic monthly report disabled",
+    "monthlyReportSaveError": "Error saving settings",
+    "loadingSettings": "Loading settings...",
+    "fileUploadError": "Please upload only PNG or JPEG files.",
+    "fileSizeError": "File is too large (maximum 5MB allowed).",
+    "logoUploadSuccess": "Logo uploaded successfully",
+    "logoUploadError": "Upload error",
+    "invalidResponse": "Invalid response format from server",
+    "onboarding": {
+      "restart": "Restart onboarding tour",
+      "restartDescription": "Start the introduction tour again to learn about the most important features."
+    }
   },
   "consultations": {
     "duration": "Duration",
@@ -201,7 +179,9 @@
     "genderOther": "Other",
     "profileIncomplete": "Your profile is incomplete.",
     "completeProfile": "Please complete your profile by filling in all required fields.",
-    "documents": "Identification Documents"
+    "documents": "Identification Documents",
+    "profileTab": "Profile",
+    "documentsTab": "Documents"
   },
   "organization": {
     "title": "Organization",
@@ -308,114 +288,69 @@
     },
     "documentTemplates": "Document Templates",
     "documentSettings": "Document Settings",
-    "templateSystemNotice": "⚠️ Notice: The template system is not yet fully implemented. Uploaded templates are currently not saved or used. Documents are generated with a standard template."
-  },
-  "tasks": {
-    "title": "To Do's",
-    "createTask": "Create new task",
-    "columns": {
-      "title": "Title",
-      "status": "Status",
-      "responsibleAndQualityControl": "Responsible / Quality Control",
-      "responsible": "Responsible",
-      "qualityControl": "Quality Control",
-      "branch": "Branch",
-      "dueDate": "Due Date",
-      "description": "Description",
-      "actions": "Actions"
+    "templateSystemNotice": "⚠️ Notice: The template system is not yet fully implemented. Uploaded templates are currently not saved or used. Documents are generated with a standard template.",
+    "loadLanguageError": "Error loading organization language:",
+    "saveLanguageError": "Error saving organization language:",
+    "documentSignatures": "Document Signatures",
+    "noDomain": "No domain",
+    "smtp": {
+      "title": "SMTP Settings",
+      "description": "Configure your own SMTP server for this organization. Emails will then be sent from this organization.",
+      "host": "SMTP Host",
+      "hostHint": "e.g. smtp.lafamilia-hostal.com or smtp.gmail.com",
+      "port": "SMTP Port",
+      "portHint": "Default: 587 (TLS) or 465 (SSL)",
+      "user": "SMTP Username",
+      "userHint": "Email address or username for SMTP authentication",
+      "password": "SMTP Password",
+      "passwordHint": "Password for SMTP authentication",
+      "fromSettings": "Sender Settings",
+      "fromEmail": "Sender Email",
+      "fromEmailHint": "Email address displayed as sender (e.g. noreply@lafamilia-hostal.com)",
+      "fromName": "Sender Name",
+      "fromNameHint": "Name displayed as sender (e.g. La Familia Hostel)",
+      "infoTitle": "ℹ️ Important Notes:",
+      "info1": "If no SMTP settings are configured, global settings from the .env file will be used",
+      "info2": "The sender email should belong to your domain to avoid spam filters",
+      "info3": "For Gmail, you must use an app password, not your regular password",
+      "saveSuccess": "SMTP settings saved successfully",
+      "saveError": "Error saving SMTP settings",
+      "requiredFields": "Please fill in all required fields (Host, Port, User, Password)",
+      "clear": "Clear"
     },
-    "status": {
-      "open": "Open",
-      "in_progress": "In Progress",
-      "improval": "To Improve",
-      "quality_control": "Quality Control",
-      "done": "Done"
+    "edit": {
+      "title": "Edit Organization"
     },
-    "actions": {
-      "backToOpen": "Back to Open",
-      "backToInProgress": "Back to In Progress",
-      "backToQualityControl": "Back to Quality Control",
-      "setInProgress": "Set In Progress",
-      "setQualityControl": "Send to Quality Control",
-      "markDone": "Mark as Done",
-      "copy": "Copy task"
+    "create": {
+      "title": "Create New Organization",
+      "name": "Name *",
+      "displayName": "Display Name *",
+      "domain": "Domain",
+      "nameRequired": "Name is required",
+      "displayNameRequired": "Display name is required",
+      "createSuccess": "Organization created successfully",
+      "createError": "Error creating organization",
+      "creating": "Creating...",
+      "createButton": "Create"
     },
-    "noTasksFound": "No tasks found",
-    "showDescription": "Show description",
-    "qualityControlLabel": "Quality Control:"
-  },
-  "requests": {
-    "title": "Requests",
-    "createRequest": "Create new request",
-    "columns": {
-      "title": "Title",
-      "status": "Status",
-      "type": "Type",
-      "requestedByResponsible": "Requested by / Responsible",
-      "requestedBy": "Requested by",
-      "responsible": "Responsible",
-      "branch": "Branch",
-      "dueDate": "Due Date",
-      "actions": "Actions"
-    },
-    "status": {
-      "approval": "Approval",
-      "approved": "Approved",
-      "to_improve": "To Improve",
-      "denied": "Denied"
-    },
-    "actions": {
-      "approve": "Approve",
-      "improve": "Improve",
-      "deny": "Deny",
-      "recheck": "Recheck",
-      "copy": "Copy request",
-      "edit": "Edit",
-      "delete": "Delete"
-    },
-    "filters": {
-      "archiv": "Archive",
-      "aktuell": "Current"
-    },
-    "types": {
-      "vacation": "Vacation Request",
-      "improvement_suggestion": "Improvement Suggestion",
-      "sick_leave": "Sick Leave",
-      "employment_certificate": "Employment Certificate",
-      "other": "Other"
+    "join": {
+      "title": "Join Organization",
+      "search": "Search Organization *",
+      "searchPlaceholder": "Enter organization name...",
+      "searching": "Searching...",
+      "noOrganizations": "No organizations found",
+      "nameRequired": "Organization name is required",
+      "selectFromList": "Please select an organization from the list",
+      "message": "Message (optional)",
+      "messagePlaceholder": "Optional: Add a message...",
+      "sendSuccess": "Join request sent successfully",
+      "sendError": "Error sending join request",
+      "sending": "Sending...",
+      "send": "Send"
     }
   },
   "tasks": {
     "title": "Tasks",
-    "createTask": "Create new task",
-    "columns": {
-      "title": "Title",
-      "status": "Status",
-      "responsibleAndQualityControl": "Responsible / Quality Control",
-      "responsible": "Responsible",
-      "qualityControl": "Quality Control",
-      "branch": "Branch",
-      "dueDate": "Due Date",
-      "actions": "Actions"
-    },
-    "status": {
-      "open": "Open",
-      "in_progress": "In Progress",
-      "improval": "Improve",
-      "quality_control": "Quality Control",
-      "done": "Done"
-    },
-    "actions": {
-      "backToOpen": "Back to Open",
-      "backToInProgress": "Back to In Progress",
-      "backToQualityControl": "Back to Quality Control",
-      "setInProgress": "Set In Progress",
-      "setQualityControl": "Set Quality Control",
-      "markDone": "Mark as Done",
-      "copy": "Copy task",
-      "edit": "Edit",
-      "delete": "Delete"
-    },
     "createTask": {
       "title": "Create New Task",
       "form": {
@@ -453,6 +388,35 @@
         "fileError": "Error processing file",
         "uploadError": "Error uploading attachments"
       }
+    },
+    "columns": {
+      "title": "Title",
+      "status": "Status",
+      "responsibleAndQualityControl": "Responsible / Quality Control",
+      "responsible": "Responsible",
+      "qualityControl": "Quality Control",
+      "branch": "Branch",
+      "dueDate": "Due Date",
+      "actions": "Actions",
+      "description": "Beschreibung [TODO: Translate]"
+    },
+    "status": {
+      "open": "Open",
+      "in_progress": "In Progress",
+      "improval": "Improve",
+      "quality_control": "Quality Control",
+      "done": "Done"
+    },
+    "actions": {
+      "backToOpen": "Back to Open",
+      "backToInProgress": "Back to In Progress",
+      "backToQualityControl": "Back to Quality Control",
+      "setInProgress": "Set In Progress",
+      "setQualityControl": "Set Quality Control",
+      "markDone": "Mark as Done",
+      "copy": "Copy task",
+      "edit": "Edit",
+      "delete": "Delete"
     },
     "editTask": {
       "title": "Edit Task",
@@ -505,6 +469,67 @@
       "current": "Current"
     }
   },
+  "requests": {
+    "title": "Requests",
+    "createRequest": {
+      "title": "Create New Request",
+      "form": {
+        "title": "Title",
+        "description": "Description",
+        "descriptionPlaceholder": "Insert text, images or files here...",
+        "responsible": "Responsible",
+        "branch": "Branch",
+        "type": "Type",
+        "isPrivate": "Private",
+        "dueDate": "Due Date",
+        "createTodo": "Automatically create task",
+        "fileUpload": "Add file",
+        "uploading": "Uploading...",
+        "pleaseSelect": "Please select...",
+        "cancel": "Cancel",
+        "create": "Create",
+        "creating": "Creating..."
+      },
+      "noRequestsFound": "No requests found"
+    },
+    "columns": {
+      "title": "Title",
+      "status": "Status",
+      "type": "Type",
+      "requestedByResponsible": "Requested by / Responsible",
+      "requestedBy": "Requested by",
+      "responsible": "Responsible",
+      "branch": "Branch",
+      "dueDate": "Due Date",
+      "actions": "Actions"
+    },
+    "status": {
+      "approval": "Approval",
+      "approved": "Approved",
+      "to_improve": "To Improve",
+      "denied": "Denied"
+    },
+    "actions": {
+      "approve": "Approve",
+      "improve": "Improve",
+      "deny": "Deny",
+      "recheck": "Recheck",
+      "copy": "Copy request",
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "filters": {
+      "archiv": "Archive",
+      "aktuell": "Current"
+    },
+    "types": {
+      "vacation": "Vacation Request",
+      "improvement_suggestion": "Improvement Suggestion",
+      "sick_leave": "Sick Leave",
+      "employment_certificate": "Employment Certificate",
+      "other": "Other"
+    }
+  },
   "users": {
     "title": "Users",
     "columns": {
@@ -552,10 +577,29 @@
     "title": "Roles",
     "permissions": "Permissions",
     "noDescription": "No description",
+    "createRole": "Create New Role",
+    "editRole": "Edit Role",
     "actions": {
       "edit": "Edit role",
       "delete": "Delete role",
       "copy": "Copy role"
+    },
+    "form": {
+      "name": "Name",
+      "description": "Description",
+      "detailedPermissions": "Detailed Permissions",
+      "activateAllPages": "Activate All Pages",
+      "deactivateAllPages": "Deactivate All Pages",
+      "pagesChecked": "Pages ✓",
+      "pagesUnchecked": "Pages ✗",
+      "activateAllTables": "Activate All Tables",
+      "deactivateAllTables": "Deactivate All Tables",
+      "tablesChecked": "Tables ✓",
+      "tablesUnchecked": "Tables ✗",
+      "activateAllButtons": "Activate All Buttons",
+      "deactivateAllButtons": "Deactivate All Buttons",
+      "buttonsChecked": "Buttons ✓",
+      "buttonsUnchecked": "Buttons ✗"
     },
     "pages": {
       "dashboard": "Dashboard",
@@ -564,6 +608,7 @@
       "team_worktime_control": "Team Control",
       "payroll": "Payroll",
       "usermanagement": "Organization",
+      "organization_management": "Organization Management",
       "cerebro": "Cerebro",
       "settings": "Settings",
       "profile": "Profile"
@@ -573,6 +618,9 @@
       "worktime": "Time Tracker",
       "users": "Users",
       "roles": "Roles",
+      "organization": "Organization",
+      "organization_join_requests": "Join Requests",
+      "organization_users": "Organization Users",
       "clients": "Clients",
       "consultation_invoices": "Invoices",
       "requests": "Requests",
@@ -594,14 +642,14 @@
       "todo_edit": "Edit",
       "todo_delete": "Delete",
       "client_create": "Create",
-      "client_edit": "Edit client",
+      "client_edit": "Edit Client",
       "client_delete": "Delete",
       "consultation_start": "Start",
       "consultation_stop": "Stop",
-      "consultation_edit": "Edit consultation",
+      "consultation_edit": "Edit Consultation",
       "invoice_create": "Create",
       "invoice_download": "Download",
-      "invoice_mark_paid": "Mark as paid",
+      "invoice_mark_paid": "Mark as Paid",
       "invoice_settings": "Settings",
       "user_create": "Create",
       "user_edit": "Edit",
@@ -610,10 +658,13 @@
       "role_create": "Create",
       "role_edit": "Edit",
       "role_delete": "Delete",
+      "organization_create": "Create",
+      "organization_edit": "Edit",
+      "organization_delete": "Delete",
       "settings_system": "System",
       "settings_notifications": "Notifications",
       "settings_profile": "Profile",
-      "database_reset_table": "Reset table",
+      "database_reset_table": "Reset Table",
       "database_logs": "Logs",
       "payroll_generate": "Generate",
       "payroll_export": "Export",
@@ -649,6 +700,7 @@
       "week": "Week",
       "quinzena": "Quinzena",
       "quinzenaFormat": "Format: YYYY-MM-Q1 (e.g. 2025-01-Q1)",
+      "weekFormat": "Format: YYYY-Www (e.g. 2025-W46)",
       "export": "Export",
       "exportTitle": "Export work times",
       "clickToView": "Click to view time entries for this day",
@@ -692,8 +744,11 @@
       "activeTracking": "Active time tracking:",
       "started": "Started:",
       "running": "Running",
-      "start": "Start",
-      "unknown": "Unknown"
+      "unknown": "Unknown",
+      "differentOrganizationWarning": {
+        "title": "Note: Different Organization",
+        "message": "This time tracking was started in a different organization. It will be assigned to the organization in which it was started after stopping."
+      }
     },
     "list": {
       "title": "Time Entries",
@@ -735,7 +790,8 @@
   "appDownload": {
     "title": "Intranet Mobile App",
     "description": "Access your work times and requests while on the go",
-    "download": "Download app"
+    "download": "Download app",
+    "downloadButton": "Download"
   },
   "createRequest": {
     "title": "New Request",
@@ -805,67 +861,9 @@
     }
   },
   "filter": {
-    "title": "Filter",
-    "apply": "Apply filter",
-    "reset": "Reset filter",
-    "save": "Save filter",
-    "filterName": "Filter Name",
-    "saveFilter": "Save filter",
-    "cancel": "Cancel",
-    "saveSuccess": "Filter saved successfully",
-    "saveError": "Error saving filter",
-    "noName": "Please enter a name for the filter",
-    "reservedNames": "The names \"Archive\" and \"Current\" are reserved for standard filters",
-    "noConditions": "Filter contains no valid conditions",
-    "notAuthenticated": "Not authenticated",
-    "cannotOverwriteStandard": "Standard filters cannot be overwritten",
-    "loadError": "Error loading existing filters",
-    "row": {
-      "selectColumn": "Select column",
-      "pleaseSelect": "Please select",
-      "enterValue": "Enter filter value...",
-      "removeCondition": "Remove filter condition",
-      "addCondition": "Add new filter condition",
-      "loadingData": "Loading data...",
-      "loadingUsers": "Loading users...",
-      "selectDate": "Select date",
-      "currentDay": "Current day",
-      "dynamicDay": "Current day (dynamic)",
-      "status": {
-        "approval": "For approval",
-        "approved": "Approved",
-        "to_improve": "To improve",
-        "denied": "Denied",
-        "open": "Open",
-        "in_progress": "In progress",
-        "improval": "To improve",
-        "quality_control": "Quality control",
-        "done": "Done",
-        "draft": "Draft",
-        "sent": "Sent",
-        "paid": "Paid",
-        "overdue": "Overdue",
-        "cancelled": "Cancelled"
-      },
-      "groups": {
-        "users": "Users",
-        "roles": "Roles"
-      }
-    },
-    "operators": {
-      "equals": "=",
-      "contains": "contains",
-      "startsWith": "starts with",
-      "endsWith": "ends with",
-      "notEquals": "is not",
-      "isExactly": "is exactly",
-      "after": "from",
-      "before": "until",
-      "between": "between",
-      "isEqual": "is equal",
-      "greaterThan": "longer than",
-      "lessThan": "shorter than"
-    }
+    "ungroup": "Ungroup",
+    "delete": "Delete Filter",
+    "cannotDeleteStandard": "Standard filters cannot be deleted"
   },
   "tableColumn": {
     "configure": "Configure columns",
@@ -897,104 +895,13 @@
       "loadError": "Error loading payroll data"
     }
   },
-  "cerebro": {
-    "title": "Cerebro",
-    "home": {
-      "title": "Readme - Overview"
-    },
-    "allArticles": {
-      "title": "All Articles"
-    },
-    "search": {
-      "title": "Search results for",
-      "noResults": "No results found"
-    },
-    "fileView": {
-      "fileNotFound": "File not found",
-      "fileNotFoundDescription": "The requested Markdown file could not be found."
-    }
-  },
-  "organization": {
-    "title": "Organization",
-    "settings": "Settings",
-    "organizationSettings": "Organization Settings",
-    "language": "Default Language",
-    "languageDescription": "This language will be used for all users who don't have their own language setting",
-    "displayName": "Display Name",
-    "domain": "Domain",
-    "logoUrl": "Logo URL",
-    "country": "Country",
-    "selectCountry": "Select Country",
-    "nit": "NIT",
-    "nitDescription": "Tax Identification Number (only for Colombia)",
-    "nitRequired": "NIT is required for Colombia",
-    "createOrganization": "Create new organization",
-    "joinOrganization": "Join organization",
-    "statistics": "Statistics",
-    "users": "Users",
-    "roles": "Roles",
-    "joinRequests": "Join requests",
-    "invitations": "Invitations",
-    "utilization": "Utilization",
-    "utilizationPercent": "Utilization",
-    "availableSlots": "Available slots",
-    "organizationName": "Organization Name",
-    "subscriptionPlan": "Subscription Plan",
-    "noPermission": "You do not have permission to view organization settings.",
-    "loadError": "Error loading organization",
-    "updateError": "Error updating organization",
-    "updateSuccess": "Organization updated successfully",
-    "noPermissionEdit": "You do not have permission to edit the organization",
-    "saving": "Saving...",
-    "notFound": "No organization found",
-    "createOrJoinHint": "You don't have an organization yet. Please create one or join one."
-  },
-  "settings": {
-    "title": "Settings",
-    "personal": "Personal",
-    "notifications": "Notifications",
-    "system": "System",
-    "language": "Language",
-    "darkMode": "Dark Mode",
-    "darkModeDescription": "Activate dark appearance",
-    "organizationLanguage": "Organization Language",
-    "userLanguage": "User Language",
-    "useOrganizationLanguage": "Use organization language",
-    "selectLanguage": "Select language",
-    "logoUpload": "Upload logo",
-    "logoUploadDescription": "Upload a logo for your company",
-    "logoUploadButton": "Select file (PNG, JPEG, max. 5MB)",
-    "logoUploading": "Uploading...",
-    "logoPreview": "Preview:",
-    "uploadDirectories": "Upload directories",
-    "taskAttachmentsPath": "Directory for task attachments",
-    "taskAttachmentsPathPlaceholder": "e.g. uploads/task-attachments",
-    "taskAttachmentsPathDescription": "Relative path for saving task attachments",
-    "requestAttachmentsPath": "Directory for request attachments",
-    "requestAttachmentsPathPlaceholder": "e.g. uploads/request-attachments",
-    "requestAttachmentsPathDescription": "Relative path for saving request attachments",
-    "saveDirectories": "Save",
-    "savingDirectories": "Saving...",
-    "saveDirectoriesSuccess": "Upload directories saved",
-    "saveDirectoriesError": "Error saving upload directories",
-    "databaseManagement": "Database management",
-    "databaseManagementDescription": "Advanced functions for managing the database. Administrators only.",
-    "monthlyReport": "Automatic monthly report",
-    "monthlyReportDescription": "Automatically generate and send monthly reports",
-    "monthlyReportEnabled": "Activated - Reports go to:",
-    "monthlyReportDisabled": "Automatic monthly report disabled",
-    "monthlyReportSaveError": "Error saving settings",
-    "loadingSettings": "Loading settings...",
-    "fileUploadError": "Please upload only PNG or JPEG files.",
-    "fileSizeError": "File is too large (maximum 5MB allowed).",
-    "logoUploadSuccess": "Logo uploaded successfully",
-    "logoUploadError": "Upload error",
-    "invalidResponse": "Invalid response format from server"
-  },
   "notifications": {
     "title": "Notifications",
     "ariaLabel": "Notifications",
     "markAllAsRead": "Mark all as read",
+    "deleteAll": "Delete all",
+    "new": "New",
+    "markAsRead": "Mark as read",
     "noNotifications": "No notifications available",
     "showAll": "Show all notifications",
     "invalidDate": "Invalid date",
@@ -1147,6 +1054,7 @@
     "tabs": {
       "users": "Users",
       "roles": "Roles",
+      "branches": "Branches",
       "organization": "Organization"
     },
     "noPermission": "Only administrators have access to this page.",
@@ -1173,107 +1081,17 @@
     "edit": "Edit Branch",
     "name": "Name",
     "noBranches": "No branches available",
-    "deleteConfirm": "Do you really want to delete this branch?"
-  },
-  "roles": {
-    "title": "Roles",
-    "permissions": "Permissions",
-    "noDescription": "No description",
-    "createRole": "Create New Role",
-    "editRole": "Edit Role",
-    "actions": {
-      "edit": "Edit role",
-      "delete": "Delete role"
-    },
-    "form": {
-      "name": "Name",
-      "description": "Description",
-      "detailedPermissions": "Detailed Permissions",
-      "activateAllPages": "Activate All Pages",
-      "deactivateAllPages": "Deactivate All Pages",
-      "pagesChecked": "Pages ✓",
-      "pagesUnchecked": "Pages ✗",
-      "activateAllTables": "Activate All Tables",
-      "deactivateAllTables": "Deactivate All Tables",
-      "tablesChecked": "Tables ✓",
-      "tablesUnchecked": "Tables ✗",
-      "activateAllButtons": "Activate All Buttons",
-      "deactivateAllButtons": "Deactivate All Buttons",
-      "buttonsChecked": "Buttons ✓",
-      "buttonsUnchecked": "Buttons ✗"
-    },
-    "pages": {
-      "dashboard": "Dashboard",
-      "worktracker": "Worktracker",
-      "consultations": "Consultations",
-      "team_worktime_control": "Team Control",
-      "payroll": "Payroll",
-      "usermanagement": "Organization",
-      "organization_management": "Organization Management",
-      "cerebro": "Cerebro",
-      "settings": "Settings",
-      "profile": "Profile"
-    },
-    "tables": {
-      "tasks": "Tasks",
-      "worktime": "Time Tracker",
-      "users": "Users",
-      "roles": "Roles",
-      "organization": "Organization",
-      "organization_join_requests": "Join Requests",
-      "organization_users": "Organization Users",
-      "clients": "Clients",
-      "consultation_invoices": "Invoices",
-      "requests": "Requests",
-      "team_worktime": "Team Worktime",
-      "settings": "Settings",
-      "notifications": "Notifications",
-      "branches": "Branches",
-      "monthly_reports": "Monthly Reports"
-    },
-    "buttons": {
-      "worktime_start": "Start",
-      "worktime_stop": "Stop",
-      "worktime_edit": "Edit",
-      "worktime_delete": "Delete",
-      "task_create": "Create",
-      "task_edit": "Edit",
-      "task_delete": "Delete",
-      "todo_create": "Create",
-      "todo_edit": "Edit",
-      "todo_delete": "Delete",
-      "client_create": "Create",
-      "client_edit": "Edit Client",
-      "client_delete": "Delete",
-      "consultation_start": "Start",
-      "consultation_stop": "Stop",
-      "consultation_edit": "Edit Consultation",
-      "invoice_create": "Create",
-      "invoice_download": "Download",
-      "invoice_mark_paid": "Mark as Paid",
-      "invoice_settings": "Settings",
-      "user_create": "Create",
-      "user_edit": "Edit",
-      "user_delete": "Delete",
-      "role_assign": "Assign",
-      "role_create": "Create",
-      "role_edit": "Edit",
-      "role_delete": "Delete",
-      "organization_create": "Create",
-      "organization_edit": "Edit",
-      "organization_delete": "Delete",
-      "settings_system": "System",
-      "settings_notifications": "Notifications",
-      "settings_profile": "Profile",
-      "database_reset_table": "Reset Table",
-      "database_logs": "Logs",
-      "payroll_generate": "Generate",
-      "payroll_export": "Export",
-      "payroll_edit": "Edit",
-      "cerebro": "Cerebro"
-    }
+    "deleteConfirm": "Do you really want to delete this branch?",
+    "loadError": "Error loading branches",
+    "nameRequired": "The name cannot be empty",
+    "saveError": "Error saving branch",
+    "deleteError": "Error deleting branch",
+    "filterCreated": "All filter for branches created",
+    "createStandardFiltersError": "Error creating standard filters",
+    "setInitialFilterError": "Error setting initial filter"
   },
   "cerebro": {
+    "title": "Cerebro",
     "home": {
       "title": "Readme - Overview"
     },
@@ -1316,7 +1134,24 @@
       "loadError": "Error loading data. Please try again later.",
       "saveError": "Error saving article",
       "saveSuccess": "Article saved successfully"
-    }
+    },
+    "menuClose": "Close Menu",
+    "menuOpen": "Open Menu",
+    "back": "Back",
+    "delete": "Delete",
+    "addMedia": "Add Media",
+    "addLink": "Add Link",
+    "addGitHubMarkdown": "Add GitHub Markdown",
+    "createdBy": "Created by",
+    "updatedAt": "Updated on",
+    "media": "Media",
+    "noMedia": "No media available.",
+    "externalLinks": "External Links",
+    "noLinks": "No links available",
+    "article": "Article",
+    "addFile": "Add File",
+    "structureLoadError": "Error loading article structure. Please try again later.",
+    "title": "Cerebro"
   },
   "sidebar": {
     "expand": "Expand",
@@ -1391,6 +1226,14 @@
           "endTime": "End time"
         }
       }
+    },
+    "permissions": {
+      "insufficient": "Insufficient Permissions",
+      "insufficientDetails": "Insufficient permissions for Team Worktime Control. Please make sure you have both the permission for \"team_worktime_control\" (page) and \"team_worktime\" (table).",
+      "missingPage": "Missing permission: team_worktime_control (page)",
+      "missingTable": "Missing permission: team_worktime (table)",
+      "contactAdmin": "Please contact an administrator to obtain the required permissions.",
+      "insufficientShort": "Insufficient permissions for Team Worktime Control"
     }
   },
   "errors": {
@@ -1449,7 +1292,8 @@
       "pending": "Pending",
       "approved": "Approved",
       "rejected": "Rejected",
-      "withdrawn": "Withdrawn"
+      "withdrawn": "Withdrawn",
+      "title": "Status"
     },
     "filter": {
       "requester": "Applicant",
@@ -1637,12 +1481,7 @@
     "markAsPaid": "Mark as paid",
     "noInvoicesFound": "No invoices found",
     "detailsAndPositions": "Invoice details & positions",
-    "consultant": "Consultant",
-    "paymentTerms": "Payment terms",
-    "subtotal": "Subtotal",
-    "vat": "VAT",
     "noVat": "No VAT",
-    "notes": "Notes",
     "items": "Invoice positions ({{count}})",
     "editItems": "Edit positions",
     "itemDescription": "Description",
@@ -1779,6 +1618,24 @@
       "start": "Started",
       "success": "Success",
       "error": "Error"
+    },
+    "tables": {
+      "permission": {
+        "displayName": "Permissions",
+        "description": "All role permissions (will be restored via seed data)"
+      },
+      "role": {
+        "displayName": "Roles",
+        "description": "All user roles incl. permissions (will be restored via seed data)"
+      },
+      "branch": {
+        "displayName": "Branches",
+        "description": "All branches (standard branches will be restored)"
+      },
+      "client": {
+        "displayName": "Demo Clients",
+        "description": "All clients (demo clients will be restored)"
+      }
     }
   },
   "lifecycle": {
@@ -1840,7 +1697,7 @@
     "noContracts": "No employment contracts available",
     "certificatesInfo": "Documents are created by HR or Admin. Contact HR to request an employment certificate.",
     "contractsInfo": "Documents are created by HR or Admin. Contact HR to request an employment contract.",
-    "generateTemplate": "Generate Template",
+    "generateTemplate": "Generate template",
     "generating": "Generating...",
     "issuedOn": "Issued on:",
     "createdBy": "Created by:",
@@ -1862,7 +1719,6 @@
     "cop": "COP",
     "emailTemplate": "Email template",
     "noTemplate": "No template available",
-    "generateTemplate": "Generate template",
     "completeRegistration": "Complete registration",
     "registrationNumber": "Registration number",
     "registrationNumberPlaceholder": "e.g. 123456789",
@@ -1937,7 +1793,22 @@
     "positionY": "Y (vertical)",
     "positionYHint": "0 = bottom",
     "positionPage": "Page",
-    "positionPageHint": "1 = first page"
+    "positionPageHint": "1 = first page",
+    "organization": {
+      "documentTemplates": "Document Templates",
+      "editTitle": "Edit Organization",
+      "lifecycleRoles": {
+        "title": "Lifecycle Roles",
+        "admin": "Admin Role",
+        "hr": "HR Role",
+        "legal": "Legal Role"
+      },
+      "tabs": {
+        "general": "General",
+        "documents": "Documents",
+        "roles": "Roles"
+      }
+    }
   },
   "reservations": {
     "title": "Reservations",
@@ -1990,5 +1861,209 @@
     "onlineCheckInCompleted": "Online check-in completed",
     "notFound": "Reservation not found",
     "checkInDate": "Check-in Date"
+  },
+  "socialSecurity": {
+    "provider": "Provider",
+    "number": "Number",
+    "registrationDate": "Registration Date",
+    "notes": "Notes",
+    "completedAt": "Completed on",
+    "notRegistered": "Not yet registered",
+    "editType": "Edit {{type}}",
+    "status": "Status",
+    "registrationNumber": "Registration Number",
+    "additionalInfo": "Additional information, contact details, etc.",
+    "loadError": "Error loading social security registrations",
+    "updateError": "Error updating social security registration"
+  },
+  "cerebroMedia": {
+    "title": "Add Media",
+    "fileTypeNotSupported": "This file type is not supported. Allowed are images, PDFs and videos.",
+    "pleaseSelectFile": "Please select a file.",
+    "pleaseEnterFileName": "Please enter a file name.",
+    "articleIdMissing": "Article ID missing.",
+    "uploadError": "Error uploading file. Please try again later.",
+    "noPermission": "You do not have permission to add media.",
+    "backToArticle": "Back to Article",
+    "clickToSelectFile": "Click to select a file",
+    "supportedFileTypes": "Supported file types: JPG, PNG, GIF, WEBP, PDF, MP4, WEBM",
+    "fileName": "File Name",
+    "fileNameRequired": "File Name *",
+    "selectOtherFile": "Select Other File",
+    "selectFile": "Select File",
+    "fileSize": "File Size:",
+    "uploadProgress": "Upload Progress",
+    "uploading": "Uploading...",
+    "uploadFile": "Upload File",
+    "videoNotSupported": "Your browser does not support the video tag."
+  },
+  "cerebroLink": {
+    "title": "Add External Link",
+    "invalidUrl": "Please enter a valid URL.",
+    "previewError": "Error fetching preview. Please check the URL.",
+    "articleIdMissing": "Article ID missing.",
+    "saveError": "Error saving link. Please try again later.",
+    "noPermission": "You do not have permission to add links.",
+    "backToArticle": "Back to Article",
+    "enterFullUrl": "Enter the full URL, including 'https://'.",
+    "titleAutoFill": "Will be automatically filled if available",
+    "titleOptional": "Optional. If empty, the title will be automatically extracted from the page.",
+    "previewLoading": "Loading preview...",
+    "preview": "Link Preview:",
+    "saving": "Saving...",
+    "addLink": "Add Link"
+  },
+  "client": {
+    "deleteTitle": "Delete Client",
+    "deleteConfirm": "Do you really want to delete the client \"{{name}}\"?",
+    "deleteSuccess": "Client successfully deleted",
+    "deleteError": "Error deleting client"
+  },
+  "notification": {
+    "deleteTitle": "Delete"
+  },
+  "githubLink": {
+    "addTitle": "Add GitHub Link",
+    "invalidUrl": "Please enter a valid GitHub URL",
+    "invalidUrlMessage": "Please enter a valid GitHub URL.",
+    "createError": "The GitHub link could not be created.",
+    "deleteError": "The GitHub link could not be deleted.",
+    "markdownFiles": "GitHub Markdown Files",
+    "titleOptional": "Title (optional)",
+    "titlePlaceholder": "e.g. Readme, Documentation, etc.",
+    "adding": "Adding...",
+    "addLink": "Add GitHub Link",
+    "linkedFiles": "Linked Markdown Files",
+    "loading": "Loading GitHub links...",
+    "noLinks": "No GitHub links available"
+  },
+  "camera": {
+    "onlyMobile": "Camera function is only available on mobile devices.",
+    "back": "Back",
+    "accessError": "Camera access not possible. Please check the permissions and make sure your device has a camera."
+  },
+  "worktimeTable": {
+    "reset": "Reset"
+  },
+  "roleManagement": {
+    "deleteError": "Error deleting role",
+    "networkError": "Network error deleting role",
+    "unhandledError": "Unhandled error deleting role:",
+    "buttonOrder": {
+      "start": "Start",
+      "stop": "Stop",
+      "create": "Create",
+      "edit": "Edit",
+      "delete": "Delete"
+    }
+  },
+  "monthlyReport": {
+    "recipientRequired": "Invoice recipient is required",
+    "recipient": "Invoice Recipient",
+    "recipientPlaceholder": "e.g.\nCompany XY AG\nExample Street 1\n8000 Zurich",
+    "saveError": "Error saving settings",
+    "saveSuccess": "Monthly report settings saved"
+  },
+  "invoice": {
+    "downloadPdfTitle": "Download PDF",
+    "downloadSuccess": "PDF successfully downloaded",
+    "downloadError": "Error downloading PDF",
+    "markPaidSuccess": "Invoice marked as paid",
+    "markPaidError": "Error marking as paid",
+    "loadError": "Error loading invoices"
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Welcome to the Intranet!",
+      "description": "We'll guide you through the most important features of the application. This tour will show you step by step how to use the different features."
+    },
+    "navigation": {
+      "back": "Back",
+      "next": "Next",
+      "skip": "Skip",
+      "complete": "End tour",
+      "restart": "Restart tour"
+    },
+    "progress": {
+      "step": "Step",
+      "of": "of"
+    },
+    "steps": {
+      "welcome": {
+        "title": "Welcome!",
+        "description": "Welcome to the Intranet! This introduction tour will show you the most important features. You can skip it at any time or restart it later in the settings."
+      },
+      "dashboard_layout": {
+        "title": "Dashboard Overview",
+        "description": "The Dashboard is your central entry point. Here you'll see all important information at a glance: your requests, statistics, and quick access to the most important features."
+      },
+      "requests_section": {
+        "title": "Requests Section",
+        "description": "Here you'll see all your requests and applications. You can create new requests, track status, and respond to answers."
+      },
+      "worktime_stats": {
+        "title": "Time Tracking Statistics",
+        "description": "This overview shows you your working hours, overtime, and more statistics about time tracking."
+      },
+      "create_request_button": {
+        "title": "Create Request",
+        "description": "Click here to create a new request. You can submit inquiries, applications, or improvement suggestions."
+      },
+      "request_form": {
+        "title": "Request Form",
+        "description": "Fill out the form to create a request. Select the responsible person, branch, and enter a description."
+      },
+      "worktracker_menu": {
+        "title": "Navigate to Worktracker",
+        "description": "Click here to go to the Worktracker. There you can manage your tasks and track status."
+      },
+      "task_list": {
+        "title": "Task List",
+        "description": "Here you'll see all your tasks. You can create, edit, change task status, and collaborate with other users."
+      },
+      "create_task_button": {
+        "title": "Create Task",
+        "description": "Create a new task to manage and track work. You can link tasks with requests and assign them to other users."
+      },
+      "start_worktime": {
+        "title": "Start Time Tracking",
+        "description": "Click here to start time tracking. Time will be automatically recorded until you stop it again."
+      },
+      "stop_worktime": {
+        "title": "Stop Time Tracking",
+        "description": "Stop time tracking when you're done working. The recorded time will be automatically saved."
+      },
+      "cerebro_menu": {
+        "title": "Open Cerebro Wiki",
+        "description": "The Cerebro Wiki is your knowledge base. Here you'll find articles, documentation, and can create your own articles."
+      },
+      "cerebro_search": {
+        "title": "Search Articles",
+        "description": "Search for articles in the wiki. You can search by keywords, browse articles, and create new content."
+      },
+      "settings_menu": {
+        "title": "Go to Settings",
+        "description": "In settings you can adjust your personal preferences, configure notifications, and restart the tour."
+      },
+      "settings_overview": {
+        "title": "Settings",
+        "description": "Here you can adjust your language, design (dark mode), notifications, and other personal settings."
+      }
+    }
+  },
+  "myJoinRequests": {
+    "title": "My Join Requests",
+    "loading": "Loading join requests...",
+    "loadError": "Error loading join requests",
+    "noRequests": "You have not submitted any join requests yet.",
+    "withdraw": "Withdraw",
+    "withdrawing": "Withdrawing...",
+    "withdrawSuccess": "Join request withdrawn successfully",
+    "withdrawError": "Error withdrawing join request",
+    "confirmWithdraw": "Are you sure you want to withdraw this join request?",
+    "processedBy": "Processed by",
+    "filter": {
+      "organization": "Organization"
+    }
   }
 }

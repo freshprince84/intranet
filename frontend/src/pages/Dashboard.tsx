@@ -51,12 +51,14 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
-        <WorktimeStats />
+      <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6" data-onboarding="dashboard-header">
+        <div data-onboarding="worktime-stats">
+          <WorktimeStats />
+        </div>
 
         <div className="mt-2 sm:mt-4 md:mt-6 grid grid-cols-1 gap-4">
           {/* Anfragen-Bereich */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full" data-onboarding="requests-section">
             <Requests />
           </div>
           

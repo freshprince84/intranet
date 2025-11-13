@@ -300,7 +300,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
       setError(null);
     } catch (error: any) {
       console.error('Fehler beim Laden der Rechnungen:', error);
-      setError('Fehler beim Laden der Rechnungen');
+      setError(t('invoice.loadError'));
     } finally {
       setLoading(false);
     }
@@ -336,10 +336,10 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast.success('PDF erfolgreich heruntergeladen');
+      toast.success(t('invoice.downloadSuccess'));
     } catch (error: any) {
       console.error('Fehler beim Download der PDF:', error);
-      toast.error(error.response?.data?.message || 'Fehler beim Download der PDF');
+      toast.error(error.response?.data?.message || t('invoice.downloadError'));
     }
   };
 
@@ -355,10 +355,10 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
         }
       );
       
-      toast.success('Rechnung als bezahlt markiert');
+      toast.success(t('invoice.markPaidSuccess'));
       loadInvoices(); // Refresh list
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Markieren als bezahlt');
+      toast.error(error.response?.data?.message || t('invoice.markPaidError'));
     }
   };
 
@@ -1064,7 +1064,7 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                       <button
                         onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
                         className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                        title="PDF herunterladen"
+                        title={t('invoice.downloadPdfTitle')}
                       >
                         <DocumentArrowDownIcon className="h-5 w-5" />
                       </button>

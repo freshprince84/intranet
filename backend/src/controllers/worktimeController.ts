@@ -3,9 +3,11 @@ import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { startOfWeek, endOfWeek, format, startOfDay, endOfDay, isAfter, isSameDay, addDays, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { toZonedTime, fromZonedTime } from 'date-fns-tz';
 import { createNotificationIfEnabled } from './notificationController';
 import { parse } from 'date-fns';
 import { getDataIsolationFilter } from '../middleware/organization';
+import { getUserLanguage, getWorktimeNotificationText } from '../utils/translations';
 
 const prisma = new PrismaClient();
 
@@ -120,10 +122,12 @@ export const startWorktime = async (req: Request, res: Response) => {
     console.log(`Zeiterfassung ID ${worktime.id} gespeichert mit Startzeit: ${worktime.startTime.toISOString()}`);
 
     // Erstelle eine Benachrichtigung, wenn eingeschaltet
+    const userLang = await getUserLanguage(Number(userId));
+    const notificationText = getWorktimeNotificationText(userLang, 'start', worktime.branch.name);
     await createNotificationIfEnabled({
       userId: Number(userId),
-      title: 'Zeiterfassung gestartet',
-      message: `Zeiterfassung für ${worktime.branch.name} wurde gestartet.`,
+      title: notificationText.title,
+      message: notificationText.message,
       type: NotificationType.worktime,
       relatedEntityId: worktime.id,
       relatedEntityType: 'start'
@@ -178,10 +182,12 @@ export const stopWorktime = async (req: Request, res: Response) => {
     console.log(`Gespeicherte Endzeit: ${worktime.endTime.toISOString()}`);
 
     // Erstelle eine Benachrichtigung, wenn eingeschaltet
+    const userLang = await getUserLanguage(Number(userId));
+    const notificationText = getWorktimeNotificationText(userLang, 'stop', worktime.branch.name);
     await createNotificationIfEnabled({
       userId: Number(userId),
-      title: 'Zeiterfassung beendet',
-      message: `Zeiterfassung für ${worktime.branch.name} wurde beendet.`,
+      title: notificationText.title,
+      message: notificationText.message,
       type: NotificationType.worktime,
       relatedEntityId: worktime.id,
       relatedEntityType: 'stop'
@@ -484,18 +490,32 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
     // UTC-Zeitgrenzen für Datenbankabfrage
     const periodStartUtc = new Date(`${periodStartStr}T00:00:00.000Z`);
     const periodEndUtc = new Date(`${periodEndStr}T23:59:59.999Z`);
+    
+    // Aktuelle Zeit für aktive Zeitmessungen (UTC)
+    const nowUtc = new Date();
         
     // Direkte Suche nach den Einträgen mit universellen UTC-Grenzen
+    // WICHTIG: Auch aktive Zeitmessungen (endTime: null) holen, die im Zeitraum starten
+    // ODER die vor dem Zeitraum starten aber noch aktiv sind (können in den Zeitraum hineinreichen)
     const entries = await prisma.workTime.findMany({
       where: {
         userId: Number(userId),
+        OR: [
+          // Einträge, die im Zeitraum starten (abgeschlossen oder aktiv)
+          {
         startTime: {
           gte: periodStartUtc,
           lte: periodEndUtc
+            }
+          },
+          // Aktive Einträge, die vor dem Zeitraum starten aber noch aktiv sind
+          {
+            startTime: {
+              lt: periodStartUtc
         },
-        endTime: {
-          not: null
+            endTime: null
         }
+        ]
       },
       include: {
         user: true,
@@ -504,7 +524,9 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
 
     console.log(`Gefundene Einträge (${isQuinzena ? 'Quinzena' : 'Woche'}): ${entries.length}`);
     if (entries.length > 0) {
-      console.log(`Erster Eintrag - startTime: ${entries[0].startTime.toISOString()}, endTime: ${entries[0].endTime.toISOString()}`);
+      entries.forEach((entry, index) => {
+        console.log(`Eintrag ${index + 1} - startTime: ${entry.startTime.toISOString()}, endTime: ${entry.endTime ? entry.endTime.toISOString() : 'null (aktiv)'}`);
+      });
     }
     
     // Erstelle Tagesdaten-Struktur
@@ -555,17 +577,108 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
 
     // Für jeden Zeiteintrag berechnen wir die Arbeitszeit in Stunden
     entries.forEach(entry => {
+      // Bestimme effektive Endzeit: Entweder gespeicherte Endzeit oder aktuelle Zeit (für aktive Zeitmessungen)
+      let effectiveEndTime: Date;
+      
       if (entry.endTime) {
+        // Abgeschlossene Zeitmessung: Verwende gespeicherte Endzeit
+        effectiveEndTime = entry.endTime;
+      } else {
+        // Aktive Zeitmessung: Berechne aktuelle Zeit in der Zeitzone des Eintrags
+        // WICHTIG: Wenn entry.timezone gespeichert ist, müssen wir die aktuelle Zeit
+        // in dieser Zeitzone berechnen, nicht in UTC, um die korrekte Differenz zu erhalten
+        
+        if (entry.timezone) {
+          // WICHTIG: Für aktive Zeitmessungen müssen wir die Differenz in der lokalen Zeitzone berechnen
+          // Problem: startTime ist in UTC gespeichert, aber repräsentiert lokale Zeit
+          // Lösung: Konvertiere beide Zeiten in die lokale Zeitzone und berechne die Differenz der lokalen Zeitkomponenten
+          
+          // toZonedTime konvertiert UTC in lokale Zeit (gibt Date-Objekt zurück, das die lokale Zeit repräsentiert)
+          const startTimeLocal = toZonedTime(entry.startTime, entry.timezone);
+          const nowLocal = toZonedTime(nowUtc, entry.timezone);
+          
+          // Extrahiere die lokalen Zeitkomponenten und berechne die Differenz
+          // WICHTIG: getTime() gibt immer UTC zurück, daher müssen wir die lokalen Komponenten manuell vergleichen
+          const startLocalMs = Date.UTC(
+            startTimeLocal.getFullYear(),
+            startTimeLocal.getMonth(),
+            startTimeLocal.getDate(),
+            startTimeLocal.getHours(),
+            startTimeLocal.getMinutes(),
+            startTimeLocal.getSeconds(),
+            startTimeLocal.getMilliseconds()
+          );
+          
+          const nowLocalMs = Date.UTC(
+            nowLocal.getFullYear(),
+            nowLocal.getMonth(),
+            nowLocal.getDate(),
+            nowLocal.getHours(),
+            nowLocal.getMinutes(),
+            nowLocal.getSeconds(),
+            nowLocal.getMilliseconds()
+          );
+          
+          // Berechne die Differenz in der lokalen Zeitzone (in Millisekunden)
+          const diffMs = nowLocalMs - startLocalMs;
+          
+          // Addiere die Differenz zu startTime (UTC), um effectiveEndTime (UTC) zu erhalten
+          effectiveEndTime = new Date(entry.startTime.getTime() + diffMs);
+          
+          console.log(`Zeitzonen-Korrektur für aktive Zeitmessung (ID: ${entry.id}):`);
+          console.log(`  Timezone: ${entry.timezone}`);
+          console.log(`  StartTime (UTC): ${entry.startTime.toISOString()}`);
+          console.log(`  StartTime (Local): ${format(startTimeLocal, 'yyyy-MM-dd HH:mm:ss')} (${entry.timezone})`);
+          console.log(`  Now (UTC): ${nowUtc.toISOString()}`);
+          console.log(`  Now (Local): ${format(nowLocal, 'yyyy-MM-dd HH:mm:ss')} (${entry.timezone})`);
+          console.log(`  Diff (Local): ${(diffMs / (1000 * 60 * 60)).toFixed(2)}h`);
+          console.log(`  EffectiveEndTime (UTC): ${effectiveEndTime.toISOString()}`);
+        } else {
+          // Fallback: Wenn keine Zeitzone gespeichert ist, verwende UTC direkt
+          effectiveEndTime = nowUtc;
+          console.warn(`Aktive Zeitmessung (ID: ${entry.id}) hat keine Zeitzone gespeichert, verwende UTC`);
+        }
+      }
+      
+      // Prüfe, ob die Zeitmessung überhaupt im Zeitraum liegt
+      // Wenn startTime vor dem Zeitraum liegt, beginne die Berechnung beim Periodenstart
+      const actualStartTime = entry.startTime < periodStartUtc ? periodStartUtc : entry.startTime;
+      
+      // Wenn effectiveEndTime nach dem Zeitraum liegt, begrenze auf Periodenende
+      const actualEndTime = effectiveEndTime > periodEndUtc ? periodEndUtc : effectiveEndTime;
+      
+      // Nur berechnen, wenn tatsächlich Zeit im Zeitraum liegt
+      if (actualStartTime < actualEndTime) {
         // Berechnung der Arbeitszeit in Millisekunden
-        const workTime = entry.endTime.getTime() - entry.startTime.getTime();
+        const workTime = actualEndTime.getTime() - actualStartTime.getTime();
         // Umrechnung in Stunden
         const hoursWorked = workTime / (1000 * 60 * 60);
         
+        // Für die Verteilung auf Tage: Wir müssen jeden Tag einzeln berechnen
+        // wenn die Zeitmessung über mehrere Tage geht
+        const startDate = new Date(actualStartTime);
+        const endDate = new Date(actualEndTime);
+        
+        // Iteriere über alle Tage, die von dieser Zeitmessung betroffen sind
+        let currentDate = new Date(startDate);
+        currentDate.setUTCHours(0, 0, 0, 0);
+        
+        while (currentDate <= endDate) {
+          // Berechne Start- und Endzeit für diesen Tag
+          const dayStart = currentDate > startDate ? currentDate : startDate;
+          const dayEnd = new Date(currentDate);
+          dayEnd.setUTCHours(23, 59, 59, 999);
+          const dayEndActual = dayEnd < endDate ? dayEnd : endDate;
+          
+          // Berechne Stunden für diesen Tag
+          const dayWorkTime = dayEndActual.getTime() - dayStart.getTime();
+          const dayHours = dayWorkTime / (1000 * 60 * 60);
+          
+          if (dayHours > 0) {
         // Extrahiere das Datum im UTC-Format
-        const date = entry.startTime;
-        const year = date.getUTCFullYear();
-        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-        const dayOfMonth = String(date.getUTCDate()).padStart(2, '0');
+            const year = currentDate.getUTCFullYear();
+            const month = String(currentDate.getUTCMonth() + 1).padStart(2, '0');
+            const dayOfMonth = String(currentDate.getUTCDate()).padStart(2, '0');
         const dateString = `${year}-${month}-${dayOfMonth}`;
         
         // Finde entsprechenden Tag in periodData
@@ -573,18 +686,26 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
         
         if (dayEntry) {
           const oldHours = dayEntry.hours;
-          dayEntry.hours += hoursWorked;
-          totalHours += hoursWorked;
+              dayEntry.hours += dayHours;
           
           // Tage mit Arbeit zählen (nur wenn vorher 0 Stunden waren)
-          if (hoursWorked > 0 && oldHours === 0) {
+              if (dayHours > 0 && oldHours === 0) {
             daysWorked++;
           }
         } else {
-          console.error(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
-          if (isQuinzena) {
-            console.error(`Verfügbare Daten in periodData:`, periodData.map(d => d.date));
+              console.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
+            }
           }
+          
+          // Nächster Tag
+          currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+        }
+        
+        // Addiere die Gesamtstunden (nur für den Zeitraum)
+        totalHours += hoursWorked;
+        
+        if (entry.endTime === null) {
+          console.log(`Aktive Zeitmessung berücksichtigt: ${entry.startTime.toISOString()} - jetzt = ${hoursWorked.toFixed(2)}h (im Zeitraum)`);
         }
       }
     });
@@ -941,10 +1062,12 @@ export const checkAndStopExceededWorktimes = async () => {
         console.log(`Lokale Endzeit: ${stoppedWorktime.endTime.getFullYear()}-${String(stoppedWorktime.endTime.getMonth() + 1).padStart(2, '0')}-${String(stoppedWorktime.endTime.getDate()).padStart(2, '0')} ${String(stoppedWorktime.endTime.getHours()).padStart(2, '0')}:${String(stoppedWorktime.endTime.getMinutes()).padStart(2, '0')}:${String(stoppedWorktime.endTime.getSeconds()).padStart(2, '0')}`);
 
         // Benachrichtigung erstellen
+        const userLang = await getUserLanguage(worktime.userId);
+        const notificationText = getWorktimeNotificationText(userLang, 'auto_stop', undefined, worktime.user.normalWorkingHours);
         await createNotificationIfEnabled({
           userId: worktime.userId,
-          title: 'Zeiterfassung automatisch beendet',
-          message: `Deine Zeiterfassung wurde automatisch beendet, da die tägliche Arbeitszeit von ${worktime.user.normalWorkingHours}h erreicht wurde.`,
+          title: notificationText.title,
+          message: notificationText.message,
           type: NotificationType.worktime,
           relatedEntityId: worktime.id,
           relatedEntityType: 'auto_stop'

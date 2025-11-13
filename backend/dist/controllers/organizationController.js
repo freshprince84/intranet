@@ -71,6 +71,8 @@ const updateOrganizationSchema = zod_1.z.object({
     isActive: zod_1.z.boolean().optional(),
     domain: zod_1.z.string().optional(),
     logo: zod_1.z.string().optional(),
+    country: zod_1.z.string().optional().nullable(),
+    nit: zod_1.z.string().optional().nullable(),
     settings: zod_1.z.record(zod_1.z.any()).optional() // Wird in updateCurrentOrganization spezifisch validiert
 });
 const languageSchema = zod_1.z.enum(['es', 'de', 'en']);
@@ -1136,6 +1138,8 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                 isActive: true,
                 maxUsers: true,
                 subscriptionPlan: true,
+                country: true,
+                nit: true,
                 settings: true,
                 createdAt: true,
                 updatedAt: true

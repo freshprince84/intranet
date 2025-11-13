@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon, ExclamationTriangleIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ExclamationTriangleIcon, CheckCircleIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
@@ -77,7 +77,7 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
   
   const validateForm = () => {
     if (confirmText.trim().toLowerCase() !== requiredConfirmText) {
-      setError(t('lifecycle.offboarding.complete.confirmTextMismatch') || 'Bestätigungstext stimmt nicht überein');
+      setError(t('lifecycle.offboarding.complete.confirmTextMismatch', { defaultValue: 'Bestätigungstext stimmt nicht überein' }));
       return false;
     }
     return true;
@@ -99,7 +99,7 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
       });
       
       showMessage(
-        t('lifecycle.offboarding.complete.success') || 'Offboarding erfolgreich abgeschlossen',
+        t('lifecycle.offboarding.complete.success', { defaultValue: 'Offboarding erfolgreich abgeschlossen' }),
         'success'
       );
       
@@ -108,8 +108,7 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
     } catch (err: any) {
       console.error('Fehler beim Abschließen des Offboarding:', err);
       const errorMessage = err.response?.data?.message || 
-        t('lifecycle.offboarding.complete.error') || 
-        'Fehler beim Abschließen des Offboarding';
+        t('lifecycle.offboarding.complete.error', { defaultValue: 'Fehler beim Abschließen des Offboarding' });
       setError(errorMessage);
       showMessage(errorMessage, 'error');
     } finally {
@@ -123,7 +122,7 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
       <div className="bg-gray-50 dark:bg-gray-700 p-3 rounded-md flex items-center space-x-3">
         <CheckCircleIcon className="h-5 w-5 text-gray-500 dark:text-gray-400" />
         <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {t('lifecycle.offboarding.complete.user') || 'Mitarbeiter'}: {userName}
+          {t('lifecycle.offboarding.complete.user', { defaultValue: 'Mitarbeiter' })}: {userName}
         </span>
       </div>
       
@@ -131,7 +130,7 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
       {offboardingTasks.length > 0 && (
         <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-md">
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            {t('lifecycle.offboarding.complete.tasksStatus') || 'Status der Offboarding-Aufgaben'}
+            {t('lifecycle.offboarding.complete.tasksStatus', { defaultValue: 'Status der Offboarding-Aufgaben' })}
           </h4>
           <div className="space-y-2">
             {offboardingTasks.map((task) => {
@@ -153,8 +152,8 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
                   <span>{task.title}</span>
                   <span className="ml-auto text-xs">
                     {isCompleted
-                      ? `(${t('common.done') || 'Abgeschlossen'})`
-                      : `(${t('common.open') || 'Offen'})`}
+                      ? `(${t('common.done', { defaultValue: 'Abgeschlossen' })})`
+                      : `(${t('common.open', { defaultValue: 'Offen' })})`}
                   </span>
                 </div>
               );
@@ -172,12 +171,13 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
             </div>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-orange-800 dark:text-orange-300">
-                {t('lifecycle.offboarding.complete.warningTitle') || 'Nicht alle Aufgaben abgeschlossen'}
+                {t('lifecycle.offboarding.complete.warningTitle', { defaultValue: 'Nicht alle Aufgaben abgeschlossen' })}
               </h3>
               <div className="mt-2 text-sm text-orange-700 dark:text-orange-200">
                 <p>
-                  {t('lifecycle.offboarding.complete.warningText') || 
-                    'Es sind noch nicht alle Offboarding-Aufgaben abgeschlossen. Sie können das Offboarding trotzdem abschließen, aber es wird empfohlen, alle Aufgaben zuerst zu erledigen.'}
+                  {t('lifecycle.offboarding.complete.warningText', { 
+                    defaultValue: 'Es sind noch nicht alle Offboarding-Aufgaben abgeschlossen. Sie können das Offboarding trotzdem abschließen, aber es wird empfohlen, alle Aufgaben zuerst zu erledigen.'
+                  })}
                 </p>
               </div>
             </div>
@@ -194,12 +194,13 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
             </div>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-green-800 dark:text-green-300">
-                {t('lifecycle.offboarding.complete.allTasksCompleted') || 'Alle Aufgaben abgeschlossen'}
+                {t('lifecycle.offboarding.complete.allTasksCompleted', { defaultValue: 'Alle Aufgaben abgeschlossen' })}
               </h3>
               <div className="mt-2 text-sm text-green-700 dark:text-green-200">
                 <p>
-                  {t('lifecycle.offboarding.complete.allTasksCompletedText') || 
-                    'Alle Offboarding-Aufgaben sind abgeschlossen. Sie können das Offboarding jetzt abschließen.'}
+                  {t('lifecycle.offboarding.complete.allTasksCompletedText', { 
+                    defaultValue: 'Alle Offboarding-Aufgaben sind abgeschlossen. Sie können das Offboarding jetzt abschließen.'
+                  })}
                 </p>
               </div>
             </div>
@@ -228,8 +229,9 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
           required
         />
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {t('lifecycle.offboarding.complete.confirmHint') || 
-            'Geben Sie den vollständigen Namen des Mitarbeiters ein, um das Offboarding abzuschließen'}
+          {t('lifecycle.offboarding.complete.confirmHint', { 
+            defaultValue: 'Geben Sie den vollständigen Namen des Mitarbeiters ein, um das Offboarding abzuschließen'
+          })}
         </p>
       </div>
       
@@ -241,12 +243,13 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
           </div>
           <div className="ml-3">
             <h3 className="text-sm font-medium text-red-800 dark:text-red-300">
-              {t('lifecycle.offboarding.complete.finalWarningTitle') || 'Wichtiger Hinweis'}
+              {t('lifecycle.offboarding.complete.finalWarningTitle', { defaultValue: 'Wichtiger Hinweis' })}
             </h3>
             <div className="mt-2 text-sm text-red-700 dark:text-red-200">
               <p>
-                {t('lifecycle.offboarding.complete.finalWarningText') || 
-                  'Durch das Abschließen des Offboarding wird der Mitarbeiter archiviert. Dieser Vorgang kann nicht rückgängig gemacht werden.'}
+                {t('lifecycle.offboarding.complete.finalWarningText', { 
+                  defaultValue: 'Durch das Abschließen des Offboarding wird der Mitarbeiter archiviert. Dieser Vorgang kann nicht rückgängig gemacht werden.'
+                })}
               </p>
             </div>
           </div>
@@ -258,26 +261,22 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
         <button
           type="button"
           onClick={onClose}
-          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={loading}
+          title={t('common.cancel', { defaultValue: 'Abbrechen' })}
         >
-          {t('common.cancel') || 'Abbrechen'}
+          <XMarkIcon className="h-5 w-5" />
         </button>
         <button
           type="submit"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={loading || confirmText.trim().toLowerCase() !== requiredConfirmText}
+          title={loading ? t('common.saving', { defaultValue: 'Speichern...' }) : t('lifecycle.offboarding.complete.button', { defaultValue: 'Offboarding abschließen' })}
         >
           {loading ? (
-            <span className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              {t('common.saving') || 'Speichern...'}
-            </span>
+            <ArrowPathIcon className="h-5 w-5 animate-spin" />
           ) : (
-            t('lifecycle.offboarding.complete.button') || 'Offboarding abschließen'
+            <CheckCircleIcon className="h-5 w-5" />
           )}
         </button>
       </div>
@@ -298,7 +297,7 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
             <div className="px-6 py-4 border-b dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <Dialog.Title className="text-lg font-semibold dark:text-white">
-                  {t('lifecycle.offboarding.complete.title') || 'Offboarding abschließen'}
+                  {t('lifecycle.offboarding.complete.title', { defaultValue: 'Offboarding abschließen' })}
                 </Dialog.Title>
                 <button
                   onClick={onClose}
@@ -355,7 +354,7 @@ const OffboardingCompleteModal: React.FC<OffboardingCompleteModalProps> = ({
       >
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
           <h2 className="text-lg font-semibold dark:text-white">
-            {t('lifecycle.offboarding.complete.title') || 'Offboarding abschließen'}
+            {t('lifecycle.offboarding.complete.title', { defaultValue: 'Offboarding abschließen' })}
           </h2>
           <button
             onClick={onClose}

@@ -27,6 +27,29 @@ Dieses Dokument definiert die verbindlichen Design-Standards für das Intranet-P
 - **Zugänglichkeit**: Alle Komponenten müssen für alle Benutzer zugänglich sein
 - **Responsivität**: Die Anwendung muss auf allen Geräten gut funktionieren
 
+### ⚠️ WICHTIG: Seitenhintergründe
+
+**Seitenhintergründe sind IMMER einfarbig - keine Gradienten!**
+
+- **Light Mode**: `bg-white` (weißer Hintergrund)
+- **Dark Mode**: `dark:bg-gray-900` (dunkelgrauer Hintergrund)
+- **Verboten**: `bg-gradient-*` Klassen für Seitenhintergründe (können vertikale Streifen verursachen)
+- **Ausnahme**: Gradienten sind nur für spezifische UI-Elemente erlaubt (z.B. Buttons, Cards), NICHT für Seitenhintergründe
+
+**Beispiel korrekt:**
+```tsx
+<div className="min-h-screen bg-white dark:bg-gray-900">
+  {/* Seiteninhalt */}
+</div>
+```
+
+**Beispiel falsch:**
+```tsx
+<div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+  {/* ❌ Gradient verursacht Streifen */}
+</div>
+```
+
 ## Farbpalette
 
 ### Primärfarben

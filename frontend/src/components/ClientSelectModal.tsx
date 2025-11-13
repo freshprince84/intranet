@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Dialog } from '@headlessui/react';
+import { useTranslation } from 'react-i18next';
 import { MagnifyingGlassIcon, XMarkIcon, PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
@@ -21,6 +22,7 @@ const ClientSelectModal: React.FC<ClientSelectModalProps> = ({
   onSelect,
   onCreateNew
 }) => {
+  const { t } = useTranslation();
   const [clients, setClients] = useState<Client[]>([]);
   const [filteredClients, setFilteredClients] = useState<Client[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -69,16 +71,16 @@ const ClientSelectModal: React.FC<ClientSelectModalProps> = ({
   const handleDelete = async (client: Client, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    if (!window.confirm(`Möchten Sie den Client "${client.name}" wirklich löschen?`)) {
+    if (!window.confirm(t('client.deleteConfirm', { name: client.name }))) {
       return;
     }
 
     try {
       await clientApi.deleteClient(client.id);
-      toast.success('Client erfolgreich gelöscht');
+      toast.success(t('client.deleteSuccess'));
       loadClients(); // Liste neu laden
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Löschen des Clients');
+      toast.error(error.response?.data?.message || t('client.deleteError'));
     }
   };
 
@@ -184,7 +186,7 @@ const ClientSelectModal: React.FC<ClientSelectModalProps> = ({
                           <button
                             onClick={(e) => handleDelete(client, e)}
                             className="p-2 text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                            title="Client löschen"
+                            title={t('client.deleteTitle')}
                           >
                             <TrashIcon className="h-5 w-5" />
                           </button>

@@ -73,7 +73,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
           const langResponse = await organizationService.getOrganizationLanguage();
           setSelectedOrgLanguage(langResponse.language || '');
         } catch (langError) {
-          console.error('Fehler beim Laden der Organisation-Sprache:', langError);
+          console.error(t('organization.loadLanguageError'), langError);
           setSelectedOrgLanguage('');
         }
       };
@@ -313,7 +313,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                           await setOrganizationLanguage(newLanguage);
                           showMessage(t('common.save'), 'success');
                         } catch (error) {
-                          console.error('Fehler beim Speichern der Organisation-Sprache:', error);
+                          console.error(t('organization.saveLanguageError'), error);
                           showMessage(t('worktime.messages.orgLanguageError'), 'error');
                         } finally {
                           setSavingOrgLanguage(false);
@@ -412,7 +412,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
             >
-              {t('organization.tabs.general') || 'Allgemein'}
+              {t('organization.tabs.general')}
             </button>
             <button
               type="button"
@@ -423,7 +423,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
             >
-              {t('organization.tabs.roles') || 'Rollen'}
+              {t('organization.tabs.roles')}
             </button>
             <button
               type="button"
@@ -434,7 +434,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
             >
-              {t('organization.tabs.documents') || 'Dokumente'}
+              {t('organization.tabs.documents')}
             </button>
             <button
               type="button"
@@ -445,7 +445,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
               } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
             >
-              {t('organization.tabs.smtp') || 'SMTP'}
+              {t('organization.tabs.smtp')}
             </button>
             {selectedCountry === 'CO' && (
               <button
@@ -457,7 +457,7 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
                 } whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm`}
               >
-                {t('organization.tabs.api') || 'API'}
+                {t('organization.tabs.api')}
               </button>
             )}
           </nav>

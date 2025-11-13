@@ -77,7 +77,14 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -99,7 +106,12 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 role: {
                     id: r.role.id,
                     name: r.role.name,
-                    permissions: r.role.permissions
+                    permissions: r.role.permissions,
+                    organization: r.role.organization ? {
+                        id: r.role.organization.id,
+                        name: r.role.organization.name,
+                        displayName: r.role.organization.displayName
+                    } : null
                 },
                 lastUsed: r.lastUsed
             }))
@@ -143,7 +155,14 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -206,7 +225,12 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 role: {
                     id: r.role.id,
                     name: r.role.name,
-                    permissions: r.role.permissions
+                    permissions: r.role.permissions,
+                    organization: r.role.organization ? {
+                        id: r.role.organization.id,
+                        name: r.role.organization.name,
+                        displayName: r.role.organization.displayName
+                    } : null
                 },
                 lastUsed: r.lastUsed
             }))
@@ -253,7 +277,14 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     include: {
                         role: {
                             include: {
-                                permissions: true
+                                permissions: true,
+                                organization: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        displayName: true
+                                    }
+                                }
                             }
                         }
                     }
@@ -273,7 +304,12 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 role: {
                     id: r.role.id,
                     name: r.role.name,
-                    permissions: r.role.permissions
+                    permissions: r.role.permissions,
+                    organization: r.role.organization ? {
+                        id: r.role.organization.id,
+                        name: r.role.organization.name,
+                        displayName: r.role.organization.displayName
+                    } : null
                 },
                 lastUsed: r.lastUsed
             }))

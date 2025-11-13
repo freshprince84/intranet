@@ -648,25 +648,21 @@ const ApiConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
           <button
             type="button"
             onClick={handleClear}
-            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+            className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+            title={t('organization.api.clear')}
           >
-            {t('organization.api.clear')}
+            <ArrowPathIcon className="h-5 w-5" />
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-700 rounded-md hover:bg-blue-700 dark:hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={loading ? t('organization.saving') : t('common.save')}
           >
             {loading ? (
-              <>
-                <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                {t('organization.saving')}
-              </>
+              <ArrowPathIcon className="h-5 w-5 animate-spin" />
             ) : (
-              <>
-                <CheckIcon className="h-4 w-4" />
-                {t('common.save')}
-              </>
+              <CheckIcon className="h-5 w-5" />
             )}
           </button>
         </div>

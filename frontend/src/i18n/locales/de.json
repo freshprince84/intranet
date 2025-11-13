@@ -49,7 +49,8 @@
     "unknown": "Unbekannt",
     "refresh": "Aktualisieren",
     "loadingScreen": "Wird geladen",
-    "loadingScreenSubtitle": "Fast fertig... nur noch einen Moment! ⚡"
+    "loadingScreenSubtitle": "Fast fertig... nur noch einen Moment! ⚡",
+    "notAuthenticated": "Nicht authentifiziert"
   },
   "header": {
     "profile": "Profil",
@@ -89,7 +90,34 @@
     "databaseManagement": "Datenbank-Verwaltung",
     "monthlyReport": "Automatische Monatsabrechnung",
     "monthlyReportDescription": "Monatliche Berichte automatisch generieren und versenden",
-    "saveAllChanges": "Alle Änderungen speichern"
+    "saveAllChanges": "Alle Änderungen speichern",
+    "darkModeDescription": "Dunkles Erscheinungsbild aktivieren",
+    "logoUploadDescription": "Laden Sie ein Logo für Ihr Unternehmen hoch",
+    "logoUploadButton": "Datei auswählen (PNG, JPEG, max. 5MB)",
+    "logoUploading": "Wird hochgeladen...",
+    "logoPreview": "Vorschau:",
+    "taskAttachmentsPathPlaceholder": "z.B. uploads/task-attachments",
+    "taskAttachmentsPathDescription": "Relativer Pfad zum Speichern von Task-Anhängen",
+    "requestAttachmentsPathPlaceholder": "z.B. uploads/request-attachments",
+    "requestAttachmentsPathDescription": "Relativer Pfad zum Speichern von Request-Anhängen",
+    "saveDirectories": "Speichern",
+    "savingDirectories": "Wird gespeichert...",
+    "saveDirectoriesSuccess": "Upload-Verzeichnisse gespeichert",
+    "saveDirectoriesError": "Fehler beim Speichern der Upload-Verzeichnisse",
+    "databaseManagementDescription": "Erweiterte Funktionen zur Verwaltung der Datenbank. Nur für Administratoren.",
+    "monthlyReportEnabled": "Aktiviert - Berichte gehen an:",
+    "monthlyReportDisabled": "Automatische Monatsabrechnung deaktiviert",
+    "monthlyReportSaveError": "Fehler beim Speichern der Einstellungen",
+    "loadingSettings": "Einstellungen werden geladen...",
+    "fileUploadError": "Bitte nur PNG oder JPEG Dateien hochladen.",
+    "fileSizeError": "Die Datei ist zu groß (maximal 5MB erlaubt).",
+    "logoUploadSuccess": "Logo erfolgreich hochgeladen",
+    "logoUploadError": "Fehler beim Upload",
+    "invalidResponse": "Ungültiges Antwortformat vom Server",
+    "onboarding": {
+      "restart": "Onboarding-Tour neu starten",
+      "restartDescription": "Starten Sie die Einführungstour erneut, um die wichtigsten Funktionen kennenzulernen."
+    }
   },
   "consultations": {
     "duration": "Dauer",
@@ -420,7 +448,14 @@
     "edit": "Niederlassung bearbeiten",
     "name": "Name",
     "noBranches": "Keine Niederlassungen vorhanden",
-    "deleteConfirm": "Möchten Sie diese Niederlassung wirklich löschen?"
+    "deleteConfirm": "Möchten Sie diese Niederlassung wirklich löschen?",
+    "loadError": "Fehler beim Laden der Niederlassungen",
+    "nameRequired": "Der Name darf nicht leer sein",
+    "saveError": "Fehler beim Speichern der Niederlassung",
+    "deleteError": "Fehler beim Löschen der Niederlassung",
+    "filterCreated": "Alle-Filter für Branches erstellt",
+    "createStandardFiltersError": "Fehler beim Erstellen der Standard-Filter",
+    "setInitialFilterError": "Fehler beim Setzen des initialen Filters"
   },
   "users": {
     "title": "Benutzer",
@@ -433,6 +468,14 @@
       "actions": "Aktionen"
     },
     "create": "Benutzer erstellen",
+    "createUser": {
+      "title": "Neuen Benutzer erstellen",
+      "email": "E-Mail",
+      "password": "Passwort",
+      "firstName": "Vorname",
+      "lastName": "Nachname",
+      "create": "Erstellen"
+    },
     "edit": "Benutzer bearbeiten",
     "delete": "Benutzer löschen",
     "active": "Aktiv",
@@ -584,6 +627,7 @@
       "week": "Woche",
       "quinzena": "Quinzena",
       "quinzenaFormat": "Format: YYYY-MM-Q1 (z.B. 2025-01-Q1)",
+      "weekFormat": "Format: YYYY-Www (z.B. 2025-W46)",
       "export": "Exportieren",
       "exportTitle": "Arbeitszeiten exportieren",
       "clickToView": "Klicken, um Zeiteinträge für diesen Tag anzuzeigen",
@@ -685,6 +729,8 @@
       "descriptionPlaceholder": "Text, Bilder oder Dateien hier einfügen...",
       "responsible": "Verantwortlicher",
       "branch": "Niederlassung",
+      "type": "Typ",
+      "isPrivate": "Privat",
       "dueDate": "Fälligkeitsdatum",
       "createTodo": "Todo automatisch erstellen",
       "select": "Bitte wählen...",
@@ -899,7 +945,23 @@
       "loadError": "Fehler beim Laden der Daten. Bitte versuchen Sie es später erneut.",
       "saveError": "Fehler beim Speichern des Artikels",
       "saveSuccess": "Artikel erfolgreich gespeichert"
-    }
+    },
+    "menuClose": "Menü schließen",
+    "menuOpen": "Menü öffnen",
+    "back": "Zurück",
+    "delete": "Löschen",
+    "addMedia": "Medien hinzufügen",
+    "addLink": "Link hinzufügen",
+    "addGitHubMarkdown": "GitHub Markdown hinzufügen",
+    "createdBy": "Erstellt von",
+    "updatedAt": "Aktualisiert am",
+    "media": "Medien",
+    "noMedia": "Keine Medien vorhanden.",
+    "externalLinks": "Externe Links",
+    "noLinks": "Keine Links vorhanden",
+    "article": "Artikel",
+    "addFile": "Datei hinzufügen",
+    "structureLoadError": "Fehler beim Laden der Artikelstruktur. Bitte versuchen Sie es später erneut."
   },
   "organization": {
     "title": "Organisation",
@@ -1063,54 +1125,17 @@
       "sendError": "Fehler beim Senden der Beitrittsanfrage",
       "sending": "Sende...",
       "send": "Senden"
-    }
-  },
-  "settings": {
-    "title": "Einstellungen",
-    "personal": "Persönlich",
-    "notifications": "Benachrichtigungen",
-    "system": "System",
-    "language": "Sprache",
-    "darkMode": "Dark Mode",
-    "darkModeDescription": "Dunkles Erscheinungsbild aktivieren",
-    "organizationLanguage": "Organisationssprache",
-    "userLanguage": "Benutzersprache",
-    "useOrganizationLanguage": "Organisationssprache verwenden",
-    "selectLanguage": "Sprache auswählen",
-    "logoUpload": "Logo hochladen",
-    "logoUploadDescription": "Laden Sie ein Logo für Ihr Unternehmen hoch",
-    "logoUploadButton": "Datei auswählen (PNG, JPEG, max. 5MB)",
-    "logoUploading": "Wird hochgeladen...",
-    "logoPreview": "Vorschau:",
-    "uploadDirectories": "Upload-Verzeichnisse",
-    "taskAttachmentsPath": "Verzeichnis für Task-Anhänge",
-    "taskAttachmentsPathPlaceholder": "z.B. uploads/task-attachments",
-    "taskAttachmentsPathDescription": "Relativer Pfad zum Speichern von Task-Anhängen",
-    "requestAttachmentsPath": "Verzeichnis für Request-Anhänge",
-    "requestAttachmentsPathPlaceholder": "z.B. uploads/request-attachments",
-    "requestAttachmentsPathDescription": "Relativer Pfad zum Speichern von Request-Anhängen",
-    "saveDirectories": "Speichern",
-    "savingDirectories": "Wird gespeichert...",
-    "saveDirectoriesSuccess": "Upload-Verzeichnisse gespeichert",
-    "saveDirectoriesError": "Fehler beim Speichern der Upload-Verzeichnisse",
-    "databaseManagement": "Datenbank-Verwaltung",
-    "databaseManagementDescription": "Erweiterte Funktionen zur Verwaltung der Datenbank. Nur für Administratoren.",
-    "monthlyReport": "Automatische Monatsabrechnung",
-    "monthlyReportDescription": "Monatliche Berichte automatisch generieren und versenden",
-    "monthlyReportEnabled": "Aktiviert - Berichte gehen an:",
-    "monthlyReportDisabled": "Automatische Monatsabrechnung deaktiviert",
-    "monthlyReportSaveError": "Fehler beim Speichern der Einstellungen",
-    "loadingSettings": "Einstellungen werden geladen...",
-    "fileUploadError": "Bitte nur PNG oder JPEG Dateien hochladen.",
-    "fileSizeError": "Die Datei ist zu groß (maximal 5MB erlaubt).",
-    "logoUploadSuccess": "Logo erfolgreich hochgeladen",
-    "logoUploadError": "Fehler beim Upload",
-    "invalidResponse": "Ungültiges Antwortformat vom Server"
+    },
+    "loadLanguageError": "Fehler beim Laden der Organisation-Sprache:",
+    "saveLanguageError": "Fehler beim Speichern der Organisation-Sprache:"
   },
   "notifications": {
     "title": "Benachrichtigungen",
     "ariaLabel": "Benachrichtigungen",
     "markAllAsRead": "Alle als gelesen markieren",
+    "deleteAll": "Alle löschen",
+    "new": "Neu",
+    "markAsRead": "Als gelesen markieren",
     "noNotifications": "Keine Benachrichtigungen vorhanden",
     "showAll": "Alle Benachrichtigungen anzeigen",
     "invalidDate": "Ungültiges Datum",
@@ -1331,6 +1356,14 @@
           "endTime": "Endzeit"
         }
       }
+    },
+    "permissions": {
+      "insufficient": "Keine ausreichenden Berechtigungen",
+      "insufficientDetails": "Keine ausreichenden Berechtigungen für Team Worktime Control. Bitte stellen Sie sicher, dass Sie sowohl die Berechtigung für \"team_worktime_control\" (Seite) als auch \"team_worktime\" (Tabelle) haben.",
+      "missingPage": "Fehlende Berechtigung: team_worktime_control (Seite)",
+      "missingTable": "Fehlende Berechtigung: team_worktime (Tabelle)",
+      "contactAdmin": "Bitte kontaktieren Sie einen Administrator, um die erforderlichen Berechtigungen zu erhalten.",
+      "insufficientShort": "Keine ausreichenden Berechtigungen für Team Worktime Control"
     }
   },
   "errors": {
@@ -1735,6 +1768,24 @@
       "start": "Gestartet",
       "success": "Erfolg",
       "error": "Fehler"
+    },
+    "tables": {
+      "permission": {
+        "displayName": "Berechtigungen",
+        "description": "Alle Rollenberechtigungen (werden durch Seed-Daten wiederhergestellt)"
+      },
+      "role": {
+        "displayName": "Rollen",
+        "description": "Alle Benutzerrollen inkl. Berechtigungen (werden durch Seed-Daten wiederhergestellt)"
+      },
+      "branch": {
+        "displayName": "Niederlassungen",
+        "description": "Alle Niederlassungen (Standard-Niederlassungen werden wiederhergestellt)"
+      },
+      "client": {
+        "displayName": "Demo-Clients",
+        "description": "Alle Clients (Demo-Clients werden wiederhergestellt)"
+      }
     }
   },
   "lifecycle": {
@@ -1881,6 +1932,21 @@
     "offboardingStarted": "Offboarding gestartet",
     "exitDate": "Austrittsdatum",
     "exitReason": "Austrittsgrund",
+    "organization": {
+      "documentTemplates": "Dokumenten-Templates",
+      "editTitle": "Organisation bearbeiten",
+      "lifecycleRoles": {
+        "title": "Lebenszyklus-Rollen",
+        "admin": "Admin-Rolle",
+        "hr": "HR-Rolle",
+        "legal": "Legal-Rolle"
+      },
+      "tabs": {
+        "general": "Allgemein",
+        "documents": "Dokumente",
+        "roles": "Rollen"
+      }
+    },
     "signatureType": "Signatur-Typ",
     "signerName": "Name des Unterzeichners",
     "signerNamePlaceholder": "z.B. Stefan Bossart",
@@ -1946,5 +2012,206 @@
     "onlineCheckInCompleted": "Online Check-in abgeschlossen",
     "notFound": "Reservierung nicht gefunden",
     "checkInDate": "Check-in Datum"
+  },
+  "socialSecurity": {
+    "provider": "Anbieter",
+    "number": "Nummer",
+    "registrationDate": "Anmeldedatum",
+    "notes": "Notizen",
+    "completedAt": "Abgeschlossen am",
+    "notRegistered": "Noch nicht registriert",
+    "editType": "{{type}} bearbeiten",
+    "status": "Status",
+    "registrationNumber": "Registrierungsnummer",
+    "additionalInfo": "Zusätzliche Informationen, Kontaktdaten, etc.",
+    "loadError": "Fehler beim Laden der Sozialversicherungen",
+    "updateError": "Fehler beim Aktualisieren der Sozialversicherung"
+  },
+  "cerebroMedia": {
+    "title": "Medien hinzufügen",
+    "fileTypeNotSupported": "Dieser Dateityp wird nicht unterstützt. Erlaubt sind Bilder, PDFs und Videos.",
+    "pleaseSelectFile": "Bitte wählen Sie eine Datei aus.",
+    "pleaseEnterFileName": "Bitte geben Sie einen Dateinamen ein.",
+    "articleIdMissing": "Artikel-ID fehlt.",
+    "uploadError": "Fehler beim Hochladen der Datei. Bitte versuchen Sie es später erneut.",
+    "noPermission": "Sie haben keine Berechtigung, Medien hinzuzufügen.",
+    "backToArticle": "Zurück zum Artikel",
+    "clickToSelectFile": "Klicken Sie, um eine Datei auszuwählen",
+    "supportedFileTypes": "Unterstützte Dateitypen: JPG, PNG, GIF, WEBP, PDF, MP4, WEBM",
+    "fileName": "Dateiname",
+    "fileNameRequired": "Dateiname *",
+    "selectOtherFile": "Andere Datei auswählen",
+    "selectFile": "Datei auswählen",
+    "fileSize": "Dateigröße:",
+    "uploadProgress": "Upload-Fortschritt",
+    "uploading": "Hochladen...",
+    "uploadFile": "Datei hochladen",
+    "videoNotSupported": "Ihr Browser unterstützt das Video-Tag nicht."
+  },
+  "cerebroLink": {
+    "title": "Externen Link hinzufügen",
+    "invalidUrl": "Bitte geben Sie eine gültige URL ein.",
+    "previewError": "Fehler beim Abrufen der Vorschau. Bitte überprüfen Sie die URL.",
+    "articleIdMissing": "Artikel-ID fehlt.",
+    "saveError": "Fehler beim Speichern des Links. Bitte versuchen Sie es später erneut.",
+    "noPermission": "Sie haben keine Berechtigung, Links hinzuzufügen.",
+    "backToArticle": "Zurück zum Artikel",
+    "enterFullUrl": "Geben Sie die vollständige URL ein, einschließlich 'https://'.",
+    "titleAutoFill": "Wird automatisch gefüllt, wenn verfügbar",
+    "titleOptional": "Optional. Wenn leer, wird der Titel automatisch aus der Seite extrahiert.",
+    "previewLoading": "Vorschau wird geladen...",
+    "preview": "Link-Vorschau:",
+    "saving": "Speichern...",
+    "addLink": "Link hinzufügen"
+  },
+  "client": {
+    "deleteTitle": "Client löschen",
+    "deleteConfirm": "Möchten Sie den Client \"{{name}}\" wirklich löschen?",
+    "deleteSuccess": "Client erfolgreich gelöscht",
+    "deleteError": "Fehler beim Löschen des Clients"
+  },
+  "dataCard": {
+    "nextStatus": "Nächster Status",
+    "previousStatus": "Vorheriger Status"
+  },
+  "notification": {
+    "deleteTitle": "Löschen"
+  },
+  "filter": {
+    "ungroup": "Gruppe auflösen",
+    "delete": "Filter löschen",
+    "cannotDeleteStandard": "Standard-Filter können nicht gelöscht werden"
+  },
+  "githubLink": {
+    "addTitle": "GitHub-Link hinzufügen",
+    "invalidUrl": "Bitte geben Sie eine gültige GitHub-URL ein",
+    "invalidUrlMessage": "Bitte geben Sie eine gültige GitHub-URL ein.",
+    "createError": "Der GitHub-Link konnte nicht erstellt werden.",
+    "deleteError": "Der GitHub-Link konnte nicht gelöscht werden.",
+    "markdownFiles": "GitHub Markdown-Dateien",
+    "titleOptional": "Titel (optional)",
+    "titlePlaceholder": "z.B. Readme, Dokumentation, etc.",
+    "adding": "Wird hinzugefügt...",
+    "addLink": "GitHub-Link hinzufügen",
+    "linkedFiles": "Verknüpfte Markdown-Dateien",
+    "loading": "Lade GitHub-Links...",
+    "noLinks": "Keine GitHub-Links vorhanden"
+  },
+  "camera": {
+    "onlyMobile": "Kamerafunktion ist nur auf mobilen Geräten verfügbar.",
+    "back": "Zurück",
+    "accessError": "Kamerazugriff nicht möglich. Bitte prüfen Sie die Berechtigungen und stellen Sie sicher, dass Ihr Gerät eine Kamera hat."
+  },
+  "worktimeTable": {
+    "reset": "Zurücksetzen"
+  },
+  "roleManagement": {
+    "deleteError": "Fehler beim Löschen der Rolle",
+    "networkError": "Netzwerkfehler beim Löschen der Rolle",
+    "unhandledError": "Unbehandelter Fehler beim Löschen der Rolle:",
+    "buttonOrder": {
+      "start": "Start",
+      "stop": "Stop",
+      "create": "Erstellen",
+      "edit": "Bearbeiten",
+      "delete": "Löschen"
+    }
+  },
+  "monthlyReport": {
+    "recipientRequired": "Rechnungsempfänger ist erforderlich",
+    "recipient": "Rechnungsempfänger",
+    "recipientPlaceholder": "z.B.\nFirma XY AG\nMusterstraße 1\n8000 Zürich",
+    "saveError": "Fehler beim Speichern der Einstellungen",
+    "saveSuccess": "Monatsabrechnungs-Einstellungen gespeichert"
+  },
+  "invoice": {
+    "downloadPdfTitle": "PDF herunterladen",
+    "downloadSuccess": "PDF erfolgreich heruntergeladen",
+    "downloadError": "Fehler beim Download der PDF",
+    "markPaidSuccess": "Rechnung als bezahlt markiert",
+    "markPaidError": "Fehler beim Markieren als bezahlt",
+    "loadError": "Fehler beim Laden der Rechnungen"
+  },
+  "common": {
+    "pleaseSelect": "Bitte wählen..."
+  },
+  "onboarding": {
+    "welcome": {
+      "title": "Willkommen im Intranet!",
+      "description": "Wir führen Sie durch die wichtigsten Funktionen der Anwendung. Diese Tour zeigt Ihnen Schritt für Schritt, wie Sie die verschiedenen Features nutzen können."
+    },
+    "navigation": {
+      "back": "Zurück",
+      "next": "Weiter",
+      "skip": "Überspringen",
+      "complete": "Tour beenden",
+      "restart": "Tour neu starten"
+    },
+    "progress": {
+      "step": "Schritt",
+      "of": "von"
+    },
+    "steps": {
+      "welcome": {
+        "title": "Willkommen!",
+        "description": "Herzlich willkommen im Intranet! Diese Einführungstour zeigt Ihnen die wichtigsten Funktionen. Sie können jederzeit überspringen oder später in den Einstellungen neu starten."
+      },
+      "dashboard_layout": {
+        "title": "Dashboard-Übersicht",
+        "description": "Das Dashboard ist Ihr zentraler Einstiegspunkt. Hier sehen Sie alle wichtigen Informationen auf einen Blick: Ihre Requests, Statistiken und schnelle Zugriffe auf die wichtigsten Funktionen."
+      },
+      "requests_section": {
+        "title": "Requests-Bereich",
+        "description": "Hier sehen Sie alle Ihre Anfragen und Anträge. Sie können neue Requests erstellen, den Status verfolgen und auf Antworten reagieren."
+      },
+      "worktime_stats": {
+        "title": "Zeiterfassungs-Statistiken",
+        "description": "Diese Übersicht zeigt Ihnen Ihre Arbeitszeiten, Überstunden und weitere Statistiken zur Zeiterfassung."
+      },
+      "create_request_button": {
+        "title": "Request erstellen",
+        "description": "Klicken Sie hier, um einen neuen Request zu erstellen. Sie können Anfragen, Anträge oder Verbesserungsvorschläge einreichen."
+      },
+      "request_form": {
+        "title": "Request-Formular",
+        "description": "Füllen Sie das Formular aus, um einen Request zu erstellen. Wählen Sie den Verantwortlichen, die Niederlassung und geben Sie eine Beschreibung ein."
+      },
+      "worktracker_menu": {
+        "title": "Zum Worktracker navigieren",
+        "description": "Klicken Sie hier, um zum Worktracker zu gelangen. Dort können Sie Ihre Aufgaben verwalten und den Status verfolgen."
+      },
+      "task_list": {
+        "title": "Task-Liste",
+        "description": "Hier sehen Sie alle Ihre Aufgaben. Sie können Tasks erstellen, bearbeiten, den Status ändern und mit anderen Benutzern zusammenarbeiten."
+      },
+      "create_task_button": {
+        "title": "Task erstellen",
+        "description": "Erstellen Sie einen neuen Task, um Aufgaben zu verwalten und zu verfolgen. Sie können Tasks mit Requests verknüpfen und anderen Benutzern zuweisen."
+      },
+      "start_worktime": {
+        "title": "Zeiterfassung starten",
+        "description": "Klicken Sie hier, um die Zeiterfassung zu starten. Die Zeit wird automatisch erfasst, bis Sie sie wieder stoppen."
+      },
+      "stop_worktime": {
+        "title": "Zeiterfassung stoppen",
+        "description": "Stoppen Sie die Zeiterfassung, wenn Sie mit der Arbeit fertig sind. Die erfasste Zeit wird automatisch gespeichert."
+      },
+      "cerebro_menu": {
+        "title": "Cerebro Wiki öffnen",
+        "description": "Das Cerebro Wiki ist Ihr Wissensspeicher. Hier finden Sie Artikel, Dokumentationen und können selbst Artikel erstellen."
+      },
+      "cerebro_search": {
+        "title": "Artikel suchen",
+        "description": "Suchen Sie nach Artikeln im Wiki. Sie können nach Stichwörtern suchen, Artikel durchsuchen und neue Inhalte erstellen."
+      },
+      "settings_menu": {
+        "title": "Zu den Einstellungen",
+        "description": "In den Einstellungen können Sie Ihre persönlichen Präferenzen anpassen, Benachrichtigungen konfigurieren und die Tour neu starten."
+      },
+      "settings_overview": {
+        "title": "Einstellungen",
+        "description": "Hier können Sie Ihre Sprache, das Design (Dark Mode), Benachrichtigungen und weitere persönliche Einstellungen anpassen."
+      }
+    }
   }
 }

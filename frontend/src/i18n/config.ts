@@ -26,8 +26,20 @@ i18n
     react: {
       useSuspense: false // Wichtig: Suspense deaktivieren für bessere Kompatibilität
     },
-    // Wichtig: Debug-Modus für Entwicklung (später entfernen)
-    debug: false
+    // Fehlende Übersetzungen behandeln
+    returnEmptyString: false, // Standard: gibt Schlüssel zurück wenn Übersetzung fehlt
+    returnNull: false, // Standard: gibt Schlüssel zurück
+    // Handler für fehlende Übersetzungen (nur in Entwicklung)
+    missingKeyHandler: (lng, ns, key) => {
+      if (process.env.NODE_ENV === 'development') {
+        console.warn(`[i18n] Missing translation: "${key}" in language "${lng}"`);
+      }
+      return key; // Gibt Schlüssel zurück als Fallback
+    },
+    // Fehlende Übersetzungen nicht speichern (in Produktion)
+    saveMissing: false,
+    // Debug-Modus nur in Entwicklung
+    debug: process.env.NODE_ENV === 'development'
   });
 
 export default i18n;

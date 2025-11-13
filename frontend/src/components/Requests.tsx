@@ -28,6 +28,7 @@ import {
   Squares2X2Icon,
   TableCellsIcon,
   UserIcon,
+  ChevronDownIcon,
   BuildingOfficeIcon,
   CalendarIcon,
   ChevronLeftIcon,
@@ -864,6 +865,7 @@ const Requests: React.FC = () => {
                 style={{ width: '30.19px', height: '30.19px' }}
                 title={t('requests.createRequest')}
                 aria-label={t('requests.createRequest')}
+                data-onboarding="create-request-button"
               >
                 <PlusIcon className="h-4 w-4" />
               </button>
@@ -1539,10 +1541,11 @@ const Requests: React.FC = () => {
         {filteredAndSortedRequests.length > displayLimit && (
           <div className="mt-4 flex justify-center">
             <button
-              className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
+              className="p-2 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
               onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+              title={`${t('common.showMore')} (${filteredAndSortedRequests.length - displayLimit} ${t('common.remaining')})`}
             >
-              {t('common.showMore')} ({filteredAndSortedRequests.length - displayLimit} {t('common.remaining')})
+              <ChevronDownIcon className="h-5 w-5" />
             </button>
           </div>
         )}

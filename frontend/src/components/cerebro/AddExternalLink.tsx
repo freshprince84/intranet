@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { cerebroApi } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
+import { XMarkIcon, PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 interface LinkPreview {
   url: string;
@@ -11,6 +13,7 @@ interface LinkPreview {
 }
 
 const AddExternalLink: React.FC = () => {
+  const { t } = useTranslation();
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const { hasPermission } = usePermissions();
@@ -48,7 +51,7 @@ const AddExternalLink: React.FC = () => {
       setPreviewLoading(true);
       
       if (!isValidUrl(urlToPreview)) {
-        setError('Bitte geben Sie eine gültige URL ein.');
+        setError(t('cerebroLink.invalidUrl'));
         setPreviewLoading(false);
         return;
       }
@@ -64,7 +67,7 @@ const AddExternalLink: React.FC = () => {
       setError(null);
     } catch (err) {
       console.error('Fehler beim Abrufen der Vorschau:', err);
-      setError('Fehler beim Abrufen der Vorschau. Bitte überprüfen Sie die URL.');
+      setError(t('cerebroLink.previewError'));
       setPreview(null);
     } finally {
       setPreviewLoading(false);
@@ -86,12 +89,12 @@ const AddExternalLink: React.FC = () => {
     e.preventDefault();
     
     if (!url.trim() || !isValidUrl(url)) {
-      setError('Bitte geben Sie eine gültige URL ein.');
+      setError(t('cerebroLink.invalidUrl'));
       return;
     }
     
     if (!slug) {
-      setError('Artikel-ID fehlt.');
+      setError(t('cerebroLink.articleIdMissing'));
       return;
     }
     
@@ -108,7 +111,7 @@ const AddExternalLink: React.FC = () => {
       navigate(`/cerebro/${slug}`);
     } catch (err) {
       console.error('Fehler beim Speichern des Links:', err);
-      setError('Fehler beim Speichern des Links. Bitte versuchen Sie es später erneut.');
+      setError(t('cerebroLink.saveError'));
       setLoading(false);
     }
   };
@@ -118,13 +121,13 @@ const AddExternalLink: React.FC = () => {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          Sie haben keine Berechtigung, Links hinzuzufügen.
+          {t('cerebroLink.noPermission')}
         </div>
         <button
           className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded"
           onClick={() => navigate(`/cerebro/${slug}`)}
         >
-          Zurück zum Artikel
+          {t('cerebroLink.backToArticle')}
         </button>
       </div>
     );
@@ -146,7 +149,7 @@ const AddExternalLink: React.FC = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Externen Link hinzufügen</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('cerebroLink.title')}</h1>
       
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
@@ -170,13 +173,13 @@ const AddExternalLink: React.FC = () => {
               required
             />
             <p className="text-sm text-gray-600 mt-1">
-              Geben Sie die vollständige URL ein, einschließlich 'https://'.
+              {t('cerebroLink.enterFullUrl')}
             </p>
           </div>
           
           <div className="mb-6">
             <label htmlFor="title" className="block text-gray-700 font-medium mb-2">
-              Titel
+              {t('common.description')}
             </label>
             <input
               type="text"
@@ -184,10 +187,10 @@ const AddExternalLink: React.FC = () => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Wird automatisch gefüllt, wenn verfügbar"
+              placeholder={t('cerebroLink.titleAutoFill')}
             />
             <p className="text-sm text-gray-600 mt-1">
-              Optional. Wenn leer, wird der Titel automatisch aus der Seite extrahiert.
+              {t('cerebroLink.titleOptional')}
             </p>
           </div>
           
@@ -196,12 +199,12 @@ const AddExternalLink: React.FC = () => {
             <div className="mb-6 p-4 border rounded bg-gray-50">
               <div className="flex items-center justify-center">
                 <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-blue-500 mr-2"></div>
-                Vorschau wird geladen...
+                {t('cerebroLink.previewLoading')}
               </div>
             </div>
           ) : preview ? (
             <div className="mb-6 p-4 border rounded bg-gray-50">
-              <h3 className="font-semibold mb-2">Link-Vorschau:</h3>
+              <h3 className="font-semibold mb-2">{t('cerebroLink.preview')}</h3>
               <div className="flex items-start">
                 {preview.thumbnail && (
                   <img 
@@ -223,23 +226,22 @@ const AddExternalLink: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate(`/cerebro/${slug}`)}
-              className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400"
+              className="p-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
+              title={t('common.cancel')}
             >
-              Abbrechen
+              <XMarkIcon className="h-5 w-5" />
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
+              title={loading ? t('cerebroLink.saving') : t('cerebroLink.addLink')}
             >
               {loading ? (
-                <>
-                  <span className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></span>
-                  Speichern...
-                </>
+                <ArrowPathIcon className="h-5 w-5 animate-spin" />
               ) : (
-                'Link hinzufügen'
+                <PlusIcon className="h-5 w-5" />
               )}
             </button>
           </div>

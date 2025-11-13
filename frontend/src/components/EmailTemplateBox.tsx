@@ -54,11 +54,11 @@ Mit freundlichen Grüßen
 Ihr Team`;
       
       setEmailTemplate(template);
-      showMessage(t('lifecycle.templateGenerated') || 'Email-Vorlage generiert', 'success');
+      showMessage(t('lifecycle.templateGenerated', { defaultValue: 'Email-Vorlage generiert' }), 'success');
     } catch (error: any) {
       console.error('Fehler beim Generieren der Email-Vorlage:', error);
       showMessage(
-        error.response?.data?.message || t('lifecycle.templateGenerationError') || 'Fehler beim Generieren der Vorlage',
+        error.response?.data?.message || t('lifecycle.templateGenerationError', { defaultValue: 'Fehler beim Generieren der Vorlage' }),
         'error'
       );
     } finally {
@@ -68,7 +68,7 @@ Ihr Team`;
 
   const handleSendEmail = async () => {
     if (!emailTemplate.trim()) {
-      showMessage(t('lifecycle.templateRequired') || 'Bitte generieren Sie zuerst eine Vorlage', 'warning');
+      showMessage(t('lifecycle.templateRequired', { defaultValue: 'Bitte generieren Sie zuerst eine Vorlage' }), 'warning');
       return;
     }
 
@@ -84,11 +84,11 @@ Ihr Team`;
       await new Promise(resolve => setTimeout(resolve, 1000));
       
       setEmailSent(true);
-      showMessage(t('lifecycle.emailSent') || 'Email erfolgreich versendet', 'success');
+      showMessage(t('lifecycle.emailSent', { defaultValue: 'Email erfolgreich versendet' }), 'success');
     } catch (error: any) {
       console.error('Fehler beim Versenden der Email:', error);
       showMessage(
-        error.response?.data?.message || t('lifecycle.emailSendError') || 'Fehler beim Versenden der Email',
+        error.response?.data?.message || t('lifecycle.emailSendError', { defaultValue: 'Fehler beim Versenden der Email' }),
         'error'
       );
     } finally {
@@ -101,7 +101,7 @@ Ihr Team`;
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold flex items-center dark:text-white">
           <EnvelopeIcon className="h-5 w-5 mr-2" />
-          {t('lifecycle.emailTemplate') || 'Email-Vorlage'}
+          {t('lifecycle.emailTemplate', { defaultValue: 'Email-Vorlage' })}
         </h3>
         <button
           onClick={handleGenerateTemplate}
@@ -111,10 +111,10 @@ Ihr Team`;
           {generating ? (
             <>
               <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
-              {t('common.generating') || 'Generiere...'}
+              {t('common.generating', { defaultValue: 'Generiere...' })}
             </>
           ) : (
-            t('lifecycle.generateTemplate') || 'Vorlage generieren'
+            t('lifecycle.generateTemplate', { defaultValue: 'Vorlage generieren' })
           )}
         </button>
       </div>
@@ -129,29 +129,21 @@ Ihr Team`;
             }}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={10}
-            placeholder={t('lifecycle.templatePlaceholder') || 'Email-Vorlage wird hier angezeigt...'}
+            placeholder={t('lifecycle.templatePlaceholder', { defaultValue: 'Email-Vorlage wird hier angezeigt...' })}
           />
           <div className="flex justify-end">
             <button
               onClick={handleSendEmail}
               disabled={loading || emailSent}
-              className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
+              className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={loading ? t('common.sending', { defaultValue: 'Sende...' }) : emailSent ? t('lifecycle.emailSent', { defaultValue: 'Versendet' }) : t('lifecycle.sendEmail', { defaultValue: 'Email versenden' })}
             >
               {loading ? (
-                <>
-                  <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
-                  {t('common.sending') || 'Sende...'}
-                </>
+                <ArrowPathIcon className="h-5 w-5 animate-spin" />
               ) : emailSent ? (
-                <>
-                  <CheckIcon className="h-4 w-4 mr-2" />
-                  {t('lifecycle.emailSent') || 'Versendet'}
-                </>
+                <CheckIcon className="h-5 w-5" />
               ) : (
-                <>
-                  <PaperAirplaneIcon className="h-4 w-4 mr-2" />
-                  {t('lifecycle.sendEmail') || 'Email versenden'}
-                </>
+                <PaperAirplaneIcon className="h-5 w-5" />
               )}
             </button>
           </div>
@@ -160,7 +152,7 @@ Ihr Team`;
       
       {!emailTemplate && (
         <div className="text-gray-500 dark:text-gray-400 text-sm text-center py-4">
-          {t('lifecycle.noTemplate') || 'Klicken Sie auf "Vorlage generieren" um eine Email-Vorlage zu erstellen'}
+          {t('lifecycle.noTemplate', { defaultValue: 'Klicken Sie auf "Vorlage generieren" um eine Email-Vorlage zu erstellen' })}
         </div>
       )}
     </div>

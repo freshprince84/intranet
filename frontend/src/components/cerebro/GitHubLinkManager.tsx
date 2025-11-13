@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { cerebroApi, CerebroExternalLink } from '../../api/cerebroApi.ts';
 
 interface GitHubLinkManagerProps {
@@ -14,6 +15,7 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
   onLinkAdded,
   onLinkRemoved
 }) => {
+  const { t } = useTranslation();
   const [links, setLinks] = useState<CerebroExternalLink[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,7 +60,7 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
     e.preventDefault();
     
     if (!newLink.url.trim()) {
-      setError('Bitte geben Sie eine gültige GitHub-URL ein');
+      setError(t('githubLink.invalidUrl'));
       return;
     }
 
@@ -90,7 +92,7 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
       }
     } catch (err) {
       console.error('Fehler beim Erstellen des GitHub-Links:', err);
-      setError('Der GitHub-Link konnte nicht erstellt werden.');
+      setError(t('githubLink.createError'));
     } finally {
       setLoading(false);
     }
@@ -108,7 +110,7 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
       }
     } catch (err) {
       console.error('Fehler beim Löschen des GitHub-Links:', err);
-      setError('Der GitHub-Link konnte nicht gelöscht werden.');
+      setError(t('githubLink.deleteError'));
     } finally {
       setLoading(false);
     }
@@ -124,7 +126,7 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
 
   return (
     <div className="github-link-manager">
-      <h3 className="text-lg font-medium mb-2 dark:text-white">GitHub Markdown-Dateien</h3>
+      <h3 className="text-lg font-medium mb-2 dark:text-white">{t('githubLink.markdownFiles')}</h3>
       
       {/* Fehleranzeige */}
       {error && (
@@ -155,21 +157,21 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
             />
             {!isValidGitHubUrl(newLink.url) && newLink.url.length > 0 && (
               <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                Bitte geben Sie eine gültige GitHub-URL ein.
+                {t('githubLink.invalidUrlMessage')}
               </p>
             )}
           </div>
           
           <div>
             <label htmlFor="github-title" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Titel (optional)
+              {t('githubLink.titleOptional')}
             </label>
             <input
               id="github-title"
               type="text"
               value={newLink.title}
               onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
-              placeholder="z.B. Readme, Dokumentation, etc."
+              placeholder={t('githubLink.titlePlaceholder')}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
             />
           </div>
@@ -183,19 +185,19 @@ const GitHubLinkManager: React.FC<GitHubLinkManagerProps> = ({
                 : 'bg-blue-600 dark:bg-blue-700 hover:bg-blue-700 dark:hover:bg-blue-600'
             }`}
           >
-            {loading ? 'Wird hinzugefügt...' : 'GitHub-Link hinzufügen'}
+            {loading ? t('githubLink.adding') : t('githubLink.addLink')}
           </button>
         </div>
       </form>
       
       {/* Liste der vorhandenen GitHub-Links */}
       <div className="space-y-3">
-        <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">Verknüpfte Markdown-Dateien</h4>
+        <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">{t('githubLink.linkedFiles')}</h4>
         
         {loading && links.length === 0 ? (
-          <div className="text-gray-500 dark:text-gray-400 italic">Lade GitHub-Links...</div>
+          <div className="text-gray-500 dark:text-gray-400 italic">{t('githubLink.loading')}</div>
         ) : links.length === 0 ? (
-          <div className="text-gray-500 dark:text-gray-400 italic">Keine GitHub-Links vorhanden</div>
+          <div className="text-gray-500 dark:text-gray-400 italic">{t('githubLink.noLinks')}</div>
         ) : (
           links.map((link) => (
             <div key={link.id} className="flex items-center justify-between p-3 border border-gray-200 dark:border-gray-700 rounded-md dark:bg-gray-800">

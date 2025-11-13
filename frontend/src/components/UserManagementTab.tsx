@@ -778,7 +778,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   }`}
                 >
                   <BuildingOfficeIcon className="h-5 w-5 inline mr-2" />
-                  Lebenszyklus
+                  {t('lifecycle.tabTitle')}
                 </button>
               </nav>
             </div>

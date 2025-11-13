@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon, ExclamationTriangleIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, ExclamationTriangleIcon, CalendarIcon, ArrowPathIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
@@ -76,7 +76,7 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
 
     // Validierung: exitDate
     if (!exitDate) {
-      errors.exitDate = t('lifecycle.offboarding.exitDateRequired') || 'Austrittsdatum ist erforderlich';
+      errors.exitDate = t('lifecycle.offboarding.exitDateRequired', { defaultValue: 'Austrittsdatum ist erforderlich' });
     } else {
       const selectedDate = new Date(exitDate);
       const today = new Date();
@@ -88,15 +88,15 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
       maxDate.setFullYear(maxDate.getFullYear() + 1);
       
       if (selectedDate > maxDate) {
-        errors.exitDate = t('lifecycle.offboarding.exitDateTooFar') || 'Austrittsdatum darf nicht mehr als 1 Jahr in der Zukunft liegen';
+        errors.exitDate = t('lifecycle.offboarding.exitDateTooFar', { defaultValue: 'Austrittsdatum darf nicht mehr als 1 Jahr in der Zukunft liegen' });
       }
     }
 
     // Validierung: exitReason
     if (!exitReason || exitReason.trim().length === 0) {
-      errors.exitReason = t('lifecycle.offboarding.exitReasonRequired') || 'Austrittsgrund ist erforderlich';
+      errors.exitReason = t('lifecycle.offboarding.exitReasonRequired', { defaultValue: 'Austrittsgrund ist erforderlich' });
     } else if (exitReason.trim().length < 10) {
-      errors.exitReason = t('lifecycle.offboarding.exitReasonTooShort') || 'Austrittsgrund muss mindestens 10 Zeichen lang sein';
+      errors.exitReason = t('lifecycle.offboarding.exitReasonTooShort', { defaultValue: 'Austrittsgrund muss mindestens 10 Zeichen lang sein' });
     }
 
     setValidationErrors(errors);
@@ -121,7 +121,7 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
       });
 
       showMessage(
-        t('lifecycle.offboarding.started') || 'Offboarding erfolgreich gestartet',
+        t('lifecycle.offboarding.started', { defaultValue: 'Offboarding erfolgreich gestartet' }),
         'success'
       );
       
@@ -130,8 +130,7 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
     } catch (err: any) {
       console.error('Fehler beim Starten des Offboarding:', err);
       const errorMessage = err.response?.data?.message || 
-        t('lifecycle.offboarding.startError') || 
-        'Fehler beim Starten des Offboarding';
+        t('lifecycle.offboarding.startError', { defaultValue: 'Fehler beim Starten des Offboarding' });
       setError(errorMessage);
       showMessage(errorMessage, 'error');
     } finally {
@@ -147,10 +146,10 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
           <ExclamationTriangleIcon className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5 mr-3 flex-shrink-0" />
           <div className="text-sm text-orange-800 dark:text-orange-200">
             <p className="font-medium mb-1">
-              {t('lifecycle.offboarding.warningTitle') || 'Wichtiger Hinweis'}
+              {t('lifecycle.offboarding.warningTitle', { defaultValue: 'Wichtiger Hinweis' })}
             </p>
             <p>
-              {t('lifecycle.offboarding.warningText') || 'Durch das Starten des Offboarding-Prozesses werden automatisch Tasks erstellt. Dieser Vorgang kann nicht rückgängig gemacht werden.'}
+              {t('lifecycle.offboarding.warningText', { defaultValue: 'Durch das Starten des Offboarding-Prozesses werden automatisch Tasks erstellt. Dieser Vorgang kann nicht rückgängig gemacht werden.' })}
             </p>
           </div>
         </div>
@@ -159,7 +158,7 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
       {/* User-Info */}
       <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
-          {t('lifecycle.offboarding.user') || 'Mitarbeiter'}
+          {t('lifecycle.offboarding.user', { defaultValue: 'Mitarbeiter' })}
         </p>
         <p className="font-medium dark:text-white">{userName}</p>
       </div>
@@ -167,7 +166,7 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
       {/* exitDate */}
       <div>
         <label htmlFor="exitDate" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('lifecycle.offboarding.exitDate') || 'Austrittsdatum'} *
+          {t('lifecycle.offboarding.exitDate', { defaultValue: 'Austrittsdatum' })} *
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -195,14 +194,14 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
           <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validationErrors.exitDate}</p>
         )}
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {t('lifecycle.offboarding.exitDateHint') || 'Das Datum, an dem der Mitarbeiter die Organisation verlässt'}
+          {t('lifecycle.offboarding.exitDateHint', { defaultValue: 'Das Datum, an dem der Mitarbeiter die Organisation verlässt' })}
         </p>
       </div>
 
       {/* exitReason */}
       <div>
         <label htmlFor="exitReason" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-          {t('lifecycle.offboarding.exitReason') || 'Austrittsgrund'} *
+          {t('lifecycle.offboarding.exitReason', { defaultValue: 'Austrittsgrund' })} *
         </label>
         <textarea
           id="exitReason"
@@ -219,14 +218,14 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
               ? 'border-red-300 dark:border-red-600 focus:ring-red-500 focus:border-red-500'
               : 'border-gray-300 dark:border-gray-600 focus:ring-blue-500 focus:border-blue-500'
           }`}
-          placeholder={t('lifecycle.offboarding.exitReasonPlaceholder') || 'z.B. Kündigung, Vertragsende, etc.'}
+          placeholder={t('lifecycle.offboarding.exitReasonPlaceholder', { defaultValue: 'z.B. Kündigung, Vertragsende, etc.' })}
           required
         />
         {validationErrors.exitReason && (
           <p className="mt-1 text-sm text-red-600 dark:text-red-400">{validationErrors.exitReason}</p>
         )}
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-          {t('lifecycle.offboarding.exitReasonHint') || 'Mindestens 10 Zeichen. Beschreiben Sie den Grund für den Austritt.'}
+          {t('lifecycle.offboarding.exitReasonHint', { defaultValue: 'Mindestens 10 Zeichen. Beschreiben Sie den Grund für den Austritt.' })}
         </p>
       </div>
 
@@ -243,25 +242,21 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
           type="button"
           onClick={onClose}
           disabled={loading}
-          className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+          title={t('common.cancel', { defaultValue: 'Abbrechen' })}
         >
-          {t('common.cancel') || 'Abbrechen'}
+          <XMarkIcon className="h-5 w-5" />
         </button>
         <button
           type="submit"
           disabled={loading}
-          className="px-4 py-2 text-sm font-medium text-white bg-orange-600 dark:bg-orange-700 rounded-md hover:bg-orange-700 dark:hover:bg-orange-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="p-2 bg-orange-600 dark:bg-orange-700 text-white rounded-md hover:bg-orange-700 dark:hover:bg-orange-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          title={loading ? t('common.saving', { defaultValue: 'Speichern...' }) : t('lifecycle.offboarding.startButton', { defaultValue: 'Offboarding starten' })}
         >
           {loading ? (
-            <span className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              {t('common.saving') || 'Speichern...'}
-            </span>
+            <ArrowPathIcon className="h-5 w-5 animate-spin" />
           ) : (
-            t('lifecycle.offboarding.startButton') || 'Offboarding starten'
+            <ArrowRightIcon className="h-5 w-5" />
           )}
         </button>
       </div>
@@ -280,7 +275,7 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
           <Dialog.Panel className="mx-auto max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl">
             <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
               <Dialog.Title className="text-lg font-semibold dark:text-white">
-                {t('lifecycle.offboarding.startTitle') || 'Offboarding starten'}
+                {t('lifecycle.offboarding.startTitle', { defaultValue: 'Offboarding starten' })}
               </Dialog.Title>
               <button
                 onClick={onClose}
@@ -328,7 +323,7 @@ const OffboardingStartModal: React.FC<OffboardingStartModalProps> = ({
       >
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 flex-shrink-0">
           <h2 className="text-lg font-semibold dark:text-white">
-            {t('lifecycle.offboarding.startTitle') || 'Offboarding starten'}
+            {t('lifecycle.offboarding.startTitle', { defaultValue: 'Offboarding starten' })}
           </h2>
           <button
             onClick={onClose}

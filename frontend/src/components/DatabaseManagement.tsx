@@ -38,6 +38,15 @@ const DatabaseManagement: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [logsLoading, setLogsLoading] = useState(false);
   
+  // Übersetzungen für Tabellennamen
+  const getTableDisplayName = (tableName: string): string => {
+    return t(`database.tables.${tableName}.displayName`, { defaultValue: tableName });
+  };
+  
+  const getTableDescription = (tableName: string): string => {
+    return t(`database.tables.${tableName}.description`, { defaultValue: '' });
+  };
+  
   // State für einzelne Tabellen-Resets
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [tablePassword, setTablePassword] = useState('');
@@ -240,7 +249,7 @@ const DatabaseManagement: React.FC = () => {
               className={`border rounded-lg p-4 ${getDangerColor(table.danger)}`}
             >
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-medium">{table.displayName}</h4>
+                <h4 className="font-medium">{getTableDisplayName(table.name)}</h4>
                 <span className={`text-xs px-2 py-1 rounded ${
                   table.danger === 'high' ? 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300' :
                   table.danger === 'medium' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300' :
@@ -251,7 +260,7 @@ const DatabaseManagement: React.FC = () => {
                 </span>
               </div>
               
-              <p className="text-sm mb-3">{table.description}</p>
+              <p className="text-sm mb-3">{getTableDescription(table.name) || table.description}</p>
               
               <div className="flex items-center text-sm mb-3">
                 <CheckCircleIcon className="h-4 w-4 mr-1" />

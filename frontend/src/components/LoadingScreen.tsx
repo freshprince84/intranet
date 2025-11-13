@@ -9,7 +9,7 @@ const LoadingScreen: React.FC = () => {
     const { t } = useTranslation();
     
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-900">
             <div className="text-center">
                 {/* Hauptspinner - nur eine Animation für optimale Performance */}
                 <div className="mb-8">
@@ -19,7 +19,7 @@ const LoadingScreen: React.FC = () => {
                 {/* Text mit subtiler Animation */}
                 <div className="space-y-2">
                     <p className="text-lg font-medium text-gray-700 dark:text-gray-300">
-                        {t('common.loadingScreen')}
+                        {t('common.loadingScreen', { defaultValue: 'Wird geladen...' })}
                     </p>
                     <div className="flex justify-center gap-1">
                         <span className="text-sm text-gray-500 dark:text-gray-400">.</span>
@@ -31,7 +31,7 @@ const LoadingScreen: React.FC = () => {
                 {/* Subtile Nachricht */}
                 <div className="mt-6 text-xs text-gray-400 dark:text-gray-500">
                     <p>
-                        {t('common.loadingScreenSubtitle')}
+                        {t('common.loadingScreenSubtitle', { defaultValue: 'Fast fertig... nur noch einen Moment! ⚡' })}
                     </p>
                 </div>
             </div>
