@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Tooltip,
   CircularProgress,
@@ -24,10 +25,13 @@ import {
 } from '@heroicons/react/24/outline';
 import { Notification, notificationApi } from '../api/notificationApi.ts';
 import { formatDistanceToNow } from 'date-fns';
-import { de } from 'date-fns/locale';
+import { de, es, enUS } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '../hooks/useLanguage.ts';
 
 const NotificationList: React.FC = () => {
+  const { t, i18n } = useTranslation();
+  const { activeLanguage } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -37,6 +41,16 @@ const NotificationList: React.FC = () => {
   const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
   const itemsPerPage = 10;
   const navigate = useNavigate();
+
+  // Dynamisches Locale basierend auf aktueller Sprache
+  const dateLocale = React.useMemo(() => {
+    const lang = activeLanguage || i18n.language || 'de';
+    switch (lang) {
+      case 'es': return es;
+      case 'en': return enUS;
+      default: return de;
+    }
+  }, [activeLanguage, i18n.language]);
 
   useEffect(() => {
     fetchNotifications();
@@ -173,10 +187,10 @@ const NotificationList: React.FC = () => {
     try {
       return formatDistanceToNow(new Date(dateString), { 
         addSuffix: true,
-        locale: de
+        locale: dateLocale
       });
     } catch (error) {
-      return 'Ungültiges Datum';
+      return t('notifications.invalidDate', { defaultValue: 'Ungültiges Datum' });
     }
   };
 
@@ -187,7 +201,7 @@ const NotificationList: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
               <BellIcon className="h-6 w-6 text-gray-600 dark:text-gray-400 mr-2" />
-              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">Benachrichtigungen</h2>
+              <h2 className="text-xl font-semibold text-gray-800 dark:text-white">{t('notifications.title', { defaultValue: 'Benachrichtigungen' })}</h2>
             </div>
             <div className="flex items-center space-x-2">
               <button
@@ -199,7 +213,7 @@ const NotificationList: React.FC = () => {
                     : 'bg-blue-50 text-blue-600 hover:bg-blue-100 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-900 dark:hover:bg-blue-900/50'}`}
               >
                 <CheckIcon className="h-4 w-4 mr-2" />
-                Alle gelesen
+                {t('notifications.markAllAsRead', { defaultValue: 'Alle gelesen' })}
               </button>
               <button
                 onClick={handleDeleteAllClick}
@@ -210,7 +224,7 @@ const NotificationList: React.FC = () => {
                     : 'bg-red-50 text-red-600 hover:bg-red-100 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-900 dark:hover:bg-red-900/50'}`}
               >
                 <TrashIcon className="h-4 w-4 mr-2" />
-                Alle löschen
+                {t('notifications.deleteAll', { defaultValue: 'Alle löschen' })}
               </button>
             </div>
           </div>
@@ -222,7 +236,7 @@ const NotificationList: React.FC = () => {
           ) : notifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
               <BellIcon className="h-16 w-16 mb-4 dark:text-gray-500" />
-              <p className="text-lg">Keine Benachrichtigungen vorhanden</p>
+              <p className="text-lg">{t('notifications.noNotifications', { defaultValue: 'Keine Benachrichtigungen vorhanden' })}</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -247,7 +261,7 @@ const NotificationList: React.FC = () => {
                         </h3>
                         {!notification.read && (
                           <span className="ml-2 px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 rounded-full">
-                            Neu
+                            {t('notifications.new', { defaultValue: 'Neu' })}
                           </span>
                         )}
                       </div>
@@ -260,7 +274,7 @@ const NotificationList: React.FC = () => {
                     </div>
                     <div className="ml-4 flex-shrink-0 flex space-x-2">
                       {!notification.read && (
-                        <Tooltip title="Als gelesen markieren">
+                        <Tooltip title={t('notifications.markAsRead', { defaultValue: 'Als gelesen markieren' })}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -272,7 +286,7 @@ const NotificationList: React.FC = () => {
                           </button>
                         </Tooltip>
                       )}
-                      <Tooltip title="Löschen">
+                      <Tooltip title={t('notification.deleteTitle')}>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -328,7 +342,7 @@ const NotificationList: React.FC = () => {
               Abbrechen
             </Button>
             <Button onClick={handleDeleteConfirm} color="error" className="dark:text-red-400">
-              Löschen
+              {t('common.delete')}
             </Button>
           </DialogActions>
         </Dialog>

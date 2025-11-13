@@ -85,7 +85,15 @@ export const API_ENDPOINTS = {
         DROPDOWN: '/users/dropdown',
         BY_ID: (id: number) => `/users/${id}`,
         CHANGE_ROLE: (id: number) => `/users/${id}/role`,
-        INVOICE_SETTINGS: '/users/invoice-settings'
+        INVOICE_SETTINGS: '/users/invoice-settings',
+        ONBOARDING: {
+            STATUS: '/users/onboarding/status',
+            PROGRESS: '/users/onboarding/progress',
+            COMPLETE: '/users/onboarding/complete',
+            EVENT: '/users/onboarding/event',
+            RESET: '/users/onboarding/reset',
+            ANALYTICS: '/users/onboarding/analytics'
+        }
     },
     // Team Worktime Control
     TEAM_WORKTIME: {

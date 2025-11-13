@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { roleApi } from '../api/apiClient.ts';
 import { Role, AccessLevel } from '../types/interfaces.ts';
-import { PencilIcon, TrashIcon, PlusIcon, FunnelIcon, XMarkIcon, CheckIcon, ArrowPathIcon, DocumentDuplicateIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, FunnelIcon, XMarkIcon, CheckIcon, ArrowPathIcon, DocumentDuplicateIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { useAuth } from '../hooks/useAuth.tsx';
@@ -781,13 +781,13 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
               // Rollenliste aktualisieren, um Frontend zu synchronisieren
               await fetchRoles();
             } else {
-              handleError(deleteError.response.data.message || 'Fehler beim Löschen der Rolle', {
+              handleError(deleteError.response.data.message || t('roleManagement.deleteError'), {
                 component: 'RoleManagementTab',
                 roleId: roleId
               });
             }
           } else {
-            handleError('Netzwerkfehler beim Löschen der Rolle', {
+            handleError(t('roleManagement.networkError'), {
               component: 'RoleManagementTab',
               roleId: roleId
             });
@@ -799,7 +799,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       console.log('Rolle erfolgreich gelöscht');
       if (onRolesChange) onRolesChange();
     } catch (err) {
-      console.error('Unbehandelter Fehler beim Löschen der Rolle:', err);
+      console.error(t('roleManagement.unhandledError'), err);
       handleError(err);
       
       // Bei einem unbehandelten Fehler trotzdem versuchen, die Rollenliste zu aktualisieren
@@ -1113,10 +1113,11 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           {filteredAndSortedRoles.length > displayLimit && (
             <div className="mt-4 flex justify-center">
               <button
-                className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700 dark:hover:bg-gray-700"
+                className="p-2 text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700 dark:hover:bg-gray-700"
                 onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+                title={`Mehr anzeigen (${filteredAndSortedRoles.length - displayLimit} verbleibend)`}
               >
-                Mehr anzeigen ({filteredAndSortedRoles.length - displayLimit} verbleibend)
+                <ChevronDownIcon className="h-5 w-5" />
               </button>
             </div>
           )}
@@ -1145,10 +1146,11 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           {filteredAndSortedRoles.length > displayLimit && (
             <div className="mt-4 flex justify-center">
               <button
-                className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700 dark:hover:bg-gray-700"
+                className="p-2 text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700 dark:hover:bg-gray-700"
                 onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+                title={`Mehr anzeigen (${filteredAndSortedRoles.length - displayLimit} verbleibend)`}
               >
-                Mehr anzeigen ({filteredAndSortedRoles.length - displayLimit} verbleibend)
+                <ChevronDownIcon className="h-5 w-5" />
               </button>
             </div>
           )}
@@ -1507,7 +1509,13 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                     const aName = buttonDisplayNames[a.entity] || a.entity;
                                     const bName = buttonDisplayNames[b.entity] || b.entity;
                                     // Logische Reihenfolge: Start, Stop, Erstellen, Bearbeiten, Löschen, dann alphabetisch
-                                    const order = ['Start', 'Stop', 'Erstellen', 'Bearbeiten', 'Löschen'];
+                                    const order = [
+                                      t('roleManagement.buttonOrder.start'),
+                                      t('roleManagement.buttonOrder.stop'),
+                                      t('roleManagement.buttonOrder.create'),
+                                      t('roleManagement.buttonOrder.edit'),
+                                      t('roleManagement.buttonOrder.delete')
+                                    ];
                                     const aIndex = order.indexOf(aName);
                                     const bIndex = order.indexOf(bName);
                                     if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
@@ -1831,7 +1839,13 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                                       .sort((a, b) => {
                                         const aName = buttonDisplayNames[a.entity] || a.entity;
                                         const bName = buttonDisplayNames[b.entity] || b.entity;
-                                        const order = ['Start', 'Stop', 'Erstellen', 'Bearbeiten', 'Löschen'];
+                                        const order = [
+                                      t('roleManagement.buttonOrder.start'),
+                                      t('roleManagement.buttonOrder.stop'),
+                                      t('roleManagement.buttonOrder.create'),
+                                      t('roleManagement.buttonOrder.edit'),
+                                      t('roleManagement.buttonOrder.delete')
+                                    ];
                                         const aIndex = order.indexOf(aName);
                                         const bIndex = order.indexOf(bName);
                                         if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;

@@ -75,7 +75,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
       console.error('Fehler beim Laden der Templates:', error);
       if (error.response?.status !== 404) {
         showMessage(
-          error.response?.data?.message || t('lifecycle.loadTemplatesError') || 'Fehler beim Laden der Templates',
+          error.response?.data?.message || t('lifecycle.loadTemplatesError', { defaultValue: 'Fehler beim Laden der Templates' }),
           'error'
         );
       }
@@ -92,7 +92,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
     // Prüfe Dateityp
     if (file.type !== 'application/pdf') {
       showMessage(
-        t('lifecycle.onlyPdfAllowed') || 'Nur PDF-Dateien sind erlaubt',
+        t('lifecycle.onlyPdfAllowed', { defaultValue: 'Nur PDF-Dateien sind erlaubt' }),
         'error'
       );
       return;
@@ -113,7 +113,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
       );
       
       showMessage(
-        response.data.message || t('lifecycle.templateUploaded') || 'Template erfolgreich hochgeladen',
+        response.data.message || t('lifecycle.templateUploaded', { defaultValue: 'Template erfolgreich hochgeladen' }),
         'success'
       );
       
@@ -122,7 +122,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
     } catch (error: any) {
       console.error('Fehler beim Hochladen:', error);
       showMessage(
-        error.response?.data?.message || t('lifecycle.uploadError') || 'Fehler beim Hochladen',
+        error.response?.data?.message || t('lifecycle.uploadError', { defaultValue: 'Fehler beim Hochladen' }),
         'error'
       );
     } finally {
@@ -134,7 +134,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
   };
 
   const handleDeleteTemplate = async (templateType: 'certificate' | 'contract') => {
-    if (!window.confirm(t('lifecycle.deleteTemplateConfirm') || 'Template wirklich löschen?')) {
+    if (!window.confirm(t('lifecycle.deleteTemplateConfirm', { defaultValue: 'Template wirklich löschen?' }))) {
       return;
     }
 
@@ -155,7 +155,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
       }
       
       showMessage(
-        t('lifecycle.templateDeleted') || 'Template erfolgreich gelöscht',
+        t('lifecycle.templateDeleted', { defaultValue: 'Template erfolgreich gelöscht' }),
         'success'
       );
       
@@ -164,7 +164,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
     } catch (error: any) {
       console.error('Fehler beim Löschen:', error);
       showMessage(
-        error.response?.data?.message || t('lifecycle.deleteError') || 'Fehler beim Löschen',
+        error.response?.data?.message || t('lifecycle.deleteError', { defaultValue: 'Fehler beim Löschen' }),
         'error'
       );
     }
@@ -184,7 +184,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center dark:text-white">
             <DocumentTextIcon className="h-5 w-5 mr-2" />
-            {t('organization.documentTemplates') || 'Dokumenten-Templates'}
+            {t('organization.documentTemplates', { defaultValue: 'Dokumenten-Templates' })}
           </h3>
           <div className="flex items-center space-x-2">
             <select
@@ -199,7 +199,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
               onClick={() => fileInputRef.current?.click()}
               disabled={uploading}
               className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              title={uploading ? (t('common.uploading') || 'Lade hoch...') : (t('lifecycle.uploadTemplate') || 'Template hochladen')}
+              title={uploading ? t('common.uploading', { defaultValue: 'Lade hoch...' }) : t('lifecycle.uploadTemplate', { defaultValue: 'Template hochladen' })}
             >
               {uploading ? (
                 <ArrowPathIcon className="h-5 w-5 animate-spin" />
@@ -220,8 +220,8 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
         {templates.length === 0 ? (
           <div className="text-center py-8 text-gray-500 dark:text-gray-400">
             <DocumentTextIcon className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p>{t('lifecycle.noTemplates') || 'Keine Templates vorhanden'}</p>
-            <p className="text-sm mt-2">{t('lifecycle.uploadFirstTemplate') || 'Laden Sie Ihr erstes Template hoch'}</p>
+            <p>{t('lifecycle.noTemplates', { defaultValue: 'Keine Templates vorhanden' })}</p>
+            <p className="text-sm mt-2">{t('lifecycle.uploadFirstTemplate', { defaultValue: 'Laden Sie Ihr erstes Template hoch' })}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -234,8 +234,8 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
                   <div className="font-medium dark:text-white">{template.name}</div>
                   <div className="text-sm text-gray-500 dark:text-gray-400">
                     {template.type === 'certificate' 
-                      ? (t('lifecycle.certificate') || 'Arbeitszeugnis')
-                      : (t('lifecycle.contract') || 'Arbeitsvertrag')}
+                      ? t('lifecycle.certificate', { defaultValue: 'Arbeitszeugnis' })
+                      : t('lifecycle.contract', { defaultValue: 'Arbeitsvertrag' })}
                     {template.version && ` - Version ${template.version}`}
                   </div>
                   {template.filePath && (
@@ -247,7 +247,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
                 <button
                   onClick={() => handleDeleteTemplate(template.type)}
                   className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 rounded-md"
-                  title={t('common.delete') || 'Löschen'}
+                  title={t('common.delete', { defaultValue: 'Löschen' })}
                 >
                   <TrashIcon className="h-5 w-5" />
                 </button>
@@ -261,7 +261,7 @@ const DocumentConfigurationTab: React.FC<DocumentConfigurationTabProps> = ({
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold flex items-center dark:text-white">
             <DocumentTextIcon className="h-5 w-5 mr-2" />
-            {t('organization.documentSignatures') || 'Dokumenten-Signaturen'}
+            {t('organization.documentSignatures', { defaultValue: 'Dokumenten-Signaturen' })}
           </h3>
         </div>
         
@@ -359,7 +359,7 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
       console.error('Fehler beim Laden der Signaturen:', error);
       if (error.response?.status !== 404) {
         showMessage(
-          error.response?.data?.message || t('lifecycle.loadSignaturesError') || 'Fehler beim Laden der Signaturen',
+          error.response?.data?.message || t('lifecycle.loadSignaturesError', { defaultValue: 'Fehler beim Laden der Signaturen' }),
           'error'
         );
       }
@@ -377,7 +377,7 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf'];
     if (!allowedTypes.includes(file.type)) {
       showMessage(
-        t('lifecycle.onlyImageOrPdfAllowed') || 'Nur Bilder (JPEG, PNG, GIF) oder PDF-Dateien sind erlaubt',
+        t('lifecycle.onlyImageOrPdfAllowed', { defaultValue: 'Nur Bilder (JPEG, PNG, GIF) oder PDF-Dateien sind erlaubt' }),
         'error'
       );
       return;
@@ -385,7 +385,7 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
 
     if (!signerName.trim()) {
       showMessage(
-        t('lifecycle.signerNameRequired') || 'Name des Unterzeichners ist erforderlich',
+        t('lifecycle.signerNameRequired', { defaultValue: 'Name des Unterzeichners ist erforderlich' }),
         'error'
       );
       return;
@@ -414,7 +414,7 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
       );
       
       showMessage(
-        response.data.message || t('lifecycle.signatureUploaded') || 'Signatur erfolgreich hochgeladen',
+        response.data.message || t('lifecycle.signatureUploaded', { defaultValue: 'Signatur erfolgreich hochgeladen' }),
         'success'
       );
       
@@ -431,7 +431,7 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
     } catch (error: any) {
       console.error('Fehler beim Hochladen:', error);
       showMessage(
-        error.response?.data?.message || t('lifecycle.uploadError') || 'Fehler beim Hochladen',
+        error.response?.data?.message || t('lifecycle.uploadError', { defaultValue: 'Fehler beim Hochladen' }),
         'error'
       );
     } finally {
@@ -443,7 +443,7 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
   };
 
   const handleDeleteSignature = async (signatureType: 'certificate' | 'contract') => {
-    if (!window.confirm(t('lifecycle.deleteSignatureConfirm') || 'Signatur wirklich löschen?')) {
+    if (!window.confirm(t('lifecycle.deleteSignatureConfirm', { defaultValue: 'Signatur wirklich löschen?' }))) {
       return;
     }
 
@@ -461,7 +461,7 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
       }
       
       showMessage(
-        t('lifecycle.signatureDeleted') || 'Signatur erfolgreich gelöscht',
+        t('lifecycle.signatureDeleted', { defaultValue: 'Signatur erfolgreich gelöscht' }),
         'success'
       );
       
@@ -469,7 +469,7 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
     } catch (error: any) {
       console.error('Fehler beim Löschen:', error);
       showMessage(
-        error.response?.data?.message || t('lifecycle.deleteError') || 'Fehler beim Löschen',
+        error.response?.data?.message || t('lifecycle.deleteError', { defaultValue: 'Fehler beim Löschen' }),
         'error'
       );
     }
@@ -489,52 +489,52 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('lifecycle.signatureType') || 'Signatur-Typ'}
+              {t('lifecycle.signatureType', { defaultValue: 'Signatur-Typ' })}
             </label>
             <select
               value={signatureType}
               onChange={(e) => setSignatureType(e.target.value as 'certificate' | 'contract')}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
             >
-              <option value="certificate">{t('lifecycle.certificate') || 'Arbeitszeugnis'}</option>
-              <option value="contract">{t('lifecycle.contract') || 'Arbeitsvertrag'}</option>
+              <option value="certificate">{t('lifecycle.certificate', { defaultValue: 'Arbeitszeugnis' })}</option>
+              <option value="contract">{t('lifecycle.contract', { defaultValue: 'Arbeitsvertrag' })}</option>
             </select>
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('lifecycle.signerName') || 'Name des Unterzeichners'} <span className="text-red-500">*</span>
+              {t('lifecycle.signerName', { defaultValue: 'Name des Unterzeichners' })} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={signerName}
               onChange={(e) => setSignerName(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-              placeholder={t('lifecycle.signerNamePlaceholder') || 'z.B. Stefan Bossart'}
+              placeholder={t('lifecycle.signerNamePlaceholder', { defaultValue: 'z.B. Stefan Bossart' })}
             />
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('lifecycle.signerPosition') || 'Position'}
+              {t('lifecycle.signerPosition', { defaultValue: 'Position' })}
             </label>
             <input
               type="text"
               value={signerPosition}
               onChange={(e) => setSignerPosition(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-              placeholder={t('lifecycle.signerPositionPlaceholder') || 'z.B. Geschäftsführer'}
+              placeholder={t('lifecycle.signerPositionPlaceholder', { defaultValue: 'z.B. Geschäftsführer' })}
             />
           </div>
           
           <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
             <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">
-              {t('lifecycle.signaturePosition') || 'Signatur-Position im PDF'}
+              {t('lifecycle.signaturePosition', { defaultValue: 'Signatur-Position im PDF' })}
             </h4>
             <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                  {t('lifecycle.positionX') || 'X (horizontal)'}
+                  {t('lifecycle.positionX', { defaultValue: 'X (horizontal)' })}
                 </label>
                 <input
                   type="number"
@@ -545,12 +545,12 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
                   min="0"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t('lifecycle.positionXHint') || '0 = links'}
+                  {t('lifecycle.positionXHint', { defaultValue: '0 = links' })}
                 </p>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                  {t('lifecycle.positionY') || 'Y (vertikal)'}
+                  {t('lifecycle.positionY', { defaultValue: 'Y (vertikal)' })}
                 </label>
                 <input
                   type="number"
@@ -561,12 +561,12 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
                   min="0"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t('lifecycle.positionYHint') || '0 = unten'}
+                  {t('lifecycle.positionYHint', { defaultValue: '0 = unten' })}
                 </p>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                  {t('lifecycle.positionPage') || 'Seite'}
+                  {t('lifecycle.positionPage', { defaultValue: 'Seite' })}
                 </label>
                 <input
                   type="number"
@@ -577,18 +577,18 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
                   min="1"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t('lifecycle.positionPageHint') || 'Seitennummer'}
+                  {t('lifecycle.positionPageHint', { defaultValue: 'Seitennummer' })}
                 </p>
               </div>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-              {t('lifecycle.signaturePositionHint') || 'Koordinaten in PDF-Punkten (1 Punkt = 1/72 Zoll). A4: 595 x 842 Punkte. Standard: X=400, Y=100, Seite=1'}
+              {t('lifecycle.signaturePositionHint', { defaultValue: 'Koordinaten in PDF-Punkten (1 Punkt = 1/72 Zoll). A4: 595 x 842 Punkte. Standard: X=400, Y=100, Seite=1' })}
             </p>
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              {t('lifecycle.signatureFile') || 'Signatur-Datei'} <span className="text-red-500">*</span>
+              {t('lifecycle.signatureFile', { defaultValue: 'Signatur-Datei' })} <span className="text-red-500">*</span>
             </label>
             <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-4 text-center">
               <input
@@ -606,14 +606,14 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
                 {uploading ? (
                   <span className="flex items-center space-x-2">
                     <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                    <span>{t('common.uploading') || 'Lade hoch...'}</span>
+                    <span>{t('common.uploading', { defaultValue: 'Lade hoch...' })}</span>
                   </span>
                 ) : (
-                  t('lifecycle.selectSignatureFile') || 'Datei auswählen'
+                  t('lifecycle.selectSignatureFile', { defaultValue: 'Datei auswählen' })
                 )}
               </button>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                {t('lifecycle.signatureFileHint') || 'JPEG, PNG, GIF oder PDF (max. 5MB)'}
+                {t('lifecycle.signatureFileHint', { defaultValue: 'JPEG, PNG, GIF oder PDF (max. 5MB)' })}
               </p>
             </div>
           </div>
@@ -623,7 +623,7 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
       {signatures.length > 0 && (
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
-            {t('lifecycle.uploadedSignatures') || 'Hochgeladene Signaturen'}
+            {t('lifecycle.uploadedSignatures', { defaultValue: 'Hochgeladene Signaturen' })}
           </h4>
           {signatures.map((signature) => (
             <div
@@ -633,8 +633,8 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
               <div>
                 <div className="font-medium dark:text-white">
                   {signature.type === 'certificate' 
-                    ? (t('lifecycle.certificate') || 'Arbeitszeugnis')
-                    : (t('lifecycle.contract') || 'Arbeitsvertrag')}
+                    ? t('lifecycle.certificate', { defaultValue: 'Arbeitszeugnis' })
+                    : t('lifecycle.contract', { defaultValue: 'Arbeitsvertrag' })}
                 </div>
                 <div className="text-sm text-gray-500 dark:text-gray-400">
                   {signature.signerName}
@@ -642,14 +642,14 @@ const SignatureUploadSection: React.FC<SignatureUploadSectionProps> = ({
                 </div>
                 {signature.position && (
                   <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                    {t('lifecycle.position') || 'Position'}: X={signature.position.x}, Y={signature.position.y}, {t('lifecycle.page') || 'Seite'} {signature.position.page}
+                    {t('lifecycle.position', { defaultValue: 'Position' })}: X={signature.position.x}, Y={signature.position.y}, {t('lifecycle.page', { defaultValue: 'Seite' })} {signature.position.page}
                   </div>
                 )}
               </div>
               <button
                 onClick={() => handleDeleteSignature(signature.type)}
                 className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900 rounded-md"
-                title={t('common.delete') || 'Löschen'}
+                title={t('common.delete', { defaultValue: 'Löschen' })}
               >
                 <TrashIcon className="h-5 w-5" />
               </button>
@@ -766,7 +766,7 @@ const FieldPositionConfiguration: React.FC<FieldPositionConfigurationProps> = ({
       });
       
       showMessage(
-        t('lifecycle.fieldPositionsSaved') || 'Feld-Positionen erfolgreich gespeichert',
+        t('lifecycle.fieldPositionsSaved', { defaultValue: 'Feld-Positionen erfolgreich gespeichert' }),
         'success'
       );
       
@@ -776,7 +776,7 @@ const FieldPositionConfiguration: React.FC<FieldPositionConfigurationProps> = ({
     } catch (error: any) {
       console.error('Fehler beim Speichern:', error);
       showMessage(
-        error.response?.data?.message || t('lifecycle.saveError') || 'Fehler beim Speichern',
+        error.response?.data?.message || t('lifecycle.saveError', { defaultValue: 'Fehler beim Speichern' }),
         'error'
       );
     } finally {
@@ -785,7 +785,7 @@ const FieldPositionConfiguration: React.FC<FieldPositionConfigurationProps> = ({
   };
 
   const handleReset = async () => {
-    if (window.confirm(t('lifecycle.resetFieldPositionsConfirm') || 'Positionen auf Standardwerte zurücksetzen?')) {
+    if (window.confirm(t('lifecycle.resetFieldPositionsConfirm', { defaultValue: 'Positionen auf Standardwerte zurücksetzen?' }))) {
       // Setze Felder auf Standard-Werte zurück
       const pageHeight = 841.89;
       const margin = 50;
@@ -824,22 +824,22 @@ const FieldPositionConfiguration: React.FC<FieldPositionConfigurationProps> = ({
 
   const fieldList = templateType === 'certificate' ? certificateFields : contractFields;
   const fieldLabels: Record<string, string> = {
-    userName: t('lifecycle.fieldUserName') || 'Benutzername',
-    organizationName: t('lifecycle.fieldOrganizationName') || 'Organisationsname',
-    currentDate: t('lifecycle.fieldCurrentDate') || 'Aktuelles Datum',
-    identificationNumber: t('lifecycle.fieldIdentificationNumber') || 'Ausweisnummer',
-    startDate: t('lifecycle.fieldStartDate') || 'Startdatum',
-    endDate: t('lifecycle.fieldEndDate') || 'Enddatum',
-    position: t('lifecycle.fieldPosition') || 'Position',
-    salary: t('lifecycle.fieldSalary') || 'Gehalt',
-    workingHours: t('lifecycle.fieldWorkingHours') || 'Arbeitsstunden'
+    userName: t('lifecycle.fieldUserName', { defaultValue: 'Benutzername' }),
+    organizationName: t('lifecycle.fieldOrganizationName', { defaultValue: 'Organisationsname' }),
+    currentDate: t('lifecycle.fieldCurrentDate', { defaultValue: 'Aktuelles Datum' }),
+    identificationNumber: t('lifecycle.fieldIdentificationNumber', { defaultValue: 'Ausweisnummer' }),
+    startDate: t('lifecycle.fieldStartDate', { defaultValue: 'Startdatum' }),
+    endDate: t('lifecycle.fieldEndDate', { defaultValue: 'Enddatum' }),
+    position: t('lifecycle.fieldPosition', { defaultValue: 'Position' }),
+    salary: t('lifecycle.fieldSalary', { defaultValue: 'Gehalt' }),
+    workingHours: t('lifecycle.fieldWorkingHours', { defaultValue: 'Arbeitsstunden' })
   };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold dark:text-white">
-          {t('organization.fieldPositions') || 'Feld-Positionen konfigurieren'}
+          {t('organization.fieldPositions', { defaultValue: 'Feld-Positionen konfigurieren' })}
         </h3>
         <div className="flex items-center space-x-2">
           <select
@@ -847,8 +847,8 @@ const FieldPositionConfiguration: React.FC<FieldPositionConfigurationProps> = ({
             onChange={(e) => setTemplateType(e.target.value as 'certificate' | 'contract')}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white text-sm"
           >
-            <option value="certificate">{t('lifecycle.certificate') || 'Certificado Laboral'}</option>
-            <option value="contract">{t('lifecycle.contract') || 'Contrato de Trabajo'}</option>
+            <option value="certificate">{t('lifecycle.certificate', { defaultValue: 'Certificado Laboral' })}</option>
+            <option value="contract">{t('lifecycle.contract', { defaultValue: 'Contrato de Trabajo' })}</option>
           </select>
         </div>
       </div>
@@ -856,10 +856,10 @@ const FieldPositionConfiguration: React.FC<FieldPositionConfigurationProps> = ({
       <div className="space-y-4">
         <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
           <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-1">
-            {t('lifecycle.fieldPositionsInfo') || 'Konfigurieren Sie die Positionen der Felder im Template-PDF.'}
+            {t('lifecycle.fieldPositionsInfo', { defaultValue: 'Konfigurieren Sie die Positionen der Felder im Template-PDF.' })}
           </p>
           <p className="text-xs text-blue-700 dark:text-blue-300">
-            {t('lifecycle.fieldPositionsHint') || 'Koordinaten in PDF-Punkten. A4: 595 x 842 Punkte. Y=0 ist unten, Y=842 ist oben. X=0 ist links, X=595 ist rechts.'}
+            {t('lifecycle.fieldPositionsHint', { defaultValue: 'Koordinaten in PDF-Punkten. A4: 595 x 842 Punkte. Y=0 ist unten, Y=842 ist oben. X=0 ist links, X=595 ist rechts.' })}
           </p>
         </div>
         
@@ -896,7 +896,7 @@ const FieldPositionConfiguration: React.FC<FieldPositionConfigurationProps> = ({
                 </div>
                 <div>
                   <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">
-                    {t('lifecycle.fontSize') || 'Schriftgröße'}
+                    {t('lifecycle.fontSize', { defaultValue: 'Schriftgröße' })}
                   </label>
                   <input
                     type="number"
@@ -915,22 +915,21 @@ const FieldPositionConfiguration: React.FC<FieldPositionConfigurationProps> = ({
         <div className="flex items-center justify-end space-x-2 pt-2 border-t border-gray-200 dark:border-gray-700">
           <button
             onClick={handleReset}
-            className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
+            className="p-2 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 dark:text-white"
+            title={t('common.reset', { defaultValue: 'Zurücksetzen' })}
           >
-            {t('common.reset') || 'Zurücksetzen'}
+            <ArrowPathIcon className="h-5 w-5" />
           </button>
           <button
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-800"
+            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed dark:bg-blue-700 dark:hover:bg-blue-800"
+            title={saving ? t('common.saving', { defaultValue: 'Speichern...' }) : t('common.save', { defaultValue: 'Speichern' })}
           >
             {saving ? (
-              <span className="flex items-center space-x-2">
-                <ArrowPathIcon className="h-4 w-4 animate-spin" />
-                <span>{t('common.saving') || 'Speichern...'}</span>
-              </span>
+              <ArrowPathIcon className="h-5 w-5 animate-spin" />
             ) : (
-              t('common.save') || 'Speichern'
+              <CheckIcon className="h-5 w-5" />
             )}
           </button>
         </div>

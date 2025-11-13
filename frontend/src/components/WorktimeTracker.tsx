@@ -452,6 +452,7 @@ const WorktimeTracker: React.FC = () => {
                             checked={isTracking}
                             onChange={handleToggleTracking}
                             disabled={!selectedBranch && !isTracking}
+                            data-onboarding={isTracking ? "stop-worktime" : "start-worktime"}
                         />
                         <div className={`w-20 h-10 rounded-full 
                             ${isTracking 

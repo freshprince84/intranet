@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import { 
   PencilIcon, 
@@ -9,7 +10,9 @@ import {
   Bars3Icon,
   ChevronUpIcon,
   ChevronDownIcon,
-  ArrowsUpDownIcon
+  ArrowsUpDownIcon,
+  CheckIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import TableColumnConfig from '../TableColumnConfig.tsx';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
@@ -50,6 +53,7 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
   loading,
   onUpdate
 }) => {
+  const { t } = useTranslation();
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editStartTime, setEditStartTime] = useState<string>('');
   const [editEndTime, setEditEndTime] = useState<string>('');
@@ -379,7 +383,7 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
               }}
               className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
             >
-              Zurücksetzen
+              {t('worktimeTable.reset')}
             </button>
           </div>
           
@@ -540,15 +544,21 @@ const UserWorktimeTable: React.FC<UserWorktimeTableProps> = ({
                           <button
                             onClick={() => handleSaveEdit(worktime.id)}
                             disabled={savingId === worktime.id}
-                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
+                            className="p-1.5 text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 rounded-md hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                            title={savingId === worktime.id ? 'Speichern...' : 'Speichern'}
                           >
-                            {savingId === worktime.id ? 'Speichern...' : 'Speichern'}
+                            {savingId === worktime.id ? (
+                              <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                            ) : (
+                              <CheckIcon className="h-5 w-5" />
+                            )}
                           </button>
                           <button
                             onClick={handleCancelEdit}
-                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+                            className="p-1.5 text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20"
+                            title="Abbrechen"
                           >
-                            Abbrechen
+                            <XMarkIcon className="h-5 w-5" />
                           </button>
                         </div>
                       ) : (

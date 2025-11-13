@@ -17,6 +17,9 @@ import { OrganizationProvider } from './contexts/OrganizationContext.tsx';
 import { SidepaneProvider } from './contexts/SidepaneContext.tsx';
 import { LanguageProvider } from './contexts/LanguageContext.tsx';
 import LoadingScreen from './components/LoadingScreen.tsx';
+import { OnboardingProvider } from './contexts/OnboardingContext.tsx';
+import { onboardingSteps } from './config/onboardingSteps.ts';
+import OnboardingTour from './components/OnboardingTour.tsx';
 
 // Lazy Loading für Page-Komponenten
 const Login = React.lazy(() => import('./pages/Login.tsx'));
@@ -55,10 +58,11 @@ const App: React.FC = () => {
                                 <SidepaneProvider>
                                     <WorktimeProvider>
                                         <BranchProvider>
-                                            <MessageProvider>
-                                            <FaviconLoader />
-                                            <Router>
-                                                <Routes>
+                                                <MessageProvider>
+                                                <FaviconLoader />
+                                                <Router>
+                                                    <OnboardingProvider steps={onboardingSteps}>
+                                                    <Routes>
                                                     {/* Öffentliche Routen */}
                                                     <Route path="/login" element={
                                                         <PublicRoute>
@@ -174,8 +178,10 @@ const App: React.FC = () => {
                                                             </ProtectedRoute>
                                                         } />
                                                     </Route>
-                                                </Routes>
-                                            </Router>
+                                                    </Routes>
+                                                    <OnboardingTour />
+                                                    </OnboardingProvider>
+                                                </Router>
                                         </MessageProvider>
                                     </BranchProvider>
                                 </WorktimeProvider>

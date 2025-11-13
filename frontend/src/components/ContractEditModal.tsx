@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon, CheckIcon, DocumentTextIcon, CalendarIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckIcon, DocumentTextIcon, CalendarIcon, CurrencyDollarIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
@@ -37,7 +37,7 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
   contract
 }) => {
   const { t } = useTranslation();
-  const { isHR } = usePermissions();
+  const { isHR, isAdmin, loading: permissionsLoading } = usePermissions();
   const { openSidepane, closeSidepane } = useSidepane();
   const { showMessage } = useMessage();
   
@@ -62,13 +62,17 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
   const [existingPdfUrl, setExistingPdfUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Prüfe Berechtigung
+  // Prüfe Berechtigung (nur wenn Berechtigungen geladen sind)
   useEffect(() => {
-    if (!isHR()) {
+    if (permissionsLoading) {
+      return; // Warte bis Berechtigungen geladen sind
+    }
+    
+    if (!isHR() && !isAdmin()) {
       showMessage('Nur HR oder Admin können Arbeitsverträge bearbeiten', 'error');
       onClose();
     }
-  }, [isHR, onClose, showMessage]);
+  }, [isHR, isAdmin, permissionsLoading, onClose, showMessage]);
 
   // Responsive Erkennung
   useEffect(() => {
@@ -180,7 +184,7 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
     }
   };
 
-  if (!isHR()) {
+  if (!isHR() && !isAdmin()) {
     return null;
   }
 
@@ -487,26 +491,22 @@ const ContractEditModal: React.FC<ContractEditModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+              className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+              title="Abbrechen"
             >
-              Abbrechen
+              <XMarkIcon className="h-5 w-5" />
             </button>
             <button
               type="button"
               onClick={handleSubmit}
               disabled={loading || !startDate}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              title={loading ? 'Wird aktualisiert...' : 'Aktualisieren'}
             >
               {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span>Wird aktualisiert...</span>
-                </>
+                <ArrowPathIcon className="h-5 w-5 animate-spin" />
               ) : (
-                <>
-                  <CheckIcon className="h-4 w-4" />
-                  <span>Aktualisieren</span>
-                </>
+                <CheckIcon className="h-5 w-5" />
               )}
             </button>
           </div>

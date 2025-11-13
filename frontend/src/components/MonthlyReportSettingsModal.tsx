@@ -31,7 +31,7 @@ const MonthlyReportSettingsModal: React.FC<MonthlyReportSettingsModalProps> = ({
         const newErrors: Record<string, string> = {};
         
         if (!formData.monthlyReportRecipient.trim()) {
-            newErrors.monthlyReportRecipient = 'Rechnungsempfänger ist erforderlich';
+            newErrors.monthlyReportRecipient = t('monthlyReport.recipientRequired');
         }
         
         if (formData.monthlyReportDay < 1 || formData.monthlyReportDay > 28) {
@@ -48,10 +48,10 @@ const MonthlyReportSettingsModal: React.FC<MonthlyReportSettingsModalProps> = ({
         try {
             setIsSaving(true);
             await onSave(formData);
-            toast.success('Monatsabrechnungs-Einstellungen gespeichert');
+            toast.success(t('monthlyReport.saveSuccess'));
             onClose();
         } catch (error) {
-            toast.error('Fehler beim Speichern der Einstellungen');
+            toast.error(t('monthlyReport.saveError'));
         } finally {
             setIsSaving(false);
         }
@@ -136,7 +136,7 @@ const MonthlyReportSettingsModal: React.FC<MonthlyReportSettingsModalProps> = ({
                             {/* Rechnungsempfänger */}
                             <div>
                                 <label htmlFor="monthlyReportRecipient" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                    Rechnungsempfänger *
+                                    {t('monthlyReport.recipient')} *
                                 </label>
                                 <textarea
                                     id="monthlyReportRecipient"
@@ -148,7 +148,7 @@ const MonthlyReportSettingsModal: React.FC<MonthlyReportSettingsModalProps> = ({
                                     }`}
                                     value={formData.monthlyReportRecipient}
                                     onChange={(e) => handleChange('monthlyReportRecipient', e.target.value)}
-                                    placeholder="z.B.&#10;Firma XY AG&#10;Musterstraße 1&#10;8000 Zürich"
+                                    placeholder={t('monthlyReport.recipientPlaceholder')}
                                 />
                                 {errors.monthlyReportRecipient && (
                                     <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.monthlyReportRecipient}</p>

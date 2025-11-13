@@ -12,7 +12,8 @@ import {
   PencilIcon,
   ArrowDownTrayIcon,
   CalendarIcon,
-  UserIcon
+  UserIcon,
+  ArrowRightIcon
 } from '@heroicons/react/24/outline';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import useMessage from '../hooks/useMessage.ts';
@@ -314,7 +315,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
   if (!lifecycleData) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-        <p className="text-gray-500 dark:text-gray-400">{t('lifecycle.noData') || 'Keine Lebenszyklus-Daten verfügbar'}</p>
+        <p className="text-gray-500 dark:text-gray-400">{t('lifecycle.noData', { defaultValue: 'Keine Lebenszyklus-Daten verfügbar' })}</p>
       </div>
     );
   }
@@ -336,18 +337,20 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
             {(isHR() || isAdmin()) && lifecycle.status === 'active' && (
               <button
                 onClick={() => setIsOffboardingStartModalOpen(true)}
-                className="px-3 py-1.5 text-sm font-medium text-white bg-orange-600 dark:bg-orange-700 rounded-md hover:bg-orange-700 dark:hover:bg-orange-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                className="p-2 bg-orange-600 dark:bg-orange-700 text-white rounded-md hover:bg-orange-700 dark:hover:bg-orange-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                title={t('lifecycle.offboarding.startButton', { defaultValue: 'Offboarding starten' })}
               >
-                {t('lifecycle.offboarding.startButton') || 'Offboarding starten'}
+                <ArrowRightIcon className="h-5 w-5" />
               </button>
             )}
             {/* Offboarding-Abschluss-Button (nur für HR/Admin, nur wenn Status = "offboarding") */}
             {(isHR() || isAdmin()) && lifecycle.status === 'offboarding' && (
               <button
                 onClick={() => setIsOffboardingCompleteModalOpen(true)}
-                className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 dark:bg-red-700 rounded-md hover:bg-red-700 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                className="p-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                title={t('lifecycle.offboarding.complete.button', { defaultValue: 'Offboarding abschließen' })}
               >
-                {t('lifecycle.offboarding.complete.button') || 'Offboarding abschließen'}
+                <CheckCircleIcon className="h-5 w-5" />
               </button>
             )}
           </div>
@@ -378,13 +381,13 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                   {new Date(lifecycle.contractStartDate).toLocaleDateString('de-DE')}
                 </span>
               ) : (
-                <span className="text-gray-400 italic text-sm">{t('lifecycle.notSet') || 'Nicht gesetzt'}</span>
+                <span className="text-gray-400 italic text-sm">{t('lifecycle.notSet', { defaultValue: 'Nicht gesetzt' })}</span>
               )}
               {(isHR() || isAdmin()) && (
                 <button
                   onClick={() => handleEditContractDates()}
                   className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition"
-                  title={t('lifecycle.edit') || 'Bearbeiten'}
+                  title={t('lifecycle.edit', { defaultValue: 'Bearbeiten' })}
                 >
                   <PencilIcon className="h-4 w-4" />
                 </button>
@@ -399,13 +402,13 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                   {new Date(lifecycle.contractEndDate).toLocaleDateString('de-DE')}
                 </span>
               ) : (
-                <span className="text-gray-400 italic text-sm">{t('lifecycle.notSet') || 'Nicht gesetzt'}</span>
+                <span className="text-gray-400 italic text-sm">{t('lifecycle.notSet', { defaultValue: 'Nicht gesetzt' })}</span>
               )}
               {(isHR() || isAdmin()) && (
                 <button
                   onClick={() => handleEditContractDates()}
                   className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition"
-                  title={t('lifecycle.edit') || 'Bearbeiten'}
+                  title={t('lifecycle.edit', { defaultValue: 'Bearbeiten' })}
                 >
                   <PencilIcon className="h-4 w-4" />
                 </button>
@@ -461,7 +464,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
       {/* Progress-Bar - Offboarding */}
       {lifecycle.status === 'offboarding' && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold dark:text-white mb-4">{t('lifecycle.offboarding.progressTitle') || 'Offboarding-Fortschritt'}</h3>
+          <h3 className="text-lg font-semibold dark:text-white mb-4">{t('lifecycle.offboarding.progressTitle', { defaultValue: 'Offboarding-Fortschritt' })}</h3>
           <div className="space-y-4">
             {/* Progress-Bar */}
             {(() => {
@@ -491,7 +494,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
             {offboardingTasks.length > 0 && (
               <div className="mt-4 space-y-2">
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('lifecycle.offboarding.tasksTitle') || 'Offboarding-Aufgaben'}
+                  {t('lifecycle.offboarding.tasksTitle', { defaultValue: 'Offboarding-Aufgaben' })}
                 </h4>
                 {offboardingTasks.map((task) => {
                   const isCompleted = task.status === 'done';
@@ -527,8 +530,8 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                           : 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200'
                       }`}>
                         {isCompleted
-                          ? t('common.done') || 'Abgeschlossen'
-                          : t('common.open') || 'Offen'}
+                          ? t('common.done', { defaultValue: 'Abgeschlossen' })
+                          : t('common.open', { defaultValue: 'Offen' })}
                       </span>
                     </div>
                   );
@@ -546,7 +549,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
             <DocumentTextIcon className="h-5 w-5 mr-2" />
             {t('lifecycle.certificates')}
           </h3>
-          {isHR() && (
+          {(isHR() || isAdmin()) && (
             <button
               onClick={() => setIsCertificateCreateModalOpen(true)}
               className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
@@ -601,7 +604,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
-                    {isHR() && (
+                    {(isHR() || isAdmin()) && (
                       <button
                         onClick={() => setEditingCertificate(cert)}
                         className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
@@ -632,15 +635,11 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
 
       {/* Dokumente - Arbeitsverträge */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold dark:text-white flex items-center">
-            <DocumentTextIcon className="h-5 w-5 mr-2" />
-            {t('lifecycle.contracts')}
-          </h3>
-          {isHR() && (
+        <div className="flex items-center mb-4">
+          {(isHR() || isAdmin()) && (
             <button
               onClick={() => setIsContractCreateModalOpen(true)}
-              className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
+              className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center mr-3"
               style={{ width: '30.19px', height: '30.19px' }}
               title={t('lifecycle.createContract')}
               aria-label={t('lifecycle.createContract')}
@@ -648,6 +647,10 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
               <PlusIcon className="h-4 w-4" />
             </button>
           )}
+          <h3 className="text-lg font-semibold dark:text-white flex items-center">
+            <DocumentTextIcon className="h-5 w-5 mr-2" />
+            {t('lifecycle.contracts')}
+          </h3>
         </div>
 
         {contracts.length === 0 ? (
@@ -704,7 +707,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
-                    {isHR() && (
+                    {(isHR() || isAdmin()) && (
                       <button
                         onClick={() => setEditingContract(contract)}
                         className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
@@ -867,13 +870,13 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md mx-4">
             <h2 className="text-xl font-semibold dark:text-white mb-4">
-              {t('lifecycle.editContractDates') || 'Vertragsdaten bearbeiten'}
+              {t('lifecycle.editContractDates', { defaultValue: 'Vertragsdaten bearbeiten' })}
             </h2>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('lifecycle.contractStart') || 'Vertragsbeginn'} *
+                  {t('lifecycle.contractStart', { defaultValue: 'Vertragsbeginn' })} *
                 </label>
                 <input
                   type="date"
@@ -886,7 +889,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('lifecycle.contractEnd') || 'Vertragsende'} (optional)
+                  {t('lifecycle.contractEnd', { defaultValue: 'Vertragsende' })} (optional)
                 </label>
                 <input
                   type="date"
@@ -895,7 +898,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                  {t('lifecycle.contractEndHint') || 'Nur bei befristeten Verträgen ausfüllen'}
+                  {t('lifecycle.contractEndHint', { defaultValue: 'Nur bei befristeten Verträgen ausfüllen' })}
                 </p>
               </div>
             </div>
@@ -905,14 +908,14 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                 onClick={() => setIsEditContractDatesModalOpen(false)}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 transition"
               >
-                {t('common.cancel') || 'Abbrechen'}
+                {t('common.cancel', { defaultValue: 'Abbrechen' })}
               </button>
               <button
                 onClick={handleSaveContractDates}
                 disabled={!editingContractStartDate}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {t('common.save') || 'Speichern'}
+                {t('common.save', { defaultValue: 'Speichern' })}
               </button>
             </div>
           </div>

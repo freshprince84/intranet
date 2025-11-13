@@ -6,7 +6,9 @@ import {
   XCircleIcon,
   PencilIcon,
   EnvelopeIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  XMarkIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
 // Social Security Editor Component
 import axiosInstance from '../config/axios.ts';
@@ -158,7 +160,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
           return;
         }
         console.error('Error loading registrations:', error);
-        showMessage('Fehler beim Laden der Sozialversicherungen', 'error');
+        showMessage(t('socialSecurity.loadError'), 'error');
       } finally {
         // Setze loading immer auf false, auch bei Abbruch
         setLoading(false);
@@ -242,7 +244,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
     } catch (error: any) {
       console.error('Error updating social security:', error);
       showMessage(
-        error.response?.data?.message || 'Fehler beim Aktualisieren der Sozialversicherung',
+        error.response?.data?.message || t('socialSecurity.updateError'),
         'error'
       );
     } finally {
@@ -303,7 +305,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold dark:text-white flex items-center">
           <DocumentTextIcon className="h-5 w-5 mr-2" />
-          {t('lifecycle.socialSecurity') || 'Sozialversicherungen'}
+          {t('lifecycle.socialSecurity', { defaultValue: 'Sozialversicherungen' })}
         </h3>
       </div>
 
@@ -334,23 +336,23 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
                         <div className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
                           {registration.provider && (
                             <div>
-                              <span className="font-medium">Anbieter:</span> {registration.provider}
+                              <span className="font-medium">{t('socialSecurity.provider')}:</span> {registration.provider}
                             </div>
                           )}
                           {registration.registrationNumber && (
                             <div>
-                              <span className="font-medium">Nummer:</span> {registration.registrationNumber}
+                              <span className="font-medium">{t('socialSecurity.number')}:</span> {registration.registrationNumber}
                             </div>
                           )}
                           {registration.registrationDate && (
                             <div>
-                              <span className="font-medium">Anmeldedatum:</span>{' '}
+                              <span className="font-medium">{t('socialSecurity.registrationDate')}:</span>{' '}
                               {new Date(registration.registrationDate).toLocaleDateString('de-DE')}
                             </div>
                           )}
                           {registration.notes && (
                             <div className="mt-2">
-                              <span className="font-medium">Notizen:</span>
+                              <span className="font-medium">{t('socialSecurity.notes')}:</span>
                               <p className="text-gray-500 dark:text-gray-400 mt-1">
                                 {registration.notes}
                               </p>
@@ -358,7 +360,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
                           )}
                           {registration.completedAt && (
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                              Abgeschlossen am:{' '}
+                              {t('socialSecurity.completedAt')}{' '}
                               {new Date(registration.completedAt).toLocaleDateString('de-DE')}
                             </div>
                           )}
@@ -366,7 +368,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
                       )}
                       {!registration && (
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Noch nicht registriert
+                          {t('socialSecurity.notRegistered')}
                         </p>
                       )}
                     </div>
@@ -374,7 +376,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
                   <button
                     onClick={() => handleEdit(type)}
                     className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition ml-4"
-                    title={t('lifecycle.edit') || 'Bearbeiten'}
+                    title={t('lifecycle.edit', { defaultValue: 'Bearbeiten' })}
                   >
                     <PencilIcon className="h-5 w-5" />
                   </button>
@@ -382,12 +384,12 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
               ) : (
                 <div className="space-y-4">
                   <h4 className="font-medium dark:text-white uppercase mb-3">
-                    {getTypeLabel(type)} bearbeiten
+                    {t('socialSecurity.editType', { type: getTypeLabel(type) })}
                   </h4>
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Status <span className="text-red-500">*</span>
+                      {t('socialSecurity.status')} <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={formData.status}
@@ -406,7 +408,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
                     <>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Registrierungsnummer
+                          {t('socialSecurity.registrationNumber')}
                         </label>
                         <input
                           type="text"
@@ -419,7 +421,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Anbieter
+                          {t('socialSecurity.provider')}
                         </label>
                         <input
                           type="text"
@@ -432,7 +434,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
 
                       <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Anmeldedatum
+                          {t('socialSecurity.registrationDate')}
                         </label>
                         <input
                           type="date"
@@ -446,14 +448,14 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Notizen
+                      {t('socialSecurity.notes')}
                     </label>
                     <textarea
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                       rows={3}
-                      placeholder="Zusätzliche Informationen, Kontaktdaten, etc."
+                      placeholder={t('socialSecurity.additionalInfo')}
                     />
                   </div>
 
@@ -461,25 +463,21 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
                     <button
                       onClick={handleCancel}
                       disabled={saving}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50"
+                      className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={t('common.cancel')}
                     >
-                      Abbrechen
+                      <XMarkIcon className="h-5 w-5" />
                     </button>
                     <button
                       onClick={handleSave}
                       disabled={saving}
-                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 dark:bg-blue-500 rounded-md hover:bg-blue-700 dark:hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                      className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={saving ? t('common.saving') : t('common.save')}
                     >
                       {saving ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                          <span>Speichere...</span>
-                        </>
+                        <ArrowPathIcon className="h-5 w-5 animate-spin" />
                       ) : (
-                        <>
-                          <CheckCircleIcon className="h-4 w-4" />
-                          <span>Speichern</span>
-                        </>
+                        <CheckCircleIcon className="h-5 w-5" />
                       )}
                     </button>
                   </div>

@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { isMobile } from '../utils/deviceDetection.ts';
+import { XMarkIcon, CameraIcon, ArrowPathIcon, CheckIcon } from '@heroicons/react/24/outline';
 
 interface CameraCaptureProps {
   onCapture: (imageData: string) => void;
@@ -7,6 +9,7 @@ interface CameraCaptureProps {
 }
 
 const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) => {
+  const { t } = useTranslation();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +33,7 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
       }
     } catch (error) {
       console.error('Fehler beim Zugriff auf die Kamera:', error);
-      setError('Kamerazugriff nicht möglich. Bitte prüfen Sie die Berechtigungen und stellen Sie sicher, dass Ihr Gerät eine Kamera hat.');
+      setError(t('camera.accessError'));
     }
   };
 
@@ -90,12 +93,13 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
   if (!isMobile()) {
     return (
       <div className="p-4 text-center dark:bg-gray-800 dark:text-white">
-        <p className="mb-4">Kamerafunktion ist nur auf mobilen Geräten verfügbar.</p>
+        <p className="mb-4">{t('camera.onlyMobile')}</p>
         <button 
-          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
+          className="p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
           onClick={onCancel}
+          title={t('camera.back')}
         >
-          Zurück
+          <XMarkIcon className="h-5 w-5" />
         </button>
       </div>
     );
@@ -109,10 +113,11 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
         <div className="error bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-4">
           <p>{error}</p>
           <button 
-            className="mt-2 px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
+            className="mt-2 p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
             onClick={onCancel}
+            title={t('camera.back')}
           >
-            Zurück
+            <XMarkIcon className="h-5 w-5" />
           </button>
         </div>
       )}
@@ -130,16 +135,18 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
           
           <div className="flex justify-between">
             <button 
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
+              className="p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
               onClick={onCancel}
+              title="Abbrechen"
             >
-              Abbrechen
+              <XMarkIcon className="h-5 w-5" />
             </button>
             <button 
-              className="px-4 py-2 bg-blue-500 dark:bg-blue-600 text-white rounded-md hover:bg-blue-600 dark:hover:bg-blue-700"
+              className="p-2 bg-blue-500 dark:bg-blue-600 text-white rounded-md hover:bg-blue-600 dark:hover:bg-blue-700"
               onClick={captureImage}
+              title="Foto aufnehmen"
             >
-              Foto aufnehmen
+              <CameraIcon className="h-5 w-5" />
             </button>
           </div>
         </>
@@ -155,16 +162,18 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
           
           <div className="flex justify-between">
             <button 
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
+              className="p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
               onClick={retakeImage}
+              title="Neu aufnehmen"
             >
-              Neu aufnehmen
+              <ArrowPathIcon className="h-5 w-5" />
             </button>
             <button 
-              className="px-4 py-2 bg-green-500 dark:bg-green-600 text-white rounded-md hover:bg-green-600 dark:hover:bg-green-700"
+              className="p-2 bg-green-500 dark:bg-green-600 text-white rounded-md hover:bg-green-600 dark:hover:bg-green-700"
               onClick={confirmImage}
+              title="Verwenden"
             >
-              Verwenden
+              <CheckIcon className="h-5 w-5" />
             </button>
           </div>
         </>

@@ -260,7 +260,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     
     const filterToDelete = savedFilters.find(filter => filter.id === filterId);
     if (filterToDelete && isStandardFilter(filterToDelete.name)) {
-      toast.error('Standard-Filter können nicht gelöscht werden');
+      toast.error(t('filter.cannotDeleteStandard'));
       return;
     }
     
@@ -765,7 +765,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                           handleUngroupFilters(group.id);
                         }}
                         className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left transition-colors"
-                        title="Gruppe auflösen"
+                        title={t('filter.ungroup')}
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -812,7 +812,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
               <button
                 onClick={(e) => handleDeleteFilter(e, filter.id)}
                 className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
-                title="Filter löschen"
+                title={t('filter.delete')}
               >
                 <XMarkIcon className="h-4 w-4" />
               </button>
@@ -858,7 +858,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                           setIsDropdownOpen(false);
                         }}
                         className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none flex-shrink-0"
-                        title="Filter löschen"
+                        title={t('filter.delete')}
                       >
                         <XMarkIcon className="h-4 w-4" />
                       </button>

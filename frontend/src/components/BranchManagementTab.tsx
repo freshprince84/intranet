@@ -39,7 +39,7 @@ const BranchCard: React.FC<{
                         <button
                             onClick={() => onEdit(branch)}
                             className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
-                            title={t('common.edit') || 'Bearbeiten'}
+                            title={t('common.edit', { defaultValue: 'Bearbeiten' })}
                         >
                             <PencilIcon className="h-5 w-5" />
                         </button>
@@ -49,7 +49,7 @@ const BranchCard: React.FC<{
                         <button
                             onClick={() => onDelete(branch.id)}
                             className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1"
-                            title={t('common.delete') || 'Löschen'}
+                            title={t('common.delete', { defaultValue: 'Löschen' })}
                         >
                             <TrashIcon className="h-5 w-5" />
                         </button>
@@ -93,7 +93,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
             setBranches(response.data);
         } catch (error: any) {
             console.error('Fehler beim Laden der Niederlassungen:', error);
-            const errorMessage = error.response?.data?.message || 'Fehler beim Laden der Niederlassungen';
+            const errorMessage = error.response?.data?.message || t('branches.loadError');
             onError(errorMessage);
         } finally {
             setLoading(false);
@@ -147,7 +147,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
         e.preventDefault();
         
         if (!formData.name.trim()) {
-            onError('Der Name darf nicht leer sein');
+            onError(t('branches.nameRequired'));
             return;
         }
 
@@ -168,14 +168,14 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
             handleCloseModal();
         } catch (error: any) {
             console.error('Fehler beim Speichern der Niederlassung:', error);
-            const errorMessage = error.response?.data?.message || 'Fehler beim Speichern der Niederlassung';
+            const errorMessage = error.response?.data?.message || t('branches.saveError');
             onError(errorMessage);
         }
     };
 
     // Branch löschen
     const handleDelete = async (branchId: number) => {
-        if (!window.confirm(t('branches.deleteConfirm') || 'Möchten Sie diese Niederlassung wirklich löschen?')) {
+        if (!window.confirm(t('branches.deleteConfirm', { defaultValue: 'Möchten Sie diese Niederlassung wirklich löschen?' }))) {
             return;
         }
 
@@ -184,7 +184,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
             await fetchBranches();
         } catch (error: any) {
             console.error('Fehler beim Löschen der Niederlassung:', error);
-            const errorMessage = error.response?.data?.message || 'Fehler beim Löschen der Niederlassung';
+            const errorMessage = error.response?.data?.message || t('branches.deleteError');
             onError(errorMessage);
         }
     };
@@ -273,7 +273,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                 const token = localStorage.getItem('token');
                 
                 if (!token) {
-                    console.error('Nicht authentifiziert');
+                    console.error(t('common.notAuthenticated'));
                     return;
                 }
 
@@ -298,10 +298,10 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                         API_ENDPOINTS.SAVED_FILTERS.BASE,
                         alleFilter
                     );
-                    console.log('Alle-Filter für Branches erstellt');
+                    console.log(t('branches.filterCreated'));
                 }
             } catch (error) {
-                console.error('Fehler beim Erstellen der Standard-Filter:', error);
+                console.error(t('branches.createStandardFiltersError'), error);
             }
         };
 
@@ -322,7 +322,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                     applyFilterConditions(alleFilter.conditions, alleFilter.operators);
                 }
             } catch (error) {
-                console.error('Fehler beim Setzen des initialen Filters:', error);
+                console.error(t('branches.setInitialFilterError'), error);
             }
         };
 
@@ -335,7 +335,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
             return (
                 <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded text-center">
                     <p className="text-gray-600 dark:text-gray-400">
-                        {t('branches.noBranches') || 'Keine Niederlassungen gefunden. Erstellen Sie eine neue Niederlassung mit dem Button oben.'}
+                        {t('branches.noBranches', { defaultValue: 'Keine Niederlassungen gefunden. Erstellen Sie eine neue Niederlassung mit dem Button oben.' })}
                     </p>
                 </div>
             );
@@ -364,7 +364,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                             className="px-4 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700 dark:hover:bg-gray-700"
                             onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
                         >
-                            {t('common.showMore') || 'Mehr anzeigen'} ({filteredAndSortedBranches.length - displayLimit} {t('common.remaining') || 'verbleibend'})
+                            {t('common.showMore', { defaultValue: 'Mehr anzeigen' })} ({filteredAndSortedBranches.length - displayLimit} {t('common.remaining', { defaultValue: 'verbleibend' })})
                         </button>
                     </div>
                 )}
@@ -395,8 +395,8 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                 onClick={handleCreate}
                                 className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
                                 style={{ width: '30.19px', height: '30.19px' }}
-                                title={t('branches.create') || 'Neue Niederlassung'}
-                                aria-label={t('branches.create') || 'Neue Niederlassung'}
+                                title={t('branches.create', { defaultValue: 'Neue Niederlassung' })}
+                                aria-label={t('branches.create', { defaultValue: 'Neue Niederlassung' })}
                             >
                                 <PlusIcon className="h-4 w-4" />
                             </button>
@@ -410,7 +410,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                     <div className="flex items-center gap-1.5">
                         <input
                             type="text"
-                            placeholder={t('common.search') || 'Suchen...'}
+                            placeholder={t('common.search', { defaultValue: 'Suchen...' })}
                             className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -418,7 +418,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                         <button
                             className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1 relative`}
                             onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-                            title={t('common.filter') || 'Filter'}
+                            title={t('common.filter', { defaultValue: 'Filter' })}
                         >
                             <FunnelIcon className="w-5 h-5" />
                             {getActiveFilterCount() > 0 && (
@@ -434,7 +434,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                 {isFilterModalOpen && (
                     <FilterPane
                         columns={[
-                            { id: 'name', label: t('branches.name') || 'Name' }
+                            { id: 'name', label: t('branches.name', { defaultValue: 'Name' }) }
                         ]}
                         onApply={applyFilterConditions}
                         onReset={resetFilterConditions}
@@ -479,8 +479,8 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                         <div className="flex items-center justify-between">
                                             <Dialog.Title className="text-lg font-semibold dark:text-white">
                                                 {editingBranch 
-                                                    ? (t('branches.edit') || 'Niederlassung bearbeiten')
-                                                    : (t('branches.create') || 'Neue Niederlassung')
+                                                    ? t('branches.edit', { defaultValue: 'Niederlassung bearbeiten' })
+                                                    : t('branches.create', { defaultValue: 'Neue Niederlassung' })
                                                 }
                                             </Dialog.Title>
                                             <button
@@ -496,7 +496,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                     <form onSubmit={handleSubmit} className="p-6 space-y-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                {t('branches.name') || 'Name'}
+                                                {t('branches.name', { defaultValue: 'Name' })}
                                             </label>
                                             <input
                                                 type="text"
@@ -514,14 +514,14 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                                 type="button"
                                                 onClick={handleCloseModal}
                                                 className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                                                title={t('common.cancel') || 'Abbrechen'}
+                                                title={t('common.cancel', { defaultValue: 'Abbrechen' })}
                                             >
                                                 <XMarkIcon className="h-5 w-5" />
                                             </button>
                                             <button
                                                 type="submit"
                                                 className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
-                                                title={editingBranch ? (t('common.update') || 'Aktualisieren') : (t('common.create') || 'Erstellen')}
+                                                title={editingBranch ? t('common.update', { defaultValue: 'Aktualisieren' }) : t('common.create', { defaultValue: 'Erstellen' })}
                                             >
                                                 <CheckIcon className="h-5 w-5" />
                                             </button>
@@ -538,8 +538,8 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                 <div className="flex items-center justify-between">
                                     <h2 className="text-lg font-semibold dark:text-white">
                                         {editingBranch 
-                                            ? (t('branches.edit') || 'Niederlassung bearbeiten')
-                                            : (t('branches.create') || 'Neue Niederlassung')
+                                            ? t('branches.edit', { defaultValue: 'Niederlassung bearbeiten' })
+                                            : t('branches.create', { defaultValue: 'Neue Niederlassung' })
                                         }
                                     </h2>
                                     <button
@@ -557,7 +557,7 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                     <div className="p-6 space-y-4">
                                         <div>
                                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                {t('branches.name') || 'Name'}
+                                                {t('branches.name', { defaultValue: 'Name' })}
                                             </label>
                                             <input
                                                 type="text"
@@ -577,14 +577,14 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                         type="button"
                                         onClick={handleCloseModal}
                                         className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                                        title={t('common.cancel') || 'Abbrechen'}
+                                        title={t('common.cancel', { defaultValue: 'Abbrechen' })}
                                     >
                                         <XMarkIcon className="h-5 w-5" />
                                     </button>
                                     <button
                                         type="submit"
                                         className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
-                                        title={editingBranch ? (t('common.update') || 'Aktualisieren') : (t('common.create') || 'Erstellen')}
+                                        title={editingBranch ? t('common.update', { defaultValue: 'Aktualisieren' }) : t('common.create', { defaultValue: 'Erstellen' })}
                                     >
                                         <CheckIcon className="h-5 w-5" />
                                     </button>

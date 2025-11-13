@@ -114,9 +114,54 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
         // Füge die aktive Zeiterfassung hinzu, wenn sie für den ausgewählten Tag relevant ist
         if (activeWorktime && isActiveWorktimeRelevant()) {
             try {
-                const activeStart = new Date(`${activeWorktime.startTime.split('Z')[0]}`);
+                const activeStart = new Date(activeWorktime.startTime);
                 const now = new Date();
-                const diff = now.getTime() - activeStart.getTime();
+                
+                // WICHTIG: Wenn timezone gespeichert ist, müssen wir die Differenz in der lokalen Zeitzone berechnen
+                let diff: number;
+                
+                if (activeWorktime.timezone) {
+                    // Konvertiere beide Zeiten in die lokale Zeitzone und berechne die Differenz
+                    const formatter = new Intl.DateTimeFormat('en-US', {
+                        timeZone: activeWorktime.timezone,
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                    
+                    // Extrahiere lokale Zeitkomponenten für start
+                    const startParts = formatter.formatToParts(activeStart);
+                    const startLocalMs = Date.UTC(
+                        parseInt(startParts.find(p => p.type === 'year')?.value || '0'),
+                        parseInt(startParts.find(p => p.type === 'month')?.value || '0') - 1,
+                        parseInt(startParts.find(p => p.type === 'day')?.value || '0'),
+                        parseInt(startParts.find(p => p.type === 'hour')?.value || '0'),
+                        parseInt(startParts.find(p => p.type === 'minute')?.value || '0'),
+                        parseInt(startParts.find(p => p.type === 'second')?.value || '0'),
+                        0
+                    );
+                    
+                    // Extrahiere lokale Zeitkomponenten für now
+                    const nowParts = formatter.formatToParts(now);
+                    const nowLocalMs = Date.UTC(
+                        parseInt(nowParts.find(p => p.type === 'year')?.value || '0'),
+                        parseInt(nowParts.find(p => p.type === 'month')?.value || '0') - 1,
+                        parseInt(nowParts.find(p => p.type === 'day')?.value || '0'),
+                        parseInt(nowParts.find(p => p.type === 'hour')?.value || '0'),
+                        parseInt(nowParts.find(p => p.type === 'minute')?.value || '0'),
+                        parseInt(nowParts.find(p => p.type === 'second')?.value || '0'),
+                        0
+                    );
+                    
+                    diff = nowLocalMs - startLocalMs;
+                } else {
+                    // Fallback: Verwende UTC direkt (alte Berechnung)
+                    diff = now.getTime() - activeStart.getTime();
+                }
                 
                 if (diff > 0) {
                     const minutes = Math.floor(diff / (1000 * 60));
@@ -143,17 +188,58 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({ isOpen, onClose, s
     const calculateActiveDuration = (): string => {
         if (!activeWorktime) return '-';
         
-        // Erstelle ein Date-Objekt ohne Zeitzonenumrechnung
-        // Entferne das 'Z' am Ende des Strings, damit JS den Zeitstempel nicht als UTC interpretiert
-        const startISOString = activeWorktime.startTime.endsWith('Z') 
-            ? activeWorktime.startTime.substring(0, activeWorktime.startTime.length - 1)
-            : activeWorktime.startTime;
-        
-        const start = new Date(startISOString);
+        const start = new Date(activeWorktime.startTime);
         const now = new Date();
         
-        // Berechnung mit Millisekunden
-        const diff = now.getTime() - start.getTime();
+        // WICHTIG: Wenn timezone gespeichert ist, müssen wir die Differenz in der lokalen Zeitzone berechnen
+        // Problem: startTime ist in UTC gespeichert, aber repräsentiert lokale Zeit
+        // Lösung: Berechne die Differenz unter Berücksichtigung der Zeitzone
+        
+        let diff: number;
+        
+        if (activeWorktime.timezone) {
+            // Konvertiere beide Zeiten in die lokale Zeitzone und berechne die Differenz
+            // Verwende Intl.DateTimeFormat, um die lokalen Zeitkomponenten zu extrahieren
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                timeZone: activeWorktime.timezone,
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            });
+            
+            // Extrahiere lokale Zeitkomponenten für start
+            const startParts = formatter.formatToParts(start);
+            const startLocalMs = Date.UTC(
+                parseInt(startParts.find(p => p.type === 'year')?.value || '0'),
+                parseInt(startParts.find(p => p.type === 'month')?.value || '0') - 1,
+                parseInt(startParts.find(p => p.type === 'day')?.value || '0'),
+                parseInt(startParts.find(p => p.type === 'hour')?.value || '0'),
+                parseInt(startParts.find(p => p.type === 'minute')?.value || '0'),
+                parseInt(startParts.find(p => p.type === 'second')?.value || '0'),
+                0
+            );
+            
+            // Extrahiere lokale Zeitkomponenten für now
+            const nowParts = formatter.formatToParts(now);
+            const nowLocalMs = Date.UTC(
+                parseInt(nowParts.find(p => p.type === 'year')?.value || '0'),
+                parseInt(nowParts.find(p => p.type === 'month')?.value || '0') - 1,
+                parseInt(nowParts.find(p => p.type === 'day')?.value || '0'),
+                parseInt(nowParts.find(p => p.type === 'hour')?.value || '0'),
+                parseInt(nowParts.find(p => p.type === 'minute')?.value || '0'),
+                parseInt(nowParts.find(p => p.type === 'second')?.value || '0'),
+                0
+            );
+            
+            diff = nowLocalMs - startLocalMs;
+        } else {
+            // Fallback: Verwende UTC direkt (alte Berechnung)
+            diff = now.getTime() - start.getTime();
+        }
         
         // Umrechnung in Stunden und Minuten
         const totalMinutes = Math.floor(diff / (1000 * 60));

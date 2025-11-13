@@ -15,7 +15,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateInvoiceSettings = exports.getUserActiveLanguage = exports.updateUserSettings = exports.updateUserRoles = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsersForDropdown = exports.getAllUsers = void 0;
+exports.getOnboardingAnalytics = exports.resetOnboarding = exports.trackOnboardingEvent = exports.completeOnboarding = exports.updateOnboardingProgress = exports.getOnboardingStatus = exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateInvoiceSettings = exports.getUserActiveLanguage = exports.updateUserSettings = exports.updateUserRoles = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsersForDropdown = exports.getAllUsers = void 0;
 const client_1 = require("@prisma/client");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const notificationController_1 = require("./notificationController");
@@ -164,6 +164,7 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 contract: true,
                 salary: true,
                 normalWorkingHours: true,
+                gender: true,
                 settings: true,
                 invoiceSettings: true,
                 roles: {
@@ -288,7 +289,7 @@ exports.updateUserById = updateUserById;
 // Benutzerprofil aktualisieren
 const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary, normalWorkingHours } = req.body;
+        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary, normalWorkingHours, gender } = req.body;
         const userId = parseInt(req.userId, 10);
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
@@ -318,7 +319,13 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 message: 'Ungültiges E-Mail-Format'
             });
         }
-        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary && { salary: parseFloat(salary) })), (normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) }));
+        // Validiere gender-Wert falls vorhanden
+        if (gender && !['male', 'female', 'other'].includes(gender)) {
+            return res.status(400).json({
+                message: 'Ungültiger gender-Wert. Erlaubt: male, female, other'
+            });
+        }
+        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary && { salary: parseFloat(salary) })), (normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (gender !== undefined && { gender: gender || null }));
         const updatedUser = yield prisma.user.update({
             where: { id: userId },
             data: updateData,
@@ -333,6 +340,7 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 contract: true,
                 salary: true,
                 normalWorkingHours: true,
+                gender: true,
                 roles: {
                     include: {
                         role: {
@@ -1094,4 +1102,224 @@ const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
     }
 });
 exports.deleteUser = deleteUser;
+// ============================================
+// ONBOARDING SYSTEM CONTROLLERS
+// ============================================
+// Onboarding-Status abrufen
+const getOnboardingStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const user = yield prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                onboardingCompleted: true,
+                onboardingProgress: true,
+                onboardingStartedAt: true,
+                onboardingCompletedAt: true
+            }
+        });
+        if (!user) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+        res.json({
+            onboardingCompleted: user.onboardingCompleted,
+            onboardingProgress: user.onboardingProgress,
+            onboardingStartedAt: user.onboardingStartedAt,
+            onboardingCompletedAt: user.onboardingCompletedAt
+        });
+    }
+    catch (error) {
+        console.error('Error in getOnboardingStatus:', error);
+        res.status(500).json({
+            message: 'Fehler beim Abrufen des Onboarding-Status',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.getOnboardingStatus = getOnboardingStatus;
+// Onboarding-Fortschritt aktualisieren
+const updateOnboardingProgress = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const { currentStep, completedSteps } = req.body;
+        if (typeof currentStep !== 'number' || !Array.isArray(completedSteps)) {
+            return res.status(400).json({ message: 'Ungültige Fortschrittsdaten' });
+        }
+        const user = yield prisma.user.update({
+            where: { id: userId },
+            data: {
+                onboardingProgress: {
+                    currentStep,
+                    completedSteps
+                },
+                onboardingStartedAt: req.body.onboardingStartedAt ? new Date(req.body.onboardingStartedAt) : undefined
+            }
+        });
+        res.json({
+            message: 'Onboarding-Fortschritt aktualisiert',
+            onboardingProgress: user.onboardingProgress
+        });
+    }
+    catch (error) {
+        console.error('Error in updateOnboardingProgress:', error);
+        res.status(500).json({
+            message: 'Fehler beim Aktualisieren des Onboarding-Fortschritts',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.updateOnboardingProgress = updateOnboardingProgress;
+// Onboarding als abgeschlossen markieren
+const completeOnboarding = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const user = yield prisma.user.update({
+            where: { id: userId },
+            data: {
+                onboardingCompleted: true,
+                onboardingCompletedAt: new Date()
+            }
+        });
+        res.json({
+            message: 'Onboarding abgeschlossen',
+            onboardingCompleted: user.onboardingCompleted,
+            onboardingCompletedAt: user.onboardingCompletedAt
+        });
+    }
+    catch (error) {
+        console.error('Error in completeOnboarding:', error);
+        res.status(500).json({
+            message: 'Fehler beim Abschließen des Onboardings',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.completeOnboarding = completeOnboarding;
+// Onboarding-Event tracken (Analytics)
+const trackOnboardingEvent = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const { stepId, stepTitle, action, duration } = req.body;
+        if (!stepId || !stepTitle || !action) {
+            return res.status(400).json({ message: 'Fehlende Event-Daten' });
+        }
+        const validActions = ['started', 'completed', 'skipped', 'cancelled'];
+        if (!validActions.includes(action)) {
+            return res.status(400).json({ message: 'Ungültige Aktion' });
+        }
+        const event = yield prisma.onboardingEvent.create({
+            data: {
+                userId,
+                stepId,
+                stepTitle,
+                action,
+                duration: duration || null
+            }
+        });
+        res.json({
+            message: 'Onboarding-Event gespeichert',
+            event
+        });
+    }
+    catch (error) {
+        console.error('Error in trackOnboardingEvent:', error);
+        res.status(500).json({
+            message: 'Fehler beim Speichern des Onboarding-Events',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.trackOnboardingEvent = trackOnboardingEvent;
+// Onboarding zurücksetzen (für Settings)
+const resetOnboarding = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const user = yield prisma.user.update({
+            where: { id: userId },
+            data: {
+                onboardingCompleted: false,
+                onboardingProgress: null,
+                onboardingStartedAt: null,
+                onboardingCompletedAt: null
+            }
+        });
+        res.json({
+            message: 'Onboarding zurückgesetzt',
+            onboardingCompleted: user.onboardingCompleted
+        });
+    }
+    catch (error) {
+        console.error('Error in resetOnboarding:', error);
+        res.status(500).json({
+            message: 'Fehler beim Zurücksetzen des Onboardings',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.resetOnboarding = resetOnboarding;
+// Onboarding-Analytics abrufen (nur für Admins)
+const getOnboardingAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        const roleId = parseInt(req.roleId, 10);
+        // Prüfe ob Admin
+        const role = yield prisma.role.findUnique({
+            where: { id: roleId }
+        });
+        if (!role || role.name.toLowerCase() !== 'admin') {
+            return res.status(403).json({ message: 'Keine Berechtigung' });
+        }
+        const events = yield prisma.onboardingEvent.findMany({
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        username: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+        // Gruppiere nach User
+        const analytics = events.reduce((acc, event) => {
+            const userId = event.userId;
+            if (!acc[userId]) {
+                acc[userId] = {
+                    user: event.user,
+                    steps: [],
+                    completedSteps: 0,
+                    skippedSteps: 0,
+                    totalDuration: 0
+                };
+            }
+            acc[userId].steps.push(event);
+            if (event.action === 'completed') {
+                acc[userId].completedSteps++;
+                if (event.duration) {
+                    acc[userId].totalDuration += event.duration;
+                }
+            }
+            else if (event.action === 'skipped') {
+                acc[userId].skippedSteps++;
+            }
+            return acc;
+        }, {});
+        res.json({
+            analytics: Object.values(analytics)
+        });
+    }
+    catch (error) {
+        console.error('Error in getOnboardingAnalytics:', error);
+        res.status(500).json({
+            message: 'Fehler beim Abrufen der Onboarding-Analytics',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.getOnboardingAnalytics = getOnboardingAnalytics;
 //# sourceMappingURL=userController.js.map

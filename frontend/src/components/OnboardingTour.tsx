@@ -1,0 +1,220 @@
+import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Dialog } from '@headlessui/react';
+import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { useOnboarding } from '../contexts/OnboardingContext.tsx';
+import OnboardingOverlay from './OnboardingOverlay.tsx';
+import { useLocation } from 'react-router-dom';
+
+const OnboardingTour: React.FC = () => {
+  const { t } = useTranslation();
+  const location = useLocation();
+  const {
+    isActive,
+    currentStep,
+    filteredSteps,
+    isLoading,
+    nextStep,
+    previousStep,
+    skipStep,
+    stopTour,
+    completeStep,
+    trackEvent
+  } = useOnboarding();
+
+  const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+
+  // Aktueller Schritt
+  const currentStepData = filteredSteps[currentStep];
+
+  // Prüfe ob aktueller Schritt zur aktuellen Route passt
+  // Bei Navigations-Schritten: Modal auch auf aktueller Route anzeigen (damit Link sichtbar ist)
+  const isStepForCurrentRoute = currentStepData?.route 
+    ? (currentStepData.action === 'navigate' 
+        ? location.pathname === currentStepData.route || 
+          (currentStepData.route === '/dashboard' && location.pathname.startsWith('/dashboard'))
+        : location.pathname === currentStepData.route || 
+          (currentStepData.route === '/dashboard' && location.pathname.startsWith('/dashboard')))
+    : true;
+
+  // Mobile-Erkennung
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Track Step-Start
+  useEffect(() => {
+    if (isActive && currentStepData) {
+      setStepStartTime(Date.now());
+      trackEvent(currentStepData.id, t(currentStepData.title), 'started');
+    }
+  }, [isActive, currentStep, currentStepData, trackEvent, t]);
+
+  // Tour nicht anzeigen wenn nicht aktiv oder kein Schritt
+  if (!isActive || !currentStepData || isLoading) {
+    return null;
+  }
+
+  // Tour nicht anzeigen wenn Schritt nicht für aktuelle Route
+  if (!isStepForCurrentRoute) {
+    return null;
+  }
+
+  const handleNext = async () => {
+    if (currentStepData) {
+      const duration = Math.floor((Date.now() - stepStartTime) / 1000);
+      await completeStep(currentStepData.id, t(currentStepData.title), duration);
+    }
+    nextStep();
+  };
+
+  const handlePrevious = () => {
+    previousStep();
+  };
+
+  const handleSkip = async () => {
+    await skipStep();
+  };
+
+  const handleComplete = async () => {
+    if (currentStepData) {
+      const duration = Math.floor((Date.now() - stepStartTime) / 1000);
+      await completeStep(currentStepData.id, t(currentStepData.title), duration);
+    }
+    stopTour();
+  };
+
+  const progress = filteredSteps.length > 0 
+    ? ((currentStep + 1) / filteredSteps.length) * 100 
+    : 0;
+
+  // Position für Modal berechnen
+  const getModalPosition = () => {
+    if (!currentStepData.target) {
+      return 'center';
+    }
+    return currentStepData.position || 'bottom';
+  };
+
+  const modalPosition = getModalPosition();
+
+  return (
+    <>
+      {/* Overlay mit Highlighting */}
+      {currentStepData.target && (
+        <OnboardingOverlay target={currentStepData.target} isActive={isActive} />
+      )}
+
+      {/* Modal für Onboarding-Schritt */}
+      <Dialog open={isActive} onClose={stopTour} className="relative z-50">
+        {/* Backdrop */}
+        <div className="fixed inset-0 bg-transparent" aria-hidden="true" />
+
+        {/* Modal */}
+        <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+          <Dialog.Panel
+            className={`
+              mx-auto max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl pointer-events-auto
+              ${modalPosition === 'center' ? 'transform-none' : ''}
+              ${modalPosition === 'top' ? 'self-start mt-4' : ''}
+              ${modalPosition === 'bottom' ? 'self-end mb-4' : ''}
+              ${modalPosition === 'left' ? 'self-center mr-auto ml-4' : ''}
+              ${modalPosition === 'right' ? 'self-center ml-auto mr-4' : ''}
+            `}
+          >
+            {/* Fortschrittsbalken */}
+            <div className="px-6 pt-4">
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-center">
+                {t('onboarding.progress.step')} {currentStep + 1} {t('onboarding.progress.of')} {filteredSteps.length}
+              </div>
+            </div>
+
+            {/* Header */}
+            <div className="px-6 pt-4 pb-2">
+              <div className="flex items-center justify-between">
+                <Dialog.Title className="text-lg font-semibold dark:text-white">
+                  {t(currentStepData.title)}
+                </Dialog.Title>
+                <button
+                  onClick={stopTour}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  aria-label={t('common.close')}
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 py-4">
+              <p className="text-gray-700 dark:text-gray-300">
+                {t(currentStepData.description)}
+              </p>
+            </div>
+
+            {/* Footer mit Buttons */}
+            <div className="px-6 pb-4 flex items-center justify-between gap-2">
+              <div className="flex gap-2">
+                {currentStep > 0 && (
+                  <button
+                    onClick={handlePrevious}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <ChevronLeftIcon className="h-4 w-4" />
+                      {t('onboarding.navigation.back')}
+                    </div>
+                  </button>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSkip}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                >
+                  {t('onboarding.navigation.skip')}
+                </button>
+                {/* "Siguiente" Button nur anzeigen, wenn Schritt KEINE Navigation erfordert */}
+                {currentStepData?.action !== 'navigate' && (
+                  currentStep === filteredSteps.length - 1 ? (
+                    <button
+                      onClick={handleComplete}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      {t('onboarding.navigation.complete')}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleNext}
+                      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <div className="flex items-center gap-1">
+                        {t('onboarding.navigation.next')}
+                        <ChevronRightIcon className="h-4 w-4" />
+                      </div>
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+          </Dialog.Panel>
+        </div>
+      </Dialog>
+    </>
+  );
+};
+
+export default OnboardingTour;
+

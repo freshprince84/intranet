@@ -765,7 +765,7 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" data-onboarding="request-form">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('createRequest.form.title')}</label>
               <input

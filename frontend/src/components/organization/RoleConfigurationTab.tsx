@@ -53,7 +53,7 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
     } catch (error) {
       console.error('Fehler beim Laden der Rollen:', error);
       showMessage(
-        t('lifecycle.loadRolesError') || 'Fehler beim Laden der Rollen',
+        t('lifecycle.loadRolesError', { defaultValue: 'Fehler beim Laden der Rollen' }),
         'error'
       );
     } finally {
@@ -71,7 +71,7 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
       // Wenn 404, dann gibt es noch keine Konfiguration - das ist OK
       if (error.response?.status !== 404) {
         showMessage(
-          error.response?.data?.message || t('lifecycle.loadLifecycleRolesError') || 'Fehler beim Laden der Konfiguration',
+          error.response?.data?.message || t('lifecycle.loadLifecycleRolesError', { defaultValue: 'Fehler beim Laden der Konfiguration' }),
           'error'
         );
       }
@@ -98,7 +98,7 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
         employeeRoleIds: (lifecycleRoles.employeeRoleIds || []).map(prepareRoleId).filter((id): id is number => id !== null)
       });
       showMessage(
-        t('lifecycle.rolesSaved') || 'Rollen-Konfiguration erfolgreich gespeichert',
+        t('lifecycle.rolesSaved', { defaultValue: 'Rollen-Konfiguration erfolgreich gespeichert' }),
         'success'
       );
       if (onSave) {
@@ -107,7 +107,7 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
     } catch (error: any) {
       console.error('Fehler beim Speichern:', error);
       showMessage(
-        error.response?.data?.message || t('lifecycle.saveError') || 'Fehler beim Speichern',
+        error.response?.data?.message || t('lifecycle.saveError', { defaultValue: 'Fehler beim Speichern' }),
         'error'
       );
     } finally {
@@ -129,7 +129,7 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
     });
 
     showMessage(
-      t('lifecycle.standardRolesAssigned') || 'Standard-Rollen zugewiesen',
+      t('lifecycle.standardRolesAssigned', { defaultValue: 'Standard-Rollen zugewiesen' }),
       'success'
     );
   };
@@ -147,20 +147,20 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold dark:text-white">
-            {t('organization.lifecycleRoles.title') || 'Lebenszyklus-Rollen'}
+            {t('organization.lifecycleRoles.title', { defaultValue: 'Lebenszyklus-Rollen' })}
           </h3>
           <button
             onClick={handleAssignStandardRoles}
             className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
           >
-            {t('lifecycle.assignStandardRoles') || 'Standard-Rollen zuweisen'}
+            {t('lifecycle.assignStandardRoles', { defaultValue: 'Standard-Rollen zuweisen' })}
           </button>
         </div>
         
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('organization.lifecycleRoles.admin') || 'Admin-Rolle'}
+              {t('organization.lifecycleRoles.admin', { defaultValue: 'Admin-Rolle' })}
             </label>
             <select
               value={lifecycleRoles.adminRoleId || ''}
@@ -174,7 +174,7 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={loadingRoles}
             >
-              <option value="">{t('common.select') || 'Bitte wählen...'}</option>
+              <option value="">{t('common.pleaseSelect')}</option>
               {roles.map(role => (
                 <option key={role.id} value={role.id}>
                   {role.name}
@@ -185,7 +185,7 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('organization.lifecycleRoles.hr') || 'HR-Rolle'}
+              {t('organization.lifecycleRoles.hr', { defaultValue: 'HR-Rolle' })}
             </label>
             <select
               value={lifecycleRoles.hrRoleId || ''}
@@ -199,7 +199,7 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={loadingRoles}
             >
-              <option value="">{t('common.select') || 'Bitte wählen...'}</option>
+              <option value="">{t('common.pleaseSelect')}</option>
               {roles.map(role => (
                 <option key={role.id} value={role.id}>
                   {role.name}
@@ -210,7 +210,7 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
           
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('organization.lifecycleRoles.legal') || 'Legal-Rolle'}
+              {t('organization.lifecycleRoles.legal', { defaultValue: 'Legal-Rolle' })}
             </label>
             <select
               value={lifecycleRoles.legalRoleId || ''}
@@ -224,7 +224,7 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               disabled={loadingRoles}
             >
-              <option value="">{t('common.select') || 'Bitte wählen...'}</option>
+              <option value="">{t('common.pleaseSelect')}</option>
               {roles.map(role => (
                 <option key={role.id} value={role.id}>
                   {role.name}
@@ -239,7 +239,7 @@ const RoleConfigurationTab: React.FC<RoleConfigurationTabProps> = ({
             onClick={handleSave}
             disabled={saving || loadingRoles}
             className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title={saving ? (t('common.saving') || 'Speichere...') : (t('common.save') || 'Speichern')}
+            title={saving ? t('common.saving', { defaultValue: 'Speichere...' }) : t('common.save', { defaultValue: 'Speichern' })}
           >
             {saving ? (
               <ArrowPathIcon className="h-5 w-5 animate-spin" />

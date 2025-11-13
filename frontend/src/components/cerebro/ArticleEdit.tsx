@@ -5,6 +5,7 @@ import { cerebroApi, CerebroArticleDetail } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { useUnifiedEditor } from '../../hooks/useUnifiedEditor.ts';
 import MarkdownPreview from '../MarkdownPreview.tsx';
+import { XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
 
 // Typen
 interface FormData {
@@ -188,7 +189,7 @@ const ArticleEdit: React.FC = () => {
     e.preventDefault();
     
     if (!formData.title.trim()) {
-      setError(t('cerebro.articleEdit.titleRequired') || 'Titel ist erforderlich');
+      setError(t('cerebro.articleEdit.titleRequired', { defaultValue: 'Titel ist erforderlich' }));
       return;
     }
     
@@ -332,7 +333,7 @@ const ArticleEdit: React.FC = () => {
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
-                title="Datei hinzufügen"
+                title={t('cerebro.addFile')}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
@@ -371,23 +372,22 @@ const ArticleEdit: React.FC = () => {
             <button
               type="button"
               onClick={handleCancel}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={saving}
+              title="Abbrechen"
             >
-              Abbrechen
+              <XMarkIcon className="h-5 w-5" />
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={saving}
+              title={saving ? 'Speichern...' : 'Speichern'}
             >
               {saving ? (
-                <>
-                  <span className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></span>
-                  Speichern...
-                </>
+                <ArrowPathIcon className="h-5 w-5 animate-spin" />
               ) : (
-                'Speichern'
+                <CheckIcon className="h-5 w-5" />
               )}
             </button>
           </div>

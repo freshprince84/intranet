@@ -50,11 +50,11 @@ const TeamWorktimeControl: React.FC = () => {
         
         if (status === 403) {
           // Berechtigungsfehler - zeige spezifische Nachricht
-          errorMessage = backendMessage || t('teamWorktime.messages.forbidden') || 'Keine ausreichenden Berechtigungen für Team Worktime Control';
+          errorMessage = backendMessage || t('teamWorktime.permissions.insufficientShort');
         } else if (status === 401) {
-          errorMessage = t('teamWorktime.messages.unauthorized') || 'Nicht autorisiert';
+          errorMessage = t('teamWorktime.messages.unauthorized', { defaultValue: 'Nicht autorisiert' });
         } else if (status === 500) {
-          errorMessage = t('teamWorktime.messages.serverError') || 'Serverfehler';
+          errorMessage = t('teamWorktime.messages.serverError', { defaultValue: 'Serverfehler' });
         } else if (backendMessage) {
           errorMessage = backendMessage;
         }
@@ -116,7 +116,7 @@ const TeamWorktimeControl: React.FC = () => {
   useEffect(() => {
     // Nur API-Calls machen, wenn Berechtigungen vorhanden sind
     if (!hasRequiredPermissions) {
-      setError('Keine ausreichenden Berechtigungen für Team Worktime Control. Bitte stellen Sie sicher, dass Sie sowohl die Berechtigung für "team_worktime_control" (Seite) als auch "team_worktime" (Tabelle) haben.');
+      setError(t('teamWorktime.permissions.insufficientDetails'));
       return;
     }
     
@@ -149,16 +149,16 @@ const TeamWorktimeControl: React.FC = () => {
             {/* Berechtigungsfehler */}
             {!hasRequiredPermissions && (
               <div className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-4">
-                <p className="font-medium mb-2">Keine ausreichenden Berechtigungen</p>
+                <p className="font-medium mb-2">{t('teamWorktime.permissions.insufficient')}</p>
                 <ul className="list-disc list-inside text-sm space-y-1">
                   {!hasPagePermission && (
-                    <li>Fehlende Berechtigung: team_worktime_control (Seite)</li>
+                    <li>{t('teamWorktime.permissions.missingPage')}</li>
                   )}
                   {!hasTablePermission && (
-                    <li>Fehlende Berechtigung: team_worktime (Tabelle)</li>
+                    <li>{t('teamWorktime.permissions.missingTable')}</li>
                   )}
                 </ul>
-                <p className="text-sm mt-2">Bitte kontaktieren Sie einen Administrator, um die erforderlichen Berechtigungen zu erhalten.</p>
+                <p className="text-sm mt-2">{t('teamWorktime.permissions.contactAdmin')}</p>
               </div>
             )}
             

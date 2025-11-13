@@ -663,16 +663,32 @@ export const StatusBadge = ({ status, processType }: { status: string, processTy
 ```
 
 **Verwendung in Komponenten:**
+
+**⚠️ EINHEITLICHER STANDARD - IMMER VERWENDEN:**
+
 ```tsx
-// ✅ RICHTIG: Übersetzungen verwenden
+// ✅ RICHTIG: Mit defaultValue für Fallback
 const { t } = useTranslation();
-<h2>{t('featureName.title')}</h2>
-<button>{t('featureName.create')}</button>
+<h2>{t('featureName.title', { defaultValue: 'Titel' })}</h2>
+<button>{t('featureName.create', { defaultValue: 'Erstellen' })}</button>
+
+// ✅ AUCH RICHTIG: Ohne defaultValue, wenn Übersetzung garantiert vorhanden ist
+// (Nur für bereits validierte Übersetzungen)
+<h2>{t('common.save')}</h2>
+
+// ❌ FALSCH: Mit || Operator (veraltet, nicht mehr verwenden!)
+<h2>{t('featureName.title') || 'Titel'}</h2>
 
 // ❌ FALSCH: Hardcoded-Text
 <h2>Titel</h2>
 <button>Erstellen</button>
 ```
+
+**WICHTIG: Warum defaultValue?**
+- Funktioniert auch bei Timing-Problemen (wenn i18n noch nicht initialisiert ist)
+- i18next-Standard (offizielle API)
+- Expliziter Fallback (besser lesbar)
+- Keine Probleme mit falsy-Werten (0, false, etc.)
 
 **Dateien für Übersetzungen:**
 - `frontend/src/i18n/locales/de.json` - Deutsch

@@ -47,6 +47,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
+    "validate-translations": "node scripts/validate-translations.js",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",

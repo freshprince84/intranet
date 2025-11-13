@@ -77,7 +77,7 @@ const SocialSecurityCompletionBox: React.FC<SocialSecurityCompletionBoxProps> = 
       const userId = extractUserId();
       if (!userId || !socialSecurityType) {
         showMessage(
-          t('lifecycle.missingData') || 'Benutzer-ID oder Sozialversicherungs-Typ fehlt',
+          t('lifecycle.missingData', { defaultValue: 'Benutzer-ID oder Sozialversicherungs-Typ fehlt' }),
           'error'
         );
         return;
@@ -97,7 +97,7 @@ const SocialSecurityCompletionBox: React.FC<SocialSecurityCompletionBoxProps> = 
       );
 
       showMessage(
-        t('lifecycle.registrationCompleted') || 'Anmeldung erfolgreich abgeschlossen',
+        t('lifecycle.registrationCompleted', { defaultValue: 'Anmeldung erfolgreich abgeschlossen' }),
         'success'
       );
 
@@ -115,7 +115,7 @@ const SocialSecurityCompletionBox: React.FC<SocialSecurityCompletionBoxProps> = 
     } catch (error: any) {
       console.error('Fehler beim Abschließen der Anmeldung:', error);
       showMessage(
-        error.response?.data?.message || t('lifecycle.registrationError') || 'Fehler beim Abschließen der Anmeldung',
+        error.response?.data?.message || t('lifecycle.registrationError', { defaultValue: 'Fehler beim Abschließen der Anmeldung' }),
         'error'
       );
     } finally {
@@ -126,12 +126,12 @@ const SocialSecurityCompletionBox: React.FC<SocialSecurityCompletionBoxProps> = 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6 mb-4">
       <h3 className="text-lg font-semibold mb-4 dark:text-white">
-        {t('lifecycle.completeRegistration') || 'Anmeldung abschließen'}
+        {t('lifecycle.completeRegistration', { defaultValue: 'Anmeldung abschließen' })}
       </h3>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {t('lifecycle.registrationNumber') || 'Registrierungsnummer'} *
+            {t('lifecycle.registrationNumber', { defaultValue: 'Registrierungsnummer' })} *
           </label>
           <input
             type="text"
@@ -139,12 +139,12 @@ const SocialSecurityCompletionBox: React.FC<SocialSecurityCompletionBoxProps> = 
             onChange={(e) => setFormData({ ...formData, registrationNumber: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-            placeholder={t('lifecycle.registrationNumberPlaceholder') || 'z.B. 123456789'}
+            placeholder={t('lifecycle.registrationNumberPlaceholder', { defaultValue: 'z.B. 123456789' })}
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {t('lifecycle.provider') || 'Anbieter'} *
+            {t('lifecycle.provider', { defaultValue: 'Anbieter' })} *
           </label>
           <input
             type="text"
@@ -152,12 +152,12 @@ const SocialSecurityCompletionBox: React.FC<SocialSecurityCompletionBoxProps> = 
             onChange={(e) => setFormData({ ...formData, provider: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             required
-            placeholder={t('lifecycle.providerPlaceholder') || 'z.B. ARL Sura, EPS Sanitas'}
+            placeholder={t('lifecycle.providerPlaceholder', { defaultValue: 'z.B. ARL Sura, EPS Sanitas' })}
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {t('lifecycle.registrationDate') || 'Anmeldedatum'} *
+            {t('lifecycle.registrationDate', { defaultValue: 'Anmeldedatum' })} *
           </label>
           <input
             type="date"
@@ -169,32 +169,27 @@ const SocialSecurityCompletionBox: React.FC<SocialSecurityCompletionBoxProps> = 
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            {t('lifecycle.notes') || 'Notizen'}
+            {t('lifecycle.notes', { defaultValue: 'Notizen' })}
           </label>
           <textarea
             value={formData.notes}
             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows={3}
-            placeholder={t('lifecycle.notesPlaceholder') || 'Zusätzliche Informationen...'}
+            placeholder={t('lifecycle.notesPlaceholder', { defaultValue: 'Zusätzliche Informationen...' })}
           />
         </div>
         <div className="flex justify-end">
           <button
             type="submit"
             disabled={loading}
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center text-sm"
+            className="p-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={loading ? t('common.saving', { defaultValue: 'Speichere...' }) : t('lifecycle.complete', { defaultValue: 'Abschließen' })}
           >
             {loading ? (
-              <>
-                <ArrowPathIcon className="h-4 w-4 mr-2 animate-spin" />
-                {t('common.saving') || 'Speichere...'}
-              </>
+              <ArrowPathIcon className="h-5 w-5 animate-spin" />
             ) : (
-              <>
-                <CheckIcon className="h-4 w-4 mr-2" />
-                {t('lifecycle.complete') || 'Abschließen'}
-              </>
+              <CheckIcon className="h-5 w-5" />
             )}
           </button>
         </div>

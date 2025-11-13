@@ -180,6 +180,7 @@ const Sidebar: React.FC = () => {
                             className={`flex flex-col items-center justify-center px-0.5 py-1 text-[10px] ${
                                 isActive(item.path) ? 'text-blue-600 font-medium' : 'text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white'
                             }`}
+                            data-onboarding={item.path === '/worktracker' ? 'worktracker-menu' : item.path === '/cerebro' ? 'cerebro-menu' : item.path === '/settings' ? 'settings-menu' : undefined}
                         >
                             <div className="h-[26px] w-[26px] mb-0.5">{item.icon}</div>
                             {/* Text nur auf größeren Mobilgeräten (>=480px) und Tablets anzeigen */}
@@ -251,6 +252,7 @@ const Sidebar: React.FC = () => {
                                 <Link 
                                     to={item.path} 
                                     className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative ${isActive(item.path) ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                                    data-onboarding={item.path === '/worktracker' ? 'worktracker-menu' : item.path === '/cerebro' ? 'cerebro-menu' : undefined}
                                 >
                                     <div className="h-6 w-6">{item.icon}</div>
                                     {!isCollapsed && <span>{item.name}</span>}
@@ -292,6 +294,7 @@ const Sidebar: React.FC = () => {
                                 <Link 
                                     to="/settings" 
                                     className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative ${isActive('/settings') ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                                    data-onboarding="settings-menu"
                                 >
                                     <div className="h-6 w-6">{settingsItem.icon}</div>
                                     {!isCollapsed && <span>{settingsItem.name}</span>}
