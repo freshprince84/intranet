@@ -609,8 +609,8 @@
     "create": "Crear usuario",
     "edit": "Editar usuario",
     "delete": "Eliminar usuario",
-    "active": "Activo",
-    "inactive": "Inactivo",
+    "active": "Activos",
+    "inactive": "Inactivos",
     "activate": "Activar",
     "deactivate": "Desactivar",
     "form": {
