@@ -319,8 +319,9 @@ async function main() {
     
     const userPermissionMap: Record<string, AccessLevel> = {};
     
-    // PAGES: alle AUSSER workcenter und organization_management
-    // organization_management = 'none' (standardmäßig ausgeblendet, kann von Organisation angepasst werden)
+    // PAGES: alle AUSSER workcenter
+    // organization_management = 'read' für User-Rolle OHNE Organisation (sichtbar für Beitritt/Gründung)
+    // organization_management = 'none' für User-Rolle MIT Organisation (nicht sichtbar)
     userPermissionMap['page_dashboard'] = 'both';
     userPermissionMap['page_worktracker'] = 'both';
     userPermissionMap['page_consultations'] = 'both';
@@ -328,7 +329,7 @@ async function main() {
     userPermissionMap['page_cerebro'] = 'both';
     userPermissionMap['page_settings'] = 'both';
     userPermissionMap['page_profile'] = 'both';
-    // NICHT: page_organization_management (bleibt 'none' - standardmäßig ausgeblendet)
+    userPermissionMap['page_organization_management'] = 'read'; // Sichtbar für User OHNE Organisation
     // NICHT: team_worktime_control (bleibt 'none')
     
     // TABELLEN: alle AUSSER die auf worktracker, workcenter & organisation
@@ -816,8 +817,10 @@ async function main() {
     ALL_BUTTONS.forEach(button => org1AdminPermissionMap[`button_${button}`] = 'both');
     await ensureAllPermissionsForRole(org1AdminRole.id, org1AdminPermissionMap);
 
-    // Org 1 User: gleiche Berechtigungen wie User
-    await ensureAllPermissionsForRole(org1UserRole.id, userPermissionMap);
+    // Org 1 User: gleiche Berechtigungen wie User, ABER organization_management = 'none' (User MIT Organisation)
+    const org1UserPermissionMap = { ...userPermissionMap };
+    org1UserPermissionMap['page_organization_management'] = 'none'; // User MIT Organisation → nicht sichtbar
+    await ensureAllPermissionsForRole(org1UserRole.id, org1UserPermissionMap);
 
     // Org 1 Hamburger: gleiche Berechtigungen wie Hamburger
     await ensureAllPermissionsForRole(org1HamburgerRole.id, hamburgerPermissionMap);
@@ -837,8 +840,10 @@ async function main() {
     ALL_BUTTONS.forEach(button => org2AdminPermissionMap[`button_${button}`] = 'both');
     await ensureAllPermissionsForRole(org2AdminRole.id, org2AdminPermissionMap);
 
-    // Org 2 User: gleiche Berechtigungen wie User
-    await ensureAllPermissionsForRole(org2UserRole.id, userPermissionMap);
+    // Org 2 User: gleiche Berechtigungen wie User, ABER organization_management = 'none' (User MIT Organisation)
+    const org2UserPermissionMap = { ...userPermissionMap };
+    org2UserPermissionMap['page_organization_management'] = 'none'; // User MIT Organisation → nicht sichtbar
+    await ensureAllPermissionsForRole(org2UserRole.id, org2UserPermissionMap);
 
     // Org 2 Hamburger: gleiche Berechtigungen wie Hamburger
     await ensureAllPermissionsForRole(org2HamburgerRole.id, hamburgerPermissionMap);

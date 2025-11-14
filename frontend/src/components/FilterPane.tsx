@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckIcon, XMarkIcon, ArrowPathIcon, BookmarkIcon } from '@heroicons/react/24/outline';
 import FilterRow, { FilterCondition } from './FilterRow.tsx';
@@ -89,18 +89,36 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     fetchExistingFilters();
   }, [tableId]);
   
-  // Initialisiere Bedingungen und Operatoren, wenn gespeicherte Werte vorhanden sind
+  // Initialisiere Bedingungen und Operatoren nur wenn sich die Props von außen ändern
+  // Verwende useRef, um die vorherigen Werte zu speichern und nur bei echten Änderungen zu aktualisieren
+  const prevSavedConditionsRef = useRef<FilterCondition[] | undefined>(savedConditions);
+  const prevSavedOperatorsRef = useRef<('AND' | 'OR')[] | undefined>(savedOperators);
+  const prevSavedSortDirectionsRef = useRef<SortDirection[] | undefined>(savedSortDirections);
+  
   useEffect(() => {
-    if (savedConditions && savedConditions.length > 0) {
-      setConditions(savedConditions);
+    // Prüfe, ob sich die Props wirklich geändert haben (nicht durch lokale State-Änderungen)
+    const conditionsChanged = JSON.stringify(prevSavedConditionsRef.current) !== JSON.stringify(savedConditions);
+    const operatorsChanged = JSON.stringify(prevSavedOperatorsRef.current) !== JSON.stringify(savedOperators);
+    const sortDirectionsChanged = JSON.stringify(prevSavedSortDirectionsRef.current) !== JSON.stringify(savedSortDirections);
+    
+    if (conditionsChanged && savedConditions) {
+      if (savedConditions.length > 0) {
+        setConditions(savedConditions);
+      } else if (savedConditions.length === 0) {
+        // Reset: Setze auf Standard
+        setConditions([{ column: '', operator: 'equals', value: null }]);
+      }
+      prevSavedConditionsRef.current = savedConditions;
     }
     
-    if (savedOperators && savedOperators.length > 0) {
+    if (operatorsChanged && savedOperators !== undefined) {
       setLogicalOperators(savedOperators);
+      prevSavedOperatorsRef.current = savedOperators;
     }
     
-    if (savedSortDirections) {
+    if (sortDirectionsChanged && savedSortDirections !== undefined) {
       setSortDirections(savedSortDirections);
+      prevSavedSortDirectionsRef.current = savedSortDirections;
     }
   }, [savedConditions, savedOperators, savedSortDirections]);
   
@@ -136,18 +154,22 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       
       // Setze Standard-Sortierrichtung für neue Spalte (nur wenn Spalte ausgewählt)
       if (newCondition.column && newCondition.column !== '') {
-        // Finde die höchste Priorität
-        const maxPriority = newSortDirections.length > 0 
-          ? Math.max(...newSortDirections.map(sd => sd.priority))
-          : 0;
-        
-        // Füge neue Sortierrichtung hinzu (mit conditionIndex)
-        newSortDirections.push({
-          column: newCondition.column,
-          direction: 'asc',
-          priority: maxPriority + 1,
-          conditionIndex: index
-        });
+        // Prüfe, ob bereits eine Sortierrichtung für diese Zeile existiert
+        const existingSortDir = newSortDirections.find(sd => sd.conditionIndex === index);
+        if (!existingSortDir) {
+          // Finde die höchste Priorität
+          const maxPriority = newSortDirections.length > 0 
+            ? Math.max(...newSortDirections.map(sd => sd.priority))
+            : 0;
+          
+          // Füge neue Sortierrichtung hinzu (mit conditionIndex)
+          newSortDirections.push({
+            column: newCondition.column,
+            direction: 'asc',
+            priority: maxPriority + 1,
+            conditionIndex: index
+          });
+        }
       }
       
       // Prioritäten neu nummerieren

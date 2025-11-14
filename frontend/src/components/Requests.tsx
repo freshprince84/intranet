@@ -1042,17 +1042,9 @@ const Requests: React.FC = () => {
                 onClose={() => {}}
                 buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                 modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-                sortDirections={viewMode === 'cards' ? cardSortDirections : undefined}
-                onSortDirectionChange={viewMode === 'cards' 
-                  ? (columnId: string, direction: 'asc' | 'desc') => {
-                      // Lokale Sortierrichtung aktualisieren (nicht persistiert)
-                      setCardSortDirections(prev => ({
-                        ...prev,
-                        [columnId]: direction
-                      }));
-                    }
-                  : undefined}
-                showSortDirection={viewMode === 'cards'}
+                sortDirections={undefined}
+                onSortDirectionChange={undefined}
+                showSortDirection={false}
               />
             </div>
           </div>

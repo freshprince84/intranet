@@ -55,6 +55,17 @@ export const handleWebhook = async (req: Request, res: Response) => {
       const entry = body.entry?.[0];
       const changes = entry?.changes?.[0];
       const value = changes?.value;
+      const field = changes?.field;
+
+      console.log('[WhatsApp Webhook] Webhook Field:', field);
+      console.log('[WhatsApp Webhook] Has messages:', !!value?.messages?.[0]);
+      console.log('[WhatsApp Webhook] Has statuses:', !!value?.statuses?.[0]);
+
+      // Status-Update (ignorieren)
+      if (value?.statuses?.[0]) {
+        console.log('[WhatsApp Webhook] Status-Update empfangen, ignoriere:', value.statuses[0].status);
+        return res.status(200).json({ success: true, message: 'Status-Update empfangen' });
+      }
 
       // Eingehende Nachricht
       if (value?.messages?.[0]) {

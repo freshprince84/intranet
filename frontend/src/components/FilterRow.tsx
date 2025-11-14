@@ -400,7 +400,7 @@ const FilterRow: React.FC<FilterRowProps> = ({
       </div>
       
       {/* Sortierrichtung und Priorität (nur wenn Spalte ausgewählt ist) */}
-      {condition.column !== '' && onSortDirectionChange && sortDirection !== undefined && (
+      {condition.column !== '' && onSortDirectionChange && (
         <div className="flex-shrink-0 flex items-center gap-1">
           {/* Prioritäts-Anzeige und -Steuerung */}
           {sortPriority !== undefined && sortPriority > 0 && (
@@ -447,9 +447,9 @@ const FilterRow: React.FC<FilterRowProps> = ({
               onSortDirectionChange(newDirection);
             }}
             className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 rounded-md transition-colors border border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400"
-            title={sortDirection === 'asc' ? t('filter.row.sortAscending') : t('filter.row.sortDescending')}
+            title={(sortDirection || 'asc') === 'asc' ? t('filter.row.sortAscending') : t('filter.row.sortDescending')}
           >
-            {sortDirection === 'asc' ? (
+            {(sortDirection || 'asc') === 'asc' ? (
               <ArrowUpIcon className="h-4 w-4" />
             ) : (
               <ArrowDownIcon className="h-4 w-4" />

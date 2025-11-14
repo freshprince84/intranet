@@ -1259,6 +1259,27 @@
     "add": "Agregar",
     "noRolesAvailable": "No hay más roles disponibles"
   },
+  "branchAssignment": {
+    "title": "Asignar sucursales",
+    "assignBranch": "Asignar sucursal",
+    "removeBranch": "Eliminar sucursal",
+    "currentBranches": "Sucursales actuales",
+    "availableBranches": "Sucursales disponibles",
+    "noBranches": "No hay sucursales disponibles",
+    "saveSuccess": "Sucursales asignadas exitosamente",
+    "saveError": "Error al asignar sucursales",
+    "loading": "Cargando sucursales...",
+    "unknownBranchesWarning": "Atención: Se encontraron IDs de sucursales desconocidos",
+    "unknownBranchesMessage": "Algunos IDs de sucursales del usuario ({{ids}}) no están presentes en las sucursales disponibles.",
+    "availableBranchIds": "IDs de sucursales disponibles: {{ids}}",
+    "noBranchesAssigned": "No hay sucursales asignadas",
+    "remove": "Eliminar",
+    "unknownBranch": "Sucursal desconocida (ID: {{id}})",
+    "unknownBranchDescription": "Esta sucursal está asignada al usuario, pero no está presente en la lista de sucursales.",
+    "add": "Agregar",
+    "noBranchesAvailable": "No hay más sucursales disponibles",
+    "noBranchesFound": "No se encontraron sucursales"
+  },
   "organisation": {
     "title": "Organización",
     "tabs": {
