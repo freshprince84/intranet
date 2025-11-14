@@ -179,6 +179,11 @@ export const getUserById = async (req: Request, res: Response) => {
                             }
                         }
                     }
+                },
+                branches: {
+                    include: {
+                        branch: true
+                    }
                 }
             }
         });

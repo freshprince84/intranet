@@ -348,10 +348,19 @@ export const createArticle = async (req: Request, res: Response) => {
         // Slug erstellen
         const slug = await createUniqueSlug(title);
         
+        // parentId normalisieren: String zu Number konvertieren oder null
+        const normalizedParentId = parentId && parentId !== '' && parentId !== 'null' 
+            ? parseInt(String(parentId), 10) 
+            : null;
+        
         // Überprüfen, ob der übergeordnete Artikel existiert, falls angegeben
-        if (parentId) {
+        if (normalizedParentId) {
+            if (isNaN(normalizedParentId)) {
+                return res.status(400).json({ message: 'Ungültige Parent-ID' });
+            }
+            
             const parentArticle = await prisma.$queryRaw`
-                SELECT * FROM "CerebroCarticle" WHERE id = ${parentId}
+                SELECT * FROM "CerebroCarticle" WHERE id = ${normalizedParentId}
             `;
             
             if (!parentArticle || (Array.isArray(parentArticle) && parentArticle.length === 0)) {
@@ -362,7 +371,7 @@ export const createArticle = async (req: Request, res: Response) => {
         // Artikel erstellen
         const newArticle = await prisma.$queryRaw`
             INSERT INTO "CerebroCarticle" (title, content, slug, "parentId", "createdById", "updatedById", "isPublished", "organizationId", "createdAt", "updatedAt")
-            VALUES (${title}, ${content || ''}, ${slug}, ${parentId || null}, ${userId}, ${userId}, ${isPublished}, ${req.organizationId || null}, NOW(), NOW())
+            VALUES (${title}, ${content || ''}, ${slug}, ${normalizedParentId}, ${userId}, ${userId}, ${isPublished}, ${req.organizationId || null}, NOW(), NOW())
             RETURNING *
         `;
         
@@ -395,9 +404,14 @@ export const createArticle = async (req: Request, res: Response) => {
         `;
         
         res.status(201).json(newArticle[0]);
-    } catch (error) {
+    } catch (error: any) {
         console.error('Fehler beim Erstellen des Artikels:', error);
-        res.status(500).json({ message: 'Fehler beim Erstellen des Artikels' });
+        const errorMessage = error?.message || 'Fehler beim Erstellen des Artikels';
+        const statusCode = error?.code === 'P2002' ? 409 : 500;
+        res.status(statusCode).json({ 
+            message: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? error : undefined
+        });
     }
 };
 
