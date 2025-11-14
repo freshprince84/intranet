@@ -228,7 +228,15 @@ export class WhatsAppService {
       console.log(`[WhatsApp Business] Sende Nachricht an ${to} via Phone Number ID ${this.phoneNumberId}`);
       console.log(`[WhatsApp Business] Payload:`, JSON.stringify(payload, null, 2));
       console.log(`[WhatsApp Business] Base URL:`, this.axiosInstance.defaults.baseURL);
-      console.log(`[WhatsApp Business] Authorization Header:`, this.axiosInstance.defaults.headers?.['Authorization']?.substring(0, 30) + '...');
+      const authHeader = this.axiosInstance.defaults.headers?.['Authorization'] as string;
+      if (authHeader) {
+        console.log(`[WhatsApp Business] Authorization Header Länge: ${authHeader.length}`);
+        console.log(`[WhatsApp Business] Authorization Header Vorschau: ${authHeader.substring(0, 50)}...`);
+        console.log(`[WhatsApp Business] Token Start: ${authHeader.substring(7, 30)}...`);
+        console.log(`[WhatsApp Business] Token Ende: ...${authHeader.substring(authHeader.length - 20)}`);
+      } else {
+        console.error(`[WhatsApp Business] ⚠️ Authorization Header fehlt!`);
+      }
 
       const response = await this.axiosInstance.post('/messages', payload);
 
