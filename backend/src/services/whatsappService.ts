@@ -28,30 +28,61 @@ export class WhatsAppService {
    * Lädt WhatsApp Settings aus der Organisation
    */
   private async loadSettings(): Promise<void> {
+    console.log(`[WhatsApp Service] Lade Settings für Organisation ${this.organizationId}`);
+    
     const organization = await prisma.organization.findUnique({
       where: { id: this.organizationId },
       select: { settings: true }
     });
 
     if (!organization?.settings) {
+      console.error(`[WhatsApp Service] Keine Settings für Organisation ${this.organizationId} gefunden`);
       throw new Error(`WhatsApp ist nicht für Organisation ${this.organizationId} konfiguriert`);
     }
 
-    const settings = decryptApiSettings(organization.settings as any);
-    const whatsappSettings = settings?.whatsapp;
-
-    if (!whatsappSettings?.apiKey) {
-      throw new Error(`WhatsApp API Key ist nicht für Organisation ${this.organizationId} konfiguriert`);
+    // Prüfe ENCRYPTION_KEY
+    const encryptionKey = process.env.ENCRYPTION_KEY;
+    if (!encryptionKey) {
+      console.warn('[WhatsApp Service] ⚠️ ENCRYPTION_KEY nicht gesetzt - versuche Settings ohne Entschlüsselung zu laden');
+    } else {
+      console.log(`[WhatsApp Service] ENCRYPTION_KEY ist gesetzt (Länge: ${encryptionKey.length})`);
     }
 
-    this.provider = whatsappSettings.provider || 'twilio';
-    this.apiKey = whatsappSettings.apiKey;
-    this.apiSecret = whatsappSettings.apiSecret;
-    this.phoneNumberId = whatsappSettings.phoneNumberId;
-    this.businessAccountId = whatsappSettings.businessAccountId;
+    try {
+      const settings = decryptApiSettings(organization.settings as any);
+      const whatsappSettings = settings?.whatsapp;
 
-    // Erstelle Axios-Instanz basierend auf Provider
-    this.axiosInstance = this.createAxiosInstance();
+      console.log(`[WhatsApp Service] WhatsApp Settings geladen:`, {
+        provider: whatsappSettings?.provider,
+        hasApiKey: !!whatsappSettings?.apiKey,
+        apiKeyLength: whatsappSettings?.apiKey?.length || 0,
+        hasPhoneNumberId: !!whatsappSettings?.phoneNumberId,
+        phoneNumberId: whatsappSettings?.phoneNumberId
+      });
+
+      if (!whatsappSettings?.apiKey) {
+        console.error(`[WhatsApp Service] WhatsApp API Key fehlt für Organisation ${this.organizationId}`);
+        throw new Error(`WhatsApp API Key ist nicht für Organisation ${this.organizationId} konfiguriert`);
+      }
+
+      this.provider = whatsappSettings.provider || 'twilio';
+      this.apiKey = whatsappSettings.apiKey;
+      this.apiSecret = whatsappSettings.apiSecret;
+      this.phoneNumberId = whatsappSettings.phoneNumberId;
+      this.businessAccountId = whatsappSettings.businessAccountId;
+
+      console.log(`[WhatsApp Service] Provider: ${this.provider}, Phone Number ID: ${this.phoneNumberId}`);
+
+      // Erstelle Axios-Instanz basierend auf Provider
+      this.axiosInstance = this.createAxiosInstance();
+    } catch (error) {
+      console.error('[WhatsApp Service] Fehler beim Laden der Settings:', error);
+      if (error instanceof Error) {
+        console.error('[WhatsApp Service] Fehlermeldung:', error.message);
+        console.error('[WhatsApp Service] Stack:', error.stack);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -93,11 +124,20 @@ export class WhatsAppService {
    */
   async sendMessage(to: string, message: string, template?: string): Promise<boolean> {
     try {
+      console.log(`[WhatsApp Service] sendMessage aufgerufen für: ${to}`);
       await this.loadSettings();
 
       if (!this.axiosInstance) {
+        console.error('[WhatsApp Service] Axios-Instanz nicht initialisiert');
         throw new Error('WhatsApp Service nicht initialisiert');
       }
+
+      if (!this.apiKey) {
+        console.error('[WhatsApp Service] API Key nicht gesetzt');
+        throw new Error('WhatsApp API Key nicht gesetzt');
+      }
+
+      console.log(`[WhatsApp Service] Sende Nachricht via ${this.provider}...`);
 
       // Normalisiere Telefonnummer (entferne Leerzeichen, füge + hinzu falls fehlt)
       const normalizedPhone = this.normalizePhoneNumber(to);
@@ -161,6 +201,11 @@ export class WhatsAppService {
       throw new Error('WhatsApp Business Service nicht initialisiert');
     }
 
+    if (!this.phoneNumberId) {
+      console.error('[WhatsApp Business] Phone Number ID fehlt!');
+      throw new Error('WhatsApp Phone Number ID ist nicht konfiguriert');
+    }
+
     try {
       const payload: any = {
         messaging_product: 'whatsapp',
@@ -180,15 +225,30 @@ export class WhatsAppService {
         };
       }
 
+      console.log(`[WhatsApp Business] Sende Nachricht an ${to} via Phone Number ID ${this.phoneNumberId}`);
+      console.log(`[WhatsApp Business] Payload:`, JSON.stringify(payload, null, 2));
+      console.log(`[WhatsApp Business] Base URL:`, this.axiosInstance.defaults.baseURL);
+      console.log(`[WhatsApp Business] Authorization Header:`, this.axiosInstance.defaults.headers?.['Authorization']?.substring(0, 30) + '...');
+
       const response = await this.axiosInstance.post('/messages', payload);
+
+      console.log(`[WhatsApp Business] ✅ Nachricht erfolgreich gesendet. Status: ${response.status}`);
+      console.log(`[WhatsApp Business] Response:`, JSON.stringify(response.data, null, 2));
 
       return response.status === 200;
     } catch (error) {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError;
-        console.error('[WhatsApp Business] API Fehler:', axiosError.response?.data);
+        console.error('[WhatsApp Business] API Fehler Details:');
+        console.error('  Status:', axiosError.response?.status);
+        console.error('  Status Text:', axiosError.response?.statusText);
+        console.error('  Response Data:', JSON.stringify(axiosError.response?.data, null, 2));
+        console.error('  Request URL:', axiosError.config?.url);
+        console.error('  Request Method:', axiosError.config?.method);
+        console.error('  Request Headers:', JSON.stringify(axiosError.config?.headers, null, 2));
         throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify(axiosError.response?.data)}`);
       }
+      console.error('[WhatsApp Business] Unbekannter Fehler:', error);
       throw error;
     }
   }
