@@ -2213,8 +2213,7 @@ export const debugUserBranches = async (req: Request, res: Response) => {
                 username: true,
                 email: true,
                 firstName: true,
-                lastName: true,
-                organizationId: true
+                lastName: true
             }
         });
 
