@@ -535,12 +535,35 @@ code {
     padding-left: 0.75rem !important; /* Erhöht von 0.5rem auf 0.75rem für mehr Innenabstand */
     padding-right: 0.75rem !important; /* Erhöht von 0.5rem auf 0.75rem für mehr Innenabstand */
   }
+  
+  /* Dashboard-Wrapper-Boxen: Immer normale Breite behalten (überschreibt obige Regel) */
+  .dashboard-requests-wrapper,
+  .dashboard-tasks-wrapper,
+  .dashboard-workcenter-wrapper,
+  .dashboard-invoices-wrapper,
+  .dashboard-monthly-reports-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
 
   /* Tabellenbehälter ohne horizontalen Abstand - ausgewogene Randbreite */
   .overflow-x-auto {
     margin-left: -0.25rem !important;
     margin-right: -0.25rem !important;
     width: calc(100% + 0.5rem) !important;
+  }
+  
+  /* Dashboard-Wrapper: Tabellen-Container sollen innerhalb der Box bleiben */
+  .dashboard-requests-wrapper .overflow-x-auto,
+  .dashboard-tasks-wrapper .overflow-x-auto,
+  .dashboard-workcenter-wrapper .overflow-x-auto,
+  .dashboard-invoices-wrapper .overflow-x-auto,
+  .dashboard-monthly-reports-wrapper .overflow-x-auto {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    width: 100% !important;
   }
 
   /* Spezifische Optimierung für mobile Tabellen-Container mit ausgeglichenen Rändern */
@@ -588,6 +611,18 @@ code {
     margin-right: calc(-50vw + 50%) !important;
     max-width: 100vw !important;
     box-sizing: border-box !important;
+  }
+  
+  /* Dashboard-Wrapper-Boxen: Immer normale Breite behalten (überschreibt obige Regel) */
+  .dashboard-requests-wrapper,
+  .dashboard-tasks-wrapper,
+  .dashboard-workcenter-wrapper,
+  .dashboard-invoices-wrapper,
+  .dashboard-monthly-reports-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
   }
 
   /* Dashboard-Box bei Cards-Mode: Schattierung und Border entfernen */

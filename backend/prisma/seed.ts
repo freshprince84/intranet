@@ -307,6 +307,11 @@ async function main() {
 
     await ensureAllPermissionsForRole(adminRole.id, adminPermissionMap);
 
+    // Cerebro-spezifische Berechtigungen für Admin (entityType: 'cerebro')
+    await ensurePermission(adminRole.id, 'cerebro', 'cerebro', 'both');
+    await ensurePermission(adminRole.id, 'cerebro_media', 'cerebro', 'both');
+    await ensurePermission(adminRole.id, 'cerebro_links', 'cerebro', 'both');
+
     // ========================================
     // 4. USER-PERMISSIONS (SELEKTIV)
     // ========================================
@@ -314,7 +319,8 @@ async function main() {
     
     const userPermissionMap: Record<string, AccessLevel> = {};
     
-    // PAGES: alle AUSSER workcenter, aber MIT organization_management
+    // PAGES: alle AUSSER workcenter und organization_management
+    // organization_management = 'none' (standardmäßig ausgeblendet, kann von Organisation angepasst werden)
     userPermissionMap['page_dashboard'] = 'both';
     userPermissionMap['page_worktracker'] = 'both';
     userPermissionMap['page_consultations'] = 'both';
@@ -322,7 +328,7 @@ async function main() {
     userPermissionMap['page_cerebro'] = 'both';
     userPermissionMap['page_settings'] = 'both';
     userPermissionMap['page_profile'] = 'both';
-    userPermissionMap['page_organization_management'] = 'both'; // Organisation-Seite (Hauptseite)
+    // NICHT: page_organization_management (bleibt 'none' - standardmäßig ausgeblendet)
     // NICHT: team_worktime_control (bleibt 'none')
     
     // TABELLEN: alle AUSSER die auf worktracker, workcenter & organisation
@@ -352,6 +358,11 @@ async function main() {
 
     await ensureAllPermissionsForRole(userRole.id, userPermissionMap);
 
+    // Cerebro-spezifische Berechtigungen für User (entityType: 'cerebro')
+    await ensurePermission(userRole.id, 'cerebro', 'cerebro', 'both');
+    await ensurePermission(userRole.id, 'cerebro_media', 'cerebro', 'both');
+    await ensurePermission(userRole.id, 'cerebro_links', 'cerebro', 'both');
+
     // ========================================
     // 5. HAMBURGER-PERMISSIONS (BASIS)
     // ========================================
@@ -369,6 +380,11 @@ async function main() {
     hamburgerPermissionMap['table_notifications'] = 'both';
 
     await ensureAllPermissionsForRole(hamburgerRole.id, hamburgerPermissionMap);
+
+    // Cerebro-spezifische Berechtigungen für Hamburger (entityType: 'cerebro')
+    await ensurePermission(hamburgerRole.id, 'cerebro', 'cerebro', 'both');
+    await ensurePermission(hamburgerRole.id, 'cerebro_media', 'cerebro', 'both');
+    await ensurePermission(hamburgerRole.id, 'cerebro_links', 'cerebro', 'both');
 
     // ========================================
     // 6. ORGANISATIONEN ERSTELLEN

@@ -171,13 +171,15 @@ const Worktracker: React.FC = () => {
     // State für erweiterte Filterbedingungen
     const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
     const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+    const [filterSortDirections, setFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
     
     // Filter State Management (Controlled Mode)
     const [activeFilterName, setActiveFilterName] = useState<string>('');
     const [selectedFilterId, setSelectedFilterId] = useState<number | null>(null);
     
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-    const [sortConfig, setSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
+    // Tabellen-Header-Sortierung (nur für Tabellen-Ansicht)
+    const [tableSortConfig, setTableSortConfig] = useState<SortConfig>({ key: 'dueDate', direction: 'asc' });
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -204,11 +206,6 @@ const Worktracker: React.FC = () => {
 
     // View-Mode aus Settings laden
     const viewMode = settings.viewMode || 'cards';
-    
-    // Lokale Sortierrichtungen für Cards (nicht persistiert)
-    const [cardSortDirections, setCardSortDirections] = useState<Record<string, 'asc' | 'desc'>>(() => {
-        return defaultCardSortDirections;
-    });
 
     // Abgeleitete Werte für Card-Ansicht aus Tabellen-Settings
     // Card-Metadaten-Reihenfolge aus columnOrder ableiten
@@ -322,7 +319,20 @@ const Worktracker: React.FC = () => {
                 if (aktuellFilter) {
                     setActiveFilterName(t('tasks.filters.current'));
                     setSelectedFilterId(aktuellFilter.id);
-                    applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators);
+                    // Migration: Altes Format zu neuem Format konvertieren
+                    let sortDirections = aktuellFilter.sortDirections || [];
+                    if (Array.isArray(sortDirections) && sortDirections.length > 0) {
+                        // Bereits neues Format
+                    } else if (sortDirections && typeof sortDirections === 'object' && !Array.isArray(sortDirections)) {
+                        // Altes Format: Record -> Array konvertieren
+                        sortDirections = Object.entries(sortDirections as Record<string, 'asc' | 'desc'>).map(([column, direction], index) => ({
+                            column,
+                            direction,
+                            priority: index + 1,
+                            conditionIndex: filterConditions.findIndex(c => c.column === column)
+                        }));
+                    }
+                    applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators, sortDirections);
                 }
             } catch (error) {
                 console.error('Fehler beim Setzen des initialen Filters:', error);
@@ -450,10 +460,13 @@ const Worktracker: React.FC = () => {
     };
 
     const handleSort = (key: SortConfig['key']) => {
-        setSortConfig(current => ({
-            key,
-            direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
-        }));
+        // Nur für Tabellen-Ansicht (Header-Sortierung)
+        if (viewMode === 'table') {
+            setTableSortConfig(current => ({
+                key,
+                direction: current.key === key && current.direction === 'asc' ? 'desc' : 'asc'
+            }));
+        }
     };
 
     const renderStatusButtons = (task: Task): JSX.Element[] => {
@@ -543,23 +556,27 @@ const Worktracker: React.FC = () => {
         return filterConditions.length;
     };
 
-    const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
         setFilterConditions(conditions);
         setFilterLogicalOperators(operators);
+        if (sortDirections !== undefined) {
+            setFilterSortDirections(sortDirections);
+        }
     };
     
     const resetFilterConditions = () => {
         setFilterConditions([]);
         setFilterLogicalOperators([]);
+        setFilterSortDirections([]);
         setActiveFilterName('');
         setSelectedFilterId(null);
     };
     
     // Filter Change Handler (Controlled Mode)
-    const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+    const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
         setActiveFilterName(name);
         setSelectedFilterId(id);
-        applyFilterConditions(conditions, operators);
+        applyFilterConditions(conditions, operators, sortDirections);
     };
 
     const getStatusPriority = (status: Task['status']): number => {
@@ -775,137 +792,121 @@ const Worktracker: React.FC = () => {
             });
         
         console.log('✅ Gefilterte Tasks:', filtered.length, 'von', tasks.length);
-        const sorted = filtered
-            .sort((a, b) => {
-                // Multi-Sortierung für Cards-Mode
-                if (viewMode === 'cards') {
-                    const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
+        
+        // Hilfsfunktion zum Extrahieren von Werten für Sortierung
+        const getSortValue = (task: Task, columnId: string): any => {
+            switch (columnId) {
+                case 'title':
+                    return task.title.toLowerCase();
+                case 'status':
+                    return getStatusPriority(task.status);
+                case 'responsible':
+                case 'responsibleAndQualityControl':
+                    return task.responsible ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase() : (task.role ? `Rolle: ${task.role.name}`.toLowerCase() : '');
+                case 'qualityControl':
+                    return task.qualityControl ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase() : '';
+                case 'branch':
+                    return task.branch.name.toLowerCase();
+                case 'dueDate':
+                    return task.dueDate ? new Date(task.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+                case 'description':
+                    return (task.description || '').toLowerCase();
+                default:
+                    return '';
+            }
+        };
+        
+        const sorted = filtered.sort((a, b) => {
+            // 1. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
+            if (filterSortDirections.length > 0 && filterConditions.length > 0) {
+                // Sortiere nach Priorität (1, 2, 3, ...)
+                const sortedByPriority = [...filterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
+                
+                for (const sortDir of sortedByPriority) {
+                    const valueA = getSortValue(a, sortDir.column);
+                    const valueB = getSortValue(b, sortDir.column);
                     
-                    for (const columnId of sortableColumns) {
-                        const direction = cardSortDirections[columnId] || 'asc';
-                        let valueA: any, valueB: any;
-                        
-                        switch (columnId) {
-                            case 'title':
-                                valueA = a.title.toLowerCase();
-                                valueB = b.title.toLowerCase();
-                                break;
-                            case 'status':
-                                valueA = getStatusPriority(a.status);
-                                valueB = getStatusPriority(b.status);
-                                break;
-                            case 'responsible':
-                                valueA = a.responsible ? `${a.responsible.firstName} ${a.responsible.lastName}`.toLowerCase() : (a.role ? `Rolle: ${a.role.name}`.toLowerCase() : '');
-                                valueB = b.responsible ? `${b.responsible.firstName} ${b.responsible.lastName}`.toLowerCase() : (b.role ? `Rolle: ${b.role.name}`.toLowerCase() : '');
-                                break;
-                            case 'qualityControl':
-                                valueA = a.qualityControl ? `${a.qualityControl.firstName} ${a.qualityControl.lastName}`.toLowerCase() : '';
-                                valueB = b.qualityControl ? `${b.qualityControl.firstName} ${b.qualityControl.lastName}`.toLowerCase() : '';
-                                break;
-                            case 'branch':
-                                valueA = a.branch.name.toLowerCase();
-                                valueB = b.branch.name.toLowerCase();
-                                break;
-                            case 'dueDate':
-                                valueA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                                valueB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                                break;
-                            case 'description':
-                                valueA = (a.description || '').toLowerCase();
-                                valueB = (b.description || '').toLowerCase();
-                                break;
-                            default:
-                                continue; // Überspringe unbekannte Spalten
-                        }
-                        
-                        // Vergleich basierend auf Typ
-                        let comparison = 0;
-                        if (typeof valueA === 'number' && typeof valueB === 'number') {
-                            comparison = valueA - valueB;
-                        } else {
-                            comparison = String(valueA).localeCompare(String(valueB));
-                        }
-                        
-                        // Sortierrichtung anwenden
-                        if (direction === 'desc') {
-                            comparison = -comparison;
-                        }
-                        
-                        // Wenn unterschiedlich, gebe Vergleich zurück
-                        if (comparison !== 0) {
-                            return comparison;
-                        }
-                    }
-                    return 0; // Alle Spalten identisch
-                } else {
-                    // Tabellen-Mode: Einzel-Sortierung wie bisher
-                    if (sortConfig.key) {
-                        let valueA, valueB;
-                        
-                        // Extrahiere die Werte basierend auf dem Sortierungsschlüssel
-                        switch (sortConfig.key) {
-                            case 'title':
-                                valueA = a.title;
-                                valueB = b.title;
-                                break;
-                            case 'status':
-                                valueA = getStatusPriority(a.status);
-                                valueB = getStatusPriority(b.status);
-                                break;
-                            case 'responsible.firstName':
-                                valueA = a.responsible ? `${a.responsible.firstName} ${a.responsible.lastName}` : (a.role ? `Rolle: ${a.role.name}` : '');
-                                valueB = b.responsible ? `${b.responsible.firstName} ${b.responsible.lastName}` : (b.role ? `Rolle: ${b.role.name}` : '');
-                                break;
-                            case 'qualityControl.firstName':
-                                valueA = a.qualityControl ? `${a.qualityControl.firstName} ${a.qualityControl.lastName}` : '';
-                                valueB = b.qualityControl ? `${b.qualityControl.firstName} ${b.qualityControl.lastName}` : '';
-                                break;
-                            case 'branch.name':
-                                valueA = a.branch.name;
-                                valueB = b.branch.name;
-                                break;
-                            case 'dueDate':
-                                valueA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                                valueB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                                break;
-                            default:
-                                valueA = a[sortConfig.key as keyof Task];
-                                valueB = b[sortConfig.key as keyof Task];
-                        }
-                        
-                        // Vergleiche die Werte basierend auf der Sortierrichtung
-                        if (typeof valueA === 'number' && typeof valueB === 'number') {
-                            return sortConfig.direction === 'asc' ? valueA - valueB : valueB - valueA;
-                        } else {
-                            const comparison = String(valueA).localeCompare(String(valueB));
-                            return sortConfig.direction === 'asc' ? comparison : -comparison;
-                        }
-                    }
-                    // Standardsortierung nur anwenden, wenn keine benutzerdefinierte Sortierung aktiv ist
-                    // Primäre Sortierung nach Fälligkeitsdatum
-                    const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                    const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
-                    
-                    if (aDate !== bDate) {
-                        return aDate - bDate; // Aufsteigend nach Datum
+                    let comparison = 0;
+                    if (typeof valueA === 'number' && typeof valueB === 'number') {
+                        comparison = valueA - valueB;
+                    } else {
+                        comparison = String(valueA).localeCompare(String(valueB));
                     }
                     
-                    // Sekundäre Sortierung nach Status-Priorität
-                    const aStatusPrio = getStatusPriority(a.status);
-                    const bStatusPrio = getStatusPriority(b.status);
-                    
-                    if (aStatusPrio !== bStatusPrio) {
-                        return aStatusPrio - bStatusPrio; // Aufsteigend nach Priorität
+                    if (sortDir.direction === 'desc') {
+                        comparison = -comparison;
                     }
                     
-                    // Tertiäre Sortierung nach Titel
-                    return a.title.localeCompare(b.title);
+                    if (comparison !== 0) {
+                        return comparison;
+                    }
                 }
-            });
+                return 0;
+            }
+            
+            // 2. Priorität: Tabellen-Header-Sortierung (nur für Tabellen-Ansicht, wenn kein Filter aktiv)
+            if (viewMode === 'table' && tableSortConfig.key) {
+                let valueA: any, valueB: any;
+                
+                switch (tableSortConfig.key) {
+                    case 'title':
+                        valueA = a.title;
+                        valueB = b.title;
+                        break;
+                    case 'status':
+                        valueA = getStatusPriority(a.status);
+                        valueB = getStatusPriority(b.status);
+                        break;
+                    case 'responsible.firstName':
+                        valueA = a.responsible ? `${a.responsible.firstName} ${a.responsible.lastName}` : (a.role ? `Rolle: ${a.role.name}` : '');
+                        valueB = b.responsible ? `${b.responsible.firstName} ${b.responsible.lastName}` : (b.role ? `Rolle: ${b.role.name}` : '');
+                        break;
+                    case 'qualityControl.firstName':
+                        valueA = a.qualityControl ? `${a.qualityControl.firstName} ${a.qualityControl.lastName}` : '';
+                        valueB = b.qualityControl ? `${b.qualityControl.firstName} ${b.qualityControl.lastName}` : '';
+                        break;
+                    case 'branch.name':
+                        valueA = a.branch.name;
+                        valueB = b.branch.name;
+                        break;
+                    case 'dueDate':
+                        valueA = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+                        valueB = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+                        break;
+                    default:
+                        valueA = a[tableSortConfig.key as keyof Task];
+                        valueB = b[tableSortConfig.key as keyof Task];
+                }
+                
+                if (typeof valueA === 'number' && typeof valueB === 'number') {
+                    return tableSortConfig.direction === 'asc' ? valueA - valueB : valueB - valueA;
+                } else {
+                    const comparison = String(valueA).localeCompare(String(valueB));
+                    return tableSortConfig.direction === 'asc' ? comparison : -comparison;
+                }
+            }
+            
+            // 3. Fallback: Standardsortierung (wenn keine benutzerdefinierte Sortierung)
+            const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+            const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
+            
+            if (aDate !== bDate) {
+                return aDate - bDate;
+            }
+            
+            const aStatusPrio = getStatusPriority(a.status);
+            const bStatusPrio = getStatusPriority(b.status);
+            
+            if (aStatusPrio !== bStatusPrio) {
+                return aStatusPrio - bStatusPrio;
+            }
+            
+            return a.title.localeCompare(b.title);
+        });
         
         console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
         return sorted;
-    }, [tasks, searchTerm, sortConfig, getStatusPriority, filterConditions, filterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+    }, [tasks, searchTerm, tableSortConfig, getStatusPriority, filterConditions, filterLogicalOperators, filterSortDirections, viewMode]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
@@ -1176,16 +1177,6 @@ const Worktracker: React.FC = () => {
                                                     updateColumnOrder(newTableOrder);
                                                 }
                                                 : handleMoveColumn}
-                                            sortDirections={viewMode === 'cards' ? cardSortDirections : undefined}
-                                            onSortDirectionChange={viewMode === 'cards'
-                                                ? (columnId: string, direction: 'asc' | 'desc') => {
-                                                    setCardSortDirections(prev => ({
-                                                        ...prev,
-                                                        [columnId]: direction
-                                                    }));
-                                                }
-                                                : undefined}
-                                            showSortDirection={viewMode === 'cards'}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             onClose={() => {}}
@@ -1203,11 +1194,13 @@ const Worktracker: React.FC = () => {
                                     onReset={resetFilterConditions}
                                     savedConditions={filterConditions}
                                     savedOperators={filterLogicalOperators}
+                                    savedSortDirections={filterSortDirections}
+                                    onSortDirectionsChange={setFilterSortDirections}
                                     tableId={TODOS_TABLE_ID}
                                 />
                                 </div>
                             )}
-                            
+
                             {/* Gespeicherte Filter als Tags anzeigen */}
                             <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
                                 <SavedFilterTags
@@ -1704,16 +1697,6 @@ const Worktracker: React.FC = () => {
                                                     updateColumnOrder(newTableOrder);
                                                 }
                                                 : handleMoveColumn}
-                                            sortDirections={viewMode === 'cards' ? cardSortDirections : undefined}
-                                            onSortDirectionChange={viewMode === 'cards'
-                                                ? (columnId: string, direction: 'asc' | 'desc') => {
-                                                    setCardSortDirections(prev => ({
-                                                        ...prev,
-                                                        [columnId]: direction
-                                                    }));
-                                                }
-                                                : undefined}
-                                            showSortDirection={viewMode === 'cards'}
                                             buttonTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             modalTitle={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
                                             onClose={() => {}}
@@ -1731,6 +1714,8 @@ const Worktracker: React.FC = () => {
                                     onReset={resetFilterConditions}
                                     savedConditions={filterConditions}
                                     savedOperators={filterLogicalOperators}
+                                    savedSortDirections={filterSortDirections}
+                                    onSortDirectionsChange={setFilterSortDirections}
                                     tableId={TODOS_TABLE_ID}
                                 />
                                 </div>

@@ -21,6 +21,7 @@ export interface User {
   gender?: string | null; // "male", "female", "other"
   active?: boolean;
   roles: UserRole[];
+  branches?: UserBranch[];
   identificationDocuments?: IdentificationDocument[];
   settings?: Settings;
   invoiceSettings?: InvoiceSettings;
@@ -34,6 +35,19 @@ export interface UserRole {
   lastUsed: boolean;
 }
 
+export interface Branch {
+  id: number;
+  name: string;
+}
+
+export interface UserBranch {
+  id: number;
+  userId: number;
+  branchId: number;
+  branch: Branch;
+  lastUsed: boolean;
+}
+
 export interface Organization {
   id: number;
   name: string;
@@ -43,6 +57,8 @@ export interface Organization {
 export interface Role {
   id: number;
   name: string;
+  allBranches?: boolean;
+  branches?: Array<{ branch: Branch }>;
   description: string | null;
   permissions: Permission[];
   organization?: Organization | null;

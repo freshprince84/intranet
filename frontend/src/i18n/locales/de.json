@@ -235,6 +235,8 @@
     "genderMale": "Männlich",
     "genderFemale": "Weiblich",
     "genderOther": "Andere",
+    "phoneNumber": "Telefonnummer",
+    "phoneNumberHint": "Format: +LändercodeNummer (z.B. +573001234567)",
     "profileIncomplete": "Ihr Profil ist unvollständig.",
     "completeProfile": "Bitte vervollständigen Sie Ihr Profil, indem Sie alle erforderlichen Felder ausfüllen.",
     "documents": "Identifikationsdokumente",
@@ -842,7 +844,11 @@
       "groups": {
         "users": "Benutzer",
         "roles": "Rollen"
-      }
+      },
+      "sortAscending": "Aufsteigend sortieren",
+      "sortDescending": "Absteigend sortieren",
+      "moveUp": "Priorität erhöhen",
+      "moveDown": "Priorität verringern"
     },
     "operators": {
       "equals": "=",

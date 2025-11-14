@@ -12,7 +12,8 @@ const prisma = new PrismaClient();
  * - WhatsApp Business API
  */
 export class WhatsAppService {
-  private organizationId: number;
+  private organizationId?: number;
+  private branchId?: number;
   private apiKey?: string;
   private apiSecret?: string;
   private phoneNumberId?: string;
@@ -20,14 +21,99 @@ export class WhatsAppService {
   private provider?: 'twilio' | 'whatsapp-business-api' | 'other';
   private axiosInstance?: AxiosInstance;
 
-  constructor(organizationId: number) {
+  /**
+   * Constructor: Akzeptiert entweder organizationId ODER branchId
+   * @param organizationId - Organisation ID (für Rückwärtskompatibilität)
+   * @param branchId - Branch ID (neu)
+   */
+  constructor(organizationId?: number, branchId?: number) {
+    if (!organizationId && !branchId) {
+      throw new Error('Entweder organizationId oder branchId muss angegeben werden');
+    }
     this.organizationId = organizationId;
+    this.branchId = branchId;
   }
 
   /**
-   * Lädt WhatsApp Settings aus der Organisation
+   * Lädt WhatsApp Settings aus Branch oder Organisation (mit Fallback)
    */
   private async loadSettings(): Promise<void> {
+    // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
+    if (this.branchId) {
+      console.log(`[WhatsApp Service] Lade Settings für Branch ${this.branchId}`);
+      
+      const branch = await prisma.branch.findUnique({
+        where: { id: this.branchId },
+        select: { 
+          whatsappSettings: true, 
+          organizationId: true 
+        }
+      });
+
+      if (branch?.whatsappSettings) {
+        // Branch hat eigene WhatsApp Settings
+        console.log(`[WhatsApp Service] Branch hat eigene WhatsApp Settings`);
+        
+        try {
+          // branch.whatsappSettings enthält direkt die WhatsApp Settings (nicht verschachtelt)
+          // Versuche zu entschlüsseln (falls verschlüsselt)
+          let whatsappSettings: any;
+          try {
+            // Versuche als verschachteltes Objekt zu entschlüsseln
+            const decrypted = decryptApiSettings({ whatsapp: branch.whatsappSettings } as any);
+            whatsappSettings = decrypted?.whatsapp;
+          } catch {
+            // Falls das fehlschlägt, versuche direkt zu entschlüsseln
+            try {
+              whatsappSettings = decryptApiSettings(branch.whatsappSettings as any);
+            } catch {
+              // Falls auch das fehlschlägt, verwende direkt (unverschlüsselt)
+              whatsappSettings = branch.whatsappSettings as any;
+            }
+          }
+
+          // Falls immer noch verschachtelt, extrahiere whatsapp
+          if (whatsappSettings?.whatsapp) {
+            whatsappSettings = whatsappSettings.whatsapp;
+          }
+
+          if (whatsappSettings?.apiKey) {
+            this.provider = whatsappSettings.provider || 'twilio';
+            this.apiKey = whatsappSettings.apiKey;
+            this.apiSecret = whatsappSettings.apiSecret;
+            this.phoneNumberId = whatsappSettings.phoneNumberId;
+            this.businessAccountId = whatsappSettings.businessAccountId;
+
+            console.log(`[WhatsApp Service] Branch Settings geladen:`, {
+              provider: this.provider,
+              hasApiKey: !!this.apiKey,
+              phoneNumberId: this.phoneNumberId
+            });
+
+            this.axiosInstance = this.createAxiosInstance();
+            return; // Erfolgreich geladen
+          } else {
+            console.warn(`[WhatsApp Service] Branch Settings gefunden, aber kein API Key vorhanden`);
+          }
+        } catch (error) {
+          console.warn(`[WhatsApp Service] Fehler beim Laden der Branch Settings:`, error);
+          // Fallback auf Organization Settings
+        }
+
+        // Fallback: Lade Organization Settings
+        if (branch.organizationId) {
+          console.log(`[WhatsApp Service] Fallback: Lade Organization Settings für Organisation ${branch.organizationId}`);
+          this.organizationId = branch.organizationId;
+        }
+      } else if (branch?.organizationId) {
+        // Branch hat keine Settings, aber Organization ID
+        console.log(`[WhatsApp Service] Branch hat keine WhatsApp Settings, verwende Organization ${branch.organizationId}`);
+        this.organizationId = branch.organizationId;
+      }
+    }
+
+    // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
+    if (this.organizationId) {
     console.log(`[WhatsApp Service] Lade Settings für Organisation ${this.organizationId}`);
     
     const organization = await prisma.organization.findUnique({
@@ -75,6 +161,7 @@ export class WhatsAppService {
 
       // Erstelle Axios-Instanz basierend auf Provider
       this.axiosInstance = this.createAxiosInstance();
+        return; // Erfolgreich geladen
     } catch (error) {
       console.error('[WhatsApp Service] Fehler beim Laden der Settings:', error);
       if (error instanceof Error) {
@@ -83,6 +170,10 @@ export class WhatsAppService {
       }
       throw error;
     }
+    }
+
+    // Falls wir hier ankommen, wurde nichts gefunden
+    throw new Error('WhatsApp Settings nicht gefunden (weder Branch noch Organization)');
   }
 
   /**
@@ -341,6 +432,28 @@ Acceso:
 ¡Te deseamos una estancia agradable!`;
 
     return await this.sendMessage(guestPhone, message);
+  }
+
+  /**
+   * Statische Methode: Erstellt Service für Branch
+   * @param branchId - Branch ID
+   * @returns WhatsAppService-Instanz
+   */
+  static async getServiceForBranch(branchId: number): Promise<WhatsAppService> {
+    const service = new WhatsAppService(undefined, branchId);
+    await service.loadSettings();
+    return service;
+  }
+
+  /**
+   * Statische Methode: Erstellt Service für Organization (Rückwärtskompatibel)
+   * @param organizationId - Organization ID
+   * @returns WhatsAppService-Instanz
+   */
+  static async getServiceForOrganization(organizationId: number): Promise<WhatsAppService> {
+    const service = new WhatsAppService(organizationId);
+    await service.loadSettings();
+    return service;
   }
 }
 

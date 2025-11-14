@@ -5,11 +5,18 @@ import { AuthenticatedRequest } from '../middleware/auth';
 const prisma = new PrismaClient();
 
 // Schnittstellendefinitionen
+interface SortDirection {
+  column: string;
+  direction: 'asc' | 'desc';
+  priority: number;
+}
+
 interface SavedFilterRequest {
   tableId: string;
   name: string;
   conditions: any[];
   operators: string[];
+  sortDirections?: SortDirection[];
 }
 
 interface FilterGroupRequest {
@@ -41,18 +48,42 @@ export const getUserSavedFilters = async (req: AuthenticatedRequest, res: Respon
       });
 
       // Parse die JSON-Strings zurück in Arrays
-      const parsedFilters = savedFilters.map(filter => ({
-        id: filter.id,
-        userId: filter.userId,
-        tableId: filter.tableId,
-        name: filter.name,
-        conditions: JSON.parse(filter.conditions),
-        operators: JSON.parse(filter.operators),
-        groupId: filter.groupId,
-        order: filter.order,
-        createdAt: filter.createdAt,
-        updatedAt: filter.updatedAt
-      }));
+      const parsedFilters = savedFilters.map(filter => {
+        let sortDirections: SortDirection[] = [];
+        if (filter.sortDirections) {
+          try {
+            const parsed = JSON.parse(filter.sortDirections);
+            // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
+            if (Array.isArray(parsed)) {
+              sortDirections = parsed;
+            } else if (typeof parsed === 'object' && parsed !== null) {
+              // Altes Format: { "status": "asc", "branch": "desc" }
+              sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
+                column,
+                direction: direction as 'asc' | 'desc',
+                priority: index + 1
+              }));
+            }
+          } catch (e) {
+            console.error('Fehler beim Parsen von sortDirections:', e);
+            sortDirections = [];
+          }
+        }
+        
+        return {
+          id: filter.id,
+          userId: filter.userId,
+          tableId: filter.tableId,
+          name: filter.name,
+          conditions: JSON.parse(filter.conditions),
+          operators: JSON.parse(filter.operators),
+          sortDirections,
+          groupId: filter.groupId,
+          order: filter.order,
+          createdAt: filter.createdAt,
+          updatedAt: filter.updatedAt
+        };
+      });
 
       return res.status(200).json(parsedFilters);
     } catch (prismaError) {
@@ -69,7 +100,7 @@ export const getUserSavedFilters = async (req: AuthenticatedRequest, res: Respon
 export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = parseInt(req.userId, 10);
-    const { tableId, name, conditions, operators } = req.body as SavedFilterRequest;
+    const { tableId, name, conditions, operators, sortDirections } = req.body as SavedFilterRequest;
 
     if (isNaN(userId)) {
       return res.status(401).json({ message: 'Nicht authentifiziert' });
@@ -86,6 +117,7 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
     // Konvertiere Arrays in JSON-Strings für die Datenbank
     const conditionsJson = JSON.stringify(conditions || []);
     const operatorsJson = JSON.stringify(operators || []);
+    const sortDirectionsJson = JSON.stringify(sortDirections || {});
 
     // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
     try {
@@ -108,7 +140,8 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
           },
           data: {
             conditions: conditionsJson,
-            operators: operatorsJson
+            operators: operatorsJson,
+            sortDirections: sortDirectionsJson
           }
         });
       } else {
@@ -119,12 +152,34 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
             tableId,
             name,
             conditions: conditionsJson,
-            operators: operatorsJson
+            operators: operatorsJson,
+            sortDirections: sortDirectionsJson
           }
         });
       }
 
       // Parse die JSON-Strings zurück in Arrays für die Antwort
+      let sortDirections: SortDirection[] = [];
+      if (filter.sortDirections) {
+        try {
+          const parsed = JSON.parse(filter.sortDirections);
+          // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
+          if (Array.isArray(parsed)) {
+            sortDirections = parsed;
+          } else if (typeof parsed === 'object' && parsed !== null) {
+            // Altes Format: { "status": "asc", "branch": "desc" }
+            sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
+              column,
+              direction: direction as 'asc' | 'desc',
+              priority: index + 1
+            }));
+          }
+        } catch (e) {
+          console.error('Fehler beim Parsen von sortDirections:', e);
+          sortDirections = [];
+        }
+      }
+      
       const parsedFilter = {
         id: filter.id,
         userId: filter.userId,
@@ -132,6 +187,7 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
         name: filter.name,
         conditions: JSON.parse(filter.conditions),
         operators: JSON.parse(filter.operators),
+        sortDirections,
         groupId: filter.groupId,
         order: filter.order,
         createdAt: filter.createdAt,
@@ -321,6 +377,7 @@ export const getFilterGroups = async (req: AuthenticatedRequest, res: Response) 
           name: filter.name,
           conditions: JSON.parse(filter.conditions),
           operators: JSON.parse(filter.operators),
+          sortDirections: filter.sortDirections ? JSON.parse(filter.sortDirections) : {},
           groupId: filter.groupId,
           order: filter.order,
           createdAt: filter.createdAt,

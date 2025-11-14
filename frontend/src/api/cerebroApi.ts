@@ -165,10 +165,9 @@ const mediaApi = {
     formData: FormData,
     onUploadProgress?: (progressEvent: any) => void
   ): Promise<CerebroMedia> => {
+    // WICHTIG: Content-Type NICHT manuell setzen bei FormData!
+    // Axios setzt automatisch 'multipart/form-data' mit korrektem Boundary
     const response = await api.post('/cerebro/media', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
       onUploadProgress,
     });
     return response.data;

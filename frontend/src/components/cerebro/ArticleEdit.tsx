@@ -5,7 +5,7 @@ import { cerebroApi, CerebroArticleDetail } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { useUnifiedEditor } from '../../hooks/useUnifiedEditor.ts';
 import MarkdownPreview from '../MarkdownPreview.tsx';
-import { XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, CheckIcon, ArrowPathIcon, PhotoIcon, FilmIcon, DocumentTextIcon, DocumentIcon } from '@heroicons/react/24/outline';
 
 // Typen
 interface FormData {
@@ -49,6 +49,73 @@ const ArticleEdit: React.FC = () => {
   const hasCerebroButtonPermission = hasPermission('cerebro', 'both', 'button');
   const hasCerebroPagePermission = hasPermission('cerebro', 'both', 'page');
   const canEditArticles = hasCerebroButtonPermission || hasCerebroPagePermission;
+  
+  // Medientyp bestimmen
+  const getMediaType = (fileType: string): 'image' | 'video' | 'pdf' | 'other' => {
+    if (fileType.startsWith('image/')) return 'image';
+    if (fileType.startsWith('video/')) return 'video';
+    if (fileType === 'application/pdf') return 'pdf';
+    return 'other';
+  };
+  
+  // Temporäre Medien-Vorschau-Komponente
+  const TemporaryMediaPreview: React.FC<{ media: typeof temporaryMedia[0] }> = ({ media }) => {
+    const mediaType = getMediaType(media.fileType);
+    const tempUrl = media.url;
+    
+    const getMediaIcon = () => {
+      switch(mediaType) {
+        case 'image': return <PhotoIcon className="h-5 w-5" />;
+        case 'video': return <FilmIcon className="h-5 w-5" />;
+        case 'pdf': return <DocumentTextIcon className="h-5 w-5" />;
+        default: return <DocumentIcon className="h-5 w-5" />;
+      }
+    };
+    
+    return (
+      <div className="border rounded p-3 mb-2 hover:bg-gray-50 dark:hover:bg-gray-700 dark:border-gray-600">
+        <div className="flex items-center">
+          {getMediaIcon()}
+          <span className="ml-2 flex-grow dark:text-gray-200">{media.fileName}</span>
+        </div>
+        
+        {mediaType === 'image' && (
+          <div className="mt-2">
+            <img 
+              src={tempUrl} 
+              alt={media.fileName} 
+              className="max-w-full h-auto rounded"
+              style={{ maxHeight: '200px' }}
+            />
+          </div>
+        )}
+        
+        {mediaType === 'video' && (
+          <div className="mt-2">
+            <video 
+              controls 
+              className="max-w-full rounded"
+              style={{ maxHeight: '200px' }}
+            >
+              <source src={tempUrl} type={media.fileType} />
+              Ihr Browser unterstützt das Video-Tag nicht.
+            </video>
+          </div>
+        )}
+        
+        {mediaType === 'pdf' && (
+          <div className="mt-2">
+            <iframe 
+              src={`${tempUrl}#view=FitH`} 
+              className="w-full rounded border dark:border-gray-600"
+              style={{ height: '200px' }}
+              title={media.fileName}
+            ></iframe>
+          </div>
+        )}
+      </div>
+    );
+  };
   
   // Upload-Funktion für unified Editor
   const handleUpload = async (file: File): Promise<{ url: string; fileName: string }> => {
@@ -208,7 +275,7 @@ const ArticleEdit: React.FC = () => {
         // Slug aktualisieren für Upload-Funktion
         setArticleSlug(savedArticle.slug);
         
-        // Temporäre Medien hochladen
+        // Temporäre Medien VOR Navigation hochladen
         if (temporaryMedia.length > 0) {
           for (const tempMedia of temporaryMedia) {
             try {
@@ -226,6 +293,11 @@ const ArticleEdit: React.FC = () => {
           }
           setTemporaryMedia([]);
         }
+        
+        // Event für Struktur-Aktualisierung auslösen
+        window.dispatchEvent(new CustomEvent('cerebro-article-created', { 
+          detail: { article: savedArticle } 
+        }));
       } else if (articleId) {
         // Bestehenden Artikel aktualisieren
         savedArticle = await cerebroApi.articles.updateArticle(articleId, {
@@ -235,6 +307,7 @@ const ArticleEdit: React.FC = () => {
         });
       }
       
+      // Navigation erst nach erfolgreichem Upload aller Medien
       navigate(`/cerebro/${savedArticle.slug}`);
     } catch (err) {
       console.error('Fehler beim Speichern des Artikels:', err);
@@ -351,6 +424,20 @@ const ArticleEdit: React.FC = () => {
                 </div>
               )}
             </div>
+            
+            {/* Temporäre Medien-Vorschau */}
+            {temporaryMedia.length > 0 && (
+              <div className="mt-3">
+                <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Hochgeladene Dateien (Vorschau):
+                </h3>
+                <div className="space-y-2">
+                  {temporaryMedia.map((media, index) => (
+                    <TemporaryMediaPreview key={index} media={media} />
+                  ))}
+                </div>
+              </div>
+            )}
             
             {/* Markdown-Vorschau - nur Tags, nicht den gesamten Inhalt */}
             {formData.content && (

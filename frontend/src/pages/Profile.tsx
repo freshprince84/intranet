@@ -7,8 +7,19 @@ import { UserCircleIcon, PencilIcon, DocumentTextIcon, XMarkIcon, CheckIcon, Bui
 import { API_URL } from '../config/api.ts';
 import useMessage from '../hooks/useMessage.ts';
 import IdentificationDocumentList from '../components/IdentificationDocumentList.tsx';
+import IdentificationDocumentForm from '../components/IdentificationDocumentForm.tsx';
 import LifecycleTab from '../components/LifecycleTab.tsx';
 import MyDocumentsTab from '../components/MyDocumentsTab.tsx';
+
+interface IdentificationDocument {
+  id: number;
+  documentType: string;
+  documentNumber: string;
+  issueDate: string | null;
+  expiryDate: string | null;
+  issuingCountry: string;
+  issuingAuthority: string | null;
+}
 
 interface UserProfile {
   id: number;
@@ -24,11 +35,9 @@ interface UserProfile {
   country: string;
   language: string;
   gender: string | null; // "male", "female", "other"
-  // Neue Felder für Identifikationsdokumente
-  identificationNumber: string | null;
-  identificationType: string | null;
-  identificationExpiryDate: string | null;
-  identificationIssuingCountry: string | null;
+  phoneNumber: string | null; // WhatsApp-Telefonnummer (mit Ländercode)
+  identificationNumber: string | null; // Wird automatisch aus Dokument befüllt
+  identificationDocuments?: IdentificationDocument[]; // Neuestes Dokument für Anzeige
 }
 
 // Länder für die Auswahl - werden dynamisch aus Übersetzungen geladen
@@ -53,6 +62,7 @@ const Profile: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
   const [activeTab, setActiveTab] = useState<'profile' | 'documents' | 'lifecycle' | 'myDocuments'>('profile');
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
 
   // Länder für die Auswahl (dynamisch aus Übersetzungen)
   const COUNTRIES = [
@@ -85,10 +95,9 @@ const Profile: React.FC = () => {
         country: 'CO',
         language: 'es',
         gender: null,
+        phoneNumber: null,
         identificationNumber: null,
-        identificationType: null,
-        identificationExpiryDate: null,
-        identificationIssuingCountry: null
+        identificationDocuments: []
       };
       setUser(initialUserData);
       setFormData(initialUserData);
@@ -114,7 +123,7 @@ const Profile: React.FC = () => {
           country: response.data.country || 'CO',
           language: response.data.language || 'es',
           gender: response.data.gender || null,
-          identificationExpiryDate: response.data.identificationExpiryDate ? new Date(response.data.identificationExpiryDate).toISOString().split('T')[0] : null
+          phoneNumber: response.data.phoneNumber || null,
         };
         setUser(profileData);
         setFormData(profileData);
@@ -163,7 +172,6 @@ const Profile: React.FC = () => {
         normalWorkingHours: formData.normalWorkingHours ? parseFloat(formData.normalWorkingHours.toString()) : 7.6,
         birthday: formData.birthday || null,
         gender: formData.gender || null,
-        identificationExpiryDate: formData.identificationExpiryDate || null
       };
 
       console.log('Sending data to backend:', dataToSend);
@@ -175,8 +183,7 @@ const Profile: React.FC = () => {
       if (response.data) {
         const updatedData = {
           ...response.data,
-          birthday: response.data.birthday ? new Date(response.data.birthday).toISOString().split('T')[0] : null,
-          identificationExpiryDate: response.data.identificationExpiryDate ? new Date(response.data.identificationExpiryDate).toISOString().split('T')[0] : null
+          birthday: response.data.birthday ? new Date(response.data.birthday).toISOString().split('T')[0] : null
         };
         setUser(updatedData);
         setFormData(updatedData);
@@ -204,9 +211,15 @@ const Profile: React.FC = () => {
     setIsEditing(true);
   };
 
-  // Prüfe ob Profil unvollständig ist
+  // Prüfe ob Profil unvollständig ist (Phase 1: Basis-Profilinfos)
   const isProfileIncomplete = () => {
-    return !user.birthday || !user.bankDetails || !user.contract || !user.salary || !user.normalWorkingHours;
+    if (!user) return true;
+    return !(
+      user.username &&
+      user.email &&
+      user.country &&
+      user.language
+    );
   };
 
   return (
@@ -330,6 +343,107 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('profile.country')} <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="country"
+                  value={isEditing ? formData.country || '' : user.country || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  required
+                >
+                  <option value="">{t('profile.selectCountry')}</option>
+                  {COUNTRIES.map((country) => (
+                    <option key={country.code} value={country.code}>
+                      {country.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('profile.language')} <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="language"
+                  value={isEditing ? formData.language || '' : user.language || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                  required
+                >
+                  <option value="">{t('profile.selectLanguage')}</option>
+                  {LANGUAGES.map((language) => (
+                    <option key={language.code} value={language.code}>
+                      {language.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Dokumenten-Upload (prominent, nach country/language) */}
+              {user && (
+                <div className="sm:col-span-2">
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-1">
+                          {t('profile.identificationDocument') || 'Identifikationsdokument'}
+                        </h3>
+                        <p className="text-xs text-blue-700 dark:text-blue-300">
+                          {t('profile.uploadDocumentHint') || 'Bitte laden Sie Ihr Identifikationsdokument (Cédula oder Pasaporte) hoch. Die Felder werden automatisch ausgefüllt.'}
+                        </p>
+                      </div>
+                      {!showDocumentUpload && (
+                        <button
+                          type="button"
+                          onClick={() => setShowDocumentUpload(true)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                        >
+                          <DocumentTextIcon className="h-5 w-5 inline mr-2" />
+                          {t('profile.uploadDocument') || 'Dokument hochladen'}
+                        </button>
+                      )}
+                    </div>
+                    {showDocumentUpload && (
+                      <div className="mt-4">
+                        <IdentificationDocumentForm
+                          userId={user.id}
+                          onDocumentSaved={() => {
+                            setShowDocumentUpload(false);
+                            fetchUserProfile(); // Aktualisiere Profil nach Upload
+                            showMessage('Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.', 'success');
+                          }}
+                          onCancel={() => setShowDocumentUpload(false)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('profile.phoneNumber')}
+                </label>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  value={isEditing ? formData.phoneNumber || '' : user.phoneNumber || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  placeholder="+573001234567"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {t('profile.phoneNumberHint')}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('profile.firstName')}
                 </label>
                 <input
@@ -428,46 +542,6 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.country')}
-                </label>
-                <select
-                  name="country"
-                  value={isEditing ? formData.country || '' : user.country || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">{t('profile.selectCountry')}</option>
-                  {COUNTRIES.map((country) => (
-                    <option key={country.code} value={country.code}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.language')}
-                </label>
-                <select
-                  name="language"
-                  value={isEditing ? formData.language || '' : user.language || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">{t('profile.selectLanguage')}</option>
-                  {LANGUAGES.map((language) => (
-                    <option key={language.code} value={language.code}>
-                      {language.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('profile.gender')}
                 </label>
                 <select
@@ -484,74 +558,71 @@ const Profile: React.FC = () => {
                 </select>
               </div>
 
-              {/* Neue Felder für Identifikationsdokumente */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.identificationType')}
-                </label>
-                <select
-                  name="identificationType"
-                  value={isEditing ? formData.identificationType || '' : user.identificationType || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">{t('common.select')}</option>
-                  {ID_TYPES.map((type) => (
-                    <option key={type.value} value={type.value}>
-                      {type.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Identifikationsdokument-Daten (readonly, aus IdentificationDocument) */}
+              {user.identificationDocuments && user.identificationDocuments.length > 0 && (
+                <>
+                  {(() => {
+                    const latestDoc = user.identificationDocuments[0];
+                    return (
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('profile.identificationType')}
+                          </label>
+                          <input
+                            type="text"
+                            value={latestDoc.documentType || ''}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                            readOnly
+                          />
+                        </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.identificationNumber')}
-                </label>
-                <input
-                  type="text"
-                  name="identificationNumber"
-                  value={isEditing ? formData.identificationNumber || '' : user.identificationNumber || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                />
-              </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('profile.identificationNumber')}
+                          </label>
+                          <input
+                            type="text"
+                            value={user.identificationNumber || latestDoc.documentNumber || ''}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                            readOnly
+                          />
+                        </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.identificationIssuingCountry')}
-                </label>
-                <select
-                  name="identificationIssuingCountry"
-                  value={isEditing ? formData.identificationIssuingCountry || '' : user.identificationIssuingCountry || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">{t('common.select')}</option>
-                  {COUNTRIES.map((country) => (
-                    <option key={country.code} value={country.code}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('profile.identificationIssuingCountry')}
+                          </label>
+                          <input
+                            type="text"
+                            value={latestDoc.issuingCountry || ''}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                            readOnly
+                          />
+                        </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.identificationExpiryDate')}
-                </label>
-                <input
-                  type="date"
-                  name="identificationExpiryDate"
-                  value={isEditing ? formData.identificationExpiryDate || '' : user.identificationExpiryDate || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                />
-              </div>
+                        {latestDoc.expiryDate && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              {t('profile.identificationExpiryDate')}
+                            </label>
+                            <input
+                              type="text"
+                              value={new Date(latestDoc.expiryDate).toISOString().split('T')[0]}
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                              readOnly
+                            />
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </>
+              )}
             </div>
 
             {isEditing && (

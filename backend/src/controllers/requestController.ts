@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { PrismaClient, Prisma, RequestStatus, RequestType, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
+import { checkUserPermission } from '../middleware/permissionMiddleware';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
@@ -250,6 +251,20 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
         const requesterId = parseInt(requested_by_id, 10);
         const responsibleId = parseInt(responsible_id, 10);
         const branchId = parseInt(branch_id, 10);
+        const userId = parseInt(req.userId as string, 10);
+        const roleId = parseInt((req as any).roleId as string, 10);
+
+        // Prüfe ob User Admin ist
+        const userRole = await prisma.role.findUnique({
+            where: { id: roleId },
+            select: { name: true }
+        });
+        const isAdmin = userRole?.name.toLowerCase() === 'admin' || userRole?.name.toLowerCase().includes('administrator');
+
+        // User-Rolle: Kann nur eigene Requests erstellen
+        if (!isAdmin && requesterId !== userId) {
+            return res.status(403).json({ message: 'Sie können nur eigene Requests erstellen' });
+        }
 
         // Validierung: Prüfe ob User-IDs zur Organisation gehören
         const userFilter = getUserOrganizationFilter(req);
@@ -386,6 +401,31 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
 
         if (!existingRequest) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
+        }
+
+        const userId = parseInt(req.userId as string, 10);
+        const roleId = parseInt((req as any).roleId as string, 10);
+
+        // Prüfe ob User Admin ist
+        const userRole = await prisma.role.findUnique({
+            where: { id: roleId },
+            select: { name: true }
+        });
+        const isAdmin = userRole?.name.toLowerCase() === 'admin' || userRole?.name.toLowerCase().includes('administrator');
+
+        // User-Rolle: Kann nur eigene Requests bearbeiten
+        if (!isAdmin && existingRequest.requesterId !== userId) {
+            return res.status(403).json({ message: 'Sie können nur eigene Requests bearbeiten' });
+        }
+
+        // Status-Update-Prüfung: User-Rolle kann nur "to improve" → "to approve" status-shiften
+        if (status && status !== existingRequest.status && !isAdmin) {
+            const allowedStatusShift = existingRequest.status === 'to_improve' && status === 'approval';
+            if (!allowedStatusShift) {
+                return res.status(403).json({ 
+                    message: 'Sie können den Status nur von "to improve" auf "to approve" ändern' 
+                });
+            }
         }
 
         // Validierung: Prüfe ob User-IDs zur Organisation gehören (wenn geändert)

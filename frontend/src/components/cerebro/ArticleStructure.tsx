@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams, Outlet, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { cerebroApi, CerebroArticleStructure } from '../../api/cerebroApi.ts';
@@ -167,44 +167,109 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
   }, []);
   
   // Lade die Artikelstruktur aus der Datenbank
-  useEffect(() => {
-    const fetchArticlesStructure = async () => {
-      try {
-        setLoading(true);
-        // Hole die Artikelstruktur
-        const structureData = await cerebroApi.articles.getArticlesStructure();
+  const fetchArticlesStructure = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Hole die Artikelstruktur
+      const structureData = await cerebroApi.articles.getArticlesStructure();
+      
+      // Prüfe, ob die Daten gültig sind
+      if (!Array.isArray(structureData)) {
+        console.error('Ungültige Antwort von der API:', structureData);
+        setError('Ungültige Antwort vom Server. Bitte versuchen Sie es später erneut.');
+        setLoading(false);
+        return;
+      }
+      
+      // Rekursive Funktion zur Normalisierung der IDs (Backend gibt manchmal numbers zurück)
+      const normalizeArticle = (article: any): any => {
+        const normalized: any = {
+          ...article,
+          id: String(article.id),
+          parentId: article.parentId ? String(article.parentId) : null
+        };
         
-        // Finde den Markdown-Ordner
-        const markdownFolderItem = structureData.find(article => article.title === 'Markdown-Dateien');
-        
-        if (markdownFolderItem) {
-          setMarkdownFolder(markdownFolderItem);
-          
-          // Expandiere den Markdown-Ordner standardmäßig, damit die Dateien sichtbar sind
-          setExpandedIds(prev => {
-            const newSet = new Set(prev);
-            newSet.add(markdownFolderItem.id);
-            return newSet;
-          });
-        } else {
-          console.warn('Markdown-Ordner nicht gefunden!');
+        if (article.children && Array.isArray(article.children)) {
+          normalized.children = article.children.map((child: any) => normalizeArticle(child));
         }
         
-        // Setze alle Artikel außer dem Markdown-Ordner in databaseArticles
-        setDatabaseArticles(
-          structureData.filter(article => article.title !== 'Markdown-Dateien')
-        );
+        return normalized;
+      };
+      
+      // Konvertiere IDs zu Strings, falls nötig
+      const normalizedData = structureData.map(article => normalizeArticle(article));
+      
+      // Finde den Markdown-Ordner
+      const markdownFolderItem = normalizedData.find(article => article.title === 'Markdown-Dateien');
+      
+      if (markdownFolderItem) {
+        setMarkdownFolder(markdownFolderItem);
         
-        setLoading(false);
-      } catch (err) {
-        console.error('Fehler beim Laden der Artikelstruktur:', err);
-        setError('Fehler beim Laden der Artikelstruktur. Bitte versuchen Sie es später erneut.');
-        setLoading(false);
+        // Expandiere den Markdown-Ordner standardmäßig, damit die Dateien sichtbar sind
+        setExpandedIds(prev => {
+          const newSet = new Set(prev);
+          newSet.add(markdownFolderItem.id);
+          return newSet;
+        });
+      } else {
+        console.warn('Markdown-Ordner nicht gefunden!');
       }
+      
+      // Setze alle Artikel außer dem Markdown-Ordner in databaseArticles
+      setDatabaseArticles(
+        normalizedData.filter(article => article.title !== 'Markdown-Dateien')
+      );
+      
+      setLoading(false);
+    } catch (err: any) {
+      console.error('Fehler beim Laden der Artikelstruktur:', err);
+      
+      // Detaillierte Fehlermeldung
+      let errorMessage = 'Fehler beim Laden der Artikelstruktur. Bitte versuchen Sie es später erneut.';
+      
+      if (err?.response?.status === 401) {
+        errorMessage = 'Sie sind nicht angemeldet. Bitte melden Sie sich an.';
+      } else if (err?.response?.status === 403) {
+        errorMessage = 'Sie haben keine Berechtigung, die Artikelstruktur anzuzeigen.';
+      } else if (err?.response?.status >= 500) {
+        errorMessage = 'Serverfehler. Bitte versuchen Sie es später erneut.';
+      } else if (err?.message) {
+        errorMessage = `Fehler: ${err.message}`;
+      }
+      
+      setError(errorMessage);
+      setLoading(false);
+    }
+  }, []);
+  
+  useEffect(() => {
+    fetchArticlesStructure();
+    
+    // Event-Listener für Artikel-Erstellung
+    const handleArticleCreated = () => {
+      fetchArticlesStructure();
     };
     
-    fetchArticlesStructure();
-  }, []);
+    window.addEventListener('cerebro-article-created', handleArticleCreated);
+    
+    return () => {
+      window.removeEventListener('cerebro-article-created', handleArticleCreated);
+    };
+  }, [fetchArticlesStructure]);
+  
+  // Struktur auch bei Route-Änderungen aktualisieren (wenn Slug sich ändert)
+  useEffect(() => {
+    if (slug) {
+      // Kurze Verzögerung, damit der Server Zeit hat, den neuen Artikel zu speichern
+      const timeoutId = setTimeout(() => {
+        fetchArticlesStructure();
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [slug, fetchArticlesStructure]);
 
   // Handling für die Suche
   const handleSearch = (e: React.FormEvent) => {

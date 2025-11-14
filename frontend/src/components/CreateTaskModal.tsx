@@ -879,15 +879,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
                                     </ul>
                                 </div>
                             )}
-                            {description && (
-                                <div className="mt-3">
-                                    <MarkdownPreview 
-                                        content={description} 
-                                        temporaryAttachments={temporaryAttachments}
-                                        showImagePreview={true}
-                                    />
-                                </div>
-                            )}
                         </div>
                     </div>
 

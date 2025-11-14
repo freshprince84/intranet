@@ -7,12 +7,14 @@ import NotificationBell from './NotificationBell.tsx';
 import { API_URL, API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import HeaderMessage from './HeaderMessage.tsx';
+import useMessage from '../hooks/useMessage.ts';
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { user, logout, switchRole } = useAuth();
     const { branches, selectedBranch, setSelectedBranch, loadBranches } = useBranch();
+    const { showMessage } = useMessage();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isRoleSubMenuOpen, setIsRoleSubMenuOpen] = useState(false);
@@ -100,8 +102,11 @@ const Header: React.FC = () => {
             await loadBranches();
             setIsRoleSubMenuOpen(false);
             setIsProfileMenuOpen(false);
-        } catch (error) {
+            showMessage(t('header.roleSwitched') || 'Rolle erfolgreich gewechselt', 'success');
+        } catch (error: any) {
             console.error('Fehler beim Rollenwechsel:', error);
+            const errorMessage = error.response?.data?.message || error.message || t('header.roleSwitchError') || 'Fehler beim Wechseln der Rolle';
+            showMessage(errorMessage, 'error');
         }
     };
 
@@ -124,8 +129,8 @@ const Header: React.FC = () => {
             }
         } catch (error: any) {
             console.error('Fehler beim Standortwechsel:', error);
-            // Zeige Fehlermeldung dem Benutzer
-            alert(error.response?.data?.message || 'Fehler beim Wechseln der Niederlassung');
+            const errorMessage = error.response?.data?.message || error.message || t('header.branchSwitchError') || 'Fehler beim Wechseln der Niederlassung';
+            showMessage(errorMessage, 'error');
         }
     };
 
@@ -145,6 +150,40 @@ const Header: React.FC = () => {
     const currentRole = user?.roles.find(r => r.role && r.lastUsed === true);
     const roleName = currentRole?.role.name || 'Keine Rolle';
     const organizationName = currentRole?.role.organization?.displayName || currentRole?.role.organization?.name || null;
+
+    // Hilfsfunktion: Prüft, ob eine Rolle für eine Branch verfügbar ist
+    const isRoleAvailableForBranch = (role: any, branchId: number | null): boolean => {
+        if (!branchId) return true; // Wenn keine Branch aktiv, zeige alle Rollen
+        if (role.allBranches === true) return true;
+        if (role.allBranches === false && role.branches) {
+            return role.branches.some((rb: any) => rb.branch?.id === branchId);
+        }
+        // Fallback: Wenn Information nicht vorhanden, zeige Rolle (für Rückwärtskompatibilität)
+        return true;
+    };
+
+    // Hilfsfunktion: Prüft, ob eine Branch für eine Rolle verfügbar ist
+    const isBranchAvailableForRole = (branch: any, roleId: number | null): boolean => {
+        if (!roleId) return true; // Wenn keine Rolle aktiv, zeige alle Branches
+        const role = user?.roles.find(r => r.role?.id === roleId)?.role;
+        if (!role) return true;
+        if (role.allBranches === true) return true;
+        if (role.allBranches === false && role.branches) {
+            return role.branches.some((rb: any) => rb.branch?.id === branch.id);
+        }
+        // Fallback: Wenn Information nicht vorhanden, zeige Branch (für Rückwärtskompatibilität)
+        return true;
+    };
+
+    // Gefilterte Rollen (nur für aktive Branch verfügbare)
+    const availableRoles = user?.roles.filter(userRole => 
+        isRoleAvailableForBranch(userRole.role, selectedBranch || null)
+    ) || [];
+
+    // Gefilterte Branches (nur für aktive Rolle verfügbare)
+    const availableBranches = branches?.filter(branch => 
+        isBranchAvailableForRole(branch, currentRole?.role.id || null)
+    ) || [];
 
     return (
         <header className="bg-white dark:bg-gray-800">
@@ -258,7 +297,7 @@ const Header: React.FC = () => {
                                     </Link>
                                     
                                     {/* Rollenauswahl Untermenü */}
-                                    {user && user.roles.length > 1 && (
+                                    {user && availableRoles.length > 1 && (
                                         <div className="relative">
                                             <button
                                                 ref={roleMenuButtonRef}
@@ -292,17 +331,22 @@ const Header: React.FC = () => {
                                                         onMouseEnter={handleMouseEnter}
                                                         onMouseLeave={handleMouseLeave}
                                                     >
-                                                        {[...user.roles]
-                                                            .sort((a, b) => {
-                                                                // Sortiere nach Organisationsname, dann nach Rollenname
-                                                                const orgA = a.role.organization?.displayName || a.role.organization?.name || '';
-                                                                const orgB = b.role.organization?.displayName || b.role.organization?.name || '';
-                                                                if (orgA !== orgB) {
-                                                                    return orgA.localeCompare(orgB);
-                                                                }
-                                                                return a.role.name.localeCompare(b.role.name);
-                                                            })
-                                                            .map((userRole) => (
+                                                        {availableRoles.length === 0 ? (
+                                                            <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                                                                {t('header.noRolesAvailable') || 'Keine Rollen für diese Branch verfügbar'}
+                                                            </div>
+                                                        ) : (
+                                                            [...availableRoles]
+                                                                .sort((a, b) => {
+                                                                    // Sortiere nach Organisationsname, dann nach Rollenname
+                                                                    const orgA = a.role.organization?.displayName || a.role.organization?.name || '';
+                                                                    const orgB = b.role.organization?.displayName || b.role.organization?.name || '';
+                                                                    if (orgA !== orgB) {
+                                                                        return orgA.localeCompare(orgB);
+                                                                    }
+                                                                    return a.role.name.localeCompare(b.role.name);
+                                                                })
+                                                                .map((userRole) => (
                                                                 <button
                                                                     key={userRole.role.id}
                                                                     onClick={() => handleRoleSwitch(userRole.role.id)}
@@ -321,7 +365,8 @@ const Header: React.FC = () => {
                                                                         )}
                                                                     </div>
                                                                 </button>
-                                                            ))}
+                                                                ))
+                                                        )}
                                                     </div>
                                                 </>
                                             )}
@@ -329,7 +374,7 @@ const Header: React.FC = () => {
                                     )}
                                     
                                     {/* Standortauswahl Untermenü */}
-                                    {branches && branches.length > 0 && (
+                                    {availableBranches && availableBranches.length > 0 && (
                                         <div className="relative">
                                             <button
                                                 ref={branchMenuButtonRef}
@@ -364,9 +409,14 @@ const Header: React.FC = () => {
                                                         onMouseEnter={handleMouseEnter}
                                                         onMouseLeave={handleMouseLeave}
                                                     >
-                                                        {[...branches]
-                                                            .sort((a, b) => a.name.localeCompare(b.name))
-                                                            .map((branch) => (
+                                                        {availableBranches.length === 0 ? (
+                                                            <div className="px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
+                                                                {t('header.noBranchesAvailable') || 'Keine Branches für diese Rolle verfügbar'}
+                                                            </div>
+                                                        ) : (
+                                                            [...availableBranches]
+                                                                .sort((a, b) => a.name.localeCompare(b.name))
+                                                                .map((branch) => (
                                                                 <button
                                                                     key={branch.id}
                                                                     onClick={() => handleBranchSwitch(branch.id)}
@@ -378,7 +428,8 @@ const Header: React.FC = () => {
                                                                 >
                                                                     {branch.name}
                                                                 </button>
-                                                            ))}
+                                                                ))
+                                                        )}
                                                     </div>
                                                 </>
                                             )}

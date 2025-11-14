@@ -22,20 +22,72 @@ export const getTest = async (_req: Request, res: Response) => {
     res.json(testBranches);
 };
 
-// Alle Niederlassungen abrufen
+// Alle Niederlassungen abrufen (optional gefiltert nach roleId)
 export const getAllBranches = async (req: Request, res: Response) => {
     try {
         // Datenisolation: Zeigt alle Branches der Organisation oder nur eigene (wenn standalone)
         const branchFilter = getDataIsolationFilter(req as any, 'branch');
         
-        const branches = await prisma.branch.findMany({
+        // Optional: Filter nach roleId (aus Query-Parameter)
+        const roleId = req.query.roleId ? parseInt(req.query.roleId as string, 10) : null;
+        
+        // Prisma Query vorbereiten
+        const queryOptions: any = {
             where: branchFilter,
-            select: {
+            orderBy: { name: 'asc' }
+        };
+        
+        // Wenn roleId vorhanden, füge roles Relation hinzu
+        if (roleId && !isNaN(roleId)) {
+            queryOptions.select = {
+                id: true,
+                name: true,
+                roles: {
+                    where: { roleId: roleId },
+                    select: { id: true }
+                }
+            };
+        } else {
+            queryOptions.select = {
                 id: true,
                 name: true
-            },
-            orderBy: { name: 'asc' }
-        });
+            };
+        }
+        
+        let branches = await prisma.branch.findMany(queryOptions);
+        
+        // Wenn roleId angegeben, filtere Branches nach Verfügbarkeit für diese Rolle
+        if (roleId && !isNaN(roleId)) {
+            // Hole die Rolle, um allBranches zu prüfen
+            const role = await prisma.role.findUnique({
+                where: { id: roleId },
+                select: {
+                    allBranches: true
+                }
+            });
+            
+            if (role) {
+                // Wenn allBranches = true, sind alle Branches verfügbar
+                // Wenn allBranches = false, nur Branches mit RoleBranch Eintrag
+                if (!role.allBranches) {
+                    branches = branches.filter(branch => {
+                        // TypeScript-Hack: branches hat jetzt ein 'roles' Feld wenn roleId vorhanden
+                        const branchWithRoles = branch as any;
+                        return branchWithRoles.roles && branchWithRoles.roles.length > 0;
+                    });
+                }
+            } else {
+                // Rolle nicht gefunden, keine Branches zurückgeben
+                branches = [];
+            }
+            
+            // Entferne das 'roles' Feld aus der Antwort
+            branches = branches.map(branch => ({
+                id: branch.id,
+                name: branch.name
+            })) as any;
+        }
+        
         res.json(branches);
     } catch (error) {
         console.error('Error in getAllBranches:', error);
@@ -137,6 +189,29 @@ export const switchUserBranch = async (req: Request, res: Response) => {
             return res.status(403).json({
                 message: 'Zugriff auf diese Niederlassung verweigert'
             });
+        }
+
+        // Prüfe, ob die aktive Rolle für die neue Branch verfügbar ist
+        const activeRole = await prisma.userRole.findFirst({
+            where: {
+                userId,
+                lastUsed: true
+            },
+            select: {
+                roleId: true
+            }
+        });
+
+        if (activeRole) {
+            // Importiere die Hilfsfunktion dynamisch, um Zirkelimporte zu vermeiden
+            const { isRoleAvailableForBranch } = await import('./roleController');
+            const isAvailable = await isRoleAvailableForBranch(activeRole.roleId, branchId);
+            
+            if (!isAvailable) {
+                return res.status(400).json({
+                    message: 'Die aktive Rolle ist für diese Branch nicht verfügbar. Bitte wechseln Sie zuerst zu einer verfügbaren Rolle.'
+                });
+            }
         }
 
         // Transaktion starten
@@ -253,7 +328,7 @@ export const createBranch = async (req: Request, res: Response) => {
 export const updateBranch = async (req: Request, res: Response) => {
     try {
         const branchId = parseInt(req.params.id, 10);
-        const { name } = req.body;
+        const { name, whatsappSettings } = req.body;
 
         if (isNaN(branchId)) {
             return res.status(400).json({ message: 'Ungültige Niederlassungs-ID' });
@@ -292,11 +367,34 @@ export const updateBranch = async (req: Request, res: Response) => {
             });
         }
 
+        // Verschlüssele WhatsApp Settings falls vorhanden
+        let encryptedWhatsAppSettings = whatsappSettings;
+        if (whatsappSettings) {
+            try {
+                const { encryptApiSettings } = await import('../utils/encryption');
+                encryptedWhatsAppSettings = encryptApiSettings(whatsappSettings);
+            } catch (error) {
+                console.warn('[Branch Controller] WhatsApp Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                // Falls Verschlüsselung fehlschlägt, speichere unverschlüsselt (nur für Development)
+            }
+        }
+
         // Aktualisiere Branch
+        const updateData: any = {
+            name: name.trim()
+        };
+
+        if (whatsappSettings !== undefined) {
+            updateData.whatsappSettings = encryptedWhatsAppSettings;
+        }
+
         const updatedBranch = await prisma.branch.update({
             where: { id: branchId },
-            data: {
-                name: name.trim()
+            data: updateData,
+            select: {
+                id: true,
+                name: true,
+                whatsappSettings: true
             }
         });
 

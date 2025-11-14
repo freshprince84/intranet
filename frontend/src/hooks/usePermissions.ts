@@ -64,6 +64,7 @@ export const usePermissions = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lifecycleRoles, setLifecycleRoles] = useState<any>(null);
+    const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
 
     useEffect(() => {
         // Warten auf Auth-Completion, bevor Berechtigungen geladen werden
@@ -73,6 +74,7 @@ export const usePermissions = () => {
         }
         
         loadPermissions();
+        checkProfileComplete();
     }, [user, isLoading]);
 
     // Lade Lebenszyklus-Rollen-Konfiguration (wird nach loadPermissions aufgerufen)
@@ -267,6 +269,54 @@ export const usePermissions = () => {
         return hasLifecycleRole('legal') || hasLifecycleRole('admin');
     }, [hasLifecycleRole]);
 
+    /**
+     * Prüft Profilvollständigkeit
+     * Nutzt user.profileComplete Feld oder ruft API-Endpoint auf
+     */
+    const checkProfileComplete = useCallback(async () => {
+        if (!user) {
+            setProfileComplete(null);
+            return;
+        }
+
+        // Prüfe zuerst user.profileComplete Feld (falls vorhanden)
+        if ('profileComplete' in user && user.profileComplete !== undefined) {
+            setProfileComplete(user.profileComplete as boolean);
+            return;
+        }
+
+        // Fallback: API-Endpoint aufrufen
+        try {
+            const response = await axiosInstance.get('/users/profile/complete');
+            setProfileComplete(response.data.complete);
+        } catch (error) {
+            console.error('Fehler beim Prüfen der Profilvollständigkeit:', error);
+            // Bei Fehler: Prüfe Felder lokal
+            const isComplete = !!(
+                user.username &&
+                user.email &&
+                user.country &&
+                user.language
+            );
+            setProfileComplete(isComplete);
+        }
+    }, [user]);
+
+    const isProfileComplete = useCallback((): boolean => {
+        if (profileComplete !== null) {
+            return profileComplete;
+        }
+        
+        // Fallback: Lokale Prüfung
+        if (!user) return false;
+        return !!(
+            user.username &&
+            user.email &&
+            user.country &&
+            user.language
+        );
+    }, [user, profileComplete]);
+
     return {
         currentRole,
         permissions,
@@ -286,7 +336,10 @@ export const usePermissions = () => {
         // Lebenszyklus-Rollen
         hasLifecycleRole,
         isHR,
-        isLegal
+        isLegal,
+        // Profilvollständigkeit
+        isProfileComplete,
+        checkProfileComplete
     };
 };
 

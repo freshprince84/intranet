@@ -695,48 +695,8 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
 
       {selectedUser && (
         <div>
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl font-semibold dark:text-white">
-                {selectedUser.firstName} {selectedUser.lastName}
-              </h2>
-              {selectedUser.active !== undefined && (
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  selectedUser.active 
-                    ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
-                    : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
-                }`}>
-                  {selectedUser.active ? t('users.active') : t('users.inactive')}
-                </span>
-              )}
-            </div>
-            {isAdmin() && (
-              <button
-                onClick={handleToggleActive}
-                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                  selectedUser.active
-                    ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30'
-                    : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30'
-                }`}
-                title={selectedUser.active ? t('users.deactivate') : t('users.activate')}
-              >
-                {selectedUser.active ? (
-                  <>
-                    <XMarkIcon className="h-5 w-5" />
-                    {t('users.deactivate')}
-                  </>
-                ) : (
-                  <>
-                    <CheckIcon className="h-5 w-5" />
-                    {t('users.activate')}
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-
-          {/* Tabs für Benutzerdetails, Dokumente und Rollen - zusammenhängende Box */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+          {/* Tabs für Benutzerdetails, Dokumente und Rollen - zusammenhängende Box ohne Shadow/Border */}
+          <div className="bg-white dark:bg-gray-800 mb-6">
             {/* Tab-Navigation */}
             <div className="border-b border-gray-200 dark:border-gray-700">
               <nav className="flex -mb-px">
@@ -785,11 +745,11 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   {t('lifecycle.tabTitle')}
                 </button>
               </nav>
-            </div>
+          </div>
 
             {/* Tab-Inhalte */}
-            {/* Benutzerdetails Formular */}
-            {activeUserTab === 'details' && (
+          {/* Benutzerdetails Formular */}
+          {activeUserTab === 'details' && (
               <form onSubmit={handleUserSubmit} className="p-6">
               {/* Bestehender Code für Benutzerdetails */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -1058,18 +1018,54 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   </button>
                 </div>
               )}
-              </form>
-            )}
 
-            {/* Identifikationsdokumente Tab */}
-            {activeUserTab === 'documents' && (
-              <div className="p-6">
-                <IdentificationDocumentList userId={selectedUser.id} isAdmin={true} />
+              {/* Status-Badge und Activate/Deactivate Button unter den Profil-Feldern */}
+              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                {selectedUser.active !== undefined && (
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    selectedUser.active 
+                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
+                      : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
+                  }`}>
+                    {selectedUser.active ? t('users.active') : t('users.inactive')}
+                  </span>
+                )}
+                {isAdmin() && (
+                  <button
+                    onClick={handleToggleActive}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      selectedUser.active
+                        ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30'
+                        : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30'
+                    }`}
+                    title={selectedUser.active ? t('users.deactivate') : t('users.activate')}
+                  >
+                    {selectedUser.active ? (
+                      <>
+                        <XMarkIcon className="h-5 w-5" />
+                        {t('users.deactivate')}
+                      </>
+                    ) : (
+                      <>
+                        <CheckIcon className="h-5 w-5" />
+                        {t('users.activate')}
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
-            )}
+            </form>
+          )}
 
-            {/* Rollen Tab */}
-            {activeUserTab === 'roles' && (
+          {/* Identifikationsdokumente Tab */}
+          {activeUserTab === 'documents' && (
+              <div className="p-6">
+            <IdentificationDocumentList userId={selectedUser.id} isAdmin={true} />
+              </div>
+          )}
+
+          {/* Rollen Tab */}
+          {activeUserTab === 'roles' && (
               <div className="p-6">
               {/* Rollenzuweisung - nur anzeigen, wenn Rollen geladen wurden */}
               {loadingRoles ? (
@@ -1194,19 +1190,19 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   </div>
                 </div>
               )}
-              </div>
-            )}
+            </div>
+          )}
 
-            {/* Lebenszyklus Tab */}
-            {activeUserTab === 'lifecycle' && selectedUser && (
+          {/* Lebenszyklus Tab */}
+          {activeUserTab === 'lifecycle' && selectedUser && (
               <div className="p-6">
-                <LifecycleView 
-                  key={`lifecycle-${selectedUser.id}-${lifecycleRefreshKey}`}
-                  userId={selectedUser.id} 
-                  userName={`${selectedUser.firstName} ${selectedUser.lastName}`}
-                />
+            <LifecycleView 
+              key={`lifecycle-${selectedUser.id}-${lifecycleRefreshKey}`}
+              userId={selectedUser.id} 
+              userName={`${selectedUser.firstName} ${selectedUser.lastName}`}
+            />
               </div>
-            )}
+          )}
           </div>
         </div>
       )}

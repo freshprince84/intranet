@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { TrashIcon, PlusCircleIcon } from '@heroicons/react/24/outline';
+import { TrashIcon, PlusCircleIcon, ArrowUpIcon, ArrowDownIcon, ChevronUpIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 
@@ -23,6 +23,12 @@ interface FilterRowProps {
   columns: TableColumn[];
   isFirst: boolean;
   isLast: boolean;
+  sortDirection?: 'asc' | 'desc';
+  sortPriority?: number;
+  onSortDirectionChange?: (direction: 'asc' | 'desc') => void;
+  onPriorityChange?: (priority: number) => void;
+  canMoveUp?: boolean;
+  canMoveDown?: boolean;
 }
 
 // Neue Interfaces für Benutzer und Rollen
@@ -88,7 +94,13 @@ const FilterRow: React.FC<FilterRowProps> = ({
   onAdd,
   columns, 
   isFirst,
-  isLast
+  isLast,
+  sortDirection,
+  sortPriority,
+  onSortDirectionChange,
+  onPriorityChange,
+  canMoveUp = false,
+  canMoveDown = false
 }) => {
   const { t } = useTranslation();
   const [operators, setOperators] = useState<{ value: string; label: string }[]>([]);
@@ -386,6 +398,65 @@ const FilterRow: React.FC<FilterRowProps> = ({
           (value) => onChange({ ...condition, value })
         )}
       </div>
+      
+      {/* Sortierrichtung und Priorität (nur wenn Spalte ausgewählt ist) */}
+      {condition.column !== '' && onSortDirectionChange && sortDirection !== undefined && (
+        <div className="flex-shrink-0 flex items-center gap-1">
+          {/* Prioritäts-Anzeige und -Steuerung */}
+          {sortPriority !== undefined && sortPriority > 0 && (
+            <div className="flex flex-col items-center gap-0.5">
+              {canMoveUp && onPriorityChange && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPriorityChange(sortPriority - 1);
+                  }}
+                  className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-500 rounded transition-colors"
+                  title={t('filter.row.moveUp')}
+                >
+                  <ChevronUpIcon className="h-3 w-3" />
+                </button>
+              )}
+              <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded min-w-[1.5rem] text-center">
+                {sortPriority}
+              </span>
+              {canMoveDown && onPriorityChange && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onPriorityChange(sortPriority + 1);
+                  }}
+                  className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-500 rounded transition-colors"
+                  title={t('filter.row.moveDown')}
+                >
+                  <ChevronDownIcon className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+          )}
+          
+          {/* Sortierrichtung-Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const currentDirection = sortDirection || 'asc';
+              const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+              onSortDirectionChange(newDirection);
+            }}
+            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 rounded-md transition-colors border border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400"
+            title={sortDirection === 'asc' ? t('filter.row.sortAscending') : t('filter.row.sortDescending')}
+          >
+            {sortDirection === 'asc' ? (
+              <ArrowUpIcon className="h-4 w-4" />
+            ) : (
+              <ArrowDownIcon className="h-4 w-4" />
+            )}
+          </button>
+        </div>
+      )}
       
       {/* Aktions-Buttons */}
       <div className="flex gap-1">

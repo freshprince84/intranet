@@ -39,6 +39,11 @@ instance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
+    // Bei FormData: Content-Type-Header entfernen, damit axios den Boundary automatisch setzt
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+    
     // Debug-Logging nur in Development
     if (process.env.NODE_ENV === 'development') {
       console.debug(`API-Request an: ${config.url}`, config);

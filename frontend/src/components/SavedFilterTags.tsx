@@ -6,12 +6,20 @@ import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
 import { toast } from 'react-toastify';
 
+interface SortDirection {
+  column: string;
+  direction: 'asc' | 'desc';
+  priority: number;
+  conditionIndex: number;
+}
+
 interface SavedFilter {
   id: number;
   name: string;
   tableId: string;
   conditions: FilterCondition[];
   operators: ('AND' | 'OR')[];
+  sortDirections?: SortDirection[];
   groupId?: number | null;
   order?: number;
   createdAt?: string;
@@ -30,11 +38,11 @@ interface FilterGroup {
 
 interface SavedFilterTagsProps {
   tableId: string;
-  onSelectFilter: (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => void;
+  onSelectFilter: (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: SortDirection[]) => void;
   onReset: () => void;
   activeFilterName?: string;
   selectedFilterId?: number | null;
-  onFilterChange?: (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => void;
+  onFilterChange?: (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: SortDirection[]) => void;
   defaultFilterName?: string;
 }
 
@@ -208,7 +216,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         if (!onFilterChange && defaultFilterName && !activeFilterName) {
           const defaultFilter = filters.find((filter: SavedFilter) => filter != null && filter.name === defaultFilterName);
           if (defaultFilter) {
-            onSelectFilter(defaultFilter.conditions, defaultFilter.operators);
+            onSelectFilter(defaultFilter.conditions, defaultFilter.operators, defaultFilter.sortDirections);
           }
         }
       } catch (err) {
@@ -247,10 +255,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const handleSelectFilter = (filter: SavedFilter) => {
     if (onFilterChange) {
       // Controlled component
-      onFilterChange(filter.name, filter.id, filter.conditions, filter.operators);
+      onFilterChange(filter.name, filter.id, filter.conditions, filter.operators, filter.sortDirections);
     } else {
       // Backward compatibility - uncontrolled component
-      onSelectFilter(filter.conditions, filter.operators);
+      onSelectFilter(filter.conditions, filter.operators, filter.sortDirections);
     }
   };
   
@@ -280,7 +288,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       if (selectedFilterId === filterId || (!onFilterChange && filterId)) {
         if (onFilterChange) {
           // Controlled: Parent entscheidet was passiert
-          onFilterChange('', null, [], []);
+          onFilterChange('', null, [], [], []);
         } else {
           // Uncontrolled: Reset
           onReset();

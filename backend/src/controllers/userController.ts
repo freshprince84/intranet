@@ -27,6 +27,7 @@ interface UpdateProfileRequest {
     salary?: string;
     normalWorkingHours?: number;
     gender?: string | null; // "male", "female", "other", oder null
+    phoneNumber?: string | null; // WhatsApp-Telefonnummer (mit Ländercode)
 }
 
 // Interface für die Aktualisierung der Benutzereinstellungen
@@ -60,6 +61,11 @@ interface UpdateInvoiceSettingsRequest {
 // Neue Interface für die Anfrage zur Aktualisierung von Benutzerrollen
 interface UpdateUserRolesRequest {
     roleIds: number[];
+}
+
+// Interface für die Aktualisierung von Benutzer-Branches
+interface UpdateUserBranchesRequest {
+    branchIds: number[];
 }
 
 // Interface für den Rollenwechsel
@@ -215,8 +221,17 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                 salary: true,
                 normalWorkingHours: true,
                 gender: true,
+                phoneNumber: true,
+                country: true,
+                language: true,
+                profileComplete: true,
+                identificationNumber: true,
                 settings: true,
                 invoiceSettings: true,
+                identificationDocuments: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1 // Neuestes Dokument
+                },
                 roles: {
                     include: {
                         role: {
@@ -482,7 +497,8 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             contract,
             salary,
             normalWorkingHours,
-            gender
+            gender,
+            phoneNumber
         } = req.body;
 
         const userId = parseInt(req.userId, 10);
@@ -525,6 +541,27 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             });
         }
 
+        // Validiere Telefonnummer-Format falls vorhanden
+        if (phoneNumber && phoneNumber.trim() !== '') {
+            // Validiere Format: + gefolgt von 1-15 Ziffern
+            const phoneRegex = /^\+[1-9]\d{1,14}$/;
+            const normalizedPhone = phoneNumber.replace(/[\s-]/g, '');
+            if (!phoneRegex.test(normalizedPhone)) {
+                return res.status(400).json({
+                    message: 'Ungültiges Telefonnummer-Format. Format: +LändercodeNummer (z.B. +573001234567)'
+                });
+            }
+        }
+
+        // Normalisiere Telefonnummer (falls vorhanden)
+        let normalizedPhoneNumber: string | null = null;
+        if (phoneNumber && phoneNumber.trim() !== '') {
+            normalizedPhoneNumber = phoneNumber.replace(/[\s-]/g, '');
+            if (!normalizedPhoneNumber.startsWith('+')) {
+                normalizedPhoneNumber = '+' + normalizedPhoneNumber;
+            }
+        }
+
         const updateData: Prisma.UserUpdateInput = {
             ...(username && { username }),
             ...(email && { email }),
@@ -535,7 +572,8 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             ...(contract !== undefined && { contract: contract || null }),
             ...(salary && { salary: parseFloat(salary) }),
             ...(normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) }),
-            ...(gender !== undefined && { gender: gender || null })
+            ...(gender !== undefined && { gender: gender || null }),
+            ...(phoneNumber !== undefined && { phoneNumber: normalizedPhoneNumber })
         };
 
         const updatedUser = await prisma.user.update({
@@ -553,6 +591,10 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                 salary: true,
                 normalWorkingHours: true,
                 gender: true,
+                phoneNumber: true,
+                country: true,
+                language: true,
+                profileComplete: true,
                 roles: {
                     include: {
                         role: {
@@ -571,6 +613,23 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                 }
             }
         });
+
+        // Prüfe Profilvollständigkeit nach Update
+        const isComplete = !!(
+            updatedUser.username &&
+            updatedUser.email &&
+            updatedUser.country &&
+            updatedUser.language
+        );
+
+        // Update profileComplete, falls sich der Status geändert hat
+        if (isComplete !== updatedUser.profileComplete) {
+            await prisma.user.update({
+                where: { id: userId },
+                data: { profileComplete: isComplete }
+            });
+            updatedUser.profileComplete = isComplete;
+        }
 
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
@@ -672,6 +731,59 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                 error: error instanceof Error ? error.message : 'Unbekannter Fehler'
             });
         }
+    }
+};
+
+// Prüfe Profilvollständigkeit
+export const isProfileComplete = async (req: AuthenticatedRequest, res: Response) => {
+    try {
+        const userId = parseInt(req.userId, 10);
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                username: true,
+                email: true,
+                country: true,
+                language: true,
+                profileComplete: true
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+
+        // Prüfe Felder
+        const missingFields: string[] = [];
+        if (!user.username) missingFields.push('username');
+        if (!user.email) missingFields.push('email');
+        if (!user.country) missingFields.push('country');
+        if (!user.language) missingFields.push('language');
+
+        const complete = missingFields.length === 0;
+
+        // Update profileComplete, falls noch nicht gesetzt
+        if (complete !== user.profileComplete) {
+            await prisma.user.update({
+                where: { id: userId },
+                data: { profileComplete: complete }
+            });
+        }
+
+        return res.json({
+            complete,
+            missingFields
+        });
+    } catch (error) {
+        console.error('Error in isProfileComplete:', error);
+        res.status(500).json({
+            message: 'Fehler bei der Profilprüfung',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
     }
 };
 
@@ -848,6 +960,203 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
         console.error('Error in updateUserRoles:', error);
         res.status(500).json({ 
             message: 'Fehler beim Aktualisieren der Benutzerrollen', 
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+};
+
+// Benutzer-Branches aktualisieren
+export const updateUserBranches = async (req: Request<{ id: string }, {}, UpdateUserBranchesRequest>, res: Response) => {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        if (isNaN(userId)) {
+            return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
+        }
+
+        const { branchIds } = req.body;
+        
+        if (!Array.isArray(branchIds)) {
+            return res.status(400).json({ message: 'branchIds muss ein Array sein' });
+        }
+
+        // Überprüfe, ob der Benutzer existiert
+        const userExists = await prisma.user.findUnique({
+            where: { id: userId }
+        });
+
+        if (!userExists) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+
+        // Überprüfe, ob alle Branches existieren und zur Organisation gehören
+        const branchFilter = getDataIsolationFilter(req as any, 'branch');
+        
+        console.log('[updateUserBranches] Branch Filter:', branchFilter);
+        console.log('[updateUserBranches] Requested branchIds:', branchIds);
+        console.log('[updateUserBranches] Organization ID:', req.organizationId);
+        
+        const existingBranches = await prisma.branch.findMany({
+            where: {
+                id: {
+                    in: branchIds
+                },
+                ...branchFilter
+            }
+        });
+
+        console.log('[updateUserBranches] Found branches:', existingBranches.map(b => ({ id: b.id, name: b.name, organizationId: b.organizationId })));
+        console.log('[updateUserBranches] Expected:', branchIds.length, 'Found:', existingBranches.length);
+
+        if (existingBranches.length !== branchIds.length) {
+            // Prüfe welche Branches fehlen
+            const foundIds = existingBranches.map(b => b.id);
+            const missingIds = branchIds.filter(id => !foundIds.includes(id));
+            
+            // Prüfe ob die fehlenden Branches existieren, aber zur falschen Organisation gehören
+            const allRequestedBranches = await prisma.branch.findMany({
+                where: {
+                    id: { in: branchIds }
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    organizationId: true
+                }
+            });
+            
+            console.log('[updateUserBranches] All requested branches (without filter):', allRequestedBranches);
+            
+            return res.status(400).json({ 
+                message: `Eine oder mehrere Niederlassungen wurden nicht gefunden oder gehören nicht zu Ihrer Organisation. Fehlende IDs: ${missingIds.join(', ')}`,
+                missingIds,
+                requestedBranchIds: branchIds,
+                foundBranchIds: foundIds,
+                organizationId: req.organizationId
+            });
+        }
+
+        // Aktuelle Benutzer-Branches abrufen, um lastUsed-Status zu prüfen
+        const currentUserBranches = await prisma.usersBranches.findMany({
+            where: { userId },
+            orderBy: { branchId: 'asc' }
+        });
+        
+        // Prüfen, welche Branch aktuell als lastUsed markiert ist
+        const currentLastUsedBranch = currentUserBranches.find(ub => ub.lastUsed);
+
+        // Lösche alle vorhandenen Benutzer-Branches
+        await prisma.usersBranches.deleteMany({
+            where: { userId }
+        });
+
+        // Erstelle neue Benutzer-Branches
+        const userBranches = await Promise.all(
+            branchIds.map(async (branchId) => {
+                return prisma.usersBranches.create({
+                    data: {
+                        userId,
+                        branchId,
+                        lastUsed: false
+                    }
+                });
+            })
+        );
+
+        // Wenn Branches zugewiesen wurden, setze lastUsed logisch
+        if (branchIds.length > 0) {
+            // Sortiere die erstellten UserBranches nach Branch-ID
+            const sortedUserBranches = [...userBranches].sort((a, b) => a.branchId - b.branchId);
+            
+            let branchToMarkAsLastUsed = sortedUserBranches[0]; // Standardmäßig die erste Branch
+
+            // Wenn zuvor eine Branch als lastUsed markiert war, versuche diese zu finden
+            if (currentLastUsedBranch) {
+                // Prüfe, ob die frühere lastUsed-Branch noch in den neuen Branches vorhanden ist
+                const previousBranchStillExists = sortedUserBranches.find(ub => ub.branchId === currentLastUsedBranch.branchId);
+                
+                if (previousBranchStillExists) {
+                    // Wenn ja, behalte diese als lastUsed
+                    branchToMarkAsLastUsed = previousBranchStillExists;
+                } else {
+                    // Wenn nicht, finde die nächsthöhere Branch-ID
+                    const higherBranches = sortedUserBranches.filter(ub => ub.branchId > currentLastUsedBranch.branchId);
+                    
+                    if (higherBranches.length > 0) {
+                        // Wenn es höhere Branches gibt, nimm die mit der niedrigsten ID
+                        branchToMarkAsLastUsed = higherBranches[0];
+                    }
+                    // Sonst bleibt es bei der ersten Branch
+                }
+            }
+
+            // Markiere die ausgewählte Branch als lastUsed
+            await prisma.usersBranches.update({
+                where: {
+                    id: branchToMarkAsLastUsed.id
+                },
+                data: {
+                    lastUsed: true
+                }
+            });
+        }
+
+        // Benutzer mit aktualisierten Branches abrufen
+        const updatedUser = await prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+                branches: {
+                    include: {
+                        branch: true
+                    }
+                }
+            }
+        });
+
+        // Benachrichtigung an den Benutzer senden, dessen Branches aktualisiert wurden
+        await createNotificationIfEnabled({
+            userId: userId,
+            title: 'Deine Niederlassungen wurden aktualisiert',
+            message: `Deine zugewiesenen Niederlassungen wurden aktualisiert. Melde dich bei Fragen an einen Administrator.`,
+            type: NotificationType.user,
+            relatedEntityId: userId,
+            relatedEntityType: 'update'
+        });
+
+        // Benachrichtigung für Administratoren der Organisation senden
+        const userFilter = getUserOrganizationFilter(req);
+        const admins = await prisma.user.findMany({
+            where: {
+                ...userFilter,
+                roles: {
+                    some: {
+                        role: {
+                            name: 'Admin',
+                            organizationId: req.organizationId
+                        }
+                    }
+                },
+                id: {
+                    not: userId // Nicht an den aktualisierten Benutzer senden, falls dieser Admin ist
+                }
+            }
+        });
+
+        for (const admin of admins) {
+            await createNotificationIfEnabled({
+                userId: admin.id,
+                title: 'Benutzer-Niederlassungen aktualisiert',
+                message: `Die Niederlassungen für "${updatedUser.firstName} ${updatedUser.lastName}" wurden aktualisiert.`,
+                type: NotificationType.user,
+                relatedEntityId: userId,
+                relatedEntityType: 'update'
+            });
+        }
+
+        res.json(updatedUser);
+    } catch (error) {
+        console.error('Error in updateUserBranches:', error);
+        res.status(500).json({ 
+            message: 'Fehler beim Aktualisieren der Benutzer-Niederlassungen', 
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
         });
     }
@@ -1086,6 +1395,29 @@ export const switchUserRole = async (req: AuthenticatedRequest, res: Response) =
             return res.status(404).json({
                 message: 'Diese Rolle ist dem Benutzer nicht zugewiesen'
             });
+        }
+
+        // Prüfe, ob die Rolle für die aktive Branch verfügbar ist
+        const activeBranch = await prisma.usersBranches.findFirst({
+            where: {
+                userId,
+                lastUsed: true
+            },
+            select: {
+                branchId: true
+            }
+        });
+
+        if (activeBranch) {
+            // Importiere die Hilfsfunktion dynamisch, um Zirkelimporte zu vermeiden
+            const { isRoleAvailableForBranch } = await import('./roleController');
+            const isAvailable = await isRoleAvailableForBranch(roleId, activeBranch.branchId);
+            
+            if (!isAvailable) {
+                return res.status(400).json({
+                    message: 'Diese Rolle ist für die aktive Branch nicht verfügbar'
+                });
+            }
         }
         
         // Transaktion starten
@@ -1859,6 +2191,179 @@ export const getOnboardingAnalytics = async (req: AuthenticatedRequest, res: Res
         console.error('Error in getOnboardingAnalytics:', error);
         res.status(500).json({
             message: 'Fehler beim Abrufen der Onboarding-Analytics',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+};
+
+// Debug-Endpoint: Zeigt alle relevanten Informationen für den aktuellen User
+export const debugUserBranches = async (req: Request, res: Response) => {
+    try {
+        const userId = parseInt((req as any).userId as string, 10);
+
+        if (!userId || isNaN(userId) || userId <= 0) {
+            return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
+        }
+
+        // 1. User-Informationen
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                organizationId: true
+            }
+        });
+
+        // 2. Alle Branches der Organisation
+        const branchFilter = getDataIsolationFilter(req as any, 'branch');
+        const allOrgBranches = await prisma.branch.findMany({
+            where: branchFilter,
+            select: {
+                id: true,
+                name: true,
+                organizationId: true
+            },
+            orderBy: { name: 'asc' }
+        });
+
+        // 3. User-Branches (zugewiesene Branches)
+        const userBranches = await prisma.usersBranches.findMany({
+            where: { userId },
+            include: {
+                branch: {
+                    select: {
+                        id: true,
+                        name: true,
+                        organizationId: true
+                    }
+                }
+            },
+            orderBy: { branchId: 'asc' }
+        });
+
+        // 4. Aktive Rolle
+        const activeRole = await prisma.userRole.findFirst({
+            where: {
+                userId,
+                lastUsed: true
+            },
+            include: {
+                role: {
+                    select: {
+                        id: true,
+                        name: true,
+                        allBranches: true,
+                        organizationId: true,
+                        branches: {
+                            include: {
+                                branch: {
+                                    select: {
+                                        id: true,
+                                        name: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // 5. Alle Rollen des Users
+        const userRoles = await prisma.userRole.findMany({
+            where: { userId },
+            include: {
+                role: {
+                    select: {
+                        id: true,
+                        name: true,
+                        allBranches: true,
+                        organizationId: true
+                    }
+                }
+            }
+        });
+
+        // 6. Prüfe für jede Branch, ob sie für die aktive Rolle verfügbar ist
+        const branchAvailability = allOrgBranches.map(branch => {
+            if (!activeRole) {
+                return {
+                    branch: { id: branch.id, name: branch.name },
+                    isAssignedToUser: userBranches.some(ub => ub.branchId === branch.id),
+                    isAvailableForActiveRole: null,
+                    reason: 'Keine aktive Rolle'
+                };
+            }
+
+            const role = activeRole.role;
+            let isAvailable = false;
+            let reason = '';
+
+            if (role.allBranches) {
+                isAvailable = true;
+                reason = 'Rolle gilt für alle Branches (allBranches = true)';
+            } else {
+                const roleBranch = role.branches.find(rb => rb.branch.id === branch.id);
+                if (roleBranch) {
+                    isAvailable = true;
+                    reason = 'Rolle ist für diese Branch zugewiesen (RoleBranch Eintrag)';
+                } else {
+                    isAvailable = false;
+                    reason = 'Rolle ist nicht für diese Branch zugewiesen (kein RoleBranch Eintrag)';
+                }
+            }
+
+            return {
+                branch: { id: branch.id, name: branch.name },
+                isAssignedToUser: userBranches.some(ub => ub.branchId === branch.id),
+                isAvailableForActiveRole: isAvailable,
+                reason
+            };
+        });
+
+        res.json({
+            user,
+            organizationId: req.organizationId,
+            allOrgBranches,
+            userBranches: userBranches.map(ub => ({
+                branchId: ub.branchId,
+                branchName: ub.branch.name,
+                lastUsed: ub.lastUsed
+            })),
+            activeRole: activeRole ? {
+                roleId: activeRole.role.id,
+                roleName: activeRole.role.name,
+                allBranches: activeRole.role.allBranches,
+                organizationId: activeRole.role.organizationId,
+                roleBranches: activeRole.role.branches.map(rb => ({
+                    branchId: rb.branch.id,
+                    branchName: rb.branch.name
+                }))
+            } : null,
+            allUserRoles: userRoles.map(ur => ({
+                roleId: ur.role.id,
+                roleName: ur.role.name,
+                allBranches: ur.role.allBranches,
+                lastUsed: ur.lastUsed
+            })),
+            branchAvailability,
+            summary: {
+                totalOrgBranches: allOrgBranches.length,
+                assignedBranches: userBranches.length,
+                activeRoleName: activeRole?.role.name || 'Keine',
+                branchesVisibleInHeader: branchAvailability.filter(ba => 
+                    ba.isAssignedToUser && (ba.isAvailableForActiveRole === true || ba.isAvailableForActiveRole === null)
+                ).length
+            }
+        });
+    } catch (error) {
+        console.error('Error in debugUserBranches:', error);
+        res.status(500).json({
+            message: 'Fehler beim Debug-Abruf',
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
         });
     }

@@ -93,6 +93,70 @@ export class LifecycleService {
   }
 
   /**
+   * Startet den Lifecycle nach erfolgreichem Admin-Onboarding
+   * Wird aufgerufen, wenn Admin-To-Do Status "qc" oder "done" hat
+   * Fügt User-Rolle hinzu und startet den Lifecycle
+   */
+  static async startLifecycleAfterOnboarding(userId: number, organizationId: number) {
+    try {
+      // Prüfe ob User bereits User-Rolle in der Organisation hat
+      const userRole = await prisma.role.findFirst({
+        where: {
+          organizationId: organizationId,
+          name: 'User'
+        }
+      });
+
+      if (!userRole) {
+        console.warn(`[startLifecycleAfterOnboarding] User-Rolle nicht gefunden für Organisation ${organizationId}`);
+        return null;
+      }
+
+      // Prüfe ob User bereits diese Rolle hat
+      const existingUserRole = await prisma.userRole.findFirst({
+        where: {
+          userId: userId,
+          roleId: userRole.id
+        }
+      });
+
+      // Füge User-Rolle hinzu, falls noch nicht vorhanden
+      if (!existingUserRole) {
+        await prisma.userRole.create({
+          data: {
+            userId: userId,
+            roleId: userRole.id,
+            lastUsed: false // Nicht als aktiv setzen, da User bereits andere Rolle haben könnte
+          }
+        });
+        console.log(`[startLifecycleAfterOnboarding] User-Rolle hinzugefügt für User ${userId} in Organisation ${organizationId}`);
+      }
+
+      // Starte Lifecycle (erstellt ihn, falls noch nicht vorhanden)
+      const lifecycle = await this.createLifecycle(userId, organizationId);
+
+      // Erstelle Event
+      await prisma.lifecycleEvent.create({
+        data: {
+          lifecycleId: lifecycle.id,
+          eventType: 'lifecycle_started_after_onboarding',
+          eventData: {
+            organizationId,
+            triggeredBy: 'admin_onboarding_complete',
+            createdAt: new Date().toISOString()
+          }
+        }
+      });
+
+      console.log(`[startLifecycleAfterOnboarding] Lifecycle gestartet für User ${userId} in Organisation ${organizationId}`);
+      return lifecycle;
+    } catch (error) {
+      console.error('[startLifecycleAfterOnboarding] Fehler:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Aktualisiert den Status eines Lebenszyklus
    */
   static async updateStatus(

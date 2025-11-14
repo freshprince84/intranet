@@ -135,4 +135,82 @@ export const isAdmin = async (req: Request, res: Response, next: NextFunction) =
             error: error instanceof Error ? error.message : 'Unbekannter Fehler'
         });
     }
+};
+
+/**
+ * Middleware zur Überprüfung der Profilvollständigkeit
+ * Erlaubt Zugriff nur, wenn Profil vollständig ist (username, email, country, language)
+ * Ausnahmen: Profil-Seite selbst und Profil-Prüf-Endpoint
+ */
+export const requireCompleteProfile = async (
+    req: AuthenticatedRequest,
+    res: Response,
+    next: NextFunction
+) => {
+    try {
+        const userId = parseInt(req.userId, 10);
+        
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+
+        // Ausnahmen: Profil-Seite und Profil-Prüf-Endpoint
+        const path = req.path;
+        if (path.includes('/profile') && (req.method === 'GET' || req.method === 'PUT')) {
+            // Erlaube Zugriff auf Profil-Seite selbst
+            return next();
+        }
+
+        const user = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { 
+                profileComplete: true,
+                username: true,
+                email: true,
+                country: true,
+                language: true
+            }
+        });
+
+        if (!user) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+
+        // Prüfe Profilvollständigkeit
+        const isComplete = !!(
+            user.username &&
+            user.email &&
+            user.country &&
+            user.language
+        );
+
+        // Update profileComplete, falls noch nicht gesetzt
+        if (isComplete !== user.profileComplete) {
+            await prisma.user.update({
+                where: { id: userId },
+                data: { profileComplete: isComplete }
+            });
+        }
+
+        if (!isComplete) {
+            return res.status(403).json({
+                message: 'Profil muss zuerst vervollständigt werden',
+                redirectTo: '/profile',
+                missingFields: [
+                    !user.username ? 'username' : null,
+                    !user.email ? 'email' : null,
+                    !user.country ? 'country' : null,
+                    !user.language ? 'language' : null
+                ].filter(Boolean)
+            });
+        }
+
+        next();
+    } catch (error) {
+        console.error('Error in requireCompleteProfile middleware:', error);
+        res.status(500).json({
+            message: 'Fehler bei der Profilprüfung',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
 }; 
