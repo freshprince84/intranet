@@ -69,6 +69,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   const [userFormData, setUserFormData] = useState<Partial<User>>({});
   const [isEditingUser, setIsEditingUser] = useState(false);
   const [selectedRoles, setSelectedRoles] = useState<number[]>([]);
+  const [lifecycleRefreshKey, setLifecycleRefreshKey] = useState(0);
   const [isDebugMode, setIsDebugMode] = useState(false);
   const [roleWarning, setRoleWarning] = useState<string | null>(null);
   const { showMessage } = useMessage();
@@ -401,6 +402,11 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
         
         showMessage('Benutzerprofil erfolgreich aktualisiert', 'success');
         setIsEditingUser(false);
+        
+        // Lifecycle-Daten neu laden, falls Vertragstyp geändert wurde
+        if (dataToSend.contract !== undefined) {
+          setLifecycleRefreshKey(prev => prev + 1);
+        }
       }
     } catch (err) {
       console.error('Fehler beim Speichern der Benutzerdaten:', err);
@@ -627,9 +633,9 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
 
       {/* Titelzeile: Button links, Dropdown rechts */}
       <div className="mb-6">
-        <div className="flex items-center gap-4">
+        <div className="flex items-start gap-4">
           {/* Linke Seite: "Neuer Benutzer"-Button */}
-          <div className="flex items-center">
+          <div className="flex items-center pt-8">
             {isAdmin() && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
@@ -645,16 +651,12 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
           
           {/* Rechts: Benutzer-Dropdown mit Active/Inactive Tabs */}
           <div className="flex-1">
-            <label htmlFor="userSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              {t('users.title')}
-            </label>
-            
             {/* Active/Inactive Tabs */}
             <div className="flex gap-2 mb-2">
               <button
                 type="button"
                 onClick={() => setUserFilterTab('active')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   userFilterTab === 'active'
                     ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
@@ -665,7 +667,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
               <button
                 type="button"
                 onClick={() => setUserFilterTab('inactive')}
-                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                   userFilterTab === 'inactive'
                     ? 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
@@ -680,7 +682,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
               onChange={handleUserSelect}
               className="w-full rounded-md border border-gray-300 dark:border-gray-600 px-3 py-2 dark:bg-gray-700 dark:text-white"
             >
-              <option value="">-- {t('users.title')} {t('common.select')} --</option>
+              <option value="">-- {t('common.select')} --</option>
               {users.map(user => (
                 <option key={user.id} value={user.id}>
                   {user.firstName} {user.lastName} ({user.username})
@@ -696,10 +698,10 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
           <div className="flex justify-between items-center mb-4">
             <div className="flex items-center gap-3">
               <h2 className="text-xl font-semibold dark:text-white">
-                {t('users.title')}: {selectedUser.firstName} {selectedUser.lastName}
+                {selectedUser.firstName} {selectedUser.lastName}
               </h2>
               {selectedUser.active !== undefined && (
-                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                   selectedUser.active 
                     ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300' 
                     : 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300'
@@ -733,8 +735,9 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
             )}
           </div>
 
-          {/* Tabs für Benutzerdetails, Dokumente und Rollen */}
+          {/* Tabs für Benutzerdetails, Dokumente und Rollen - zusammenhängende Box */}
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+            {/* Tab-Navigation */}
             <div className="border-b border-gray-200 dark:border-gray-700">
               <nav className="flex -mb-px">
                 <button
@@ -783,11 +786,11 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                 </button>
               </nav>
             </div>
-          </div>
 
-          {/* Benutzerdetails Formular */}
-          {activeUserTab === 'details' && (
-            <form onSubmit={handleUserSubmit} className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            {/* Tab-Inhalte */}
+            {/* Benutzerdetails Formular */}
+            {activeUserTab === 'details' && (
+              <form onSubmit={handleUserSubmit} className="p-6">
               {/* Bestehender Code für Benutzerdetails */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div>
@@ -1055,17 +1058,19 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   </button>
                 </div>
               )}
-            </form>
-          )}
+              </form>
+            )}
 
-          {/* Identifikationsdokumente Tab */}
-          {activeUserTab === 'documents' && (
-            <IdentificationDocumentList userId={selectedUser.id} isAdmin={true} />
-          )}
+            {/* Identifikationsdokumente Tab */}
+            {activeUserTab === 'documents' && (
+              <div className="p-6">
+                <IdentificationDocumentList userId={selectedUser.id} isAdmin={true} />
+              </div>
+            )}
 
-          {/* Rollen Tab */}
-          {activeUserTab === 'roles' && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            {/* Rollen Tab */}
+            {activeUserTab === 'roles' && (
+              <div className="p-6">
               {/* Rollenzuweisung - nur anzeigen, wenn Rollen geladen wurden */}
               {loadingRoles ? (
                 <div className="mt-4 mb-4">
@@ -1189,16 +1194,20 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   </div>
                 </div>
               )}
-            </div>
-          )}
+              </div>
+            )}
 
-          {/* Lebenszyklus Tab */}
-          {activeUserTab === 'lifecycle' && selectedUser && (
-            <LifecycleView 
-              userId={selectedUser.id} 
-              userName={`${selectedUser.firstName} ${selectedUser.lastName}`}
-            />
-          )}
+            {/* Lebenszyklus Tab */}
+            {activeUserTab === 'lifecycle' && selectedUser && (
+              <div className="p-6">
+                <LifecycleView 
+                  key={`lifecycle-${selectedUser.id}-${lifecycleRefreshKey}`}
+                  userId={selectedUser.id} 
+                  userName={`${selectedUser.firstName} ${selectedUser.lastName}`}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 

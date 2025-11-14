@@ -170,3 +170,4 @@ testWelcomeMessage()
     process.exit(1);
   });
 
+

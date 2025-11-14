@@ -1,6 +1,8 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { PrismaClient, Reservation } from '@prisma/client';
 import { decryptApiSettings } from '../utils/encryption';
+import { WhatsAppService } from './whatsappService';
+import { TTLockService } from './ttlockService';
 
 const prisma = new PrismaClient();
 
@@ -170,6 +172,20 @@ export class BoldPaymentService {
     }
 
     try {
+      // Mindestbeträge je nach Währung (basierend auf typischen Payment-Provider-Anforderungen)
+      const MIN_AMOUNTS: Record<string, number> = {
+        'COP': 10000,  // Kolumbien: Mindestens 10.000 COP (ca. 2-3 USD)
+        'USD': 1,      // USA: Mindestens 1 USD
+        'EUR': 1,      // Europa: Mindestens 1 EUR
+      };
+
+      const minAmount = MIN_AMOUNTS[currency] || 1;
+      if (amount < minAmount) {
+        throw new Error(
+          `Betrag zu niedrig: ${amount} ${currency}. Mindestbetrag: ${minAmount} ${currency}`
+        );
+      }
+
       // Beschreibung: min 2, max 100 Zeichen
       const paymentDescription = (description || 
         `Reservierung ${reservation.guestName}`).substring(0, 100);
@@ -205,6 +221,9 @@ export class BoldPaymentService {
         payload.callback_url = `${appUrl}/api/bold-payment/webhook`;
       }
       // Für Sandbox/Development ohne https:// URL wird callback_url weggelassen
+
+      // Logge Payload für Debugging
+      console.log('[Bold Payment] Payload:', JSON.stringify(payload, null, 2));
 
       // Endpoint: POST /online/link/v1
       const response = await this.axiosInstance.post<{
@@ -248,9 +267,30 @@ export class BoldPaymentService {
       if (axios.isAxiosError(error)) {
         const axiosError = error as AxiosError<any>;
         const status = axiosError.response?.status;
-        const errorMessage = axiosError.response?.data?.errors?.[0]?.message ||
-          axiosError.response?.data?.message ||
-          axiosError.message;
+        const responseData = axiosError.response?.data;
+        
+        // Detailliertes Logging
+        console.error('[Bold Payment] API Error Details:');
+        console.error('  Status:', status);
+        console.error('  Status Text:', axiosError.response?.statusText);
+        console.error('  Response Data:', JSON.stringify(responseData, null, 2));
+        
+        // Extrahiere Fehlermeldungen
+        let errorMessage = 'Unbekannter Fehler';
+        if (responseData?.errors && Array.isArray(responseData.errors) && responseData.errors.length > 0) {
+          const errors = responseData.errors.map((e: any) => {
+            if (typeof e === 'string') return e;
+            if (e.message) return e.message;
+            if (e.code) return `Code ${e.code}: ${e.message || JSON.stringify(e)}`;
+            return JSON.stringify(e);
+          });
+          errorMessage = errors.join('; ');
+          console.error('  Errors:', errors);
+        } else if (responseData?.message) {
+          errorMessage = responseData.message;
+        } else if (axiosError.message) {
+          errorMessage = axiosError.message;
+        }
         
         // Spezifische Fehlermeldung für 403 Forbidden
         if (status === 403) {
@@ -264,7 +304,20 @@ export class BoldPaymentService {
           );
         }
         
-        throw new Error(`Bold Payment API Fehler: ${errorMessage}`);
+        // Spezifische Fehlermeldung für 400 Bad Request
+        if (status === 400) {
+          throw new Error(
+            `Bold Payment API Fehler (400 Bad Request): ${errorMessage}\n` +
+            `Bitte prüfen Sie:\n` +
+            `1. Sind alle erforderlichen Felder im Payload vorhanden?\n` +
+            `2. Ist das Betragsformat korrekt?\n` +
+            `3. Ist die Währung gültig?\n` +
+            `4. Ist die Referenz eindeutig?\n` +
+            `5. Details: ${JSON.stringify(responseData, null, 2)}`
+          );
+        }
+        
+        throw new Error(`Bold Payment API Fehler (${status}): ${errorMessage}`);
       }
       throw error;
     }
@@ -360,6 +413,96 @@ export class BoldPaymentService {
             where: { id: reservation.id },
             data: { paymentStatus: 'paid' as any }
           });
+
+          // Nach Zahlung: Erstelle TTLock Code und sende WhatsApp-Nachricht
+          try {
+            // Hole aktualisierte Reservierung mit Organisation
+            const updatedReservation = await prisma.reservation.findUnique({
+              where: { id: reservation.id },
+              include: { organization: true }
+            });
+
+            if (!updatedReservation) {
+              console.warn(`[Bold Payment Webhook] Reservierung ${reservation.id} nicht gefunden nach Update`);
+              break;
+            }
+
+            // Erstelle TTLock Passcode (wenn konfiguriert und Telefonnummer vorhanden)
+            if (updatedReservation.guestPhone) {
+              let ttlockCode: string | null = null;
+              
+              try {
+                const ttlockService = new TTLockService(updatedReservation.organizationId);
+                const settings = updatedReservation.organization.settings as any;
+                const doorSystemSettings = settings?.doorSystem;
+
+                if (doorSystemSettings?.lockIds && doorSystemSettings.lockIds.length > 0) {
+                  const lockId = doorSystemSettings.lockIds[0];
+                  
+                  // Erstelle temporären Passcode (30 Tage gültig)
+                  const startDate = new Date();
+                  const endDate = new Date();
+                  endDate.setDate(endDate.getDate() + 30);
+                  
+                  ttlockCode = await ttlockService.createTemporaryPasscode(
+                    lockId,
+                    startDate,
+                    endDate,
+                    `Guest: ${updatedReservation.guestName}`
+                  );
+
+                  // Speichere TTLock Code in Reservierung
+                  await prisma.reservation.update({
+                    where: { id: reservation.id },
+                    data: {
+                      doorPin: ttlockCode,
+                      doorAppName: 'TTLock',
+                      ttlLockId: lockId,
+                      ttlLockPassword: ttlockCode
+                    }
+                  });
+
+                  console.log(`[Bold Payment Webhook] TTLock Code erstellt für Reservierung ${reservation.id}`);
+                }
+              } catch (ttlockError) {
+                console.error('[Bold Payment Webhook] Fehler beim Erstellen des TTLock Passcodes:', ttlockError);
+                // Weiter ohne TTLock Code
+              }
+
+              // Sende WhatsApp-Nachricht mit TTLock Code
+              try {
+                const whatsappService = new WhatsAppService(updatedReservation.organizationId);
+                
+                const message = `Hola ${updatedReservation.guestName},
+
+¡Gracias por tu pago!
+
+${ttlockCode ? `Tu código de acceso TTLock:
+${ttlockCode}
+
+` : ''}¡Te esperamos!`;
+
+                await whatsappService.sendMessage(updatedReservation.guestPhone, message);
+
+                // Speichere versendete Nachricht
+                await prisma.reservation.update({
+                  where: { id: reservation.id },
+                  data: {
+                    sentMessage: message,
+                    sentMessageAt: new Date()
+                  }
+                });
+
+                console.log(`[Bold Payment Webhook] WhatsApp-Nachricht mit TTLock Code versendet für Reservierung ${reservation.id}`);
+              } catch (whatsappError) {
+                console.error('[Bold Payment Webhook] Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
+                // Fehler nicht weiterwerfen
+              }
+            }
+          } catch (error) {
+            console.error('[Bold Payment Webhook] Fehler beim Verarbeiten der Zahlung (TTLock/WhatsApp):', error);
+            // Fehler nicht weiterwerfen, Payment Status wurde bereits aktualisiert
+          }
           break;
 
         case 'payment.partially_paid':

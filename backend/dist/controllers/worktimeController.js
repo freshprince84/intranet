@@ -50,6 +50,7 @@ const locale_1 = require("date-fns/locale");
 const date_fns_tz_1 = require("date-fns-tz");
 const notificationController_1 = require("./notificationController");
 const organization_1 = require("../middleware/organization");
+const translations_1 = require("../utils/translations");
 const prisma = new client_1.PrismaClient();
 const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -143,10 +144,12 @@ const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
         console.log(`Zeiterfassung ID ${worktime.id} gespeichert mit Startzeit: ${worktime.startTime.toISOString()}`);
         // Erstelle eine Benachrichtigung, wenn eingeschaltet
+        const userLang = yield (0, translations_1.getUserLanguage)(Number(userId));
+        const notificationText = (0, translations_1.getWorktimeNotificationText)(userLang, 'start', worktime.branch.name);
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: Number(userId),
-            title: 'Zeiterfassung gestartet',
-            message: `Zeiterfassung für ${worktime.branch.name} wurde gestartet.`,
+            title: notificationText.title,
+            message: notificationText.message,
             type: client_1.NotificationType.worktime,
             relatedEntityId: worktime.id,
             relatedEntityType: 'start'
@@ -189,10 +192,12 @@ const stopWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         });
         console.log(`Gespeicherte Endzeit: ${worktime.endTime.toISOString()}`);
         // Erstelle eine Benachrichtigung, wenn eingeschaltet
+        const userLang = yield (0, translations_1.getUserLanguage)(Number(userId));
+        const notificationText = (0, translations_1.getWorktimeNotificationText)(userLang, 'stop', worktime.branch.name);
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: Number(userId),
-            title: 'Zeiterfassung beendet',
-            message: `Zeiterfassung für ${worktime.branch.name} wurde beendet.`,
+            title: notificationText.title,
+            message: notificationText.message,
             type: client_1.NotificationType.worktime,
             relatedEntityId: worktime.id,
             relatedEntityType: 'stop'
@@ -922,10 +927,12 @@ const checkAndStopExceededWorktimes = () => __awaiter(void 0, void 0, void 0, fu
                 console.log(`Zeiterfassung ID ${stoppedWorktime.id} wurde beendet um: ${stoppedWorktime.endTime.toISOString()}`);
                 console.log(`Lokale Endzeit: ${stoppedWorktime.endTime.getFullYear()}-${String(stoppedWorktime.endTime.getMonth() + 1).padStart(2, '0')}-${String(stoppedWorktime.endTime.getDate()).padStart(2, '0')} ${String(stoppedWorktime.endTime.getHours()).padStart(2, '0')}:${String(stoppedWorktime.endTime.getMinutes()).padStart(2, '0')}:${String(stoppedWorktime.endTime.getSeconds()).padStart(2, '0')}`);
                 // Benachrichtigung erstellen
+                const userLang = yield (0, translations_1.getUserLanguage)(worktime.userId);
+                const notificationText = (0, translations_1.getWorktimeNotificationText)(userLang, 'auto_stop', undefined, worktime.user.normalWorkingHours);
                 yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: worktime.userId,
-                    title: 'Zeiterfassung automatisch beendet',
-                    message: `Deine Zeiterfassung wurde automatisch beendet, da die tägliche Arbeitszeit von ${worktime.user.normalWorkingHours}h erreicht wurde.`,
+                    title: notificationText.title,
+                    message: notificationText.message,
                     type: client_1.NotificationType.worktime,
                     relatedEntityId: worktime.id,
                     relatedEntityType: 'auto_stop'

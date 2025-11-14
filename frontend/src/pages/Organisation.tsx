@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { UserGroupIcon, UserIcon, ShieldCheckIcon, MapPinIcon } from '@heroicons/react/24/outline';
@@ -19,7 +19,8 @@ const Organisation: React.FC = () => {
   const { 
     isAdmin, 
     hasPermission, 
-    canViewOrganization 
+    canViewOrganization,
+    loading: permissionsLoading
   } = usePermissions();
 
   // Berechtigungen prüfen
@@ -29,9 +30,29 @@ const Organisation: React.FC = () => {
   const canViewBranches = hasPermission('branches', 'read', 'table');
   const canViewOrg = canViewOrganization();
 
-  // Standard-Tab setzen: organization wenn verfügbar, sonst users wenn verfügbar, sonst roles, sonst branches
-  const defaultTab = canViewOrg ? 'organization' : (canViewUsers ? 'users' : (canViewRoles ? 'roles' : (canViewBranches ? 'branches' : 'organization')));
-  const [activeTabState, setActiveTabState] = useState<'users' | 'roles' | 'branches' | 'organization'>(defaultTab);
+  const [activeTabState, setActiveTabState] = useState<'users' | 'roles' | 'branches' | 'organization'>('users');
+  const isInitialized = useRef(false);
+
+  // Tab beim ersten Laden basierend auf Berechtigungen setzen (nur wenn Berechtigungen geladen sind)
+  // Reihenfolge: users -> roles -> branches -> organization
+  useEffect(() => {
+    if (!permissionsLoading && !isInitialized.current) {
+      let defaultTab: 'users' | 'roles' | 'branches' | 'organization' = 'organization'; // Fallback
+      
+      if (canViewUsers) {
+        defaultTab = 'users';
+      } else if (canViewRoles) {
+        defaultTab = 'roles';
+      } else if (canViewBranches) {
+        defaultTab = 'branches';
+      } else if (canViewOrg) {
+        defaultTab = 'organization';
+      }
+      
+      setActiveTabState(defaultTab);
+      isInitialized.current = true;
+    }
+  }, [permissionsLoading, canViewUsers, canViewRoles, canViewBranches, canViewOrg]);
 
   // Tab-Wechsel Handler - Fehler beim Wechsel zurücksetzen
   const handleTabChange = (tab: 'users' | 'roles' | 'branches' | 'organization') => {

@@ -27,6 +27,11 @@ import monthlyConsultationReportsRoutes from './routes/monthlyConsultationReport
 import databaseRoutes from './routes/database';
 import claudeRoutes from './routes/claudeRoutes';
 import organizationRoutes from './routes/organizations';
+import lobbyPmsRoutes from './routes/lobbyPms';
+import boldPaymentRoutes from './routes/boldPayment';
+import ttlockRoutes from './routes/ttlock';
+import whatsappRoutes from './routes/whatsapp';
+import reservationRoutes from './routes/reservations';
 import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 import { checkAndGenerateMonthlyReports, triggerMonthlyReportCheck } from './services/monthlyReportScheduler';
@@ -195,6 +200,11 @@ app.use('/api/monthly-consultation-reports', monthlyConsultationReportsRoutes);
 app.use('/api/database', databaseRoutes);
 app.use('/api/claude', claudeRoutes);
 app.use('/api/organizations', organizationRoutes);
+app.use('/api/lobby-pms', lobbyPmsRoutes);
+app.use('/api/bold-payment', boldPaymentRoutes);
+app.use('/api/ttlock', ttlockRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
+app.use('/api/reservations', reservationRoutes);
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

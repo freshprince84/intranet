@@ -4,6 +4,7 @@
 
 export enum ReservationStatus {
   CONFIRMED = 'confirmed',
+  NOTIFICATION_SENT = 'notification_sent',
   CHECKED_IN = 'checked_in',
   CHECKED_OUT = 'checked_out',
   CANCELLED = 'cancelled',
@@ -41,6 +42,8 @@ export interface Reservation {
   sireRegistrationId?: string | null;
   sireRegisteredAt?: string | null; // ISO datetime string
   sireRegistrationError?: string | null;
+  sentMessage?: string | null; // Versendete WhatsApp-Nachricht
+  sentMessageAt?: string | null; // ISO datetime string
   guestNationality?: string | null;
   guestPassportNumber?: string | null;
   guestBirthDate?: string | null; // ISO date string

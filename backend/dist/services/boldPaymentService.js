@@ -16,6 +16,8 @@ exports.BoldPaymentService = void 0;
 const axios_1 = __importDefault(require("axios"));
 const client_1 = require("@prisma/client");
 const encryption_1 = require("../utils/encryption");
+const whatsappService_1 = require("./whatsappService");
+const ttlockService_1 = require("./ttlockService");
 const prisma = new client_1.PrismaClient();
 /**
  * Service für Bold Payment Integration
@@ -283,6 +285,80 @@ class BoldPaymentService {
                             where: { id: reservation.id },
                             data: { paymentStatus: 'paid' }
                         });
+                        // Nach Zahlung: Erstelle TTLock Code und sende WhatsApp-Nachricht
+                        try {
+                            // Hole aktualisierte Reservierung mit Organisation
+                            const updatedReservation = yield prisma.reservation.findUnique({
+                                where: { id: reservation.id },
+                                include: { organization: true }
+                            });
+                            if (!updatedReservation) {
+                                console.warn(`[Bold Payment Webhook] Reservierung ${reservation.id} nicht gefunden nach Update`);
+                                break;
+                            }
+                            // Erstelle TTLock Passcode (wenn konfiguriert und Telefonnummer vorhanden)
+                            if (updatedReservation.guestPhone) {
+                                let ttlockCode = null;
+                                try {
+                                    const ttlockService = new ttlockService_1.TTLockService(updatedReservation.organizationId);
+                                    const settings = updatedReservation.organization.settings;
+                                    const doorSystemSettings = settings === null || settings === void 0 ? void 0 : settings.doorSystem;
+                                    if ((doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds) && doorSystemSettings.lockIds.length > 0) {
+                                        const lockId = doorSystemSettings.lockIds[0];
+                                        // Erstelle temporären Passcode (30 Tage gültig)
+                                        const startDate = new Date();
+                                        const endDate = new Date();
+                                        endDate.setDate(endDate.getDate() + 30);
+                                        ttlockCode = yield ttlockService.createTemporaryPasscode(lockId, startDate, endDate, `Guest: ${updatedReservation.guestName}`);
+                                        // Speichere TTLock Code in Reservierung
+                                        yield prisma.reservation.update({
+                                            where: { id: reservation.id },
+                                            data: {
+                                                doorPin: ttlockCode,
+                                                doorAppName: 'TTLock',
+                                                ttlLockId: lockId,
+                                                ttlLockPassword: ttlockCode
+                                            }
+                                        });
+                                        console.log(`[Bold Payment Webhook] TTLock Code erstellt für Reservierung ${reservation.id}`);
+                                    }
+                                }
+                                catch (ttlockError) {
+                                    console.error('[Bold Payment Webhook] Fehler beim Erstellen des TTLock Passcodes:', ttlockError);
+                                    // Weiter ohne TTLock Code
+                                }
+                                // Sende WhatsApp-Nachricht mit TTLock Code
+                                try {
+                                    const whatsappService = new whatsappService_1.WhatsAppService(updatedReservation.organizationId);
+                                    const message = `Hola ${updatedReservation.guestName},
+
+¡Gracias por tu pago!
+
+${ttlockCode ? `Tu código de acceso TTLock:
+${ttlockCode}
+
+` : ''}¡Te esperamos!`;
+                                    yield whatsappService.sendMessage(updatedReservation.guestPhone, message);
+                                    // Speichere versendete Nachricht
+                                    yield prisma.reservation.update({
+                                        where: { id: reservation.id },
+                                        data: {
+                                            sentMessage: message,
+                                            sentMessageAt: new Date()
+                                        }
+                                    });
+                                    console.log(`[Bold Payment Webhook] WhatsApp-Nachricht mit TTLock Code versendet für Reservierung ${reservation.id}`);
+                                }
+                                catch (whatsappError) {
+                                    console.error('[Bold Payment Webhook] Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
+                                    // Fehler nicht weiterwerfen
+                                }
+                            }
+                        }
+                        catch (error) {
+                            console.error('[Bold Payment Webhook] Fehler beim Verarbeiten der Zahlung (TTLock/WhatsApp):', error);
+                            // Fehler nicht weiterwerfen, Payment Status wurde bereits aktualisiert
+                        }
                         break;
                     case 'payment.partially_paid':
                         yield prisma.reservation.update({

@@ -29,6 +29,8 @@ import organizationRoutes from './routes/organizations';
 import lobbyPmsRoutes from './routes/lobbyPms';
 import boldPaymentRoutes from './routes/boldPayment';
 import ttlockRoutes from './routes/ttlock';
+import whatsappRoutes from './routes/whatsapp';
+import reservationRoutes from './routes/reservations';
 import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 import { checkAndGenerateMonthlyReports, triggerMonthlyReportCheck } from './services/monthlyReportScheduler';
@@ -145,6 +147,15 @@ app.get('/api/test-route', (req: Request, res: Response) => {
   });
 });
 
+// Test-Route für Reservierungen (vor authMiddleware)
+app.get('/api/test-reservations', (req: Request, res: Response) => {
+  res.json({ 
+    message: 'Test-Reservations-Route ist erreichbar',
+    timestamp: new Date().toISOString(),
+    reservationRoutesLoaded: typeof reservationRoutes !== 'undefined'
+  });
+});
+
 // Test-Route für manuelle Auslösung der Monatsabrechnungsprüfung
 app.post('/api/admin/trigger-monthly-reports', async (req: Request, res: Response) => {
   try {
@@ -222,6 +233,12 @@ app.use('/api/organizations', organizationRoutes);
 app.use('/api/lobby-pms', lobbyPmsRoutes);
 app.use('/api/bold-payment', boldPaymentRoutes);
 app.use('/api/ttlock', ttlockRoutes);
+app.use('/api/whatsapp', whatsappRoutes);
+// Reservierungen (manuelle Erstellung) - MUSS nach lobby-pms kommen
+console.log('[App] Registriere /api/reservations Route...');
+console.log('[App] reservationRoutes:', reservationRoutes ? 'geladen' : 'FEHLT!');
+app.use('/api/reservations', reservationRoutes);
+console.log('[App] /api/reservations Route registriert');
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

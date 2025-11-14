@@ -100,3 +100,4 @@ checkPasscodeStatus()
     process.exit(1);
   });
 
+
