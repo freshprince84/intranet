@@ -1,6 +1,10 @@
 import { PrismaClient } from '@prisma/client';
 import { WhatsAppAiService } from './whatsappAiService';
 import { LanguageDetectionService } from './languageDetectionService';
+import { WhatsAppService } from './whatsappService';
+import path from 'path';
+import fs from 'fs';
+import { v4 as uuidv4 } from 'uuid';
 
 const prisma = new PrismaClient();
 
@@ -603,17 +607,6 @@ export class WhatsAppMessageHandler {
 
           const responsibleId = context.responsibleId;
           let description = messageText || 'Request via WhatsApp';
-          
-          // Füge Media-Info hinzu, falls vorhanden
-          if (mediaUrl) {
-            const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
-            const mediaNote: Record<string, string> = {
-              es: '\n\n📷 Imagen adjunta (Media ID: ' + mediaUrl + ')',
-              de: '\n\n📷 Bild angehängt (Media ID: ' + mediaUrl + ')',
-              en: '\n\n📷 Image attached (Media ID: ' + mediaUrl + ')'
-            };
-            description += mediaNote[language] || mediaNote.es;
-          }
 
           // Hole Branch für organizationId
           const branch = await prisma.branch.findUnique({
@@ -634,6 +627,57 @@ export class WhatsAppMessageHandler {
               organizationId: branch?.organizationId || null
             }
           });
+
+          // Lade und speichere Media, falls vorhanden
+          if (mediaUrl) {
+            try {
+              console.log(`[WhatsApp Message Handler] Lade Media ${mediaUrl} für Request ${request.id}...`);
+              
+              const whatsappService = await WhatsAppService.getServiceForBranch(branchId);
+              const mediaData = await whatsappService.downloadMedia(mediaUrl);
+
+              // Speichere Media als RequestAttachment
+              const UPLOAD_DIR = path.join(__dirname, '../../uploads/request-attachments');
+              if (!fs.existsSync(UPLOAD_DIR)) {
+                fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+              }
+
+              const uniqueFileName = `${uuidv4()}${path.extname(mediaData.fileName)}`;
+              const filePath = path.join(UPLOAD_DIR, uniqueFileName);
+
+              fs.writeFileSync(filePath, mediaData.buffer);
+
+              await prisma.requestAttachment.create({
+                data: {
+                  requestId: request.id,
+                  fileName: mediaData.fileName,
+                  fileType: mediaData.mimeType,
+                  fileSize: mediaData.buffer.length,
+                  filePath: uniqueFileName
+                }
+              });
+
+              console.log(`[WhatsApp Message Handler] Media erfolgreich als Attachment gespeichert für Request ${request.id}`);
+
+              // Aktualisiere Beschreibung mit Hinweis auf Attachment
+              const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+              const mediaNote: Record<string, string> = {
+                es: '\n\n📷 Imagen adjunta',
+                de: '\n\n📷 Bild angehängt',
+                en: '\n\n📷 Image attached'
+              };
+              
+              await prisma.request.update({
+                where: { id: request.id },
+                data: {
+                  description: description + (mediaNote[language] || mediaNote.es)
+                }
+              });
+            } catch (error) {
+              console.error(`[WhatsApp Message Handler] Fehler beim Herunterladen/Speichern von Media:`, error);
+              // Weiter ohne Media - Request wurde bereits erstellt
+            }
+          }
 
           // Reset Conversation State
           await prisma.whatsAppConversation.update({
