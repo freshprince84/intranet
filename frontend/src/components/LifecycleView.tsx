@@ -131,9 +131,15 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
 
   const fetchDataRef = useRef(false);
 
-  const fetchData = useCallback(async () => {
-    // Verhindere mehrfaches gleichzeitiges Laden
-    if (fetchDataRef.current) {
+  const fetchData = useCallback(async (force: boolean = false) => {
+    // Verhindere mehrfaches gleichzeitiges Laden (außer wenn force=true)
+    if (fetchDataRef.current && !force) {
+      // Wenn bereits geladen wird, warte kurz und versuche es erneut
+      setTimeout(() => {
+        if (!fetchDataRef.current) {
+          fetchData(true);
+        }
+      }, 500);
       return;
     }
     
@@ -162,6 +168,14 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         offboardingTaskTitles.includes(task.title)
       );
       setOffboardingTasks(filteredTasks);
+      
+      // Prüfe ob automatische Status-Änderung nötig ist (wird im Backend gemacht, aber hier prüfen wir für UI-Feedback)
+      if (lifecycleResponse.data?.lifecycle?.status === 'onboarding' && lifecycleResponse.data?.progress?.percent === 100) {
+        // Status wird automatisch im Backend geändert, lade Daten nach kurzer Verzögerung neu
+        setTimeout(() => {
+          fetchData();
+        }, 1000);
+      }
       
       setError(null);
     } catch (err: any) {
@@ -239,6 +253,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
     }
   };
 
+
   const handleDownloadContract = async (contractId: number) => {
     setDownloadingContractId(contractId);
     try {
@@ -266,7 +281,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
     }
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status: string, clickable: boolean = false) => {
     const statusConfig: Record<string, { color: string; labelKey: string }> = {
       onboarding: { color: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300', labelKey: 'lifecycle.status.onboarding' },
       active: { color: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300', labelKey: 'lifecycle.status.active' },
@@ -278,7 +293,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
     const config = statusConfig[status] || { color: 'bg-gray-100 text-gray-800', labelKey: status };
     
     return (
-      <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.color}`}>
+      <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.color} ${clickable ? 'cursor-pointer hover:opacity-80' : ''}`}>
         {t(config.labelKey) || status}
       </span>
     );
@@ -320,7 +335,9 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
     );
   }
 
-  const { lifecycle, progress, socialSecurityRegistrations = [] } = lifecycleData;
+  // Extrahiere socialSecurityRegistrations aus lifecycle (falls direkt vorhanden) oder aus lifecycleData
+  const socialSecurityRegistrations = lifecycleData.lifecycle?.socialSecurityRegistrations || lifecycleData.socialSecurityRegistrations || [];
+  const { lifecycle, progress } = lifecycleData;
 
   return (
     <div className="space-y-6">
@@ -332,6 +349,7 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
             {t('lifecycle.statusTitle')}
           </h3>
           <div className="flex items-center space-x-3">
+          {/* Status-Badge (nur Anzeige, keine Änderung möglich) */}
           {getStatusBadge(lifecycle.status)}
             {/* Offboarding-Start-Button (nur für HR/Admin, nur wenn Status = "active") */}
             {(isHR() || isAdmin()) && lifecycle.status === 'active' && (
@@ -736,58 +754,12 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
         )}
       </div>
 
-      {/* Social Security Status - Anzeige für alle */}
-      {socialSecurityRegistrations.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
-          <h3 className="text-lg font-semibold dark:text-white mb-4 flex items-center">
-            <DocumentTextIcon className="h-5 w-5 mr-2" />
-            {t('lifecycle.socialSecurity')}
-          </h3>
-          <div className="space-y-3">
-            {socialSecurityRegistrations.map((registration) => (
-              <div
-                key={registration.id}
-                className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg"
-              >
-                <div className="flex items-center space-x-3">
-                  {registration.status === 'registered' ? (
-                    <CheckCircleIcon className="h-5 w-5 text-green-500" />
-                  ) : registration.status === 'pending' ? (
-                    <ClockIcon className="h-5 w-5 text-yellow-500" />
-                  ) : (
-                    <XCircleIcon className="h-5 w-5 text-red-500" />
-                  )}
-                  <div>
-                    <div className="font-medium dark:text-white uppercase">
-                      {registration.registrationType}
-                    </div>
-                    {registration.provider && (
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {registration.provider}
-                      </div>
-                    )}
-                    {registration.registrationNumber && (
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        Nr: {registration.registrationNumber}
-                      </div>
-                    )}
-                  </div>
-                </div>
-                <span className="text-sm font-medium dark:text-white">
-                  {t(`lifecycle.socialSecurityStatus.${registration.status}`) || registration.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Social Security Editor - Nur für Legal/Admin */}
       {lifecycleData?.lifecycle && (
         <SocialSecurityEditor
           userId={userId}
           lifecycleId={lifecycleData.lifecycle.id}
-          onUpdate={fetchData}
+          onUpdate={() => fetchData(true)}
         />
       )}
 

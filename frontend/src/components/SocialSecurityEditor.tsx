@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   CheckCircleIcon,
@@ -41,7 +41,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
   onUpdate
 }) => {
   const { t } = useTranslation();
-  const { isLegal, isAdmin } = usePermissions();
+  const { isLegal, isAdmin, loading: permissionsLoading } = usePermissions();
   const { showMessage } = useMessage();
   
   const [registrations, setRegistrations] = useState<Record<SocialSecurityType, SocialSecurityRegistration | null>>({
@@ -63,7 +63,105 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
   const loadingRef = useRef(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
+  // loadRegistrations außerhalb von useEffect definieren, damit es von handleSave aufgerufen werden kann
+  const loadRegistrations = useCallback(async () => {
+    // Erstelle neuen AbortController
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
+    loadingRef.current = true;
+    setLoading(true);
+    try {
+      const types: SocialSecurityType[] = ['arl', 'eps', 'pension', 'caja'];
+      const registrationPromises = types.map(async (type) => {
+        // Prüfe ob Request abgebrochen wurde
+        if (abortController.signal.aborted) {
+          return { type, registration: null };
+        }
+
+        try {
+          const response = await axiosInstance.get(
+            API_ENDPOINTS.LIFECYCLE.SOCIAL_SECURITY(userId, type),
+            {
+              timeout: 5000, // 5 Sekunden Timeout
+              signal: abortController.signal
+            }
+          );
+          return { type, registration: response.data };
+        } catch (error: any) {
+          // Ignoriere Abort-Errors (AbortError oder CanceledError von Axios)
+          if (error.name === 'AbortError' || error.name === 'CanceledError' || abortController.signal.aborted) {
+            return { type, registration: null };
+          }
+          // Behandle 404 als "nicht vorhanden" (normal)
+          if (error.response?.status === 404) {
+            return { type, registration: null };
+          }
+          // Behandle Network Errors und Timeouts
+          if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || error.message?.includes('ERR_INSUFFICIENT_RESOURCES')) {
+            console.warn(`Network error loading ${type}, treating as not found`);
+            return { type, registration: null };
+          }
+          console.error(`Error loading ${type}:`, error);
+          return { type, registration: null };
+        }
+      });
+
+      const results = await Promise.all(registrationPromises);
+      
+      // Prüfe erneut ob Request abgebrochen wurde
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      const newRegistrations: Record<SocialSecurityType, SocialSecurityRegistration | null> = {
+        arl: null,
+        eps: null,
+        pension: null,
+        caja: null
+      };
+
+      results.forEach(({ type, registration }) => {
+        if (registration) {
+          // Backend gibt zurück: { id, type, status, number, provider, registeredAt, notes, completedAt }
+          // Mappe auf Frontend-Format: { id, registrationType, registrationNumber, provider, registrationDate, status, notes, completedAt }
+          newRegistrations[type as SocialSecurityType] = {
+            id: registration.id || 0,
+            registrationType: type,
+            registrationNumber: registration.number || registration.registrationNumber || null,
+            provider: registration.provider || null,
+            registrationDate: registration.registeredAt || registration.registrationDate || null,
+            status: registration.status || 'pending',
+            notes: registration.notes || null,
+            completedAt: registration.completedAt || null
+          };
+        }
+      });
+
+      setRegistrations(newRegistrations);
+    } catch (error: any) {
+      // Ignoriere Abort-Errors (AbortError oder CanceledError von Axios)
+      if (error.name === 'AbortError' || error.name === 'CanceledError' || abortController.signal.aborted) {
+        return;
+      }
+      console.error('Error loading registrations:', error);
+      showMessage(t('socialSecurity.loadError'), 'error');
+    } finally {
+      // Setze loading immer auf false, auch bei Abbruch
+      setLoading(false);
+      loadingRef.current = false;
+    }
+  }, [userId, t, showMessage]);
+
   useEffect(() => {
+    // Warte bis Berechtigungen geladen sind
+    if (permissionsLoading) {
+      return;
+    }
+    
     // Prüfe Berechtigung und lade nur einmal pro userId/lifecycleId
     const hasPermission = isLegal() || isAdmin();
     if (!hasPermission || !userId || !lifecycleId) {
@@ -76,98 +174,6 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
       return;
     }
 
-    // Breche vorherige Requests ab
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
-
-    // Erstelle neuen AbortController
-    const abortController = new AbortController();
-    abortControllerRef.current = abortController;
-
-    const loadRegistrations = async () => {
-      loadingRef.current = true;
-      setLoading(true);
-      try {
-        const types: SocialSecurityType[] = ['arl', 'eps', 'pension', 'caja'];
-        const registrationPromises = types.map(async (type) => {
-          // Prüfe ob Request abgebrochen wurde
-          if (abortController.signal.aborted) {
-            return { type, registration: null };
-          }
-
-          try {
-            const response = await axiosInstance.get(
-              API_ENDPOINTS.LIFECYCLE.SOCIAL_SECURITY(userId, type),
-              {
-                timeout: 5000, // 5 Sekunden Timeout
-                signal: abortController.signal
-              }
-            );
-            return { type, registration: response.data };
-          } catch (error: any) {
-            // Ignoriere Abort-Errors (AbortError oder CanceledError von Axios)
-            if (error.name === 'AbortError' || error.name === 'CanceledError' || abortController.signal.aborted) {
-              return { type, registration: null };
-            }
-            // Behandle 404 als "nicht vorhanden" (normal)
-            if (error.response?.status === 404) {
-              return { type, registration: null };
-            }
-            // Behandle Network Errors und Timeouts
-            if (error.code === 'ERR_NETWORK' || error.code === 'ECONNABORTED' || error.message?.includes('ERR_INSUFFICIENT_RESOURCES')) {
-              console.warn(`Network error loading ${type}, treating as not found`);
-              return { type, registration: null };
-            }
-            console.error(`Error loading ${type}:`, error);
-            return { type, registration: null };
-          }
-        });
-
-        const results = await Promise.all(registrationPromises);
-        
-        // Prüfe erneut ob Request abgebrochen wurde
-        if (abortController.signal.aborted) {
-          return;
-        }
-
-        const newRegistrations: Record<SocialSecurityType, SocialSecurityRegistration | null> = {
-          arl: null,
-          eps: null,
-          pension: null,
-          caja: null
-        };
-
-        results.forEach(({ type, registration }) => {
-          if (registration) {
-            newRegistrations[type as SocialSecurityType] = {
-              id: registration.id || 0,
-              registrationType: type,
-              registrationNumber: registration.registrationNumber || null,
-              provider: registration.provider || null,
-              registrationDate: registration.registrationDate || null,
-              status: registration.status || 'pending',
-              notes: registration.notes || null,
-              completedAt: registration.completedAt || null
-            };
-          }
-        });
-
-        setRegistrations(newRegistrations);
-      } catch (error: any) {
-        // Ignoriere Abort-Errors (AbortError oder CanceledError von Axios)
-        if (error.name === 'AbortError' || error.name === 'CanceledError' || abortController.signal.aborted) {
-          return;
-        }
-        console.error('Error loading registrations:', error);
-        showMessage(t('socialSecurity.loadError'), 'error');
-      } finally {
-        // Setze loading immer auf false, auch bei Abbruch
-        setLoading(false);
-        loadingRef.current = false;
-      }
-    };
-
     loadRegistrations();
 
     // Cleanup: Breche Request ab wenn Component unmountet oder Dependencies sich ändern
@@ -178,7 +184,7 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
       loadingRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, lifecycleId]); // isLegal und isAdmin sind Funktionen, nicht als Dependencies
+  }, [userId, lifecycleId, permissionsLoading]); // permissionsLoading als Dependency hinzugefügt
 
   const handleEdit = (type: SocialSecurityType) => {
     const registration = registrations[type];
@@ -217,6 +223,17 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
 
   const handleSave = async () => {
     if (!editingType) return;
+    
+    // Prüfe Berechtigung nochmal vor dem Speichern
+    if (permissionsLoading) {
+      showMessage(t('common.loading', { defaultValue: 'Berechtigungen werden geladen...' }), 'warning');
+      return;
+    }
+    
+    if (!isLegal() && !isAdmin()) {
+      showMessage(t('lifecycle.noPermission', { defaultValue: 'Keine Berechtigung - nur Legal oder Admin' }), 'error');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -235,10 +252,16 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
 
       showMessage('Sozialversicherung erfolgreich aktualisiert', 'success');
       setEditingType(null);
+      
+      // Warte kurz, damit Backend die Daten aktualisiert hat
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
       // Lade Registrierungen neu nach Update
       await loadRegistrations();
+      
       // onUpdate nur aufrufen, wenn es eine Funktion ist (verhindert Re-Render-Loops)
       if (onUpdate && typeof onUpdate === 'function') {
+        // Rufe onUpdate auf, um LifecycleView zu aktualisieren
         onUpdate();
       }
     } catch (error: any) {
@@ -283,6 +306,17 @@ const SocialSecurityEditor: React.FC<SocialSecurityEditorProps> = ({
     };
     return labels[type];
   };
+
+  // Warte bis Berechtigungen geladen sind
+  if (permissionsLoading) {
+    return (
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
+        <div className="flex justify-center items-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isLegal() && !isAdmin()) {
     return null;

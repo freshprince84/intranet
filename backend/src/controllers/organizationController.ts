@@ -1188,6 +1188,14 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
         });
       }
 
+      // ✅ TTLOCK PASSWORD: MD5-Hash für TTLock Password erstellen (falls vorhanden)
+      if (newSettings.doorSystem?.password && !newSettings.doorSystem.password.match(/^[a-f0-9]{32}$/i)) {
+        // Password ist noch nicht gehasht (32-stelliger MD5-Hash)
+        const crypto = require('crypto');
+        newSettings.doorSystem.password = crypto.createHash('md5').update(newSettings.doorSystem.password).digest('hex');
+        console.log('[TTLock] Password wurde MD5-gehasht');
+      }
+
       // ✅ VERSCHLÜSSELUNG: Verschlüssele alle API-Keys vor dem Speichern
       try {
         const encryptedSettings = encryptApiSettings(newSettings);

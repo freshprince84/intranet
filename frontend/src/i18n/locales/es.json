@@ -271,7 +271,15 @@
         "title": "TTLock (Sistema de Puertas)",
         "apiUrl": "URL de API",
         "clientId": "ID de Cliente",
-        "clientSecret": "Secreto de Cliente"
+        "clientSecret": "Secreto de Cliente",
+        "username": "Nombre de Usuario de TTLock App",
+        "usernameHint": "El nombre de usuario para la aplicación TTLock (ej. +573024498991 o 3024498991)",
+        "password": "Contraseña de TTLock App",
+        "passwordHint": "La contraseña para la aplicación TTLock (almacenada como hash MD5)",
+        "passcodeType": "Tipo de Código de Acceso",
+        "passcodeTypeAuto": "Automático (10 dígitos, sin sincronización)",
+        "passcodeTypeCustom": "Personalizado (4 dígitos, requiere sincronización)",
+        "passcodeTypeHint": "Automático: Los códigos de 10 dígitos funcionan sin puerta de enlace/sincronización. Personalizado: Los códigos de 4 dígitos requieren sincronización Bluetooth a través de la aplicación TTLock."
       },
       "sire": {
         "title": "SIRE (Migración)",
@@ -531,7 +539,7 @@
     }
   },
   "users": {
-    "title": "Usuarios",
+    "title": "Perfil",
     "columns": {
       "username": "Nombre de usuario",
       "email": "Correo electrónico",
@@ -1807,7 +1815,34 @@
     "positionY": "Y (vertical)",
     "positionYHint": "0 = abajo",
     "positionPage": "Página",
-    "positionPageHint": "1 = primera página"
+    "positionPageHint": "1 = primera página",
+    "notSet": "No establecido",
+    "editContractDates": "Editar datos del contrato",
+    "contractEndHint": "Solo completar para contratos temporales",
+    "dataCopied": "Datos copiados al portapapeles",
+    "copyError": "Error al copiar",
+    "copyData": "Copiar datos",
+    "noDataAvailable": "No hay datos generados automáticamente disponibles",
+    "missingData": "Falta ID de usuario o tipo de seguridad social",
+    "registrationCompleted": "Registro completado exitosamente",
+    "registrationError": "Error al completar el registro",
+    "notes": "Notas",
+    "notesPlaceholder": "Información adicional...",
+    "complete": "Completar",
+    "templateGenerated": "Plantilla de correo generada",
+    "templateGenerationError": "Error al generar la plantilla",
+    "templateRequired": "Por favor genere primero una plantilla",
+    "emailSent": "Correo enviado exitosamente",
+    "emailSendError": "Error al enviar el correo",
+    "templatePlaceholder": "La plantilla de correo se mostrará aquí...",
+    "sendEmail": "Enviar correo",
+    "loadSignaturesError": "Error al cargar las firmas",
+    "signatureUploaded": "Firma subida exitosamente",
+    "signatureDeleted": "Firma eliminada exitosamente",
+    "changeStatus": "Cambiar estado",
+    "statusUpdated": "Estado actualizado exitosamente",
+    "statusUpdateError": "Error al actualizar el estado",
+    "noPermission": "Sin permiso - solo Legal o Administrador"
   },
   "socialSecurity": {
     "provider": "Proveedor",

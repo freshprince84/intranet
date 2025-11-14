@@ -77,8 +77,11 @@ export interface OrganizationSettings {
     apiUrl?: string;
     clientId?: string;
     clientSecret?: string;
+    username?: string;
+    password?: string; // MD5-hashed password
     accessToken?: string;
     lockIds?: string[];
+    passcodeType?: 'auto' | 'custom'; // 'auto' = 10-stellig (ohne Sync), 'custom' = 4-stellig (mit Sync)
   };
   
   // SIRE Settings

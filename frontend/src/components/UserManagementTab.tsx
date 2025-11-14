@@ -25,7 +25,8 @@ const CONTRACT_TYPES = [
   { code: 'tiempo_parcial_7', name: 'Tiempo Parcial (≤7 Tage/Monat)' },
   { code: 'tiempo_parcial_14', name: 'Tiempo Parcial (≤14 Tage/Monat)' },
   { code: 'tiempo_parcial_21', name: 'Tiempo Parcial (≤21 Tage/Monat)' },
-  { code: 'servicios_externos', name: 'Servicios Externos (Stundenbasiert)' }
+  { code: 'prestacion_de_servicios', name: 'Prestación de Servicios' },
+  { code: 'externo', name: 'Externo' }
 ];
 
 // Gemeinsame Debug-Komponente hinzufügen
@@ -871,13 +872,19 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('profile.contract')}
                   </label>
-                  <input
-                    type="text"
+                  <select
                     name="contract"
                     value={userFormData.contract || ''}
                     onChange={handleUserInputChange}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  />
+                  >
+                    <option value="">{t('common.pleaseSelect', { defaultValue: 'Bitte auswählen...' })}</option>
+                    {CONTRACT_TYPES.map((type) => (
+                      <option key={type.code} value={type.code}>
+                        {type.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
