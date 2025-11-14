@@ -455,6 +455,90 @@ Acceso:
     await service.loadSettings();
     return service;
   }
+
+  /**
+   * Lädt Media von der WhatsApp Business API herunter
+   * @param mediaId - Media ID von WhatsApp
+   * @returns Buffer mit den Mediendaten und MIME-Type
+   */
+  async downloadMedia(mediaId: string): Promise<{ buffer: Buffer; mimeType: string; fileName: string }> {
+    try {
+      await this.loadSettings();
+
+      if (this.provider !== 'whatsapp-business-api') {
+        throw new Error('Media-Download nur für WhatsApp Business API unterstützt');
+      }
+
+      if (!this.axiosInstance || !this.apiKey) {
+        throw new Error('WhatsApp Service nicht initialisiert');
+      }
+
+      console.log(`[WhatsApp Service] Lade Media ${mediaId} herunter...`);
+
+      // Schritt 1: Hole Media-URL
+      // WhatsApp Business API Endpoint: GET https://graph.facebook.com/v18.0/{media-id}
+      // Erstelle separate Axios-Instanz für Media-Download (baseURL enthält phoneNumberId, was hier nicht benötigt wird)
+      const mediaApiClient = axios.create({
+        baseURL: 'https://graph.facebook.com/v18.0',
+        timeout: 30000,
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`
+        }
+      });
+
+      const mediaInfoResponse = await mediaApiClient.get(`/${mediaId}`);
+
+      const mediaUrl = mediaInfoResponse.data.url;
+      const mimeType = mediaInfoResponse.data.mime_type || 'image/jpeg';
+      const fileName = mediaInfoResponse.data.filename || `whatsapp-media-${mediaId}.${this.getFileExtension(mimeType)}`;
+
+      console.log(`[WhatsApp Service] Media-URL erhalten: ${mediaUrl.substring(0, 50)}...`);
+
+      // Schritt 2: Lade die tatsächliche Datei herunter
+      const mediaResponse = await axios.get(mediaUrl, {
+        responseType: 'arraybuffer',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`
+        }
+      });
+
+      const buffer = Buffer.from(mediaResponse.data);
+
+      console.log(`[WhatsApp Service] Media heruntergeladen: ${buffer.length} bytes, Type: ${mimeType}`);
+
+      return {
+        buffer,
+        mimeType,
+        fileName
+      };
+    } catch (error) {
+      console.error('[WhatsApp Service] Fehler beim Herunterladen von Media:', error);
+      if (axios.isAxiosError(error)) {
+        const axiosError = error as AxiosError;
+        console.error('[WhatsApp Service] API Fehler:', axiosError.response?.data);
+        throw new Error(`WhatsApp Media Download Fehler: ${JSON.stringify(axiosError.response?.data)}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Hilfsmethode: Ermittelt Dateiendung aus MIME-Type
+   */
+  private getFileExtension(mimeType: string): string {
+    const mimeToExt: Record<string, string> = {
+      'image/jpeg': 'jpg',
+      'image/png': 'png',
+      'image/gif': 'gif',
+      'image/webp': 'webp',
+      'application/pdf': 'pdf',
+      'video/mp4': 'mp4',
+      'video/webm': 'webm',
+      'audio/mpeg': 'mp3',
+      'audio/ogg': 'ogg'
+    };
+    return mimeToExt[mimeType] || 'bin';
+  }
 }
 
 
