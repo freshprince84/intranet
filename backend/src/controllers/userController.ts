@@ -380,11 +380,52 @@ export const updateUserById = async (req: Request, res: Response) => {
                     const epsRequired = contract === 'tiempo_completo';
                     
                     console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
                     
-                    await prisma.employeeLifecycle.update({
+                    const updated = await prisma.employeeLifecycle.update({
                         where: { userId },
                         data: { epsRequired }
                     });
+                    
+                    console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
+
+                    // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
+                    if (epsRequired && !lifecycle.epsRequired) {
+                        const existingRegistration = await prisma.socialSecurityRegistration.findUnique({
+                            where: {
+                                lifecycleId_registrationType: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps'
+                                }
+                            }
+                        });
+
+                        if (existingRegistration && existingRegistration.status === 'not_required') {
+                            // Ändere Status von "not_required" auf "pending"
+                            await prisma.socialSecurityRegistration.update({
+                                where: {
+                                    lifecycleId_registrationType: {
+                                        lifecycleId: lifecycle.id,
+                                        registrationType: 'eps'
+                                    }
+                                },
+                                data: {
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
+                        } else if (!existingRegistration) {
+                            // Erstelle neue "pending"-Registrierung
+                            await prisma.socialSecurityRegistration.create({
+                                data: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps',
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
+                        }
+                    }
 
                     // Erstelle Event für die Änderung
                     await prisma.lifecycleEvent.create({
@@ -491,7 +532,7 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             ...(lastName && { lastName }),
             ...(birthday && { birthday: new Date(birthday) }),
             ...(bankDetails && { bankDetails }),
-            ...(contract && { contract }),
+            ...(contract !== undefined && { contract: contract || null }),
             ...(salary && { salary: parseFloat(salary) }),
             ...(normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) }),
             ...(gender !== undefined && { gender: gender || null })
@@ -545,11 +586,52 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                     const epsRequired = contract === 'tiempo_completo';
                     
                     console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
                     
-                    await prisma.employeeLifecycle.update({
+                    const updated = await prisma.employeeLifecycle.update({
                         where: { userId },
                         data: { epsRequired }
                     });
+                    
+                    console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
+
+                    // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
+                    if (epsRequired && !lifecycle.epsRequired) {
+                        const existingRegistration = await prisma.socialSecurityRegistration.findUnique({
+                            where: {
+                                lifecycleId_registrationType: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps'
+                                }
+                            }
+                        });
+
+                        if (existingRegistration && existingRegistration.status === 'not_required') {
+                            // Ändere Status von "not_required" auf "pending"
+                            await prisma.socialSecurityRegistration.update({
+                                where: {
+                                    lifecycleId_registrationType: {
+                                        lifecycleId: lifecycle.id,
+                                        registrationType: 'eps'
+                                    }
+                                },
+                                data: {
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
+                        } else if (!existingRegistration) {
+                            // Erstelle neue "pending"-Registrierung
+                            await prisma.socialSecurityRegistration.create({
+                                data: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps',
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
+                        }
+                    }
 
                     // Erstelle Event für die Änderung
                     await prisma.lifecycleEvent.create({
@@ -1307,7 +1389,7 @@ export const updateUser = async (req: Request, res: Response) => {
             ...(lastName && { lastName }),
             ...(birthday && { birthday: new Date(birthday) }),
             ...(bankDetails && { bankDetails }),
-            ...(contract && { contract }),
+            ...(contract !== undefined && { contract: contract || null }),
             ...(salary && { salary: parseFloat(salary.toString()) }),
             ...(active !== undefined && active !== null && { active: Boolean(active) })
         };
@@ -1340,11 +1422,52 @@ export const updateUser = async (req: Request, res: Response) => {
                     const epsRequired = contract === 'tiempo_completo';
                     
                     console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
                     
-                    await prisma.employeeLifecycle.update({
+                    const updated = await prisma.employeeLifecycle.update({
                         where: { userId },
                         data: { epsRequired }
                     });
+                    
+                    console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
+
+                    // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
+                    if (epsRequired && !lifecycle.epsRequired) {
+                        const existingRegistration = await prisma.socialSecurityRegistration.findUnique({
+                            where: {
+                                lifecycleId_registrationType: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps'
+                                }
+                            }
+                        });
+
+                        if (existingRegistration && existingRegistration.status === 'not_required') {
+                            // Ändere Status von "not_required" auf "pending"
+                            await prisma.socialSecurityRegistration.update({
+                                where: {
+                                    lifecycleId_registrationType: {
+                                        lifecycleId: lifecycle.id,
+                                        registrationType: 'eps'
+                                    }
+                                },
+                                data: {
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
+                        } else if (!existingRegistration) {
+                            // Erstelle neue "pending"-Registrierung
+                            await prisma.socialSecurityRegistration.create({
+                                data: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps',
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
+                        }
+                    }
 
                     // Erstelle Event für die Änderung
                     await prisma.lifecycleEvent.create({

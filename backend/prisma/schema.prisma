@@ -802,6 +802,7 @@ enum SubscriptionPlan {
 
 enum ReservationStatus {
   confirmed
+  notification_sent
   checked_in
   checked_out
   cancelled
@@ -1034,6 +1035,8 @@ model Reservation {
   roomDescription          String?
   status                   ReservationStatus        @default(confirmed)
   paymentStatus            PaymentStatus            @default(pending)
+  amount                   Decimal?                 @db.Decimal(10, 2) // Preis der Reservierung
+  currency                 String?                  @default("COP") // Währung (COP, USD, EUR, etc.)
   paymentLink              String? // Bold Payment Link
   doorPin                  String? // PIN für Türsystem
   doorAppName              String? // App-Name (z.B. "TTLock")
@@ -1042,6 +1045,8 @@ model Reservation {
   onlineCheckInCompleted   Boolean                  @default(false)
   onlineCheckInCompletedAt DateTime?
   invitationSentAt         DateTime? // Wann wurde die Check-in-Einladung versendet
+  sentMessage              String? // Versendete WhatsApp-Nachricht (für Anzeige)
+  sentMessageAt            DateTime? // Wann wurde die Nachricht versendet
   sireRegistered           Boolean                  @default(false)
   sireRegistrationId       String? // ID der SIRE-Registrierung
   sireRegisteredAt         DateTime?

@@ -207,3 +207,4 @@ echo $ENCRYPTION_KEY
 - ✅ Backend: Passcode-Typ aus Settings lesen
 - ✅ Dokumentation vollständig
 
+

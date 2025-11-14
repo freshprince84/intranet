@@ -1,0 +1,44 @@
+import axiosInstance from '../config/axios.ts';
+import { Reservation } from '../types/reservation.ts';
+
+// WICHTIG: axiosInstance hat bereits baseURL mit /api, daher nur /reservations hier
+const API_BASE = '/reservations';
+
+export interface CreateReservationData {
+  guestName: string;
+  contact: string; // Telefonnummer oder Email
+  amount: number;
+  currency?: string; // Default: "COP"
+}
+
+export const reservationService = {
+  /**
+   * Erstellt eine neue Reservierung
+   */
+  async create(data: CreateReservationData): Promise<Reservation> {
+    console.log('[reservationService] POST zu:', API_BASE);
+    console.log('[reservationService] Daten:', data);
+    const response = await axiosInstance.post(API_BASE, data);
+    console.log('[reservationService] Response:', response);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Holt eine Reservierung nach ID
+   */
+  async getById(id: number): Promise<Reservation> {
+    const response = await axiosInstance.get(`${API_BASE}/${id}`);
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Aktualisiert Kontaktinformation (Telefonnummer oder Email)
+   */
+  async updateGuestContact(id: number, contact: string): Promise<Reservation> {
+    const response = await axiosInstance.put(`${API_BASE}/${id}/guest-contact`, {
+      contact
+    });
+    return response.data.data || response.data;
+  }
+};
+

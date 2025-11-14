@@ -243,7 +243,7 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 message: 'Ungültiges E-Mail-Format'
             });
         }
-        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary !== undefined && { salary: salary === null ? null : parseFloat(salary.toString()) })), (payrollCountry && { payrollCountry })), (hourlyRate !== undefined && { hourlyRate: hourlyRate === null ? null : hourlyRate })), (contractType !== undefined && { contractType })), (monthlySalary !== undefined && { monthlySalary: monthlySalary === null ? null : parseFloat(monthlySalary.toString()) })), (normalWorkingHours !== undefined && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (active !== undefined && active !== null && { active: Boolean(active) }));
+        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract !== undefined && { contract: contract || null })), (salary !== undefined && { salary: salary === null ? null : parseFloat(salary.toString()) })), (payrollCountry && { payrollCountry })), (hourlyRate !== undefined && { hourlyRate: hourlyRate === null ? null : hourlyRate })), (contractType !== undefined && { contractType })), (monthlySalary !== undefined && { monthlySalary: monthlySalary === null ? null : parseFloat(monthlySalary.toString()) })), (normalWorkingHours !== undefined && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (active !== undefined && active !== null && { active: Boolean(active) }));
         console.log('Updating user with data:', updateData);
         const updatedUser = yield prisma.user.update({
             where: { id: userId },
@@ -267,6 +267,87 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 }
             }
         });
+        // Automatisch epsRequired setzen basierend auf contract-Typ
+        if (contract !== undefined && contract !== null && contract !== '') {
+            try {
+                console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
+                const lifecycle = yield prisma.employeeLifecycle.findUnique({
+                    where: { userId }
+                });
+                if (lifecycle) {
+                    // tiempo_completo → epsRequired = true
+                    // Alle anderen → epsRequired = false
+                    const epsRequired = contract === 'tiempo_completo';
+                    console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
+                    const updated = yield prisma.employeeLifecycle.update({
+                        where: { userId },
+                        data: { epsRequired }
+                    });
+                    console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
+                    // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
+                    if (epsRequired && !lifecycle.epsRequired) {
+                        const existingRegistration = yield prisma.socialSecurityRegistration.findUnique({
+                            where: {
+                                lifecycleId_registrationType: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps'
+                                }
+                            }
+                        });
+                        if (existingRegistration && existingRegistration.status === 'not_required') {
+                            // Ändere Status von "not_required" auf "pending"
+                            yield prisma.socialSecurityRegistration.update({
+                                where: {
+                                    lifecycleId_registrationType: {
+                                        lifecycleId: lifecycle.id,
+                                        registrationType: 'eps'
+                                    }
+                                },
+                                data: {
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
+                        }
+                        else if (!existingRegistration) {
+                            // Erstelle neue "pending"-Registrierung
+                            yield prisma.socialSecurityRegistration.create({
+                                data: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps',
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
+                        }
+                    }
+                    // Erstelle Event für die Änderung
+                    yield prisma.lifecycleEvent.create({
+                        data: {
+                            lifecycleId: lifecycle.id,
+                            eventType: 'eps_required_updated',
+                            eventData: {
+                                contract,
+                                epsRequired,
+                                reason: `Automatisch gesetzt basierend auf Vertragstyp: ${contract}`
+                            }
+                        }
+                    });
+                    console.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
+                }
+                else {
+                    console.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
+                }
+            }
+            catch (lifecycleError) {
+                // Logge Fehler, aber breche nicht ab
+                console.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
+            }
+        }
+        else {
+            console.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
+        }
         res.json(updatedUser);
     }
     catch (error) {
@@ -325,7 +406,7 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 message: 'Ungültiger gender-Wert. Erlaubt: male, female, other'
             });
         }
-        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary && { salary: parseFloat(salary) })), (normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (gender !== undefined && { gender: gender || null }));
+        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract !== undefined && { contract: contract || null })), (salary && { salary: parseFloat(salary) })), (normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (gender !== undefined && { gender: gender || null }));
         const updatedUser = yield prisma.user.update({
             where: { id: userId },
             data: updateData,
@@ -359,6 +440,87 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             }
         });
+        // Automatisch epsRequired setzen basierend auf contract-Typ
+        if (contract !== undefined && contract !== null && contract !== '') {
+            try {
+                console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
+                const lifecycle = yield prisma.employeeLifecycle.findUnique({
+                    where: { userId }
+                });
+                if (lifecycle) {
+                    // tiempo_completo → epsRequired = true
+                    // Alle anderen → epsRequired = false
+                    const epsRequired = contract === 'tiempo_completo';
+                    console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
+                    const updated = yield prisma.employeeLifecycle.update({
+                        where: { userId },
+                        data: { epsRequired }
+                    });
+                    console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
+                    // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
+                    if (epsRequired && !lifecycle.epsRequired) {
+                        const existingRegistration = yield prisma.socialSecurityRegistration.findUnique({
+                            where: {
+                                lifecycleId_registrationType: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps'
+                                }
+                            }
+                        });
+                        if (existingRegistration && existingRegistration.status === 'not_required') {
+                            // Ändere Status von "not_required" auf "pending"
+                            yield prisma.socialSecurityRegistration.update({
+                                where: {
+                                    lifecycleId_registrationType: {
+                                        lifecycleId: lifecycle.id,
+                                        registrationType: 'eps'
+                                    }
+                                },
+                                data: {
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
+                        }
+                        else if (!existingRegistration) {
+                            // Erstelle neue "pending"-Registrierung
+                            yield prisma.socialSecurityRegistration.create({
+                                data: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps',
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
+                        }
+                    }
+                    // Erstelle Event für die Änderung
+                    yield prisma.lifecycleEvent.create({
+                        data: {
+                            lifecycleId: lifecycle.id,
+                            eventType: 'eps_required_updated',
+                            eventData: {
+                                contract,
+                                epsRequired,
+                                reason: `Automatisch gesetzt basierend auf Vertragstyp: ${contract}`
+                            }
+                        }
+                    });
+                    console.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
+                }
+                else {
+                    console.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
+                }
+            }
+            catch (lifecycleError) {
+                // Logge Fehler, aber breche nicht ab
+                console.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
+            }
+        }
+        else {
+            console.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
+        }
         res.json(updatedUser);
     }
     catch (error) {
@@ -967,7 +1129,7 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
         }
         // Aktualisiere den Benutzer
-        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract && { contract })), (salary && { salary: parseFloat(salary.toString()) })), (active !== undefined && active !== null && { active: Boolean(active) }));
+        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract !== undefined && { contract: contract || null })), (salary && { salary: parseFloat(salary.toString()) })), (active !== undefined && active !== null && { active: Boolean(active) }));
         console.log('Update data to be applied:', updateData);
         const updatedUser = yield prisma.user.update({
             where: { id: userId },
@@ -980,6 +1142,87 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 }
             }
         });
+        // Automatisch epsRequired setzen basierend auf contract-Typ
+        if (contract !== undefined && contract !== null && contract !== '') {
+            try {
+                console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
+                const lifecycle = yield prisma.employeeLifecycle.findUnique({
+                    where: { userId }
+                });
+                if (lifecycle) {
+                    // tiempo_completo → epsRequired = true
+                    // Alle anderen → epsRequired = false
+                    const epsRequired = contract === 'tiempo_completo';
+                    console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
+                    const updated = yield prisma.employeeLifecycle.update({
+                        where: { userId },
+                        data: { epsRequired }
+                    });
+                    console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
+                    // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
+                    if (epsRequired && !lifecycle.epsRequired) {
+                        const existingRegistration = yield prisma.socialSecurityRegistration.findUnique({
+                            where: {
+                                lifecycleId_registrationType: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps'
+                                }
+                            }
+                        });
+                        if (existingRegistration && existingRegistration.status === 'not_required') {
+                            // Ändere Status von "not_required" auf "pending"
+                            yield prisma.socialSecurityRegistration.update({
+                                where: {
+                                    lifecycleId_registrationType: {
+                                        lifecycleId: lifecycle.id,
+                                        registrationType: 'eps'
+                                    }
+                                },
+                                data: {
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] EPS-Registrierung von "not_required" auf "pending" geändert für User ${userId}`);
+                        }
+                        else if (!existingRegistration) {
+                            // Erstelle neue "pending"-Registrierung
+                            yield prisma.socialSecurityRegistration.create({
+                                data: {
+                                    lifecycleId: lifecycle.id,
+                                    registrationType: 'eps',
+                                    status: 'pending'
+                                }
+                            });
+                            console.log(`[EPS Required] Neue EPS-Registrierung mit Status "pending" erstellt für User ${userId}`);
+                        }
+                    }
+                    // Erstelle Event für die Änderung
+                    yield prisma.lifecycleEvent.create({
+                        data: {
+                            lifecycleId: lifecycle.id,
+                            eventType: 'eps_required_updated',
+                            eventData: {
+                                contract,
+                                epsRequired,
+                                reason: `Automatisch gesetzt basierend auf Vertragstyp: ${contract}`
+                            }
+                        }
+                    });
+                    console.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
+                }
+                else {
+                    console.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
+                }
+            }
+            catch (lifecycleError) {
+                // Logge Fehler, aber breche nicht ab
+                console.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
+            }
+        }
+        else {
+            console.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
+        }
         // Benachrichtigung für den aktualisierten Benutzer senden
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: updatedUser.id,

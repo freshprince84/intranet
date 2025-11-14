@@ -25,8 +25,11 @@ const doorSystemSchema = zod_1.z.object({
     apiUrl: zod_1.z.string().url('Ungültige URL').optional(),
     clientId: zod_1.z.string().optional(),
     clientSecret: zod_1.z.string().optional(),
+    username: zod_1.z.string().optional(),
+    password: zod_1.z.string().optional(), // MD5-hashed password
     accessToken: zod_1.z.string().optional(),
     lockIds: zod_1.z.array(zod_1.z.string()).optional(),
+    passcodeType: zod_1.z.enum(['auto', 'custom']).optional(), // 'auto' = 10-stellig (ohne Sync), 'custom' = 4-stellig (mit Sync)
 }).optional();
 // SIRE Settings Schema
 const sireSchema = zod_1.z.object({

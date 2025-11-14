@@ -6,6 +6,7 @@ import { API_ENDPOINTS } from '../../config/api.ts';
 import { Reservation, ReservationStatus, PaymentStatus } from '../../types/reservation.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import CheckInForm from './CheckInForm.tsx';
+import GuestContactModal from './GuestContactModal.tsx';
 import {
   ArrowLeftIcon,
   CalendarIcon,
@@ -32,6 +33,7 @@ const ReservationDetails: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCheckInForm, setShowCheckInForm] = useState(false);
+  const [showGuestContactModal, setShowGuestContactModal] = useState(false);
 
   const getLocale = () => {
     switch (i18n.language) {
@@ -63,8 +65,12 @@ const ReservationDetails: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axiosInstance.get(API_ENDPOINTS.RESERVATIONS.BY_ID(parseInt(id)));
-      setReservation(response.data);
+      const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BY_ID(parseInt(id)));
+      const reservationData = response.data?.data || response.data;
+      console.log('[ReservationDetails] Geladene Reservierung:', reservationData);
+      console.log('[ReservationDetails] Status:', reservationData?.status);
+      console.log('[ReservationDetails] PaymentStatus:', reservationData?.paymentStatus);
+      setReservation(reservationData);
     } catch (err: any) {
       console.error('Fehler beim Laden der Reservierung:', err);
       setError(err.response?.data?.message || t('reservations.loadError', 'Fehler beim Laden der Reservierung'));
@@ -115,6 +121,16 @@ const ReservationDetails: React.FC = () => {
   }
 
   const canCheckIn = reservation.status === ReservationStatus.CONFIRMED;
+  
+  // Prüfe ob Modal angezeigt werden soll (bei Status-Shift wenn guestPhone/Email fehlt)
+  // Modal soll erscheinen wenn:
+  // - Status ist confirmed oder notification_sent
+  // - guestPhone UND guestEmail fehlen
+  const shouldShowGuestContactModal = 
+    reservation && 
+    (reservation.status === ReservationStatus.CONFIRMED || reservation.status === ReservationStatus.NOTIFICATION_SENT) &&
+    !reservation.guestPhone && 
+    !reservation.guestEmail;
 
   return (
     <div className="space-y-6">
@@ -128,14 +144,24 @@ const ReservationDetails: React.FC = () => {
           {t('common.back', 'Zurück')}
         </button>
 
-        {canCheckIn && (
-          <button
-            onClick={() => setShowCheckInForm(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-          >
-            {t('reservations.checkIn', 'Check-in durchführen')}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {shouldShowGuestContactModal && (
+            <button
+              onClick={() => setShowGuestContactModal(true)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              {t('reservations.addContact', 'Kontakt hinzufügen')}
+            </button>
+          )}
+          {canCheckIn && (
+            <button
+              onClick={() => setShowCheckInForm(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            >
+              {t('reservations.checkIn', 'Check-in durchführen')}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Details Card */}
@@ -313,6 +339,36 @@ const ReservationDetails: React.FC = () => {
           onSuccess={handleCheckInSuccess}
           onCancel={() => setShowCheckInForm(false)}
         />
+      )}
+
+      {/* Guest Contact Modal */}
+      {showGuestContactModal && reservation && (
+        <GuestContactModal
+          isOpen={showGuestContactModal}
+          onClose={() => setShowGuestContactModal(false)}
+          reservation={reservation}
+          onSuccess={() => {
+            loadReservation();
+            setShowGuestContactModal(false);
+          }}
+        />
+      )}
+
+      {/* Versendete Nachricht anzeigen */}
+      {reservation.sentMessage && (
+        <div className="mt-6 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 p-4">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            {t('reservations.sentMessage', 'Versendete Nachricht')}
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
+            {reservation.sentMessage}
+          </p>
+          {reservation.sentMessageAt && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              {t('reservations.sentAt', 'Versendet am')}: {formatDateTime(reservation.sentMessageAt)}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );

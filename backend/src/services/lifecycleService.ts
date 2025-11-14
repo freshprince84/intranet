@@ -297,6 +297,19 @@ export class LifecycleService {
       return null;
     }
 
+    // Spezielle Behandlung für EPS: Prüfe epsRequired
+    if (type === 'eps' && !lifecycle.epsRequired) {
+      // EPS ist nicht erforderlich → Status = 'not_required'
+      return {
+        type,
+        status: 'not_required' as SocialSecurityStatus,
+        number: null,
+        provider: null,
+        registeredAt: null,
+        notes: null
+      };
+    }
+
     // Hole aus EmployeeLifecycle oder SocialSecurityRegistration
     const registration = await prisma.socialSecurityRegistration.findUnique({
       where: {
@@ -326,9 +339,23 @@ export class LifecycleService {
     const providerField = `${type}Provider` as keyof typeof lifecycle;
     const registeredAtField = `${type}RegisteredAt` as keyof typeof lifecycle;
 
+    const fallbackStatus = lifecycle[statusField] as SocialSecurityStatus;
+    
+    // Für EPS: Wenn epsRequired = true und kein Status gesetzt, dann 'pending'
+    if (type === 'eps' && lifecycle.epsRequired && !fallbackStatus) {
+      return {
+        type,
+        status: 'pending' as SocialSecurityStatus,
+        number: lifecycle[numberField] as string | null,
+        provider: lifecycle[providerField] as string | null,
+        registeredAt: lifecycle[registeredAtField] as Date | null,
+        notes: null
+      };
+    }
+
     return {
       type,
-      status: lifecycle[statusField] as SocialSecurityStatus,
+      status: fallbackStatus || ('pending' as SocialSecurityStatus),
       number: lifecycle[numberField] as string | null,
       provider: lifecycle[providerField] as string | null,
       registeredAt: lifecycle[registeredAtField] as Date | null,

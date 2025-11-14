@@ -8,7 +8,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateAllApiUrls = exports.validateApiUrl = void 0;
 const ALLOWED_DOMAINS = {
     lobbyPms: ['app.lobbypms.com'],
-    ttlock: ['open.ttlock.com'],
+    ttlock: ['open.ttlock.com', 'euopen.ttlock.com', 'api.sciener.com'],
     sire: ['api.sire.gov.co'],
     boldPayment: ['api.bold.co', 'sandbox.bold.co'],
 };

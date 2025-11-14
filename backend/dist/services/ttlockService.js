@@ -30,7 +30,8 @@ class TTLockService {
      * @throws Error wenn TTLock nicht konfiguriert ist
      */
     constructor(organizationId) {
-        this.apiUrl = 'https://open.ttlock.com';
+        this.apiUrl = 'https://euopen.ttlock.com';
+        this.passcodeType = 'auto'; // 'auto' = 10-stellig, 'custom' = 4-stellig
         this.organizationId = organizationId;
         // Settings werden beim ersten API-Call geladen (lazy loading)
         this.axiosInstance = axios_1.default.create({
@@ -59,20 +60,31 @@ class TTLockService {
             if (!(doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.clientId) || !(doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.clientSecret)) {
                 throw new Error(`TTLock Client ID/Secret ist nicht für Organisation ${this.organizationId} konfiguriert`);
             }
+            if (!(doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.username) || !(doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.password)) {
+                throw new Error(`TTLock Username/Password ist nicht für Organisation ${this.organizationId} konfiguriert`);
+            }
             this.clientId = doorSystemSettings.clientId;
             this.clientSecret = doorSystemSettings.clientSecret;
-            this.apiUrl = doorSystemSettings.apiUrl || 'https://open.ttlock.com';
+            this.username = doorSystemSettings.username;
+            this.password = doorSystemSettings.password; // Already MD5-hashed
+            this.apiUrl = doorSystemSettings.apiUrl || 'https://euopen.ttlock.com';
             this.accessToken = doorSystemSettings.accessToken;
+            this.passcodeType = doorSystemSettings.passcodeType || 'auto'; // 'auto' = 10-stellig, 'custom' = 4-stellig
             // Re-initialisiere Axios-Instanz mit korrekten Settings
             this.axiosInstance = this.createAxiosInstance();
         });
     }
     /**
      * Erstellt eine konfigurierte Axios-Instanz für TTLock API-Requests
+     * API-Endpunkte sind auf api.sciener.com, nicht auf euopen.ttlock.com
      */
     createAxiosInstance() {
+        // API-Endpunkte sind auf euapi.ttlock.com (nicht api.sciener.com!)
+        const apiBaseUrl = this.apiUrl.includes('euopen.ttlock.com')
+            ? 'https://euapi.ttlock.com'
+            : this.apiUrl;
         const instance = axios_1.default.create({
-            baseURL: this.apiUrl,
+            baseURL: apiBaseUrl,
             timeout: 30000,
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded'
@@ -107,9 +119,9 @@ class TTLockService {
      */
     getAccessToken() {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a, _b, _c, _d, _e;
             // Lade Settings falls noch nicht geladen
-            if (!this.clientId || !this.clientSecret) {
+            if (!this.clientId || !this.clientSecret || !this.username || !this.password) {
                 yield this.loadSettings();
             }
             // Prüfe ob Token noch gültig ist
@@ -117,26 +129,64 @@ class TTLockService {
                 return this.accessToken;
             }
             try {
-                const response = yield this.axiosInstance.post('/oauth2/token', new URLSearchParams({
+                // TTLock OAuth-Endpunkt: /oauth2/token
+                // Verwendet Resource Owner Password Credentials Grant
+                // OAuth-Endpunkt ist auf api.sciener.com, nicht auf euopen.ttlock.com
+                const oauthUrl = this.apiUrl.includes('euopen.ttlock.com')
+                    ? 'https://api.sciener.com'
+                    : this.apiUrl;
+                const response = yield axios_1.default.post(`${oauthUrl}/oauth2/token`, new URLSearchParams({
                     client_id: this.clientId || '',
                     client_secret: this.clientSecret || '',
-                    grant_type: 'client_credentials'
-                }));
-                if (response.data.errcode === 0 && response.data.data) {
-                    this.accessToken = response.data.data.access_token;
-                    const expiresIn = response.data.data.expires_in || 7200; // Standard: 2 Stunden
+                    username: this.username || '',
+                    password: this.password || '' // Already MD5-hashed
+                }), {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                });
+                // TTLock OAuth gibt entweder errcode=0 mit data zurück, oder direkt access_token
+                const responseData = response.data;
+                if (responseData.errcode === 0 && responseData.data) {
+                    // Format: { errcode: 0, data: { access_token: ... } }
+                    this.accessToken = responseData.data.access_token;
+                    const expiresIn = responseData.data.expires_in || 7200;
                     this.tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
-                    // Speichere Token in Organisation Settings
+                }
+                else if (responseData.access_token) {
+                    // Format: { access_token: ..., expires_in: ... }
+                    this.accessToken = responseData.access_token;
+                    const expiresIn = responseData.expires_in || 7200;
+                    this.tokenExpiresAt = new Date(Date.now() + expiresIn * 1000);
+                }
+                else {
+                    // Fehlerfall
+                    const errorMsg = responseData.errmsg || `Unknown error (errcode: ${responseData.errcode})`;
+                    console.error('[TTLock] OAuth Error:', {
+                        errcode: responseData.errcode,
+                        errmsg: errorMsg,
+                        data: responseData
+                    });
+                    throw new Error(errorMsg);
+                }
+                // Speichere Token in Organisation Settings
+                if (this.accessToken) {
                     yield this.saveAccessToken(this.accessToken);
                     return this.accessToken;
                 }
-                throw new Error(response.data.errmsg || 'Fehler beim Abrufen des Access Tokens');
+                throw new Error('Access token nicht in Response gefunden');
             }
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
-                    throw new Error(((_b = (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.errmsg) ||
-                        `TTLock API Fehler: ${axiosError.message}`);
+                    const errorMsg = ((_b = (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.errmsg) || axiosError.message;
+                    console.error('[TTLock] OAuth Request Error:', {
+                        status: (_c = axiosError.response) === null || _c === void 0 ? void 0 : _c.status,
+                        statusText: (_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.statusText,
+                        errmsg: errorMsg,
+                        data: (_e = axiosError.response) === null || _e === void 0 ? void 0 : _e.data
+                    });
+                    throw new Error(errorMsg);
                 }
                 throw error;
             }
@@ -174,29 +224,124 @@ class TTLockService {
      */
     createTemporaryPasscode(lockId, startDate, endDate, passcodeName) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a, _b, _c, _d, _e, _f;
             try {
                 const accessToken = yield this.getAccessToken();
-                const payload = new URLSearchParams({
-                    clientId: this.clientId || '',
-                    accessToken: accessToken,
+                // date muss die aktuelle Unix-Zeit in Millisekunden sein (innerhalb von 5 Minuten)
+                // Wichtig: date muss direkt vor dem Request gesetzt werden, um Zeitabweichungen zu vermeiden
+                const currentTimestamp = Date.now(); // Millisekunden
+                // Debug: Zeige Payload vor dem Request
+                console.log('[TTLock] Passcode Creation Payload:', {
+                    clientId: this.clientId,
                     lockId: lockId,
                     keyboardPwdName: passcodeName || 'Guest Passcode',
-                    startDate: Math.floor(startDate.getTime() / 1000).toString(), // Unix timestamp
-                    endDate: Math.floor(endDate.getTime() / 1000).toString(),
-                    keyboardPwdType: '2', // Temporärer Passcode
-                    date: Math.floor(Date.now() / 1000).toString()
+                    startDate: Math.floor(startDate.getTime() / 1000),
+                    endDate: Math.floor(endDate.getTime() / 1000),
+                    keyboardPwdType: '2',
+                    date: currentTimestamp
                 });
-                const response = yield this.axiosInstance.post('/v3/keyboardPwd/add', payload);
-                if (response.data.errcode === 0 && response.data.data) {
-                    return response.data.data.passcode;
+                // TTLock API Parameter - laut Dokumentation
+                // keyboardPwd: Passcode (Int, Required) - muss generiert werden
+                // addType: 1=via phone bluetooth, 2=via gateway/WiFi (Required)
+                // keyboardPwdType: 2=permanent, 3=period (optional, default 3)
+                // startDate/endDate: Long (Millisekunden, nicht Sekunden!)
+                // WICHTIG: Ohne Gateway funktionieren nur automatisch generierte 10-stellige Passcodes aus der Ferne!
+                // Personalisierte 4-stellige Passcodes erfordern Bluetooth-Synchronisation
+                // Lösung: Verwende automatisch generierte 10-stellige Passcodes (funktionieren ohne Sync)
+                // Passcode-Typ aus Settings lesen (pro Organisation konfigurierbar)
+                const useAutoGenerated = this.passcodeType === 'auto';
+                let generatedPasscode;
+                if (!useAutoGenerated) {
+                    // Personalisierter 4-stelliger Passcode (erfordert Bluetooth-Synchronisation über TTLock App)
+                    generatedPasscode = Math.floor(1000 + Math.random() * 9000).toString();
+                    console.log('[TTLock] Verwende benutzerdefinierten 4-stelligen Passcode (erfordert Synchronisation)');
                 }
-                throw new Error(response.data.errmsg || 'Fehler beim Erstellen des Passcodes');
+                else {
+                    // Automatisch generierter 10-stelliger Passcode (funktioniert ohne Synchronisation)
+                    generatedPasscode = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+                    console.log('[TTLock] Verwende automatisch generierten 10-stelligen Passcode (ohne Synchronisation)');
+                }
+                const payload = new URLSearchParams();
+                payload.append('clientId', this.clientId || '');
+                payload.append('accessToken', accessToken);
+                payload.append('lockId', lockId.toString());
+                // keyboardPwd: Optional wenn API Passcode generieren soll, Required für personalisierte Codes
+                if (generatedPasscode) {
+                    payload.append('keyboardPwd', generatedPasscode);
+                }
+                payload.append('keyboardPwdName', passcodeName || 'Guest Passcode');
+                payload.append('keyboardPwdType', '3'); // 3 = period (temporärer Passcode)
+                payload.append('startDate', startDate.getTime().toString()); // Millisekunden!
+                payload.append('endDate', endDate.getTime().toString()); // Millisekunden!
+                // addType: 1=via phone bluetooth (APP SDK), 2=via gateway/WiFi
+                // WICHTIG: addType: 1 erstellt den Passcode, aber er muss über die TTLock App synchronisiert werden!
+                // Der Passcode wird in der API erstellt, aber erst nach Bluetooth-Synchronisation aktiv
+                payload.append('addType', '1'); // 1 = via phone bluetooth (erfordert App-Synchronisation)
+                payload.append('date', currentTimestamp.toString()); // Millisekunden
+                // Debug: Zeige vollständigen Request
+                console.log('[TTLock] Request URL:', `${this.axiosInstance.defaults.baseURL}/v3/keyboardPwd/add`);
+                console.log('[TTLock] Request Payload (stringified):', payload.toString());
+                console.log('[TTLock] Request Payload (as object):', Object.fromEntries(payload));
+                const response = yield this.axiosInstance.post('/v3/keyboardPwd/add', payload, {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    }
+                });
+                const responseData = response.data;
+                // TTLock API gibt entweder errcode=0 mit data zurück, oder direkt keyboardPwdId
+                // Wenn keyboardPwd weggelassen wurde, generiert die API den Passcode automatisch
+                if (responseData.errcode === 0) {
+                    // API gibt möglicherweise den generierten Passcode zurück
+                    if ((_a = responseData.data) === null || _a === void 0 ? void 0 : _a.keyboardPwd) {
+                        return responseData.data.keyboardPwd.toString();
+                    }
+                    else if ((_b = responseData.data) === null || _b === void 0 ? void 0 : _b.passcode) {
+                        return responseData.data.passcode.toString();
+                    }
+                    else if (responseData.keyboardPwd) {
+                        return responseData.keyboardPwd.toString();
+                    }
+                    // Falls kein Passcode zurückgegeben wird, verwende unseren generierten
+                    return generatedPasscode || 'ERROR_NO_PASSCODE';
+                }
+                else if (responseData.keyboardPwdId) {
+                    // Erfolg: API gibt keyboardPwdId zurück (kein errcode)
+                    console.log('[TTLock] Passcode erfolgreich erstellt! keyboardPwdId:', responseData.keyboardPwdId);
+                    // Prüfe ob API den Passcode zurückgegeben hat
+                    if (responseData.keyboardPwd) {
+                        return responseData.keyboardPwd.toString();
+                    }
+                    else if (responseData.passcode) {
+                        return responseData.passcode.toString();
+                    }
+                    return generatedPasscode || 'ERROR_NO_PASSCODE';
+                }
+                else if ((_c = responseData.data) === null || _c === void 0 ? void 0 : _c.passcode) {
+                    return responseData.data.passcode.toString();
+                }
+                else if ((_d = responseData.data) === null || _d === void 0 ? void 0 : _d.keyboardPwd) {
+                    return responseData.data.keyboardPwd.toString();
+                }
+                else if (responseData.passcode) {
+                    return responseData.passcode.toString();
+                }
+                else if (responseData.keyboardPwd) {
+                    return responseData.keyboardPwd.toString();
+                }
+                // Fehlerfall
+                const errorMsg = responseData.errmsg || `Unknown error (errcode: ${responseData.errcode})`;
+                console.error('[TTLock] Passcode Creation Error:', {
+                    errcode: responseData.errcode,
+                    errmsg: errorMsg,
+                    data: responseData,
+                    payload: Object.fromEntries(payload)
+                });
+                throw new Error(errorMsg);
             }
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
-                    throw new Error(((_b = (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.errmsg) ||
+                    throw new Error(((_f = (_e = axiosError.response) === null || _e === void 0 ? void 0 : _e.data) === null || _f === void 0 ? void 0 : _f.errmsg) ||
                         `TTLock API Fehler: ${axiosError.message}`);
                 }
                 throw error;
@@ -214,12 +359,14 @@ class TTLockService {
             var _a, _b;
             try {
                 const accessToken = yield this.getAccessToken();
+                // date muss die aktuelle Unix-Zeit in Millisekunden sein (innerhalb von 5 Minuten)
+                const currentTimestamp = Date.now(); // Millisekunden
                 const payload = new URLSearchParams({
                     clientId: this.clientId || '',
                     accessToken: accessToken,
                     lockId: lockId,
                     keyboardPwdId: passcodeId,
-                    date: Math.floor(Date.now() / 1000).toString()
+                    date: currentTimestamp.toString()
                 });
                 const response = yield this.axiosInstance.post('/v3/keyboardPwd/delete', payload);
                 if (response.data.errcode !== 0) {
@@ -246,17 +393,46 @@ class TTLockService {
             var _a, _b;
             try {
                 const accessToken = yield this.getAccessToken();
-                const response = yield this.axiosInstance.post('/v3/lock/list', new URLSearchParams({
+                // date muss die aktuelle Unix-Zeit in Sekunden sein (innerhalb von 5 Minuten)
+                // Wichtig: date muss direkt VOR dem Request gesetzt werden, um Zeitabweichungen zu vermeiden
+                // Versuche zuerst Sekunden, falls das nicht funktioniert, könnte es Millisekunden sein
+                const currentTimestampSeconds = Math.floor(Date.now() / 1000);
+                const currentTimestampMillis = Date.now();
+                // Debug: Zeige beide Timestamps
+                console.log(`[TTLock] Date Timestamp (Sekunden): ${currentTimestampSeconds}`);
+                console.log(`[TTLock] Date Timestamp (Millisekunden): ${currentTimestampMillis}`);
+                const params = new URLSearchParams({
                     clientId: this.clientId || '',
                     accessToken: accessToken,
                     pageNo: '1',
                     pageSize: '100',
-                    date: Math.floor(Date.now() / 1000).toString()
-                }));
-                if (response.data.errcode === 0 && response.data.data) {
-                    return response.data.data.map(lock => lock.lockId);
+                    date: currentTimestampMillis.toString() // Versuche Millisekunden
+                });
+                const response = yield this.axiosInstance.post('/v3/lock/list', params);
+                const responseData = response.data;
+                // TTLock API gibt entweder errcode=0 mit data zurück, oder direkt list
+                if (responseData.errcode === 0 && responseData.data) {
+                    // Format: { errcode: 0, data: [{ lockId: ... }] }
+                    return responseData.data.map((lock) => lock.lockId);
                 }
-                throw new Error(response.data.errmsg || 'Fehler beim Abrufen der Locks');
+                else if (responseData.list && Array.isArray(responseData.list)) {
+                    // Format: { list: [{ lockId: ... }], pageNo: 1, ... }
+                    console.log('[TTLock] Lock List Response:', JSON.stringify(responseData, null, 2));
+                    const lockIds = responseData.list.map((lock) => {
+                        // Lock ID kann in verschiedenen Feldern sein: lockId, id, etc.
+                        return lock.lockId || lock.id || lock.lock_id || Object.values(lock)[0];
+                    }).filter((id) => id); // Filtere undefined/null
+                    console.log('[TTLock] Extracted Lock IDs:', lockIds);
+                    return lockIds;
+                }
+                // Fehlerfall
+                const errorMsg = responseData.errmsg || `Unknown error (errcode: ${responseData.errcode})`;
+                console.error('[TTLock] Lock List Error:', {
+                    errcode: responseData.errcode,
+                    errmsg: errorMsg,
+                    data: responseData
+                });
+                throw new Error(errorMsg);
             }
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {

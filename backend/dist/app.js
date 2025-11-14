@@ -43,6 +43,8 @@ const organizations_1 = __importDefault(require("./routes/organizations"));
 const lobbyPms_1 = __importDefault(require("./routes/lobbyPms"));
 const boldPayment_1 = __importDefault(require("./routes/boldPayment"));
 const ttlock_1 = __importDefault(require("./routes/ttlock"));
+const whatsapp_1 = __importDefault(require("./routes/whatsapp"));
+const reservations_1 = __importDefault(require("./routes/reservations"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const monthlyReportScheduler_1 = require("./services/monthlyReportScheduler");
 const reservationScheduler_1 = require("./services/reservationScheduler");
@@ -139,6 +141,13 @@ app.get('/api/test-route', (req, res) => {
         env: process.env.NODE_ENV
     });
 });
+// Test-Route für Reservierungen (vor authMiddleware)
+app.get('/api/test-reservations', (req, res) => {
+    res.json({
+        message: 'Test-Reservations-Route ist erreichbar',
+        timestamp: new Date().toISOString()
+    });
+});
 // Test-Route für manuelle Auslösung der Monatsabrechnungsprüfung
 app.post('/api/admin/trigger-monthly-reports', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -215,6 +224,9 @@ app.use('/api/organizations', organizations_1.default);
 app.use('/api/lobby-pms', lobbyPms_1.default);
 app.use('/api/bold-payment', boldPayment_1.default);
 app.use('/api/ttlock', ttlock_1.default);
+app.use('/api/whatsapp', whatsapp_1.default);
+// Reservierungen (manuelle Erstellung) - MUSS nach lobby-pms kommen
+app.use('/api/reservations', reservations_1.default);
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

@@ -5,12 +5,14 @@ import axiosInstance from '../../config/axios.ts';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import { Reservation, ReservationStatus, PaymentStatus } from '../../types/reservation.ts';
 import ReservationCard from './ReservationCard.tsx';
+import CreateReservationModal from './CreateReservationModal.tsx';
 import useMessage from '../../hooks/useMessage.ts';
 import {
   CalendarIcon,
   ArrowPathIcon,
   FunnelIcon,
-  XMarkIcon
+  XMarkIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline';
 
 const ReservationList: React.FC = () => {
@@ -26,13 +28,20 @@ const ReservationList: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   const loadReservations = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await axiosInstance.get(API_ENDPOINTS.RESERVATIONS.BASE);
-      setReservations(response.data || []);
+      const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE);
+      const reservations = response.data?.data || response.data || [];
+      console.log('[ReservationList] Geladene Reservierungen:', reservations);
+      if (reservations.length > 0) {
+        console.log('[ReservationList] Erste Reservierung Status:', reservations[0]?.status);
+        console.log('[ReservationList] Erste Reservierung PaymentStatus:', reservations[0]?.paymentStatus);
+      }
+      setReservations(reservations);
     } catch (err: any) {
       console.error('Fehler beim Laden der Reservierungen:', err);
       setError(err.response?.data?.message || t('reservations.loadError', 'Fehler beim Laden der Reservierungen'));
@@ -139,8 +148,16 @@ const ReservationList: React.FC = () => {
             />
           </div>
 
-          {/* Filter & Sync Buttons */}
+          {/* Filter & Sync & Create Buttons */}
           <div className="flex gap-2">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center"
+            >
+              <PlusIcon className="h-5 w-5 mr-2" />
+              {t('reservations.createReservation.button', 'Neue Reservierung')}
+            </button>
+
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
               className={`px-4 py-2 rounded-lg border transition-colors ${
@@ -250,12 +267,24 @@ const ReservationList: React.FC = () => {
       {/* Ergebnis-Zähler */}
       {sortedReservations.length > 0 && (
         <div className="text-sm text-gray-500 dark:text-gray-400 text-center">
-          {t('reservations.resultCount', {
+          {t('reservations.resultCount', `${sortedReservations.length} von ${reservations.length} Reservierungen`, {
             count: sortedReservations.length,
             total: reservations.length
-          }, `${sortedReservations.length} von ${reservations.length} Reservierungen`)}
+          })}
         </div>
       )}
+
+      {/* Create Reservation Modal */}
+      <CreateReservationModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onReservationCreated={async (newReservation) => {
+          // Lade Reservierungen neu, um den aktualisierten Status (notification_sent) zu erhalten
+          await loadReservations();
+          // Navigiere zur Detailansicht
+          navigate(`/reservations/${newReservation.id}`);
+        }}
+      />
     </div>
   );
 };

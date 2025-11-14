@@ -1043,6 +1043,7 @@ const updateOrganizationLanguage = (req, res) => __awaiter(void 0, void 0, void 
 exports.updateOrganizationLanguage = updateOrganizationLanguage;
 // Aktuelle Organisation aktualisieren (basierend auf User-Kontext)
 const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const userId = req.userId;
         if (!userId) {
@@ -1104,6 +1105,13 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                     message: 'Ungültige API-URLs',
                     errors: urlErrors
                 });
+            }
+            // ✅ TTLOCK PASSWORD: MD5-Hash für TTLock Password erstellen (falls vorhanden)
+            if (((_a = newSettings.doorSystem) === null || _a === void 0 ? void 0 : _a.password) && !newSettings.doorSystem.password.match(/^[a-f0-9]{32}$/i)) {
+                // Password ist noch nicht gehasht (32-stelliger MD5-Hash)
+                const crypto = require('crypto');
+                newSettings.doorSystem.password = crypto.createHash('md5').update(newSettings.doorSystem.password).digest('hex');
+                console.log('[TTLock] Password wurde MD5-gehasht');
             }
             // ✅ VERSCHLÜSSELUNG: Verschlüssele alle API-Keys vor dem Speichern
             try {

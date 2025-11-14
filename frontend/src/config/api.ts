@@ -252,6 +252,13 @@ export const API_ENDPOINTS = {
         REGISTER_SIRE: (id: number) => `/lobby-pms/reservations/${id}/register-sire`,
         SIRE_STATUS: (id: number) => `/lobby-pms/reservations/${id}/sire-status`
     },
+    // Reservierungen (neue API)
+    RESERVATION: {
+        BASE: '/reservations',
+        CREATE: '/reservations',
+        BY_ID: (id: number) => `/reservations/${id}`,
+        UPDATE_GUEST_CONTACT: (id: number) => `/reservations/${id}/guest-contact`
+    },
     // TTLock (Türsystem)
     TTLOCK: {
         LOCKS: '/ttlock/locks',

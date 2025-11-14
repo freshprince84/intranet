@@ -8,7 +8,6 @@
     "loading": "Laden...",
     "yes": "Ja",
     "no": "Nein",
-    "close": "Schließen",
     "back": "Zurück",
     "next": "Weiter",
     "search": "Suchen",
@@ -50,7 +49,16 @@
     "refresh": "Aktualisieren",
     "loadingScreen": "Wird geladen",
     "loadingScreenSubtitle": "Fast fertig... nur noch einen Moment! ⚡",
-    "notAuthenticated": "Nicht authentifiziert"
+    "notAuthenticated": "Nicht authentifiziert",
+    "clearFilters": "Filter zurücksetzen",
+    "done": "Abgeschlossen",
+    "generating": "Generiere...",
+    "open": "Offen",
+    "pleaseSelect": "Bitte wählen...",
+    "processing": "Wird verarbeitet...",
+    "retry": "Wiederholen",
+    "sending": "Sende...",
+    "update": "Aktualisieren"
   },
   "header": {
     "profile": "Profil",
@@ -2013,10 +2021,25 @@
     "resultCount": "{{count}} von {{total}} Reservierungen",
     "status": "Status",
     "status.confirmed": "Bestätigt",
+    "status.notification_sent": "Mitteilung versendet",
     "status.checkedIn": "Eingecheckt",
     "status.checkedOut": "Ausgecheckt",
     "status.cancelled": "Storniert",
     "status.noShow": "Nicht erschienen",
+    "addContact": "Kontakt hinzufügen",
+    "contactRequired": "Kontaktinformation ist erforderlich",
+    "contactUpdated": "Kontaktinformation aktualisiert und Nachricht versendet",
+    "contactUpdateError": "Fehler beim Aktualisieren",
+    "sentMessage": "Versendete Nachricht",
+    "sentAt": "Versendet am",
+    "guestContact": {
+      "title": "Gast-Kontaktinformation",
+      "label": "Telefonnummer oder Email",
+      "placeholder": "z.B. +573001234567 oder email@example.com",
+      "detectedEmail": "Email erkannt",
+      "detectedPhone": "Telefonnummer erkannt",
+      "hint": "Nach dem Speichern wird automatisch eine WhatsApp-Nachricht mit Zahlungslink und TTLock Code versendet."
+    },
     "paymentStatus": "Zahlungsstatus",
     "paymentStatus.pending": "Ausstehend",
     "paymentStatus.paid": "Bezahlt",
@@ -2049,7 +2072,26 @@
     "onlineCheckIn": "Online",
     "onlineCheckInCompleted": "Online Check-in abgeschlossen",
     "notFound": "Reservierung nicht gefunden",
-    "checkInDate": "Check-in Datum"
+    "checkInDate": "Check-in Datum",
+    "createReservation": {
+      "title": "Neue Reservierung",
+      "button": "Neue Reservierung",
+      "guestName": "Gast-Name",
+      "contact": "Telefonnummer oder Email",
+      "contactPlaceholder": "z.B. +573001234567 oder email@example.com",
+      "detectedEmail": "Email erkannt",
+      "detectedPhone": "Telefonnummer erkannt",
+      "amount": "Betrag",
+      "currency": "Währung",
+      "hint": "Nach der Erstellung wird automatisch eine WhatsApp-Nachricht mit Zahlungslink versendet (wenn Telefonnummer angegeben).",
+      "success": "Reservierung erfolgreich erstellt",
+      "errors": {
+        "guestNameRequired": "Gast-Name ist erforderlich",
+        "contactRequired": "Kontaktinformation ist erforderlich",
+        "amountRequired": "Betrag muss eine positive Zahl sein",
+        "createError": "Fehler beim Erstellen der Reservierung"
+      }
+    }
   },
   "socialSecurity": {
     "provider": "Anbieter",
@@ -2169,9 +2211,6 @@
     "markPaidSuccess": "Rechnung als bezahlt markiert",
     "markPaidError": "Fehler beim Markieren als bezahlt",
     "loadError": "Fehler beim Laden der Rechnungen"
-  },
-  "common": {
-    "pleaseSelect": "Bitte wählen..."
   },
   "onboarding": {
     "welcome": {

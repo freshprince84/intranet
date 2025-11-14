@@ -262,6 +262,18 @@ class LifecycleService {
             if (!lifecycle) {
                 return null;
             }
+            // Spezielle Behandlung für EPS: Prüfe epsRequired
+            if (type === 'eps' && !lifecycle.epsRequired) {
+                // EPS ist nicht erforderlich → Status = 'not_required'
+                return {
+                    type,
+                    status: 'not_required',
+                    number: null,
+                    provider: null,
+                    registeredAt: null,
+                    notes: null
+                };
+            }
             // Hole aus EmployeeLifecycle oder SocialSecurityRegistration
             const registration = yield prisma.socialSecurityRegistration.findUnique({
                 where: {
@@ -273,12 +285,14 @@ class LifecycleService {
             });
             if (registration) {
                 return {
+                    id: registration.id,
                     type,
                     status: registration.status,
                     number: registration.registrationNumber,
                     provider: registration.provider,
                     registeredAt: registration.registrationDate,
-                    notes: registration.notes
+                    notes: registration.notes,
+                    completedAt: registration.completedAt
                 };
             }
             // Fallback zu EmployeeLifecycle-Feldern
@@ -286,9 +300,21 @@ class LifecycleService {
             const numberField = `${type}Number`;
             const providerField = `${type}Provider`;
             const registeredAtField = `${type}RegisteredAt`;
+            const fallbackStatus = lifecycle[statusField];
+            // Für EPS: Wenn epsRequired = true und kein Status gesetzt, dann 'pending'
+            if (type === 'eps' && lifecycle.epsRequired && !fallbackStatus) {
+                return {
+                    type,
+                    status: 'pending',
+                    number: lifecycle[numberField],
+                    provider: lifecycle[providerField],
+                    registeredAt: lifecycle[registeredAtField],
+                    notes: null
+                };
+            }
             return {
                 type,
-                status: lifecycle[statusField],
+                status: fallbackStatus || 'pending',
                 number: lifecycle[numberField],
                 provider: lifecycle[providerField],
                 registeredAt: lifecycle[registeredAtField],
@@ -363,6 +389,31 @@ class LifecycleService {
                     triggeredBy: completedBy
                 }
             });
+            // Prüfe ob Onboarding automatisch abgeschlossen werden kann
+            // Lade aktualisierten Lifecycle mit allen Daten
+            const updatedLifecycle = yield prisma.employeeLifecycle.findUnique({
+                where: { userId }
+            });
+            if (updatedLifecycle && updatedLifecycle.status === 'onboarding') {
+                const progress = this.calculateProgress(updatedLifecycle);
+                // Wenn alle Schritte abgeschlossen sind (100%), setze Status automatisch auf 'active'
+                if (progress.percent === 100) {
+                    yield this.updateStatus(userId, 'active', undefined, completedBy);
+                    // Erstelle Event für automatische Status-Änderung
+                    yield prisma.lifecycleEvent.create({
+                        data: {
+                            lifecycleId: updatedLifecycle.id,
+                            eventType: 'status_auto_changed',
+                            eventData: {
+                                oldStatus: 'onboarding',
+                                newStatus: 'active',
+                                reason: 'All onboarding steps completed (100%)'
+                            },
+                            triggeredBy: completedBy
+                        }
+                    });
+                }
+            }
             return this.getSocialSecurityStatus(userId, type);
         });
     }
