@@ -602,7 +602,18 @@ export class WhatsAppMessageHandler {
           }
 
           const responsibleId = context.responsibleId;
-          const description = messageText || 'Request via WhatsApp';
+          let description = messageText || 'Request via WhatsApp';
+          
+          // Füge Media-Info hinzu, falls vorhanden
+          if (mediaUrl) {
+            const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+            const mediaNote: Record<string, string> = {
+              es: '\n\n📷 Imagen adjunta (Media ID: ' + mediaUrl + ')',
+              de: '\n\n📷 Bild angehängt (Media ID: ' + mediaUrl + ')',
+              en: '\n\n📷 Image attached (Media ID: ' + mediaUrl + ')'
+            };
+            description += mediaNote[language] || mediaNote.es;
+          }
 
           // Hole Branch für organizationId
           const branch = await prisma.branch.findUnique({
@@ -684,7 +695,18 @@ export class WhatsAppMessageHandler {
           }
 
           const responsibleId = context.responsibleId;
-          const description = messageText || 'Task via WhatsApp';
+          let description = messageText || 'Task via WhatsApp';
+          
+          // Füge Media-Info hinzu, falls vorhanden
+          if (mediaUrl) {
+            const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
+            const mediaNote: Record<string, string> = {
+              es: '\n\n📷 Imagen adjunta (Media ID: ' + mediaUrl + ')',
+              de: '\n\n📷 Bild angehängt (Media ID: ' + mediaUrl + ')',
+              en: '\n\n📷 Image attached (Media ID: ' + mediaUrl + ')'
+            };
+            description += mediaNote[language] || mediaNote.es;
+          }
 
           // Hole Quality Control User (erster Admin oder Verantwortlicher)
           const qualityControlUser = await prisma.user.findFirst({

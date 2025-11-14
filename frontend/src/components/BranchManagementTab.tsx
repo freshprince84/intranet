@@ -76,7 +76,16 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
             provider: 'whatsapp-business-api' as 'twilio' | 'whatsapp-business-api',
             apiKey: '',
             apiSecret: '',
-            phoneNumberId: ''
+            phoneNumberId: '',
+            ai: {
+                enabled: false,
+                model: 'gpt-4o',
+                systemPrompt: '',
+                rules: [] as string[],
+                sources: [] as string[],
+                temperature: 0.7,
+                maxTokens: 500
+            }
         }
     });
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
@@ -135,7 +144,16 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                 provider: 'whatsapp-business-api' as 'twilio' | 'whatsapp-business-api',
                 apiKey: '',
                 apiSecret: '',
-                phoneNumberId: ''
+                phoneNumberId: '',
+                ai: {
+                    enabled: false,
+                    model: 'gpt-4o',
+                    systemPrompt: '',
+                    rules: [] as string[],
+                    sources: [] as string[],
+                    temperature: 0.7,
+                    maxTokens: 500
+                }
             }
         });
         setEditingBranch(null);
@@ -150,13 +168,23 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
     // Modal öffnen für Bearbeitung
     const handleEdit = async (branch: Branch) => {
         setEditingBranch(branch);
+        const existingSettings = branch.whatsappSettings || {};
         setFormData({ 
             name: branch.name,
-            whatsappSettings: branch.whatsappSettings || {
-                provider: 'whatsapp-business-api' as 'twilio' | 'whatsapp-business-api',
-                apiKey: '',
-                apiSecret: '',
-                phoneNumberId: ''
+            whatsappSettings: {
+                provider: existingSettings.provider || 'whatsapp-business-api',
+                apiKey: existingSettings.apiKey || '',
+                apiSecret: existingSettings.apiSecret || '',
+                phoneNumberId: existingSettings.phoneNumberId || '',
+                ai: existingSettings.ai || {
+                    enabled: false,
+                    model: 'gpt-4o',
+                    systemPrompt: '',
+                    rules: [],
+                    sources: [],
+                    temperature: 0.7,
+                    maxTokens: 500
+                }
             }
         });
         setIsModalOpen(true);
@@ -621,6 +649,184 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                                             className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
                                                         />
                                                     </div>
+
+                                                    {/* AI Configuration */}
+                                                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                                                        <div className="flex items-center justify-between mb-4">
+                                                            <h5 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                KI-Konfiguration (AI)
+                                                            </h5>
+                                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={formData.whatsappSettings.ai.enabled}
+                                                                    onChange={(e) => setFormData({
+                                                                        ...formData,
+                                                                        whatsappSettings: {
+                                                                            ...formData.whatsappSettings,
+                                                                            ai: {
+                                                                                ...formData.whatsappSettings.ai,
+                                                                                enabled: e.target.checked
+                                                                            }
+                                                                        }
+                                                                    })}
+                                                                    className="sr-only peer"
+                                                                />
+                                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                                                <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                                                                    {formData.whatsappSettings.ai.enabled ? 'Aktiviert' : 'Deaktiviert'}
+                                                                </span>
+                                                            </label>
+                                                        </div>
+
+                                                        {formData.whatsappSettings.ai.enabled && (
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label htmlFor="aiModel" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Modell
+                                                                    </label>
+                                                                    <select
+                                                                        id="aiModel"
+                                                                        value={formData.whatsappSettings.ai.model}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            whatsappSettings: {
+                                                                                ...formData.whatsappSettings,
+                                                                                ai: {
+                                                                                    ...formData.whatsappSettings.ai,
+                                                                                    model: e.target.value
+                                                                                }
+                                                                            }
+                                                                        })}
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    >
+                                                                        <option value="gpt-4o">GPT-4o</option>
+                                                                        <option value="gpt-4">GPT-4</option>
+                                                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div>
+                                                                    <label htmlFor="aiSystemPrompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        System Prompt
+                                                                    </label>
+                                                                    <textarea
+                                                                        id="aiSystemPrompt"
+                                                                        value={formData.whatsappSettings.ai.systemPrompt}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            whatsappSettings: {
+                                                                                ...formData.whatsappSettings,
+                                                                                ai: {
+                                                                                    ...formData.whatsappSettings.ai,
+                                                                                    systemPrompt: e.target.value
+                                                                                }
+                                                                            }
+                                                                        })}
+                                                                        rows={4}
+                                                                        placeholder="Du bist ein hilfreicher Assistent für..."
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Regeln (eine pro Zeile)
+                                                                    </label>
+                                                                    <textarea
+                                                                        value={formData.whatsappSettings.ai.rules.join('\n')}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            whatsappSettings: {
+                                                                                ...formData.whatsappSettings,
+                                                                                ai: {
+                                                                                    ...formData.whatsappSettings.ai,
+                                                                                    rules: e.target.value.split('\n').filter(r => r.trim())
+                                                                                }
+                                                                            }
+                                                                        })}
+                                                                        rows={3}
+                                                                        placeholder="Antworte immer auf Spanisch&#10;Sei freundlich und professionell"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Quellen/URLs (eine pro Zeile)
+                                                                    </label>
+                                                                    <textarea
+                                                                        value={formData.whatsappSettings.ai.sources.join('\n')}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            whatsappSettings: {
+                                                                                ...formData.whatsappSettings,
+                                                                                ai: {
+                                                                                    ...formData.whatsappSettings.ai,
+                                                                                    sources: e.target.value.split('\n').filter(s => s.trim())
+                                                                                }
+                                                                            }
+                                                                        })}
+                                                                        rows={2}
+                                                                        placeholder="https://wiki.example.com/manila-procedures&#10;https://wiki.example.com/faq"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+
+                                                                <div className="grid grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <label htmlFor="aiTemperature" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                            Temperature ({formData.whatsappSettings.ai.temperature})
+                                                                        </label>
+                                                                        <input
+                                                                            type="range"
+                                                                            id="aiTemperature"
+                                                                            min="0"
+                                                                            max="2"
+                                                                            step="0.1"
+                                                                            value={formData.whatsappSettings.ai.temperature}
+                                                                            onChange={(e) => setFormData({
+                                                                                ...formData,
+                                                                                whatsappSettings: {
+                                                                                    ...formData.whatsappSettings,
+                                                                                    ai: {
+                                                                                        ...formData.whatsappSettings.ai,
+                                                                                        temperature: parseFloat(e.target.value)
+                                                                                    }
+                                                                                }
+                                                                            })}
+                                                                            className="mt-1 block w-full"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label htmlFor="aiMaxTokens" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                            Max Tokens
+                                                                        </label>
+                                                                        <input
+                                                                            type="number"
+                                                                            id="aiMaxTokens"
+                                                                            min="100"
+                                                                            max="4000"
+                                                                            step="100"
+                                                                            value={formData.whatsappSettings.ai.maxTokens}
+                                                                            onChange={(e) => setFormData({
+                                                                                ...formData,
+                                                                                whatsappSettings: {
+                                                                                    ...formData.whatsappSettings,
+                                                                                    ai: {
+                                                                                        ...formData.whatsappSettings.ai,
+                                                                                        maxTokens: parseInt(e.target.value) || 500
+                                                                                    }
+                                                                                }
+                                                                            })}
+                                                                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
                                         )}
@@ -771,6 +977,184 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                                             placeholder="Phone Number ID"
                                                             className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
                                                         />
+                                                    </div>
+
+                                                    {/* AI Configuration */}
+                                                    <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                                                        <div className="flex items-center justify-between mb-4">
+                                                            <h5 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                KI-Konfiguration (AI)
+                                                            </h5>
+                                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={formData.whatsappSettings.ai.enabled}
+                                                                    onChange={(e) => setFormData({
+                                                                        ...formData,
+                                                                        whatsappSettings: {
+                                                                            ...formData.whatsappSettings,
+                                                                            ai: {
+                                                                                ...formData.whatsappSettings.ai,
+                                                                                enabled: e.target.checked
+                                                                            }
+                                                                        }
+                                                                    })}
+                                                                    className="sr-only peer"
+                                                                />
+                                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                                                <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                                                                    {formData.whatsappSettings.ai.enabled ? 'Aktiviert' : 'Deaktiviert'}
+                                                                </span>
+                                                            </label>
+                                                        </div>
+
+                                                        {formData.whatsappSettings.ai.enabled && (
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label htmlFor="aiModelDesktop" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Modell
+                                                                    </label>
+                                                                    <select
+                                                                        id="aiModelDesktop"
+                                                                        value={formData.whatsappSettings.ai.model}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            whatsappSettings: {
+                                                                                ...formData.whatsappSettings,
+                                                                                ai: {
+                                                                                    ...formData.whatsappSettings.ai,
+                                                                                    model: e.target.value
+                                                                                }
+                                                                            }
+                                                                        })}
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    >
+                                                                        <option value="gpt-4o">GPT-4o</option>
+                                                                        <option value="gpt-4">GPT-4</option>
+                                                                        <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                                                                    </select>
+                                                                </div>
+
+                                                                <div>
+                                                                    <label htmlFor="aiSystemPromptDesktop" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        System Prompt
+                                                                    </label>
+                                                                    <textarea
+                                                                        id="aiSystemPromptDesktop"
+                                                                        value={formData.whatsappSettings.ai.systemPrompt}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            whatsappSettings: {
+                                                                                ...formData.whatsappSettings,
+                                                                                ai: {
+                                                                                    ...formData.whatsappSettings.ai,
+                                                                                    systemPrompt: e.target.value
+                                                                                }
+                                                                            }
+                                                                        })}
+                                                                        rows={4}
+                                                                        placeholder="Du bist ein hilfreicher Assistent für..."
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Regeln (eine pro Zeile)
+                                                                    </label>
+                                                                    <textarea
+                                                                        value={formData.whatsappSettings.ai.rules.join('\n')}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            whatsappSettings: {
+                                                                                ...formData.whatsappSettings,
+                                                                                ai: {
+                                                                                    ...formData.whatsappSettings.ai,
+                                                                                    rules: e.target.value.split('\n').filter(r => r.trim())
+                                                                                }
+                                                                            }
+                                                                        })}
+                                                                        rows={3}
+                                                                        placeholder="Antworte immer auf Spanisch&#10;Sei freundlich und professionell"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Quellen/URLs (eine pro Zeile)
+                                                                    </label>
+                                                                    <textarea
+                                                                        value={formData.whatsappSettings.ai.sources.join('\n')}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            whatsappSettings: {
+                                                                                ...formData.whatsappSettings,
+                                                                                ai: {
+                                                                                    ...formData.whatsappSettings.ai,
+                                                                                    sources: e.target.value.split('\n').filter(s => s.trim())
+                                                                                }
+                                                                            }
+                                                                        })}
+                                                                        rows={2}
+                                                                        placeholder="https://wiki.example.com/manila-procedures&#10;https://wiki.example.com/faq"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+
+                                                                <div className="grid grid-cols-2 gap-4">
+                                                                    <div>
+                                                                        <label htmlFor="aiTemperatureDesktop" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                            Temperature ({formData.whatsappSettings.ai.temperature})
+                                                                        </label>
+                                                                        <input
+                                                                            type="range"
+                                                                            id="aiTemperatureDesktop"
+                                                                            min="0"
+                                                                            max="2"
+                                                                            step="0.1"
+                                                                            value={formData.whatsappSettings.ai.temperature}
+                                                                            onChange={(e) => setFormData({
+                                                                                ...formData,
+                                                                                whatsappSettings: {
+                                                                                    ...formData.whatsappSettings,
+                                                                                    ai: {
+                                                                                        ...formData.whatsappSettings.ai,
+                                                                                        temperature: parseFloat(e.target.value)
+                                                                                    }
+                                                                                }
+                                                                            })}
+                                                                            className="mt-1 block w-full"
+                                                                        />
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label htmlFor="aiMaxTokensDesktop" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                            Max Tokens
+                                                                        </label>
+                                                                        <input
+                                                                            type="number"
+                                                                            id="aiMaxTokensDesktop"
+                                                                            min="100"
+                                                                            max="4000"
+                                                                            step="100"
+                                                                            value={formData.whatsappSettings.ai.maxTokens}
+                                                                            onChange={(e) => setFormData({
+                                                                                ...formData,
+                                                                                whatsappSettings: {
+                                                                                    ...formData.whatsappSettings,
+                                                                                    ai: {
+                                                                                        ...formData.whatsappSettings.ai,
+                                                                                        maxTokens: parseInt(e.target.value) || 500
+                                                                                    }
+                                                                                }
+                                                                            })}
+                                                                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
