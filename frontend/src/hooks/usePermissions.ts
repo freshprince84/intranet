@@ -164,9 +164,17 @@ export const usePermissions = () => {
         return hasAccess;
     };
 
-    const isAdmin = (): boolean => {
-        return currentRole?.name.toLowerCase() === 'admin';
-    };
+    const isAdmin = useCallback((): boolean => {
+        // Prüfe zuerst ob Rolle als Admin in lifecycleRoles konfiguriert ist
+        if (currentRole && lifecycleRoles) {
+            const adminRoleId = lifecycleRoles.adminRoleId;
+            if (adminRoleId && currentRole.id === adminRoleId) {
+                return true;
+            }
+        }
+        // Fallback: Prüfe Rollennamen
+        return currentRole?.name.toLowerCase() === 'admin' || currentRole?.name.toLowerCase().includes('administrator');
+    }, [currentRole, lifecycleRoles]);
 
     // Organisation-spezifische Berechtigungen
     const canManageOrganization = (): boolean => {

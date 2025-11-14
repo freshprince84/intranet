@@ -32,6 +32,9 @@ const ApiConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
     ttlockClientId: '',
     ttlockClientSecret: '',
     ttlockApiUrl: 'https://open.ttlock.com',
+    ttlockUsername: '',
+    ttlockPassword: '',
+    ttlockPasscodeType: 'auto' as 'auto' | 'custom',
     
     // SIRE
     sireApiUrl: '',
@@ -73,6 +76,9 @@ const ApiConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
         ttlockClientId: doorSystem.clientId || '',
         ttlockClientSecret: doorSystem.clientSecret || '',
         ttlockApiUrl: doorSystem.apiUrl || 'https://open.ttlock.com',
+        ttlockUsername: doorSystem.username || '',
+        ttlockPassword: '', // Password wird nicht angezeigt (aus Sicherheitsgründen)
+        ttlockPasscodeType: (doorSystem.passcodeType as 'auto' | 'custom') || 'auto',
         
         sireApiUrl: sire.apiUrl || '',
         sireApiKey: sire.apiKey || '',
@@ -120,6 +126,9 @@ const ApiConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
       ttlockClientId: '',
       ttlockClientSecret: '',
       ttlockApiUrl: 'https://open.ttlock.com',
+      ttlockUsername: '',
+      ttlockPassword: '',
+      ttlockPasscodeType: 'auto' as 'auto' | 'custom',
       sireApiUrl: '',
       sireApiKey: '',
       sireApiSecret: '',
@@ -183,7 +192,10 @@ const ApiConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
           provider: 'ttlock' as const,
           apiUrl: apiSettings.ttlockApiUrl || undefined,
           clientId: apiSettings.ttlockClientId || undefined,
-          clientSecret: apiSettings.ttlockClientSecret || undefined
+          clientSecret: apiSettings.ttlockClientSecret || undefined,
+          username: apiSettings.ttlockUsername || undefined,
+          password: apiSettings.ttlockPassword || undefined, // Wird MD5-gehasht im Backend
+          passcodeType: apiSettings.ttlockPasscodeType || 'auto'
         },
         sire: {
           ...currentSettings.sire,
@@ -454,6 +466,54 @@ const ApiConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
               label={t('organization.api.ttlock.clientSecret')}
               placeholder="Client Secret"
             />
+
+            <div>
+              <label htmlFor="ttlockUsername" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('organization.api.ttlock.username')}
+              </label>
+              <input
+                type="text"
+                id="ttlockUsername"
+                name="ttlockUsername"
+                value={apiSettings.ttlockUsername}
+                onChange={handleChange}
+                placeholder="TTLock App Username (z.B. +573024498991)"
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+              />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {t('organization.api.ttlock.usernameHint')}
+              </p>
+            </div>
+
+            <SecretInput
+              name="ttlockPassword"
+              value={apiSettings.ttlockPassword}
+              onChange={handleChange}
+              label={t('organization.api.ttlock.password')}
+              placeholder="TTLock App Password"
+            />
+            <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+              {t('organization.api.ttlock.passwordHint')}
+            </p>
+
+            <div>
+              <label htmlFor="ttlockPasscodeType" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('organization.api.ttlock.passcodeType')}
+              </label>
+              <select
+                id="ttlockPasscodeType"
+                name="ttlockPasscodeType"
+                value={apiSettings.ttlockPasscodeType}
+                onChange={handleChange}
+                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+              >
+                <option value="auto">{t('organization.api.ttlock.passcodeTypeAuto')}</option>
+                <option value="custom">{t('organization.api.ttlock.passcodeTypeCustom')}</option>
+              </select>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {t('organization.api.ttlock.passcodeTypeHint')}
+              </p>
+            </div>
           </div>
         </div>
 

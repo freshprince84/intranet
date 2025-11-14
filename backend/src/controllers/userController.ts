@@ -328,7 +328,7 @@ export const updateUserById = async (req: Request, res: Response) => {
             ...(lastName && { lastName }),
             ...(birthday && { birthday: new Date(birthday) }),
             ...(bankDetails && { bankDetails }),
-            ...(contract && { contract }),
+            ...(contract !== undefined && { contract: contract || null }),
             ...(salary !== undefined && { salary: salary === null ? null : parseFloat(salary.toString()) }),
             // Zusätzliche Lohnabrechnung-Felder
             ...(payrollCountry && { payrollCountry }),
@@ -365,6 +365,51 @@ export const updateUserById = async (req: Request, res: Response) => {
                 }
             }
         });
+
+        // Automatisch epsRequired setzen basierend auf contract-Typ
+        if (contract !== undefined && contract !== null && contract !== '') {
+            try {
+                console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
+                const lifecycle = await prisma.employeeLifecycle.findUnique({
+                    where: { userId }
+                });
+
+                if (lifecycle) {
+                    // tiempo_completo → epsRequired = true
+                    // Alle anderen → epsRequired = false
+                    const epsRequired = contract === 'tiempo_completo';
+                    
+                    console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    
+                    await prisma.employeeLifecycle.update({
+                        where: { userId },
+                        data: { epsRequired }
+                    });
+
+                    // Erstelle Event für die Änderung
+                    await prisma.lifecycleEvent.create({
+                        data: {
+                            lifecycleId: lifecycle.id,
+                            eventType: 'eps_required_updated',
+                            eventData: {
+                                contract,
+                                epsRequired,
+                                reason: `Automatisch gesetzt basierend auf Vertragstyp: ${contract}`
+                            }
+                        }
+                    });
+                    
+                    console.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
+                } else {
+                    console.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
+                }
+            } catch (lifecycleError) {
+                // Logge Fehler, aber breche nicht ab
+                console.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
+            }
+        } else {
+            console.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
+        }
 
         res.json(updatedUser);
     } catch (error) {
@@ -485,6 +530,51 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                 }
             }
         });
+
+        // Automatisch epsRequired setzen basierend auf contract-Typ
+        if (contract !== undefined && contract !== null && contract !== '') {
+            try {
+                console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
+                const lifecycle = await prisma.employeeLifecycle.findUnique({
+                    where: { userId }
+                });
+
+                if (lifecycle) {
+                    // tiempo_completo → epsRequired = true
+                    // Alle anderen → epsRequired = false
+                    const epsRequired = contract === 'tiempo_completo';
+                    
+                    console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    
+                    await prisma.employeeLifecycle.update({
+                        where: { userId },
+                        data: { epsRequired }
+                    });
+
+                    // Erstelle Event für die Änderung
+                    await prisma.lifecycleEvent.create({
+                        data: {
+                            lifecycleId: lifecycle.id,
+                            eventType: 'eps_required_updated',
+                            eventData: {
+                                contract,
+                                epsRequired,
+                                reason: `Automatisch gesetzt basierend auf Vertragstyp: ${contract}`
+                            }
+                        }
+                    });
+                    
+                    console.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
+                } else {
+                    console.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
+                }
+            } catch (lifecycleError) {
+                // Logge Fehler, aber breche nicht ab
+                console.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
+            }
+        } else {
+            console.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
+        }
 
         res.json(updatedUser);
     } catch (error) {
@@ -1235,6 +1325,51 @@ export const updateUser = async (req: Request, res: Response) => {
                 }
             }
         });
+
+        // Automatisch epsRequired setzen basierend auf contract-Typ
+        if (contract !== undefined && contract !== null && contract !== '') {
+            try {
+                console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
+                const lifecycle = await prisma.employeeLifecycle.findUnique({
+                    where: { userId }
+                });
+
+                if (lifecycle) {
+                    // tiempo_completo → epsRequired = true
+                    // Alle anderen → epsRequired = false
+                    const epsRequired = contract === 'tiempo_completo';
+                    
+                    console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
+                    
+                    await prisma.employeeLifecycle.update({
+                        where: { userId },
+                        data: { epsRequired }
+                    });
+
+                    // Erstelle Event für die Änderung
+                    await prisma.lifecycleEvent.create({
+                        data: {
+                            lifecycleId: lifecycle.id,
+                            eventType: 'eps_required_updated',
+                            eventData: {
+                                contract,
+                                epsRequired,
+                                reason: `Automatisch gesetzt basierend auf Vertragstyp: ${contract}`
+                            }
+                        }
+                    });
+                    
+                    console.log(`[EPS Required] Erfolgreich aktualisiert für User ${userId}`);
+                } else {
+                    console.log(`[EPS Required] Kein Lifecycle gefunden für User ${userId}`);
+                }
+            } catch (lifecycleError) {
+                // Logge Fehler, aber breche nicht ab
+                console.error('Fehler beim Aktualisieren von epsRequired:', lifecycleError);
+            }
+        } else {
+            console.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
+        }
 
         // Benachrichtigung für den aktualisierten Benutzer senden
         await createNotificationIfEnabled({

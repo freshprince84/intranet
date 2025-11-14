@@ -309,12 +309,14 @@ export class LifecycleService {
 
     if (registration) {
       return {
+        id: registration.id,
         type,
         status: registration.status,
         number: registration.registrationNumber,
         provider: registration.provider,
         registeredAt: registration.registrationDate,
-        notes: registration.notes
+        notes: registration.notes,
+        completedAt: registration.completedAt
       };
     }
 
@@ -413,6 +415,40 @@ export class LifecycleService {
         triggeredBy: completedBy
       }
     });
+
+    // Prüfe ob Onboarding automatisch abgeschlossen werden kann
+    // Lade aktualisierten Lifecycle mit allen Daten
+    const updatedLifecycle = await prisma.employeeLifecycle.findUnique({
+      where: { userId }
+    });
+
+    if (updatedLifecycle && updatedLifecycle.status === 'onboarding') {
+      const progress = this.calculateProgress(updatedLifecycle);
+      
+      // Wenn alle Schritte abgeschlossen sind (100%), setze Status automatisch auf 'active'
+      if (progress.percent === 100) {
+        await this.updateStatus(
+          userId,
+          'active',
+          undefined,
+          completedBy
+        );
+        
+        // Erstelle Event für automatische Status-Änderung
+        await prisma.lifecycleEvent.create({
+          data: {
+            lifecycleId: updatedLifecycle.id,
+            eventType: 'status_auto_changed',
+            eventData: {
+              oldStatus: 'onboarding',
+              newStatus: 'active',
+              reason: 'All onboarding steps completed (100%)'
+            },
+            triggeredBy: completedBy
+          }
+        });
+      }
+    }
 
     return this.getSocialSecurityStatus(userId, type);
   }
