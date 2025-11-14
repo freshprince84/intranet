@@ -401,7 +401,27 @@ export const createOrganization = async (req: Request, res: Response) => {
           roleId: userRole.id
         });
       }
-
+      
+      // Cerebro-spezifische Berechtigungen hinzufügen (entityType: 'cerebro')
+      userPermissions.push({
+        entity: 'cerebro',
+        entityType: 'cerebro',
+        accessLevel: 'both',
+        roleId: userRole.id
+      });
+      userPermissions.push({
+        entity: 'cerebro_media',
+        entityType: 'cerebro',
+        accessLevel: 'both',
+        roleId: userRole.id
+      });
+      userPermissions.push({
+        entity: 'cerebro_links',
+        entityType: 'cerebro',
+        accessLevel: 'both',
+        roleId: userRole.id
+      });
+      
       await tx.permission.createMany({
         data: userPermissions
       });
@@ -417,6 +437,26 @@ export const createOrganization = async (req: Request, res: Response) => {
 
       // 3e. Berechtigungen für Hamburger-Rolle erstellen (basierend auf seed.ts)
       const hamburgerPermissions = [];
+      
+      // Cerebro-spezifische Berechtigungen für Hamburger-Rolle hinzufügen
+      hamburgerPermissions.push({
+        entity: 'cerebro',
+        entityType: 'cerebro',
+        accessLevel: 'both',
+        roleId: hamburgerRole.id
+      });
+      hamburgerPermissions.push({
+        entity: 'cerebro_media',
+        entityType: 'cerebro',
+        accessLevel: 'both',
+        roleId: hamburgerRole.id
+      });
+      hamburgerPermissions.push({
+        entity: 'cerebro_links',
+        entityType: 'cerebro',
+        accessLevel: 'both',
+        roleId: hamburgerRole.id
+      });
       const hamburgerPermissionMap: Record<string, AccessLevel> = {
         'page_dashboard': 'both',
         'page_settings': 'both',

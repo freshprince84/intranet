@@ -309,9 +309,10 @@ const ArticleEdit: React.FC = () => {
       
       // Navigation erst nach erfolgreichem Upload aller Medien
       navigate(`/cerebro/${savedArticle.slug}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Fehler beim Speichern des Artikels:', err);
-      setError('Fehler beim Speichern des Artikels. Bitte versuchen Sie es später erneut.');
+      const errorMessage = err?.response?.data?.message || err?.message || 'Fehler beim Speichern des Artikels. Bitte versuchen Sie es später erneut.';
+      setError(errorMessage);
       setSaving(false);
     }
   };
