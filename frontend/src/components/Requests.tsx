@@ -182,6 +182,7 @@ const Requests: React.FC = () => {
   // State-Variablen für erweiterte Filterbedingungen
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+  const [filterSortDirections, setFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
   
   // Filter State Management (Controlled Mode)
   const [activeFilterName, setActiveFilterName] = useState<string>('');
@@ -429,7 +430,20 @@ const Requests: React.FC = () => {
         if (aktuellFilter) {
           setActiveFilterName('Aktuell'); // Speichere deutschen Namen, wird beim Anzeigen übersetzt
           setSelectedFilterId(aktuellFilter.id);
-          applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators);
+          // Migration: Altes Format zu neuem Format konvertieren
+          let sortDirections = aktuellFilter.sortDirections || [];
+          if (Array.isArray(sortDirections) && sortDirections.length > 0) {
+            // Bereits neues Format
+          } else if (sortDirections && typeof sortDirections === 'object' && !Array.isArray(sortDirections)) {
+            // Altes Format: Record -> Array konvertieren
+            sortDirections = Object.entries(sortDirections as Record<string, 'asc' | 'desc'>).map(([column, direction], index) => ({
+              column,
+              direction,
+              priority: index + 1,
+              conditionIndex: filterConditions.findIndex(c => c.column === column)
+            }));
+          }
+          applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators, sortDirections);
         }
       } catch (error) {
         console.error('Fehler beim Setzen des initialen Filters:', error);
@@ -550,23 +564,27 @@ const Requests: React.FC = () => {
     setDragOverColumn(null);
   };
 
-  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  const applyFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
     setFilterConditions(conditions);
     setFilterLogicalOperators(operators);
+    if (sortDirections !== undefined) {
+      setFilterSortDirections(sortDirections);
+    }
   };
   
   const resetFilterConditions = () => {
     setFilterConditions([]);
     setFilterLogicalOperators([]);
+    setFilterSortDirections([]);
     setActiveFilterName('');
     setSelectedFilterId(null);
   };
   
   // Filter Change Handler (Controlled Mode)
-  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[]) => {
+  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
-    applyFilterConditions(conditions, operators);
+    applyFilterConditions(conditions, operators, sortDirections);
   };
 
   const getActiveFilterCount = () => {
@@ -667,108 +685,129 @@ const Requests: React.FC = () => {
         return true;
       })
       .sort((a, b) => {
-        // Bei Cards-Mode: Multi-Sortierung basierend auf Spaltenreihenfolge
+        // Hilfsfunktion zum Abrufen von Sortierwerten
+        const getSortValue = (request: Request, columnId: string): any => {
+          switch (columnId) {
+            case 'title':
+              return request.title.toLowerCase();
+            case 'status':
+              const statusOrder: Record<string, number> = {
+                'approval': 0,
+                'to_improve': 1,
+                'approved': 2,
+                'denied': 3
+              };
+              return statusOrder[request.status] ?? 999;
+            case 'type':
+              const typeOrder: Record<string, number> = {
+                'vacation': 0,
+                'improvement_suggestion': 1,
+                'sick_leave': 2,
+                'employment_certificate': 3,
+                'other': 4
+              };
+              return typeOrder[request.type || 'other'] ?? 999;
+            case 'requestedBy':
+            case 'requestedByResponsible':
+              return `${request.requestedBy.firstName} ${request.requestedBy.lastName}`.toLowerCase();
+            case 'responsible':
+              return `${request.responsible.firstName} ${request.responsible.lastName}`.toLowerCase();
+            case 'branch':
+              return request.branch.name.toLowerCase();
+            case 'dueDate':
+              return new Date(request.dueDate).getTime();
+            case 'description':
+              return (request.description || '').toLowerCase();
+            default:
+              return '';
+          }
+        };
+        
+        // 1. Priorität: Filter-Sortierrichtungen (wenn Filter aktiv)
+        if (filterSortDirections.length > 0 && filterConditions.length > 0) {
+          // Sortiere nach Priorität (1, 2, 3, ...)
+          const sortedByPriority = [...filterSortDirections].sort((sd1, sd2) => sd1.priority - sd2.priority);
+          
+          for (const sortDir of sortedByPriority) {
+            const valueA = getSortValue(a, sortDir.column);
+            const valueB = getSortValue(b, sortDir.column);
+            
+            let comparison = 0;
+            if (typeof valueA === 'number' && typeof valueB === 'number') {
+              comparison = valueA - valueB;
+            } else {
+              comparison = String(valueA).localeCompare(String(valueB));
+            }
+            
+            if (sortDir.direction === 'desc') {
+              comparison = -comparison;
+            }
+            
+            if (comparison !== 0) {
+              return comparison;
+            }
+          }
+          return 0;
+        }
+        
+        // 2. Priorität: Cards-Mode Multi-Sortierung (wenn kein Filter aktiv)
         if (viewMode === 'cards') {
-          // Sortiere nach sichtbaren Spalten in der definierten Reihenfolge
           const sortableColumns = cardMetadataOrder.filter(colId => visibleCardMetadata.has(colId));
           
           for (const columnId of sortableColumns) {
-            let aValue: any;
-            let bValue: any;
+            const valueA = getSortValue(a, columnId);
+            const valueB = getSortValue(b, columnId);
             
-            // Hole Werte basierend auf Spalten-ID
-            switch (columnId) {
-              case 'title':
-                aValue = a.title.toLowerCase();
-                bValue = b.title.toLowerCase();
-                break;
-              case 'status':
-                // Status-Priorität für Sortierung: approval < to_improve < approved < denied
-                const statusOrder: Record<string, number> = {
-                  'approval': 0,
-                  'to_improve': 1,
-                  'approved': 2,
-                  'denied': 3
-                };
-                aValue = statusOrder[a.status] ?? 999;
-                bValue = statusOrder[b.status] ?? 999;
-                break;
-              case 'type':
-                const typeOrder: Record<string, number> = {
-                  'vacation': 0,
-                  'improvement_suggestion': 1,
-                  'sick_leave': 2,
-                  'employment_certificate': 3,
-                  'other': 4
-                };
-                aValue = typeOrder[a.type || 'other'] ?? 999;
-                bValue = typeOrder[b.type || 'other'] ?? 999;
-                break;
-              case 'requestedBy':
-                aValue = `${a.requestedBy.firstName} ${a.requestedBy.lastName}`.toLowerCase();
-                bValue = `${b.requestedBy.firstName} ${b.requestedBy.lastName}`.toLowerCase();
-                break;
-              case 'responsible':
-                aValue = `${a.responsible.firstName} ${a.responsible.lastName}`.toLowerCase();
-                bValue = `${b.responsible.firstName} ${b.responsible.lastName}`.toLowerCase();
-                break;
-              case 'branch':
-                aValue = a.branch.name.toLowerCase();
-                bValue = b.branch.name.toLowerCase();
-                break;
-              case 'dueDate':
-                aValue = new Date(a.dueDate).getTime();
-                bValue = new Date(b.dueDate).getTime();
-                break;
-              case 'description':
-                aValue = (a.description || '').toLowerCase();
-                bValue = (b.description || '').toLowerCase();
-                break;
-              default:
-                continue;
+            const direction = cardSortDirections[columnId] || 'asc';
+            let comparison = 0;
+            if (typeof valueA === 'number' && typeof valueB === 'number') {
+              comparison = valueA - valueB;
+            } else {
+              comparison = String(valueA).localeCompare(String(valueB));
             }
             
-            // Vergleiche Werte (berücksichtige Sortierrichtung pro Spalte)
-            const direction = cardSortDirections[columnId] || 'asc';
-            if (aValue < bValue) return direction === 'asc' ? -1 : 1;
-            if (aValue > bValue) return direction === 'asc' ? 1 : -1;
-            // Bei Gleichheit: Weiter zur nächsten Spalte
+            if (direction === 'desc') {
+              comparison = -comparison;
+            }
+            
+            if (comparison !== 0) {
+              return comparison;
+            }
           }
-          
-          return 0; // Alle Spalten identisch
-        } else {
-          // Tabellen-Mode: Normale Einzel-Sortierung
-          let aValue: any = a[sortConfig.key as keyof Request];
-          let bValue: any = b[sortConfig.key as keyof Request];
-
-          // Handle nested properties
-          if (sortConfig.key === 'requestedBy.firstName') {
-            aValue = a.requestedBy.firstName;
-            bValue = b.requestedBy.firstName;
-          } else if (sortConfig.key === 'responsible.firstName') {
-            aValue = a.responsible.firstName;
-            bValue = b.responsible.firstName;
-          } else if (sortConfig.key === 'branch.name') {
-            aValue = a.branch.name;
-            bValue = b.branch.name;
-          } else if (sortConfig.key === 'type') {
-            const typeOrder: Record<string, number> = {
-              'vacation': 0,
-              'improvement_suggestion': 1,
-              'sick_leave': 2,
-              'employment_certificate': 3,
-              'other': 4
-            };
-            aValue = typeOrder[(a as any).type || 'other'] ?? 999;
-            bValue = typeOrder[(b as any).type || 'other'] ?? 999;
-          }
-
-          if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-          if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
           return 0;
         }
+        
+        // 3. Priorität: Tabellen-Mode Einzel-Sortierung (wenn kein Filter aktiv)
+        let aValue: any = a[sortConfig.key as keyof Request];
+        let bValue: any = b[sortConfig.key as keyof Request];
+
+        // Handle nested properties
+        if (sortConfig.key === 'requestedBy.firstName') {
+          aValue = a.requestedBy.firstName;
+          bValue = b.requestedBy.firstName;
+        } else if (sortConfig.key === 'responsible.firstName') {
+          aValue = a.responsible.firstName;
+          bValue = b.responsible.firstName;
+        } else if (sortConfig.key === 'branch.name') {
+          aValue = a.branch.name;
+          bValue = b.branch.name;
+        } else if (sortConfig.key === 'type') {
+          const typeOrder: Record<string, number> = {
+            'vacation': 0,
+            'improvement_suggestion': 1,
+            'sick_leave': 2,
+            'employment_certificate': 3,
+            'other': 4
+          };
+          aValue = typeOrder[(a as any).type || 'other'] ?? 999;
+          bValue = typeOrder[(b as any).type || 'other'] ?? 999;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
       });
-  }, [requests, searchTerm, sortConfig, filterConditions, filterLogicalOperators, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+  }, [requests, searchTerm, sortConfig, filterConditions, filterLogicalOperators, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
 
   // Funktion zum Kopieren eines Requests
   const handleCopyRequest = async (request) => {
@@ -850,12 +889,8 @@ const Requests: React.FC = () => {
         />
       )}
 
-      <div 
-        className={viewMode === 'cards' ? '' : 'border-0 rounded-lg'}
-        data-view-mode={viewMode}
-      >
-        {/* Neu angeordnete UI-Elemente in einer Zeile */}
-        <div className="flex items-center mb-4 justify-between px-3 sm:px-4 md:px-6">
+      {/* Neu angeordnete UI-Elemente in einer Zeile */}
+      <div className="flex items-center mb-4 justify-between px-3 sm:px-4 md:px-6">
           {/* Linke Seite: "Neuer Request"-Button */}
           <div className="flex items-center">
             {hasPermission('requests', 'write', 'table') && (
@@ -1040,6 +1075,8 @@ const Requests: React.FC = () => {
             onReset={resetFilterConditions}
             savedConditions={filterConditions}
             savedOperators={filterLogicalOperators}
+            savedSortDirections={filterSortDirections}
+            onSortDirectionsChange={setFilterSortDirections}
             tableId={REQUESTS_TABLE_ID}
             />
           </div>
@@ -1049,18 +1086,18 @@ const Requests: React.FC = () => {
         <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
           <SavedFilterTags
           tableId={REQUESTS_TABLE_ID}
-          onSelectFilter={applyFilterConditions}
+          onSelectFilter={(conditions, operators, sortDirections) => applyFilterConditions(conditions, operators, sortDirections)}
           onReset={resetFilterConditions}
           activeFilterName={activeFilterName}
           selectedFilterId={selectedFilterId}
-          onFilterChange={handleFilterChange}
+          onFilterChange={(name, id, conditions, operators, sortDirections) => handleFilterChange(name, id, conditions, operators, sortDirections)}
           defaultFilterName="Aktuell"
           />
         </div>
 
         {/* Conditional Rendering: Table oder Cards */}
         {viewMode === 'table' ? (
-          <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
+          <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
@@ -1549,7 +1586,6 @@ const Requests: React.FC = () => {
             </button>
           </div>
         )}
-      </div>
     </>
   );
 };

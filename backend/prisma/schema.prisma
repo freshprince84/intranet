@@ -31,7 +31,7 @@ model User {
   employeeNumber           String?
   identificationNumber     String?
   taxIdentificationNumber  String?
-  gender                   String?                     // "male", "female", "other"
+  gender                   String? // "male", "female", "other"
   active                   Boolean                     @default(true)
   carticlesCreated         CerebroCarticle[]           @relation("CarticleCreator")
   carticlesUpdated         CerebroCarticle[]           @relation("CarticleUpdater")
@@ -66,10 +66,13 @@ model User {
   contractsGenerated       EmploymentContract[]        @relation("ContractGenerator")
   passwordResetTokens      PasswordResetToken[]
   onboardingCompleted      Boolean                     @default(false)
-  onboardingProgress        Json?                      // Speichert den Fortschritt: { currentStep: number, completedSteps: number[] }
-  onboardingStartedAt       DateTime?
-  onboardingCompletedAt     DateTime?
-  onboardingEvents          OnboardingEvent[]
+  onboardingProgress       Json? // Speichert den Fortschritt: { currentStep: number, completedSteps: number[] }
+  onboardingStartedAt      DateTime?
+  onboardingCompletedAt    DateTime?
+  onboardingEvents         OnboardingEvent[]
+  profileComplete          Boolean                     @default(false) // Profilvollständigkeit nach Registrierung (username, email, country, language)
+  phoneNumber              String? // WhatsApp-Telefonnummer (mit Ländercode, z.B. +573001234567)
+  whatsappConversations    WhatsAppConversation[]
 }
 
 model Organization {
@@ -83,8 +86,8 @@ model Organization {
   subscriptionPlan     String                      @default("basic")
   subscriptionEnd      DateTime?
   settings             Json?
-  country              String?                     // Land der Organisation (z.B. "CO" für Kolumbien)
-  nit                  String?                     // NIT (Número de Identificación Tributaria) für Kolumbien
+  country              String? // Land der Organisation (z.B. "CO" für Kolumbien)
+  nit                  String? // NIT (Número de Identificación Tributaria) für Kolumbien
   createdAt            DateTime                    @default(now())
   updatedAt            DateTime                    @updatedAt
   invitations          OrganizationInvitation[]
@@ -143,11 +146,13 @@ model Role {
   name           String
   description    String?
   organizationId Int?
+  allBranches    Boolean                  @default(false) // Wenn true, gilt für alle Branches der Organisation
   invitations    OrganizationInvitation[]
   permissions    Permission[]
   organization   Organization?            @relation(fields: [organizationId], references: [id])
   tasks          Task[]
   users          UserRole[]
+  branches       RoleBranch[] // Spezifische Branch-Zuweisungen (nur wenn allBranches = false)
 
   @@unique([name, organizationId])
 }
@@ -177,17 +182,21 @@ model Permission {
 }
 
 model Branch {
-  id                Int                 @id @default(autoincrement())
-  name              String              @unique
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  organizationId    Int?
-  organization      Organization?       @relation(fields: [organizationId], references: [id])
-  requests          Request[]
-  tasks             Task[]
-  users             UsersBranches[]
-  workTimes         WorkTime[]
-  taskStatusChanges TaskStatusHistory[]
+  id                    Int                          @id @default(autoincrement())
+  name                  String                       @unique
+  createdAt             DateTime                     @default(now())
+  updatedAt             DateTime                     @updatedAt
+  organizationId        Int?
+  organization          Organization?                @relation(fields: [organizationId], references: [id])
+  whatsappSettings      Json? // WhatsApp-Konfiguration pro Branch
+  requests              Request[]
+  tasks                 Task[]
+  users                 UsersBranches[]
+  workTimes             WorkTime[]
+  taskStatusChanges     TaskStatusHistory[]
+  roles                 RoleBranch[] // Rollen, die für diese Branch verfügbar sind
+  whatsappConversations WhatsAppConversation[]
+  phoneNumberMappings   WhatsAppPhoneNumberMapping[]
 }
 
 model UsersBranches {
@@ -201,6 +210,18 @@ model UsersBranches {
   user      User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, branchId])
+}
+
+model RoleBranch {
+  id        Int      @id @default(autoincrement())
+  roleId    Int
+  branchId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      Role     @relation(fields: [roleId], references: [id])
+  branch    Branch   @relation(fields: [branchId], references: [id])
+
+  @@unique([roleId, branchId])
 }
 
 model WorkTime {
@@ -302,32 +323,33 @@ model UserTableSettings {
 }
 
 model FilterGroup {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  tableId    String
-  name       String
-  order      Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  user       User     @relation(fields: [userId], references: [id])
-  filters    SavedFilter[]
+  id        Int           @id @default(autoincrement())
+  userId    Int
+  tableId   String
+  name      String
+  order     Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [userId], references: [id])
+  filters   SavedFilter[]
 
   @@unique([userId, tableId, name])
 }
 
 model SavedFilter {
-  id         Int      @id @default(autoincrement())
-  userId     Int
-  tableId    String
-  name       String
-  conditions String
-  operators  String
-  groupId    Int?
-  order      Int      @default(0)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  user       User     @relation(fields: [userId], references: [id])
-  group      FilterGroup? @relation(fields: [groupId], references: [id])
+  id             Int          @id @default(autoincrement())
+  userId         Int
+  tableId        String
+  name           String
+  conditions     String
+  operators      String
+  sortDirections String? // JSON-String mit Record<string, 'asc' | 'desc'>
+  groupId        Int?
+  order          Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  user           User         @relation(fields: [userId], references: [id])
+  group          FilterGroup? @relation(fields: [groupId], references: [id])
 
   @@unique([userId, tableId, name])
 }
@@ -1004,15 +1026,15 @@ model PasswordResetToken {
 // ============================================
 
 model OnboardingEvent {
-  id          Int      @id @default(autoincrement())
-  userId      Int
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stepId      String   // ID des Onboarding-Schritts
-  stepTitle   String   // Titel des Schritts (für Reports)
-  action      String   // 'started', 'completed', 'skipped', 'cancelled'
-  duration    Int?     // Dauer in Sekunden (für 'completed')
-  createdAt   DateTime @default(now())
-  
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stepId    String // ID des Onboarding-Schritts
+  stepTitle String // Titel des Schritts (für Reports)
+  action    String // 'started', 'completed', 'skipped', 'cancelled'
+  duration  Int? // Dauer in Sekunden (für 'completed')
+  createdAt DateTime @default(now())
+
   @@index([userId])
   @@index([stepId])
   @@index([createdAt])
@@ -1080,4 +1102,37 @@ model ReservationSyncHistory {
 
   @@index([reservationId])
   @@index([syncedAt])
+}
+
+model WhatsAppPhoneNumberMapping {
+  id            Int      @id @default(autoincrement())
+  phoneNumberId String // WhatsApp Business API Phone Number ID
+  branchId      Int // Branch, der diese Nummer verwendet
+  isPrimary     Boolean  @default(false) // Primäre Nummer für diesen Branch
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  branch        Branch   @relation(fields: [branchId], references: [id])
+
+  @@unique([phoneNumberId, branchId])
+  @@index([phoneNumberId])
+  @@index([branchId])
+}
+
+model WhatsAppConversation {
+  id            Int      @id @default(autoincrement())
+  phoneNumber   String // Telefonnummer des Users (mit Ländercode)
+  userId        Int? // User-ID (falls identifiziert)
+  branchId      Int // Branch, zu dem die Konversation gehört
+  state         String // "idle", "request_creation", "task_creation", "waiting_for_responsible", etc.
+  context       Json? // Kontext-Daten (z.B. teilweise erstellter Request)
+  lastMessageAt DateTime @default(now())
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  branch        Branch   @relation(fields: [branchId], references: [id])
+  user          User?    @relation(fields: [userId], references: [id])
+
+  @@unique([phoneNumber, branchId])
+  @@index([phoneNumber])
+  @@index([branchId])
+  @@index([userId])
 }

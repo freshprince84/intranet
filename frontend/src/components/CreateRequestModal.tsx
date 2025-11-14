@@ -591,15 +591,6 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                     )}
                   </div>
                   {renderTemporaryAttachments()}
-                  {formData.description && (
-                    <div className="mt-3">
-                      <MarkdownPreview 
-                        content={formData.description} 
-                        temporaryAttachments={temporaryAttachments}
-                        showImagePreview={true}
-                      />
-                    </div>
-                  )}
                 </div>
 
                 <div>
@@ -818,15 +809,6 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 )}
               </div>
               {renderTemporaryAttachments()}
-              {formData.description && (
-                <div className="mt-3">
-                  <MarkdownPreview 
-                    content={formData.description} 
-                    temporaryAttachments={temporaryAttachments}
-                    showImagePreview={true}
-                  />
-                </div>
-              )}
             </div>
 
             <div>

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllRoles, getRoleById, createRole, updateRole, deleteRole, getRolePermissions } from '../controllers/roleController';
+import { getAllRoles, getRoleById, createRole, updateRole, deleteRole, getRolePermissions, getRoleBranches, updateRoleBranches } from '../controllers/roleController';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
 
@@ -71,5 +71,11 @@ router.delete('/:id', roleAuthMiddleware, deleteRole);
 
 // Berechtigungen einer Rolle abrufen
 router.get('/:id/permissions', roleAuthMiddleware, getRolePermissions);
+
+// Branches einer Rolle abrufen
+router.get('/:id/branches', roleAuthMiddleware, getRoleBranches);
+
+// Branches einer Rolle aktualisieren
+router.put('/:id/branches', roleAuthMiddleware, updateRoleBranches);
 
 export default router; 

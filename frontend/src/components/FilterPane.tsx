@@ -12,12 +12,21 @@ interface TableColumn {
   label: string;
 }
 
+interface SortDirection {
+  column: string;
+  direction: 'asc' | 'desc';
+  priority: number;
+  conditionIndex: number; // Index der Filterzeile, zu der diese Sortierrichtung gehört
+}
+
 interface FilterPaneProps {
   columns: TableColumn[];
   onApply: (conditions: FilterCondition[], logicalOperators: ('AND' | 'OR')[]) => void;
   onReset: () => void;
   savedConditions?: FilterCondition[];
   savedOperators?: ('AND' | 'OR')[];
+  savedSortDirections?: SortDirection[];
+  onSortDirectionsChange?: (sortDirections: SortDirection[]) => void;
   tableId: string; // Tabellen-ID für die gespeicherten Filter
 }
 
@@ -27,6 +36,8 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   onReset,
   savedConditions,
   savedOperators,
+  savedSortDirections,
+  onSortDirectionsChange,
   tableId
 }) => {
   const { t } = useTranslation();
@@ -42,6 +53,11 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     savedOperators && savedOperators.length > 0
       ? savedOperators
       : []
+  );
+  
+  // Initialisiere Sortierrichtungen (Array-basiert mit Priorität)
+  const [sortDirections, setSortDirections] = useState<SortDirection[]>(
+    savedSortDirections || []
   );
 
   // Zustand für das Speichern von Filtern
@@ -82,12 +98,66 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     if (savedOperators && savedOperators.length > 0) {
       setLogicalOperators(savedOperators);
     }
-  }, [savedConditions, savedOperators]);
+    
+    if (savedSortDirections) {
+      setSortDirections(savedSortDirections);
+    }
+  }, [savedConditions, savedOperators, savedSortDirections]);
+  
+  // Hilfsfunktion: Prioritäten neu nummerieren (1, 2, 3, ...)
+  const renumberPriorities = (sortDirs: SortDirection[]): SortDirection[] => {
+    return sortDirs
+      .sort((a, b) => a.priority - b.priority)
+      .map((sd, index) => ({ ...sd, priority: index + 1 }));
+  };
+  
+  // Hilfsfunktion: Sortierrichtung für eine Zeile finden
+  const getSortDirectionForIndex = (index: number): SortDirection | undefined => {
+    return sortDirections.find(sd => sd.conditionIndex === index);
+  };
   
   const handleConditionChange = (index: number, newCondition: FilterCondition) => {
     const newConditions = [...conditions];
+    const oldCondition = newConditions[index];
     newConditions[index] = newCondition;
     setConditions(newConditions);
+    
+    // Wenn sich die Spalte geändert hat, aktualisiere Sortierrichtungen
+    if (oldCondition.column !== newCondition.column) {
+      let newSortDirections = [...sortDirections];
+      
+      // Entferne Sortierrichtung für diese Zeile (wenn vorhanden)
+      if (oldCondition.column) {
+        const oldSortDirIndex = newSortDirections.findIndex(sd => sd.conditionIndex === index);
+        if (oldSortDirIndex >= 0) {
+          newSortDirections.splice(oldSortDirIndex, 1);
+        }
+      }
+      
+      // Setze Standard-Sortierrichtung für neue Spalte (nur wenn Spalte ausgewählt)
+      if (newCondition.column && newCondition.column !== '') {
+        // Finde die höchste Priorität
+        const maxPriority = newSortDirections.length > 0 
+          ? Math.max(...newSortDirections.map(sd => sd.priority))
+          : 0;
+        
+        // Füge neue Sortierrichtung hinzu (mit conditionIndex)
+        newSortDirections.push({
+          column: newCondition.column,
+          direction: 'asc',
+          priority: maxPriority + 1,
+          conditionIndex: index
+        });
+      }
+      
+      // Prioritäten neu nummerieren
+      newSortDirections = renumberPriorities(newSortDirections);
+      
+      setSortDirections(newSortDirections);
+      if (onSortDirectionsChange) {
+        onSortDirectionsChange(newSortDirections);
+      }
+    }
   };
   
   const handleOperatorChange = (index: number, newOperator: 'AND' | 'OR') => {
@@ -117,6 +187,87 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       newOperators.splice(index - 1, 1);
       setLogicalOperators(newOperators);
     }
+    
+    // Entferne Sortierrichtung für diese Zeile und aktualisiere Indizes
+    let newSortDirections = sortDirections
+      .filter(sd => sd.conditionIndex !== index) // Entferne Sortierrichtung für gelöschte Zeile
+      .map(sd => {
+        // Aktualisiere conditionIndex für alle Zeilen nach der gelöschten
+        if (sd.conditionIndex > index) {
+          return { ...sd, conditionIndex: sd.conditionIndex - 1 };
+        }
+        return sd;
+      });
+    
+    // Prioritäten neu nummerieren
+    newSortDirections = renumberPriorities(newSortDirections);
+    
+    setSortDirections(newSortDirections);
+    if (onSortDirectionsChange) {
+      onSortDirectionsChange(newSortDirections);
+    }
+  };
+  
+  const handleSortDirectionChange = (index: number, direction: 'asc' | 'desc') => {
+    const condition = conditions[index];
+    if (condition && condition.column) {
+      let newSortDirections = [...sortDirections];
+      const existingIndex = newSortDirections.findIndex(sd => sd.conditionIndex === index);
+      
+      if (existingIndex >= 0) {
+        // Aktualisiere bestehende Sortierrichtung
+        newSortDirections[existingIndex] = {
+          ...newSortDirections[existingIndex],
+          direction
+        };
+      } else {
+        // Erstelle neue Sortierrichtung
+        const maxPriority = newSortDirections.length > 0 
+          ? Math.max(...newSortDirections.map(sd => sd.priority))
+          : 0;
+        newSortDirections.push({
+          column: condition.column,
+          direction,
+          priority: maxPriority + 1,
+          conditionIndex: index
+        });
+        // Prioritäten neu nummerieren
+        newSortDirections = renumberPriorities(newSortDirections);
+      }
+      
+      setSortDirections(newSortDirections);
+      if (onSortDirectionsChange) {
+        onSortDirectionsChange(newSortDirections);
+      }
+    }
+  };
+  
+  const handlePriorityChange = (index: number, newPriority: number) => {
+    const condition = conditions[index];
+    if (condition && condition.column) {
+      let newSortDirections = [...sortDirections];
+      const existingIndex = newSortDirections.findIndex(sd => sd.conditionIndex === index);
+      
+      if (existingIndex >= 0) {
+        const currentPriority = newSortDirections[existingIndex].priority;
+        
+        // Tausche Prioritäten mit der anderen Zeile
+        const otherIndex = newSortDirections.findIndex(sd => sd.priority === newPriority);
+        if (otherIndex >= 0) {
+          newSortDirections[otherIndex].priority = currentPriority;
+        }
+        
+        newSortDirections[existingIndex].priority = newPriority;
+        
+        // Prioritäten neu nummerieren
+        newSortDirections = renumberPriorities(newSortDirections);
+        
+        setSortDirections(newSortDirections);
+        if (onSortDirectionsChange) {
+          onSortDirectionsChange(newSortDirections);
+        }
+      }
+    }
   };
   
   const handleApplyFilters = () => {
@@ -128,6 +279,10 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   const handleResetFilters = () => {
     setConditions([{ column: '', operator: 'equals', value: null }]);
     setLogicalOperators([]);
+    setSortDirections([]);
+    if (onSortDirectionsChange) {
+      onSortDirectionsChange([]);
+    }
     onReset();
   };
 
@@ -176,7 +331,8 @@ const FilterPane: React.FC<FilterPaneProps> = ({
           tableId,
           name: filterName,
           conditions: validConditions,
-          operators: logicalOperators
+          operators: logicalOperators,
+          sortDirections: sortDirections
         }
       );
       
@@ -204,6 +360,41 @@ const FilterPane: React.FC<FilterPaneProps> = ({
               columns={columns}
               isFirst={index === 0}
               isLast={index === conditions.length - 1}
+              sortDirection={(() => {
+                const sortDir = getSortDirectionForIndex(index);
+                return sortDir ? sortDir.direction : undefined;
+              })()}
+              sortPriority={(() => {
+                const sortDir = getSortDirectionForIndex(index);
+                return sortDir ? sortDir.priority : undefined;
+              })()}
+              onSortDirectionChange={condition.column && condition.column !== '' ? (direction) => {
+                handleSortDirectionChange(index, direction);
+              } : undefined}
+              onPriorityChange={(() => {
+                const sortDir = getSortDirectionForIndex(index);
+                if (sortDir) {
+                  return (newPriority: number) => handlePriorityChange(index, newPriority);
+                }
+                return undefined;
+              })()}
+              canMoveUp={(() => {
+                const sortDir = getSortDirectionForIndex(index);
+                if (sortDir && sortDir.priority > 1) {
+                  return true;
+                }
+                return false;
+              })()}
+              canMoveDown={(() => {
+                const sortDir = getSortDirectionForIndex(index);
+                if (sortDir) {
+                  const maxPriority = sortDirections.length > 0 
+                    ? Math.max(...sortDirections.map(sd => sd.priority))
+                    : 0;
+                  return sortDir.priority < maxPriority;
+                }
+                return false;
+              })()}
             />
             
             {/* Operator zwischen Bedingungen einfügen (aber nicht nach der letzten) */}

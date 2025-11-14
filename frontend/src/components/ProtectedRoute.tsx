@@ -21,7 +21,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     organizationRequired = false 
 }) => {
     const { user, isLoading } = useAuth();
-    const { hasPermission, canViewOrganization, loading } = usePermissions();
+    const { hasPermission, canViewOrganization, isProfileComplete, loading } = usePermissions();
     const location = useLocation();
     
     // Kombinierter Loading-Check (Auth + Permissions)
@@ -32,6 +32,20 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Authentifizierung prüfen
     if (!user) {
         return <Navigate to="/login" replace state={{ from: location }} />;
+    }
+    
+    // Profilvollständigkeit prüfen (Ausnahme: Profil-Seite selbst)
+    if (location.pathname !== '/profile' && !isProfileComplete()) {
+        return (
+            <Navigate 
+                to="/profile" 
+                replace 
+                state={{ 
+                    from: location,
+                    message: 'Bitte vervollständigen Sie zuerst Ihr Profil'
+                }} 
+            />
+        );
     }
     
     // Organisationszugriff prüfen (falls erforderlich)

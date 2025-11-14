@@ -41,6 +41,13 @@ export const startWorktime = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Benutzer nicht gefunden' });
     }
 
+    // Prüfe ob bankDetails ausgefüllt ist (erforderlich für Zeiterfassung)
+    if (!user.bankDetails || user.bankDetails.trim() === '') {
+      return res.status(403).json({ 
+        message: 'Bitte geben Sie zuerst Ihre Bankverbindung im Profil ein, bevor Sie die Zeiterfassung nutzen können.' 
+      });
+    }
+
     // Verwende direkt das aktuelle Datum oder das übergebene Startdatum
     const now = startTime ? new Date(startTime) : new Date();
     

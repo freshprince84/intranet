@@ -71,14 +71,16 @@ export const userApi = {
     }
   },
   update: (id: number, data: any) => apiClient.put(`/users/${id}`, data),
-  updateRoles: (id: number, roleIds: number[]) => apiClient.put(`/users/${id}/roles`, { roleIds })
+  updateRoles: (id: number, roleIds: number[]) => apiClient.put(`/users/${id}/roles`, { roleIds }),
+  updateBranches: (id: number, branchIds: number[]) => apiClient.put(`/users/${id}/branches`, { branchIds })
 };
 
 // Role API
 export const roleApi = {
-  getAll: () => {
-    console.log('DEBUGAUSGABE API-Client: roleApi.getAll wird aufgerufen');
-    return apiClient.get('/roles')
+  getAll: (branchId?: number) => {
+    console.log('DEBUGAUSGABE API-Client: roleApi.getAll wird aufgerufen', branchId ? `mit branchId=${branchId}` : '');
+    const url = branchId ? `/roles?branchId=${branchId}` : '/roles';
+    return apiClient.get(url)
       .then(response => {
         console.log('DEBUGAUSGABE API-Client: roleApi.getAll erfolgreich:', response.data.length, 'Rollen geladen');
         return response;
@@ -129,7 +131,29 @@ export const roleApi = {
   delete: (id: number) => {
     console.log(`DEBUGAUSGABE API-Client: roleApi.delete(${id}) wird aufgerufen`);
     return apiClient.delete(`/roles/${id}`);
+  },
+  getRoleBranches: (id: number) => {
+    console.log(`DEBUGAUSGABE API-Client: roleApi.getRoleBranches(${id}) wird aufgerufen`);
+    return apiClient.get(`/roles/${id}/branches`);
+  },
+  updateRoleBranches: (id: number, data: { allBranches?: boolean; branchIds?: number[] }) => {
+    console.log(`DEBUGAUSGABE API-Client: roleApi.updateRoleBranches(${id}) wird aufgerufen mit:`, data);
+    return apiClient.put(`/roles/${id}/branches`, data);
   }
+};
+
+// Branch API
+export const branchApi = {
+  getAll: (roleId?: number) => {
+    const url = roleId ? `/branches?roleId=${roleId}` : '/branches';
+    return apiClient.get(url);
+  },
+  getById: (id: number) => apiClient.get(`/branches/${id}`),
+  getUserBranches: () => apiClient.get('/branches/user'),
+  switchBranch: (branchId: number) => apiClient.put('/branches/switch', { branchId }),
+  create: (data: any) => apiClient.post('/branches', data),
+  update: (id: number, data: any) => apiClient.put(`/branches/${id}`, data),
+  delete: (id: number) => apiClient.delete(`/branches/${id}`)
 };
 
 export default apiClient; 

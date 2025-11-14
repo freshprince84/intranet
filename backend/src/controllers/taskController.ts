@@ -7,6 +7,7 @@ import { PrismaClient, Prisma, TaskStatus, NotificationType } from '@prisma/clie
 import { validateTask, TaskData } from '../validation/taskValidation';
 import { createNotificationIfEnabled } from './notificationController';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
+import { LifecycleService } from '../services/lifecycleService';
 
 const prisma = new PrismaClient();
 
@@ -269,12 +270,55 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
                 },
                 qualityControl: {
                     select: userSelect
+                },
+                role: {
+                    select: { id: true, name: true, organizationId: true }
                 }
             }
         });
 
         if (!currentTask) {
             return res.status(404).json({ error: 'Task nicht gefunden' });
+        }
+
+        // Prüfe Task-Berechtigungen für User-Rolle
+        const userId = parseInt(req.userId as string, 10);
+        const roleId = parseInt((req as any).roleId as string, 10);
+        
+        // Prüfe ob User Admin ist
+        const userRole = await prisma.role.findUnique({
+            where: { id: roleId },
+            select: { name: true }
+        });
+        const isAdmin = userRole?.name.toLowerCase() === 'admin' || userRole?.name.toLowerCase().includes('administrator');
+
+        // User-Rolle: Kann nur eigene Tasks oder Tasks der eigenen Rolle "User" status-shiften
+        if (updateData.status && !isAdmin) {
+            // Prüfe ob User die User-Rolle in der Organisation hat
+            const userRoleInOrg = await prisma.role.findFirst({
+                where: {
+                    organizationId: currentTask.organizationId,
+                    name: 'User',
+                    users: {
+                        some: {
+                            userId: userId
+                        }
+                    }
+                }
+            });
+
+            // Erlaube Status-Update nur wenn:
+            // 1. Task ist dem User zugewiesen (responsibleId === userId), ODER
+            // 2. Task gehört zur User-Rolle und User hat diese Rolle
+            const canModify = 
+                currentTask.responsibleId === userId ||
+                (userRoleInOrg && currentTask.roleId === userRoleInOrg.id);
+
+            if (!canModify) {
+                return res.status(403).json({ 
+                    error: 'Sie können nur eigene Tasks oder Tasks Ihrer Rolle "User" bearbeiten' 
+                });
+            }
         }
         
         // Wenn nur der Status aktualisiert wird, keine vollständige Validierung
@@ -377,6 +421,99 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
                         changedAt: new Date()
                     }
                 });
+            }
+            
+            // Prüfe ob es ein Admin-Onboarding-Task ist und starte Lifecycle
+            // Erkenne Admin-Onboarding-Task am Titel-Pattern "Profil vervollständigen:"
+            // WICHTIG: Task ist der Admin-Rolle zugewiesen (roleId), daher ist responsibleId = null
+            // Der Onboarding-User wird aus dem Link in der description extrahiert: userId=XXX
+            if ((updateData.status === 'quality_control' || updateData.status === 'done') && 
+                task.title.includes('Profil vervollständigen:') && 
+                task.organizationId) {
+                try {
+                    // Extrahiere userId aus description (Link: /organization?tab=users&userId=XXX)
+                    const userIdMatch = task.description?.match(/userId=(\d+)/);
+                    if (!userIdMatch) {
+                        console.log('[updateTask] Konnte userId nicht aus Task-Description extrahieren');
+                    } else {
+                        const onboardingUserId = parseInt(userIdMatch[1], 10);
+                    
+                    // Prüfe ob User contract, salary, normalWorkingHours hat
+                    const onboardingUser = await prisma.user.findUnique({
+                        where: { id: onboardingUserId },
+                        select: {
+                            id: true,
+                            contract: true,
+                            salary: true,
+                            normalWorkingHours: true
+                        }
+                    });
+
+                    if (onboardingUser) {
+                        // Prüfe ob alle Felder ausgefüllt sind
+                        const hasContract = onboardingUser.contract && onboardingUser.contract.trim() !== '';
+                        const hasSalary = onboardingUser.salary !== null && onboardingUser.salary !== undefined;
+                        const hasNormalWorkingHours = onboardingUser.normalWorkingHours !== null && onboardingUser.normalWorkingHours !== undefined;
+
+                        // Nur wenn Status "done" UND alle Felder ausgefüllt sind, starte Lifecycle
+                        if (updateData.status === 'done' && hasContract && hasSalary && hasNormalWorkingHours) {
+                            console.log(`[updateTask] Starte Lifecycle für User ${onboardingUserId} nach Admin-Onboarding`);
+                            await LifecycleService.startLifecycleAfterOnboarding(onboardingUserId, task.organizationId);
+                            
+                            // Benachrichtigung an User
+                            await createNotificationIfEnabled({
+                                userId: onboardingUserId,
+                                title: 'Onboarding abgeschlossen',
+                                message: 'Ihr Onboarding wurde abgeschlossen. Sie können nun alle Funktionen nutzen.',
+                                type: NotificationType.user,
+                                relatedEntityId: onboardingUserId,
+                                relatedEntityType: 'update'
+                            });
+                        } else if (updateData.status === 'quality_control' && (!hasContract || !hasSalary || !hasNormalWorkingHours)) {
+                            console.log(`[updateTask] Quality-Control-Status gesetzt, aber nicht alle Felder ausgefüllt für User ${onboardingUserId}`);
+                        }
+                    }
+                    }
+                } catch (lifecycleError) {
+                    console.error('[updateTask] Fehler beim Starten des Lifecycle:', lifecycleError);
+                    // Fehler blockiert nicht die Task-Aktualisierung
+                }
+            }
+
+            // Prüfe ob es ein BankDetails-To-Do ist
+            // Erkenne BankDetails-To-Do am Titel-Pattern "Bankverbindung eingeben"
+            // Task ist dem User zugewiesen (responsibleId = userId)
+            if ((updateData.status === 'quality_control' || updateData.status === 'done') && 
+                task.title.includes('Bankverbindung eingeben') && 
+                task.responsibleId) {
+                try {
+                    const bankDetailsUserId = task.responsibleId;
+                    
+                    // Prüfe ob User bankDetails hat
+                    const bankDetailsUser = await prisma.user.findUnique({
+                        where: { id: bankDetailsUserId },
+                        select: {
+                            id: true,
+                            bankDetails: true
+                        }
+                    });
+
+                    if (bankDetailsUser) {
+                        // Prüfe ob bankDetails ausgefüllt ist
+                        const hasBankDetails = bankDetailsUser.bankDetails && bankDetailsUser.bankDetails.trim() !== '';
+
+                        // Nur wenn Status "done" UND bankDetails ausgefüllt ist, Task als erledigt markieren
+                        if (updateData.status === 'done' && hasBankDetails) {
+                            console.log(`[updateTask] BankDetails-To-Do erledigt für User ${bankDetailsUserId}`);
+                            // Task ist bereits auf "done" gesetzt, keine weitere Aktion nötig
+                        } else if (updateData.status === 'quality_control' && !hasBankDetails) {
+                            console.log(`[updateTask] Quality-Control-Status gesetzt, aber bankDetails nicht ausgefüllt für User ${bankDetailsUserId}`);
+                        }
+                    }
+                } catch (bankDetailsError) {
+                    console.error('[updateTask] Fehler bei BankDetails-To-Do-Prüfung:', bankDetailsError);
+                    // Fehler blockiert nicht die Task-Aktualisierung
+                }
             }
             
             // Benachrichtigung für den Verantwortlichen, nur wenn ein Benutzer zugewiesen ist

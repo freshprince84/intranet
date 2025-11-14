@@ -121,7 +121,37 @@ export const uploadMedia = async (req: Request, res: Response) => {
             RETURNING *
         `;
         
-        res.status(201).json(media[0]);
+        const mediaData = media[0];
+        
+        // Markdown-Link zum Artikelinhalt hinzufügen
+        // Verwende den bereits geladenen Artikel (content ist in SELECT * enthalten)
+        if (article && Array.isArray(article) && article.length > 0) {
+            const currentContent = article[0].content || '';
+            const mediaUrl = `/api/cerebro/media/${mediaData.id}/file`;
+            
+            // Markdown-Link basierend auf Dateityp erstellen
+            let markdownLink = '';
+            if (req.file.mimetype.startsWith('image/')) {
+                markdownLink = `\n\n![${req.file.originalname}](${mediaUrl})`;
+            } else if (req.file.mimetype === 'application/pdf') {
+                markdownLink = `\n\n[📄 ${req.file.originalname}](${mediaUrl})`;
+            } else if (req.file.mimetype.startsWith('video/')) {
+                markdownLink = `\n\n[🎬 ${req.file.originalname}](${mediaUrl})`;
+            } else {
+                markdownLink = `\n\n[📎 ${req.file.originalname}](${mediaUrl})`;
+            }
+            
+            // Link zum Inhalt hinzufügen
+            const updatedContent = currentContent + markdownLink;
+            
+            await prisma.$queryRaw`
+                UPDATE "CerebroCarticle"
+                SET content = ${updatedContent}, "updatedAt" = NOW()
+                WHERE id = ${articleId}
+            `;
+        }
+        
+        res.status(201).json(mediaData);
     } catch (error) {
         console.error('Fehler beim Hochladen der Mediendatei:', error);
         
@@ -197,6 +227,63 @@ export const getMediaById = async (req: Request, res: Response) => {
         }
         
         res.status(200).json(media[0]);
+    } catch (error) {
+        console.error('Fehler beim Abrufen der Mediendatei:', error);
+        res.status(500).json({ message: 'Fehler beim Abrufen der Mediendatei' });
+    }
+};
+
+/**
+ * Mediendatei als Datei abrufen (für Anzeige/Download)
+ */
+export const getMediaFile = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const mediaId = parseInt(id, 10);
+        
+        if (isNaN(mediaId)) {
+            return res.status(400).json({ message: 'Ungültige Medien-ID' });
+        }
+        
+        // Mediendatei abrufen
+        const media = await prisma.$queryRaw`
+            SELECT * FROM "CerebroMedia" WHERE id = ${mediaId}
+        `;
+        
+        if (!media || (Array.isArray(media) && media.length === 0)) {
+            return res.status(404).json({ message: 'Mediendatei nicht gefunden' });
+        }
+        
+        const mediaData = media[0];
+        const filePath = mediaData.path;
+        
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ message: 'Datei nicht gefunden' });
+        }
+        
+        // Entscheide basierend auf dem MIME-Typ, wie die Datei bereitgestellt wird
+        if (mediaData.mimetype.startsWith('image/')) {
+            // Bilder direkt anzeigen mit Cache-Kontrolle
+            res.setHeader('Content-Type', mediaData.mimetype);
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(mediaData.filename)}"`);
+            res.setHeader('Cache-Control', 'max-age=31536000'); // 1 Jahr cachen
+            fs.createReadStream(filePath).pipe(res);
+        } else if (mediaData.mimetype === 'application/pdf') {
+            // PDFs direkt anzeigen (für iframe-Vorschau)
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(mediaData.filename)}"`);
+            res.setHeader('Cache-Control', 'max-age=31536000'); // 1 Jahr cachen
+            fs.createReadStream(filePath).pipe(res);
+        } else if (mediaData.mimetype.startsWith('video/')) {
+            // Videos direkt anzeigen
+            res.setHeader('Content-Type', mediaData.mimetype);
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(mediaData.filename)}"`);
+            res.setHeader('Cache-Control', 'max-age=31536000'); // 1 Jahr cachen
+            fs.createReadStream(filePath).pipe(res);
+        } else {
+            // Andere Dateien als Download anbieten
+            res.download(filePath, mediaData.filename);
+        }
     } catch (error) {
         console.error('Fehler beim Abrufen der Mediendatei:', error);
         res.status(500).json({ message: 'Fehler beim Abrufen der Mediendatei' });

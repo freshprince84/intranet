@@ -274,6 +274,14 @@ export const API_ENDPOINTS = {
 };
 
 /**
+ * Generiert eine vollständige URL für ein Cerebro-Media
+ * Verwendet API_URL für korrekte URL-Generierung in Entwicklung und Produktion
+ */
+export const getCerebroMediaUrl = (mediaId: number): string => {
+    return `${API_URL}/cerebro/media/${mediaId}/file`;
+};
+
+/**
  * Generiert eine vollständige URL für ein Task-Attachment
  * Verwendet API_URL für korrekte URL-Generierung in Entwicklung und Produktion
  */

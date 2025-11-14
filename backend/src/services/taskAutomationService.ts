@@ -733,5 +733,276 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
       throw error;
     }
   }
+
+  /**
+   * Erstellt automatisch einen Admin-Onboarding-Task für Kolumbien
+   * Wird aufgerufen, wenn ein User einer Organisation in Kolumbien beitritt und ein Dokument hochlädt
+   * 
+   * @param userId - ID des Users
+   * @param organizationId - ID der Organisation
+   * @returns Erstellter Task oder null
+   */
+  static async createAdminOnboardingTask(userId: number, organizationId: number) {
+    try {
+      // Prüfe: Organisation in Kolumbien?
+      const organization = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { country: true, settings: true }
+      });
+      
+      if (organization?.country !== 'CO') {
+        console.log(`[createAdminOnboardingTask] Organisation ${organizationId} ist nicht in Kolumbien, überspringe Task-Erstellung`);
+        return null; // Nur für Kolumbien
+      }
+      
+      // Hole User-Daten
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          branches: {
+            take: 1,
+            include: { branch: true }
+          }
+        }
+      });
+      
+      if (!user) {
+        throw new Error('User nicht gefunden');
+      }
+      
+      // Hole Admin-Rolle (nutze bestehende Logik aus createOnboardingTasks)
+      const settings = organization.settings as any;
+      const lifecycleRoles = settings?.lifecycleRoles;
+      let adminRoleId: number | null = lifecycleRoles?.adminRoleId || null;
+      
+      // Fallback: Suche nach Admin-Rolle
+      if (!adminRoleId) {
+        const adminRole = await prisma.role.findFirst({
+          where: {
+            organizationId: organizationId,
+            name: { contains: 'Admin', mode: 'insensitive' }
+          }
+        });
+        if (adminRole) {
+          adminRoleId = adminRole.id;
+        }
+      }
+      
+      if (!adminRoleId) {
+        console.warn(`[createAdminOnboardingTask] Keine Admin-Rolle gefunden für Organisation ${organizationId}`);
+        return null;
+      }
+      
+      // Hole Admin-User für QC (nutze bestehende Logik)
+      let adminUserId: number | null = null;
+      if (adminRoleId) {
+        const adminUser = await prisma.user.findFirst({
+          where: {
+            roles: {
+              some: {
+                roleId: adminRoleId,
+                lastUsed: true
+              }
+            }
+          }
+        });
+        if (adminUser) {
+          adminUserId = adminUser.id;
+        }
+      }
+      
+      // Hole Branch (nutze bestehende Logik)
+      let userBranch = user.branches[0]?.branch;
+      if (!userBranch) {
+        const firstOrgBranch = await prisma.branch.findFirst({
+          where: { organizationId },
+          orderBy: { id: 'asc' }
+        });
+        if (!firstOrgBranch) {
+          throw new Error('Organisation hat keine Niederlassung');
+        }
+        userBranch = firstOrgBranch;
+      }
+      
+      // Prüfe ob bereits ein Admin-Onboarding-Task existiert
+      const existingTask = await prisma.task.findFirst({
+        where: {
+          organizationId: organizationId,
+          title: {
+            contains: `Profil vervollständigen: ${user.firstName || ''} ${user.lastName || ''}`.trim() || `Profil vervollständigen: User ${userId}`
+          }
+        }
+      });
+      
+      if (existingTask) {
+        console.log(`[createAdminOnboardingTask] Admin-Onboarding-Task existiert bereits für User ${userId}`);
+        return existingTask;
+      }
+      
+      // Erstelle Task für Admin
+      // WICHTIG: Task ist der Admin-Rolle zugewiesen (roleId), daher kann responsibleId NICHT gesetzt werden
+      // Der Onboarding-User wird im Link in der description gespeichert: userId=XXX
+      const task = await prisma.task.create({
+        data: {
+          title: `Profil vervollständigen: ${user.firstName || ''} ${user.lastName || ''}`.trim() || `Profil vervollständigen: User ${userId}`,
+          description: `Bitte vervollständigen Sie das Profil für ${user.firstName || ''} ${user.lastName || ''}:\n- Contrato\n- Salario\n- Horas normales de trabajo\n\nLink: /organization?tab=users&userId=${userId}`,
+          status: 'open',
+          roleId: adminRoleId, // Zugewiesen an Admin-Rolle (entweder roleId ODER responsibleId, nicht beides!)
+          qualityControlId: adminUserId || userId, // QC = Admin (Fallback: User selbst)
+          branchId: userBranch.id,
+          organizationId: organizationId
+        }
+      });
+      
+      // Notification an Admin (nutze bestehende Funktion)
+      if (adminUserId) {
+        await createNotificationIfEnabled({
+          userId: adminUserId,
+          title: 'Neues Onboarding-To-Do',
+          message: `Profil vervollständigen für ${user.firstName || ''} ${user.lastName || ''}`,
+          type: NotificationType.task,
+          relatedEntityId: task.id,
+          relatedEntityType: 'task'
+        });
+      }
+      
+      console.log(`[createAdminOnboardingTask] Admin-Onboarding-Task erstellt: Task ID ${task.id} für User ${userId}`);
+      return task;
+    } catch (error) {
+      console.error('[createAdminOnboardingTask] Fehler:', error);
+      // Logge Fehler, aber breche nicht ab
+      return null;
+    }
+  }
+
+  /**
+   * Erstellt automatisch ein To-Do für User, um bankDetails einzugeben
+   * Wird aufgerufen nach Organisation-Beitritt
+   * User muss bankDetails eingeben, bevor Zeiterfassung möglich ist
+   */
+  static async createUserBankDetailsTask(userId: number, organizationId: number) {
+    try {
+      // Hole User-Daten
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          branches: {
+            take: 1,
+            include: { branch: true }
+          }
+        }
+      });
+      
+      if (!user) {
+        throw new Error('User nicht gefunden');
+      }
+
+      // Prüfe ob User bereits bankDetails hat
+      if (user.bankDetails && user.bankDetails.trim() !== '') {
+        console.log(`[createUserBankDetailsTask] User ${userId} hat bereits bankDetails, überspringe Task-Erstellung`);
+        return null;
+      }
+
+      // Hole Branch (nutze bestehende Logik)
+      let userBranch = user.branches[0]?.branch;
+      if (!userBranch) {
+        const firstOrgBranch = await prisma.branch.findFirst({
+          where: { organizationId },
+          orderBy: { id: 'asc' }
+        });
+        if (!firstOrgBranch) {
+          throw new Error('Organisation hat keine Niederlassung');
+        }
+        userBranch = firstOrgBranch;
+      }
+
+      // Hole Admin-User für QC (nutze bestehende Logik aus createAdminOnboardingTask)
+      const organization = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { settings: true }
+      });
+
+      const settings = organization?.settings as any;
+      const lifecycleRoles = settings?.lifecycleRoles;
+      let adminRoleId: number | null = lifecycleRoles?.adminRoleId || null;
+      
+      // Fallback: Suche nach Admin-Rolle
+      if (!adminRoleId) {
+        const adminRole = await prisma.role.findFirst({
+          where: {
+            organizationId: organizationId,
+            name: { contains: 'Admin', mode: 'insensitive' }
+          }
+        });
+        if (adminRole) {
+          adminRoleId = adminRole.id;
+        }
+      }
+
+      let adminUserId: number | null = null;
+      if (adminRoleId) {
+        const adminUser = await prisma.user.findFirst({
+          where: {
+            roles: {
+              some: {
+                roleId: adminRoleId,
+                lastUsed: true
+              }
+            }
+          }
+        });
+        if (adminUser) {
+          adminUserId = adminUser.id;
+        }
+      }
+
+      // Prüfe ob bereits ein BankDetails-Task existiert
+      const existingTask = await prisma.task.findFirst({
+        where: {
+          organizationId: organizationId,
+          responsibleId: userId,
+          title: {
+            contains: 'Bankverbindung eingeben'
+          }
+        }
+      });
+      
+      if (existingTask) {
+        console.log(`[createUserBankDetailsTask] BankDetails-Task existiert bereits für User ${userId}`);
+        return existingTask;
+      }
+      
+      // Erstelle Task für User
+      // WICHTIG: Task ist dem User zugewiesen (responsibleId), daher kann roleId NICHT gesetzt werden
+      const task = await prisma.task.create({
+        data: {
+          title: 'Bankverbindung eingeben',
+          description: `Bitte geben Sie Ihre Bankverbindung im Profil ein, bevor Sie die Zeiterfassung nutzen können.\n\nLink: /profile`,
+          status: 'open',
+          responsibleId: userId, // User ist verantwortlich für sein eigenes To-Do
+          qualityControlId: adminUserId || userId, // QC = Admin (Fallback: User selbst)
+          branchId: userBranch.id,
+          organizationId: organizationId
+        }
+      });
+      
+      // Notification an User
+      await createNotificationIfEnabled({
+        userId: userId,
+        title: 'Bankverbindung eingeben',
+        message: 'Bitte geben Sie Ihre Bankverbindung im Profil ein, bevor Sie die Zeiterfassung nutzen können.',
+        type: NotificationType.task,
+        relatedEntityId: task.id,
+        relatedEntityType: 'task'
+      });
+      
+      console.log(`[createUserBankDetailsTask] BankDetails-Task erstellt: Task ID ${task.id} für User ${userId}`);
+      return task;
+    } catch (error) {
+      console.error('[createUserBankDetailsTask] Fehler:', error);
+      // Logge Fehler, aber breche nicht ab
+      return null;
+    }
+  }
 }
 

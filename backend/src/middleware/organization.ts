@@ -8,6 +8,7 @@ declare global {
   namespace Express {
     interface Request {
       organizationId?: number;
+      branchId?: number;
       userRole?: any;
     }
   }
@@ -45,6 +46,22 @@ export const organizationMiddleware = async (req: Request, res: Response, next: 
     // WICHTIG: Kann NULL sein für standalone User (Hamburger-Rolle)
     req.organizationId = userRole.role.organizationId;
     req.userRole = userRole;
+
+    // Hole aktive Branch des Users
+    const userBranch = await prisma.usersBranches.findFirst({
+      where: {
+        userId: Number(userId),
+        lastUsed: true
+      },
+      select: {
+        branchId: true
+      }
+    });
+
+    // Setze branchId im Request (kann undefined sein, wenn User keine Branch hat)
+    if (userBranch) {
+      req.branchId = userBranch.branchId;
+    }
 
     next();
   } catch (error) {

@@ -55,20 +55,21 @@ router.get('/carticles/:id', cerebroController.getArticleById);
 router.get('/carticles/slug/:slug', cerebroController.getArticleBySlug);
 
 // Geschützte Routen
-router.post('/carticles', authenticateToken, checkPermission('cerebro', 'write'), cerebroController.createArticle);
-router.put('/carticles/:id', authenticateToken, checkPermission('cerebro', 'write'), cerebroController.updateArticle);
-router.delete('/carticles/:id', authenticateToken, checkPermission('cerebro', 'write'), cerebroController.deleteArticle);
+router.post('/carticles', authenticateToken, checkPermission('cerebro', 'write', 'cerebro'), cerebroController.createArticle);
+router.put('/carticles/:id', authenticateToken, checkPermission('cerebro', 'write', 'cerebro'), cerebroController.updateArticle);
+router.delete('/carticles/:id', authenticateToken, checkPermission('cerebro', 'write', 'cerebro'), cerebroController.deleteArticle);
 
 // -------------------- Medien-Routen --------------------
 
 // Öffentliche Routen
 router.get('/media/carticle/:carticleId', cerebroMediaController.getMediaByArticle);
 router.get('/media/:id', cerebroMediaController.getMediaById);
+router.get('/media/:id/file', cerebroMediaController.getMediaFile);
 
 // Geschützte Routen
-router.post('/media', authenticateToken, checkPermission('cerebro_media', 'write'), upload.single('file'), cerebroMediaController.uploadMedia);
-router.put('/media/:id', authenticateToken, checkPermission('cerebro_media', 'write'), cerebroMediaController.updateMedia);
-router.delete('/media/:id', authenticateToken, checkPermission('cerebro_media', 'write'), cerebroMediaController.deleteMedia);
+router.post('/media', authenticateToken, checkPermission('cerebro_media', 'write', 'cerebro'), upload.single('file'), cerebroMediaController.uploadMedia);
+router.put('/media/:id', authenticateToken, checkPermission('cerebro_media', 'write', 'cerebro'), cerebroMediaController.updateMedia);
+router.delete('/media/:id', authenticateToken, checkPermission('cerebro_media', 'write', 'cerebro'), cerebroMediaController.deleteMedia);
 
 // -------------------- Externe Links Routen --------------------
 
@@ -78,8 +79,8 @@ router.get('/links/:id', cerebroExternalLinksController.getLinkById);
 router.get('/links/preview', cerebroExternalLinksController.getLinkPreview);
 
 // Geschützte Routen
-router.post('/links', authenticateToken, checkPermission('cerebro_links', 'write'), cerebroExternalLinksController.createExternalLink);
-router.put('/links/:id', authenticateToken, checkPermission('cerebro_links', 'write'), cerebroExternalLinksController.updateLink);
-router.delete('/links/:id', authenticateToken, checkPermission('cerebro_links', 'write'), cerebroExternalLinksController.deleteLink);
+router.post('/links', authenticateToken, checkPermission('cerebro_links', 'write', 'cerebro'), cerebroExternalLinksController.createExternalLink);
+router.put('/links/:id', authenticateToken, checkPermission('cerebro_links', 'write', 'cerebro'), cerebroExternalLinksController.updateLink);
+router.delete('/links/:id', authenticateToken, checkPermission('cerebro_links', 'write', 'cerebro'), cerebroExternalLinksController.deleteLink);
 
 export default router; 

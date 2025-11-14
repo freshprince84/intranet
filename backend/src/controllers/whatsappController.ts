@@ -1,6 +1,11 @@
 import { Request, Response } from 'express';
+import { PrismaClient } from '@prisma/client';
 import { WhatsAppMessageParser, ParsedReservationMessage } from '../services/whatsappMessageParser';
 import { WhatsAppReservationService } from '../services/whatsappReservationService';
+import { WhatsAppMessageHandler } from '../services/whatsappMessageHandler';
+import { WhatsAppService } from '../services/whatsappService';
+
+const prisma = new PrismaClient();
 
 /**
  * POST /api/whatsapp/webhook
@@ -11,11 +16,22 @@ import { WhatsAppReservationService } from '../services/whatsappReservationServi
  */
 export const handleWebhook = async (req: Request, res: Response) => {
   try {
+    console.log('[WhatsApp Webhook] Webhook-Anfrage erhalten:', {
+      method: req.method,
+      path: req.path,
+      headers: {
+        'content-type': req.headers['content-type'],
+        'user-agent': req.headers['user-agent']
+      }
+    });
+
     // WhatsApp Business API Webhook-Verifizierung (GET Request)
     if (req.method === 'GET') {
       const mode = req.query['hub.mode'];
       const token = req.query['hub.verify_token'];
       const challenge = req.query['hub.challenge'];
+
+      console.log('[WhatsApp Webhook] GET Request - Verifizierung:', { mode, token: token ? '***' : 'fehlt', challenge });
 
       // TODO: Webhook-Verifizierungstoken aus Settings laden
       const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || 'your_verify_token';
@@ -24,12 +40,14 @@ export const handleWebhook = async (req: Request, res: Response) => {
         console.log('[WhatsApp Webhook] Webhook verifiziert');
         return res.status(200).send(challenge);
       } else {
+        console.warn('[WhatsApp Webhook] Verifizierung fehlgeschlagen:', { mode, tokenMatch: token === verifyToken });
         return res.status(403).send('Forbidden');
       }
     }
 
     // POST Request: Eingehende Nachricht
     const body = req.body;
+    console.log('[WhatsApp Webhook] POST Request Body:', JSON.stringify(body, null, 2));
 
     // WhatsApp Business API Format
     // https://developers.facebook.com/docs/whatsapp/cloud-api/webhooks/components
@@ -41,11 +59,29 @@ export const handleWebhook = async (req: Request, res: Response) => {
       // Eingehende Nachricht
       if (value?.messages?.[0]) {
         const message = value.messages[0];
+        const fromNumber = message.from; // Telefonnummer des Absenders
         const messageText = message.text?.body || '';
+        const mediaUrl = message.image?.id || message.document?.id;
+        const phoneNumberId = value.metadata?.phone_number_id;
 
-        console.log('[WhatsApp Webhook] Eingehende Nachricht:', messageText);
+        console.log('[WhatsApp Webhook] Eingehende Nachricht:', {
+          from: fromNumber,
+          text: messageText,
+          phoneNumberId: phoneNumberId
+        });
 
-        // Prüfe ob es eine LobbyPMS Reservierungsnachricht ist
+        // 1. Identifiziere Branch via Phone Number ID
+        const branchId = await identifyBranchFromPhoneNumberId(phoneNumberId);
+
+        if (!branchId) {
+          console.error('[WhatsApp Webhook] Branch nicht gefunden für Phone Number ID:', phoneNumberId);
+          // Trotzdem 200 zurückgeben, damit WhatsApp nicht erneut sendet
+          return res.status(200).json({ success: false, error: 'Branch nicht gefunden' });
+        }
+
+        console.log('[WhatsApp Webhook] Branch identifiziert:', branchId);
+
+        // 2. Prüfe ob es eine LobbyPMS Reservierungsnachricht ist (bestehende Funktionalität)
         const parsedMessage = WhatsAppMessageParser.parseReservationMessage(messageText);
 
         if (parsedMessage) {
@@ -63,10 +99,42 @@ export const handleWebhook = async (req: Request, res: Response) => {
             // Trotzdem 200 zurückgeben, damit WhatsApp nicht erneut sendet
             return res.status(200).json({ success: false, error: 'Fehler beim Erstellen der Reservierung' });
           }
-        } else {
-          console.log('[WhatsApp Webhook] Keine LobbyPMS Reservierungsnachricht erkannt');
-          // Normale Nachricht, nicht verarbeiten
-          return res.status(200).json({ success: true, message: 'Nachricht nicht verarbeitet' });
+        }
+
+        // 3. Verarbeite Nachricht via Message Handler (neue Funktionalität)
+        try {
+          console.log('[WhatsApp Webhook] Rufe Message Handler auf...');
+          const response = await WhatsAppMessageHandler.handleIncomingMessage(
+            fromNumber,
+            messageText,
+            branchId,
+            mediaUrl
+          );
+
+          console.log('[WhatsApp Webhook] Antwort generiert:', response.substring(0, 100) + '...');
+          console.log('[WhatsApp Webhook] Vollständige Antwort:', response);
+
+          // 4. Sende Antwort
+          console.log('[WhatsApp Webhook] Erstelle WhatsApp Service für Branch', branchId);
+          const whatsappService = await WhatsAppService.getServiceForBranch(branchId);
+          
+          console.log('[WhatsApp Webhook] Sende Antwort an', fromNumber);
+          await whatsappService.sendMessage(fromNumber, response);
+
+          console.log('[WhatsApp Webhook] ✅ Antwort erfolgreich gesendet');
+
+          return res.status(200).json({ success: true, message: 'Nachricht verarbeitet und Antwort gesendet' });
+        } catch (error) {
+          console.error('[WhatsApp Webhook] ❌ Fehler bei Message Handler:', error);
+          if (error instanceof Error) {
+            console.error('[WhatsApp Webhook] Fehlermeldung:', error.message);
+            console.error('[WhatsApp Webhook] Stack:', error.stack);
+          }
+          // Trotzdem 200 zurückgeben, damit WhatsApp nicht erneut sendet
+          return res.status(200).json({ 
+            success: false, 
+            error: error instanceof Error ? error.message : 'Fehler bei der Verarbeitung' 
+          });
         }
       }
     }
@@ -83,4 +151,54 @@ export const handleWebhook = async (req: Request, res: Response) => {
     });
   }
 };
+
+/**
+ * Identifiziert Branch via Phone Number ID
+ * 
+ * 1. Prüft Phone Number Mapping
+ * 2. Fallback: Sucht Branch mit dieser phoneNumberId in Settings
+ */
+async function identifyBranchFromPhoneNumberId(phoneNumberId: string): Promise<number | null> {
+  try {
+    // 1. Prüfe Phone Number Mapping
+    const mapping = await prisma.whatsAppPhoneNumberMapping.findFirst({
+      where: { phoneNumberId },
+      select: { branchId: true }
+    });
+
+    if (mapping) {
+      console.log('[WhatsApp Webhook] Branch via Mapping gefunden:', mapping.branchId);
+      return mapping.branchId;
+    }
+
+    // 2. Fallback: Suche Branch mit dieser phoneNumberId in Settings
+    // Prisma unterstützt JSONB-Pfad-Suche nicht direkt, daher manuell
+    const branches = await prisma.branch.findMany({
+      where: {
+        whatsappSettings: { not: null }
+      },
+      select: {
+        id: true,
+        whatsappSettings: true
+      }
+    });
+
+    for (const branch of branches) {
+      if (branch.whatsappSettings) {
+        const settings = branch.whatsappSettings as any;
+        const whatsappSettings = settings?.whatsapp || settings;
+        if (whatsappSettings?.phoneNumberId === phoneNumberId) {
+          console.log('[WhatsApp Webhook] Branch via Settings gefunden:', branch.id);
+          return branch.id;
+        }
+      }
+    }
+
+    console.warn('[WhatsApp Webhook] Kein Branch gefunden für Phone Number ID:', phoneNumberId);
+    return null;
+  } catch (error) {
+    console.error('[WhatsApp Webhook] Fehler bei Branch-Identifikation:', error);
+    return null;
+  }
+}
 

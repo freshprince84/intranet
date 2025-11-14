@@ -122,8 +122,29 @@ export const createExternalLink = async (req: Request, res: Response) => {
             RETURNING *
         `;
         
+        const linkData = link[0];
+        
+        // Markdown-Link zum Artikelinhalt hinzufügen
+        // Verwende den bereits geladenen Artikel (content ist in SELECT * enthalten)
+        if (article && Array.isArray(article) && article.length > 0) {
+            const currentContent = article[0].content || '';
+            const linkTitle = title || metadata.title || url;
+            
+            // Markdown-Link erstellen
+            const markdownLink = `\n\n[🔗 ${linkTitle}](${url})`;
+            
+            // Link zum Inhalt hinzufügen
+            const updatedContent = currentContent + markdownLink;
+            
+            await prisma.$queryRaw`
+                UPDATE "CerebroCarticle"
+                SET content = ${updatedContent}, "updatedAt" = NOW()
+                WHERE id = ${parseInt(carticleId, 10)}
+            `;
+        }
+        
         res.status(201).json({
-            ...link[0],
+            ...linkData,
             metadata
         });
     } catch (error) {

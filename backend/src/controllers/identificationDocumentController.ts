@@ -3,6 +3,8 @@ import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import axios from 'axios';
+import { TaskAutomationService } from '../services/taskAutomationService';
 
 const prisma = new PrismaClient();
 
@@ -101,6 +103,126 @@ export const addDocument = async (req: Request, res: Response) => {
       const document = await prisma.identificationDocument.create({
         data: documentData
       });
+
+      // Automatische Extraktion und User-Update (nur wenn imageData vorhanden)
+      if (imageData || req.file) {
+        try {
+          // Konvertiere Datei zu base64, falls nötig
+          let imageBase64: string | null = null;
+          if (imageData) {
+            imageBase64 = imageData;
+          } else if (req.file) {
+            const fileBuffer = fs.readFileSync(req.file.path);
+            const mimeType = req.file.mimetype;
+            imageBase64 = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+          }
+
+          if (imageBase64) {
+            // Rufe Dokumentenerkennung auf
+            const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+            if (OPENAI_API_KEY) {
+              try {
+                const recognitionResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
+                  model: "gpt-4o",
+                  messages: [
+                    {
+                      role: "system",
+                      content: "Du bist ein Experte für Dokumentenerkennung. Extrahiere alle relevanten Informationen aus dem Ausweisdokument und gib die Daten in einem strukturierten JSON-Format zurück. Beachte folgende Felder: documentType (mögliche Werte: passport, national_id, driving_license, residence_permit, cedula_colombia), documentNumber, issueDate (ISO-Format YYYY-MM-DD), expiryDate (ISO-Format YYYY-MM-DD), issuingCountry, issuingAuthority, firstName, lastName, birthday (ISO-Format YYYY-MM-DD), gender (mögliche Werte: male, female, other oder null falls nicht erkennbar). Für kolumbianische Dokumente (Cédula): Extrahiere auch firstName, lastName, birthday und gender falls möglich."
+                    },
+                    {
+                      role: "user",
+                      content: [
+                        {
+                          type: "text",
+                          text: `Analysiere dieses Ausweisdokument und extrahiere alle relevanten Daten in ein strukturiertes JSON-Format. Es handelt sich um ein Dokument vom Typ: ${documentType}.`
+                        },
+                        {
+                          type: "image_url",
+                          image_url: { url: imageBase64 }
+                        }
+                      ]
+                    }
+                  ],
+                  max_tokens: 1000
+                }, {
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENAI_API_KEY}`
+                  }
+                });
+
+                const aiResponse = recognitionResponse.data.choices[0].message.content;
+                let recognizedData: any = {};
+                
+                try {
+                  if (aiResponse.trim().startsWith('{')) {
+                    recognizedData = JSON.parse(aiResponse);
+                  } else {
+                    const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/) || 
+                                      aiResponse.match(/```\n([\s\S]*?)\n```/) ||
+                                      aiResponse.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                      recognizedData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+                    }
+                  }
+                } catch (parseError) {
+                  console.error('Fehler beim Parsen der KI-Antwort:', parseError);
+                }
+
+                // Update User-Felder mit erkannten Daten
+                const userUpdateData: any = {};
+                if (recognizedData.firstName) userUpdateData.firstName = recognizedData.firstName;
+                if (recognizedData.lastName) userUpdateData.lastName = recognizedData.lastName;
+                if (recognizedData.birthday) userUpdateData.birthday = new Date(recognizedData.birthday);
+                if (recognizedData.gender && ['male', 'female', 'other'].includes(recognizedData.gender)) {
+                  userUpdateData.gender = recognizedData.gender;
+                }
+                if (recognizedData.documentNumber) userUpdateData.identificationNumber = recognizedData.documentNumber;
+
+                // Update User, falls Daten erkannt wurden
+                if (Object.keys(userUpdateData).length > 0) {
+                  await prisma.user.update({
+                    where: { id: userId },
+                    data: userUpdateData
+                  });
+                  console.log(`[addDocument] User ${userId} aktualisiert mit erkannten Daten:`, userUpdateData);
+                }
+
+                // Prüfe Organisation und erstelle Admin-Task für Kolumbien
+                const user = await prisma.user.findUnique({
+                  where: { id: userId },
+                  include: {
+                    roles: {
+                      include: {
+                        role: {
+                          include: {
+                            organization: {
+                              select: { id: true, country: true }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                });
+
+                // Finde Organisation des Users (erste Rolle mit Organisation)
+                const userOrganization = user?.roles.find(r => r.role.organization)?.role.organization;
+                if (userOrganization && userOrganization.country === 'CO') {
+                  // Erstelle Admin-Onboarding-Task
+                  await TaskAutomationService.createAdminOnboardingTask(userId, userOrganization.id);
+                }
+              } catch (recognitionError) {
+                console.error('[addDocument] Fehler bei automatischer Dokumentenerkennung:', recognitionError);
+                // Fehler blockiert nicht die Dokumentenerstellung
+              }
+            }
+          }
+        } catch (error) {
+          console.error('[addDocument] Fehler bei automatischer Verarbeitung:', error);
+          // Fehler blockiert nicht die Dokumentenerstellung
+        }
+      }
 
       res.status(201).json(document);
     });

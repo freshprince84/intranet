@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
-import { roleApi } from '../api/apiClient.ts';
+import { roleApi, branchApi } from '../api/apiClient.ts';
 import { Role, AccessLevel } from '../types/interfaces.ts';
 import { PencilIcon, TrashIcon, PlusIcon, FunnelIcon, XMarkIcon, CheckIcon, ArrowPathIcon, DocumentDuplicateIcon, ChevronDownIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
@@ -327,6 +327,25 @@ const RoleCard: React.FC<{
       {/* Beschreibung */}
       <p className="text-sm text-gray-600 dark:text-gray-400">{role.description || t('roles.noDescription')}</p>
       
+      {/* Branch-Zuweisungen */}
+      <div className="mt-2">
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          {role.allBranches ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300">
+              {t('roles.form.allBranches') || 'Alle Branches'}
+            </span>
+          ) : role.branches && role.branches.length > 0 ? (
+            <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300">
+              {role.branches.length} {t('roles.form.specificBranches') || 'Branches'}
+            </span>
+          ) : (
+            <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400">
+              {t('roles.form.noBranches') || 'Keine Branches'}
+            </span>
+          )}
+        </span>
+      </div>
+      
       {/* Berechtigungen - kompakt */}
       <div className="mt-2">
         <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">{t('roles.permissions')}:</h4>
@@ -463,6 +482,12 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   
+  // States für Branch-Zuweisungen
+  const [allBranches, setAllBranches] = useState<boolean>(true);
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
+  const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  
   // Neue State-Variablen für erweiterte Filterbedingungen
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogicalOperators, setFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
@@ -508,6 +533,19 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     };
   }, [isModalOpen, openSidepane, closeSidepane]);
 
+  // Funktion zum Laden der Branches
+  const fetchBranches = useCallback(async () => {
+    setLoadingBranches(true);
+    try {
+      const response = await branchApi.getAll();
+      setBranches(response.data);
+    } catch (error) {
+      console.error('Fehler beim Laden der Branches:', error);
+    } finally {
+      setLoadingBranches(false);
+    }
+  }, []);
+
   // Aktualisiere die fetchRoles-Funktion, um den neuen ErrorHandler zu nutzen
   const fetchRoles = useCallback(async () => {
     setLoading(true);
@@ -539,10 +577,25 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
     fetchRoles();
   }, [fetchRoles]);
 
+  // Branches beim Öffnen des Modals laden
+  useEffect(() => {
+    if (isModalOpen) {
+      fetchBranches();
+    }
+  }, [isModalOpen, fetchBranches]);
+
   // Speichern einer Rolle
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Validierung: Wenn allBranches = false, müssen Branches ausgewählt sein
+    if (!allBranches && selectedBranchIds.length === 0) {
+      handleError(t('roles.form.branchSelectionRequired') || 'Bitte wählen Sie mindestens eine Branch aus oder aktivieren Sie "Für alle Branches gültig"', {
+        component: 'RoleManagementTab'
+      });
+      return;
+    }
     
     if (!formData.name) {
       handleValidationError('Rollenname darf nicht leer sein', { name: 'Rollenname ist erforderlich' });
@@ -617,7 +670,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         const dataToSend = {
           name: formData.name,
           description: formData.description,
-          permissions: filteredPermissions
+          permissions: filteredPermissions,
+          allBranches: allBranches,
+          branchIds: allBranches ? [] : selectedBranchIds
         };
         
         console.log('DEBUGAUSGABE: Vor dem API-Aufruf roleApi.update');
@@ -680,7 +735,9 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
         const dataToSend = {
           name: formData.name,
           description: formData.description,
-          permissions: filteredPermissions
+          permissions: filteredPermissions,
+          allBranches: allBranches,
+          branchIds: allBranches ? [] : selectedBranchIds
         };
         
         console.log('DEBUGAUSGABE: Vor dem API-Aufruf roleApi.create');
@@ -857,7 +914,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   };
 
   // Rolle zum Bearbeiten vorbereiten
-  const prepareRoleForEditing = (role: Role) => {
+  const prepareRoleForEditing = async (role: Role) => {
     // Verhindere das Bearbeiten von geschützten Rollen
     if (isStandardRole(role.id, role.name)) {
       handleError('Geschützte Systemrollen können nicht bearbeitet werden', {
@@ -909,6 +966,20 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
       permissions: allPermissions
     });
     
+    // Lade Branch-Zuweisungen der Rolle
+    if (role.id) {
+      try {
+        const branchResponse = await roleApi.getRoleBranches(role.id);
+        const branchData = branchResponse.data;
+        setAllBranches(branchData.allBranches || false);
+        setSelectedBranchIds(branchData.branches?.map((b: any) => b.id) || []);
+      } catch (error) {
+        console.error('Fehler beim Laden der Branch-Zuweisungen:', error);
+        setAllBranches(true);
+        setSelectedBranchIds([]);
+      }
+    }
+    
     setEditingRole(role);
     setIsModalOpen(true);
   };
@@ -916,6 +987,8 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   // Formular für neue Rolle zurücksetzen
   const resetForm = () => {
     setEditingRole(null);
+    setAllBranches(true);
+    setSelectedBranchIds([]);
     setFormData({
       name: '',
       description: '',
@@ -1376,6 +1449,66 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                     className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:bg-gray-700 dark:text-white"
                   />
                 </div>
+                  </div>
+                  
+                  {/* Branch-Zuweisungen */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      {t('roles.form.branchAssignment') || 'Branch-Zuweisung'}
+                    </label>
+                    <div className="space-y-3">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={allBranches}
+                          onChange={(e) => {
+                            setAllBranches(e.target.checked);
+                            if (e.target.checked) {
+                              setSelectedBranchIds([]);
+                            }
+                          }}
+                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                          {t('roles.form.allBranches') || 'Für alle Branches gültig'}
+                        </span>
+                      </label>
+                      
+                      {!allBranches && (
+                        <div className="ml-6">
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                            {t('roles.form.specificBranches') || 'Spezifische Branches:'}
+                          </label>
+                          {loadingBranches ? (
+                            <div className="text-sm text-gray-500">Lade Branches...</div>
+                          ) : branches.length === 0 ? (
+                            <div className="text-sm text-gray-500">Keine Branches verfügbar</div>
+                          ) : (
+                            <div className="space-y-2 max-h-40 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-2">
+                              {branches.map((branch) => (
+                                <label key={branch.id} className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedBranchIds.includes(branch.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedBranchIds([...selectedBranchIds, branch.id]);
+                                      } else {
+                                        setSelectedBranchIds(selectedBranchIds.filter(id => id !== branch.id));
+                                      }
+                                    }}
+                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                  />
+                                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                                    {branch.name}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="mt-2">

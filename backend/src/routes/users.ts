@@ -4,8 +4,10 @@ import {
   getAllUsersForDropdown, 
   getCurrentUser, 
   updateProfile, 
+  isProfileComplete,
   getUserById, 
   updateUserRoles, 
+  updateUserBranches,
   updateUserById, 
   updateUserSettings, 
   updateInvoiceSettings, 
@@ -17,7 +19,8 @@ import {
   completeOnboarding,
   trackOnboardingEvent,
   resetOnboarding,
-  getOnboardingAnalytics
+  getOnboardingAnalytics,
+  debugUserBranches
 } from '../controllers/userController';
 import { 
   getLifecycle, 
@@ -50,7 +53,9 @@ router.use(organizationMiddleware);
 router.get('/', getAllUsers);
 router.get('/dropdown', getAllUsersForDropdown);
 router.get('/profile', getCurrentUser);
+router.get('/profile/complete', isProfileComplete);
 router.get('/active-language', getUserActiveLanguage);
+router.get('/debug/branches', debugUserBranches); // Debug-Endpoint
 router.put('/profile', updateProfile);
 router.put('/settings', updateUserSettings);
 router.put('/invoice-settings', updateInvoiceSettings);
@@ -69,6 +74,7 @@ router.post('/', createUser); // Neue Benutzer erstellen (nur für Admins einer 
 router.get('/:id', getUserById);
 router.put('/:id', updateUserById);
 router.put('/:id/roles', updateUserRoles);
+router.put('/:id/branches', updateUserBranches);
 
 // Lebenszyklus-Routen
 router.get('/:id/lifecycle', getLifecycle);
