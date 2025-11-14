@@ -41,6 +41,7 @@ export class TTLockService {
   private apiUrl: string = 'https://euopen.ttlock.com';
   private accessToken?: string;
   private tokenExpiresAt?: Date;
+  private passcodeType: string = 'auto'; // 'auto' = 10-stellig, 'custom' = 4-stellig
   private axiosInstance: AxiosInstance;
 
   /**
