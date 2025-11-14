@@ -1200,7 +1200,8 @@
     "unknownBranch": "Unknown Branch (ID: {{id}})",
     "unknownBranchDescription": "This branch is assigned to the user but is not present in the branch list.",
     "add": "Add",
-    "noBranchesAvailable": "No more branches available"
+    "noBranchesAvailable": "No more branches available",
+    "noBranchesFound": "No branches found"
   },
   "organisation": {
     "title": "Organization",

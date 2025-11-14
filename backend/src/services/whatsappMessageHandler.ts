@@ -27,9 +27,20 @@ export class WhatsAppMessageHandler {
     try {
       // 1. Normalisiere Telefonnummer
       const normalizedPhone = LanguageDetectionService.normalizePhoneNumber(phoneNumber);
+      console.log('[WhatsApp Message Handler] Telefonnummer:', {
+        original: phoneNumber,
+        normalized: normalizedPhone
+      });
 
       // 2. Identifiziere User via phoneNumber
       const user = await this.identifyUser(normalizedPhone, branchId);
+      console.log('[WhatsApp Message Handler] User-Identifikation:', {
+        phoneNumber: normalizedPhone,
+        branchId: branchId,
+        userFound: !!user,
+        userId: user?.id,
+        userName: user ? `${user.firstName} ${user.lastName}` : null
+      });
 
       // 3. Lade/Erstelle Conversation State
       const conversation = await this.getOrCreateConversation(normalizedPhone, branchId, user?.id);
@@ -98,7 +109,10 @@ export class WhatsAppMessageHandler {
    */
   private static async identifyUser(phoneNumber: string, branchId: number): Promise<any | null> {
     try {
-      const user = await prisma.user.findFirst({
+      console.log('[WhatsApp Message Handler] Suche User:', { phoneNumber, branchId });
+      
+      // Versuche exakte Übereinstimmung
+      let user = await prisma.user.findFirst({
         where: {
           phoneNumber: phoneNumber,
           branches: {
@@ -111,13 +125,133 @@ export class WhatsAppMessageHandler {
           id: true,
           firstName: true,
           lastName: true,
-          email: true
+          email: true,
+          phoneNumber: true
         }
       });
+
+      if (user) {
+        console.log('[WhatsApp Message Handler] User gefunden (exakt):', user.id);
+        return user;
+      }
+
+      // Fallback: Suche auch ohne + (falls WhatsApp ohne + sendet)
+      if (phoneNumber.startsWith('+')) {
+        const phoneWithoutPlus = phoneNumber.substring(1);
+        console.log('[WhatsApp Message Handler] Versuche Suche ohne +:', phoneWithoutPlus);
+        user = await prisma.user.findFirst({
+          where: {
+            OR: [
+              { phoneNumber: phoneNumber },
+              { phoneNumber: phoneWithoutPlus },
+              { phoneNumber: `+${phoneWithoutPlus}` }
+            ],
+            branches: {
+              some: {
+                branchId: branchId
+              }
+            }
+          },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phoneNumber: true
+          }
+        });
+
+        if (user) {
+          console.log('[WhatsApp Message Handler] User gefunden (mit Fallback):', user.id);
+          return user;
+        }
+      }
+
+      // Fallback: Suche ohne Branch-Filter (falls User in anderem Branch ist)
+      console.log('[WhatsApp Message Handler] Exakte Suche fehlgeschlagen, versuche ohne Branch-Filter...');
+      const userWithBranches = await prisma.user.findFirst({
+        where: {
+          phoneNumber: phoneNumber
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phoneNumber: true,
+          branches: {
+            select: {
+              branchId: true,
+              branch: {
+                select: {
+                  id: true,
+                  name: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (userWithBranches) {
+        console.log('[WhatsApp Message Handler] User gefunden (ohne Branch-Filter):', {
+          userId: userWithBranches.id,
+          userName: `${userWithBranches.firstName} ${userWithBranches.lastName}`,
+          userBranches: userWithBranches.branches.map(b => ({ id: b.branchId, name: b.branch.name })),
+          targetBranchId: branchId
+        });
+        
+        // Prüfe ob User im Branch ist
+        const isInBranch = userWithBranches.branches.some(b => b.branchId === branchId);
+        if (!isInBranch) {
+          console.warn('[WhatsApp Message Handler] User ist nicht im Branch!', {
+            userId: userWithBranches.id,
+            targetBranchId: branchId,
+            userBranches: userWithBranches.branches.map(b => b.branchId)
+          });
+          // User nicht im Branch - return null
+          return null;
+        }
+        
+        // User ist im Branch - return user (ohne branches für Kompatibilität)
+        user = {
+          id: userWithBranches.id,
+          firstName: userWithBranches.firstName,
+          lastName: userWithBranches.lastName,
+          email: userWithBranches.email,
+          phoneNumber: userWithBranches.phoneNumber
+        };
+      } else {
+        console.warn('[WhatsApp Message Handler] Kein User gefunden für Telefonnummer:', phoneNumber);
+        
+        // Debug: Zeige alle User mit ähnlichen Telefonnummern
+        const allUsers = await prisma.user.findMany({
+          where: {
+            phoneNumber: { not: null }
+          },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phoneNumber: true
+          },
+          take: 10
+        });
+        
+        console.log('[WhatsApp Message Handler] Verfügbare User mit Telefonnummer:', allUsers.map(u => ({
+          id: u.id,
+          name: `${u.firstName} ${u.lastName}`,
+          phone: u.phoneNumber
+        })));
+      }
 
       return user;
     } catch (error) {
       console.error('[WhatsApp Message Handler] Fehler bei User-Identifikation:', error);
+      if (error instanceof Error) {
+        console.error('[WhatsApp Message Handler] Fehlermeldung:', error.message);
+        console.error('[WhatsApp Message Handler] Stack:', error.stack);
+      }
       return null;
     }
   }

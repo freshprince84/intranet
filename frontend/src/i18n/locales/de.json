@@ -1308,6 +1308,27 @@
     "add": "Hinzufügen",
     "noRolesAvailable": "Keine weiteren Rollen verfügbar"
   },
+  "branchAssignment": {
+    "title": "Niederlassungen zuweisen",
+    "assignBranch": "Niederlassung zuweisen",
+    "removeBranch": "Niederlassung entfernen",
+    "currentBranches": "Aktuelle Niederlassungen",
+    "availableBranches": "Verfügbare Niederlassungen",
+    "noBranches": "Keine Niederlassungen verfügbar",
+    "saveSuccess": "Niederlassungen erfolgreich zugewiesen",
+    "saveError": "Fehler beim Zuweisen der Niederlassungen",
+    "loading": "Niederlassungen werden geladen...",
+    "unknownBranchesWarning": "Achtung: Unbekannte Niederlassungs-IDs gefunden",
+    "unknownBranchesMessage": "Einige Niederlassungs-IDs des Benutzers ({{ids}}) sind in den verfügbaren Niederlassungen nicht vorhanden.",
+    "availableBranchIds": "Verfügbare Niederlassungs-IDs: {{ids}}",
+    "noBranchesAssigned": "Keine Niederlassungen zugewiesen",
+    "remove": "Entfernen",
+    "unknownBranch": "Unbekannte Niederlassung (ID: {{id}})",
+    "unknownBranchDescription": "Diese Niederlassung ist dem Benutzer zugewiesen, aber nicht in der Niederlassungsliste vorhanden.",
+    "add": "Hinzufügen",
+    "noBranchesAvailable": "Keine weiteren Niederlassungen verfügbar",
+    "noBranchesFound": "Keine Niederlassungen gefunden"
+  },
   "sidebar": {
     "expand": "Erweitern",
     "collapse": "Einklappen",

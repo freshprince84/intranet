@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
-import { userApi, roleApi } from '../api/apiClient.ts';
+import { userApi, roleApi, branchApi } from '../api/apiClient.ts';
 import { User, Role } from '../types/interfaces.ts';
-import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, ShieldCheckIcon, XMarkIcon, ArrowPathIcon, BuildingOfficeIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, ShieldCheckIcon, XMarkIcon, ArrowPathIcon, BuildingOfficeIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import useMessage from '../hooks/useMessage.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import IdentificationDocumentList from './IdentificationDocumentList.tsx';
@@ -79,8 +79,13 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   const [roles, setRoles] = useState<Role[]>([]);
   const [loadingRoles, setLoadingRoles] = useState(false);
   
+  // State für Branches
+  const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
+  const [loadingBranches, setLoadingBranches] = useState(false);
+  const [selectedBranches, setSelectedBranches] = useState<number[]>([]);
+  
   // Neuer State für die aktive Unterseite
-  const [activeUserTab, setActiveUserTab] = useState<'details' | 'documents' | 'roles' | 'lifecycle'>('details');
+  const [activeUserTab, setActiveUserTab] = useState<'details' | 'documents' | 'roles' | 'branches' | 'lifecycle'>('details');
   
   // State für Active/Inactive Filter
   const [userFilterTab, setUserFilterTab] = useState<'active' | 'inactive'>('active');
@@ -204,6 +209,29 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
     }
   };
 
+  // Branches laden - Wird erst aufgerufen, wenn ein Benutzer ausgewählt wurde
+  const fetchBranches = async () => {
+    try {
+      setLoadingBranches(true);
+      
+      try {
+        const response = await branchApi.getAll();
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+          setBranches(response.data);
+          console.log(`${response.data.length} Branches erfolgreich geladen`);
+        } else {
+          console.warn('Keine Branches vom Server erhalten');
+          setBranches([]);
+        }
+      } catch (error) {
+        console.warn('Fehler beim Laden der Branches:', error);
+        setBranches([]);
+      }
+    } finally {
+      setLoadingBranches(false);
+    }
+  };
+
   // Detaillierte Benutzerdaten laden
   const fetchUserDetails = async (userId: number) => {
     try {
@@ -258,13 +286,46 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       
       console.log('Endgültige extrahierte Rollen-IDs:', roleIds);
       
+      // Extrahiere Branch-IDs aus der verschachtelten Struktur
+      let branchIds: number[] = [];
+      
+      if (response.data.branches && Array.isArray(response.data.branches)) {
+        console.log('Branches-Struktur (Typ):', typeof response.data.branches, 'Länge:', response.data.branches.length);
+        
+        // Struktur: branches: [{ branch: { id, name, ... } }]
+        if (response.data.branches.length > 0 && response.data.branches[0].branch) {
+          branchIds = response.data.branches.map(userBranch => userBranch.branch.id);
+          console.log('Extrahierte Branch-IDs aus verschachtelter Struktur:', branchIds);
+        }
+        // Fallback für andere Formate
+        else if (response.data.branches.length > 0) {
+          if (typeof response.data.branches[0] === 'number') {
+            branchIds = response.data.branches;
+          } else if (response.data.branches[0].branchId) {
+            branchIds = response.data.branches.map(branch => branch.branchId);
+          } else if (response.data.branches[0].id) {
+            branchIds = response.data.branches.map(branch => branch.id);
+          }
+        }
+      } else {
+        console.warn('Branches fehlen oder sind kein Array:', response.data.branches);
+      }
+      
+      console.log('Endgültige extrahierte Branch-IDs:', branchIds);
+      
       setSelectedUser(userData);
       setUserFormData(userData);
       setSelectedRoles(roleIds);
+      setSelectedBranches(branchIds);
       
       // Rollen nur einmal laden, wenn sie noch nicht geladen wurden
       if (roles.length === 0) {
         await fetchRoles();
+      }
+      
+      // Branches nur einmal laden, wenn sie noch nicht geladen wurden
+      if (branches.length === 0) {
+        await fetchBranches();
       }
     } catch (err) {
       console.error('Fehler beim Laden der Benutzerdetails:', err);
@@ -555,6 +616,50 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
     }
   };
 
+  // Toggle Branch für einen Benutzer (hinzufügen/entfernen)
+  const toggleBranch = async (branchId: number) => {
+    if (!branchId || !selectedUser) return;
+    
+    try {
+      console.log('Toggle Branch:', branchId, 'für Benutzer:', selectedUser.id);
+      console.log('Aktuelle ausgewählte Branches:', selectedBranches);
+      
+      // Überprüfen, ob die Branch bereits zugewiesen ist
+      const isBranchSelected = selectedBranches.includes(branchId);
+      
+      const newSelectedBranches = isBranchSelected
+        ? selectedBranches.filter(id => id !== branchId)
+        : [...selectedBranches, branchId];
+      
+      console.log('Neue ausgewählte Branches:', newSelectedBranches);
+      
+      // Optimistisches UI-Update
+      setSelectedBranches(newSelectedBranches);
+      
+      // API-Aufruf zur Aktualisierung der Branches
+      console.log('Sende Branch-Aktualisierung an API:', { userId: selectedUser.id, branchIds: newSelectedBranches });
+      const response = await userApi.updateBranches(selectedUser.id, newSelectedBranches);
+      console.log('API-Antwort bei Branch-Aktualisierung:', response.data);
+      
+      // Benutzer nach dem Update neu laden
+      await fetchUserDetails(selectedUser.id);
+      
+      // Erfolgsmeldung anzeigen
+      showMessage(
+        isBranchSelected
+          ? `Branch erfolgreich entfernt`
+          : `Branch erfolgreich zugewiesen`,
+        'success'
+      );
+    } catch (error) {
+      // Bei Fehler auf vorherigen Zustand zurücksetzen
+      console.error('Fehler beim Aktualisieren der Branches:', error);
+      fetchUserDetails(selectedUser.id);
+      handleError(error);
+      showMessage('Fehler beim Aktualisieren der Branches', 'error');
+    }
+  };
+
   // Initialisiere FormData wenn Benutzer ausgewählt wird
   useEffect(() => {
     if (selectedUser) {
@@ -732,6 +837,17 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                 >
                   <ShieldCheckIcon className="h-5 w-5 inline mr-2" />
                   {t('roles.title')}
+                </button>
+                <button
+                  onClick={() => setActiveUserTab('branches')}
+                  className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
+                    activeUserTab === 'branches'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <MapPinIcon className="h-5 w-5 inline mr-2" />
+                  {t('branches.title') || 'Niederlassungen'}
                 </button>
                 <button
                   onClick={() => setActiveUserTab('lifecycle')}
@@ -1188,6 +1304,130 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                       </div>
                     )}
                   </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Branches Tab */}
+          {activeUserTab === 'branches' && (
+              <div className="p-6">
+              {/* Branch-Zuweisung - nur anzeigen, wenn Branches geladen wurden */}
+              {loadingBranches ? (
+                <div className="mt-4 mb-4">
+                  <h3 className="text-lg font-semibold mb-4 dark:text-white">{t('branchAssignment.title') || 'Niederlassungszuweisung'}</h3>
+                  <p className="dark:text-gray-300">{t('branchAssignment.loading') || 'Lade Niederlassungen...'}</p>
+                </div>
+              ) : branches.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-4 dark:text-white">{t('branchAssignment.title') || 'Niederlassungszuweisung'}</h3>
+                  
+                  {/* Überprüfung auf unbekannte Branches */}
+                  {selectedBranches.some(branchId => !branches.some(branch => branch.id === branchId)) && (
+                    <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-400 dark:border-yellow-700 text-yellow-700 dark:text-yellow-300 px-4 py-3 rounded mb-4">
+                      <p className="font-bold">{t('branchAssignment.unknownBranchesWarning') || 'Unbekannte Niederlassungen zugewiesen'}</p>
+                      <p>{t('branchAssignment.unknownBranchesMessage', { ids: selectedBranches.filter(branchId => !branches.some(branch => branch.id === branchId)).join(', ') }) || `Die folgenden Niederlassungs-IDs sind zugewiesen, aber nicht verfügbar: ${selectedBranches.filter(branchId => !branches.some(branch => branch.id === branchId)).join(', ')}`}</p>
+                      <p className="mt-2 text-sm">{t('branchAssignment.availableBranchIds', { ids: branches.map(b => b.id).join(', ') }) || `Verfügbare Niederlassungs-IDs: ${branches.map(b => b.id).join(', ')}`}</p>
+                    </div>
+                  )}
+                  
+                  {/* Aktuell zugewiesene Branches */}
+                  <div className="mb-4">
+                    <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">{t('branchAssignment.currentBranches') || 'Aktuell zugewiesene Niederlassungen'}</h4>
+                    {selectedBranches.length === 0 ? (
+                      <p className="text-gray-500 dark:text-gray-400 italic">{t('branchAssignment.noBranchesAssigned') || 'Keine Niederlassungen zugewiesen'}</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Bekannte zugewiesene Branches */}
+                        {branches
+                          .filter(branch => selectedBranches.includes(branch.id))
+                          .map(branch => (
+                            <div 
+                              key={branch.id} 
+                              className="border border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 rounded-lg p-4 cursor-pointer"
+                              onClick={() => toggleBranch(branch.id)}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <h4 className="font-medium dark:text-white">
+                                    {branch.name}
+                                  </h4>
+                                </div>
+                                <div className="flex items-center text-blue-600 dark:text-blue-400">
+                                  <span className="mr-2 text-sm">{t('branchAssignment.remove') || 'Entfernen'}</span>
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        
+                        {/* Unbekannte zugewiesene Branches */}
+                        {selectedBranches
+                          .filter(branchId => !branches.some(branch => branch.id === branchId))
+                          .map(branchId => (
+                            <div 
+                              key={`unknown-${branchId}`} 
+                              className="border border-orange-500 bg-orange-50 rounded-lg p-4"
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <h4 className="font-medium">{t('branchAssignment.unknownBranch', { id: branchId }) || `Unbekannte Niederlassung (ID: ${branchId})`}</h4>
+                                  <p className="text-sm text-orange-600">{t('branchAssignment.unknownBranchDescription') || 'Diese Niederlassung existiert nicht mehr oder ist nicht verfügbar.'}</p>
+                                </div>
+                                <div className="flex items-center text-orange-600">
+                                  <span className="mr-2 text-sm">{t('branchAssignment.remove') || 'Entfernen'}</span>
+                                  <button 
+                                    onClick={() => toggleBranch(branchId)}
+                                    className="focus:outline-none">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Verfügbare Branches */}
+                  <div>
+                    <h4 className="font-medium text-gray-700 dark:text-gray-300 mb-2">{t('branchAssignment.availableBranches') || 'Verfügbare Niederlassungen'}</h4>
+                    {branches.filter(branch => !selectedBranches.includes(branch.id)).length === 0 ? (
+                      <p className="text-gray-500 dark:text-gray-400 italic">{t('branchAssignment.noBranchesAvailable') || 'Keine weiteren Niederlassungen verfügbar'}</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {branches
+                          .filter(branch => !selectedBranches.includes(branch.id))
+                          .map(branch => (
+                            <div 
+                              key={branch.id} 
+                              className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 cursor-pointer hover:border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                              onClick={() => toggleBranch(branch.id)}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <h4 className="font-medium dark:text-white">{branch.name}</h4>
+                                </div>
+                                <div className="flex items-center text-gray-500 hover:text-blue-600 dark:hover:text-blue-400">
+                                  <span className="mr-2 text-sm">{t('branchAssignment.add') || 'Hinzufügen'}</span>
+                                  <PlusIcon className="h-5 w-5" />
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              {!loadingBranches && branches.length === 0 && (
+                <div className="mt-4 mb-4">
+                  <h3 className="text-lg font-semibold mb-4 dark:text-white">{t('branchAssignment.title') || 'Niederlassungszuweisung'}</h3>
+                  <p className="text-gray-500 dark:text-gray-400">{t('branchAssignment.noBranchesFound') || 'Keine Niederlassungen gefunden'}</p>
                 </div>
               )}
             </div>
