@@ -197,8 +197,9 @@ export class WhatsAppAiService {
         return false;
       }
 
-      const settings = decryptApiSettings(branch.whatsappSettings as any);
-      const whatsappSettings = settings?.whatsapp || settings;
+      // Branch-Settings sind flach strukturiert, nicht verschachtelt
+      const settings = branch.whatsappSettings as any;
+      const whatsappSettings = settings; // Branch-Settings sind direkt WhatsApp Settings
       const aiConfig: AIConfig = whatsappSettings?.ai;
 
       return aiConfig?.enabled === true;
