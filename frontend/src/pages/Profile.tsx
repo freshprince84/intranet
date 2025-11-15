@@ -168,11 +168,17 @@ const Profile: React.FC = () => {
         throw new Error('Nachname ist erforderlich');
       }
 
+      // Nur die benötigten Felder senden (nicht identificationDocuments, roles, etc.)
       const dataToSend = {
-        ...formData,
+        username: formData.username,
+        email: formData.email,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        birthday: formData.birthday || null,
+        bankDetails: formData.bankDetails || null,
+        contract: formData.contract || null,
         salary: formData.salary ? parseFloat(formData.salary.toString()) : null,
         normalWorkingHours: formData.normalWorkingHours ? parseFloat(formData.normalWorkingHours.toString()) : 7.6,
-        birthday: formData.birthday || null,
         gender: formData.gender || null,
         phoneNumber: formData.phoneNumber || null,
       };
