@@ -35,17 +35,25 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
     
     // Profilvollständigkeit prüfen (Ausnahme: Profil-Seite selbst)
+    // WICHTIG: Nur prüfen, wenn User Mitglied einer Organisation ist
+    // Vor Organisation-Beitritt: Keine Profil-Blockierung
     if (location.pathname !== '/profile' && !isProfileComplete()) {
-        return (
-            <Navigate 
-                to="/profile" 
-                replace 
-                state={{ 
-                    from: location,
-                    message: 'Bitte vervollständigen Sie zuerst Ihr Profil'
-                }} 
-            />
-        );
+        // Prüfe ob User Mitglied einer Organisation ist
+        const hasOrganization = user.roles?.some((r: any) => r.role.organization !== null) || false;
+        
+        // Nur blockieren, wenn User Mitglied einer Organisation ist
+        if (hasOrganization) {
+            return (
+                <Navigate 
+                    to="/profile" 
+                    replace 
+                    state={{ 
+                        from: location,
+                        message: 'Bitte vervollständigen Sie zuerst Ihr Profil'
+                    }} 
+                />
+            );
+        }
     }
     
     // Organisationszugriff prüfen (falls erforderlich)

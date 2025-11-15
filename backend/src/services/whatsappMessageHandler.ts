@@ -647,7 +647,7 @@ export class WhatsAppMessageHandler {
 
               fs.writeFileSync(filePath, mediaData.buffer);
 
-              await prisma.requestAttachment.create({
+              const attachment = await prisma.requestAttachment.create({
                 data: {
                   requestId: request.id,
                   fileName: mediaData.fileName,
@@ -657,20 +657,17 @@ export class WhatsAppMessageHandler {
                 }
               });
 
-              console.log(`[WhatsApp Message Handler] Media erfolgreich als Attachment gespeichert für Request ${request.id}`);
+              console.log(`[WhatsApp Message Handler] Media erfolgreich als Attachment gespeichert für Request ${request.id}, Attachment ID: ${attachment.id}`);
 
-              // Aktualisiere Beschreibung mit Hinweis auf Attachment
-              const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
-              const mediaNote: Record<string, string> = {
-                es: '\n\n📷 Imagen adjunta',
-                de: '\n\n📷 Bild angehängt',
-                en: '\n\n📷 Image attached'
-              };
+              // Aktualisiere Beschreibung mit Markdown-Link zum Attachment
+              // Format: ![filename](/api/requests/{requestId}/attachments/{attachmentId})
+              const attachmentUrl = `/api/requests/${request.id}/attachments/${attachment.id}`;
+              const markdownImageLink = `\n\n![${mediaData.fileName}](${attachmentUrl})`;
               
               await prisma.request.update({
                 where: { id: request.id },
                 data: {
-                  description: description + (mediaNote[language] || mediaNote.es)
+                  description: description + markdownImageLink
                 }
               });
             } catch (error) {

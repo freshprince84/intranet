@@ -161,6 +161,30 @@ export const requireCompleteProfile = async (
             return next();
         }
 
+        // Prüfe ob User Mitglied einer Organisation ist
+        const userRole = await prisma.userRole.findFirst({
+            where: { 
+                userId: userId,
+                lastUsed: true 
+            },
+            include: {
+                role: {
+                    select: {
+                        organizationId: true
+                    }
+                }
+            }
+        });
+
+        // WICHTIG: profileComplete ist nur relevant, wenn User Mitglied einer Organisation ist
+        // Vor Organisation-Beitritt: Keine Profil-Blockierung
+        const hasOrganization = userRole?.role.organizationId !== null && userRole?.role.organizationId !== undefined;
+        
+        if (!hasOrganization) {
+            // User hat keine Organisation → Keine Profil-Blockierung
+            return next();
+        }
+
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: { 
@@ -176,7 +200,7 @@ export const requireCompleteProfile = async (
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
 
-        // Prüfe Profilvollständigkeit
+        // Prüfe Profilvollständigkeit (nur wenn User Mitglied einer Organisation ist)
         const isComplete = !!(
             user.username &&
             user.email &&
