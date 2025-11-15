@@ -972,6 +972,83 @@ LOBBY_PMS: {
    - Test-Reservierung anlegen
    - Basis-Funktionalität testen
 
+## Status-Übersicht
+
+### ✅ Vollständig implementiert (Stand: 2025-01-XX)
+
+**Backend (100% abgeschlossen):**
+- ✅ LobbyPmsService - API-Integration (wartet auf Dokumentation)
+- ✅ WhatsAppService - Twilio & WhatsApp Business API
+- ✅ BoldPaymentService - Payment Links & Webhooks
+- ✅ SireService - Automatische Gästeregistrierung
+- ✅ TTLockService - Türsystem-PIN-Verwaltung
+- ✅ ReservationNotificationService - E-Mail/WhatsApp-Versand
+- ✅ ReservationScheduler - Tägliche Automatisierung
+- ✅ ReservationTaskService - Task-Management
+- ✅ MockLobbyPmsService - Mock-Daten für Tests
+
+**Frontend (100% abgeschlossen):**
+- ✅ API Configuration Tab - Vollständig implementiert
+- ✅ ReservationsPage - Implementiert
+- ✅ ReservationList - Liste mit Filter, Suche, Sync
+- ✅ ReservationCard - Kartenansicht
+- ✅ ReservationDetails - Detailansicht
+- ✅ CheckInForm - Check-in-Modal
+- ✅ Responsive Design, Dark Mode, Mehrsprachigkeit (DE/ES/EN)
+
+**Automatisierungen:**
+- ✅ Täglich um 20:00 Uhr: Check-in-Einladungen für morgen
+- ✅ Automatische Task-Erstellung bei Synchronisation
+- ✅ Automatische SIRE-Registrierung beim Check-in
+- ✅ Automatische TTLock PIN-Generierung beim Check-in
+- ✅ Automatische Check-in-Bestätigungen per E-Mail/WhatsApp
+
+### ⚠️ Ausstehend
+
+**Wartet auf API-Dokumentation:**
+- ⚠️ LobbyPMS API Endpoints - Korrekte Pfade und Authentifizierung
+- ⚠️ Betrag aus LobbyPMS - Feld in API Response identifizieren
+
+**Optional:**
+- [ ] Unit-Tests für Services
+- [ ] Integration-Tests
+- [ ] E2E-Tests
+- [ ] Stündliche automatische Synchronisation (aktuell nur manuell)
+
+## Implementierte Anbindungen
+
+### 1. LobbyPMS ✅
+- Service: `LobbyPmsService`
+- Controller: `lobbyPmsController.ts`
+- Routen: `/api/lobby-pms/*`
+- Webhook: `/api/lobby-pms/webhook`
+- ⚠️ Wartet auf API-Dokumentation für korrekte Endpoints
+
+### 2. Bold Payment ✅
+- Service: `BoldPaymentService`
+- Controller: `boldPaymentController.ts`
+- Routen: `/api/bold-payment/*`
+- Webhook: `/api/bold-payment/webhook`
+- Payment Link Erstellung, Status Abfrage, Automatische Status-Updates
+
+### 3. TTLock (Türsystem) ✅
+- Service: `TTLockService`
+- Controller: `ttlockController.ts`
+- Routen: `/api/ttlock/*`
+- OAuth 2.0 Token-Management, Passcode-Generierung/-Löschung, Lock-Verwaltung
+
+### 4. WhatsApp ✅
+- Service: `WhatsAppService`
+- Twilio Integration, WhatsApp Business API Integration
+- Template-basierte Nachrichten
+- Automatischer Versand über `ReservationNotificationService`
+
+### 5. SIRE ✅
+- Service: `SireService`
+- Controller: `lobbyPmsController.ts` (registerSire, getSireStatus)
+- Routen: `/api/lobby-pms/reservations/:id/register-sire`
+- Automatische Registrierung beim Check-in, Status-Tracking
+
 ## Wichtige Hinweise
 
 - ⚠️ **Server-Neustart**: Nach Schema-Änderungen muss der Server neu gestartet werden (nur nach Absprache!)
@@ -979,6 +1056,14 @@ LOBBY_PMS: {
 - ⚠️ **Webhooks**: Webhook-Endpunkte müssen öffentlich erreichbar sein (HTTPS erforderlich)
 - ⚠️ **Datenschutz**: Gäste-Daten müssen DSGVO-konform behandelt werden
 - ⚠️ **Fehlerbehandlung**: Robuste Fehlerbehandlung für alle externen API-Calls
+- ⚠️ **ENCRYPTION_KEY**: Muss in `.env` gesetzt sein für Verschlüsselung der API-Keys
+
+## Weitere Dokumentation
+
+- **[LOBBYPMS_SETUP_ANLEITUNG.md](LOBBYPMS_SETUP_ANLEITUNG.md)** - Vollständige Setup- und Konfigurationsanleitung
+- **[LOBBYPMS_USE_CASES_UND_PROZESSE.md](LOBBYPMS_USE_CASES_UND_PROZESSE.md)** - Detaillierte Use Cases und Prozess-Flows
+- **[LOBBYPMS_WO_IM_SYSTEM_SEHEN.md](LOBBYPMS_WO_IM_SYSTEM_SEHEN.md)** - Wo im System Use Cases zu finden sind
+- **[LOBBYPMS_MOCK_DATEN.md](LOBBYPMS_MOCK_DATEN.md)** - Mock-Daten für Tests ohne echte API
 
 ## Referenzen
 
