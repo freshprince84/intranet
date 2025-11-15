@@ -615,7 +615,9 @@ const Worktracker: React.FC = () => {
         setFilterConditions(conditions);
         setFilterLogicalOperators(operators);
         if (sortDirections !== undefined) {
-            setFilterSortDirections(sortDirections);
+            // Sicherstellen, dass sortDirections ein Array ist
+            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+            setFilterSortDirections(validSortDirections);
         }
     };
     

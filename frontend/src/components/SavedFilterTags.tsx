@@ -217,7 +217,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         if (!onFilterChange && defaultFilterName && !activeFilterName) {
           const defaultFilter = filters.find((filter: SavedFilter) => filter != null && filter.name === defaultFilterName);
           if (defaultFilter) {
-            onSelectFilter(defaultFilter.conditions, defaultFilter.operators, defaultFilter.sortDirections);
+            // Sicherstellen, dass sortDirections ein Array ist
+            const validSortDirections = Array.isArray(defaultFilter.sortDirections) ? defaultFilter.sortDirections : undefined;
+            onSelectFilter(defaultFilter.conditions, defaultFilter.operators, validSortDirections);
           }
         }
       } catch (err) {
@@ -254,12 +256,15 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   
   // Wähle einen gespeicherten Filter aus
   const handleSelectFilter = (filter: SavedFilter) => {
+    // Sicherstellen, dass sortDirections ein Array ist (oder undefined)
+    const validSortDirections = Array.isArray(filter.sortDirections) ? filter.sortDirections : undefined;
+    
     if (onFilterChange) {
       // Controlled component
-      onFilterChange(filter.name, filter.id, filter.conditions, filter.operators, filter.sortDirections);
+      onFilterChange(filter.name, filter.id, filter.conditions, filter.operators, validSortDirections);
     } else {
       // Backward compatibility - uncontrolled component
-      onSelectFilter(filter.conditions, filter.operators, filter.sortDirections);
+      onSelectFilter(filter.conditions, filter.operators, validSortDirections);
     }
   };
   

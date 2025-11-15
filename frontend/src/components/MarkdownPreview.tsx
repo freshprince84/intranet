@@ -37,12 +37,18 @@ const ExternalLinkPreview: React.FC<ExternalLinkPreviewProps> = ({ url, alt }) =
       try {
         setLoading(true);
         setError(false);
+        console.log('🔗 Lade Link-Vorschau für URL:', url);
         // Verwende Backend-API für Link-Preview
         const response = await api.get(`/cerebro/links/preview?url=${encodeURIComponent(url)}`);
+        console.log('✅ Link-Vorschau erhalten:', response.data);
         setPreview(response.data);
-      } catch (err) {
-        console.error('Fehler beim Abrufen der Link-Vorschau:', err);
+      } catch (err: any) {
+        console.error('❌ Fehler beim Abrufen der Link-Vorschau:', err);
+        console.error('   URL:', url);
+        console.error('   Error Details:', err?.response?.data || err?.message);
         setError(true);
+        // Fallback: Setze Preview mit URL als Titel
+        setPreview({ title: alt || url, thumbnail: null, type: 'link' });
       } finally {
         setLoading(false);
       }
@@ -53,7 +59,7 @@ const ExternalLinkPreview: React.FC<ExternalLinkPreviewProps> = ({ url, alt }) =
     } else {
       setLoading(false);
     }
-  }, [url]);
+  }, [url, alt]);
   
   // Domain extrahieren für Fallback
   const getDomain = (url: string): string => {
@@ -896,11 +902,27 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       return (
         <div className="flex flex-col gap-3 mt-2">
           {uniqueLinks.map((attachment, index) => {
+            // Bestimme URL - prüfe zuerst metadata, dann attachment.url
+            let url: string = '';
+            let metadata = getAttachmentMetadata(attachment.alt, attachment.url);
+            if (metadata?.url) {
+              url = metadata.url;
+            } else {
+              url = attachment.url || '';
+            }
+            
+            if (attachment.isTemporary) {
+              const tempUrl = getTemporaryFileUrl(attachment.alt);
+              if (tempUrl) url = tempUrl;
+            }
+            
+            console.log('🔗 Rendere ExternalLinkPreview:', { url, alt: attachment.alt });
+            
             return (
               <ExternalLinkPreview 
-                key={`link-${attachment.alt}-${attachment.url}-${index}`}
-                url={attachment.url || ''}
-                alt={attachment.alt || attachment.url || ''}
+                key={`link-${attachment.alt}-${url}-${index}`}
+                url={url}
+                alt={attachment.alt || url || ''}
               />
             );
           })}
