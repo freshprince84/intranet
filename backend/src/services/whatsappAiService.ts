@@ -45,8 +45,28 @@ export class WhatsAppAiService {
       throw new Error('Branch WhatsApp Settings nicht gefunden');
     }
 
-    const settings = decryptApiSettings(branch.whatsappSettings as any);
-    const whatsappSettings = settings?.whatsapp || settings; // Falls direkt WhatsApp Settings
+    // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
+    // Entschlüssele nur apiKey und apiSecret, nicht das gesamte Objekt
+    const { decryptSecret } = await import('../utils/encryption');
+    const settings = branch.whatsappSettings as any;
+    
+    // Entschlüssele apiKey und apiSecret falls verschlüsselt
+    if (settings.apiKey && typeof settings.apiKey === 'string' && settings.apiKey.includes(':')) {
+      try {
+        settings.apiKey = decryptSecret(settings.apiKey);
+      } catch (error) {
+        console.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiKey:', error);
+      }
+    }
+    if (settings.apiSecret && typeof settings.apiSecret === 'string' && settings.apiSecret.includes(':')) {
+      try {
+        settings.apiSecret = decryptSecret(settings.apiSecret);
+      } catch (error) {
+        console.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiSecret:', error);
+      }
+    }
+    
+    const whatsappSettings = settings; // Branch-Settings sind direkt WhatsApp Settings
     const aiConfig: AIConfig = whatsappSettings?.ai;
 
     if (!aiConfig?.enabled) {

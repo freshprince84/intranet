@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import api from '../api/apiClient.ts';
 
 interface MarkdownPreviewProps {
   content: string;
@@ -19,6 +20,128 @@ interface MarkdownPreviewProps {
     url: string;
   }>; // Attachment-Metadaten für bessere Dateityp-Erkennung
 }
+
+// Komponente für externe Link-Vorschau (wie X.com)
+interface ExternalLinkPreviewProps {
+  url: string;
+  alt: string;
+}
+
+const ExternalLinkPreview: React.FC<ExternalLinkPreviewProps> = ({ url, alt }) => {
+  const [preview, setPreview] = useState<{ title: string; thumbnail: string | null; type: string | null } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  
+  useEffect(() => {
+    const fetchPreview = async () => {
+      try {
+        setLoading(true);
+        setError(false);
+        // Verwende Backend-API für Link-Preview
+        const response = await api.get(`/cerebro/links/preview?url=${encodeURIComponent(url)}`);
+        setPreview(response.data);
+      } catch (err) {
+        console.error('Fehler beim Abrufen der Link-Vorschau:', err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    if (url && url.match(/^https?:\/\//)) {
+      fetchPreview();
+    } else {
+      setLoading(false);
+    }
+  }, [url]);
+  
+  // Domain extrahieren für Fallback
+  const getDomain = (url: string): string => {
+    try {
+      return new URL(url).hostname.replace('www.', '');
+    } catch {
+      return url;
+    }
+  };
+  
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+  
+  const displayTitle = preview?.title || alt || getDomain(url);
+  const displayThumbnail = preview?.thumbnail;
+  
+  return (
+    <div 
+      onClick={handleClick}
+      className="border border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-all hover:shadow-md"
+    >
+      {/* Thumbnail-Bild (wenn verfügbar) */}
+      {displayThumbnail ? (
+        <div className="w-full h-48 bg-gray-200 dark:bg-gray-700 overflow-hidden relative">
+          <img 
+            src={displayThumbnail} 
+            alt={displayTitle}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              // Fallback bei Bildfehler: Zeige Platzhalter
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              const parent = target.parentElement;
+              if (parent) {
+                parent.innerHTML = `
+                  <div class="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 flex items-center justify-center">
+                    <div class="text-white text-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                      <p class="text-sm font-medium">${getDomain(url)}</p>
+                    </div>
+                  </div>
+                `;
+              }
+            }}
+          />
+        </div>
+      ) : (
+        // Fallback: Farbiger Platzhalter mit Domain
+        <div className="w-full h-48 bg-gradient-to-br from-blue-500 to-purple-600 dark:from-blue-600 dark:to-purple-700 flex items-center justify-center">
+          <div className="text-white text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            <p className="text-sm font-medium">{getDomain(url)}</p>
+          </div>
+        </div>
+      )}
+      
+      {/* Titel und URL */}
+      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+        {loading ? (
+          <div className="flex items-center">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+            <span className="text-sm text-gray-500 dark:text-gray-400">Lade Vorschau...</span>
+          </div>
+        ) : (
+          <>
+            <h4 className="font-semibold text-gray-900 dark:text-white mb-1 line-clamp-2">
+              {displayTitle}
+            </h4>
+            <div className="flex items-center mt-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {getDomain(url)}
+              </p>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ 
   content, 
@@ -48,35 +171,62 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         isTemporary: match[2] === "wird nach dem Erstellen hochgeladen"
       }));
     
-    // Reine URLs (ohne Markdown-Format): http:// oder https://
+    // Reine URLs (ohne Markdown-Format): 
+    // 1. Mit Protokoll: http:// oder https://
+    // 2. Ohne Protokoll: www.example.com oder example.com
     // WICHTIG: Nur URLs die nicht bereits in Markdown-Links enthalten sind
-    // Regex: Findet URLs am Zeilenanfang, nach Whitespace, oder am Zeilenende
-    // Stoppt bei Whitespace, Zeilenende, oder schließenden Klammern
-    const urlRegex = /(?:^|[\s\n])(https?:\/\/[^\s\n\)\]\>]+)/g;
     const rawUrlMatches: Array<{ type: string; alt: string; url: string; isTemporary: boolean }> = [];
     const allMarkdownUrls = new Set([...imageMatches, ...markdownLinkMatches].map(m => m.url));
     
+    // Regex für URLs mit Protokoll: https?://...
+    const urlWithProtocolRegex = /(?:^|[\s\n])(https?:\/\/[^\s\n\)\]\>]+)/g;
     let urlMatch;
-    while ((urlMatch = urlRegex.exec(content)) !== null) {
+    while ((urlMatch = urlWithProtocolRegex.exec(content)) !== null) {
       const url = urlMatch[1].trim();
       // Überspringe URLs, die bereits in Markdown-Links enthalten sind
       if (!allMarkdownUrls.has(url)) {
         rawUrlMatches.push({
           type: 'link',
-          alt: url, // Verwende URL als Alt-Text
+          alt: url,
           url: url,
           isTemporary: false
         });
       }
     }
     
-    console.log('📋 extractAttachments:', {
-      contentLength: content.length,
-      imageMatches: imageMatches.length,
-      markdownLinkMatches: markdownLinkMatches.length,
-      rawUrlMatches: rawUrlMatches.length,
-      allLinks: [...markdownLinkMatches, ...rawUrlMatches].map(l => ({ alt: l.alt, url: l.url }))
-    });
+    // Regex für URLs ohne Protokoll: www.example.com oder example.com
+    // Pattern: (www\.)?[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+
+    // Mindestens 2 Teile (Domain + TLD), z.B. "example.com" oder "www.example.com"
+    // Stoppt bei Whitespace, Zeilenende, oder schließenden Klammern
+    const urlWithoutProtocolRegex = /(?:^|[\s\n])((?:www\.)?[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+(?:\/[^\s\n\)\]\>]*)?)(?=[\s\n\)\]\>]|$)/g;
+    let urlMatchNoProtocol;
+    while ((urlMatchNoProtocol = urlWithoutProtocolRegex.exec(content)) !== null) {
+      const url = urlMatchNoProtocol[1].trim();
+      
+      // Überspringe, wenn bereits in Markdown-Links enthalten
+      if (allMarkdownUrls.has(url) || allMarkdownUrls.has(`https://${url}`) || allMarkdownUrls.has(`http://${url}`)) {
+        continue;
+      }
+      
+      // Überspringe, wenn bereits als URL mit Protokoll erkannt
+      if (rawUrlMatches.some(m => m.url === url || m.url === `https://${url}` || m.url === `http://${url}`)) {
+        continue;
+      }
+      
+      // Prüfe, ob es wirklich eine URL ist (nicht nur ein Wort)
+      // Mindestens ein Punkt muss vorhanden sein (für TLD)
+      if (url.includes('.')) {
+        // Füge https:// hinzu, wenn kein Protokoll vorhanden ist
+        const fullUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
+        rawUrlMatches.push({
+          type: 'link',
+          alt: url,
+          url: fullUrl, // Speichere mit Protokoll für iframe
+          isTemporary: false
+        });
+      }
+    }
+    
     
     const allAttachments = [...imageMatches, ...markdownLinkMatches, ...rawUrlMatches];
     
@@ -564,18 +714,9 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     
     // Filtere externe Links heraus, die als Web-Vorschau gerendert werden sollen
     const externalLinksToRender = attachments.filter(attachment => {
-      // DEBUG: Logging für Diagnose
-      console.log('🔍 Externer Link Check:', {
-        type: attachment.type,
-        alt: attachment.alt,
-        url: attachment.url,
-        isTemporary: attachment.isTemporary
-      });
-      
       // WICHTIG: Cerebro-Media-Links werden NICHT als Web-Vorschau gerendert
       const isCerebroMedia = attachment.url?.includes('/cerebro/media/');
       if (isCerebroMedia) {
-        console.log('  ❌ Cerebro-Media, überspringe');
         return false;
       }
       
@@ -594,13 +735,12 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       }
       
       if (!url || url === "wird nach dem Erstellen hochgeladen") {
-        console.log('  ❌ Keine gültige URL');
         return false;
       }
       
-      // Prüfe ob es ein externer Link ist (http:// oder https://)
+      // Prüfe ob es ein externer Link ist (http://, https://, oder www./Domain ohne Protokoll)
+      // URLs ohne Protokoll werden bereits mit https:// gespeichert (siehe extractAttachments)
       const isExternalLink = url.match(/^https?:\/\//);
-      console.log('  🔗 URL:', url, 'isExternalLink:', !!isExternalLink);
       if (!isExternalLink) {
         return false;
       }
@@ -628,12 +768,8 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                              url.includes('/api/tasks/attachments/');
       
       // Nur echte externe Links rendern (keine Bilder, PDFs, Attachments)
-      const shouldRender = isExternalLink && !isImage && !isPdf && !isAttachmentUrl;
-      console.log('  ✅ Soll gerendert werden:', shouldRender, { isImage, isPdf, isAttachmentUrl });
-      return shouldRender;
+      return isExternalLink && !isImage && !isPdf && !isAttachmentUrl;
     });
-    
-    console.log('📊 Externe Links gefunden:', externalLinksToRender.length, externalLinksToRender);
     
     // Ersetze externe Links aus dem Text (werden separat als Vorschau gerendert)
     // 1. Markdown-Links: [Text](URL)
@@ -667,12 +803,16 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       return `${alt} [Link]`;
     });
     
-    // 2. Reine URLs (ohne Markdown-Format): http:// oder https://
+    // 2. Reine URLs (ohne Markdown-Format): http://, https://, oder www.example.com
     // Entferne URLs, die in externalLinksToRender enthalten sind
     externalLinksToRender.forEach(link => {
-      const url = link.url;
-      // Erstelle Regex, die die URL findet (am Zeilenanfang, nach Whitespace, oder am Zeilenende)
-      const urlEscaped = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // link.url enthält bereits https:// (wenn ursprünglich ohne Protokoll)
+      // link.alt enthält die ursprüngliche URL (mit oder ohne Protokoll)
+      const originalUrl = link.alt; // Ursprüngliche URL wie im Text
+      const fullUrl = link.url; // URL mit Protokoll für iframe
+      
+      // Erstelle Regex, die die ursprüngliche URL findet (am Zeilenanfang, nach Whitespace, oder am Zeilenende)
+      const urlEscaped = originalUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       // Finde URL mit optionalem Whitespace davor und danach
       const urlRegex = new RegExp(`(?:^|[\\s\\n])(${urlEscaped})(?:[\\s\\n]|$)`, 'g');
       processedContent = processedContent.replace(urlRegex, (match, urlMatch) => {
@@ -738,11 +878,9 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       );
     };
     
-    // Rendere externe Links als Web-Vorschau (iframe)
+    // Rendere externe Links als statische Bildvorschau (wie X.com)
     const renderExternalLinks = () => {
-      console.log('🌐 renderExternalLinks aufgerufen, Anzahl:', externalLinksToRender.length);
       if (externalLinksToRender.length === 0) {
-        console.log('  ❌ Keine externen Links zum Rendern');
         return null;
       }
       
@@ -758,52 +896,14 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       return (
         <div className="flex flex-col gap-3 mt-2">
           {uniqueLinks.map((attachment, index) => {
-            // Bestimme URL
-            let url: string = '';
-            let metadata = getAttachmentMetadata(attachment.alt, attachment.url);
-            if (metadata?.url) {
-              url = metadata.url;
-            } else {
-              url = attachment.url || '';
-            }
-            
-            if (attachment.isTemporary) {
-              const tempUrl = getTemporaryFileUrl(attachment.alt);
-              if (tempUrl) url = tempUrl;
-            }
-            
-            if (!url || url === "wird nach dem Erstellen hochgeladen") {
-              return null;
-            }
-            
             return (
-              <div key={`link-${attachment.alt}-${url}-${index}`} className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
-                <div className="p-3">
-                  <div className="flex items-center mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                    <span className="text-sm font-medium dark:text-gray-200 flex-grow">{attachment.alt || url}</span>
-                    <a 
-                      href={url} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="ml-2 text-blue-600 dark:text-blue-400 hover:underline text-sm"
-                    >
-                      Öffnen
-                    </a>
-                  </div>
-                  <iframe 
-                    src={url}
-                    className="w-full rounded border dark:border-gray-600"
-                    style={{ height: '400px' }}
-                    title={attachment.alt || 'Web-Vorschau'}
-                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-                  />
-                </div>
-              </div>
+              <ExternalLinkPreview 
+                key={`link-${attachment.alt}-${attachment.url}-${index}`}
+                url={attachment.url || ''}
+                alt={attachment.alt || attachment.url || ''}
+              />
             );
-          }).filter((item): item is React.ReactElement => item !== null)}
+          })}
         </div>
       );
     };
