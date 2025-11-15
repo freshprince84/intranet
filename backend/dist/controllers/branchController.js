@@ -72,6 +72,7 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
             queryOptions.select = {
                 id: true,
                 name: true,
+                whatsappSettings: true,
                 roles: {
                     where: { roleId: roleId },
                     select: { id: true }
@@ -81,10 +82,34 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
         else {
             queryOptions.select = {
                 id: true,
-                name: true
+                name: true,
+                whatsappSettings: true
             };
         }
         let branches = yield prisma.branch.findMany(queryOptions);
+        // Entschlüssele WhatsApp Settings für alle Branches
+        // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
+        const { decryptSecret } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+        branches = branches.map((branch) => {
+            if (branch.whatsappSettings) {
+                try {
+                    const settings = branch.whatsappSettings;
+                    // Prüfe ob Settings verschlüsselt sind (Format: iv:authTag:encrypted)
+                    if (settings.apiKey && typeof settings.apiKey === 'string' && settings.apiKey.includes(':')) {
+                        settings.apiKey = decryptSecret(settings.apiKey);
+                    }
+                    if (settings.apiSecret && typeof settings.apiSecret === 'string' && settings.apiSecret.includes(':')) {
+                        settings.apiSecret = decryptSecret(settings.apiSecret);
+                    }
+                    branch.whatsappSettings = settings;
+                }
+                catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings für Branch ${branch.id}:`, error);
+                    // Bei Fehler: Settings bleiben verschlüsselt (für Migration)
+                }
+            }
+            return branch;
+        });
         // Wenn roleId angegeben, filtere Branches nach Verfügbarkeit für diese Rolle
         if (roleId && !isNaN(roleId)) {
             // Hole die Rolle, um allBranches zu prüfen
@@ -109,10 +134,11 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 // Rolle nicht gefunden, keine Branches zurückgeben
                 branches = [];
             }
-            // Entferne das 'roles' Feld aus der Antwort
+            // Entferne das 'roles' Feld aus der Antwort, behalte aber whatsappSettings
             branches = branches.map(branch => ({
                 id: branch.id,
-                name: branch.name
+                name: branch.name,
+                whatsappSettings: branch.whatsappSettings
             }));
         }
         res.json(branches);
@@ -365,6 +391,7 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             try {
                 const { encryptApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
                 encryptedWhatsAppSettings = encryptApiSettings(whatsappSettings);
+                console.log('[Branch Controller] WhatsApp Settings verschlüsselt und bereit zum Speichern');
             }
             catch (error) {
                 console.warn('[Branch Controller] WhatsApp Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
@@ -377,6 +404,14 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         };
         if (whatsappSettings !== undefined) {
             updateData.whatsappSettings = encryptedWhatsAppSettings;
+            console.log('[Branch Controller] WhatsApp Settings werden gespeichert:', {
+                hasProvider: !!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.provider),
+                hasApiKey: !!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.apiKey),
+                hasPhoneNumberId: !!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.phoneNumberId)
+            });
+        }
+        else {
+            console.log('[Branch Controller] Keine WhatsApp Settings im Request');
         }
         const updatedBranch = yield prisma.branch.update({
             where: { id: branchId },
@@ -387,6 +422,26 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 whatsappSettings: true
             }
         });
+        // Entschlüssele WhatsApp Settings für Response (Frontend braucht entschlüsselte Werte)
+        // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
+        if (updatedBranch.whatsappSettings) {
+            try {
+                const { decryptSecret } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                const settings = updatedBranch.whatsappSettings;
+                // Prüfe ob Settings verschlüsselt sind (Format: iv:authTag:encrypted)
+                if (settings.apiKey && typeof settings.apiKey === 'string' && settings.apiKey.includes(':')) {
+                    settings.apiKey = decryptSecret(settings.apiKey);
+                }
+                if (settings.apiSecret && typeof settings.apiSecret === 'string' && settings.apiSecret.includes(':')) {
+                    settings.apiSecret = decryptSecret(settings.apiSecret);
+                }
+                updatedBranch.whatsappSettings = settings;
+            }
+            catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings:', error);
+                // Bei Fehler: Settings bleiben verschlüsselt (für Migration)
+            }
+        }
         res.json(updatedBranch);
     }
     catch (error) {

@@ -473,10 +473,16 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         // Normalisiere Telefonnummer (falls vorhanden)
         let normalizedPhoneNumber = null;
-        if (phoneNumber && phoneNumber.trim() !== '') {
-            normalizedPhoneNumber = phoneNumber.replace(/[\s-]/g, '');
-            if (!normalizedPhoneNumber.startsWith('+')) {
-                normalizedPhoneNumber = '+' + normalizedPhoneNumber;
+        if (phoneNumber !== undefined) {
+            if (phoneNumber && phoneNumber.trim() !== '') {
+                normalizedPhoneNumber = phoneNumber.replace(/[\s-]/g, '');
+                if (!normalizedPhoneNumber.startsWith('+')) {
+                    normalizedPhoneNumber = '+' + normalizedPhoneNumber;
+                }
+            }
+            else {
+                // Explizit auf null setzen, wenn phoneNumber leer oder null ist
+                normalizedPhoneNumber = null;
             }
         }
         const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract !== undefined && { contract: contract || null })), (salary && { salary: parseFloat(salary) })), (normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (gender !== undefined && { gender: gender || null })), (phoneNumber !== undefined && { phoneNumber: normalizedPhoneNumber }));

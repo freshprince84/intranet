@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -15,7 +48,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WhatsAppAiService = void 0;
 const axios_1 = __importDefault(require("axios"));
 const client_1 = require("@prisma/client");
-const encryption_1 = require("../utils/encryption");
 const languageDetectionService_1 = require("./languageDetectionService");
 const prisma = new client_1.PrismaClient();
 /**
@@ -38,8 +70,28 @@ class WhatsAppAiService {
             if (!(branch === null || branch === void 0 ? void 0 : branch.whatsappSettings)) {
                 throw new Error('Branch WhatsApp Settings nicht gefunden');
             }
-            const settings = (0, encryption_1.decryptApiSettings)(branch.whatsappSettings);
-            const whatsappSettings = (settings === null || settings === void 0 ? void 0 : settings.whatsapp) || settings; // Falls direkt WhatsApp Settings
+            // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
+            // Entschlüssele nur apiKey und apiSecret, nicht das gesamte Objekt
+            const { decryptSecret } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+            const settings = branch.whatsappSettings;
+            // Entschlüssele apiKey und apiSecret falls verschlüsselt
+            if (settings.apiKey && typeof settings.apiKey === 'string' && settings.apiKey.includes(':')) {
+                try {
+                    settings.apiKey = decryptSecret(settings.apiKey);
+                }
+                catch (error) {
+                    console.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiKey:', error);
+                }
+            }
+            if (settings.apiSecret && typeof settings.apiSecret === 'string' && settings.apiSecret.includes(':')) {
+                try {
+                    settings.apiSecret = decryptSecret(settings.apiSecret);
+                }
+                catch (error) {
+                    console.warn('[WhatsApp AI Service] Fehler beim Entschlüsseln von apiSecret:', error);
+                }
+            }
+            const whatsappSettings = settings; // Branch-Settings sind direkt WhatsApp Settings
             const aiConfig = whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.ai;
             if (!(aiConfig === null || aiConfig === void 0 ? void 0 : aiConfig.enabled)) {
                 throw new Error('KI ist für diesen Branch nicht aktiviert');
@@ -148,8 +200,9 @@ class WhatsAppAiService {
                 if (!(branch === null || branch === void 0 ? void 0 : branch.whatsappSettings)) {
                     return false;
                 }
-                const settings = (0, encryption_1.decryptApiSettings)(branch.whatsappSettings);
-                const whatsappSettings = (settings === null || settings === void 0 ? void 0 : settings.whatsapp) || settings;
+                // Branch-Settings sind flach strukturiert, nicht verschachtelt
+                const settings = branch.whatsappSettings;
+                const whatsappSettings = settings; // Branch-Settings sind direkt WhatsApp Settings
                 const aiConfig = whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.ai;
                 return (aiConfig === null || aiConfig === void 0 ? void 0 : aiConfig.enabled) === true;
             }
