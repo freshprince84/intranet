@@ -645,6 +645,40 @@ const Worktracker: React.FC = () => {
         }
     };
 
+    // Status-Farben für Reservations
+    const getReservationStatusColor = (status: ReservationStatus): string => {
+        switch (status) {
+            case ReservationStatus.CONFIRMED:
+                return 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200';
+            case ReservationStatus.NOTIFICATION_SENT:
+                return 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200';
+            case ReservationStatus.CHECKED_IN:
+                return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200';
+            case ReservationStatus.CHECKED_OUT:
+                return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+            case ReservationStatus.CANCELLED:
+                return 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200';
+            case ReservationStatus.NO_SHOW:
+                return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200';
+            default:
+                return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200';
+        }
+    };
+
+    const getPaymentStatusColor = (status: PaymentStatus): string => {
+        switch (status) {
+            case PaymentStatus.PAID:
+                return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200';
+            case PaymentStatus.PARTIALLY_PAID:
+                return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200';
+            case PaymentStatus.REFUNDED:
+                return 'bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200';
+            case PaymentStatus.PENDING:
+            default:
+                return 'bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200';
+        }
+    };
+
     const filteredAndSortedTasks = useMemo(() => {
         console.log('🔄 Filtere Tasks:', tasks.length, 'Tasks vorhanden');
         console.log('🔄 Filterbedingungen:', filterConditions);
@@ -962,6 +996,47 @@ const Worktracker: React.FC = () => {
         console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
         return sorted;
     }, [tasks, searchTerm, tableSortConfig, getStatusPriority, filterConditions, filterLogicalOperators, filterSortDirections, viewMode]);
+
+    // Filter- und Sortierlogik für Reservations
+    const filteredAndSortedReservations = useMemo(() => {
+        console.log('🔄 Filtere Reservations:', reservations.length, 'Reservations vorhanden');
+        const validReservations = reservations.filter(reservation => reservation != null);
+        
+        const filtered = validReservations.filter(reservation => {
+            // Status-Filter
+            if (reservationFilterStatus !== 'all' && reservation.status !== reservationFilterStatus) {
+                return false;
+            }
+            
+            // Payment-Status-Filter
+            if (reservationFilterPaymentStatus !== 'all' && reservation.paymentStatus !== reservationFilterPaymentStatus) {
+                return false;
+            }
+            
+            // Such-Filter
+            if (reservationSearchTerm) {
+                const searchLower = reservationSearchTerm.toLowerCase();
+                const matchesSearch = 
+                    reservation.guestName.toLowerCase().includes(searchLower) ||
+                    (reservation.guestEmail && reservation.guestEmail.toLowerCase().includes(searchLower)) ||
+                    (reservation.guestPhone && reservation.guestPhone.toLowerCase().includes(searchLower)) ||
+                    (reservation.roomNumber && reservation.roomNumber.toLowerCase().includes(searchLower)) ||
+                    (reservation.lobbyReservationId && reservation.lobbyReservationId.toLowerCase().includes(searchLower));
+                
+                if (!matchesSearch) return false;
+            }
+            
+            return true;
+        });
+        
+        // Sortiere nach Check-in-Datum (neueste zuerst)
+        const sorted = [...filtered].sort((a, b) => {
+            return new Date(b.checkInDate).getTime() - new Date(a.checkInDate).getTime();
+        });
+        
+        console.log('✅ Gefilterte und sortierte Reservations:', sorted.length);
+        return sorted;
+    }, [reservations, reservationFilterStatus, reservationFilterPaymentStatus, reservationSearchTerm]);
 
     // Handler für das Verschieben von Spalten per Drag & Drop
     const handleMoveColumn = (dragIndex: number, hoverIndex: number) => {
@@ -1282,21 +1357,23 @@ const Worktracker: React.FC = () => {
                             )}
 
                             {/* Gespeicherte Filter als Tags anzeigen */}
-                            <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
-                                <SavedFilterTags
-                                tableId={TODOS_TABLE_ID}
-                                onSelectFilter={applyFilterConditions}
-                                onReset={resetFilterConditions}
-                                activeFilterName={activeFilterName}
-                                selectedFilterId={selectedFilterId}
-                                onFilterChange={handleFilterChange}
-                                defaultFilterName={t('tasks.filters.current')}
-                            />
-                            </div>
+                            {activeTab === 'todos' && (
+                                <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
+                                    <SavedFilterTags
+                                    tableId={TODOS_TABLE_ID}
+                                    onSelectFilter={applyFilterConditions}
+                                    onReset={resetFilterConditions}
+                                    activeFilterName={activeFilterName}
+                                    selectedFilterId={selectedFilterId}
+                                    onFilterChange={handleFilterChange}
+                                    defaultFilterName={t('tasks.filters.current')}
+                                />
+                                </div>
+                            )}
                             
-                            {/* Tabelle oder Cards */}
-                            {viewMode === 'table' ? (
-                                /* Tabellen-Ansicht */
+                            {/* Tabelle oder Cards - nur aktiven Tab rendern */}
+                            {activeTab === 'todos' && viewMode === 'table' ? (
+                                /* Tabellen-Ansicht - Tasks */
                                 <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
                                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                                         <thead className="bg-gray-50 dark:bg-gray-700">
@@ -1630,14 +1707,265 @@ const Worktracker: React.FC = () => {
                                 </div>
                             )}
                             
-                            {/* "Mehr anzeigen" Button - Mobil */}
-                            {filteredAndSortedTasks.length > displayLimit && (
+                            {/* "Mehr anzeigen" Button - Mobil - Tasks */}
+                            {activeTab === 'todos' && filteredAndSortedTasks.length > displayLimit && (
                                 <div className="mt-4 flex justify-center">
                                     <button
                                         className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
                                         onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
                                     >
                                         {t('common.showMore')} ({filteredAndSortedTasks.length - displayLimit} {t('common.remaining')})
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {/* Reservations Rendering - Cards */}
+                            {activeTab === 'reservations' && viewMode === 'cards' && (
+                                <div className="-mx-3 sm:-mx-4 md:-mx-6">
+                                    {reservationsLoading ? (
+                                        <div className="flex justify-center py-12">
+                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
+                                        </div>
+                                    ) : reservationsError ? (
+                                        <div className="flex justify-center py-12 text-red-600 dark:text-red-400">
+                                            {reservationsError}
+                                        </div>
+                                    ) : filteredAndSortedReservations.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+                                            <CalendarIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />
+                                            <div className="text-sm">
+                                                {reservationSearchTerm || reservationFilterStatus !== 'all' || reservationFilterPaymentStatus !== 'all'
+                                                    ? t('reservations.noResults', 'Keine Reservations gefunden')
+                                                    : t('reservations.noReservations', 'Keine Reservations vorhanden')}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <CardGrid>
+                                            {filteredAndSortedReservations.slice(0, displayLimit).map(reservation => {
+                                                const formatDate = (dateString: string) => {
+                                                    try {
+                                                        return format(new Date(dateString), 'dd.MM.yyyy', { locale: de });
+                                                    } catch {
+                                                        return dateString;
+                                                    }
+                                                };
+                                                
+                                                // Metadaten für Reservation-Card
+                                                const metadata: MetadataItem[] = [];
+                                                
+                                                // Haupt-Metadaten: Check-in/Check-out
+                                                metadata.push({
+                                                    icon: <CalendarIcon className="h-4 w-4" />,
+                                                    label: t('reservations.checkInOut', 'Check-in/Check-out'),
+                                                    value: `${formatDate(reservation.checkInDate)} - ${formatDate(reservation.checkOutDate)}`,
+                                                    section: 'main'
+                                                });
+                                                
+                                                // Zweite Zeile: Zimmernummer
+                                                if (reservation.roomNumber) {
+                                                    metadata.push({
+                                                        icon: <HomeIcon className="h-4 w-4" />,
+                                                        label: t('reservations.room', 'Zimmer'),
+                                                        value: reservation.roomNumber,
+                                                        section: 'main-second'
+                                                    });
+                                                }
+                                                
+                                                // Rechts: E-Mail
+                                                if (reservation.guestEmail) {
+                                                    metadata.push({
+                                                        icon: <EnvelopeIcon className="h-4 w-4" />,
+                                                        label: t('reservations.email', 'E-Mail'),
+                                                        value: reservation.guestEmail,
+                                                        section: 'right'
+                                                    });
+                                                }
+                                                
+                                                // Rechts: Telefon
+                                                if (reservation.guestPhone) {
+                                                    metadata.push({
+                                                        icon: <PhoneIcon className="h-4 w-4" />,
+                                                        label: t('reservations.phone', 'Telefon'),
+                                                        value: reservation.guestPhone,
+                                                        section: 'right'
+                                                    });
+                                                }
+                                                
+                                                // Action-Buttons
+                                                const actionButtons = (
+                                                    <div className="flex items-center space-x-2">
+                                                        {hasPermission('reservations', 'write', 'table') && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    navigate(`/reservations/${reservation.id}`);
+                                                                }}
+                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                title={t('common.viewDetails', 'Details anzeigen')}
+                                                            >
+                                                                <InformationCircleIcon className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                                
+                                                return (
+                                                    <DataCard
+                                                        key={reservation.id}
+                                                        title={reservation.guestName}
+                                                        subtitle={reservation.lobbyReservationId ? `ID: ${reservation.lobbyReservationId}` : undefined}
+                                                        status={{
+                                                            label: t(`reservations.status.${reservation.status}`, reservation.status),
+                                                            color: getReservationStatusColor(reservation.status),
+                                                            onPreviousClick: undefined,
+                                                            onNextClick: undefined
+                                                        }}
+                                                        metadata={metadata}
+                                                        actions={actionButtons}
+                                                        onClick={() => navigate(`/reservations/${reservation.id}`)}
+                                                    />
+                                                );
+                                            })}
+                                        </CardGrid>
+                                    )}
+                                </div>
+                            )}
+                            
+                            {/* Reservations Rendering - Tabelle (optional, analog zu Tasks) */}
+                            {activeTab === 'reservations' && viewMode === 'table' && (
+                                <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6">
+                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                        <thead className="bg-gray-50 dark:bg-gray-700">
+                                            <tr>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('reservations.guestName', 'Gast')}
+                                                </th>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('reservations.status', 'Status')}
+                                                </th>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('reservations.paymentStatus', 'Zahlungsstatus')}
+                                                </th>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('reservations.checkInOut', 'Check-in/Check-out')}
+                                                </th>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('reservations.room', 'Zimmer')}
+                                                </th>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('common.actions', 'Aktionen')}
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                            {reservationsLoading ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-3 sm:px-4 md:px-6 py-4 text-center">
+                                                        <div className="flex justify-center">
+                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : reservationsError ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
+                                                        {reservationsError}
+                                                    </td>
+                                                </tr>
+                                            ) : filteredAndSortedReservations.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                                                        <div className="flex flex-col items-center justify-center gap-4">
+                                                            <CalendarIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+                                                            <div className="text-sm">
+                                                                {reservationSearchTerm || reservationFilterStatus !== 'all' || reservationFilterPaymentStatus !== 'all'
+                                                                    ? t('reservations.noResults', 'Keine Reservations gefunden')
+                                                                    : t('reservations.noReservations', 'Keine Reservations vorhanden')}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                <>
+                                                    {filteredAndSortedReservations.slice(0, displayLimit).map(reservation => {
+                                                        const formatDate = (dateString: string) => {
+                                                            try {
+                                                                return format(new Date(dateString), 'dd.MM.yyyy', { locale: de });
+                                                            } catch {
+                                                                return dateString;
+                                                            }
+                                                        };
+                                                        
+                                                        return (
+                                                            <tr 
+                                                                key={reservation.id} 
+                                                                className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                                                                onClick={() => navigate(`/reservations/${reservation.id}`)}
+                                                            >
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4">
+                                                                    <div className="text-sm text-gray-900 dark:text-gray-200 break-words">
+                                                                        {reservation.guestName}
+                                                                        {reservation.lobbyReservationId && (
+                                                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                                ID: {reservation.lobbyReservationId}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getReservationStatusColor(reservation.status)}`}>
+                                                                        {t(`reservations.status.${reservation.status}`, reservation.status)}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPaymentStatusColor(reservation.paymentStatus)}`}>
+                                                                        {t(`reservations.paymentStatus.${reservation.paymentStatus}`, reservation.paymentStatus)}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                        {formatDate(reservation.checkInDate)} - {formatDate(reservation.checkOutDate)}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                        {reservation.roomNumber || '-'}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                    <div className="flex space-x-2 action-buttons">
+                                                                        {hasPermission('reservations', 'write', 'table') && (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    navigate(`/reservations/${reservation.id}`);
+                                                                                }}
+                                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                title={t('common.viewDetails', 'Details anzeigen')}
+                                                                            >
+                                                                                <InformationCircleIcon className="h-4 w-4" />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            
+                            {/* "Mehr anzeigen" Button - Reservations */}
+                            {activeTab === 'reservations' && filteredAndSortedReservations.length > displayLimit && (
+                                <div className="mt-4 flex justify-center">
+                                    <button
+                                        className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
+                                        onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+                                    >
+                                        {t('common.showMore')} ({filteredAndSortedReservations.length - displayLimit} {t('common.remaining')})
                                     </button>
                                 </div>
                             )}
@@ -2222,14 +2550,265 @@ const Worktracker: React.FC = () => {
                                 </div>
                             )}
                             
-                            {/* "Mehr anzeigen" Button - Desktop */}
-                            {filteredAndSortedTasks.length > displayLimit && (
+                            {/* "Mehr anzeigen" Button - Desktop - Tasks */}
+                            {activeTab === 'todos' && filteredAndSortedTasks.length > displayLimit && (
                                 <div className="mt-4 flex justify-center">
                                     <button
                                         className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
                                         onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
                                     >
                                         {t('common.showMore')} ({filteredAndSortedTasks.length - displayLimit} {t('common.remaining')})
+                                    </button>
+                                </div>
+                            )}
+                            
+                            {/* Reservations Rendering - Desktop - Cards */}
+                            {activeTab === 'reservations' && viewMode === 'cards' && (
+                                <div className="-mx-3 sm:-mx-4 md:-mx-6">
+                                    {reservationsLoading ? (
+                                        <div className="flex justify-center py-12">
+                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
+                                        </div>
+                                    ) : reservationsError ? (
+                                        <div className="flex justify-center py-12 text-red-600 dark:text-red-400">
+                                            {reservationsError}
+                                        </div>
+                                    ) : filteredAndSortedReservations.length === 0 ? (
+                                        <div className="flex flex-col items-center justify-center py-12 text-gray-500 dark:text-gray-400">
+                                            <CalendarIcon className="h-10 w-10 mb-4 text-gray-400 dark:text-gray-500" />
+                                            <div className="text-sm">
+                                                {reservationSearchTerm || reservationFilterStatus !== 'all' || reservationFilterPaymentStatus !== 'all'
+                                                    ? t('reservations.noResults', 'Keine Reservations gefunden')
+                                                    : t('reservations.noReservations', 'Keine Reservations vorhanden')}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <CardGrid>
+                                            {filteredAndSortedReservations.slice(0, displayLimit).map(reservation => {
+                                                const formatDate = (dateString: string) => {
+                                                    try {
+                                                        return format(new Date(dateString), 'dd.MM.yyyy', { locale: de });
+                                                    } catch {
+                                                        return dateString;
+                                                    }
+                                                };
+                                                
+                                                // Metadaten für Reservation-Card
+                                                const metadata: MetadataItem[] = [];
+                                                
+                                                // Haupt-Metadaten: Check-in/Check-out
+                                                metadata.push({
+                                                    icon: <CalendarIcon className="h-4 w-4" />,
+                                                    label: t('reservations.checkInOut', 'Check-in/Check-out'),
+                                                    value: `${formatDate(reservation.checkInDate)} - ${formatDate(reservation.checkOutDate)}`,
+                                                    section: 'main'
+                                                });
+                                                
+                                                // Zweite Zeile: Zimmernummer
+                                                if (reservation.roomNumber) {
+                                                    metadata.push({
+                                                        icon: <HomeIcon className="h-4 w-4" />,
+                                                        label: t('reservations.room', 'Zimmer'),
+                                                        value: reservation.roomNumber,
+                                                        section: 'main-second'
+                                                    });
+                                                }
+                                                
+                                                // Rechts: E-Mail
+                                                if (reservation.guestEmail) {
+                                                    metadata.push({
+                                                        icon: <EnvelopeIcon className="h-4 w-4" />,
+                                                        label: t('reservations.email', 'E-Mail'),
+                                                        value: reservation.guestEmail,
+                                                        section: 'right'
+                                                    });
+                                                }
+                                                
+                                                // Rechts: Telefon
+                                                if (reservation.guestPhone) {
+                                                    metadata.push({
+                                                        icon: <PhoneIcon className="h-4 w-4" />,
+                                                        label: t('reservations.phone', 'Telefon'),
+                                                        value: reservation.guestPhone,
+                                                        section: 'right'
+                                                    });
+                                                }
+                                                
+                                                // Action-Buttons
+                                                const actionButtons = (
+                                                    <div className="flex items-center space-x-2">
+                                                        {hasPermission('reservations', 'write', 'table') && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    navigate(`/reservations/${reservation.id}`);
+                                                                }}
+                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                title={t('common.viewDetails', 'Details anzeigen')}
+                                                            >
+                                                                <InformationCircleIcon className="h-4 w-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                );
+                                                
+                                                return (
+                                                    <DataCard
+                                                        key={reservation.id}
+                                                        title={reservation.guestName}
+                                                        subtitle={reservation.lobbyReservationId ? `ID: ${reservation.lobbyReservationId}` : undefined}
+                                                        status={{
+                                                            label: t(`reservations.status.${reservation.status}`, reservation.status),
+                                                            color: getReservationStatusColor(reservation.status),
+                                                            onPreviousClick: undefined,
+                                                            onNextClick: undefined
+                                                        }}
+                                                        metadata={metadata}
+                                                        actions={actionButtons}
+                                                        onClick={() => navigate(`/reservations/${reservation.id}`)}
+                                                    />
+                                                );
+                                            })}
+                                        </CardGrid>
+                                    )}
+                                </div>
+                            )}
+                            
+                            {/* Reservations Rendering - Desktop - Tabelle */}
+                            {activeTab === 'reservations' && viewMode === 'table' && (
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                                        <thead className="bg-gray-50 dark:bg-gray-700">
+                                            <tr>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('reservations.guestName', 'Gast')}
+                                                </th>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('reservations.status', 'Status')}
+                                                </th>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('reservations.paymentStatus', 'Zahlungsstatus')}
+                                                </th>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('reservations.checkInOut', 'Check-in/Check-out')}
+                                                </th>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('reservations.room', 'Zimmer')}
+                                                </th>
+                                                <th scope="col" className="px-3 sm:px-4 md:px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                    {t('common.actions', 'Aktionen')}
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                            {reservationsLoading ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-3 sm:px-4 md:px-6 py-4 text-center">
+                                                        <div className="flex justify-center">
+                                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-900 dark:border-gray-100"></div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : reservationsError ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-6 py-4 text-center text-red-600 dark:text-red-400">
+                                                        {reservationsError}
+                                                    </td>
+                                                </tr>
+                                            ) : filteredAndSortedReservations.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan={6} className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                                                        <div className="flex flex-col items-center justify-center gap-4">
+                                                            <CalendarIcon className="h-10 w-10 text-gray-400 dark:text-gray-500" />
+                                                            <div className="text-sm">
+                                                                {reservationSearchTerm || reservationFilterStatus !== 'all' || reservationFilterPaymentStatus !== 'all'
+                                                                    ? t('reservations.noResults', 'Keine Reservations gefunden')
+                                                                    : t('reservations.noReservations', 'Keine Reservations vorhanden')}
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : (
+                                                <>
+                                                    {filteredAndSortedReservations.slice(0, displayLimit).map(reservation => {
+                                                        const formatDate = (dateString: string) => {
+                                                            try {
+                                                                return format(new Date(dateString), 'dd.MM.yyyy', { locale: de });
+                                                            } catch {
+                                                                return dateString;
+                                                            }
+                                                        };
+                                                        
+                                                        return (
+                                                            <tr 
+                                                                key={reservation.id} 
+                                                                className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                                                                onClick={() => navigate(`/reservations/${reservation.id}`)}
+                                                            >
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4">
+                                                                    <div className="text-sm text-gray-900 dark:text-gray-200 break-words">
+                                                                        {reservation.guestName}
+                                                                        {reservation.lobbyReservationId && (
+                                                                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                                                                                ID: {reservation.lobbyReservationId}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getReservationStatusColor(reservation.status)}`}>
+                                                                        {t(`reservations.status.${reservation.status}`, reservation.status)}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getPaymentStatusColor(reservation.paymentStatus)}`}>
+                                                                        {t(`reservations.paymentStatus.${reservation.paymentStatus}`, reservation.paymentStatus)}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                        {formatDate(reservation.checkInDate)} - {formatDate(reservation.checkOutDate)}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                    <div className="text-sm text-gray-900 dark:text-gray-200">
+                                                                        {reservation.roomNumber || '-'}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
+                                                                    <div className="flex space-x-2 action-buttons">
+                                                                        {hasPermission('reservations', 'write', 'table') && (
+                                                                            <button
+                                                                                onClick={(e) => {
+                                                                                    e.stopPropagation();
+                                                                                    navigate(`/reservations/${reservation.id}`);
+                                                                                }}
+                                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                title={t('common.viewDetails', 'Details anzeigen')}
+                                                                            >
+                                                                                <InformationCircleIcon className="h-4 w-4" />
+                                                                            </button>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            
+                            {/* "Mehr anzeigen" Button - Desktop - Reservations */}
+                            {activeTab === 'reservations' && filteredAndSortedReservations.length > displayLimit && (
+                                <div className="mt-4 flex justify-center">
+                                    <button
+                                        className="px-4 py-2 text-sm font-medium text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
+                                        onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+                                    >
+                                        {t('common.showMore')} ({filteredAndSortedReservations.length - displayLimit} {t('common.remaining')})
                                     </button>
                                 </div>
                             )}
@@ -2281,6 +2860,18 @@ const Worktracker: React.FC = () => {
                     task={selectedTask}
                 />
             )}
+            
+            {/* Create Reservation Modal */}
+            <CreateReservationModal
+                isOpen={isCreateReservationModalOpen}
+                onClose={() => setIsCreateReservationModalOpen(false)}
+                onReservationCreated={async (newReservation) => {
+                    // Lade Reservations neu, um den aktualisierten Status zu erhalten
+                    await loadReservations();
+                    // Navigiere zur Detailansicht
+                    navigate(`/reservations/${newReservation.id}`);
+                }}
+            />
         </div>
     );
 };
