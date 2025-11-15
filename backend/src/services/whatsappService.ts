@@ -286,8 +286,16 @@ export class WhatsAppService {
 
   /**
    * Sendet Nachricht über WhatsApp Business API
+   * @param templateParams - Optional: Template-Parameter (für Template Messages)
+   * @param templateLanguage - Optional: Template-Sprache (Standard: 'en' oder aus Environment)
    */
-  private async sendViaWhatsAppBusiness(to: string, message: string, template?: string): Promise<boolean> {
+  private async sendViaWhatsAppBusiness(
+    to: string, 
+    message: string, 
+    template?: string,
+    templateParams?: Array<{ type: 'text'; text: string }>,
+    templateLanguage?: string
+  ): Promise<boolean> {
     if (!this.axiosInstance) {
       throw new Error('WhatsApp Business Service nicht initialisiert');
     }
@@ -309,11 +317,24 @@ export class WhatsAppService {
 
       // Wenn Template angegeben, verwende Template-Nachricht
       if (template) {
+        // Template-Sprache: Parameter > Environment-Variable > Standard (Standard: Englisch)
+        const languageCode = templateLanguage || process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en';
+        
         payload.type = 'template';
         payload.template = {
           name: template,
-          language: { code: 'es' } // Standard: Spanisch
+          language: { code: languageCode }
         };
+
+        // Füge Template-Parameter hinzu, falls vorhanden
+        if (templateParams && templateParams.length > 0) {
+          payload.template.components = [
+            {
+              type: 'body',
+              parameters: templateParams
+            }
+          ];
+        }
       }
 
       console.log(`[WhatsApp Business] Sende Nachricht an ${to} via Phone Number ID ${this.phoneNumberId}`);
@@ -353,6 +374,94 @@ export class WhatsAppService {
   }
 
   /**
+   * Prüft ob ein Fehler auf "outside 24-hour window" hinweist
+   */
+  private isOutside24HourWindowError(error: any): boolean {
+    if (axios.isAxiosError(error)) {
+      const errorData = error.response?.data as any;
+      const errorCode = errorData?.error?.code;
+      const errorMessage = (errorData?.error?.message || '').toLowerCase();
+      const errorSubcode = errorData?.error?.error_subcode;
+
+      // WhatsApp Business API Fehlercodes für 24h-Fenster
+      // 131047 = Message outside 24-hour window
+      // 131026 = Template required (auch bei 24h-Fenster)
+      return (
+        errorCode === 131047 ||
+        errorCode === 131026 ||
+        errorSubcode === 131047 ||
+        errorMessage.includes('24 hour') ||
+        errorMessage.includes('outside window') ||
+        errorMessage.includes('template required') ||
+        errorMessage.includes('outside the 24 hour')
+      );
+    }
+    return false;
+  }
+
+  /**
+   * Sendet Nachricht mit Fallback auf Template Message
+   * Versucht zuerst Session Message (24h-Fenster), bei Fehler: Template Message
+   * 
+   * @param to - Telefonnummer des Empfängers
+   * @param message - Nachrichtentext (für Session Message)
+   * @param templateName - Template-Name (für Fallback)
+   * @param templateParams - Template-Parameter (Array von Text-Parametern)
+   * @returns true wenn erfolgreich
+   */
+  async sendMessageWithFallback(
+    to: string,
+    message: string,
+    templateName?: string,
+    templateParams?: string[]
+  ): Promise<boolean> {
+    try {
+      // Versuche zuerst Session Message (24h-Fenster)
+      console.log(`[WhatsApp Service] Versuche Session Message (24h-Fenster) für ${to}...`);
+      return await this.sendMessage(to, message);
+    } catch (error) {
+      // Prüfe ob Fehler "outside 24h window" ist
+      if (this.isOutside24HourWindowError(error)) {
+        console.log(`[WhatsApp Service] ⚠️ 24h-Fenster abgelaufen, verwende Template Message...`);
+        
+        if (!templateName) {
+          console.error('[WhatsApp Service] Template-Name fehlt für Fallback!');
+          throw new Error('Template Message erforderlich, aber kein Template-Name angegeben');
+        }
+
+        // Fallback: Template Message
+        try {
+          await this.loadSettings();
+          
+          if (!this.axiosInstance || !this.phoneNumberId) {
+            throw new Error('WhatsApp Service nicht initialisiert');
+          }
+
+          const normalizedPhone = this.normalizePhoneNumber(to);
+          
+          // Formatiere Template-Parameter
+          const formattedParams = templateParams?.map(text => ({
+            type: 'text' as const,
+            text: text
+          })) || [];
+
+          // Template-Sprache aus Environment-Variable oder Standard (Standard: Englisch)
+          const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en';
+          
+          return await this.sendViaWhatsAppBusiness(normalizedPhone, message, templateName, formattedParams, languageCode);
+        } catch (templateError) {
+          console.error('[WhatsApp Service] Fehler bei Template Message:', templateError);
+          throw templateError;
+        }
+      } else {
+        // Anderer Fehler - weiterwerfen
+        console.error('[WhatsApp Service] Unbekannter Fehler bei Session Message:', error);
+        throw error;
+      }
+    }
+  }
+
+  /**
    * Normalisiert Telefonnummer (entfernt Leerzeichen, fügt + hinzu)
    */
   private normalizePhoneNumber(phone: string): string {
@@ -369,6 +478,7 @@ export class WhatsAppService {
 
   /**
    * Sendet Check-in-Einladung per WhatsApp
+   * Verwendet Hybrid-Ansatz: Session Message mit Fallback auf Template
    * 
    * @param guestName - Name des Gastes
    * @param guestPhone - Telefonnummer des Gastes
@@ -395,11 +505,18 @@ ${paymentLink}
 
 ¡Te esperamos mañana!`;
 
-    return await this.sendMessage(guestPhone, message);
+    // Template-Name aus Environment oder Settings (Standard: reservation_checkin_invitation)
+    const templateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_INVITATION || 'reservation_checkin_invitation';
+    
+    // Template-Parameter (müssen in der Reihenfolge der {{1}}, {{2}}, {{3}} im Template sein)
+    const templateParams = [guestName, checkInLink, paymentLink];
+
+    return await this.sendMessageWithFallback(guestPhone, message, templateName, templateParams);
   }
 
   /**
    * Sendet Check-in-Bestätigung per WhatsApp
+   * Verwendet Hybrid-Ansatz: Session Message mit Fallback auf Template
    * 
    * @param guestName - Name des Gastes
    * @param guestPhone - Telefonnummer des Gastes
@@ -431,7 +548,14 @@ Acceso:
 
 ¡Te deseamos una estancia agradable!`;
 
-    return await this.sendMessage(guestPhone, message);
+    // Template-Name aus Environment oder Settings (Standard: reservation_checkin_confirmation)
+    const templateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_CONFIRMATION || 'reservation_checkin_confirmation';
+    
+    // Template-Parameter (müssen in der Reihenfolge der {{1}}, {{2}}, etc. im Template sein)
+    // Format: Name, Room Number, Room Description, Door PIN, App Name
+    const templateParams = [guestName, roomNumber, roomDescription, doorPin, doorAppName];
+
+    return await this.sendMessageWithFallback(guestPhone, message, templateName, templateParams);
   }
 
   /**

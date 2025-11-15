@@ -17,6 +17,8 @@ const client_1 = require("@prisma/client");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
+const axios_1 = __importDefault(require("axios"));
+const taskAutomationService_1 = require("../services/taskAutomationService");
 const prisma = new client_1.PrismaClient();
 // Konfiguration für Datei-Upload
 const storage = multer_1.default.diskStorage({
@@ -50,6 +52,7 @@ const upload = (0, multer_1.default)({
 const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         upload.single('documentFile')(req, res, (err) => __awaiter(void 0, void 0, void 0, function* () {
+            var _a;
             if (err) {
                 return res.status(400).json({ error: err.message });
             }
@@ -103,6 +106,152 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             const document = yield prisma.identificationDocument.create({
                 data: documentData
             });
+            // Automatische Extraktion und User-Update (nur wenn imageData vorhanden)
+            if (imageData || req.file) {
+                try {
+                    // Konvertiere Datei zu base64, falls nötig
+                    let imageBase64 = null;
+                    if (imageData) {
+                        imageBase64 = imageData;
+                    }
+                    else if (req.file) {
+                        const fileBuffer = fs_1.default.readFileSync(req.file.path);
+                        const mimeType = req.file.mimetype;
+                        imageBase64 = `data:${mimeType};base64,${fileBuffer.toString('base64')}`;
+                    }
+                    if (imageBase64) {
+                        // Rufe Dokumentenerkennung auf
+                        const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+                        if (OPENAI_API_KEY) {
+                            try {
+                                const recognitionResponse = yield axios_1.default.post('https://api.openai.com/v1/chat/completions', {
+                                    model: "gpt-4o",
+                                    messages: [
+                                        {
+                                            role: "system",
+                                            content: "Du bist ein Experte für Dokumentenerkennung. Extrahiere alle relevanten Informationen aus dem Ausweisdokument und gib die Daten in einem strukturierten JSON-Format zurück. Beachte folgende Felder: documentType (mögliche Werte: passport, national_id, driving_license, residence_permit, cedula_colombia), documentNumber, issueDate (ISO-Format YYYY-MM-DD), expiryDate (ISO-Format YYYY-MM-DD), issuingCountry, issuingAuthority, firstName, lastName, birthday (ISO-Format YYYY-MM-DD), gender (mögliche Werte: male, female, other oder null falls nicht erkennbar). Für kolumbianische Dokumente (Cédula): Extrahiere auch firstName, lastName, birthday und gender falls möglich."
+                                        },
+                                        {
+                                            role: "user",
+                                            content: [
+                                                {
+                                                    type: "text",
+                                                    text: `Analysiere dieses Ausweisdokument und extrahiere alle relevanten Daten in ein strukturiertes JSON-Format. Es handelt sich um ein Dokument vom Typ: ${documentType}.`
+                                                },
+                                                {
+                                                    type: "image_url",
+                                                    image_url: { url: imageBase64 }
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    max_tokens: 1000
+                                }, {
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'Authorization': `Bearer ${OPENAI_API_KEY}`
+                                    }
+                                });
+                                const aiResponse = recognitionResponse.data.choices[0].message.content;
+                                let recognizedData = {};
+                                try {
+                                    if (aiResponse.trim().startsWith('{')) {
+                                        recognizedData = JSON.parse(aiResponse);
+                                    }
+                                    else {
+                                        const jsonMatch = aiResponse.match(/```json\n([\s\S]*?)\n```/) ||
+                                            aiResponse.match(/```\n([\s\S]*?)\n```/) ||
+                                            aiResponse.match(/\{[\s\S]*\}/);
+                                        if (jsonMatch) {
+                                            recognizedData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+                                        }
+                                    }
+                                }
+                                catch (parseError) {
+                                    console.error('Fehler beim Parsen der KI-Antwort:', parseError);
+                                }
+                                // Update User-Felder mit erkannten Daten
+                                const userUpdateData = {};
+                                if (recognizedData.firstName)
+                                    userUpdateData.firstName = recognizedData.firstName;
+                                if (recognizedData.lastName)
+                                    userUpdateData.lastName = recognizedData.lastName;
+                                if (recognizedData.birthday)
+                                    userUpdateData.birthday = new Date(recognizedData.birthday);
+                                if (recognizedData.gender && ['male', 'female', 'other'].includes(recognizedData.gender)) {
+                                    userUpdateData.gender = recognizedData.gender;
+                                }
+                                if (recognizedData.documentNumber)
+                                    userUpdateData.identificationNumber = recognizedData.documentNumber;
+                                // Update User, falls Daten erkannt wurden
+                                if (Object.keys(userUpdateData).length > 0) {
+                                    yield prisma.user.update({
+                                        where: { id: userId },
+                                        data: userUpdateData
+                                    });
+                                    console.log(`[addDocument] User ${userId} aktualisiert mit erkannten Daten:`, userUpdateData);
+                                }
+                                // Prüfe Organisation und erstelle Admin-Task für Kolumbien
+                                const user = yield prisma.user.findUnique({
+                                    where: { id: userId },
+                                    include: {
+                                        roles: {
+                                            include: {
+                                                role: {
+                                                    include: {
+                                                        organization: {
+                                                            select: { id: true, country: true }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                                // Finde Organisation des Users (erste Rolle mit Organisation)
+                                const userOrganization = (_a = user === null || user === void 0 ? void 0 : user.roles.find(r => r.role.organization)) === null || _a === void 0 ? void 0 : _a.role.organization;
+                                if (userOrganization && userOrganization.country === 'CO') {
+                                    // Erstelle Admin-Onboarding-Task
+                                    yield taskAutomationService_1.TaskAutomationService.createAdminOnboardingTask(userId, userOrganization.id);
+                                    // Markiere Identitätsdokument-To-Do als erledigt, falls vorhanden
+                                    try {
+                                        const identificationDocumentTask = yield prisma.task.findFirst({
+                                            where: {
+                                                organizationId: userOrganization.id,
+                                                responsibleId: userId,
+                                                OR: [
+                                                    { title: { contains: 'Subir documento de identidad' } },
+                                                    { title: { contains: 'Identitätsdokument hochladen' } }
+                                                ],
+                                                status: { not: 'done' }
+                                            }
+                                        });
+                                        if (identificationDocumentTask) {
+                                            yield prisma.task.update({
+                                                where: { id: identificationDocumentTask.id },
+                                                data: { status: 'done' }
+                                            });
+                                            console.log(`[addDocument] Identitätsdokument-To-Do als erledigt markiert: Task ID ${identificationDocumentTask.id} für User ${userId}`);
+                                        }
+                                    }
+                                    catch (taskUpdateError) {
+                                        console.error('[addDocument] Fehler beim Markieren des Identitätsdokument-To-Dos als erledigt:', taskUpdateError);
+                                        // Fehler blockiert nicht die Dokumentenerstellung
+                                    }
+                                }
+                            }
+                            catch (recognitionError) {
+                                console.error('[addDocument] Fehler bei automatischer Dokumentenerkennung:', recognitionError);
+                                // Fehler blockiert nicht die Dokumentenerstellung
+                            }
+                        }
+                    }
+                }
+                catch (error) {
+                    console.error('[addDocument] Fehler bei automatischer Verarbeitung:', error);
+                    // Fehler blockiert nicht die Dokumentenerstellung
+                }
+            }
             res.status(201).json(document);
         }));
     }

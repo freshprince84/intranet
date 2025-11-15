@@ -47,6 +47,13 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         isTemporary: match[2] === "wird nach dem Erstellen hochgeladen"
       }));
     
+    console.log('📋 extractAttachments:', {
+      contentLength: content.length,
+      imageMatches: imageMatches.length,
+      linkMatches: linkMatches.length,
+      links: linkMatches.map(l => ({ alt: l.alt, url: l.url }))
+    });
+    
     const allAttachments = [...imageMatches, ...linkMatches];
     
     // Duplikate entfernen - gruppieren nach alt (Dateiname) und URL, nur eindeutige behalten
@@ -242,6 +249,11 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           }
         }
         
+        // WICHTIG: Wenn es ein Cerebro-Media ist, zeige es NICHT als Vorschau an,
+        // sondern nur als einfachen Link, da es bereits separat angezeigt wird
+        // (wie bei Requests & Tasks - siehe IMAGE_PREVIEW_IMPLEMENTATION.md)
+        const isCerebroMedia = attachment.url?.includes('/cerebro/media/');
+        
         // Bestimme URL: Priorität: Metadaten-URL > Markdown-URL > Temporäre URL
         let url: string = '';
         if (metadata?.url) {
@@ -313,6 +325,26 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         console.log('📄 Finale Entscheidung:', { isImage, isPdf, isExternalLink: url && url.match(/^https?:\/\//) && !isImage && !isPdf });
         
         const isExternalLink = url && url.match(/^https?:\/\//) && !isImage && !isPdf;
+        
+        // WICHTIG: Cerebro-Media-Links werden NICHT als Vorschau angezeigt,
+        // sondern nur als einfacher Link, da sie bereits separat angezeigt werden
+        if (isCerebroMedia) {
+          return (
+            <div key={index} className="p-3 flex items-center border rounded-lg bg-gray-50 dark:bg-gray-700/50">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+              <a 
+                href={url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-blue-600 dark:text-blue-400 hover:underline"
+              >
+                {attachment.alt}
+              </a>
+            </div>
+          );
+        }
         
         return (
           <div key={index} className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
@@ -433,6 +465,13 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     
     // Filtere Bilder heraus, die als große Vorschau gerendert werden sollen
     const imagesToRender = attachments.filter(attachment => {
+      // WICHTIG: Cerebro-Media-Links werden NICHT als Vorschau gerendert,
+      // da sie bereits separat angezeigt werden (wie bei Requests & Tasks)
+      const isCerebroMedia = attachment.url?.includes('/cerebro/media/');
+      if (isCerebroMedia) {
+        return false; // Cerebro-Media ausschließen
+      }
+      
       // Hole Metadaten für diesen Anhang (mit URL als Fallback)
       let metadata = getAttachmentMetadata(attachment.alt, attachment.url);
       
@@ -499,14 +538,109 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     // Entferne auch alle Leerzeilen, die durch das Entfernen der Bilder entstehen könnten
     processedContent = processedContent.replace(/\n{3,}/g, '\n\n').trim();
     
-    // Ersetze Links durch Text mit Link-Referenz (aber nur wenn es kein Bild ist)
+    // Filtere externe Links heraus, die als Web-Vorschau gerendert werden sollen
+    const externalLinksToRender = attachments.filter(attachment => {
+      // DEBUG: Logging für Diagnose
+      console.log('🔍 Externer Link Check:', {
+        type: attachment.type,
+        alt: attachment.alt,
+        url: attachment.url,
+        isTemporary: attachment.isTemporary
+      });
+      
+      // WICHTIG: Cerebro-Media-Links werden NICHT als Web-Vorschau gerendert
+      const isCerebroMedia = attachment.url?.includes('/cerebro/media/');
+      if (isCerebroMedia) {
+        console.log('  ❌ Cerebro-Media, überspringe');
+        return false;
+      }
+      
+      // Bestimme URL
+      let url: string = '';
+      let metadata = getAttachmentMetadata(attachment.alt, attachment.url);
+      if (metadata?.url) {
+        url = metadata.url;
+      } else {
+        url = attachment.url || '';
+      }
+      
+      if (attachment.isTemporary) {
+        const tempUrl = getTemporaryFileUrl(attachment.alt);
+        if (tempUrl) url = tempUrl;
+      }
+      
+      if (!url || url === "wird nach dem Erstellen hochgeladen") {
+        console.log('  ❌ Keine gültige URL');
+        return false;
+      }
+      
+      // Prüfe ob es ein externer Link ist (http:// oder https://)
+      const isExternalLink = url.match(/^https?:\/\//);
+      console.log('  🔗 URL:', url, 'isExternalLink:', !!isExternalLink);
+      if (!isExternalLink) {
+        return false;
+      }
+      
+      // Prüfe ob es ein Bild ist (sollte nicht als externer Link behandelt werden)
+      let isImage = false;
+      let isPdf = false;
+      
+      if (metadata?.fileType) {
+        isImage = metadata.fileType.startsWith('image/');
+        isPdf = metadata.fileType === 'application/pdf';
+      } else if (attachment.type === 'image') {
+        isImage = true;
+      } else {
+        // Prüfe URL auf Bild-Endungen
+        const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?|$)/i;
+        isImage = imageExtensions.test(url);
+        // Prüfe URL auf PDF
+        const pdfExtensions = /\.pdf(\?|$)/i;
+        isPdf = pdfExtensions.test(url);
+      }
+      
+      // Prüfe ob es eine Attachment-URL ist (Tasks/Requests)
+      const isAttachmentUrl = url.includes('/api/requests/attachments/') || 
+                             url.includes('/api/tasks/attachments/');
+      
+      // Nur echte externe Links rendern (keine Bilder, PDFs, Attachments)
+      const shouldRender = isExternalLink && !isImage && !isPdf && !isAttachmentUrl;
+      console.log('  ✅ Soll gerendert werden:', shouldRender, { isImage, isPdf, isAttachmentUrl });
+      return shouldRender;
+    });
+    
+    console.log('📊 Externe Links gefunden:', externalLinksToRender.length, externalLinksToRender);
+    
+    // Ersetze externe Links aus dem Text (werden separat als Vorschau gerendert)
     processedContent = processedContent.replace(linkRegex, (match, alt, url) => {
       // Überspringe Links, die bereits als Bilder behandelt wurden
       if (match.startsWith('![')) {
         return match;
       }
+      
+      // Prüfe ob es ein externer Link ist, der als Vorschau gerendert wird
+      const isExternalLink = url.match(/^https?:\/\//);
+      const isCerebroMedia = url.includes('/cerebro/media/');
+      const isAttachmentUrl = url.includes('/api/requests/attachments/') || 
+                             url.includes('/api/tasks/attachments/');
+      
+      // Prüfe ob es ein Bild oder PDF ist
+      const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?|$)/i;
+      const pdfExtensions = /\.pdf(\?|$)/i;
+      const isImage = imageExtensions.test(url);
+      const isPdf = pdfExtensions.test(url);
+      
+      // Entferne externe Links komplett (werden als Vorschau gerendert)
+      if (isExternalLink && !isCerebroMedia && !isAttachmentUrl && !isImage && !isPdf) {
+        return '';
+      }
+      
+      // Andere Links als Text mit Link-Referenz
       return `${alt} [Link]`;
     });
+    
+    // Entferne auch alle Leerzeilen, die durch das Entfernen der Links entstehen könnten
+    processedContent = processedContent.replace(/\n{3,}/g, '\n\n').trim();
     
     // Rendere nur die Bilder aus imagesToRender als große Vorschau
     const renderFilteredAttachments = () => {
@@ -559,14 +693,86 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       );
     };
     
+    // Rendere externe Links als Web-Vorschau (iframe)
+    const renderExternalLinks = () => {
+      console.log('🌐 renderExternalLinks aufgerufen, Anzahl:', externalLinksToRender.length);
+      if (externalLinksToRender.length === 0) {
+        console.log('  ❌ Keine externen Links zum Rendern');
+        return null;
+      }
+      
+      // Entferne Duplikate basierend auf URL
+      const uniqueLinks = externalLinksToRender.reduce((acc, current) => {
+        const url = current.url || '';
+        if (!acc.some(link => (link.url || '') === url)) {
+          acc.push(current);
+        }
+        return acc;
+      }, [] as typeof externalLinksToRender);
+      
+      return (
+        <div className="flex flex-col gap-3 mt-2">
+          {uniqueLinks.map((attachment, index) => {
+            // Bestimme URL
+            let url: string = '';
+            let metadata = getAttachmentMetadata(attachment.alt, attachment.url);
+            if (metadata?.url) {
+              url = metadata.url;
+            } else {
+              url = attachment.url || '';
+            }
+            
+            if (attachment.isTemporary) {
+              const tempUrl = getTemporaryFileUrl(attachment.alt);
+              if (tempUrl) url = tempUrl;
+            }
+            
+            if (!url || url === "wird nach dem Erstellen hochgeladen") {
+              return null;
+            }
+            
+            return (
+              <div key={`link-${attachment.alt}-${url}-${index}`} className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                <div className="p-3">
+                  <div className="flex items-center mb-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    <span className="text-sm font-medium dark:text-gray-200 flex-grow">{attachment.alt || url}</span>
+                    <a 
+                      href={url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="ml-2 text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                    >
+                      Öffnen
+                    </a>
+                  </div>
+                  <iframe 
+                    src={url}
+                    className="w-full rounded border dark:border-gray-600"
+                    style={{ height: '400px' }}
+                    title={attachment.alt || 'Web-Vorschau'}
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                  />
+                </div>
+              </div>
+            );
+          }).filter((item): item is React.ReactElement => item !== null)}
+        </div>
+      );
+    };
+    
     return (
       <div className={`markdown-preview ${className} dark:text-gray-200`} style={style}>
-        {/* Text-Inhalt ohne Bilder */}
+        {/* Text-Inhalt ohne Bilder und externe Links */}
         {processedContent && (
           <div dangerouslySetInnerHTML={{ __html: processedContent.replace(/\n/g, '<br/>') }} />
         )}
         {/* Bilder als große Vorschau */}
         {renderFilteredAttachments()}
+        {/* Externe Links als Web-Vorschau */}
+        {renderExternalLinks()}
       </div>
     );
   }

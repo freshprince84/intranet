@@ -481,10 +481,10 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
             }
 
             // Prüfe ob es ein BankDetails-To-Do ist
-            // Erkenne BankDetails-To-Do am Titel-Pattern "Bankverbindung eingeben"
+            // Erkenne BankDetails-To-Do am Titel-Pattern (prüfe beide Varianten für Abwärtskompatibilität)
             // Task ist dem User zugewiesen (responsibleId = userId)
             if ((updateData.status === 'quality_control' || updateData.status === 'done') && 
-                task.title.includes('Bankverbindung eingeben') && 
+                (task.title.includes('Ingresar datos bancarios') || task.title.includes('Bankverbindung eingeben')) && 
                 task.responsibleId) {
                 try {
                     const bankDetailsUserId = task.responsibleId;
@@ -512,6 +512,44 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
                     }
                 } catch (bankDetailsError) {
                     console.error('[updateTask] Fehler bei BankDetails-To-Do-Prüfung:', bankDetailsError);
+                    // Fehler blockiert nicht die Task-Aktualisierung
+                }
+            }
+
+            // Prüfe ob es ein Identitätsdokument-To-Do ist
+            // Erkenne Identitätsdokument-To-Do am Titel-Pattern (prüfe beide Varianten für Abwärtskompatibilität)
+            // Task ist dem User zugewiesen (responsibleId = userId)
+            if ((updateData.status === 'quality_control' || updateData.status === 'done') && 
+                (task.title.includes('Subir documento de identidad') || task.title.includes('Identitätsdokument hochladen')) && 
+                task.responsibleId) {
+                try {
+                    const identificationDocumentUserId = task.responsibleId;
+                    
+                    // Prüfe ob User ein Identitätsdokument hat
+                    const identificationDocumentUser = await prisma.user.findUnique({
+                        where: { id: identificationDocumentUserId },
+                        include: {
+                            identificationDocuments: {
+                                take: 1,
+                                orderBy: { createdAt: 'desc' }
+                            }
+                        }
+                    });
+
+                    if (identificationDocumentUser) {
+                        // Prüfe ob Identitätsdokument vorhanden ist
+                        const hasIdentificationDocument = identificationDocumentUser.identificationDocuments && identificationDocumentUser.identificationDocuments.length > 0;
+
+                        // Nur wenn Status "done" UND Identitätsdokument vorhanden ist, Task als erledigt markieren
+                        if (updateData.status === 'done' && hasIdentificationDocument) {
+                            console.log(`[updateTask] Identitätsdokument-To-Do erledigt für User ${identificationDocumentUserId}`);
+                            // Task ist bereits auf "done" gesetzt, keine weitere Aktion nötig
+                        } else if (updateData.status === 'quality_control' && !hasIdentificationDocument) {
+                            console.log(`[updateTask] Quality-Control-Status gesetzt, aber Identitätsdokument nicht vorhanden für User ${identificationDocumentUserId}`);
+                        }
+                    }
+                } catch (identificationDocumentError) {
+                    console.error('[updateTask] Fehler bei Identitätsdokument-To-Do-Prüfung:', identificationDocumentError);
                     // Fehler blockiert nicht die Task-Aktualisierung
                 }
             }

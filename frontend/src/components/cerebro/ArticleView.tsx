@@ -198,19 +198,111 @@ const ArticleView: React.FC = () => {
     
     // Generiere attachmentMetadata aus Medien
     const attachmentMetadata = article.media.map(media => ({
-      id: media.id,
+      id: parseInt(media.id, 10),
       fileName: media.filename,
       fileType: media.mimetype,
-      url: getCerebroMediaUrl(media.id)
+      url: getCerebroMediaUrl(parseInt(media.id, 10))
     }));
+    
+    // WICHTIG: Zeige ALLE Medien IMMER separat an, unabhängig davon, ob sie im Content referenziert sind
+    // Der Markdown-Link im Content ist optional und zeigt nur einen Link (keine Vorschau)
+    // Die separate Anzeige zeigt IMMER die Vorschau (wie bei Requests & Tasks)
     
     // MarkdownPreview mit showImagePreview verwenden
     return (
-      <MarkdownPreview 
-        content={article.content || ''}
-        showImagePreview={true}
-        attachmentMetadata={attachmentMetadata}
-      />
+      <div>
+        <MarkdownPreview 
+          content={article.content || ''}
+          showImagePreview={true}
+          attachmentMetadata={attachmentMetadata}
+        />
+        
+        {/* Zeige ALLE Medien immer separat an (wie bei Requests & Tasks) */}
+        {article.media.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-3 dark:text-white">Angehängte Dateien</h3>
+            <div className="flex flex-col gap-3">
+              {article.media.map(media => {
+                const mediaUrl = getCerebroMediaUrl(parseInt(media.id, 10));
+                const isImage = media.mimetype.startsWith('image/');
+                const isPdf = media.mimetype === 'application/pdf';
+                const isVideo = media.mimetype.startsWith('video/');
+                
+                return (
+                  <div key={media.id} className="border rounded-lg overflow-hidden bg-gray-50 dark:bg-gray-700/50">
+                    {isImage ? (
+                      <div>
+                        <img 
+                          src={mediaUrl} 
+                          alt={media.filename} 
+                          className="w-full h-auto max-h-96 object-contain" 
+                          style={{ display: 'block' }}
+                        />
+                      </div>
+                    ) : isPdf ? (
+                      <div className="p-3">
+                        <div className="flex items-center mb-2">
+                          <DocumentTextIcon className="h-4 w-4 mr-2 dark:text-gray-300" />
+                          <span className="text-sm font-medium dark:text-gray-200">{media.filename}</span>
+                          <a 
+                            href={mediaUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="ml-auto text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                          >
+                            Öffnen
+                          </a>
+                        </div>
+                        <iframe 
+                          src={`${mediaUrl}#view=FitH`} 
+                          className="w-full rounded border dark:border-gray-600"
+                          style={{ height: '400px' }}
+                          title={media.filename}
+                        />
+                      </div>
+                    ) : isVideo ? (
+                      <div className="p-3">
+                        <div className="flex items-center mb-2">
+                          <FilmIcon className="h-4 w-4 mr-2 dark:text-gray-300" />
+                          <span className="text-sm font-medium dark:text-gray-200">{media.filename}</span>
+                          <a 
+                            href={mediaUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="ml-auto text-blue-600 dark:text-blue-400 hover:underline text-sm"
+                          >
+                            Öffnen
+                          </a>
+                        </div>
+                        <video 
+                          controls 
+                          className="w-full rounded"
+                          style={{ maxHeight: '400px' }}
+                        >
+                          <source src={mediaUrl} type={media.mimetype} />
+                          Ihr Browser unterstützt das Video-Tag nicht.
+                        </video>
+                      </div>
+                    ) : (
+                      <div className="p-3 flex items-center">
+                        <DocumentIcon className="h-4 w-4 mr-2 dark:text-gray-300" />
+                        <a 
+                          href={mediaUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          {media.filename}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
     );
   };
   

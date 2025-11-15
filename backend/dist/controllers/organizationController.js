@@ -415,6 +415,25 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
                     roleId: userRole.id
                 });
             }
+            // Cerebro-spezifische Berechtigungen hinzufügen (entityType: 'cerebro')
+            userPermissions.push({
+                entity: 'cerebro',
+                entityType: 'cerebro',
+                accessLevel: 'both',
+                roleId: userRole.id
+            });
+            userPermissions.push({
+                entity: 'cerebro_media',
+                entityType: 'cerebro',
+                accessLevel: 'both',
+                roleId: userRole.id
+            });
+            userPermissions.push({
+                entity: 'cerebro_links',
+                entityType: 'cerebro',
+                accessLevel: 'both',
+                roleId: userRole.id
+            });
             yield tx.permission.createMany({
                 data: userPermissions
             });
@@ -428,6 +447,25 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
             // 3e. Berechtigungen für Hamburger-Rolle erstellen (basierend auf seed.ts)
             const hamburgerPermissions = [];
+            // Cerebro-spezifische Berechtigungen für Hamburger-Rolle hinzufügen
+            hamburgerPermissions.push({
+                entity: 'cerebro',
+                entityType: 'cerebro',
+                accessLevel: 'both',
+                roleId: hamburgerRole.id
+            });
+            hamburgerPermissions.push({
+                entity: 'cerebro_media',
+                entityType: 'cerebro',
+                accessLevel: 'both',
+                roleId: hamburgerRole.id
+            });
+            hamburgerPermissions.push({
+                entity: 'cerebro_links',
+                entityType: 'cerebro',
+                accessLevel: 'both',
+                roleId: hamburgerRole.id
+            });
             const hamburgerPermissionMap = {
                 'page_dashboard': 'both',
                 'page_settings': 'both',
@@ -1043,7 +1081,7 @@ const updateOrganizationLanguage = (req, res) => __awaiter(void 0, void 0, void 
 exports.updateOrganizationLanguage = updateOrganizationLanguage;
 // Aktuelle Organisation aktualisieren (basierend auf User-Kontext)
 const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b, _c;
     try {
         const userId = req.userId;
         if (!userId) {
@@ -1078,6 +1116,12 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
         }
         // Wenn settings aktualisiert werden, validiere und verschlüssele sie
         let updateData = Object.assign({}, validatedData);
+        // Debug: Logge Logo-Daten
+        console.log('=== ORGANIZATION UPDATE DEBUG ===');
+        console.log('validatedData.logo:', validatedData.logo ? `${validatedData.logo.substring(0, 50)}...` : 'null/undefined');
+        console.log('validatedData.logo type:', typeof validatedData.logo);
+        console.log('validatedData.logo length:', (_a = validatedData.logo) === null || _a === void 0 ? void 0 : _a.length);
+        console.log('updateData.logo:', updateData.logo ? `${updateData.logo.substring(0, 50)}...` : 'null/undefined');
         if (validatedData.settings !== undefined) {
             const currentSettings = organization.settings || {};
             const newSettings = Object.assign(Object.assign({}, currentSettings), validatedData.settings);
@@ -1107,7 +1151,7 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                 });
             }
             // ✅ TTLOCK PASSWORD: MD5-Hash für TTLock Password erstellen (falls vorhanden)
-            if (((_a = newSettings.doorSystem) === null || _a === void 0 ? void 0 : _a.password) && !newSettings.doorSystem.password.match(/^[a-f0-9]{32}$/i)) {
+            if (((_b = newSettings.doorSystem) === null || _b === void 0 ? void 0 : _b.password) && !newSettings.doorSystem.password.match(/^[a-f0-9]{32}$/i)) {
                 // Password ist noch nicht gehasht (32-stelliger MD5-Hash)
                 const crypto = require('crypto');
                 newSettings.doorSystem.password = crypto.createHash('md5').update(newSettings.doorSystem.password).digest('hex');
@@ -1132,6 +1176,15 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
             }
             // ✅ AUDIT-LOG: Protokolliere Settings-Änderungen
             yield (0, auditService_1.logSettingsChange)(organization.id, Number(userId), currentSettings, newSettings, req.ip, req.get('user-agent'));
+        }
+        // Debug: Logge updateData vor dem Speichern
+        console.log('updateData vor Prisma Update:', Object.assign(Object.assign({}, updateData), { logo: updateData.logo ? `${updateData.logo.substring(0, 50)}...` : updateData.logo }));
+        // Stelle sicher, dass leere Strings als null gespeichert werden (nicht als leerer String)
+        if (updateData.logo !== undefined) {
+            if (updateData.logo === '' || (typeof updateData.logo === 'string' && updateData.logo.trim() === '')) {
+                updateData.logo = null;
+                console.log('Logo ist leerer String, setze auf null');
+            }
         }
         // Aktualisiere Organisation
         const updatedOrganization = yield prisma.organization.update({
@@ -1164,6 +1217,9 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                 // Frontend zeigt dann verschlüsselte Werte, aber das ist OK für Migration
             }
         }
+        // Debug: Logge gespeichertes Logo
+        console.log('Gespeichertes Logo in DB:', updatedOrganization.logo ? `${updatedOrganization.logo.substring(0, 50)}...` : 'null');
+        console.log('Logo length:', (_c = updatedOrganization.logo) === null || _c === void 0 ? void 0 : _c.length);
         res.json(updatedOrganization);
     }
     catch (error) {

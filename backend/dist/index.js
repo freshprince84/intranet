@@ -41,6 +41,11 @@ const monthlyConsultationReports_1 = __importDefault(require("./routes/monthlyCo
 const database_1 = __importDefault(require("./routes/database"));
 const claudeRoutes_1 = __importDefault(require("./routes/claudeRoutes"));
 const organizations_1 = __importDefault(require("./routes/organizations"));
+const lobbyPms_1 = __importDefault(require("./routes/lobbyPms"));
+const boldPayment_1 = __importDefault(require("./routes/boldPayment"));
+const ttlock_1 = __importDefault(require("./routes/ttlock"));
+const whatsapp_1 = __importDefault(require("./routes/whatsapp"));
+const reservations_1 = __importDefault(require("./routes/reservations"));
 const claudeConsoleService_1 = require("./services/claudeConsoleService");
 const worktimeController_1 = require("./controllers/worktimeController");
 const monthlyReportScheduler_1 = require("./services/monthlyReportScheduler");
@@ -190,6 +195,11 @@ app.use('/api/monthly-consultation-reports', monthlyConsultationReports_1.defaul
 app.use('/api/database', database_1.default);
 app.use('/api/claude', claudeRoutes_1.default);
 app.use('/api/organizations', organizations_1.default);
+app.use('/api/lobby-pms', lobbyPms_1.default);
+app.use('/api/bold-payment', boldPayment_1.default);
+app.use('/api/ttlock', ttlock_1.default);
+app.use('/api/whatsapp', whatsapp_1.default);
+app.use('/api/reservations', reservations_1.default);
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

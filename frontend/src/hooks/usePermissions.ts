@@ -73,9 +73,22 @@ export const usePermissions = () => {
             return;
         }
         
+        // Wenn User vorhanden ist, sofort profileComplete setzen (synchron wenn möglich)
+        if (user) {
+            // Prüfe zuerst user.profileComplete Feld (falls vorhanden) - synchron
+            if ('profileComplete' in user && user.profileComplete !== undefined) {
+                setProfileComplete(user.profileComplete as boolean);
+            } else {
+                // Fallback: Asynchron prüfen
+                checkProfileComplete();
+            }
+        } else {
+            setProfileComplete(null);
+        }
+        
         loadPermissions();
-        checkProfileComplete();
-    }, [user, isLoading]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user, isLoading]); // checkProfileComplete aus Dependencies entfernt, da es zu Loops führt
 
     // Lade Lebenszyklus-Rollen-Konfiguration (wird nach loadPermissions aufgerufen)
     useEffect(() => {
@@ -291,11 +304,10 @@ export const usePermissions = () => {
             setProfileComplete(response.data.complete);
         } catch (error) {
             console.error('Fehler beim Prüfen der Profilvollständigkeit:', error);
-            // Bei Fehler: Prüfe Felder lokal
+            // Bei Fehler: Prüfe Felder lokal (username, email, language - country NICHT nötig)
             const isComplete = !!(
                 user.username &&
                 user.email &&
-                user.country &&
                 user.language
             );
             setProfileComplete(isComplete);
@@ -320,11 +332,10 @@ export const usePermissions = () => {
             return profileComplete;
         }
         
-        // Fallback: Lokale Prüfung
+        // Fallback: Lokale Prüfung (username, email, language - country NICHT nötig)
         return !!(
             user.username &&
             user.email &&
-            user.country &&
             user.language
         );
     }, [user, profileComplete]);

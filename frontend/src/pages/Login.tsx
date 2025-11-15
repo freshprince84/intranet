@@ -15,20 +15,13 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Prüfe ob Profil unvollständig ist
-  const isProfileIncomplete = (user: any) => {
-    return !user.birthday || !user.bankDetails || !user.contract || !user.salary || !user.normalWorkingHours;
-  };
-
   // Überprüfe, ob der Benutzer bereits eingeloggt ist
+  // Navigation wird jetzt von ProtectedRoute und OnboardingContext gehandhabt
+  // Keine manuelle Navigation mehr hier, da sie zu Timing-Problemen führt
   useEffect(() => {
     if (user) {
-      console.log('Benutzer bereits eingeloggt, prüfe Profilvollständigkeit');
-      if (isProfileIncomplete(user)) {
-        navigate('/profile');
-      } else {
-        navigate('/dashboard');
-      }
+      // Einfach zum Dashboard navigieren, ProtectedRoute prüft Profilvollständigkeit
+      navigate('/dashboard');
     }
   }, [user, navigate]);
 

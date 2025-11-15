@@ -14,7 +14,9 @@ router.use(organization_1.organizationMiddleware);
 router.get('/', userController_1.getAllUsers);
 router.get('/dropdown', userController_1.getAllUsersForDropdown);
 router.get('/profile', userController_1.getCurrentUser);
+router.get('/profile/complete', userController_1.isProfileComplete);
 router.get('/active-language', userController_1.getUserActiveLanguage);
+router.get('/debug/branches', userController_1.debugUserBranches); // Debug-Endpoint
 router.put('/profile', userController_1.updateProfile);
 router.put('/settings', userController_1.updateUserSettings);
 router.put('/invoice-settings', userController_1.updateInvoiceSettings);
@@ -31,6 +33,7 @@ router.post('/', userController_1.createUser); // Neue Benutzer erstellen (nur f
 router.get('/:id', userController_1.getUserById);
 router.put('/:id', userController_1.updateUserById);
 router.put('/:id/roles', userController_1.updateUserRoles);
+router.put('/:id/branches', userController_1.updateUserBranches);
 // Lebenszyklus-Routen
 router.get('/:id/lifecycle', lifecycleController_1.getLifecycle);
 router.put('/:id/lifecycle/status', lifecycleController_1.updateStatus);

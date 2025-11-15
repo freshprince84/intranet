@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateMedia = exports.deleteMedia = exports.getMediaById = exports.getMediaByArticle = exports.uploadMedia = exports.upload = void 0;
+exports.updateMedia = exports.deleteMedia = exports.getMediaFile = exports.getMediaById = exports.getMediaByArticle = exports.uploadMedia = exports.upload = void 0;
 const client_1 = require("@prisma/client");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
@@ -123,7 +123,35 @@ const uploadMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             )
             RETURNING *
         `;
-        res.status(201).json(media[0]);
+        const mediaData = media[0];
+        // Markdown-Link zum Artikelinhalt hinzufügen
+        // Verwende den bereits geladenen Artikel (content ist in SELECT * enthalten)
+        if (article && Array.isArray(article) && article.length > 0) {
+            const currentContent = article[0].content || '';
+            const mediaUrl = `/api/cerebro/media/${mediaData.id}/file`;
+            // Markdown-Link basierend auf Dateityp erstellen
+            let markdownLink = '';
+            if (req.file.mimetype.startsWith('image/')) {
+                markdownLink = `\n\n![${req.file.originalname}](${mediaUrl})`;
+            }
+            else if (req.file.mimetype === 'application/pdf') {
+                markdownLink = `\n\n[📄 ${req.file.originalname}](${mediaUrl})`;
+            }
+            else if (req.file.mimetype.startsWith('video/')) {
+                markdownLink = `\n\n[🎬 ${req.file.originalname}](${mediaUrl})`;
+            }
+            else {
+                markdownLink = `\n\n[📎 ${req.file.originalname}](${mediaUrl})`;
+            }
+            // Link zum Inhalt hinzufügen
+            const updatedContent = currentContent + markdownLink;
+            yield prisma.$queryRaw `
+                UPDATE "CerebroCarticle"
+                SET content = ${updatedContent}, "updatedAt" = NOW()
+                WHERE id = ${articleId}
+            `;
+        }
+        res.status(201).json(mediaData);
     }
     catch (error) {
         console.error('Fehler beim Hochladen der Mediendatei:', error);
@@ -197,6 +225,61 @@ const getMediaById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.getMediaById = getMediaById;
+/**
+ * Mediendatei als Datei abrufen (für Anzeige/Download)
+ */
+const getMediaFile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const mediaId = parseInt(id, 10);
+        if (isNaN(mediaId)) {
+            return res.status(400).json({ message: 'Ungültige Medien-ID' });
+        }
+        // Mediendatei abrufen
+        const media = yield prisma.$queryRaw `
+            SELECT * FROM "CerebroMedia" WHERE id = ${mediaId}
+        `;
+        if (!media || (Array.isArray(media) && media.length === 0)) {
+            return res.status(404).json({ message: 'Mediendatei nicht gefunden' });
+        }
+        const mediaData = media[0];
+        const filePath = mediaData.path;
+        if (!fs_1.default.existsSync(filePath)) {
+            return res.status(404).json({ message: 'Datei nicht gefunden' });
+        }
+        // Entscheide basierend auf dem MIME-Typ, wie die Datei bereitgestellt wird
+        if (mediaData.mimetype.startsWith('image/')) {
+            // Bilder direkt anzeigen mit Cache-Kontrolle
+            res.setHeader('Content-Type', mediaData.mimetype);
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(mediaData.filename)}"`);
+            res.setHeader('Cache-Control', 'max-age=31536000'); // 1 Jahr cachen
+            fs_1.default.createReadStream(filePath).pipe(res);
+        }
+        else if (mediaData.mimetype === 'application/pdf') {
+            // PDFs direkt anzeigen (für iframe-Vorschau)
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(mediaData.filename)}"`);
+            res.setHeader('Cache-Control', 'max-age=31536000'); // 1 Jahr cachen
+            fs_1.default.createReadStream(filePath).pipe(res);
+        }
+        else if (mediaData.mimetype.startsWith('video/')) {
+            // Videos direkt anzeigen
+            res.setHeader('Content-Type', mediaData.mimetype);
+            res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(mediaData.filename)}"`);
+            res.setHeader('Cache-Control', 'max-age=31536000'); // 1 Jahr cachen
+            fs_1.default.createReadStream(filePath).pipe(res);
+        }
+        else {
+            // Andere Dateien als Download anbieten
+            res.download(filePath, mediaData.filename);
+        }
+    }
+    catch (error) {
+        console.error('Fehler beim Abrufen der Mediendatei:', error);
+        res.status(500).json({ message: 'Fehler beim Abrufen der Mediendatei' });
+    }
+});
+exports.getMediaFile = getMediaFile;
 /**
  * Mediendatei löschen
  */

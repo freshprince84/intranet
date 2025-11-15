@@ -8,7 +8,8 @@ import {
 } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
-import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
+import useMessage from '../hooks/useMessage.ts';
 
 interface InvoiceSuccessModalProps {
   isOpen: boolean;
@@ -27,6 +28,8 @@ const InvoiceSuccessModal: React.FC<InvoiceSuccessModalProps> = ({
   totalAmount,
   clientName
 }) => {
+  const { t } = useTranslation();
+  const { showMessage } = useMessage();
   const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const handleDownloadPdf = async () => {
@@ -54,10 +57,10 @@ const InvoiceSuccessModal: React.FC<InvoiceSuccessModalProps> = ({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast.success('PDF erfolgreich heruntergeladen');
+      showMessage(t('invoice.downloadSuccess', { defaultValue: 'PDF erfolgreich heruntergeladen' }), 'success');
     } catch (error: any) {
       console.error('Fehler beim Download der PDF:', error);
-      toast.error(error.response?.data?.message || 'Fehler beim Download der PDF');
+      showMessage(error.response?.data?.message || t('invoice.downloadError', { defaultValue: 'Fehler beim Download der PDF' }), 'error');
     } finally {
       setDownloadingPdf(false);
     }
@@ -65,7 +68,7 @@ const InvoiceSuccessModal: React.FC<InvoiceSuccessModalProps> = ({
 
   const handleViewInvoiceManagement = () => {
     // TODO: Navigation zur Rechnungsverwaltung (wird in Phase 5 implementiert)
-    toast.info('Rechnungsverwaltung wird in Phase 5 implementiert');
+    showMessage(t('invoice.invoiceManagementPhase5', { defaultValue: 'Rechnungsverwaltung wird in Phase 5 implementiert' }), 'info');
     onClose();
   };
 

@@ -8,6 +8,7 @@ import { API_URL, API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import HeaderMessage from './HeaderMessage.tsx';
 import useMessage from '../hooks/useMessage.ts';
+import { useOnboarding } from '../contexts/OnboardingContext.tsx';
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
@@ -15,6 +16,7 @@ const Header: React.FC = () => {
     const { user, logout, switchRole } = useAuth();
     const { branches, selectedBranch, setSelectedBranch, loadBranches } = useBranch();
     const { showMessage } = useMessage();
+    const { completeStep } = useOnboarding();
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
     const [isNotificationOpen, setIsNotificationOpen] = useState(false);
     const [isRoleSubMenuOpen, setIsRoleSubMenuOpen] = useState(false);
@@ -26,21 +28,6 @@ const Header: React.FC = () => {
     const roleSubMenuRef = useRef<HTMLDivElement>(null);
     const branchMenuButtonRef = useRef<HTMLButtonElement>(null);
     const branchSubMenuRef = useRef<HTMLDivElement>(null);
-
-    // Versuche das Logo zu laden - erst direkt, dann über Base64 wenn nötig
-    useEffect(() => {
-        if (logoLoadFailed) {
-            console.log("Versuche Logo über Base64-API zu laden...");
-            axiosInstance.get('/settings/logo/base64')
-                .then(response => {
-                    console.log("Base64-Logo geladen, Größe:", response.data.size, "Bytes");
-                    setLogoSrc(response.data.logo);
-                })
-                .catch(error => {
-                    console.error("Fehler beim Laden des Base64-Logos:", error);
-                });
-        }
-    }, [logoLoadFailed]);
 
     const handleLogout = async () => {
         await logout();
@@ -103,6 +90,14 @@ const Header: React.FC = () => {
             setIsRoleSubMenuOpen(false);
             setIsProfileMenuOpen(false);
             showMessage(t('header.roleSwitched') || 'Rolle erfolgreich gewechselt', 'success');
+            
+            // Prüfe ob switch_role_after_join Schritt aktiv ist und schließe ihn ab
+            try {
+                await completeStep('switch_role_after_join', t('onboarding.steps.switch_role_after_join.title') || 'Rolle wechseln');
+            } catch (error) {
+                // Fehler beim Abschließen blockiert nicht den Rollenwechsel
+                console.error('Fehler beim Abschließen des switch_role_after_join Schritts:', error);
+            }
         } catch (error: any) {
             console.error('Fehler beim Rollenwechsel:', error);
             const errorMessage = error.response?.data?.message || error.message || t('header.roleSwitchError') || 'Fehler beim Wechseln der Rolle';
@@ -150,6 +145,56 @@ const Header: React.FC = () => {
     const currentRole = user?.roles.find(r => r.role && r.lastUsed === true);
     const roleName = currentRole?.role.name || 'Keine Rolle';
     const organizationName = currentRole?.role.organization?.displayName || currentRole?.role.organization?.name || null;
+    const organization = currentRole?.role.organization;
+
+    // Logo basierend auf Organisation setzen
+    useEffect(() => {
+        // Warte bis User-Daten geladen sind
+        if (!user) {
+            return;
+        }
+        
+        console.log('=== LOGO-LOGIK DEBUG ===');
+        console.log('organization:', organization);
+        console.log('organization?.logo:', organization?.logo);
+        console.log('organization?.logo type:', typeof organization?.logo);
+        console.log('organization?.logo length:', organization?.logo?.length);
+        
+        // Prüfe ob User eine Organisation hat und ob diese ein Logo hat
+        // Wichtig: Prüfe auch auf leeren String!
+        if (organization && organization.logo && organization.logo.trim() !== '') {
+            console.log('✅ Verwende Organisationslogo');
+            // Wenn Logo als Base64-Data-URL gespeichert ist (beginnt mit "data:")
+            if (organization.logo.startsWith('data:')) {
+                console.log('Logo ist Base64-Data-URL');
+                setLogoSrc(organization.logo);
+            } else {
+                // Wenn Logo als URL gespeichert ist
+                console.log('Logo ist URL:', organization.logo);
+                setLogoSrc(organization.logo);
+            }
+        } else {
+            // Keine Organisation oder kein Logo -> Standardlogo des Intranets verwenden (aus Mobile App)
+            console.log('❌ Verwende Standardlogo - organization:', !!organization, 'logo:', !!organization?.logo, 'logo value:', organization?.logo);
+            setLogoSrc('/intranet-logo.png');
+        }
+    }, [user, organization, currentRole]);
+
+    // Versuche das Logo zu laden - erst direkt, dann über Base64 wenn nötig
+    useEffect(() => {
+        // Nur für Standardlogo (nicht für Organisationslogo)
+        if (logoLoadFailed && !organization?.logo) {
+            console.log("Versuche Logo über Base64-API zu laden...");
+            axiosInstance.get('/settings/logo/base64')
+                .then(response => {
+                    console.log("Base64-Logo geladen, Größe:", response.data.size, "Bytes");
+                    setLogoSrc(response.data.logo);
+                })
+                .catch(error => {
+                    console.error("Fehler beim Laden des Base64-Logos:", error);
+                });
+        }
+    }, [logoLoadFailed, organization]);
 
     // Hilfsfunktion: Prüft, ob eine Rolle für eine Branch verfügbar ist
     const isRoleAvailableForBranch = (role: any, branchId: number | null): boolean => {
@@ -300,6 +345,7 @@ const Header: React.FC = () => {
                                     {user && availableRoles.length > 1 && (
                                         <div className="relative">
                                             <button
+                                                data-onboarding="switch-role-menu"
                                                 ref={roleMenuButtonRef}
                                                 onClick={() => setIsRoleSubMenuOpen(!isRoleSubMenuOpen)}
                                                 onMouseEnter={handleRoleMenuMouseEnter}

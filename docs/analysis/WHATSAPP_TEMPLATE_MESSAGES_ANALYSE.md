@@ -346,3 +346,4 @@ payload.template = {
 - **Template Messages**: https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-message-templates
 - **24-Hour Window**: https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages
 
+

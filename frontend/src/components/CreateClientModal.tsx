@@ -5,7 +5,7 @@ import { XMarkIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react/24/outline
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { Client } from '../types/client.ts';
-import { toast } from 'react-toastify';
+import useMessage from '../hooks/useMessage.ts';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 
 interface CreateClientModalProps {
@@ -20,6 +20,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
   onSave
 }) => {
   const { t } = useTranslation();
+  const { showMessage } = useMessage();
   const { openSidepane, closeSidepane } = useSidepane();
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const [formData, setFormData] = useState({
@@ -65,7 +66,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
         notes: formData.notes || null
       });
       
-      toast.success('Client erfolgreich angelegt');
+      showMessage(t('client.createSuccess', { defaultValue: 'Client erfolgreich angelegt' }), 'success');
       onSave(response.data);
       
       // Form zurücksetzen
@@ -78,7 +79,7 @@ const CreateClientModal: React.FC<CreateClientModalProps> = ({
         notes: ''
       });
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Anlegen des Clients');
+      showMessage(error.response?.data?.message || t('client.createError', { defaultValue: 'Fehler beim Anlegen des Clients' }), 'error');
     } finally {
       setLoading(false);
     }

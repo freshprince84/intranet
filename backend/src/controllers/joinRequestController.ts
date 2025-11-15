@@ -303,13 +303,22 @@ export const processJoinRequest = async (req: Request, res: Response) => {
       requestId
     );
 
-    // Erstelle BankDetails-To-Do für User nach erfolgreichem Beitritt
+    // Erstelle To-Dos für User nach erfolgreichem Beitritt
     if (action === 'approve') {
       try {
+        // BankDetails-To-Do (für alle Organisationen)
         await TaskAutomationService.createUserBankDetailsTask(joinRequest.requesterId, joinRequest.organizationId);
       } catch (bankDetailsTaskError) {
         // Logge Fehler, aber breche nicht ab
         console.error('[processJoinRequest] Fehler beim Erstellen des BankDetails-To-Dos:', bankDetailsTaskError);
+      }
+      
+      try {
+        // Identitätsdokument-To-Do (nur für Kolumbien)
+        await TaskAutomationService.createUserIdentificationDocumentTask(joinRequest.requesterId, joinRequest.organizationId);
+      } catch (identificationDocumentTaskError) {
+        // Logge Fehler, aber breche nicht ab
+        console.error('[processJoinRequest] Fehler beim Erstellen des Identitätsdokument-To-Dos:', identificationDocumentTaskError);
       }
     }
 

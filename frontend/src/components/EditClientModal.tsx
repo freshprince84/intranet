@@ -5,7 +5,7 @@ import { XMarkIcon, TrashIcon, CheckIcon, ArrowPathIcon } from '@heroicons/react
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { Client } from '../types/client.ts';
-import { toast } from 'react-toastify';
+import useMessage from '../hooks/useMessage.ts';
 import * as clientApi from '../api/clientApi.ts';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 
@@ -25,6 +25,7 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
   client
 }) => {
   const { t } = useTranslation();
+  const { showMessage } = useMessage();
   const { openSidepane, closeSidepane } = useSidepane();
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const [formData, setFormData] = useState({
@@ -120,10 +121,10 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
         isActive: formData.isActive
       });
       
-      toast.success('Client erfolgreich aktualisiert');
+      showMessage(t('client.updateSuccess', { defaultValue: 'Client erfolgreich aktualisiert' }), 'success');
       onClientUpdated?.(updated);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Aktualisieren des Clients');
+      showMessage(error.response?.data?.message || t('client.updateError', { defaultValue: 'Fehler beim Aktualisieren des Clients' }), 'error');
     } finally {
       setLoading(false);
     }
@@ -141,11 +142,11 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
       setLoading(true);
       await clientApi.deleteClient(client.id);
       
-      toast.success('Client erfolgreich gelöscht');
+      showMessage(t('client.deleteSuccess', { defaultValue: 'Client erfolgreich gelöscht' }), 'success');
       onClientDeleted?.(client.id);
       onClose();
     } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Fehler beim Löschen des Clients';
+      const errorMessage = error.response?.data?.message || t('client.deleteError', { defaultValue: 'Fehler beim Löschen des Clients' });
       const errorDetails = error.response?.data?.details;
       const errorSuggestion = error.response?.data?.suggestion;
       
@@ -153,12 +154,17 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
       if (error.response?.status === 409 && errorDetails) {
         const details = Object.entries(errorDetails)
           .filter(([_, count]) => (count as number) > 0)
-          .map(([key, count]) => `${count as number} ${key === 'workTimes' ? 'Zeiteinträge' : key === 'consultationInvoices' ? 'Rechnungen' : 'Monatsberichte'}`)
+          .map(([key, count]) => {
+            const translationKey = key === 'workTimes' ? 'client.workTimes' : 
+                                  key === 'consultationInvoices' ? 'client.consultationInvoices' : 
+                                  'client.monthlyReports';
+            return `${count as number} ${t(translationKey, { defaultValue: key === 'workTimes' ? 'Zeiteinträge' : key === 'consultationInvoices' ? 'Rechnungen' : 'Monatsberichte' })}`;
+          })
           .join(', ');
         
-        toast.error(`${errorMessage}. Verknüpfungen: ${details}. ${errorSuggestion || ''}`);
+        showMessage(`${errorMessage}. ${t('client.links', { defaultValue: 'Verknüpfungen' })}: ${details}. ${errorSuggestion || ''}`, 'error');
       } else {
-        toast.error(errorMessage);
+        showMessage(errorMessage, 'error');
       }
       
       setConfirmDelete(false);

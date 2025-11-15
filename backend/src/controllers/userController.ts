@@ -246,7 +246,8 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                                     select: {
                                         id: true,
                                         name: true,
-                                        displayName: true
+                                        displayName: true,
+                                        logo: true
                                     }
                                 }
                             }
@@ -266,6 +267,14 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                 ...user,
                 roles: user.roles.map(roleEntry => ({
                     ...roleEntry,
+                    role: {
+                        ...roleEntry.role,
+                        organization: roleEntry.role.organization ? {
+                            ...roleEntry.role.organization,
+                            // Korrigiere String 'null' zu echtem null
+                            logo: roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo
+                        } : null
+                    },
                     lastUsed: roleEntry.role.id === roleId
                 }))
             };
@@ -273,7 +282,23 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
             return res.json(modifiedUser);
         }
         
-        res.json(user);
+        // Stelle sicher, dass das Logo-Feld explizit zurückgegeben wird
+        const userWithLogo = {
+            ...user,
+            roles: user.roles.map(roleEntry => ({
+                ...roleEntry,
+                role: {
+                    ...roleEntry.role,
+                    organization: roleEntry.role.organization ? {
+                        ...roleEntry.role.organization,
+                        // Korrigiere String 'null' zu echtem null
+                        logo: roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo
+                    } : null
+                }
+            }))
+        };
+        
+        res.json(userWithLogo);
     } catch (error) {
         console.error('Error in getCurrentUser:', error);
         res.status(500).json({ 
@@ -619,11 +644,10 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             }
         });
 
-        // Prüfe Profilvollständigkeit nach Update
+        // Prüfe Profilvollständigkeit nach Update (username, email, language - country NICHT nötig)
         const isComplete = !!(
             updatedUser.username &&
             updatedUser.email &&
-            updatedUser.country &&
             updatedUser.language
         );
 
@@ -762,11 +786,10 @@ export const isProfileComplete = async (req: AuthenticatedRequest, res: Response
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
 
-        // Prüfe Felder
+        // Prüfe Felder (username, email, language - country NICHT nötig)
         const missingFields: string[] = [];
         if (!user.username) missingFields.push('username');
         if (!user.email) missingFields.push('email');
-        if (!user.country) missingFields.push('country');
         if (!user.language) missingFields.push('language');
 
         const complete = missingFields.length === 0;

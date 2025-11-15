@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { cerebroApi, CerebroArticle } from '../../api/cerebroApi.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 
@@ -14,6 +15,7 @@ interface ArticleListProps {
 
 // Artikellisten-Komponente
 const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSearchQuery }) => {
+  const { t } = useTranslation();
   const [articles, setArticles] = useState<CerebroArticle[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -155,7 +157,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSe
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded flex items-center"
             onClick={navigateToCreateArticle}
           >
-            <FaPlus className="mr-2" /> Neuer Artikel
+            <FaPlus className="mr-2" /> {t('cerebro.articleList.newArticle', { defaultValue: 'Neuer Artikel' })}
           </button>
         )}
       </div>
@@ -166,7 +168,7 @@ const ArticleList: React.FC<ArticleListProps> = ({ limit, searchQuery: initialSe
           <input
             type="text"
             className="w-full md:w-[300px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-            placeholder="Artikel suchen..."
+            placeholder={t('cerebro.articleList.searchPlaceholder', { defaultValue: 'Artikel suchen...' })}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}

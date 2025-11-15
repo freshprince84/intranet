@@ -143,9 +143,21 @@ ${ttlockCode}
 
 ` : ''}¡Te esperamos!`;
 
-        // Sende WhatsApp-Nachricht
+        // Sende WhatsApp-Nachricht (mit Fallback auf Template)
         const whatsappService = new WhatsAppService(reservation.organizationId);
-        await whatsappService.sendMessage(updatedReservation.guestPhone, sentMessage);
+        const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_confirmation';
+        const templateParams = [
+          updatedReservation.guestName,
+          checkInDateStr,
+          checkOutDateStr,
+          paymentLink
+        ];
+        await whatsappService.sendMessageWithFallback(
+          updatedReservation.guestPhone,
+          sentMessage,
+          templateName,
+          templateParams
+        );
 
         sentMessageAt = new Date();
 
@@ -294,9 +306,21 @@ ${paymentLink}
 
 ¡Te esperamos!`;
 
-        // Sende WhatsApp-Nachricht
+        // Sende WhatsApp-Nachricht (mit Fallback auf Template)
         const whatsappService = new WhatsAppService(reservation.organizationId);
-        await whatsappService.sendMessage(reservation.guestPhone, sentMessage);
+        const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_confirmation';
+        const templateParams = [
+          reservation.guestName,
+          `${amount} ${currency}`,
+          checkInLink,
+          paymentLink
+        ];
+        await whatsappService.sendMessageWithFallback(
+          reservation.guestPhone,
+          sentMessage,
+          templateName,
+          templateParams
+        );
 
         sentMessageAt = new Date();
 

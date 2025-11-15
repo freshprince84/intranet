@@ -19,7 +19,7 @@ import { useOnboarding } from '../contexts/OnboardingContext.tsx';
 import { useNavigate } from 'react-router-dom';
 
 const Settings: React.FC = () => {
-    const { user } = useAuth();
+    const { user, fetchCurrentUser } = useAuth();
     const { isAdmin } = usePermissions();
     const { isDarkMode, toggleDarkMode } = useTheme();
     const { showMessage } = useMessage();
@@ -179,6 +179,14 @@ const Settings: React.FC = () => {
                 const responseData = JSON.parse(responseText);
                 console.log('Response Data:', responseData);
                 showMessage(t('settings.logoUploadSuccess'), 'success');
+                
+                // User-Daten neu laden, damit das Logo im Header aktualisiert wird
+                try {
+                    await fetchCurrentUser();
+                    console.log('User-Daten nach Logo-Upload neu geladen');
+                } catch (error) {
+                    console.error('Fehler beim Neuladen der User-Daten:', error);
+                }
                 
                 // Favicon nach Upload aktualisieren
                 const faviconLink = document.getElementById('favicon') as HTMLLinkElement;

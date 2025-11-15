@@ -18,7 +18,12 @@ router.get('/', (req, res, next) => {
     console.log('[Reservations Route] organizationId:', req.organizationId);
     (0, reservationController_1.getAllReservations)(req, res).catch(next);
 });
-router.post('/', reservationController_1.createReservation);
+router.post('/', (req, res, next) => {
+    console.log('[Reservations Route] POST / aufgerufen');
+    console.log('[Reservations Route] organizationId:', req.organizationId);
+    console.log('[Reservations Route] Body:', req.body);
+    (0, reservationController_1.createReservation)(req, res).catch(next);
+});
 router.get('/:id', reservationController_1.getReservationById);
 router.put('/:id/guest-contact', reservationController_1.updateGuestContact);
 exports.default = router;

@@ -358,7 +358,7 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Suchen..."
+                  placeholder={t('common.searchPlaceholder', { defaultValue: 'Suchen...' })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-l-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                   data-onboarding="cerebro-search"
                 />
@@ -392,7 +392,7 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
             {/* Normale Artikel aus der Datenbank */}
             {!loading && databaseArticles.length > 0 && (
               <div className="space-y-1 mb-4">
-                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Artikel</h3>
+                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">{t('cerebro.article', { defaultValue: 'Artikel' })}</h3>
                 <ArticleTree 
                   articles={databaseArticles} 
                   currentSlug={slug}

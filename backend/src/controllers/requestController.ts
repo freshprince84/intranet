@@ -67,20 +67,26 @@ export const getAllRequests = async (req: Request, res: Response) => {
         // Erweitere Filter um private/öffentliche Logik
         // Private Requests: Nur für requesterId und responsibleId sichtbar
         // Öffentliche Requests: Für alle User der Organisation sichtbar
+        // WICHTIG: isolationFilter und OR-Bedingung müssen mit AND kombiniert werden,
+        // damit das OR aus isolationFilter nicht überschrieben wird
         const whereClause: Prisma.RequestWhereInput = {
-            ...isolationFilter,
-            OR: [
-                // Öffentliche Requests (isPrivate = false) innerhalb der Organisation
+            AND: [
+                isolationFilter,
                 {
-                    isPrivate: false,
-                    ...(organizationId ? { organizationId } : {})
-                },
-                // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
-                {
-                    isPrivate: true,
                     OR: [
-                        { requesterId: userId },
-                        { responsibleId: userId }
+                        // Öffentliche Requests (isPrivate = false) innerhalb der Organisation
+                        {
+                            isPrivate: false,
+                            ...(organizationId ? { organizationId } : {})
+                        },
+                        // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                        {
+                            isPrivate: true,
+                            OR: [
+                                { requesterId: userId },
+                                { responsibleId: userId }
+                            ]
+                        }
                     ]
                 }
             ]
@@ -152,21 +158,27 @@ export const getRequestById = async (req: Request<{ id: string }>, res: Response
         const isolationFilter = getDataIsolationFilter(req as any, 'request');
         
         // Erweitere Filter um private/öffentliche Logik
+        // WICHTIG: isolationFilter und OR-Bedingung müssen mit AND kombiniert werden,
+        // damit das OR aus isolationFilter nicht überschrieben wird
         const whereClause: Prisma.RequestWhereInput = {
             id: parseInt(id),
-            ...isolationFilter,
-            OR: [
-                // Öffentliche Requests
+            AND: [
+                isolationFilter,
                 {
-                    isPrivate: false,
-                    ...(organizationId ? { organizationId } : {})
-                },
-                // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
-                {
-                    isPrivate: true,
                     OR: [
-                        { requesterId: userId },
-                        { responsibleId: userId }
+                        // Öffentliche Requests
+                        {
+                            isPrivate: false,
+                            ...(organizationId ? { organizationId } : {})
+                        },
+                        // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                        {
+                            isPrivate: true,
+                            OR: [
+                                { requesterId: userId },
+                                { responsibleId: userId }
+                            ]
+                        }
                     ]
                 }
             ]

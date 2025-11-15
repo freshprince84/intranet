@@ -25,33 +25,148 @@ const prisma = new client_1.PrismaClient();
  * - WhatsApp Business API
  */
 class WhatsAppService {
-    constructor(organizationId) {
+    /**
+     * Constructor: Akzeptiert entweder organizationId ODER branchId
+     * @param organizationId - Organisation ID (für Rückwärtskompatibilität)
+     * @param branchId - Branch ID (neu)
+     */
+    constructor(organizationId, branchId) {
+        if (!organizationId && !branchId) {
+            throw new Error('Entweder organizationId oder branchId muss angegeben werden');
+        }
         this.organizationId = organizationId;
+        this.branchId = branchId;
     }
     /**
-     * Lädt WhatsApp Settings aus der Organisation
+     * Lädt WhatsApp Settings aus Branch oder Organisation (mit Fallback)
      */
     loadSettings() {
         return __awaiter(this, void 0, void 0, function* () {
-            const organization = yield prisma.organization.findUnique({
-                where: { id: this.organizationId },
-                select: { settings: true }
-            });
-            if (!(organization === null || organization === void 0 ? void 0 : organization.settings)) {
-                throw new Error(`WhatsApp ist nicht für Organisation ${this.organizationId} konfiguriert`);
+            var _a;
+            // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
+            if (this.branchId) {
+                console.log(`[WhatsApp Service] Lade Settings für Branch ${this.branchId}`);
+                const branch = yield prisma.branch.findUnique({
+                    where: { id: this.branchId },
+                    select: {
+                        whatsappSettings: true,
+                        organizationId: true
+                    }
+                });
+                if (branch === null || branch === void 0 ? void 0 : branch.whatsappSettings) {
+                    // Branch hat eigene WhatsApp Settings
+                    console.log(`[WhatsApp Service] Branch hat eigene WhatsApp Settings`);
+                    try {
+                        // branch.whatsappSettings enthält direkt die WhatsApp Settings (nicht verschachtelt)
+                        // Versuche zu entschlüsseln (falls verschlüsselt)
+                        let whatsappSettings;
+                        try {
+                            // Versuche als verschachteltes Objekt zu entschlüsseln
+                            const decrypted = (0, encryption_1.decryptApiSettings)({ whatsapp: branch.whatsappSettings });
+                            whatsappSettings = decrypted === null || decrypted === void 0 ? void 0 : decrypted.whatsapp;
+                        }
+                        catch (_b) {
+                            // Falls das fehlschlägt, versuche direkt zu entschlüsseln
+                            try {
+                                whatsappSettings = (0, encryption_1.decryptApiSettings)(branch.whatsappSettings);
+                            }
+                            catch (_c) {
+                                // Falls auch das fehlschlägt, verwende direkt (unverschlüsselt)
+                                whatsappSettings = branch.whatsappSettings;
+                            }
+                        }
+                        // Falls immer noch verschachtelt, extrahiere whatsapp
+                        if (whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.whatsapp) {
+                            whatsappSettings = whatsappSettings.whatsapp;
+                        }
+                        if (whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.apiKey) {
+                            this.provider = whatsappSettings.provider || 'twilio';
+                            this.apiKey = whatsappSettings.apiKey;
+                            this.apiSecret = whatsappSettings.apiSecret;
+                            this.phoneNumberId = whatsappSettings.phoneNumberId;
+                            this.businessAccountId = whatsappSettings.businessAccountId;
+                            console.log(`[WhatsApp Service] Branch Settings geladen:`, {
+                                provider: this.provider,
+                                hasApiKey: !!this.apiKey,
+                                phoneNumberId: this.phoneNumberId
+                            });
+                            this.axiosInstance = this.createAxiosInstance();
+                            return; // Erfolgreich geladen
+                        }
+                        else {
+                            console.warn(`[WhatsApp Service] Branch Settings gefunden, aber kein API Key vorhanden`);
+                        }
+                    }
+                    catch (error) {
+                        console.warn(`[WhatsApp Service] Fehler beim Laden der Branch Settings:`, error);
+                        // Fallback auf Organization Settings
+                    }
+                    // Fallback: Lade Organization Settings
+                    if (branch.organizationId) {
+                        console.log(`[WhatsApp Service] Fallback: Lade Organization Settings für Organisation ${branch.organizationId}`);
+                        this.organizationId = branch.organizationId;
+                    }
+                }
+                else if (branch === null || branch === void 0 ? void 0 : branch.organizationId) {
+                    // Branch hat keine Settings, aber Organization ID
+                    console.log(`[WhatsApp Service] Branch hat keine WhatsApp Settings, verwende Organization ${branch.organizationId}`);
+                    this.organizationId = branch.organizationId;
+                }
             }
-            const settings = (0, encryption_1.decryptApiSettings)(organization.settings);
-            const whatsappSettings = settings === null || settings === void 0 ? void 0 : settings.whatsapp;
-            if (!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.apiKey)) {
-                throw new Error(`WhatsApp API Key ist nicht für Organisation ${this.organizationId} konfiguriert`);
+            // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
+            if (this.organizationId) {
+                console.log(`[WhatsApp Service] Lade Settings für Organisation ${this.organizationId}`);
+                const organization = yield prisma.organization.findUnique({
+                    where: { id: this.organizationId },
+                    select: { settings: true }
+                });
+                if (!(organization === null || organization === void 0 ? void 0 : organization.settings)) {
+                    console.error(`[WhatsApp Service] Keine Settings für Organisation ${this.organizationId} gefunden`);
+                    throw new Error(`WhatsApp ist nicht für Organisation ${this.organizationId} konfiguriert`);
+                }
+                // Prüfe ENCRYPTION_KEY
+                const encryptionKey = process.env.ENCRYPTION_KEY;
+                if (!encryptionKey) {
+                    console.warn('[WhatsApp Service] ⚠️ ENCRYPTION_KEY nicht gesetzt - versuche Settings ohne Entschlüsselung zu laden');
+                }
+                else {
+                    console.log(`[WhatsApp Service] ENCRYPTION_KEY ist gesetzt (Länge: ${encryptionKey.length})`);
+                }
+                try {
+                    const settings = (0, encryption_1.decryptApiSettings)(organization.settings);
+                    const whatsappSettings = settings === null || settings === void 0 ? void 0 : settings.whatsapp;
+                    console.log(`[WhatsApp Service] WhatsApp Settings geladen:`, {
+                        provider: whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.provider,
+                        hasApiKey: !!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.apiKey),
+                        apiKeyLength: ((_a = whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.apiKey) === null || _a === void 0 ? void 0 : _a.length) || 0,
+                        hasPhoneNumberId: !!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.phoneNumberId),
+                        phoneNumberId: whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.phoneNumberId
+                    });
+                    if (!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.apiKey)) {
+                        console.error(`[WhatsApp Service] WhatsApp API Key fehlt für Organisation ${this.organizationId}`);
+                        throw new Error(`WhatsApp API Key ist nicht für Organisation ${this.organizationId} konfiguriert`);
+                    }
+                    this.provider = whatsappSettings.provider || 'twilio';
+                    this.apiKey = whatsappSettings.apiKey;
+                    this.apiSecret = whatsappSettings.apiSecret;
+                    this.phoneNumberId = whatsappSettings.phoneNumberId;
+                    this.businessAccountId = whatsappSettings.businessAccountId;
+                    console.log(`[WhatsApp Service] Provider: ${this.provider}, Phone Number ID: ${this.phoneNumberId}`);
+                    // Erstelle Axios-Instanz basierend auf Provider
+                    this.axiosInstance = this.createAxiosInstance();
+                    return; // Erfolgreich geladen
+                }
+                catch (error) {
+                    console.error('[WhatsApp Service] Fehler beim Laden der Settings:', error);
+                    if (error instanceof Error) {
+                        console.error('[WhatsApp Service] Fehlermeldung:', error.message);
+                        console.error('[WhatsApp Service] Stack:', error.stack);
+                    }
+                    throw error;
+                }
             }
-            this.provider = whatsappSettings.provider || 'twilio';
-            this.apiKey = whatsappSettings.apiKey;
-            this.apiSecret = whatsappSettings.apiSecret;
-            this.phoneNumberId = whatsappSettings.phoneNumberId;
-            this.businessAccountId = whatsappSettings.businessAccountId;
-            // Erstelle Axios-Instanz basierend auf Provider
-            this.axiosInstance = this.createAxiosInstance();
+            // Falls wir hier ankommen, wurde nichts gefunden
+            throw new Error('WhatsApp Settings nicht gefunden (weder Branch noch Organization)');
         });
     }
     /**
@@ -95,10 +210,17 @@ class WhatsAppService {
     sendMessage(to, message, template) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
+                console.log(`[WhatsApp Service] sendMessage aufgerufen für: ${to}`);
                 yield this.loadSettings();
                 if (!this.axiosInstance) {
+                    console.error('[WhatsApp Service] Axios-Instanz nicht initialisiert');
                     throw new Error('WhatsApp Service nicht initialisiert');
                 }
+                if (!this.apiKey) {
+                    console.error('[WhatsApp Service] API Key nicht gesetzt');
+                    throw new Error('WhatsApp API Key nicht gesetzt');
+                }
+                console.log(`[WhatsApp Service] Sende Nachricht via ${this.provider}...`);
                 // Normalisiere Telefonnummer (entferne Leerzeichen, füge + hinzu falls fehlt)
                 const normalizedPhone = this.normalizePhoneNumber(to);
                 if (this.provider === 'twilio') {
@@ -153,12 +275,18 @@ class WhatsAppService {
     }
     /**
      * Sendet Nachricht über WhatsApp Business API
+     * @param templateParams - Optional: Template-Parameter (für Template Messages)
+     * @param templateLanguage - Optional: Template-Sprache (Standard: 'en' oder aus Environment)
      */
-    sendViaWhatsAppBusiness(to, message, template) {
+    sendViaWhatsAppBusiness(to, message, template, templateParams, templateLanguage) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b;
+            var _a, _b, _c, _d, _e, _f, _g, _h;
             if (!this.axiosInstance) {
                 throw new Error('WhatsApp Business Service nicht initialisiert');
+            }
+            if (!this.phoneNumberId) {
+                console.error('[WhatsApp Business] Phone Number ID fehlt!');
+                throw new Error('WhatsApp Phone Number ID ist nicht konfiguriert');
             }
             try {
                 const payload = {
@@ -171,22 +299,132 @@ class WhatsAppService {
                 };
                 // Wenn Template angegeben, verwende Template-Nachricht
                 if (template) {
+                    // Template-Sprache: Parameter > Environment-Variable > Standard (Standard: Englisch)
+                    const languageCode = templateLanguage || process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en';
                     payload.type = 'template';
                     payload.template = {
                         name: template,
-                        language: { code: 'es' } // Standard: Spanisch
+                        language: { code: languageCode }
                     };
+                    // Füge Template-Parameter hinzu, falls vorhanden
+                    if (templateParams && templateParams.length > 0) {
+                        payload.template.components = [
+                            {
+                                type: 'body',
+                                parameters: templateParams
+                            }
+                        ];
+                    }
+                }
+                console.log(`[WhatsApp Business] Sende Nachricht an ${to} via Phone Number ID ${this.phoneNumberId}`);
+                console.log(`[WhatsApp Business] Payload:`, JSON.stringify(payload, null, 2));
+                console.log(`[WhatsApp Business] Base URL:`, this.axiosInstance.defaults.baseURL);
+                const authHeader = (_a = this.axiosInstance.defaults.headers) === null || _a === void 0 ? void 0 : _a['Authorization'];
+                if (authHeader) {
+                    console.log(`[WhatsApp Business] Authorization Header Länge: ${authHeader.length}`);
+                    console.log(`[WhatsApp Business] Authorization Header Vorschau: ${authHeader.substring(0, 50)}...`);
+                    console.log(`[WhatsApp Business] Token Start: ${authHeader.substring(7, 30)}...`);
+                    console.log(`[WhatsApp Business] Token Ende: ...${authHeader.substring(authHeader.length - 20)}`);
+                }
+                else {
+                    console.error(`[WhatsApp Business] ⚠️ Authorization Header fehlt!`);
                 }
                 const response = yield this.axiosInstance.post('/messages', payload);
+                console.log(`[WhatsApp Business] ✅ Nachricht erfolgreich gesendet. Status: ${response.status}`);
+                console.log(`[WhatsApp Business] Response:`, JSON.stringify(response.data, null, 2));
                 return response.status === 200;
             }
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
-                    console.error('[WhatsApp Business] API Fehler:', (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data);
-                    throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify((_b = axiosError.response) === null || _b === void 0 ? void 0 : _b.data)}`);
+                    console.error('[WhatsApp Business] API Fehler Details:');
+                    console.error('  Status:', (_b = axiosError.response) === null || _b === void 0 ? void 0 : _b.status);
+                    console.error('  Status Text:', (_c = axiosError.response) === null || _c === void 0 ? void 0 : _c.statusText);
+                    console.error('  Response Data:', JSON.stringify((_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.data, null, 2));
+                    console.error('  Request URL:', (_e = axiosError.config) === null || _e === void 0 ? void 0 : _e.url);
+                    console.error('  Request Method:', (_f = axiosError.config) === null || _f === void 0 ? void 0 : _f.method);
+                    console.error('  Request Headers:', JSON.stringify((_g = axiosError.config) === null || _g === void 0 ? void 0 : _g.headers, null, 2));
+                    throw new Error(`WhatsApp Business API Fehler: ${JSON.stringify((_h = axiosError.response) === null || _h === void 0 ? void 0 : _h.data)}`);
                 }
+                console.error('[WhatsApp Business] Unbekannter Fehler:', error);
                 throw error;
+            }
+        });
+    }
+    /**
+     * Prüft ob ein Fehler auf "outside 24-hour window" hinweist
+     */
+    isOutside24HourWindowError(error) {
+        var _a, _b, _c, _d;
+        if (axios_1.default.isAxiosError(error)) {
+            const errorData = (_a = error.response) === null || _a === void 0 ? void 0 : _a.data;
+            const errorCode = (_b = errorData === null || errorData === void 0 ? void 0 : errorData.error) === null || _b === void 0 ? void 0 : _b.code;
+            const errorMessage = (((_c = errorData === null || errorData === void 0 ? void 0 : errorData.error) === null || _c === void 0 ? void 0 : _c.message) || '').toLowerCase();
+            const errorSubcode = (_d = errorData === null || errorData === void 0 ? void 0 : errorData.error) === null || _d === void 0 ? void 0 : _d.error_subcode;
+            // WhatsApp Business API Fehlercodes für 24h-Fenster
+            // 131047 = Message outside 24-hour window
+            // 131026 = Template required (auch bei 24h-Fenster)
+            return (errorCode === 131047 ||
+                errorCode === 131026 ||
+                errorSubcode === 131047 ||
+                errorMessage.includes('24 hour') ||
+                errorMessage.includes('outside window') ||
+                errorMessage.includes('template required') ||
+                errorMessage.includes('outside the 24 hour'));
+        }
+        return false;
+    }
+    /**
+     * Sendet Nachricht mit Fallback auf Template Message
+     * Versucht zuerst Session Message (24h-Fenster), bei Fehler: Template Message
+     *
+     * @param to - Telefonnummer des Empfängers
+     * @param message - Nachrichtentext (für Session Message)
+     * @param templateName - Template-Name (für Fallback)
+     * @param templateParams - Template-Parameter (Array von Text-Parametern)
+     * @returns true wenn erfolgreich
+     */
+    sendMessageWithFallback(to, message, templateName, templateParams) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // Versuche zuerst Session Message (24h-Fenster)
+                console.log(`[WhatsApp Service] Versuche Session Message (24h-Fenster) für ${to}...`);
+                return yield this.sendMessage(to, message);
+            }
+            catch (error) {
+                // Prüfe ob Fehler "outside 24h window" ist
+                if (this.isOutside24HourWindowError(error)) {
+                    console.log(`[WhatsApp Service] ⚠️ 24h-Fenster abgelaufen, verwende Template Message...`);
+                    if (!templateName) {
+                        console.error('[WhatsApp Service] Template-Name fehlt für Fallback!');
+                        throw new Error('Template Message erforderlich, aber kein Template-Name angegeben');
+                    }
+                    // Fallback: Template Message
+                    try {
+                        yield this.loadSettings();
+                        if (!this.axiosInstance || !this.phoneNumberId) {
+                            throw new Error('WhatsApp Service nicht initialisiert');
+                        }
+                        const normalizedPhone = this.normalizePhoneNumber(to);
+                        // Formatiere Template-Parameter
+                        const formattedParams = (templateParams === null || templateParams === void 0 ? void 0 : templateParams.map(text => ({
+                            type: 'text',
+                            text: text
+                        }))) || [];
+                        // Template-Sprache aus Environment-Variable oder Standard (Standard: Englisch)
+                        const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en';
+                        return yield this.sendViaWhatsAppBusiness(normalizedPhone, message, templateName, formattedParams, languageCode);
+                    }
+                    catch (templateError) {
+                        console.error('[WhatsApp Service] Fehler bei Template Message:', templateError);
+                        throw templateError;
+                    }
+                }
+                else {
+                    // Anderer Fehler - weiterwerfen
+                    console.error('[WhatsApp Service] Unbekannter Fehler bei Session Message:', error);
+                    throw error;
+                }
             }
         });
     }
@@ -204,6 +442,7 @@ class WhatsAppService {
     }
     /**
      * Sendet Check-in-Einladung per WhatsApp
+     * Verwendet Hybrid-Ansatz: Session Message mit Fallback auf Template
      *
      * @param guestName - Name des Gastes
      * @param guestPhone - Telefonnummer des Gastes
@@ -225,11 +464,16 @@ Por favor, realiza el pago por adelantado:
 ${paymentLink}
 
 ¡Te esperamos mañana!`;
-            return yield this.sendMessage(guestPhone, message);
+            // Template-Name aus Environment oder Settings (Standard: reservation_checkin_invitation)
+            const templateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_INVITATION || 'reservation_checkin_invitation';
+            // Template-Parameter (müssen in der Reihenfolge der {{1}}, {{2}}, {{3}} im Template sein)
+            const templateParams = [guestName, checkInLink, paymentLink];
+            return yield this.sendMessageWithFallback(guestPhone, message, templateName, templateParams);
         });
     }
     /**
      * Sendet Check-in-Bestätigung per WhatsApp
+     * Verwendet Hybrid-Ansatz: Session Message mit Fallback auf Template
      *
      * @param guestName - Name des Gastes
      * @param guestPhone - Telefonnummer des Gastes
@@ -254,8 +498,112 @@ Acceso:
 - App: ${doorAppName}
 
 ¡Te deseamos una estancia agradable!`;
-            return yield this.sendMessage(guestPhone, message);
+            // Template-Name aus Environment oder Settings (Standard: reservation_checkin_confirmation)
+            const templateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_CONFIRMATION || 'reservation_checkin_confirmation';
+            // Template-Parameter (müssen in der Reihenfolge der {{1}}, {{2}}, etc. im Template sein)
+            // Format: Name, Room Number, Room Description, Door PIN, App Name
+            const templateParams = [guestName, roomNumber, roomDescription, doorPin, doorAppName];
+            return yield this.sendMessageWithFallback(guestPhone, message, templateName, templateParams);
         });
+    }
+    /**
+     * Statische Methode: Erstellt Service für Branch
+     * @param branchId - Branch ID
+     * @returns WhatsAppService-Instanz
+     */
+    static getServiceForBranch(branchId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const service = new WhatsAppService(undefined, branchId);
+            yield service.loadSettings();
+            return service;
+        });
+    }
+    /**
+     * Statische Methode: Erstellt Service für Organization (Rückwärtskompatibel)
+     * @param organizationId - Organization ID
+     * @returns WhatsAppService-Instanz
+     */
+    static getServiceForOrganization(organizationId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const service = new WhatsAppService(organizationId);
+            yield service.loadSettings();
+            return service;
+        });
+    }
+    /**
+     * Lädt Media von der WhatsApp Business API herunter
+     * @param mediaId - Media ID von WhatsApp
+     * @returns Buffer mit den Mediendaten und MIME-Type
+     */
+    downloadMedia(mediaId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
+            try {
+                yield this.loadSettings();
+                if (this.provider !== 'whatsapp-business-api') {
+                    throw new Error('Media-Download nur für WhatsApp Business API unterstützt');
+                }
+                if (!this.axiosInstance || !this.apiKey) {
+                    throw new Error('WhatsApp Service nicht initialisiert');
+                }
+                console.log(`[WhatsApp Service] Lade Media ${mediaId} herunter...`);
+                // Schritt 1: Hole Media-URL
+                // WhatsApp Business API Endpoint: GET https://graph.facebook.com/v18.0/{media-id}
+                // Erstelle separate Axios-Instanz für Media-Download (baseURL enthält phoneNumberId, was hier nicht benötigt wird)
+                const mediaApiClient = axios_1.default.create({
+                    baseURL: 'https://graph.facebook.com/v18.0',
+                    timeout: 30000,
+                    headers: {
+                        'Authorization': `Bearer ${this.apiKey}`
+                    }
+                });
+                const mediaInfoResponse = yield mediaApiClient.get(`/${mediaId}`);
+                const mediaUrl = mediaInfoResponse.data.url;
+                const mimeType = mediaInfoResponse.data.mime_type || 'image/jpeg';
+                const fileName = mediaInfoResponse.data.filename || `whatsapp-media-${mediaId}.${this.getFileExtension(mimeType)}`;
+                console.log(`[WhatsApp Service] Media-URL erhalten: ${mediaUrl.substring(0, 50)}...`);
+                // Schritt 2: Lade die tatsächliche Datei herunter
+                const mediaResponse = yield axios_1.default.get(mediaUrl, {
+                    responseType: 'arraybuffer',
+                    headers: {
+                        'Authorization': `Bearer ${this.apiKey}`
+                    }
+                });
+                const buffer = Buffer.from(mediaResponse.data);
+                console.log(`[WhatsApp Service] Media heruntergeladen: ${buffer.length} bytes, Type: ${mimeType}`);
+                return {
+                    buffer,
+                    mimeType,
+                    fileName
+                };
+            }
+            catch (error) {
+                console.error('[WhatsApp Service] Fehler beim Herunterladen von Media:', error);
+                if (axios_1.default.isAxiosError(error)) {
+                    const axiosError = error;
+                    console.error('[WhatsApp Service] API Fehler:', (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data);
+                    throw new Error(`WhatsApp Media Download Fehler: ${JSON.stringify((_b = axiosError.response) === null || _b === void 0 ? void 0 : _b.data)}`);
+                }
+                throw error;
+            }
+        });
+    }
+    /**
+     * Hilfsmethode: Ermittelt Dateiendung aus MIME-Type
+     */
+    getFileExtension(mimeType) {
+        const mimeToExt = {
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/gif': 'gif',
+            'image/webp': 'webp',
+            'application/pdf': 'pdf',
+            'video/mp4': 'mp4',
+            'video/webm': 'webm',
+            'audio/mpeg': 'mp3',
+            'audio/ogg': 'ogg'
+        };
+        return mimeToExt[mimeType] || 'bin';
     }
 }
 exports.WhatsAppService = WhatsAppService;

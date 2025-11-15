@@ -213,7 +213,8 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
                                     select: {
                                         id: true,
                                         name: true,
-                                        displayName: true
+                                        displayName: true,
+                                        logo: true
                                     }
                                 }
                             }
@@ -280,6 +281,30 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
             { expiresIn: '24h' }
         );
         
+        // Prüfe Profilvollständigkeit (username, email, language - country NICHT nötig)
+        const isComplete = !!(
+            user.username &&
+            user.email &&
+            user.language
+        );
+        
+        // Update profileComplete, falls noch nicht gesetzt
+        if (isComplete !== user.profileComplete) {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { profileComplete: isComplete }
+            });
+        }
+        
+        // Debug: Logge Logo-Daten vor Login-Response
+        const activeRoleOrg = user.roles.find(r => r.lastUsed)?.role.organization;
+        console.log('=== LOGIN LOGO DEBUG ===');
+        console.log('Active role organization:', activeRoleOrg ? {
+            id: activeRoleOrg.id,
+            name: activeRoleOrg.name,
+            logo: activeRoleOrg.logo ? (activeRoleOrg.logo === 'null' ? 'String "null" (WIRD KORRIGIERT)' : `${activeRoleOrg.logo.substring(0, 50)}...`) : 'null'
+        } : 'null');
+        
         // Bereite die Benutzerinformationen für die Antwort vor
         const userResponse = {
             id: user.id,
@@ -287,6 +312,8 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
+            language: user.language,
+            profileComplete: isComplete,
             roles: user.roles.map(r => ({
                 role: {
                     id: r.role.id,
@@ -295,7 +322,9 @@ export const login = async (req: Request<{}, {}, LoginRequest>, res: Response) =
                     organization: r.role.organization ? {
                         id: r.role.organization.id,
                         name: r.role.organization.name,
-                        displayName: r.role.organization.displayName
+                        displayName: r.role.organization.displayName,
+                        // Korrigiere String 'null' zu echtem null
+                        logo: r.role.organization.logo === 'null' || r.role.organization.logo === null || r.role.organization.logo === '' ? null : r.role.organization.logo
                     } : null
                 },
                 lastUsed: r.lastUsed
@@ -348,7 +377,8 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                                     select: {
                                         id: true,
                                         name: true,
-                                        displayName: true
+                                        displayName: true,
+                                        logo: true
                                     }
                                 }
                             }
@@ -376,7 +406,8 @@ export const getCurrentUser = async (req: AuthenticatedRequest, res: Response) =
                     organization: r.role.organization ? {
                         id: r.role.organization.id,
                         name: r.role.organization.name,
-                        displayName: r.role.organization.displayName
+                        displayName: r.role.organization.displayName,
+                        logo: r.role.organization.logo
                     } : null
                 },
                 lastUsed: r.lastUsed

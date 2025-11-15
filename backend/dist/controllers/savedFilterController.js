@@ -32,18 +32,43 @@ const getUserSavedFilters = (req, res) => __awaiter(void 0, void 0, void 0, func
                 }
             });
             // Parse die JSON-Strings zurück in Arrays
-            const parsedFilters = savedFilters.map(filter => ({
-                id: filter.id,
-                userId: filter.userId,
-                tableId: filter.tableId,
-                name: filter.name,
-                conditions: JSON.parse(filter.conditions),
-                operators: JSON.parse(filter.operators),
-                groupId: filter.groupId,
-                order: filter.order,
-                createdAt: filter.createdAt,
-                updatedAt: filter.updatedAt
-            }));
+            const parsedFilters = savedFilters.map(filter => {
+                let sortDirections = [];
+                if (filter.sortDirections) {
+                    try {
+                        const parsed = JSON.parse(filter.sortDirections);
+                        // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
+                        if (Array.isArray(parsed)) {
+                            sortDirections = parsed;
+                        }
+                        else if (typeof parsed === 'object' && parsed !== null) {
+                            // Altes Format: { "status": "asc", "branch": "desc" }
+                            sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
+                                column,
+                                direction: direction,
+                                priority: index + 1
+                            }));
+                        }
+                    }
+                    catch (e) {
+                        console.error('Fehler beim Parsen von sortDirections:', e);
+                        sortDirections = [];
+                    }
+                }
+                return {
+                    id: filter.id,
+                    userId: filter.userId,
+                    tableId: filter.tableId,
+                    name: filter.name,
+                    conditions: JSON.parse(filter.conditions),
+                    operators: JSON.parse(filter.operators),
+                    sortDirections,
+                    groupId: filter.groupId,
+                    order: filter.order,
+                    createdAt: filter.createdAt,
+                    updatedAt: filter.updatedAt
+                };
+            });
             return res.status(200).json(parsedFilters);
         }
         catch (prismaError) {
@@ -61,7 +86,7 @@ exports.getUserSavedFilters = getUserSavedFilters;
 const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.userId, 10);
-        const { tableId, name, conditions, operators } = req.body;
+        const { tableId, name, conditions, operators, sortDirections } = req.body;
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
@@ -74,6 +99,7 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Konvertiere Arrays in JSON-Strings für die Datenbank
         const conditionsJson = JSON.stringify(conditions || []);
         const operatorsJson = JSON.stringify(operators || []);
+        const sortDirectionsJson = JSON.stringify(sortDirections || {});
         // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
         try {
             // Prüfe, ob bereits ein Filter mit diesem Namen existiert
@@ -93,7 +119,8 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     },
                     data: {
                         conditions: conditionsJson,
-                        operators: operatorsJson
+                        operators: operatorsJson,
+                        sortDirections: sortDirectionsJson
                     }
                 });
             }
@@ -105,11 +132,34 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                         tableId,
                         name,
                         conditions: conditionsJson,
-                        operators: operatorsJson
+                        operators: operatorsJson,
+                        sortDirections: sortDirectionsJson
                     }
                 });
             }
             // Parse die JSON-Strings zurück in Arrays für die Antwort
+            let sortDirections = [];
+            if (filter.sortDirections) {
+                try {
+                    const parsed = JSON.parse(filter.sortDirections);
+                    // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
+                    if (Array.isArray(parsed)) {
+                        sortDirections = parsed;
+                    }
+                    else if (typeof parsed === 'object' && parsed !== null) {
+                        // Altes Format: { "status": "asc", "branch": "desc" }
+                        sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
+                            column,
+                            direction: direction,
+                            priority: index + 1
+                        }));
+                    }
+                }
+                catch (e) {
+                    console.error('Fehler beim Parsen von sortDirections:', e);
+                    sortDirections = [];
+                }
+            }
             const parsedFilter = {
                 id: filter.id,
                 userId: filter.userId,
@@ -117,6 +167,7 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 name: filter.name,
                 conditions: JSON.parse(filter.conditions),
                 operators: JSON.parse(filter.operators),
+                sortDirections,
                 groupId: filter.groupId,
                 order: filter.order,
                 createdAt: filter.createdAt,
@@ -291,6 +342,7 @@ const getFilterGroups = (req, res) => __awaiter(void 0, void 0, void 0, function
                     name: filter.name,
                     conditions: JSON.parse(filter.conditions),
                     operators: JSON.parse(filter.operators),
+                    sortDirections: filter.sortDirections ? JSON.parse(filter.sortDirections) : {},
                     groupId: filter.groupId,
                     order: filter.order,
                     createdAt: filter.createdAt,

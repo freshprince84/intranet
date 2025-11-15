@@ -12,17 +12,17 @@ const instance = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   },
-  // Debug-Informationen nur in Development
-  onUploadProgress: (progressEvent) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('Upload-Fortschritt:', progressEvent);
-    }
-  },
-  onDownloadProgress: (progressEvent) => {
-    if (process.env.NODE_ENV === 'development') {
-      console.debug('Download-Fortschritt:', progressEvent);
-    }
-  }
+  // Debug-Informationen deaktiviert (zu viele Logs)
+  // onUploadProgress: (progressEvent) => {
+  //   if (process.env.NODE_ENV === 'development') {
+  //     console.debug('Upload-Fortschritt:', progressEvent);
+  //   }
+  // },
+  // onDownloadProgress: (progressEvent) => {
+  //   if (process.env.NODE_ENV === 'development') {
+  //     console.debug('Download-Fortschritt:', progressEvent);
+  //   }
+  // }
 });
 
 // Füge den Token zu allen Requests hinzu, wenn vorhanden
@@ -44,10 +44,11 @@ instance.interceptors.request.use(
       delete config.headers['Content-Type'];
     }
     
-    // Debug-Logging nur in Development
-    if (process.env.NODE_ENV === 'development') {
-      console.debug(`API-Request an: ${config.url}`, config);
-    }
+    // Debug-Logging deaktiviert (zu viele Logs)
+    // Nur für spezifische Endpoints aktivieren, wenn nötig
+    // if (process.env.NODE_ENV === 'development' && !config.url?.includes('/onboarding/status')) {
+    //   console.debug(`API-Request an: ${config.url}`, config);
+    // }
     
     return config;
   },
@@ -60,10 +61,11 @@ instance.interceptors.request.use(
 // Response-Interceptor für Debugging
 instance.interceptors.response.use(
   (response) => {
-    // Debug-Logging nur in Development
-    if (process.env.NODE_ENV === 'development') {
-      console.debug(`API-Response von: ${response.config.url}`, response.status);
-    }
+    // Debug-Logging deaktiviert (zu viele Logs)
+    // Nur für spezifische Endpoints aktivieren, wenn nötig
+    // if (process.env.NODE_ENV === 'development' && !response.config.url?.includes('/onboarding/status')) {
+    //   console.debug(`API-Response von: ${response.config.url}`, response.status);
+    // }
     return response;
   },
   (error) => {

@@ -153,7 +153,23 @@ const createExternalLink = (req, res) => __awaiter(void 0, void 0, void 0, funct
             )
             RETURNING *
         `;
-        res.status(201).json(Object.assign(Object.assign({}, link[0]), { metadata }));
+        const linkData = link[0];
+        // Markdown-Link zum Artikelinhalt hinzufügen
+        // Verwende den bereits geladenen Artikel (content ist in SELECT * enthalten)
+        if (article && Array.isArray(article) && article.length > 0) {
+            const currentContent = article[0].content || '';
+            const linkTitle = title || metadata.title || url;
+            // Markdown-Link erstellen
+            const markdownLink = `\n\n[🔗 ${linkTitle}](${url})`;
+            // Link zum Inhalt hinzufügen
+            const updatedContent = currentContent + markdownLink;
+            yield prisma.$queryRaw `
+                UPDATE "CerebroCarticle"
+                SET content = ${updatedContent}, "updatedAt" = NOW()
+                WHERE id = ${parseInt(carticleId, 10)}
+            `;
+        }
+        res.status(201).json(Object.assign(Object.assign({}, linkData), { metadata }));
     }
     catch (error) {
         console.error('Fehler beim Erstellen des externen Links:', error);

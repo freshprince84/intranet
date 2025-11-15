@@ -16,7 +16,7 @@ import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
-import { toast } from 'react-toastify';
+import useMessage from '../hooks/useMessage.ts';
 import { calculateDuration, formatTime } from '../utils/dateUtils.ts';
 
 interface InvoiceDetail {
@@ -110,6 +110,7 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
   onInvoiceUpdated
 }) => {
   const { t } = useTranslation();
+  const { showMessage } = useMessage();
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -160,10 +161,10 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
       
-      toast.success('PDF erfolgreich heruntergeladen');
+      showMessage(t('invoice.downloadSuccess', { defaultValue: 'PDF erfolgreich heruntergeladen' }), 'success');
     } catch (error: any) {
       console.error('Fehler beim Download der PDF:', error);
-      toast.error(error.response?.data?.message || 'Fehler beim Download der PDF');
+      showMessage(error.response?.data?.message || t('invoice.downloadError', { defaultValue: 'Fehler beim Download der PDF' }), 'error');
     }
   };
 
@@ -183,11 +184,11 @@ const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
         }
       );
       
-      toast.success('Rechnung als bezahlt markiert');
+      showMessage(t('invoice.markPaidSuccess', { defaultValue: 'Rechnung als bezahlt markiert' }), 'success');
       loadInvoiceDetails(); // Refresh details
       onInvoiceUpdated(); // Refresh parent list
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Markieren als bezahlt');
+      showMessage(error.response?.data?.message || t('invoice.markPaidError', { defaultValue: 'Fehler beim Markieren als bezahlt' }), 'error');
     } finally {
       setIsMarkingAsPaid(false);
     }

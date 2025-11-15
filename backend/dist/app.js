@@ -145,7 +145,8 @@ app.get('/api/test-route', (req, res) => {
 app.get('/api/test-reservations', (req, res) => {
     res.json({
         message: 'Test-Reservations-Route ist erreichbar',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        reservationRoutesLoaded: typeof reservations_1.default !== 'undefined'
     });
 });
 // Test-Route für manuelle Auslösung der Monatsabrechnungsprüfung
@@ -226,7 +227,10 @@ app.use('/api/bold-payment', boldPayment_1.default);
 app.use('/api/ttlock', ttlock_1.default);
 app.use('/api/whatsapp', whatsapp_1.default);
 // Reservierungen (manuelle Erstellung) - MUSS nach lobby-pms kommen
+console.log('[App] Registriere /api/reservations Route...');
+console.log('[App] reservationRoutes:', reservations_1.default ? 'geladen' : 'FEHLT!');
 app.use('/api/reservations', reservations_1.default);
+console.log('[App] /api/reservations Route registriert');
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

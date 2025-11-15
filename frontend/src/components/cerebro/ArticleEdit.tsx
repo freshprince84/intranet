@@ -329,7 +329,7 @@ const ArticleEdit: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">
-        {isNewArticle ? 'Neuen Artikel erstellen' : 'Artikel bearbeiten'}
+        {isNewArticle ? t('cerebro.articleEdit.createTitle', { defaultValue: 'Neuen Artikel erstellen' }) : t('cerebro.articleEdit.editTitle', { defaultValue: 'Artikel bearbeiten' })}
       </h1>
       
       {error && (
@@ -341,13 +341,13 @@ const ArticleEdit: React.FC = () => {
       {loading ? (
         <div className="text-center py-8">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-          <p className="mt-2 text-gray-600">Daten werden geladen...</p>
+          <p className="mt-2 text-gray-600">{t('cerebro.articleEdit.loadingData', { defaultValue: 'Daten werden geladen...' })}</p>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
           <div className="mb-4">
             <label htmlFor="title" className="block text-gray-700 font-medium mb-2">
-              Titel *
+              {t('cerebro.articleEdit.titleRequired', { defaultValue: 'Titel *' })}
             </label>
             <input
               type="text"
@@ -362,7 +362,7 @@ const ArticleEdit: React.FC = () => {
           
           <div className="mb-4">
             <label htmlFor="parentId" className="block text-gray-700 font-medium mb-2">
-              Elternartikel
+              {t('cerebro.articleEdit.parentArticle', { defaultValue: 'Elternartikel' })}
             </label>
             <select
               id="parentId"
@@ -371,7 +371,7 @@ const ArticleEdit: React.FC = () => {
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="">Kein Elternartikel (Root)</option>
+              <option value="">{t('cerebro.articleEdit.noParent', { defaultValue: 'Kein Elternartikel (Root)' })}</option>
               {articles
                 .filter(article => article.id !== articleId) // Sich selbst ausschließen
                 .map(article => (

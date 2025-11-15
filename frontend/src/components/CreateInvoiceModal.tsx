@@ -4,7 +4,7 @@ import { XMarkIcon, CheckIcon, ArrowPathIcon, DocumentTextIcon } from '@heroicon
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
-import { toast } from 'react-toastify';
+import useMessage from '../hooks/useMessage.ts';
 import { Consultation } from '../types/client.ts';
 import { calculateDuration, formatTime } from '../utils/dateUtils.ts';
 import { format } from 'date-fns';
@@ -47,6 +47,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
   onInvoiceCreated
 }) => {
   const { t } = useTranslation();
+  const { showMessage } = useMessage();
   const { hasPermission } = usePermissions();
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState<InvoiceSettings | null>(null);
@@ -79,9 +80,9 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
     } catch (error: any) {
       console.error('Fehler beim Laden der Rechnungseinstellungen:', error);
       if (error.response?.status === 404) {
-        toast.error('Bitte konfigurieren Sie zuerst Ihre Rechnungseinstellungen');
+        showMessage(t('invoice.settingsNotConfigured', { defaultValue: 'Bitte konfigurieren Sie zuerst Ihre Rechnungseinstellungen' }), 'error');
       } else {
-        toast.error('Fehler beim Laden der Rechnungseinstellungen');
+        showMessage(t('invoice.loadSettingsError', { defaultValue: 'Fehler beim Laden der Rechnungseinstellungen' }), 'error');
       }
     } finally {
       setLoading(false);
@@ -126,25 +127,25 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
     e.preventDefault();
     
     if (!settings) {
-      toast.error('Rechnungseinstellungen konnten nicht geladen werden');
+      showMessage(t('invoice.settingsNotLoaded', { defaultValue: 'Rechnungseinstellungen konnten nicht geladen werden' }), 'error');
       return;
     }
 
     if (consultations.length === 0) {
-      toast.error('Keine Beratungen zum Abrechnen vorhanden');
+      showMessage(t('invoice.noConsultations', { defaultValue: 'Keine Beratungen zum Abrechnen vorhanden' }), 'error');
       return;
     }
 
     // Validiere, dass alle Consultations den gleichen Client haben
     const uniqueClientIds = [...new Set(consultations.map(c => c.clientId))];
     if (uniqueClientIds.length > 1) {
-      toast.error('Alle Beratungen müssen den gleichen Kunden haben');
+      showMessage(t('invoice.differentClients', { defaultValue: 'Alle Beratungen müssen den gleichen Kunden haben' }), 'error');
       return;
     }
 
     const clientId = uniqueClientIds[0];
     if (!clientId) {
-      toast.error('Kein gültiger Kunde in den Beratungen gefunden');
+      showMessage(t('invoice.noValidClient', { defaultValue: 'Kein gültiger Kunde in den Beratungen gefunden' }), 'error');
       return;
     }
 
@@ -178,7 +179,7 @@ const CreateInvoiceModal: React.FC<CreateInvoiceModalProps> = ({
       onInvoiceCreated(invoice.id);
       
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Fehler beim Erstellen der Rechnung');
+      showMessage(error.response?.data?.message || t('invoice.createError', { defaultValue: 'Fehler beim Erstellen der Rechnung' }), 'error');
     } finally {
       setLoading(false);
     }
