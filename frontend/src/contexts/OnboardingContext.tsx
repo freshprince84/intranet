@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
@@ -23,6 +23,7 @@ export interface OnboardingStep {
     accessLevel: 'read' | 'write' | 'both';
   }[];
   roleFilter?: string[]; // Rollen, für die dieser Schritt angezeigt wird
+  showCondition?: 'hasInactiveOrgRole'; // Bedingung, wann dieser Schritt angezeigt werden soll
 }
 
 // Onboarding-Status-Interface
@@ -44,8 +45,11 @@ interface OnboardingContextType {
   steps: OnboardingStep[];
   filteredSteps: OnboardingStep[];
   isLoading: boolean;
+  modalDismissed: boolean;
   startTour: () => Promise<void>;
   stopTour: () => Promise<void>;
+  dismissModal: () => void; // Modal temporär schließen
+  showModal: () => void; // Modal wieder anzeigen
   nextStep: () => void;
   previousStep: () => void;
   skipStep: () => void;
@@ -66,6 +70,61 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [status, setStatus] = useState<OnboardingStatus | null>(null);
+  const [modalDismissed, setModalDismissed] = useState<boolean>(false); // Modal temporär geschlossen
+  const modalDismissedRef = useRef<boolean>(false); // Ref für aktuellen modalDismissed-Wert
+
+  // Prüfe ob User eine inaktive Rolle mit Organisation hat
+  const hasInactiveOrgRole = useCallback((): boolean => {
+    if (!user || !user.roles) return false;
+    
+    // Finde aktive Rolle (lastUsed: true)
+    const activeRole = user.roles.find((r: any) => r.lastUsed === true);
+    
+    // Wenn aktive Rolle bereits eine Organisation hat, keine neue Rolle vorhanden
+    if (activeRole?.role?.organization !== null) {
+      return false;
+    }
+    
+    // Prüfe ob es eine Rolle mit Organisation gibt, die nicht aktiv ist
+    const hasInactiveOrgRole = user.roles.some((r: any) => 
+      !r.lastUsed && r.role.organization !== null
+    );
+    
+    return hasInactiveOrgRole;
+  }, [user]);
+
+  // Prüfe ob User ein Identitätsdokument hochladen muss (nur für Kolumbien)
+  const needsIdentificationDocument = useCallback((): boolean => {
+    if (!user || !user.roles) return false;
+    
+    // Finde aktive Rolle mit Organisation
+    const activeRole = user.roles.find((r: any) => r.lastUsed === true && r.role.organization !== null);
+    
+    if (!activeRole) {
+      return false; // Keine aktive Rolle mit Organisation
+    }
+    
+    // Prüfe ob Organisation in Kolumbien ist
+    const organization = activeRole.role.organization;
+    if (organization?.country !== 'CO') {
+      return false; // Nur für Kolumbien
+    }
+    
+    // Prüfe ob User bereits ein Identitätsdokument hat
+    const hasDocument = user.identificationDocuments && user.identificationDocuments.length > 0;
+    
+    return !hasDocument; // Nur anzeigen wenn kein Dokument vorhanden
+  }, [user]);
+
+  // Prüfe ob User keine Organisation hat
+  const hasNoOrganization = useCallback((): boolean => {
+    if (!user || !user.roles) return true; // Keine Rollen = keine Organisation
+    
+    // Prüfe ob User eine Rolle mit Organisation hat
+    const hasOrg = user.roles.some((r: any) => r.role.organization !== null);
+    
+    return !hasOrg; // true wenn KEINE Organisation vorhanden
+  }, [user]);
 
   // Filtere Schritte basierend auf Berechtigungen
   const filterStepsByPermissions = useCallback((stepsToFilter: OnboardingStep[]): OnboardingStep[] => {
@@ -77,6 +136,25 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
       // Prüfe Rollen-Filter
       if (step.roleFilter && !step.roleFilter.includes(currentRole.name)) {
         return false;
+      }
+
+      // Prüfe showCondition
+      if (step.showCondition === 'hasInactiveOrgRole') {
+        if (!hasInactiveOrgRole()) {
+          return false;
+        }
+      }
+      
+      if (step.showCondition === 'needsIdentificationDocument') {
+        if (!needsIdentificationDocument()) {
+          return false;
+        }
+      }
+      
+      if (step.showCondition === 'hasNoOrganization') {
+        if (!hasNoOrganization()) {
+          return false;
+        }
       }
 
       // Prüfe Berechtigungen
@@ -99,7 +177,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
 
       return true;
     });
-  }, [permissions, currentRole]);
+  }, [permissions, currentRole, hasInactiveOrgRole, needsIdentificationDocument, hasNoOrganization]);
 
   const filteredSteps = filterStepsByPermissions(steps);
 
@@ -127,24 +205,45 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
   const startTour = useCallback(async () => {
     if (!user) return;
 
-    // Prüfe ob Profil unvollständig ist (nur wenn User Mitglied einer Organisation ist)
+    // Prüfe ob Profil vollständig ist (username, email, language)
+    const profileComplete = isProfileComplete();
     const hasOrganization = user.roles?.some((r: any) => r.role.organization !== null) || false;
-    const profileIncomplete = hasOrganization && !isProfileComplete();
     
-    // Finde Profil-Schritt
+    // Finde Schritte
     const profileStepIndex = filteredSteps.findIndex(s => s.id === 'profile_complete');
-    const shouldStartWithProfile = profileIncomplete && profileStepIndex !== -1;
-
-    // Wenn Profil unvollständig, starte mit Profil-Schritt
-    const initialStep = shouldStartWithProfile ? profileStepIndex : 0;
+    const organizationStepIndex = filteredSteps.findIndex(s => s.id === 'join_or_create_organization');
+    const welcomeStepIndex = filteredSteps.findIndex(s => s.id === 'welcome');
+    
+    let initialStep = 0;
+    
+    if (!profileComplete && profileStepIndex !== -1) {
+      // Profil unvollständig → Starte mit Profil-Schritt
+      initialStep = profileStepIndex;
+    } else if (!hasOrganization && welcomeStepIndex !== -1) {
+      // Profil vollständig, aber keine Organisation → Starte mit Welcome auf Dashboard, dann zur Organisation
+      initialStep = welcomeStepIndex;
+    } else if (hasOrganization && welcomeStepIndex !== -1) {
+      // Profil vollständig und Organisation vorhanden → Starte mit Welcome-Schritt
+      initialStep = welcomeStepIndex;
+    }
     
     setIsActive(true);
     setCurrentStep(initialStep);
     setCompletedSteps([]);
 
-    // Navigiere zur Profil-Seite, wenn Profil unvollständig
-    if (shouldStartWithProfile && location.pathname !== '/profile') {
+    // Modal nur anzeigen, wenn es nicht explizit geschlossen wurde
+    if (!modalDismissedRef.current) {
+      setModalDismissed(false);
+    }
+
+    // Navigiere zur entsprechenden Seite
+    if (!profileComplete && location.pathname !== '/profile') {
       navigate('/profile');
+    } else if (!hasOrganization && organizationStepIndex !== -1 && location.pathname !== '/organization') {
+      navigate('/organization');
+    } else if (location.pathname !== '/dashboard') {
+      // Immer zum Dashboard navigieren (für Welcome-Schritt)
+      navigate('/dashboard');
     }
 
     // Track Start-Event
@@ -179,12 +278,11 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
         setStatus(statusData);
 
         if (!statusData.onboardingCompleted) {
-          // Prüfe ob Profil vollständig ist (nur wenn User Mitglied einer Organisation ist)
+          // Prüfe ob Profil vollständig ist (username, email, language)
+          const profileComplete = isProfileComplete();
           const hasOrganization = user.roles?.some((r: any) => r.role.organization !== null) || false;
-          const profileComplete = hasOrganization ? isProfileComplete() : true; // Vor Organisation: Profil gilt als vollständig
           
           // Wenn Profil vollständig ist UND Tour bereits gestartet wurde, setze Tour fort
-          // Wenn Profil vollständig ist UND Tour noch nicht gestartet wurde, starte Tour NICHT
           if (profileComplete && statusData.onboardingStartedAt) {
             // Profil vollständig und Tour bereits gestartet → Tour fortsetzen
             if (statusData.onboardingProgress) {
@@ -192,24 +290,58 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
               setCompletedSteps(statusData.onboardingProgress.completedSteps);
             }
             setIsActive(true);
+            if (!modalDismissedRef.current) {
+              setModalDismissed(false);
+            }
           } else if (!profileComplete) {
-            // Profil unvollständig → Tour starten/forsetzen
+            // Profil unvollständig → Tour starten/fortsetzen
             if (statusData.onboardingProgress) {
               setCurrentStep(statusData.onboardingProgress.currentStep);
               setCompletedSteps(statusData.onboardingProgress.completedSteps);
             }
             if (!statusData.onboardingStartedAt) {
-              // Warte noch etwas, damit UI vollständig geladen ist
-              setTimeout(async () => {
-                await startTour();
+              setTimeout(() => {
+                startTour();
               }, 500);
             } else {
               setIsActive(true);
+              if (!modalDismissedRef.current) {
+                setModalDismissed(false);
+              }
+            }
+          } else if (!hasOrganization) {
+            // Profil vollständig, aber keine Organisation → Tour starten mit Organisation-Schritt
+            if (statusData.onboardingProgress) {
+              setCurrentStep(statusData.onboardingProgress.currentStep);
+              setCompletedSteps(statusData.onboardingProgress.completedSteps);
+            }
+            if (!statusData.onboardingStartedAt) {
+              setTimeout(() => {
+                startTour();
+              }, 500);
+            } else {
+              setIsActive(true);
+              if (!modalDismissedRef.current) {
+                setModalDismissed(false);
+              }
             }
           } else {
-            // Profil vollständig, aber Tour noch nicht gestartet → Tour nicht starten
-            setIsActive(false);
+            // Profil vollständig und Organisation vorhanden, aber Tour noch nicht gestartet → Tour starten mit Welcome
+            if (!statusData.onboardingStartedAt) {
+              setTimeout(() => {
+                startTour();
+              }, 500);
+            } else {
+              setIsActive(true);
+              if (!modalDismissedRef.current) {
+                setModalDismissed(false);
+              }
+            }
           }
+        } else {
+          // Onboarding bereits abgeschlossen → Tour nicht anzeigen
+          setIsActive(false);
+          setModalDismissed(true);
         }
       } catch (error) {
         console.error('Fehler beim Laden des Onboarding-Status:', error);
@@ -227,8 +359,8 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
         // Auch bei Fehler: Tour starten, wenn noch nicht gestartet (für neue User)
         const savedStarted = localStorage.getItem('onboardingStartedAt');
         if (!savedStarted) {
-          setTimeout(async () => {
-            await startTour();
+          setTimeout(() => {
+            startTour();
           }, 500);
         }
       } finally {
@@ -237,7 +369,8 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
     };
 
     loadStatus();
-  }, [user, startTour]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // startTour aus Dependencies entfernt, da es zu häufigen Re-Renders führt
 
   // Speichere Fortschritt
   const saveProgress = useCallback(async (step: number, completed: number[]) => {
@@ -298,10 +431,57 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
     }
   }, [location.pathname, isActive, currentStep, filteredSteps, completedSteps, saveProgress, trackEvent]);
 
+  // Modal wieder anzeigen, wenn Route wechselt (wenn Modal geschlossen war)
+  // ABER: Nur wenn Profil unvollständig ist (nur wenn User Mitglied einer Organisation ist)
+  // WICHTIG: Nur auf Route-Wechsel reagieren, nicht auf modalDismissed-Änderung
+  const previousPathname = useRef<string>(location.pathname);
+  
+  // Aktualisiere Ref, wenn modalDismissed sich ändert
+  useEffect(() => {
+    modalDismissedRef.current = modalDismissed;
+  }, [modalDismissed]);
+  
+  useEffect(() => {
+    // Nur reagieren, wenn sich die Route geändert hat (nicht bei modalDismissed-Änderung)
+    if (isActive && modalDismissedRef.current && previousPathname.current !== location.pathname) {
+      previousPathname.current = location.pathname;
+      
+      // Prüfe ob Profil vollständig ist (nur wenn User Mitglied einer Organisation ist)
+      const hasOrganization = user?.roles?.some((r: any) => r.role.organization !== null) || false;
+      const profileComplete = hasOrganization ? isProfileComplete() : true; // Vor Organisation: Profil gilt als vollständig
+      
+      // Nur wenn Profil unvollständig ist, Modal wieder anzeigen
+      if (!profileComplete) {
+        // Modal bei jedem Route-Wechsel wieder anzeigen (Dashboard, Settings, etc.)
+        // WICHTIG: Kleine Verzögerung, damit Route-Wechsel abgeschlossen ist
+        const timer = setTimeout(() => {
+          setModalDismissed(false);
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    } else if (previousPathname.current !== location.pathname) {
+      // Route hat sich geändert, aber Modal war nicht geschlossen → Pathname aktualisieren
+      previousPathname.current = location.pathname;
+    }
+  }, [location.pathname, isActive, user, isProfileComplete]); // modalDismissed aus Dependencies entfernt
+
+  // Modal temporär schließen (nicht die Tour stoppen)
+  // WICHTIG: Verhindere, dass Modal sofort wieder geöffnet wird
+  const dismissModal = useCallback(() => {
+    setModalDismissed(true);
+    // Setze Ref, damit useEffect nicht sofort wieder öffnet
+    modalDismissedRef.current = true;
+  }, []);
+
+  // Modal wieder anzeigen
+  const showModal = useCallback(() => {
+    setModalDismissed(false);
+  }, []);
 
   // Tour stoppen
   const stopTour = useCallback(async () => {
     setIsActive(false);
+    setModalDismissed(false);
     
     // Track Cancel-Event
     if (filteredSteps[currentStep]) {
@@ -391,8 +571,97 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
           });
         }, 500);
       }
+      
+      // Wenn switch_role_after_join Schritt abgeschlossen, automatisch zum nächsten Schritt wechseln
+      if (stepId === 'switch_role_after_join' && currentStep === stepIndex) {
+        // Warte kurz, damit UI aktualisiert werden kann
+        setTimeout(() => {
+          setCurrentStep(prevStep => {
+            if (prevStep < filteredSteps.length - 1) {
+              const nextStepIndex = prevStep + 1;
+              saveProgress(nextStepIndex, newCompletedSteps);
+              
+              // Navigiere zum nächsten Schritt
+              const nextStep = filteredSteps[nextStepIndex];
+              if (nextStep?.route) {
+                navigate(nextStep.route);
+              }
+              
+              return nextStepIndex;
+            }
+            return prevStep;
+          });
+        }, 500);
+      }
+      
+      // Wenn join_or_create_organization Schritt abgeschlossen, automatisch zum nächsten Schritt wechseln
+      if (stepId === 'join_or_create_organization' && currentStep === stepIndex) {
+        // Warte kurz, damit UI aktualisiert werden kann
+        setTimeout(() => {
+          setCurrentStep(prevStep => {
+            if (prevStep < filteredSteps.length - 1) {
+              const nextStepIndex = prevStep + 1;
+              saveProgress(nextStepIndex, newCompletedSteps);
+              
+              // Navigiere zum nächsten Schritt (switch_role_after_join oder welcome)
+              const nextStep = filteredSteps[nextStepIndex];
+              if (nextStep?.route) {
+                navigate(nextStep.route);
+              }
+              
+              return nextStepIndex;
+            }
+            return prevStep;
+          });
+        }, 500);
+      }
+      
+      // Wenn welcome Schritt abgeschlossen und User keine Organisation hat, automatisch zur Organisation navigieren
+      if (stepId === 'welcome' && currentStep === stepIndex) {
+        const hasOrganization = user?.roles?.some((r: any) => r.role.organization !== null) || false;
+        if (!hasOrganization) {
+          // Finde Organisation-Schritt
+          const orgStepIndex = filteredSteps.findIndex(s => s.id === 'join_or_create_organization');
+          if (orgStepIndex !== -1) {
+            // Warte kurz, damit UI aktualisiert werden kann
+            setTimeout(() => {
+              setCurrentStep(orgStepIndex);
+              saveProgress(orgStepIndex, newCompletedSteps);
+              
+              // Navigiere zur Organisation-Seite
+              const orgStep = filteredSteps[orgStepIndex];
+              if (orgStep?.route) {
+                navigate(orgStep.route);
+              }
+            }, 500);
+          }
+        }
+      }
     }
-  }, [filteredSteps, completedSteps, trackEvent, currentStep, saveProgress, navigate]);
+  }, [filteredSteps, completedSteps, trackEvent, currentStep, saveProgress, navigate, user]);
+
+  // Automatischer Schritt-Wechsel wenn User einer Organisation beigetreten ist
+  useEffect(() => {
+    if (!isActive || !user || !filteredSteps.length || currentStep >= filteredSteps.length) {
+      return;
+    }
+
+    const currentStepData = filteredSteps[currentStep];
+    
+    // Prüfe ob aktueller Schritt join_or_create_organization ist
+    if (currentStepData?.id === 'join_or_create_organization') {
+      // Prüfe ob User jetzt eine Organisation hat
+      const hasOrganization = user.roles?.some((r: any) => r.role.organization !== null) || false;
+      
+      if (hasOrganization) {
+        // User hat Organisation → Schritt automatisch abschließen
+        const stepIndex = filteredSteps.findIndex(s => s.id === 'join_or_create_organization');
+        if (stepIndex !== -1 && !completedSteps.includes(stepIndex)) {
+          completeStep('join_or_create_organization', currentStepData.title, 0);
+        }
+      }
+    }
+  }, [user, isActive, currentStep, filteredSteps, completedSteps, completeStep]);
 
   // Tour zurücksetzen
   const resetTour = useCallback(async () => {
@@ -418,8 +687,11 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
         steps: filteredSteps,
         filteredSteps,
         isLoading,
+        modalDismissed,
         startTour,
         stopTour,
+        dismissModal,
+        showModal,
         nextStep,
         previousStep,
         skipStep,

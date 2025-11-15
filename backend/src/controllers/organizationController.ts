@@ -779,6 +779,11 @@ export const getCurrentOrganization = async (req: Request, res: Response) => {
     }
 
     const organization = userRole.role.organization;
+    
+    // Korrigiere String 'null' zu echtem null
+    if (organization && organization.logo === 'null') {
+      organization.logo = null;
+    }
 
     // ✅ ENTschlüssele Settings für Response (Frontend braucht entschlüsselte Werte)
     if (organization.settings) {
@@ -1160,6 +1165,13 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
       return res.status(401).json({ message: 'Nicht authentifiziert' });
     }
 
+    // Debug: Logge Request-Body
+    console.log('=== REQUEST BODY DEBUG ===');
+    console.log('req.body.logo vorhanden:', !!req.body.logo);
+    console.log('req.body.logo type:', typeof req.body.logo);
+    console.log('req.body.logo length:', req.body.logo?.length);
+    console.log('req.body keys:', Object.keys(req.body));
+    
     // Validiere Eingabedaten
     const validatedData = updateOrganizationSchema.parse(req.body);
 
@@ -1197,6 +1209,14 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
 
       // Wenn settings aktualisiert werden, validiere und verschlüssele sie
     let updateData = { ...validatedData };
+    
+    // Debug: Logge Logo-Daten
+    console.log('=== ORGANIZATION UPDATE DEBUG ===');
+    console.log('validatedData.logo:', validatedData.logo ? (validatedData.logo === 'null' ? 'String "null"' : `${validatedData.logo.substring(0, 50)}...`) : 'null/undefined');
+    console.log('validatedData.logo type:', typeof validatedData.logo);
+    console.log('validatedData.logo length:', validatedData.logo?.length);
+    console.log('validatedData.logo === "null":', validatedData.logo === 'null');
+    console.log('updateData.logo:', updateData.logo ? (updateData.logo === 'null' ? 'String "null"' : `${updateData.logo.substring(0, 50)}...`) : 'null/undefined');
     if (validatedData.settings !== undefined) {
       const currentSettings = (organization.settings as any) || {};
         const newSettings = { ...currentSettings, ...validatedData.settings };
@@ -1263,6 +1283,23 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
       );
     }
 
+    // Debug: Logge updateData vor dem Speichern
+    console.log('updateData vor Prisma Update:', {
+      ...updateData,
+      logo: updateData.logo ? `${updateData.logo.substring(0, 50)}...` : updateData.logo
+    });
+    
+    // Stelle sicher, dass leere Strings und String 'null' als null gespeichert werden
+    if (updateData.logo !== undefined) {
+      if (updateData.logo === '' || 
+          (typeof updateData.logo === 'string' && updateData.logo.trim() === '') ||
+          updateData.logo === 'null' ||
+          updateData.logo === null) {
+        updateData.logo = null;
+        console.log('Logo ist leerer String oder String "null", setze auf null');
+      }
+    }
+    
     // Aktualisiere Organisation
     const updatedOrganization = await prisma.organization.update({
       where: { id: organization.id },
@@ -1294,6 +1331,10 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
         // Frontend zeigt dann verschlüsselte Werte, aber das ist OK für Migration
       }
     }
+    
+    // Debug: Logge gespeichertes Logo
+    console.log('Gespeichertes Logo in DB:', updatedOrganization.logo ? `${updatedOrganization.logo.substring(0, 50)}...` : 'null');
+    console.log('Logo length:', updatedOrganization.logo?.length);
 
     res.json(updatedOrganization);
   } catch (error) {

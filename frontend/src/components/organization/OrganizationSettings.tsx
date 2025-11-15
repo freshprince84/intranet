@@ -143,10 +143,11 @@ const OrganizationSettings: React.FC = () => {
         {/* Titelzeile mit Action-Buttons */}
         <div className="flex items-center mb-4 sm:mb-4">
           {/* Linke Seite: Action-Buttons */}
-          <div className="flex items-center">
+          <div className="flex items-center" data-onboarding="organization-buttons">
             {/* Button: Neue Organisation erstellen - immer sichtbar (nicht nur für Admins) */}
             <button
               onClick={() => setIsCreateModalOpen(true)}
+              data-onboarding="create-organization-button"
               className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
               style={{ width: '30.19px', height: '30.19px' }}
               title={t('organization.createOrganization')}
@@ -158,6 +159,7 @@ const OrganizationSettings: React.FC = () => {
             {/* Button: Organisation beitreten - immer sichtbar */}
             <button
               onClick={() => setIsJoinModalOpen(true)}
+              data-onboarding="join-organization-button"
               className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center ml-2"
               style={{ width: '30.19px', height: '30.19px' }}
               title={t('organization.joinOrganization')}

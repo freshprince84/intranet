@@ -817,6 +817,15 @@
     "notAuthenticated": "Nicht authentifiziert",
     "cannotOverwriteStandard": "Standardfilter können nicht überschrieben werden",
     "loadError": "Fehler beim Laden der existierenden Filter",
+    "deleteSuccess": "Filter erfolgreich gelöscht",
+    "deleteError": "Fehler beim Löschen des Filters",
+    "addToGroupSuccess": "Filter zur Gruppe hinzugefügt",
+    "createGroupSuccess": "Gruppe erstellt",
+    "groupError": "Fehler beim Gruppieren der Filter",
+    "ungroupSuccess": "Gruppe aufgelöst",
+    "ungroupError": "Fehler beim Auflösen der Gruppe",
+    "groupNameRequired": "Gruppenname darf nicht leer sein",
+    "renameGroupSuccess": "Gruppe umbenannt",
     "row": {
       "selectColumn": "Spalte wählen",
       "pleaseSelect": "Bitte wählen",
@@ -953,15 +962,25 @@
     },
     "articleEdit": {
       "title": "Titel",
+      "titleRequired": "Titel *",
       "parent": "Übergeordneter Artikel",
+      "parentArticle": "Elternartikel",
+      "noParent": "Kein Elternartikel (Root)",
       "content": "Inhalt",
       "save": "Speichern",
       "saving": "Wird gespeichert...",
       "cancel": "Abbrechen",
-      "titleRequired": "Bitte geben Sie einen Titel ein.",
+      "titleRequiredMessage": "Bitte geben Sie einen Titel ein.",
       "loadError": "Fehler beim Laden der Daten. Bitte versuchen Sie es später erneut.",
       "saveError": "Fehler beim Speichern des Artikels",
-      "saveSuccess": "Artikel erfolgreich gespeichert"
+      "saveSuccess": "Artikel erfolgreich gespeichert",
+      "createTitle": "Neuen Artikel erstellen",
+      "editTitle": "Artikel bearbeiten",
+      "loadingData": "Daten werden geladen..."
+    },
+    "articleList": {
+      "newArticle": "Neuer Artikel",
+      "searchPlaceholder": "Artikel suchen..."
     },
     "menuClose": "Menü schließen",
     "menuOpen": "Menü öffnen",
@@ -2178,7 +2197,15 @@
     "deleteTitle": "Client löschen",
     "deleteConfirm": "Möchten Sie den Client \"{{name}}\" wirklich löschen?",
     "deleteSuccess": "Client erfolgreich gelöscht",
-    "deleteError": "Fehler beim Löschen des Clients"
+    "deleteError": "Fehler beim Löschen des Clients",
+    "createSuccess": "Client erfolgreich angelegt",
+    "createError": "Fehler beim Anlegen des Clients",
+    "updateSuccess": "Client erfolgreich aktualisiert",
+    "updateError": "Fehler beim Aktualisieren des Clients",
+    "workTimes": "Zeiteinträge",
+    "consultationInvoices": "Rechnungen",
+    "monthlyReports": "Monatsberichte",
+    "links": "Verknüpfungen"
   },
   "dataCard": {
     "nextStatus": "Nächster Status",
@@ -2186,11 +2213,6 @@
   },
   "notification": {
     "deleteTitle": "Löschen"
-  },
-  "filter": {
-    "ungroup": "Gruppe auflösen",
-    "delete": "Filter löschen",
-    "cannotDeleteStandard": "Standard-Filter können nicht gelöscht werden"
   },
   "githubLink": {
     "addTitle": "GitHub-Link hinzufügen",
@@ -2240,7 +2262,15 @@
     "downloadError": "Fehler beim Download der PDF",
     "markPaidSuccess": "Rechnung als bezahlt markiert",
     "markPaidError": "Fehler beim Markieren als bezahlt",
-    "loadError": "Fehler beim Laden der Rechnungen"
+    "loadError": "Fehler beim Laden der Rechnungen",
+    "settingsNotConfigured": "Bitte konfigurieren Sie zuerst Ihre Rechnungseinstellungen",
+    "loadSettingsError": "Fehler beim Laden der Rechnungseinstellungen",
+    "settingsNotLoaded": "Rechnungseinstellungen konnten nicht geladen werden",
+    "noConsultations": "Keine Beratungen zum Abrechnen vorhanden",
+    "differentClients": "Alle Beratungen müssen den gleichen Kunden haben",
+    "noValidClient": "Kein gültiger Kunde in den Beratungen gefunden",
+    "createError": "Fehler beim Erstellen der Rechnung",
+    "invoiceManagementPhase5": "Rechnungsverwaltung wird in Phase 5 implementiert"
   },
   "onboarding": {
     "waiting": "Bitte vervollständigen Sie Ihr Profil...",
@@ -2260,13 +2290,25 @@
       "of": "von"
     },
     "steps": {
+      "switch_role_after_join": {
+        "title": "Rolle wechseln",
+        "description": "Du wurdest in eine Organisation aufgenommen. Bitte wechsle deine Rolle im oberen Menü, um auf die Funktionen der Organisation zuzugreifen."
+      },
+      "upload_identification_document": {
+        "title": "Identitätsdokument hochladen",
+        "description": "Bitte laden Sie Ihr Identitätsdokument (Cédula oder Pasaporte) im Profil hoch. Die Felder werden nach dem Upload automatisch ausgefüllt."
+      },
       "profile_complete": {
         "title": "Profil vervollständigen",
-        "description": "Um zu beginnen, müssen Sie Ihr Profil mit den grundlegenden Informationen vervollständigen. Bitte füllen Sie die Pflichtfelder aus: Benutzername, E-Mail, Land und Sprache. Nach dem Speichern setzen wir die Tour fort."
+        "description": "Um zu beginnen, müssen Sie Ihr Profil mit den grundlegenden Informationen vervollständigen. Bitte füllen Sie die Pflichtfelder aus: Benutzername, E-Mail und Sprache. Nach dem Speichern setzen wir die Tour fort."
+      },
+      "join_or_create_organization": {
+        "title": "Organisation beitreten oder gründen",
+        "description": "Um das System vollständig nutzen zu können, müssen Sie einer Organisation beitreten oder eine neue gründen. Klicken Sie auf die Buttons oben, um eine Organisation zu erstellen oder einer beizutreten."
       },
       "welcome": {
         "title": "Willkommen!",
-        "description": "Herzlich willkommen im Intranet! Diese Einführungstour zeigt Ihnen die wichtigsten Funktionen. Sie können jederzeit überspringen oder später in den Einstellungen neu starten."
+        "description": "Herzlich willkommen im Intranet! Um das System vollständig nutzen zu können, müssen Sie zunächst einer Organisation beitreten oder eine neue gründen. Wir leiten Sie jetzt zur Organisation-Seite weiter."
       },
       "dashboard_layout": {
         "title": "Dashboard-Übersicht",

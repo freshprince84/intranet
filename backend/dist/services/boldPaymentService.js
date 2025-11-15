@@ -134,12 +134,22 @@ class BoldPaymentService {
      */
     createPaymentLink(reservation_1, amount_1) {
         return __awaiter(this, arguments, void 0, function* (reservation, amount, currency = 'COP', description) {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+            var _a, _b, _c, _d, _e;
             // Lade Settings falls noch nicht geladen
             if (!this.merchantId) {
                 yield this.loadSettings();
             }
             try {
+                // Mindestbeträge je nach Währung (basierend auf typischen Payment-Provider-Anforderungen)
+                const MIN_AMOUNTS = {
+                    'COP': 10000, // Kolumbien: Mindestens 10.000 COP (ca. 2-3 USD)
+                    'USD': 1, // USA: Mindestens 1 USD
+                    'EUR': 1, // Europa: Mindestens 1 EUR
+                };
+                const minAmount = MIN_AMOUNTS[currency] || 1;
+                if (amount < minAmount) {
+                    throw new Error(`Betrag zu niedrig: ${amount} ${currency}. Mindestbetrag: ${minAmount} ${currency}`);
+                }
                 // Beschreibung: min 2, max 100 Zeichen
                 const paymentDescription = (description ||
                     `Reservierung ${reservation.guestName}`).substring(0, 100);
@@ -171,6 +181,8 @@ class BoldPaymentService {
                     payload.callback_url = `${appUrl}/api/bold-payment/webhook`;
                 }
                 // Für Sandbox/Development ohne https:// URL wird callback_url weggelassen
+                // Logge Payload für Debugging
+                console.log('[Bold Payment] Payload:', JSON.stringify(payload, null, 2));
                 // Endpoint: POST /online/link/v1
                 const response = yield this.axiosInstance.post('/online/link/v1', payload);
                 // Response-Struktur: { payload: { payment_link: "LNK_...", url: "https://..." }, errors: [] }
@@ -198,9 +210,33 @@ class BoldPaymentService {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
                     const status = (_c = axiosError.response) === null || _c === void 0 ? void 0 : _c.status;
-                    const errorMessage = ((_g = (_f = (_e = (_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.data) === null || _e === void 0 ? void 0 : _e.errors) === null || _f === void 0 ? void 0 : _f[0]) === null || _g === void 0 ? void 0 : _g.message) ||
-                        ((_j = (_h = axiosError.response) === null || _h === void 0 ? void 0 : _h.data) === null || _j === void 0 ? void 0 : _j.message) ||
-                        axiosError.message;
+                    const responseData = (_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.data;
+                    // Detailliertes Logging
+                    console.error('[Bold Payment] API Error Details:');
+                    console.error('  Status:', status);
+                    console.error('  Status Text:', (_e = axiosError.response) === null || _e === void 0 ? void 0 : _e.statusText);
+                    console.error('  Response Data:', JSON.stringify(responseData, null, 2));
+                    // Extrahiere Fehlermeldungen
+                    let errorMessage = 'Unbekannter Fehler';
+                    if ((responseData === null || responseData === void 0 ? void 0 : responseData.errors) && Array.isArray(responseData.errors) && responseData.errors.length > 0) {
+                        const errors = responseData.errors.map((e) => {
+                            if (typeof e === 'string')
+                                return e;
+                            if (e.message)
+                                return e.message;
+                            if (e.code)
+                                return `Code ${e.code}: ${e.message || JSON.stringify(e)}`;
+                            return JSON.stringify(e);
+                        });
+                        errorMessage = errors.join('; ');
+                        console.error('  Errors:', errors);
+                    }
+                    else if (responseData === null || responseData === void 0 ? void 0 : responseData.message) {
+                        errorMessage = responseData.message;
+                    }
+                    else if (axiosError.message) {
+                        errorMessage = axiosError.message;
+                    }
                     // Spezifische Fehlermeldung für 403 Forbidden
                     if (status === 403) {
                         throw new Error(`Bold Payment API Fehler (403 Forbidden): ${errorMessage}\n` +
@@ -210,7 +246,17 @@ class BoldPaymentService {
                             `3. Sind die Keys für die richtige Umgebung (Sandbox/Production) aktiviert?\n` +
                             `4. Wird die "Llave de identidad" (Identity Key) korrekt verwendet?`);
                     }
-                    throw new Error(`Bold Payment API Fehler: ${errorMessage}`);
+                    // Spezifische Fehlermeldung für 400 Bad Request
+                    if (status === 400) {
+                        throw new Error(`Bold Payment API Fehler (400 Bad Request): ${errorMessage}\n` +
+                            `Bitte prüfen Sie:\n` +
+                            `1. Sind alle erforderlichen Felder im Payload vorhanden?\n` +
+                            `2. Ist das Betragsformat korrekt?\n` +
+                            `3. Ist die Währung gültig?\n` +
+                            `4. Ist die Referenz eindeutig?\n` +
+                            `5. Details: ${JSON.stringify(responseData, null, 2)}`);
+                    }
+                    throw new Error(`Bold Payment API Fehler (${status}): ${errorMessage}`);
                 }
                 throw error;
             }

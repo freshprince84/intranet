@@ -1,0 +1,95 @@
+"use strict";
+/**
+ * Language Detection Service
+ *
+ * Erkennt Sprache basierend auf Landesvorwahl der Telefonnummer
+ */
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.LanguageDetectionService = void 0;
+class LanguageDetectionService {
+    /**
+     * Erkennt Sprache basierend auf Landesvorwahl
+     * @param phoneNumber - Telefonnummer mit Ländercode (z.B. +573001234567)
+     * @returns Sprachcode (z.B. "es", "de", "en")
+     */
+    static detectLanguageFromPhoneNumber(phoneNumber) {
+        // Mapping: Ländercode -> Sprache
+        const countryCodeMap = {
+            '57': 'es', // Kolumbien
+            '49': 'de', // Deutschland
+            '41': 'de', // Schweiz (Standard)
+            '1': 'en', // USA/Kanada
+            '34': 'es', // Spanien
+            '33': 'fr', // Frankreich
+            '39': 'it', // Italien
+            '44': 'en', // UK
+            '52': 'es', // Mexiko
+            '54': 'es', // Argentinien
+            '55': 'pt', // Brasilien
+            '86': 'zh', // China
+            '81': 'ja', // Japan
+            '82': 'ko', // Südkorea
+            '91': 'hi', // Indien
+            '7': 'ru', // Russland
+            '90': 'tr', // Türkei
+            '20': 'ar', // Ägypten
+            '27': 'en', // Südafrika
+            '61': 'en', // Australien
+            '64': 'en', // Neuseeland
+        };
+        // Normalisiere Telefonnummer (entferne Leerzeichen, Bindestriche)
+        const normalized = phoneNumber.replace(/[\s-]/g, '');
+        if (normalized.startsWith('+')) {
+            // Prüfe 1-3 stellige Ländercodes (von lang nach kurz)
+            for (let len = 3; len >= 1; len--) {
+                const code = normalized.substring(1, 1 + len);
+                if (countryCodeMap[code]) {
+                    return countryCodeMap[code];
+                }
+            }
+        }
+        else if (normalized.startsWith('00')) {
+            // Internationales Format mit 00 (z.B. 0049123456789)
+            for (let len = 3; len >= 1; len--) {
+                const code = normalized.substring(2, 2 + len);
+                if (countryCodeMap[code]) {
+                    return countryCodeMap[code];
+                }
+            }
+        }
+        // Fallback: Spanisch (da hauptsächlich Kolumbien)
+        return 'es';
+    }
+    /**
+     * Validiert Telefonnummer-Format
+     * @param phoneNumber - Telefonnummer
+     * @returns true wenn Format gültig
+     */
+    static isValidPhoneNumber(phoneNumber) {
+        // Validiere Format: + gefolgt von 1-15 Ziffern
+        const phoneRegex = /^\+[1-9]\d{1,14}$/;
+        return phoneRegex.test(phoneNumber.replace(/[\s-]/g, ''));
+    }
+    /**
+     * Normalisiert Telefonnummer (entfernt Leerzeichen, fügt + hinzu falls fehlt)
+     * @param phoneNumber - Telefonnummer
+     * @returns Normalisierte Telefonnummer
+     */
+    static normalizePhoneNumber(phoneNumber) {
+        // Entferne alle Leerzeichen und Bindestriche
+        let normalized = phoneNumber.replace(/[\s-]/g, '');
+        // Füge + hinzu falls nicht vorhanden
+        if (!normalized.startsWith('+')) {
+            // Wenn mit 00 beginnt, ersetze durch +
+            if (normalized.startsWith('00')) {
+                normalized = '+' + normalized.substring(2);
+            }
+            else {
+                normalized = '+' + normalized;
+            }
+        }
+        return normalized;
+    }
+}
+exports.LanguageDetectionService = LanguageDetectionService;
+//# sourceMappingURL=languageDetectionService.js.map

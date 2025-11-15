@@ -947,6 +947,15 @@
     "notAuthenticated": "Not authenticated",
     "cannotOverwriteStandard": "Standard filters cannot be overwritten",
     "loadError": "Error loading existing filters",
+    "deleteSuccess": "Filter deleted successfully",
+    "deleteError": "Error deleting filter",
+    "addToGroupSuccess": "Filter added to group",
+    "createGroupSuccess": "Group created",
+    "groupError": "Error grouping filters",
+    "ungroupSuccess": "Group ungrouped",
+    "ungroupError": "Error ungrouping",
+    "groupNameRequired": "Group name cannot be empty",
+    "renameGroupSuccess": "Group renamed",
     "row": {
       "selectColumn": "Select column",
       "pleaseSelect": "Please select",
@@ -1282,15 +1291,25 @@
     },
     "articleEdit": {
       "title": "Title",
+      "titleRequired": "Title *",
       "parent": "Parent Article",
+      "parentArticle": "Parent Article",
+      "noParent": "No Parent Article (Root)",
       "content": "Content",
       "save": "Save",
       "saving": "Saving...",
       "cancel": "Cancel",
-      "titleRequired": "Please enter a title.",
+      "titleRequiredMessage": "Please enter a title.",
       "loadError": "Error loading data. Please try again later.",
       "saveError": "Error saving article",
-      "saveSuccess": "Article saved successfully"
+      "saveSuccess": "Article saved successfully",
+      "createTitle": "Create New Article",
+      "editTitle": "Edit Article",
+      "loadingData": "Loading data..."
+    },
+    "articleList": {
+      "newArticle": "New Article",
+      "searchPlaceholder": "Search articles..."
     },
     "menuClose": "Close Menu",
     "menuOpen": "Open Menu",
@@ -2121,7 +2140,15 @@
     "deleteTitle": "Delete Client",
     "deleteConfirm": "Do you really want to delete the client \"{{name}}\"?",
     "deleteSuccess": "Client successfully deleted",
-    "deleteError": "Error deleting client"
+    "deleteError": "Error deleting client",
+    "createSuccess": "Client created successfully",
+    "createError": "Error creating client",
+    "updateSuccess": "Client updated successfully",
+    "updateError": "Error updating client",
+    "workTimes": "time entries",
+    "consultationInvoices": "invoices",
+    "monthlyReports": "monthly reports",
+    "links": "Links"
   },
   "notification": {
     "deleteTitle": "Delete"
@@ -2174,7 +2201,15 @@
     "downloadError": "Error downloading PDF",
     "markPaidSuccess": "Invoice marked as paid",
     "markPaidError": "Error marking as paid",
-    "loadError": "Error loading invoices"
+    "loadError": "Error loading invoices",
+    "settingsNotConfigured": "Please configure your invoice settings first",
+    "loadSettingsError": "Error loading invoice settings",
+    "settingsNotLoaded": "Invoice settings could not be loaded",
+    "noConsultations": "No consultations available for invoicing",
+    "differentClients": "All consultations must have the same client",
+    "noValidClient": "No valid client found in consultations",
+    "createError": "Error creating invoice",
+    "invoiceManagementPhase5": "Invoice management will be implemented in Phase 5"
   },
   "onboarding": {
     "waiting": "Please complete your profile...",
@@ -2194,13 +2229,25 @@
       "of": "of"
     },
     "steps": {
+      "switch_role_after_join": {
+        "title": "Switch role",
+        "description": "You have been accepted into an organization. Please switch your role in the top menu to access the organization's features."
+      },
+      "upload_identification_document": {
+        "title": "Upload identification document",
+        "description": "Please upload your identification document (Cédula or Pasaporte) in your profile. The fields will be automatically filled after upload."
+      },
       "profile_complete": {
         "title": "Complete your profile",
-        "description": "To get started, you need to complete your profile with basic information. Please fill in the required fields: username, email, country, and language. Once saved, we'll continue with the tour."
+        "description": "To get started, you need to complete your profile with basic information. Please fill in the required fields: username, email, and language. Once saved, we'll continue with the tour."
+      },
+      "join_or_create_organization": {
+        "title": "Join or create organization",
+        "description": "To fully use the system, you need to join an organization or create a new one. Click on the buttons above to create an organization or join one."
       },
       "welcome": {
         "title": "Welcome!",
-        "description": "Welcome to the Intranet! This introduction tour will show you the most important features. You can skip it at any time or restart it later in the settings."
+        "description": "Welcome to the Intranet! To fully use the system, you need to join an organization or create a new one. We will now guide you to the organization page."
       },
       "dashboard_layout": {
         "title": "Dashboard Overview",

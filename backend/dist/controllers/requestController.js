@@ -43,17 +43,26 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Erweitere Filter um private/öffentliche Logik
         // Private Requests: Nur für requesterId und responsibleId sichtbar
         // Öffentliche Requests: Für alle User der Organisation sichtbar
-        const whereClause = Object.assign(Object.assign({}, isolationFilter), { OR: [
-                Object.assign({ isPrivate: false }, (organizationId ? { organizationId } : {})),
-                // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+        // WICHTIG: isolationFilter und OR-Bedingung müssen mit AND kombiniert werden,
+        // damit das OR aus isolationFilter nicht überschrieben wird
+        const whereClause = {
+            AND: [
+                isolationFilter,
                 {
-                    isPrivate: true,
                     OR: [
-                        { requesterId: userId },
-                        { responsibleId: userId }
+                        Object.assign({ isPrivate: false }, (organizationId ? { organizationId } : {})),
+                        // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                        {
+                            isPrivate: true,
+                            OR: [
+                                { requesterId: userId },
+                                { responsibleId: userId }
+                            ]
+                        }
                     ]
                 }
-            ] });
+            ]
+        };
         const requests = yield prisma.request.findMany({
             where: whereClause,
             include: {
@@ -117,17 +126,27 @@ const getRequestById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Basis-Filter: Datenisolation
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
         // Erweitere Filter um private/öffentliche Logik
-        const whereClause = Object.assign(Object.assign({ id: parseInt(id) }, isolationFilter), { OR: [
-                Object.assign({ isPrivate: false }, (organizationId ? { organizationId } : {})),
-                // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+        // WICHTIG: isolationFilter und OR-Bedingung müssen mit AND kombiniert werden,
+        // damit das OR aus isolationFilter nicht überschrieben wird
+        const whereClause = {
+            id: parseInt(id),
+            AND: [
+                isolationFilter,
                 {
-                    isPrivate: true,
                     OR: [
-                        { requesterId: userId },
-                        { responsibleId: userId }
+                        Object.assign({ isPrivate: false }, (organizationId ? { organizationId } : {})),
+                        // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                        {
+                            isPrivate: true,
+                            OR: [
+                                { requesterId: userId },
+                                { responsibleId: userId }
+                            ]
+                        }
                     ]
                 }
-            ] });
+            ]
+        };
         const request = yield prisma.request.findFirst({
             where: whereClause,
             include: {
@@ -192,6 +211,18 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const requesterId = parseInt(requested_by_id, 10);
         const responsibleId = parseInt(responsible_id, 10);
         const branchId = parseInt(branch_id, 10);
+        const userId = parseInt(req.userId, 10);
+        const roleId = parseInt(req.roleId, 10);
+        // Prüfe ob User Admin ist
+        const userRole = yield prisma.role.findUnique({
+            where: { id: roleId },
+            select: { name: true }
+        });
+        const isAdmin = (userRole === null || userRole === void 0 ? void 0 : userRole.name.toLowerCase()) === 'admin' || (userRole === null || userRole === void 0 ? void 0 : userRole.name.toLowerCase().includes('administrator'));
+        // User-Rolle: Kann nur eigene Requests erstellen
+        if (!isAdmin && requesterId !== userId) {
+            return res.status(403).json({ message: 'Sie können nur eigene Requests erstellen' });
+        }
         // Validierung: Prüfe ob User-IDs zur Organisation gehören
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
         const requesterUser = yield prisma.user.findFirst({
@@ -299,6 +330,27 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         });
         if (!existingRequest) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
+        }
+        const userId = parseInt(req.userId, 10);
+        const roleId = parseInt(req.roleId, 10);
+        // Prüfe ob User Admin ist
+        const userRole = yield prisma.role.findUnique({
+            where: { id: roleId },
+            select: { name: true }
+        });
+        const isAdmin = (userRole === null || userRole === void 0 ? void 0 : userRole.name.toLowerCase()) === 'admin' || (userRole === null || userRole === void 0 ? void 0 : userRole.name.toLowerCase().includes('administrator'));
+        // User-Rolle: Kann nur eigene Requests bearbeiten
+        if (!isAdmin && existingRequest.requesterId !== userId) {
+            return res.status(403).json({ message: 'Sie können nur eigene Requests bearbeiten' });
+        }
+        // Status-Update-Prüfung: User-Rolle kann nur "to improve" → "to approve" status-shiften
+        if (status && status !== existingRequest.status && !isAdmin) {
+            const allowedStatusShift = existingRequest.status === 'to_improve' && status === 'approval';
+            if (!allowedStatusShift) {
+                return res.status(403).json({
+                    message: 'Sie können den Status nur von "to improve" auf "to approve" ändern'
+                });
+            }
         }
         // Validierung: Prüfe ob User-IDs zur Organisation gehören (wenn geändert)
         if (requested_by_id) {

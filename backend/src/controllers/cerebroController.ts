@@ -34,8 +34,9 @@ const createUniqueSlug = async (title: string): Promise<string> => {
  */
 export const getAllArticles = async (req: Request, res: Response) => {
     try {
-        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
-        const articleFilter = getDataIsolationFilter(req as any, 'cerebroCarticle');
+        // Verwende getDataIsolationFilter nur wenn userId vorhanden ist (authentifizierte Requests)
+        // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
+        const articleFilter = req.userId ? getDataIsolationFilter(req as any, 'cerebroCarticle') : {};
         
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const articles = await prisma.cerebroCarticle.findMany({
@@ -112,8 +113,9 @@ export const getArticleById = async (req: Request, res: Response) => {
             return res.status(400).json({ message: 'Ungültige Artikel-ID' });
         }
         
-        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
-        const articleFilter = getDataIsolationFilter(req as any, 'cerebroCarticle');
+        // Verwende getDataIsolationFilter nur wenn userId vorhanden ist (authentifizierte Requests)
+        // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
+        const articleFilter = req.userId ? getDataIsolationFilter(req as any, 'cerebroCarticle') : {};
         
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const article = await prisma.cerebroCarticle.findFirst({
@@ -191,8 +193,9 @@ export const getArticleBySlug = async (req: Request, res: Response) => {
     try {
         const { slug } = req.params;
         
-        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
-        const articleFilter = getDataIsolationFilter(req as any, 'cerebroCarticle');
+        // Verwende getDataIsolationFilter nur wenn userId vorhanden ist (authentifizierte Requests)
+        // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
+        const articleFilter = req.userId ? getDataIsolationFilter(req as any, 'cerebroCarticle') : {};
         
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const article = await prisma.cerebroCarticle.findFirst({
@@ -273,8 +276,9 @@ export const getArticleBySlug = async (req: Request, res: Response) => {
  */
 export const getArticlesStructure = async (req: Request, res: Response) => {
     try {
-        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
-        const articleFilter = getDataIsolationFilter(req as any, 'cerebroCarticle');
+        // Verwende getDataIsolationFilter nur wenn userId vorhanden ist (authentifizierte Requests)
+        // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
+        const articleFilter = req.userId ? getDataIsolationFilter(req as any, 'cerebroCarticle') : {};
         
         // Jetzt mit Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const articles = await prisma.cerebroCarticle.findMany({
@@ -338,11 +342,8 @@ export const getArticlesStructure = async (req: Request, res: Response) => {
  */
 export const createArticle = async (req: Request, res: Response) => {
     try {
-        console.log('[createArticle] Start - userId:', req.userId, 'organizationId:', (req as any).organizationId);
         const { title, content, parentId, isPublished = false } = req.body;
         const userId = parseInt(req.userId, 10);
-        
-        console.log('[createArticle] Request body:', { title, parentId, isPublished, contentLength: content?.length });
         
         if (!title) {
             return res.status(400).json({ message: 'Titel ist erforderlich' });
@@ -406,7 +407,6 @@ export const createArticle = async (req: Request, res: Response) => {
             WHERE uns."carticleCreate" = true
         `;
         
-        console.log('[createArticle] ✅ Artikel erfolgreich erstellt:', newArticle[0].id);
         res.status(201).json(newArticle[0]);
     } catch (error: any) {
         console.error('[createArticle] ❌ Fehler beim Erstellen des Artikels:', error);
@@ -631,8 +631,9 @@ export const searchArticles = async (req: Request, res: Response) => {
         
         const searchTerm = q as string;
         
-        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
-        const articleFilter = getDataIsolationFilter(req as any, 'cerebroCarticle');
+        // Verwende getDataIsolationFilter nur wenn userId vorhanden ist (authentifizierte Requests)
+        // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
+        const articleFilter = req.userId ? getDataIsolationFilter(req as any, 'cerebroCarticle') : {};
         
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const articles = await prisma.cerebroCarticle.findMany({

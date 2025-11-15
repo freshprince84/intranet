@@ -7,6 +7,7 @@ import { UpdateOrganizationRequest, Organization } from '../../types/organizatio
 import useMessage from '../../hooks/useMessage.ts';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 import { useLanguage } from '../../hooks/useLanguage.ts';
+import { useAuth } from '../../hooks/useAuth.tsx';
 import RoleConfigurationTab from './RoleConfigurationTab.tsx';
 import DocumentConfigurationTab from './DocumentConfigurationTab.tsx';
 import SMTPConfigurationTab from './SMTPConfigurationTab.tsx';
@@ -21,6 +22,7 @@ interface Props {
 
 const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, organization }) => {
   const { t } = useTranslation();
+  const { fetchCurrentUser } = useAuth();
   const [formData, setFormData] = useState<UpdateOrganizationRequest>({
     displayName: '',
     domain: '',
@@ -41,6 +43,8 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
   const [selectedOrgLanguage, setSelectedOrgLanguage] = useState<string>('');
   const [savingOrgLanguage, setSavingOrgLanguage] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'general' | 'roles' | 'documents' | 'smtp' | 'api'>('general');
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   // Länder-Liste
   const COUNTRIES = [
@@ -66,6 +70,14 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
       // Setze Land direkt aus organization (statt aus settings)
       setSelectedCountry(organization.country || '');
       setNit(organization.nit || '');
+      
+      // Setze Logo-Preview wenn Logo vorhanden
+      if (organization.logo) {
+        setLogoPreview(organization.logo);
+      } else {
+        setLogoPreview(null);
+      }
+      setLogoFile(null);
       
       // Lade Organisation-Sprache
       const loadOrgLanguage = async () => {
@@ -140,6 +152,34 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
     }
   };
 
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Prüfe Dateityp
+    if (!file.type.match('image/(png|jpeg|jpg)')) {
+      showMessage(t('organization.logoInvalidType') || 'Nur PNG und JPEG Dateien sind erlaubt', 'error');
+      return;
+    }
+
+    // Prüfe Dateigröße (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showMessage(t('organization.logoTooLarge') || 'Logo darf maximal 5MB groß sein', 'error');
+      return;
+    }
+
+    setLogoFile(file);
+
+    // Erstelle Preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setLogoPreview(base64String);
+      setFormData(prev => ({ ...prev, logo: base64String }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -148,6 +188,14 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
       setErrors({});
       await organizationService.updateOrganization(formData);
       showMessage(t('organization.updateSuccess'), 'success');
+      
+      // User-Daten neu laden, damit das Logo im Header aktualisiert wird
+      try {
+        await fetchCurrentUser();
+      } catch (error) {
+        console.error('Fehler beim Neuladen der User-Daten:', error);
+      }
+      
       onClose();
       if (onSuccess) {
         onSuccess();
@@ -251,19 +299,44 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
 
                 <div>
                   <label 
-                    htmlFor="logo" 
+                    htmlFor="logo-mobile" 
                     className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                   >
-                    {t('organization.logoUrl')}
+                    {t('organization.logo') || 'Logo'}
                   </label>
                   <input
-                    type="text"
-                    id="logo"
+                    type="file"
+                    id="logo-mobile"
                     name="logo"
-                    value={formData.logo || ''}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                    accept="image/png,image/jpeg,image/jpg"
+                    onChange={handleLogoFileChange}
+                    className="mt-1 block w-full text-sm text-gray-500 dark:text-gray-400
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-md file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-blue-50 file:text-blue-700
+                      hover:file:bg-blue-100
+                      dark:file:bg-blue-900 dark:file:text-blue-300
+                      dark:hover:file:bg-blue-800"
                   />
+                  {logoPreview && (
+                    <div className="mt-2">
+                      <img 
+                        src={logoPreview} 
+                        alt="Logo Preview" 
+                        className="h-20 w-auto border border-gray-300 dark:border-gray-600 rounded"
+                      />
+                    </div>
+                  )}
+                  {formData.logo && !logoPreview && (
+                    <div className="mt-2">
+                      <img 
+                        src={formData.logo} 
+                        alt="Current Logo" 
+                        className="h-20 w-auto border border-gray-300 dark:border-gray-600 rounded"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Land */}
@@ -518,16 +591,41 @@ const EditOrganizationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, or
                 htmlFor="logo" 
                 className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
               >
-                {t('organization.logoUrl')}
+                {t('organization.logo') || 'Logo'}
               </label>
               <input
-                type="text"
+                type="file"
                 id="logo"
                 name="logo"
-                value={formData.logo || ''}
-                onChange={handleChange}
-                className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                accept="image/png,image/jpeg,image/jpg"
+                onChange={handleLogoFileChange}
+                className="mt-1 block w-full text-sm text-gray-500 dark:text-gray-400
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-md file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100
+                  dark:file:bg-blue-900 dark:file:text-blue-300
+                  dark:hover:file:bg-blue-800"
               />
+              {logoPreview && (
+                <div className="mt-2">
+                  <img 
+                    src={logoPreview} 
+                    alt="Logo Preview" 
+                    className="h-20 w-auto border border-gray-300 dark:border-gray-600 rounded"
+                  />
+                </div>
+              )}
+              {formData.logo && !logoPreview && (
+                <div className="mt-2">
+                  <img 
+                    src={formData.logo} 
+                    alt="Current Logo" 
+                    className="h-20 w-auto border border-gray-300 dark:border-gray-600 rounded"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Land */}

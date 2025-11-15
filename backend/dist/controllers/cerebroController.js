@@ -42,8 +42,9 @@ const createUniqueSlug = (title) => __awaiter(void 0, void 0, void 0, function* 
  */
 const getAllArticles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
-        const articleFilter = (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle');
+        // Verwende getDataIsolationFilter nur wenn userId vorhanden ist (authentifizierte Requests)
+        // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
+        const articleFilter = req.userId ? (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle') : {};
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const articles = yield prisma.cerebroCarticle.findMany({
             where: articleFilter,
@@ -107,8 +108,9 @@ const getArticleById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (isNaN(articleId)) {
             return res.status(400).json({ message: 'Ungültige Artikel-ID' });
         }
-        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
-        const articleFilter = (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle');
+        // Verwende getDataIsolationFilter nur wenn userId vorhanden ist (authentifizierte Requests)
+        // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
+        const articleFilter = req.userId ? (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle') : {};
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const article = yield prisma.cerebroCarticle.findFirst({
             where: Object.assign({ id: articleId }, articleFilter),
@@ -170,8 +172,9 @@ const getArticleBySlug = (req, res) => __awaiter(void 0, void 0, void 0, functio
     var _a, _b, _c, _d, _e, _f, _g, _h;
     try {
         const { slug } = req.params;
-        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
-        const articleFilter = (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle');
+        // Verwende getDataIsolationFilter nur wenn userId vorhanden ist (authentifizierte Requests)
+        // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
+        const articleFilter = req.userId ? (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle') : {};
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const article = yield prisma.cerebroCarticle.findFirst({
             where: Object.assign({ slug }, articleFilter),
@@ -236,8 +239,9 @@ exports.getArticleBySlug = getArticleBySlug;
  */
 const getArticlesStructure = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
-        const articleFilter = (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle');
+        // Verwende getDataIsolationFilter nur wenn userId vorhanden ist (authentifizierte Requests)
+        // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
+        const articleFilter = req.userId ? (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle') : {};
         // Jetzt mit Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const articles = yield prisma.cerebroCarticle.findMany({
             where: articleFilter,
@@ -305,10 +309,17 @@ const createArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         // Slug erstellen
         const slug = yield createUniqueSlug(title);
+        // parentId normalisieren: String zu Number konvertieren oder null
+        const normalizedParentId = parentId && parentId !== '' && parentId !== 'null'
+            ? parseInt(String(parentId), 10)
+            : null;
         // Überprüfen, ob der übergeordnete Artikel existiert, falls angegeben
-        if (parentId) {
+        if (normalizedParentId) {
+            if (isNaN(normalizedParentId)) {
+                return res.status(400).json({ message: 'Ungültige Parent-ID' });
+            }
             const parentArticle = yield prisma.$queryRaw `
-                SELECT * FROM "CerebroCarticle" WHERE id = ${parentId}
+                SELECT * FROM "CerebroCarticle" WHERE id = ${normalizedParentId}
             `;
             if (!parentArticle || (Array.isArray(parentArticle) && parentArticle.length === 0)) {
                 return res.status(404).json({ message: 'Übergeordneter Artikel nicht gefunden' });
@@ -317,7 +328,7 @@ const createArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Artikel erstellen
         const newArticle = yield prisma.$queryRaw `
             INSERT INTO "CerebroCarticle" (title, content, slug, "parentId", "createdById", "updatedById", "isPublished", "organizationId", "createdAt", "updatedAt")
-            VALUES (${title}, ${content || ''}, ${slug}, ${parentId || null}, ${userId}, ${userId}, ${isPublished}, ${req.organizationId || null}, NOW(), NOW())
+            VALUES (${title}, ${content || ''}, ${slug}, ${normalizedParentId}, ${userId}, ${userId}, ${isPublished}, ${req.organizationId || null}, NOW(), NOW())
             RETURNING *
         `;
         // Benachrichtigung erstellen
@@ -350,8 +361,18 @@ const createArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         res.status(201).json(newArticle[0]);
     }
     catch (error) {
-        console.error('Fehler beim Erstellen des Artikels:', error);
-        res.status(500).json({ message: 'Fehler beim Erstellen des Artikels' });
+        console.error('[createArticle] ❌ Fehler beim Erstellen des Artikels:', error);
+        console.error('[createArticle] Error details:', {
+            message: error === null || error === void 0 ? void 0 : error.message,
+            code: error === null || error === void 0 ? void 0 : error.code,
+            stack: error === null || error === void 0 ? void 0 : error.stack
+        });
+        const errorMessage = (error === null || error === void 0 ? void 0 : error.message) || 'Fehler beim Erstellen des Artikels';
+        const statusCode = (error === null || error === void 0 ? void 0 : error.code) === 'P2002' ? 409 : 500;
+        res.status(statusCode).json({
+            message: errorMessage,
+            details: process.env.NODE_ENV === 'development' ? error : undefined
+        });
     }
 });
 exports.createArticle = createArticle;
@@ -537,8 +558,9 @@ const searchArticles = (req, res) => __awaiter(void 0, void 0, void 0, function*
             return res.status(400).json({ message: 'Suchbegriff ist erforderlich' });
         }
         const searchTerm = q;
-        // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
-        const articleFilter = (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle');
+        // Verwende getDataIsolationFilter nur wenn userId vorhanden ist (authentifizierte Requests)
+        // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
+        const articleFilter = req.userId ? (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle') : {};
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
         const articles = yield prisma.cerebroCarticle.findMany({
             where: Object.assign(Object.assign({}, articleFilter), { OR: [

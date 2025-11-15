@@ -127,9 +127,16 @@ ${ttlockCode ? `Tu código de acceso TTLock:
 ${ttlockCode}
 
 ` : ''}¡Te esperamos!`;
-                // Sende WhatsApp-Nachricht
+                // Sende WhatsApp-Nachricht (mit Fallback auf Template)
                 const whatsappService = new whatsappService_1.WhatsAppService(reservation.organizationId);
-                yield whatsappService.sendMessage(updatedReservation.guestPhone, sentMessage);
+                const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_confirmation';
+                const templateParams = [
+                    updatedReservation.guestName,
+                    checkInDateStr,
+                    checkOutDateStr,
+                    paymentLink
+                ];
+                yield whatsappService.sendMessageWithFallback(updatedReservation.guestPhone, sentMessage, templateName, templateParams);
                 sentMessageAt = new Date();
                 // Speichere versendete Nachricht in Reservierung
                 yield prisma.reservation.update({
@@ -168,6 +175,9 @@ exports.updateGuestContact = updateGuestContact;
  */
 const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        console.log('[Reservation] createReservation aufgerufen');
+        console.log('[Reservation] organizationId:', req.organizationId);
+        console.log('[Reservation] Body:', req.body);
         const { guestName, contact, amount, currency = 'COP' } = req.body;
         // Validierung
         if (!guestName || typeof guestName !== 'string' || guestName.trim().length === 0) {
@@ -213,7 +223,7 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
             reservationData.guestEmail = contact.trim();
         }
         // Erstelle Reservierung
-        const reservation = yield prisma.reservation.create({
+        let reservation = yield prisma.reservation.create({
             data: reservationData,
             include: {
                 organization: {
@@ -232,10 +242,14 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
         let paymentLink = null;
         if (contactType === 'phone' && reservation.guestPhone) {
             try {
-                // Erstelle Zahlungslink
+                // Erstelle Zahlungslink (ERFORDERLICH - Reservierung wird nicht als notification_sent markiert, wenn fehlschlägt)
                 const boldPaymentService = new boldPaymentService_1.BoldPaymentService(reservation.organizationId);
                 paymentLink = yield boldPaymentService.createPaymentLink(reservation, amount, currency, `Zahlung für Reservierung ${reservation.guestName}`);
-                // Erstelle Nachrichtentext (nur Zahlungslink, keine Check-in-Aufforderung)
+                console.log(`[Reservation] Payment-Link erstellt: ${paymentLink}`);
+                // Erstelle Check-in-Link
+                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+                const checkInLink = `${frontendUrl}/check-in/${reservation.id}`;
+                // Erstelle Nachrichtentext (mit Zahlungslink und Check-in-Aufforderung)
                 sentMessage = `Hola ${reservation.guestName},
 
 ¡Bienvenido a La Familia Hostel!
@@ -243,13 +257,23 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
 Tu reserva ha sido confirmada.
 Cargos: ${amount} ${currency}
 
+Puedes realizar el check-in en línea ahora:
+${checkInLink}
+
 Por favor, realiza el pago:
 ${paymentLink}
 
 ¡Te esperamos!`;
-                // Sende WhatsApp-Nachricht
+                // Sende WhatsApp-Nachricht (mit Fallback auf Template)
                 const whatsappService = new whatsappService_1.WhatsAppService(reservation.organizationId);
-                yield whatsappService.sendMessage(reservation.guestPhone, sentMessage);
+                const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_confirmation';
+                const templateParams = [
+                    reservation.guestName,
+                    `${amount} ${currency}`,
+                    checkInLink,
+                    paymentLink
+                ];
+                yield whatsappService.sendMessageWithFallback(reservation.guestPhone, sentMessage, templateName, templateParams);
                 sentMessageAt = new Date();
                 // Speichere versendete Nachricht und Payment Link in Reservierung
                 yield prisma.reservation.update({
@@ -263,9 +287,16 @@ ${paymentLink}
                 });
                 console.log(`[Reservation] Reservierung ${reservation.id} erstellt und WhatsApp-Nachricht versendet`);
             }
-            catch (whatsappError) {
-                console.error('[Reservation] Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
+            catch (error) {
+                console.error('[Reservation] Fehler beim Versenden der WhatsApp-Nachricht:', error);
+                console.error('[Reservation] Error Details:', JSON.stringify(error, null, 2));
+                // Prüfe ob es ein WhatsApp-Token-Problem ist
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                if (errorMessage.includes('access token') || errorMessage.includes('OAuthException') || errorMessage.includes('Session has expired')) {
+                    console.error('[Reservation] ⚠️ WhatsApp Access Token ist abgelaufen! Bitte neuen Token in den Organisationseinstellungen eintragen.');
+                }
                 // Fehler nicht weiterwerfen, Reservierung wurde bereits erstellt
+                // Status bleibt auf 'confirmed', da Nachricht nicht versendet wurde
                 // Payment Link wurde möglicherweise erstellt, speichere ihn trotzdem
                 if (paymentLink) {
                     yield prisma.reservation.update({
@@ -275,11 +306,24 @@ ${paymentLink}
                 }
             }
         }
+        // Hole die aktuelle Reservierung mit allen Feldern (inkl. Updates wie sentMessage, status, etc.)
+        const finalReservation = yield prisma.reservation.findUnique({
+            where: { id: reservation.id },
+            include: {
+                organization: {
+                    select: {
+                        id: true,
+                        name: true,
+                        displayName: true,
+                        settings: true
+                    }
+                },
+                task: true
+            }
+        });
         res.status(201).json({
             success: true,
-            data: Object.assign(Object.assign({}, reservation), { sentMessage,
-                sentMessageAt,
-                paymentLink })
+            data: finalReservation || reservation
         });
     }
     catch (error) {
@@ -316,13 +360,7 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
                         displayName: true
                     }
                 },
-                task: {
-                    select: {
-                        id: true,
-                        title: true,
-                        status: true
-                    }
-                }
+                task: true
             },
             orderBy: {
                 createdAt: 'desc'
@@ -381,6 +419,8 @@ const getReservationById = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 message: 'Reservierung nicht gefunden'
             });
         }
+        console.log('[Reservation] getReservationById - Status:', reservation.status);
+        console.log('[Reservation] getReservationById - PaymentStatus:', reservation.paymentStatus);
         res.json({
             success: true,
             data: reservation

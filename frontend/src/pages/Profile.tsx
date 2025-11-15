@@ -57,7 +57,7 @@ const ID_TYPES = [
 ];
 
 const Profile: React.FC = () => {
-  const { user: authUser } = useAuth();
+  const { user: authUser, fetchCurrentUser } = useAuth();
   const { showMessage } = useMessage();
   const { t } = useTranslation();
   const { completeStep } = useOnboarding();
@@ -117,7 +117,6 @@ const Profile: React.FC = () => {
 
       const response = await axiosInstance.get('/users/profile');
       
-      console.log('Profile response:', response.data);
       if (response.data) {
         const profileData = {
           ...response.data,
@@ -177,11 +176,7 @@ const Profile: React.FC = () => {
         gender: formData.gender || null,
       };
 
-      console.log('Sending data to backend:', dataToSend);
-      
       const response = await axiosInstance.put('/users/profile', dataToSend);
-      
-      console.log('Update response:', response.data);
       
       if (response.data) {
         const updatedData = {
@@ -193,11 +188,17 @@ const Profile: React.FC = () => {
         showMessage('Profil erfolgreich aktualisiert', 'success');
         setIsEditing(false);
         
-        // Prüfe ob Profil jetzt vollständig ist (für Tour)
+        // User-Context aktualisieren, damit profileComplete State in usePermissions aktualisiert wird
+        try {
+          await fetchCurrentUser();
+        } catch (error) {
+          console.error('Fehler beim Aktualisieren des User-Contexts:', error);
+        }
+        
+        // Prüfe ob Profil jetzt vollständig ist (username, email, language - country NICHT nötig)
         const isComplete = !!(
           updatedData.username &&
           updatedData.email &&
-          updatedData.country &&
           updatedData.language
         );
         
@@ -232,12 +233,12 @@ const Profile: React.FC = () => {
   };
 
   // Prüfe ob Profil unvollständig ist (Phase 1: Basis-Profilinfos)
+  // username, email, language - country NICHT nötig
   const isProfileIncomplete = () => {
     if (!user) return true;
     return !(
       user.username &&
       user.email &&
-      user.country &&
       user.language
     );
   };
@@ -334,10 +335,10 @@ const Profile: React.FC = () => {
           {/* Hinweis: Profil ausfüllen um System freizuschalten */}
           {user && (() => {
             const hasOrganization = user.roles?.some(r => r.role.organization !== null) || false;
+            // username, email, language - country NICHT nötig
             const isProfileIncomplete = hasOrganization && !(
               user.username &&
               user.email &&
-              user.country &&
               user.language
             );
             
@@ -396,7 +397,7 @@ const Profile: React.FC = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.country')} <span className="text-red-500">*</span>
+                  {t('profile.country')}
                 </label>
                 <select
                   name="country"
@@ -404,7 +405,6 @@ const Profile: React.FC = () => {
                   onChange={handleInputChange}
                   disabled={!isEditing}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  required
                 >
                   <option value="">{t('profile.selectCountry')}</option>
                   {COUNTRIES.map((country) => (
@@ -451,6 +451,7 @@ const Profile: React.FC = () => {
                       </div>
                       {!showDocumentUpload && (
                         <button
+                          data-onboarding="upload-document-button"
                           type="button"
                           onClick={() => setShowDocumentUpload(true)}
                           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
@@ -464,10 +465,18 @@ const Profile: React.FC = () => {
                       <div className="mt-4">
                         <IdentificationDocumentForm
                           userId={user.id}
-                          onDocumentSaved={() => {
+                          onDocumentSaved={async () => {
                             setShowDocumentUpload(false);
                             fetchUserProfile(); // Aktualisiere Profil nach Upload
                             showMessage('Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.', 'success');
+                            
+                            // Schließe Onboarding-Schritt ab, wenn aktiv
+                            try {
+                              await completeStep('upload_identification_document', t('onboarding.steps.upload_identification_document.title') || 'Dokument hochladen');
+                            } catch (error) {
+                              // Fehler beim Abschließen blockiert nicht den Upload
+                              console.error('Fehler beim Abschließen des upload_identification_document Schritts:', error);
+                            }
                           }}
                           onCancel={() => setShowDocumentUpload(false)}
                         />

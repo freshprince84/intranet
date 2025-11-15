@@ -4,7 +4,7 @@ import { XMarkIcon, ChevronDownIcon, PencilIcon, CheckIcon, TrashIcon } from '@h
 import { FilterCondition } from './FilterRow.tsx';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
-import { toast } from 'react-toastify';
+import useMessage from '../hooks/useMessage.ts';
 
 interface SortDirection {
   column: string;
@@ -56,6 +56,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   defaultFilterName = 'Heute'
 }) => {
   const { t } = useTranslation();
+  const { showMessage } = useMessage();
   
   // Übersetze Filter-Namen beim Anzeigen
   const translateFilterName = (name: string): string => {
@@ -268,7 +269,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
     
     const filterToDelete = savedFilters.find(filter => filter.id === filterId);
     if (filterToDelete && isStandardFilter(filterToDelete.name)) {
-      toast.error(t('filter.cannotDeleteStandard'));
+      showMessage(t('filter.cannotDeleteStandard', { defaultValue: 'Standard-Filter können nicht gelöscht werden' }), 'error');
       return;
     }
     
@@ -295,10 +296,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         }
       }
       
-      toast.success('Filter erfolgreich gelöscht');
+      showMessage(t('filter.deleteSuccess', { defaultValue: 'Filter erfolgreich gelöscht' }), 'success');
     } catch (err) {
       console.error('Fehler beim Löschen des Filters:', err);
-      toast.error('Fehler beim Löschen des Filters');
+      showMessage(t('filter.deleteError', { defaultValue: 'Fehler beim Löschen des Filters' }), 'error');
     }
   };
   
@@ -540,7 +541,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       if (type === 'group') {
         // Filter auf Gruppe gezogen -> Zu Gruppe hinzufügen
         await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.GROUPS.ADD_FILTER(draggedFilterId, targetId as number));
-        toast.success('Filter zur Gruppe hinzugefügt');
+        showMessage(t('filter.addToGroupSuccess', { defaultValue: 'Filter zur Gruppe hinzugefügt' }), 'success');
       } else {
         // Filter auf Filter gezogen -> Zu bestehender Gruppe hinzufügen oder neue erstellen
         const targetFilter = savedFilters.find(f => f.id === targetId as number);
@@ -552,7 +553,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
         if (targetFilter.groupId) {
           // Füge zu bestehender Gruppe hinzu
           await axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.GROUPS.ADD_FILTER(draggedFilterId, targetFilter.groupId));
-          toast.success('Filter zur Gruppe hinzugefügt');
+          showMessage(t('filter.addToGroupSuccess', { defaultValue: 'Filter zur Gruppe hinzugefügt' }), 'success');
         } else {
           // Erstelle neue Gruppe mit beiden Filtern
           const groupName = `Gruppe ${filterGroups.length + 1}`;
@@ -568,7 +569,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
             axiosInstance.post(API_ENDPOINTS.SAVED_FILTERS.GROUPS.ADD_FILTER(targetFilter.id, newGroup.id))
           ]);
           
-          toast.success('Gruppe erstellt');
+          showMessage(t('filter.createGroupSuccess', { defaultValue: 'Gruppe erstellt' }), 'success');
         }
       }
       
@@ -576,7 +577,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       await refreshFilters();
     } catch (err) {
       console.error('Fehler beim Gruppieren der Filter:', err);
-      toast.error('Fehler beim Gruppieren der Filter');
+      showMessage(t('filter.groupError', { defaultValue: 'Fehler beim Gruppieren der Filter' }), 'error');
     } finally {
       handleDragEnd();
     }
@@ -598,7 +599,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   const handleUngroupFilters = async (groupId: number) => {
     try {
       await axiosInstance.delete(API_ENDPOINTS.SAVED_FILTERS.GROUPS.DELETE(groupId));
-      toast.success('Gruppe aufgelöst');
+      showMessage(t('filter.ungroupSuccess', { defaultValue: 'Gruppe aufgelöst' }), 'success');
       await refreshFilters();
       setOpenGroupDropdowns(prev => {
         const newSet = new Set(prev);
@@ -607,7 +608,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       });
     } catch (err) {
       console.error('Fehler beim Auflösen der Gruppe:', err);
-      toast.error('Fehler beim Auflösen der Gruppe');
+      showMessage(t('filter.ungroupError', { defaultValue: 'Fehler beim Auflösen der Gruppe' }), 'error');
     }
   };
 
@@ -623,7 +624,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
 
   const handleSaveGroupName = async (groupId: number) => {
     if (!editingGroupName.trim()) {
-      toast.error('Gruppenname darf nicht leer sein');
+      showMessage(t('filter.groupNameRequired', { defaultValue: 'Gruppenname darf nicht leer sein' }), 'error');
       return;
     }
 
@@ -631,7 +632,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
       await axiosInstance.put(API_ENDPOINTS.SAVED_FILTERS.GROUPS.UPDATE(groupId), {
         name: editingGroupName.trim()
       });
-      toast.success('Gruppe umbenannt');
+      showMessage(t('filter.renameGroupSuccess', { defaultValue: 'Gruppe umbenannt' }), 'success');
       await refreshFilters();
       setEditingGroupId(null);
       setEditingGroupName('');

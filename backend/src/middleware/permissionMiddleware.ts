@@ -32,10 +32,6 @@ export const checkPermission = (entity: string, requiredAccess: 'read' | 'write'
             const userId = parseInt(req.userId, 10);
             const roleId = parseInt(req.roleId, 10);
 
-            // Debug-Logging
-            console.log(`[checkPermission] Entity: ${entity}, RequiredAccess: ${requiredAccess}, EntityType: ${entityType}`);
-            console.log(`[checkPermission] userId: ${req.userId} (parsed: ${userId}), roleId: ${req.roleId} (parsed: ${roleId})`);
-
             if (isNaN(userId) || isNaN(roleId)) {
                 console.error(`[checkPermission] ❌ Authentifizierung fehlgeschlagen: userId=${req.userId}, roleId=${req.roleId}`);
                 return res.status(401).json({ message: 'Nicht authentifiziert' });
@@ -44,7 +40,9 @@ export const checkPermission = (entity: string, requiredAccess: 'read' | 'write'
             // Prüfe, ob der Benutzer die erforderliche Berechtigung hat
             const hasAccess = await checkUserPermission(userId, roleId, entity, requiredAccess, entityType);
 
-            console.log(`[checkPermission] Berechtigungsprüfung: ${hasAccess ? '✅ GEWÄHRT' : '❌ VERWEIGERT'}`);
+            if (!hasAccess) {
+                console.error(`[checkPermission] ❌ VERWEIGERT: Entity=${entity}, EntityType=${entityType}, UserId=${userId}, RoleId=${roleId}`);
+            }
 
             if (!hasAccess) {
                 return res.status(403).json({ 
@@ -81,16 +79,13 @@ export const checkUserPermission = async (
             return false;
         }
 
-        console.log(`[checkUserPermission] Rolle gefunden: "${role.name}" (ID: ${role.id}), Organization: ${role.organizationId || 'null'}`);
-        console.log(`[checkUserPermission] Verfügbare Permissions: ${role.permissions.length}`);
-
         // Suche nach der Berechtigung für die angeforderte Entität
         const permission = role.permissions.find(
             p => p.entity === currentEntity && p.entityType === entityType
         );
 
         if (!permission) {
-            console.error(`[checkUserPermission] ❌ Berechtigung nicht gefunden: entity=${currentEntity}, entityType=${entityType}`);
+            console.error(`[checkUserPermission] ❌ Berechtigung nicht gefunden: entity=${currentEntity}, entityType=${entityType}, role="${role.name}" (ID: ${role.id})`);
             console.log(`[checkUserPermission] Verfügbare Cerebro-Permissions:`);
             role.permissions
                 .filter(p => p.entity.includes('cerebro'))
@@ -99,8 +94,6 @@ export const checkUserPermission = async (
                 });
             return false;
         }
-
-        console.log(`[checkUserPermission] ✅ Berechtigung gefunden: ${permission.accessLevel}`);
 
         // Prüfe, ob die Berechtigung ausreichend ist
         const hasAccess = 
@@ -222,10 +215,10 @@ export const requireCompleteProfile = async (
         }
 
         // Prüfe Profilvollständigkeit (nur wenn User Mitglied einer Organisation ist)
+        // username, email, language - country NICHT nötig
         const isComplete = !!(
             user.username &&
             user.email &&
-            user.country &&
             user.language
         );
 
@@ -244,7 +237,6 @@ export const requireCompleteProfile = async (
                 missingFields: [
                     !user.username ? 'username' : null,
                     !user.email ? 'email' : null,
-                    !user.country ? 'country' : null,
                     !user.language ? 'language' : null
                 ].filter(Boolean)
             });

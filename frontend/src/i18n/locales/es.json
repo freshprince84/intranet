@@ -962,6 +962,15 @@
     "notAuthenticated": "No autenticado",
     "cannotOverwriteStandard": "Los filtros estándar no se pueden sobrescribir",
     "loadError": "Error al cargar los filtros existentes",
+    "deleteSuccess": "Filtro eliminado exitosamente",
+    "deleteError": "Error al eliminar el filtro",
+    "addToGroupSuccess": "Filtro agregado al grupo",
+    "createGroupSuccess": "Grupo creado",
+    "groupError": "Error al agrupar filtros",
+    "ungroupSuccess": "Grupo desagrupado",
+    "ungroupError": "Error al desagrupar",
+    "groupNameRequired": "El nombre del grupo no puede estar vacío",
+    "renameGroupSuccess": "Grupo renombrado",
     "row": {
       "selectColumn": "Seleccionar columna",
       "pleaseSelect": "Por favor seleccione",
@@ -1080,15 +1089,25 @@
     },
     "articleEdit": {
       "title": "Título",
+      "titleRequired": "Título *",
       "parent": "Artículo principal",
+      "parentArticle": "Artículo padre",
+      "noParent": "Sin artículo padre (Raíz)",
       "content": "Contenido",
       "save": "Guardar",
       "saving": "Guardando...",
       "cancel": "Cancelar",
-      "titleRequired": "Por favor ingrese un título.",
+      "titleRequiredMessage": "Por favor ingrese un título.",
       "loadError": "Error al cargar los datos. Por favor intente más tarde.",
       "saveError": "Error al guardar el artículo",
-      "saveSuccess": "Artículo guardado exitosamente"
+      "saveSuccess": "Artículo guardado exitosamente",
+      "createTitle": "Crear nuevo artículo",
+      "editTitle": "Editar artículo",
+      "loadingData": "Cargando datos..."
+    },
+    "articleList": {
+      "newArticle": "Nuevo artículo",
+      "searchPlaceholder": "Buscar artículos..."
     },
     "menuClose": "Cerrar Menú",
     "menuOpen": "Abrir Menú",
@@ -2048,7 +2067,15 @@
     "deleteTitle": "Eliminar Cliente",
     "deleteConfirm": "¿Realmente desea eliminar el cliente \"{{name}}\"?",
     "deleteSuccess": "Cliente eliminado exitosamente",
-    "deleteError": "Error al eliminar el cliente"
+    "deleteError": "Error al eliminar el cliente",
+    "createSuccess": "Cliente creado exitosamente",
+    "createError": "Error al crear el cliente",
+    "updateSuccess": "Cliente actualizado exitosamente",
+    "updateError": "Error al actualizar el cliente",
+    "workTimes": "entradas de tiempo",
+    "consultationInvoices": "facturas",
+    "monthlyReports": "informes mensuales",
+    "links": "Enlaces"
   },
   "notification": {
     "deleteTitle": "Eliminar"
@@ -2101,7 +2128,15 @@
     "downloadError": "Error al descargar el PDF",
     "markPaidSuccess": "Factura marcada como pagada",
     "markPaidError": "Error al marcar como pagada",
-    "loadError": "Error al cargar las facturas"
+    "loadError": "Error al cargar las facturas",
+    "settingsNotConfigured": "Por favor configure primero sus ajustes de facturación",
+    "loadSettingsError": "Error al cargar los ajustes de facturación",
+    "settingsNotLoaded": "No se pudieron cargar los ajustes de facturación",
+    "noConsultations": "No hay consultas disponibles para facturar",
+    "differentClients": "Todas las consultas deben tener el mismo cliente",
+    "noValidClient": "No se encontró un cliente válido en las consultas",
+    "createError": "Error al crear la factura",
+    "invoiceManagementPhase5": "La gestión de facturas se implementará en la Fase 5"
   },
   "onboarding": {
     "welcome": {
@@ -2121,13 +2156,25 @@
       "of": "de"
     },
     "steps": {
+      "switch_role_after_join": {
+        "title": "Cambiar rol",
+        "description": "Has sido aceptado en una organización. Por favor, cambia tu rol en el menú superior para acceder a las funciones de la organización."
+      },
+      "upload_identification_document": {
+        "title": "Subir documento de identidad",
+        "description": "Por favor, suba su documento de identidad (Cédula o Pasaporte) en el perfil. Los campos se completarán automáticamente después del upload."
+      },
       "profile_complete": {
         "title": "Completa tu perfil",
-        "description": "Para comenzar, necesitas completar tu perfil con la información básica. Por favor, completa los campos obligatorios: nombre de usuario, correo electrónico, país e idioma. Una vez guardado, continuaremos con el tour."
+        "description": "Para comenzar, necesitas completar tu perfil con la información básica. Por favor, completa los campos obligatorios: nombre de usuario, correo electrónico e idioma. Una vez guardado, continuaremos con el tour."
+      },
+      "join_or_create_organization": {
+        "title": "Unirse o crear organización",
+        "description": "Para usar el sistema completamente, necesitas unirte a una organización o crear una nueva. Haz clic en los botones de arriba para crear una organización o unirte a una."
       },
       "welcome": {
         "title": "¡Bienvenido!",
-        "description": "¡Bienvenido a la Intranet! Este tour de introducción te mostrará las funciones más importantes. Puedes omitirlo en cualquier momento o reiniciarlo más tarde en la configuración."
+        "description": "¡Bienvenido a la Intranet! Para usar el sistema completamente, necesitas unirte a una organización o crear una nueva. Ahora te guiaremos a la página de organización."
       },
       "dashboard_layout": {
         "title": "Vista general del Dashboard",

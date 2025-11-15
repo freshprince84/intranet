@@ -1015,9 +1015,6 @@ const Worktracker: React.FC = () => {
                 return filtered;
             });
 
-            // Test-Toast um zu prüfen, ob Toast funktioniert
-            toast.info('Test: Task wird gelöscht...');
-
             try {
                 console.log('📡 Sende Delete-Request...');
                 await axiosInstance.delete(API_ENDPOINTS.TASKS.BY_ID(taskId));

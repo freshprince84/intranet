@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -22,19 +55,66 @@ const getTest = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.json(testBranches);
 });
 exports.getTest = getTest;
-// Alle Niederlassungen abrufen
+// Alle Niederlassungen abrufen (optional gefiltert nach roleId)
 const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Datenisolation: Zeigt alle Branches der Organisation oder nur eigene (wenn standalone)
         const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
-        const branches = yield prisma.branch.findMany({
+        // Optional: Filter nach roleId (aus Query-Parameter)
+        const roleId = req.query.roleId ? parseInt(req.query.roleId, 10) : null;
+        // Prisma Query vorbereiten
+        const queryOptions = {
             where: branchFilter,
-            select: {
+            orderBy: { name: 'asc' }
+        };
+        // Wenn roleId vorhanden, füge roles Relation hinzu
+        if (roleId && !isNaN(roleId)) {
+            queryOptions.select = {
+                id: true,
+                name: true,
+                roles: {
+                    where: { roleId: roleId },
+                    select: { id: true }
+                }
+            };
+        }
+        else {
+            queryOptions.select = {
                 id: true,
                 name: true
-            },
-            orderBy: { name: 'asc' }
-        });
+            };
+        }
+        let branches = yield prisma.branch.findMany(queryOptions);
+        // Wenn roleId angegeben, filtere Branches nach Verfügbarkeit für diese Rolle
+        if (roleId && !isNaN(roleId)) {
+            // Hole die Rolle, um allBranches zu prüfen
+            const role = yield prisma.role.findUnique({
+                where: { id: roleId },
+                select: {
+                    allBranches: true
+                }
+            });
+            if (role) {
+                // Wenn allBranches = true, sind alle Branches verfügbar
+                // Wenn allBranches = false, nur Branches mit RoleBranch Eintrag
+                if (!role.allBranches) {
+                    branches = branches.filter(branch => {
+                        // TypeScript-Hack: branches hat jetzt ein 'roles' Feld wenn roleId vorhanden
+                        const branchWithRoles = branch;
+                        return branchWithRoles.roles && branchWithRoles.roles.length > 0;
+                    });
+                }
+            }
+            else {
+                // Rolle nicht gefunden, keine Branches zurückgeben
+                branches = [];
+            }
+            // Entferne das 'roles' Feld aus der Antwort
+            branches = branches.map(branch => ({
+                id: branch.id,
+                name: branch.name
+            }));
+        }
         res.json(branches);
     }
     catch (error) {
@@ -124,6 +204,26 @@ const switchUserBranch = (req, res) => __awaiter(void 0, void 0, void 0, functio
             return res.status(403).json({
                 message: 'Zugriff auf diese Niederlassung verweigert'
             });
+        }
+        // Prüfe, ob die aktive Rolle für die neue Branch verfügbar ist
+        const activeRole = yield prisma.userRole.findFirst({
+            where: {
+                userId,
+                lastUsed: true
+            },
+            select: {
+                roleId: true
+            }
+        });
+        if (activeRole) {
+            // Importiere die Hilfsfunktion dynamisch, um Zirkelimporte zu vermeiden
+            const { isRoleAvailableForBranch } = yield Promise.resolve().then(() => __importStar(require('./roleController')));
+            const isAvailable = yield isRoleAvailableForBranch(activeRole.roleId, branchId);
+            if (!isAvailable) {
+                return res.status(400).json({
+                    message: 'Die aktive Rolle ist für diese Branch nicht verfügbar. Bitte wechseln Sie zuerst zu einer verfügbaren Rolle.'
+                });
+            }
         }
         // Transaktion starten
         yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
@@ -230,7 +330,7 @@ exports.createBranch = createBranch;
 const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const branchId = parseInt(req.params.id, 10);
-        const { name } = req.body;
+        const { name, whatsappSettings } = req.body;
         if (isNaN(branchId)) {
             return res.status(400).json({ message: 'Ungültige Niederlassungs-ID' });
         }
@@ -259,11 +359,32 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 message: 'Eine Niederlassung mit diesem Namen existiert bereits'
             });
         }
+        // Verschlüssele WhatsApp Settings falls vorhanden
+        let encryptedWhatsAppSettings = whatsappSettings;
+        if (whatsappSettings) {
+            try {
+                const { encryptApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                encryptedWhatsAppSettings = encryptApiSettings(whatsappSettings);
+            }
+            catch (error) {
+                console.warn('[Branch Controller] WhatsApp Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+                // Falls Verschlüsselung fehlschlägt, speichere unverschlüsselt (nur für Development)
+            }
+        }
         // Aktualisiere Branch
+        const updateData = {
+            name: name.trim()
+        };
+        if (whatsappSettings !== undefined) {
+            updateData.whatsappSettings = encryptedWhatsAppSettings;
+        }
         const updatedBranch = yield prisma.branch.update({
             where: { id: branchId },
-            data: {
-                name: name.trim()
+            data: updateData,
+            select: {
+                id: true,
+                name: true,
+                whatsappSettings: true
             }
         });
         res.json(updatedBranch);

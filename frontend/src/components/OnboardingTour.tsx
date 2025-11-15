@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog } from '@headlessui/react';
 import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
@@ -14,31 +14,36 @@ const OnboardingTour: React.FC = () => {
     currentStep,
     filteredSteps,
     isLoading,
+    modalDismissed,
     nextStep,
     previousStep,
     skipStep,
     stopTour,
+    dismissModal,
     completeStep,
     trackEvent
   } = useOnboarding();
 
   const [stepStartTime, setStepStartTime] = useState<number>(Date.now());
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
+  const isDismissingRef = useRef<boolean>(false); // Verhindert mehrfache Aufrufe
 
   // Aktueller Schritt
   const currentStepData = filteredSteps[currentStep];
 
   // Prüfe ob aktueller Schritt zur aktuellen Route passt
   // Bei Navigations-Schritten: Modal auch auf aktueller Route anzeigen (damit Link sichtbar ist)
-  // WICHTIG: Tour sollte auch auf /profile funktionieren (wenn User dorthin umgeleitet wurde)
+  // WICHTIG: Tour sollte auch auf /profile und /organization funktionieren (wenn User dorthin umgeleitet wurde)
   const isStepForCurrentRoute = currentStepData?.route 
     ? (currentStepData.action === 'navigate' 
         ? location.pathname === currentStepData.route || 
           (currentStepData.route === '/dashboard' && location.pathname.startsWith('/dashboard')) ||
-          (currentStepData.route === '/profile' && location.pathname === '/profile')
+          (currentStepData.route === '/profile' && location.pathname === '/profile') ||
+          (currentStepData.route === '/organization' && location.pathname === '/organization')
         : location.pathname === currentStepData.route || 
           (currentStepData.route === '/dashboard' && location.pathname.startsWith('/dashboard')) ||
-          (currentStepData.route === '/profile' && location.pathname === '/profile'))
+          (currentStepData.route === '/profile' && location.pathname === '/profile') ||
+          (currentStepData.route === '/organization' && location.pathname === '/organization'))
     : true;
 
   // Mobile-Erkennung
@@ -68,6 +73,11 @@ const OnboardingTour: React.FC = () => {
     return null;
   }
 
+  // Modal nicht anzeigen, wenn es geschlossen wurde
+  if (modalDismissed) {
+    return null;
+  }
+
   const handleNext = async () => {
     // Bei 'wait' Aktion: Nicht automatisch weiter, sondern warten bis Schritt abgeschlossen ist
     if (currentStepData?.action === 'wait') {
@@ -88,7 +98,16 @@ const OnboardingTour: React.FC = () => {
   };
 
   const handleSkip = async () => {
-    await skipStep();
+    if (isDismissingRef.current) return; // Verhindere mehrfache Aufrufe
+    isDismissingRef.current = true;
+    try {
+      // Tour komplett stoppen (nicht nur Modal schließen)
+      await stopTour();
+    } finally {
+      setTimeout(() => {
+        isDismissingRef.current = false;
+      }, 300);
+    }
   };
 
   const handleComplete = async () => {
@@ -120,8 +139,21 @@ const OnboardingTour: React.FC = () => {
         <OnboardingOverlay target={currentStepData.target} isActive={isActive} />
       )}
 
-      {/* Modal für Onboarding-Schritt */}
-      <Dialog open={isActive} onClose={stopTour} className="relative z-50">
+      {/* Modal für Onboarding-Schritt - z-index niedriger als Topmenu */}
+      <Dialog 
+        open={isActive && !modalDismissed} 
+        onClose={(e) => {
+          // Verhindere mehrfache Aufrufe
+          if (isDismissingRef.current) return;
+          isDismissingRef.current = true;
+          dismissModal();
+          setTimeout(() => {
+            isDismissingRef.current = false;
+          }, 300);
+        }} 
+        className="relative" 
+        style={{ zIndex: 40 }}
+      >
         {/* Backdrop */}
         <div className="fixed inset-0 bg-transparent" aria-hidden="true" />
 
@@ -135,7 +167,7 @@ const OnboardingTour: React.FC = () => {
               ${modalPosition === 'bottom' ? 'self-end mb-4' : ''}
               ${modalPosition === 'left' ? 'self-center mr-auto ml-4' : ''}
               ${modalPosition === 'right' ? 'self-center ml-auto mr-4' : ''}
-              max-h-[90vh] overflow-y-auto
+              max-h-[80vh] overflow-y-auto
             `}
           >
             {/* Fortschrittsbalken */}
@@ -158,9 +190,19 @@ const OnboardingTour: React.FC = () => {
                   {t(currentStepData.title)}
                 </Dialog.Title>
                 <button
-                  onClick={stopTour}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (isDismissingRef.current) return; // Verhindere mehrfache Aufrufe
+                    isDismissingRef.current = true;
+                    dismissModal();
+                    setTimeout(() => {
+                      isDismissingRef.current = false;
+                    }, 300);
+                  }}
                   className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
                   aria-label={t('common.close')}
+                  title={t('onboarding.dismissModal') || 'Modal schließen (kann später wieder geöffnet werden)'}
                 >
                   <XMarkIcon className="h-6 w-6" />
                 </button>

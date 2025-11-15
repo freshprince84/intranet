@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRolePermissions = exports.deleteRole = exports.updateRole = exports.createRole = exports.getRoleById = exports.getAllRoles = void 0;
+exports.updateRoleBranches = exports.getRoleBranches = exports.getRolePermissions = exports.deleteRole = exports.updateRole = exports.createRole = exports.getRoleById = exports.getAllRoles = exports.isRoleAvailableForBranch = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
 const organization_1 = require("../middleware/organization");
@@ -20,7 +20,25 @@ const userSelect = {
     firstName: true,
     lastName: true
 };
-// Alle Rollen abrufen
+// Hilfsfunktion: Prüft, ob eine Rolle für eine Branch verfügbar ist
+const isRoleAvailableForBranch = (roleId, branchId) => __awaiter(void 0, void 0, void 0, function* () {
+    const role = yield prisma.role.findUnique({
+        where: { id: roleId },
+        select: {
+            allBranches: true,
+            branches: {
+                where: { branchId },
+                select: { id: true }
+            }
+        }
+    });
+    if (!role)
+        return false;
+    // Rolle ist verfügbar, wenn allBranches = true ODER es gibt einen RoleBranch Eintrag
+    return role.allBranches || role.branches.length > 0;
+});
+exports.isRoleAvailableForBranch = isRoleAvailableForBranch;
+// Alle Rollen abrufen (optional gefiltert nach branchId)
 const getAllRoles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         console.log('getAllRoles aufgerufen');
@@ -29,13 +47,42 @@ const getAllRoles = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         console.log('Prisma-Verbindung OK');
         // Datenisolation: Zeigt alle Rollen der Organisation oder nur eigene (wenn standalone)
         const roleFilter = (0, organization_1.getDataIsolationFilter)(req, 'role');
-        const roles = yield prisma.role.findMany({
+        // Optional: Filter nach branchId (aus Query-Parameter)
+        const branchId = req.query.branchId ? parseInt(req.query.branchId, 10) : null;
+        let roles = yield prisma.role.findMany({
             where: roleFilter,
             include: {
-                permissions: true
+                permissions: true,
+                branches: branchId ? {
+                    where: { branchId },
+                    include: {
+                        branch: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        }
+                    }
+                } : {
+                    include: {
+                        branch: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        }
+                    }
+                }
             },
             orderBy: { name: 'asc' }
         });
+        // Wenn branchId angegeben, filtere Rollen nach Verfügbarkeit
+        if (branchId && !isNaN(branchId)) {
+            roles = roles.filter(role => {
+                // Rolle ist verfügbar, wenn allBranches = true ODER es gibt einen RoleBranch Eintrag
+                return role.allBranches || (role.branches && role.branches.length > 0);
+            });
+        }
         console.log('Gefundene Rollen:', roles.length);
         res.json(roles);
     }
@@ -64,6 +111,16 @@ const getRoleById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             where: { id: roleId },
             include: {
                 permissions: true,
+                branches: {
+                    include: {
+                        branch: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        }
+                    }
+                },
                 users: {
                     include: {
                         user: {
@@ -96,7 +153,7 @@ exports.getRoleById = getRoleById;
 // Neue Rolle erstellen
 const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, description, permissions } = req.body;
+        const { name, description, permissions, allBranches = false, branchIds = [] } = req.body;
         console.log('Request Body für createRole:', req.body);
         console.log('Permissions aus Request:', permissions);
         if (!name) {
@@ -122,22 +179,56 @@ const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 message: 'Fehler beim Erstellen der Rolle: Sie müssen Mitglied einer Organisation sein, um Rollen zu erstellen'
             });
         }
+        // Validierung: Wenn allBranches = false, müssen branchIds angegeben werden
+        if (!allBranches && (!branchIds || branchIds.length === 0)) {
+            return res.status(400).json({
+                message: 'Fehler beim Erstellen der Rolle: Wenn "alle Branches" nicht aktiviert ist, müssen mindestens eine Branch ausgewählt werden'
+            });
+        }
+        // Prüfe, ob alle branchIds zur Organisation gehören
+        if (branchIds.length > 0) {
+            const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
+            const existingBranches = yield prisma.branch.findMany({
+                where: Object.assign({ id: { in: branchIds } }, branchFilter)
+            });
+            if (existingBranches.length !== branchIds.length) {
+                return res.status(400).json({
+                    message: 'Eine oder mehrere Branches wurden nicht gefunden oder gehören nicht zu Ihrer Organisation'
+                });
+            }
+        }
         try {
             const role = yield prisma.role.create({
                 data: {
                     name,
                     description,
                     organizationId: organizationId, // Verwende Organisation des aktuellen Users
+                    allBranches: allBranches,
                     permissions: {
                         create: permissions.map(permission => ({
                             entity: permission.entity,
                             entityType: permission.entityType || 'page',
                             accessLevel: permission.accessLevel
                         }))
+                    },
+                    branches: allBranches ? undefined : {
+                        create: branchIds.map(branchId => ({
+                            branchId
+                        }))
                     }
                 },
                 include: {
-                    permissions: true
+                    permissions: true,
+                    branches: {
+                        include: {
+                            branch: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
+                            }
+                        }
+                    }
                 }
             });
             console.log('Neue Rolle wurde erstellt, überprüfe Permissions:');
@@ -212,7 +303,7 @@ exports.createRole = createRole;
 // Rolle aktualisieren
 const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, description, permissions } = req.body;
+        const { name, description, permissions, allBranches, branchIds } = req.body;
         const roleId = parseInt(req.params.id, 10);
         if (isNaN(roleId)) {
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
@@ -222,8 +313,26 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (!hasAccess) {
             return res.status(403).json({ message: 'Zugriff auf diese Rolle verweigert' });
         }
+        // Validierung: Wenn allBranches = false, müssen branchIds angegeben werden
+        if (allBranches !== undefined && !allBranches && (!branchIds || branchIds.length === 0)) {
+            return res.status(400).json({
+                message: 'Fehler beim Aktualisieren der Rolle: Wenn "alle Branches" nicht aktiviert ist, müssen mindestens eine Branch ausgewählt werden'
+            });
+        }
+        // Prüfe, ob alle branchIds zur Organisation gehören (wenn angegeben)
+        if (branchIds && branchIds.length > 0) {
+            const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
+            const existingBranches = yield prisma.branch.findMany({
+                where: Object.assign({ id: { in: branchIds } }, branchFilter)
+            });
+            if (existingBranches.length !== branchIds.length) {
+                return res.status(400).json({
+                    message: 'Eine oder mehrere Branches wurden nicht gefunden oder gehören nicht zu Ihrer Organisation'
+                });
+            }
+        }
         console.log(`Aktualisierung für Rolle mit ID ${roleId} begonnen...`);
-        console.log('Neue Daten:', { name, description, permissions: permissions.length });
+        console.log('Neue Daten:', { name, description, permissions: permissions.length, allBranches, branchIds });
         // Detaillierte Ausgabe der Berechtigungen
         console.log('Detaillierte Berechtigungen:');
         permissions.forEach((perm, index) => {
@@ -234,7 +343,10 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             // 1. Prüfe, ob die Rolle existiert
             const existingRole = yield tx.role.findUnique({
                 where: { id: roleId },
-                include: { permissions: true }
+                include: {
+                    permissions: true,
+                    branches: true
+                }
             });
             if (!existingRole) {
                 throw new Error(`Rolle mit ID ${roleId} wurde nicht gefunden`);
@@ -245,22 +357,53 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 where: { roleId: roleId }
             });
             console.log(`${deletedPermissions.count} alte Berechtigungen gelöscht`);
-            // 3. Aktualisiere die Rolle selbst
+            // 3. Aktualisiere Branch-Zuweisungen (wenn allBranches oder branchIds angegeben)
+            if (allBranches !== undefined) {
+                // Lösche alle bestehenden RoleBranch Einträge
+                yield tx.roleBranch.deleteMany({
+                    where: { roleId: roleId }
+                });
+                // Wenn allBranches = false und branchIds angegeben, erstelle neue RoleBranch Einträge
+                if (!allBranches && branchIds && branchIds.length > 0) {
+                    yield tx.roleBranch.createMany({
+                        data: branchIds.map(branchId => ({
+                            roleId: roleId,
+                            branchId: branchId
+                        }))
+                    });
+                }
+            }
+            // 4. Aktualisiere die Rolle selbst
+            const updateData = {
+                name,
+                description,
+                permissions: {
+                    create: permissions.map(permission => ({
+                        entity: permission.entity,
+                        entityType: permission.entityType || 'page',
+                        accessLevel: permission.accessLevel
+                    }))
+                }
+            };
+            // Füge allBranches hinzu, wenn angegeben
+            if (allBranches !== undefined) {
+                updateData.allBranches = allBranches;
+            }
             const role = yield tx.role.update({
                 where: { id: roleId },
-                data: {
-                    name,
-                    description,
-                    permissions: {
-                        create: permissions.map(permission => ({
-                            entity: permission.entity,
-                            entityType: permission.entityType || 'page',
-                            accessLevel: permission.accessLevel
-                        }))
-                    }
-                },
+                data: updateData,
                 include: {
                     permissions: true,
+                    branches: {
+                        include: {
+                            branch: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
+                            }
+                        }
+                    },
                     users: true
                 }
             });
@@ -393,11 +536,15 @@ const deleteRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             prisma.permission.deleteMany({
                 where: { roleId: roleId }
             }),
-            // 2. Lösche alle Benutzer-Rollen-Verknüpfungen
+            // 2. Lösche alle RoleBranch-Verknüpfungen
+            prisma.roleBranch.deleteMany({
+                where: { roleId: roleId }
+            }),
+            // 3. Lösche alle Benutzer-Rollen-Verknüpfungen
             prisma.userRole.deleteMany({
                 where: { roleId: roleId }
             }),
-            // 3. Lösche die Rolle selbst
+            // 4. Lösche die Rolle selbst
             prisma.role.delete({
                 where: { id: roleId }
             })
@@ -489,4 +636,135 @@ const getRolePermissions = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.getRolePermissions = getRolePermissions;
+// Branches einer Rolle abrufen
+const getRoleBranches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const roleId = parseInt(req.params.id, 10);
+        if (isNaN(roleId)) {
+            return res.status(400).json({ message: 'Ungültige Rollen-ID' });
+        }
+        // Prüfe ob Rolle zur Organisation gehört
+        const hasAccess = yield (0, organization_1.belongsToOrganization)(req, 'role', roleId);
+        if (!hasAccess) {
+            return res.status(403).json({ message: 'Zugriff auf diese Rolle verweigert' });
+        }
+        const role = yield prisma.role.findUnique({
+            where: { id: roleId },
+            select: {
+                id: true,
+                name: true,
+                allBranches: true,
+                branches: {
+                    include: {
+                        branch: {
+                            select: {
+                                id: true,
+                                name: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        if (!role) {
+            return res.status(404).json({ message: 'Rolle nicht gefunden' });
+        }
+        res.json({
+            roleId: role.id,
+            roleName: role.name,
+            allBranches: role.allBranches,
+            branches: role.branches.map(rb => rb.branch)
+        });
+    }
+    catch (error) {
+        console.error('Error in getRoleBranches:', error);
+        res.status(500).json({
+            message: 'Fehler beim Abrufen der Branches',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.getRoleBranches = getRoleBranches;
+const updateRoleBranches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const roleId = parseInt(req.params.id, 10);
+        const { allBranches, branchIds = [] } = req.body;
+        if (isNaN(roleId)) {
+            return res.status(400).json({ message: 'Ungültige Rollen-ID' });
+        }
+        // Prüfe ob Rolle zur Organisation gehört
+        const hasAccess = yield (0, organization_1.belongsToOrganization)(req, 'role', roleId);
+        if (!hasAccess) {
+            return res.status(403).json({ message: 'Zugriff auf diese Rolle verweigert' });
+        }
+        // Validierung
+        if (allBranches !== undefined && !allBranches && branchIds.length === 0) {
+            return res.status(400).json({
+                message: 'Wenn "alle Branches" nicht aktiviert ist, müssen mindestens eine Branch ausgewählt werden'
+            });
+        }
+        // Prüfe, ob alle branchIds zur Organisation gehören
+        if (branchIds.length > 0) {
+            const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
+            const existingBranches = yield prisma.branch.findMany({
+                where: Object.assign({ id: { in: branchIds } }, branchFilter)
+            });
+            if (existingBranches.length !== branchIds.length) {
+                return res.status(400).json({
+                    message: 'Eine oder mehrere Branches wurden nicht gefunden oder gehören nicht zu Ihrer Organisation'
+                });
+            }
+        }
+        const updatedRole = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+            // Lösche alle bestehenden RoleBranch Einträge
+            yield tx.roleBranch.deleteMany({
+                where: { roleId: roleId }
+            });
+            // Aktualisiere allBranches Flag
+            const updateData = {};
+            if (allBranches !== undefined) {
+                updateData.allBranches = allBranches;
+            }
+            // Wenn allBranches = false und branchIds angegeben, erstelle neue RoleBranch Einträge
+            if (allBranches !== undefined && !allBranches && branchIds.length > 0) {
+                yield tx.roleBranch.createMany({
+                    data: branchIds.map(branchId => ({
+                        roleId: roleId,
+                        branchId: branchId
+                    }))
+                });
+            }
+            // Aktualisiere die Rolle
+            return yield tx.role.update({
+                where: { id: roleId },
+                data: updateData,
+                include: {
+                    branches: {
+                        include: {
+                            branch: {
+                                select: {
+                                    id: true,
+                                    name: true
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }));
+        res.json({
+            roleId: updatedRole.id,
+            allBranches: updatedRole.allBranches,
+            branches: updatedRole.branches.map(rb => rb.branch)
+        });
+    }
+    catch (error) {
+        console.error('Error in updateRoleBranches:', error);
+        res.status(500).json({
+            message: 'Fehler beim Aktualisieren der Branches',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.updateRoleBranches = updateRoleBranches;
 //# sourceMappingURL=roleController.js.map

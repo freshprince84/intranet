@@ -57,5 +57,9 @@ router.put('/:id', roleAuthMiddleware, roleController_1.updateRole);
 router.delete('/:id', roleAuthMiddleware, roleController_1.deleteRole);
 // Berechtigungen einer Rolle abrufen
 router.get('/:id/permissions', roleAuthMiddleware, roleController_1.getRolePermissions);
+// Branches einer Rolle abrufen
+router.get('/:id/branches', roleAuthMiddleware, roleController_1.getRoleBranches);
+// Branches einer Rolle aktualisieren
+router.put('/:id/branches', roleAuthMiddleware, roleController_1.updateRoleBranches);
 exports.default = router;
 //# sourceMappingURL=roles.js.map

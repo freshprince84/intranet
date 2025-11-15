@@ -40,6 +40,20 @@ const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, voi
         // WICHTIG: Kann NULL sein für standalone User (Hamburger-Rolle)
         req.organizationId = userRole.role.organizationId;
         req.userRole = userRole;
+        // Hole aktive Branch des Users
+        const userBranch = yield prisma.usersBranches.findFirst({
+            where: {
+                userId: Number(userId),
+                lastUsed: true
+            },
+            select: {
+                branchId: true
+            }
+        });
+        // Setze branchId im Request (kann undefined sein, wenn User keine Branch hat)
+        if (userBranch) {
+            req.branchId = userBranch.branchId;
+        }
         next();
     }
     catch (error) {

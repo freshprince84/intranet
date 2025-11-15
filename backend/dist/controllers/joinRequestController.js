@@ -13,6 +13,7 @@ exports.withdrawJoinRequest = exports.processJoinRequest = exports.getMyJoinRequ
 const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
 const notificationController_1 = require("./notificationController");
+const taskAutomationService_1 = require("../services/taskAutomationService");
 const prisma = new client_1.PrismaClient();
 // Validation Schemas
 const createJoinRequestSchema = zod_1.z.object({
@@ -270,6 +271,25 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }));
         // 🔔 Benachrichtige Requester über Entscheidung
         yield (0, notificationController_1.notifyJoinRequestStatus)(joinRequest.requesterId, joinRequest.organization.displayName, action === 'approve' ? 'approved' : 'rejected', requestId);
+        // Erstelle To-Dos für User nach erfolgreichem Beitritt
+        if (action === 'approve') {
+            try {
+                // BankDetails-To-Do (für alle Organisationen)
+                yield taskAutomationService_1.TaskAutomationService.createUserBankDetailsTask(joinRequest.requesterId, joinRequest.organizationId);
+            }
+            catch (bankDetailsTaskError) {
+                // Logge Fehler, aber breche nicht ab
+                console.error('[processJoinRequest] Fehler beim Erstellen des BankDetails-To-Dos:', bankDetailsTaskError);
+            }
+            try {
+                // Identitätsdokument-To-Do (nur für Kolumbien)
+                yield taskAutomationService_1.TaskAutomationService.createUserIdentificationDocumentTask(joinRequest.requesterId, joinRequest.organizationId);
+            }
+            catch (identificationDocumentTaskError) {
+                // Logge Fehler, aber breche nicht ab
+                console.error('[processJoinRequest] Fehler beim Erstellen des Identitätsdokument-To-Dos:', identificationDocumentTaskError);
+            }
+        }
         res.json(result);
     }
     catch (error) {

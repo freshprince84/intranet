@@ -61,6 +61,16 @@ const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         const activeRole = user.roles.find(r => r.lastUsed);
         if (activeRole) {
             req.roleId = String(activeRole.role.id);
+            // Logging entfernt: Zu viele Logs bei jedem Request
+            // Nur bei Fehlern loggen (siehe else-Block)
+        }
+        else {
+            // Nur bei Fehlern loggen (wenn keine aktive Rolle gefunden)
+            console.error(`[authMiddleware] ❌ Keine aktive Rolle gefunden für User ${user.id}`);
+            console.error(`[authMiddleware] Verfügbare Rollen: ${user.roles.length}`);
+            user.roles.forEach(r => {
+                console.error(`   - ${r.role.name} (ID: ${r.role.id}), lastUsed: ${r.lastUsed}`);
+            });
         }
         next();
     }

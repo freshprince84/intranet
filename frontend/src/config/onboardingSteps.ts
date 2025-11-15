@@ -20,6 +20,60 @@ export const onboardingSteps: OnboardingStep[] = [
     roleFilter: ['User', 'Hamburger', 'Admin']
   },
   // ============================================
+  // PROZESS 0.25: Organisation beitreten oder gründen
+  // ============================================
+  {
+    id: 'join_or_create_organization',
+    title: 'onboarding.steps.join_or_create_organization.title',
+    description: 'onboarding.steps.join_or_create_organization.description',
+    target: '[data-onboarding="organization-buttons"]',
+    position: 'bottom',
+    route: '/organization',
+    order: 0.25,
+    page: 'organisation',
+    process: 'organization-setup',
+    action: 'wait', // Wartet auf Organisation-Beitritt/Gründung
+    roleFilter: ['User', 'Hamburger', 'Admin'],
+    // Nur anzeigen wenn User KEINE Organisation hat
+    showCondition: 'hasNoOrganization'
+  },
+  // ============================================
+  // PROZESS 0.5: Rolle wechseln nach Organisation-Beitritt
+  // ============================================
+  {
+    id: 'switch_role_after_join',
+    title: 'onboarding.steps.switch_role_after_join.title',
+    description: 'onboarding.steps.switch_role_after_join.description',
+    target: '[data-onboarding="switch-role-menu"]',
+    position: 'bottom',
+    route: '/dashboard',
+    order: 0,
+    page: 'dashboard',
+    process: 'role-switch',
+    action: 'wait', // Wartet auf Rollenwechsel
+    roleFilter: ['User', 'Hamburger', 'Admin'],
+    // Nur anzeigen wenn User neue Rolle mit Organisation hat, die noch nicht aktiv ist
+    showCondition: 'hasInactiveOrgRole'
+  },
+  // ============================================
+  // PROZESS 0.6: Identitätsdokument hochladen (nur Kolumbien)
+  // ============================================
+  {
+    id: 'upload_identification_document',
+    title: 'onboarding.steps.upload_identification_document.title',
+    description: 'onboarding.steps.upload_identification_document.description',
+    target: '[data-onboarding="upload-document-button"]',
+    position: 'bottom',
+    route: '/profile',
+    order: 1,
+    page: 'profile',
+    process: 'document-upload',
+    action: 'wait', // Wartet auf Dokumenten-Upload
+    roleFilter: ['User', 'Hamburger', 'Admin'],
+    // Nur anzeigen wenn Organisation in Kolumbien ist und User noch kein Dokument hat
+    showCondition: 'needsIdentificationDocument'
+  },
+  // ============================================
   // PROZESS 1: Dashboard-Übersicht
   // ============================================
   {

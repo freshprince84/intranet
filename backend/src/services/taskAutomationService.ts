@@ -956,14 +956,15 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
         }
       }
 
-      // Prüfe ob bereits ein BankDetails-Task existiert
+      // Prüfe ob bereits ein BankDetails-Task existiert (prüfe beide Varianten für Abwärtskompatibilität)
       const existingTask = await prisma.task.findFirst({
         where: {
           organizationId: organizationId,
           responsibleId: userId,
-          title: {
-            contains: 'Bankverbindung eingeben'
-          }
+          OR: [
+            { title: { contains: 'Ingresar datos bancarios' } },
+            { title: { contains: 'Bankverbindung eingeben' } }
+          ]
         }
       });
       
@@ -976,8 +977,8 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
       // WICHTIG: Task ist dem User zugewiesen (responsibleId), daher kann roleId NICHT gesetzt werden
       const task = await prisma.task.create({
         data: {
-          title: 'Bankverbindung eingeben',
-          description: `Bitte geben Sie Ihre Bankverbindung im Profil ein, bevor Sie die Zeiterfassung nutzen können.\n\nLink: /profile`,
+          title: 'Ingresar datos bancarios',
+          description: `Por favor, ingrese sus datos bancarios en el perfil antes de poder utilizar el registro de tiempo.\n\nLink: /profile`,
           status: 'open',
           responsibleId: userId, // User ist verantwortlich für sein eigenes To-Do
           qualityControlId: adminUserId || userId, // QC = Admin (Fallback: User selbst)
@@ -989,8 +990,8 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
       // Notification an User
       await createNotificationIfEnabled({
         userId: userId,
-        title: 'Bankverbindung eingeben',
-        message: 'Bitte geben Sie Ihre Bankverbindung im Profil ein, bevor Sie die Zeiterfassung nutzen können.',
+        title: 'Ingresar datos bancarios',
+        message: 'Por favor, ingrese sus datos bancarios en el perfil antes de poder utilizar el registro de tiempo.',
         type: NotificationType.task,
         relatedEntityId: task.id,
         relatedEntityType: 'task'
@@ -1000,6 +1001,147 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
       return task;
     } catch (error) {
       console.error('[createUserBankDetailsTask] Fehler:', error);
+      // Logge Fehler, aber breche nicht ab
+      return null;
+    }
+  }
+
+  /**
+   * Erstellt automatisch ein To-Do für User, um Identitätsdokument hochzuladen
+   * Wird aufgerufen nach Organisation-Beitritt (nur für Kolumbien)
+   * User muss Identitätsdokument hochladen, damit Admin das Profil vervollständigen kann
+   */
+  static async createUserIdentificationDocumentTask(userId: number, organizationId: number) {
+    try {
+      // Prüfe: Organisation in Kolumbien?
+      const organization = await prisma.organization.findUnique({
+        where: { id: organizationId },
+        select: { country: true, settings: true }
+      });
+      
+      if (organization?.country !== 'CO') {
+        console.log(`[createUserIdentificationDocumentTask] Organisation ${organizationId} ist nicht in Kolumbien, überspringe Task-Erstellung`);
+        return null; // Nur für Kolumbien
+      }
+
+      // Hole User-Daten
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+        include: {
+          branches: {
+            take: 1,
+            include: { branch: true }
+          },
+          identificationDocuments: {
+            take: 1,
+            orderBy: { createdAt: 'desc' }
+          }
+        }
+      });
+      
+      if (!user) {
+        throw new Error('User nicht gefunden');
+      }
+
+      // Prüfe ob User bereits ein Identitätsdokument hat
+      if (user.identificationDocuments && user.identificationDocuments.length > 0) {
+        console.log(`[createUserIdentificationDocumentTask] User ${userId} hat bereits ein Identitätsdokument, überspringe Task-Erstellung`);
+        return null;
+      }
+
+      // Hole Branch (nutze bestehende Logik)
+      let userBranch = user.branches[0]?.branch;
+      if (!userBranch) {
+        const firstOrgBranch = await prisma.branch.findFirst({
+          where: { organizationId },
+          orderBy: { id: 'asc' }
+        });
+        if (!firstOrgBranch) {
+          throw new Error('Organisation hat keine Niederlassung');
+        }
+        userBranch = firstOrgBranch;
+      }
+
+      // Hole Admin-User für QC (nutze bestehende Logik)
+      const settings = organization.settings as any;
+      const lifecycleRoles = settings?.lifecycleRoles;
+      let adminRoleId: number | null = lifecycleRoles?.adminRoleId || null;
+      
+      // Fallback: Suche nach Admin-Rolle
+      if (!adminRoleId) {
+        const adminRole = await prisma.role.findFirst({
+          where: {
+            organizationId: organizationId,
+            name: { contains: 'Admin', mode: 'insensitive' }
+          }
+        });
+        if (adminRole) {
+          adminRoleId = adminRole.id;
+        }
+      }
+
+      let adminUserId: number | null = null;
+      if (adminRoleId) {
+        const adminUser = await prisma.user.findFirst({
+          where: {
+            roles: {
+              some: {
+                roleId: adminRoleId,
+                lastUsed: true
+              }
+            }
+          }
+        });
+        if (adminUser) {
+          adminUserId = adminUser.id;
+        }
+      }
+
+      // Prüfe ob bereits ein Identitätsdokument-Task existiert
+      const existingTask = await prisma.task.findFirst({
+        where: {
+          organizationId: organizationId,
+          responsibleId: userId,
+          OR: [
+            { title: { contains: 'Subir documento de identidad' } },
+            { title: { contains: 'Identitätsdokument hochladen' } }
+          ]
+        }
+      });
+      
+      if (existingTask) {
+        console.log(`[createUserIdentificationDocumentTask] Identitätsdokument-Task existiert bereits für User ${userId}`);
+        return existingTask;
+      }
+      
+      // Erstelle Task für User
+      // WICHTIG: Task ist dem User zugewiesen (responsibleId), daher kann roleId NICHT gesetzt werden
+      const task = await prisma.task.create({
+        data: {
+          title: 'Subir documento de identidad',
+          description: `Por favor, suba su documento de identidad (Cédula o Pasaporte) en el perfil. Los campos se completarán automáticamente.\n\nLink: /profile`,
+          status: 'open',
+          responsibleId: userId, // User ist verantwortlich für sein eigenes To-Do
+          qualityControlId: adminUserId || userId, // QC = Admin (Fallback: User selbst)
+          branchId: userBranch.id,
+          organizationId: organizationId
+        }
+      });
+      
+      // Notification an User
+      await createNotificationIfEnabled({
+        userId: userId,
+        title: 'Subir documento de identidad',
+        message: 'Por favor, suba su documento de identidad (Cédula o Pasaporte) en el perfil. Los campos se completarán automáticamente.',
+        type: NotificationType.task,
+        relatedEntityId: task.id,
+        relatedEntityType: 'task'
+      });
+      
+      console.log(`[createUserIdentificationDocumentTask] Identitätsdokument-Task erstellt: Task ID ${task.id} für User ${userId}`);
+      return task;
+    } catch (error) {
+      console.error('[createUserIdentificationDocumentTask] Fehler:', error);
       // Logge Fehler, aber breche nicht ab
       return null;
     }

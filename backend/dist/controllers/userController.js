@@ -2,6 +2,39 @@
 // TODO: Nach einem Server-Neustart müssen die Prisma-Types neu generiert werden mit:
 // cd backend && npx prisma generate
 // Die aktuellen Linter-Fehler entstehen durch nicht aktualisierte Types
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -15,7 +48,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getOnboardingAnalytics = exports.resetOnboarding = exports.trackOnboardingEvent = exports.completeOnboarding = exports.updateOnboardingProgress = exports.getOnboardingStatus = exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateInvoiceSettings = exports.getUserActiveLanguage = exports.updateUserSettings = exports.updateUserRoles = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsersForDropdown = exports.getAllUsers = void 0;
+exports.debugUserBranches = exports.getOnboardingAnalytics = exports.resetOnboarding = exports.trackOnboardingEvent = exports.completeOnboarding = exports.updateOnboardingProgress = exports.getOnboardingStatus = exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateInvoiceSettings = exports.getUserActiveLanguage = exports.updateUserSettings = exports.updateUserBranches = exports.updateUserRoles = exports.isProfileComplete = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsersForDropdown = exports.getAllUsers = void 0;
 const client_1 = require("@prisma/client");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const notificationController_1 = require("./notificationController");
@@ -126,6 +159,11 @@ const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                             }
                         }
                     }
+                },
+                branches: {
+                    include: {
+                        branch: true
+                    }
                 }
             }
         });
@@ -165,8 +203,17 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 salary: true,
                 normalWorkingHours: true,
                 gender: true,
+                phoneNumber: true,
+                country: true,
+                language: true,
+                profileComplete: true,
+                identificationNumber: true,
                 settings: true,
                 invoiceSettings: true,
+                identificationDocuments: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1 // Neuestes Dokument
+                },
                 roles: {
                     include: {
                         role: {
@@ -176,7 +223,8 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                                     select: {
                                         id: true,
                                         name: true,
-                                        displayName: true
+                                        displayName: true,
+                                        logo: true
                                     }
                                 }
                             }
@@ -190,10 +238,12 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
         // Die Rolle aus dem Token als aktive Rolle markieren
         if (!isNaN(roleId)) {
-            const modifiedUser = Object.assign(Object.assign({}, user), { roles: user.roles.map(roleEntry => (Object.assign(Object.assign({}, roleEntry), { lastUsed: roleEntry.role.id === roleId }))) });
+            const modifiedUser = Object.assign(Object.assign({}, user), { roles: user.roles.map(roleEntry => (Object.assign(Object.assign({}, roleEntry), { role: Object.assign(Object.assign({}, roleEntry.role), { organization: roleEntry.role.organization ? Object.assign(Object.assign({}, roleEntry.role.organization), { logo: roleEntry.role.organization.logo || null }) : null }), lastUsed: roleEntry.role.id === roleId }))) });
             return res.json(modifiedUser);
         }
-        res.json(user);
+        // Stelle sicher, dass das Logo-Feld explizit zurückgegeben wird
+        const userWithLogo = Object.assign(Object.assign({}, user), { roles: user.roles.map(roleEntry => (Object.assign(Object.assign({}, roleEntry), { role: Object.assign(Object.assign({}, roleEntry.role), { organization: roleEntry.role.organization ? Object.assign(Object.assign({}, roleEntry.role.organization), { logo: roleEntry.role.organization.logo || null }) : null }) }))) });
+        res.json(userWithLogo);
     }
     catch (error) {
         console.error('Error in getCurrentUser:', error);
@@ -370,7 +420,7 @@ exports.updateUserById = updateUserById;
 // Benutzerprofil aktualisieren
 const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary, normalWorkingHours, gender } = req.body;
+        const { username, email, firstName, lastName, birthday, bankDetails, contract, salary, normalWorkingHours, gender, phoneNumber } = req.body;
         const userId = parseInt(req.userId, 10);
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
@@ -406,7 +456,26 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 message: 'Ungültiger gender-Wert. Erlaubt: male, female, other'
             });
         }
-        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract !== undefined && { contract: contract || null })), (salary && { salary: parseFloat(salary) })), (normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (gender !== undefined && { gender: gender || null }));
+        // Validiere Telefonnummer-Format falls vorhanden
+        if (phoneNumber && phoneNumber.trim() !== '') {
+            // Validiere Format: + gefolgt von 1-15 Ziffern
+            const phoneRegex = /^\+[1-9]\d{1,14}$/;
+            const normalizedPhone = phoneNumber.replace(/[\s-]/g, '');
+            if (!phoneRegex.test(normalizedPhone)) {
+                return res.status(400).json({
+                    message: 'Ungültiges Telefonnummer-Format. Format: +LändercodeNummer (z.B. +573001234567)'
+                });
+            }
+        }
+        // Normalisiere Telefonnummer (falls vorhanden)
+        let normalizedPhoneNumber = null;
+        if (phoneNumber && phoneNumber.trim() !== '') {
+            normalizedPhoneNumber = phoneNumber.replace(/[\s-]/g, '');
+            if (!normalizedPhoneNumber.startsWith('+')) {
+                normalizedPhoneNumber = '+' + normalizedPhoneNumber;
+            }
+        }
+        const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract !== undefined && { contract: contract || null })), (salary && { salary: parseFloat(salary) })), (normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (gender !== undefined && { gender: gender || null })), (phoneNumber !== undefined && { phoneNumber: normalizedPhoneNumber }));
         const updatedUser = yield prisma.user.update({
             where: { id: userId },
             data: updateData,
@@ -422,6 +491,10 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 salary: true,
                 normalWorkingHours: true,
                 gender: true,
+                phoneNumber: true,
+                country: true,
+                language: true,
+                profileComplete: true,
                 roles: {
                     include: {
                         role: {
@@ -440,6 +513,18 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             }
         });
+        // Prüfe Profilvollständigkeit nach Update (username, email, language - country NICHT nötig)
+        const isComplete = !!(updatedUser.username &&
+            updatedUser.email &&
+            updatedUser.language);
+        // Update profileComplete, falls sich der Status geändert hat
+        if (isComplete !== updatedUser.profileComplete) {
+            yield prisma.user.update({
+                where: { id: userId },
+                data: { profileComplete: isComplete }
+            });
+            updatedUser.profileComplete = isComplete;
+        }
         // Automatisch epsRequired setzen basierend auf contract-Typ
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
@@ -540,6 +625,56 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.updateProfile = updateProfile;
+// Prüfe Profilvollständigkeit
+const isProfileComplete = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        if (isNaN(userId)) {
+            return res.status(401).json({ message: 'Nicht authentifiziert' });
+        }
+        const user = yield prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                username: true,
+                email: true,
+                country: true,
+                language: true,
+                profileComplete: true
+            }
+        });
+        if (!user) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+        // Prüfe Felder (username, email, language - country NICHT nötig)
+        const missingFields = [];
+        if (!user.username)
+            missingFields.push('username');
+        if (!user.email)
+            missingFields.push('email');
+        if (!user.language)
+            missingFields.push('language');
+        const complete = missingFields.length === 0;
+        // Update profileComplete, falls noch nicht gesetzt
+        if (complete !== user.profileComplete) {
+            yield prisma.user.update({
+                where: { id: userId },
+                data: { profileComplete: complete }
+            });
+        }
+        return res.json({
+            complete,
+            missingFields
+        });
+    }
+    catch (error) {
+        console.error('Error in isProfileComplete:', error);
+        res.status(500).json({
+            message: 'Fehler bei der Profilprüfung',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.isProfileComplete = isProfileComplete;
 // Benutzerrollen aktualisieren
 const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -690,6 +825,169 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
     }
 });
 exports.updateUserRoles = updateUserRoles;
+// Benutzer-Branches aktualisieren
+const updateUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.params.id, 10);
+        if (isNaN(userId)) {
+            return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
+        }
+        const { branchIds } = req.body;
+        if (!Array.isArray(branchIds)) {
+            return res.status(400).json({ message: 'branchIds muss ein Array sein' });
+        }
+        // Überprüfe, ob der Benutzer existiert
+        const userExists = yield prisma.user.findUnique({
+            where: { id: userId }
+        });
+        if (!userExists) {
+            return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+        }
+        // Überprüfe, ob alle Branches existieren und zur Organisation gehören
+        const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
+        console.log('[updateUserBranches] Branch Filter:', branchFilter);
+        console.log('[updateUserBranches] Requested branchIds:', branchIds);
+        console.log('[updateUserBranches] Organization ID:', req.organizationId);
+        const existingBranches = yield prisma.branch.findMany({
+            where: Object.assign({ id: {
+                    in: branchIds
+                } }, branchFilter)
+        });
+        console.log('[updateUserBranches] Found branches:', existingBranches.map(b => ({ id: b.id, name: b.name, organizationId: b.organizationId })));
+        console.log('[updateUserBranches] Expected:', branchIds.length, 'Found:', existingBranches.length);
+        if (existingBranches.length !== branchIds.length) {
+            // Prüfe welche Branches fehlen
+            const foundIds = existingBranches.map(b => b.id);
+            const missingIds = branchIds.filter(id => !foundIds.includes(id));
+            // Prüfe ob die fehlenden Branches existieren, aber zur falschen Organisation gehören
+            const allRequestedBranches = yield prisma.branch.findMany({
+                where: {
+                    id: { in: branchIds }
+                },
+                select: {
+                    id: true,
+                    name: true,
+                    organizationId: true
+                }
+            });
+            console.log('[updateUserBranches] All requested branches (without filter):', allRequestedBranches);
+            return res.status(400).json({
+                message: `Eine oder mehrere Niederlassungen wurden nicht gefunden oder gehören nicht zu Ihrer Organisation. Fehlende IDs: ${missingIds.join(', ')}`,
+                missingIds,
+                requestedBranchIds: branchIds,
+                foundBranchIds: foundIds,
+                organizationId: req.organizationId
+            });
+        }
+        // Aktuelle Benutzer-Branches abrufen, um lastUsed-Status zu prüfen
+        const currentUserBranches = yield prisma.usersBranches.findMany({
+            where: { userId },
+            orderBy: { branchId: 'asc' }
+        });
+        // Prüfen, welche Branch aktuell als lastUsed markiert ist
+        const currentLastUsedBranch = currentUserBranches.find(ub => ub.lastUsed);
+        // Lösche alle vorhandenen Benutzer-Branches
+        yield prisma.usersBranches.deleteMany({
+            where: { userId }
+        });
+        // Erstelle neue Benutzer-Branches
+        const userBranches = yield Promise.all(branchIds.map((branchId) => __awaiter(void 0, void 0, void 0, function* () {
+            return prisma.usersBranches.create({
+                data: {
+                    userId,
+                    branchId,
+                    lastUsed: false
+                }
+            });
+        })));
+        // Wenn Branches zugewiesen wurden, setze lastUsed logisch
+        if (branchIds.length > 0) {
+            // Sortiere die erstellten UserBranches nach Branch-ID
+            const sortedUserBranches = [...userBranches].sort((a, b) => a.branchId - b.branchId);
+            let branchToMarkAsLastUsed = sortedUserBranches[0]; // Standardmäßig die erste Branch
+            // Wenn zuvor eine Branch als lastUsed markiert war, versuche diese zu finden
+            if (currentLastUsedBranch) {
+                // Prüfe, ob die frühere lastUsed-Branch noch in den neuen Branches vorhanden ist
+                const previousBranchStillExists = sortedUserBranches.find(ub => ub.branchId === currentLastUsedBranch.branchId);
+                if (previousBranchStillExists) {
+                    // Wenn ja, behalte diese als lastUsed
+                    branchToMarkAsLastUsed = previousBranchStillExists;
+                }
+                else {
+                    // Wenn nicht, finde die nächsthöhere Branch-ID
+                    const higherBranches = sortedUserBranches.filter(ub => ub.branchId > currentLastUsedBranch.branchId);
+                    if (higherBranches.length > 0) {
+                        // Wenn es höhere Branches gibt, nimm die mit der niedrigsten ID
+                        branchToMarkAsLastUsed = higherBranches[0];
+                    }
+                    // Sonst bleibt es bei der ersten Branch
+                }
+            }
+            // Markiere die ausgewählte Branch als lastUsed
+            yield prisma.usersBranches.update({
+                where: {
+                    id: branchToMarkAsLastUsed.id
+                },
+                data: {
+                    lastUsed: true
+                }
+            });
+        }
+        // Benutzer mit aktualisierten Branches abrufen
+        const updatedUser = yield prisma.user.findUnique({
+            where: { id: userId },
+            include: {
+                branches: {
+                    include: {
+                        branch: true
+                    }
+                }
+            }
+        });
+        // Benachrichtigung an den Benutzer senden, dessen Branches aktualisiert wurden
+        yield (0, notificationController_1.createNotificationIfEnabled)({
+            userId: userId,
+            title: 'Deine Niederlassungen wurden aktualisiert',
+            message: `Deine zugewiesenen Niederlassungen wurden aktualisiert. Melde dich bei Fragen an einen Administrator.`,
+            type: client_1.NotificationType.user,
+            relatedEntityId: userId,
+            relatedEntityType: 'update'
+        });
+        // Benachrichtigung für Administratoren der Organisation senden
+        const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
+        const admins = yield prisma.user.findMany({
+            where: Object.assign(Object.assign({}, userFilter), { roles: {
+                    some: {
+                        role: {
+                            name: 'Admin',
+                            organizationId: req.organizationId
+                        }
+                    }
+                }, id: {
+                    not: userId // Nicht an den aktualisierten Benutzer senden, falls dieser Admin ist
+                } })
+        });
+        for (const admin of admins) {
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: admin.id,
+                title: 'Benutzer-Niederlassungen aktualisiert',
+                message: `Die Niederlassungen für "${updatedUser.firstName} ${updatedUser.lastName}" wurden aktualisiert.`,
+                type: client_1.NotificationType.user,
+                relatedEntityId: userId,
+                relatedEntityType: 'update'
+            });
+        }
+        res.json(updatedUser);
+    }
+    catch (error) {
+        console.error('Error in updateUserBranches:', error);
+        res.status(500).json({
+            message: 'Fehler beim Aktualisieren der Benutzer-Niederlassungen',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.updateUserBranches = updateUserBranches;
 // Benutzereinstellungen aktualisieren
 const updateUserSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -866,6 +1164,26 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
             return res.status(404).json({
                 message: 'Diese Rolle ist dem Benutzer nicht zugewiesen'
             });
+        }
+        // Prüfe, ob die Rolle für die aktive Branch verfügbar ist
+        const activeBranch = yield prisma.usersBranches.findFirst({
+            where: {
+                userId,
+                lastUsed: true
+            },
+            select: {
+                branchId: true
+            }
+        });
+        if (activeBranch) {
+            // Importiere die Hilfsfunktion dynamisch, um Zirkelimporte zu vermeiden
+            const { isRoleAvailableForBranch } = yield Promise.resolve().then(() => __importStar(require('./roleController')));
+            const isAvailable = yield isRoleAvailableForBranch(roleId, activeBranch.branchId);
+            if (!isAvailable) {
+                return res.status(400).json({
+                    message: 'Diese Rolle ist für die aktive Branch nicht verfügbar'
+                });
+            }
         }
         // Transaktion starten
         yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
@@ -1565,4 +1883,166 @@ const getOnboardingAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, f
     }
 });
 exports.getOnboardingAnalytics = getOnboardingAnalytics;
+// Debug-Endpoint: Zeigt alle relevanten Informationen für den aktuellen User
+const debugUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = parseInt(req.userId, 10);
+        if (!userId || isNaN(userId) || userId <= 0) {
+            return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
+        }
+        // 1. User-Informationen
+        const user = yield prisma.user.findUnique({
+            where: { id: userId },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                firstName: true,
+                lastName: true
+            }
+        });
+        // 2. Alle Branches der Organisation
+        const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
+        const allOrgBranches = yield prisma.branch.findMany({
+            where: branchFilter,
+            select: {
+                id: true,
+                name: true,
+                organizationId: true
+            },
+            orderBy: { name: 'asc' }
+        });
+        // 3. User-Branches (zugewiesene Branches)
+        const userBranches = yield prisma.usersBranches.findMany({
+            where: { userId },
+            include: {
+                branch: {
+                    select: {
+                        id: true,
+                        name: true,
+                        organizationId: true
+                    }
+                }
+            },
+            orderBy: { branchId: 'asc' }
+        });
+        // 4. Aktive Rolle
+        const activeRole = yield prisma.userRole.findFirst({
+            where: {
+                userId,
+                lastUsed: true
+            },
+            include: {
+                role: {
+                    select: {
+                        id: true,
+                        name: true,
+                        allBranches: true,
+                        organizationId: true,
+                        branches: {
+                            include: {
+                                branch: {
+                                    select: {
+                                        id: true,
+                                        name: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        // 5. Alle Rollen des Users
+        const userRoles = yield prisma.userRole.findMany({
+            where: { userId },
+            include: {
+                role: {
+                    select: {
+                        id: true,
+                        name: true,
+                        allBranches: true,
+                        organizationId: true
+                    }
+                }
+            }
+        });
+        // 6. Prüfe für jede Branch, ob sie für die aktive Rolle verfügbar ist
+        const branchAvailability = allOrgBranches.map(branch => {
+            if (!activeRole) {
+                return {
+                    branch: { id: branch.id, name: branch.name },
+                    isAssignedToUser: userBranches.some(ub => ub.branchId === branch.id),
+                    isAvailableForActiveRole: null,
+                    reason: 'Keine aktive Rolle'
+                };
+            }
+            const role = activeRole.role;
+            let isAvailable = false;
+            let reason = '';
+            if (role.allBranches) {
+                isAvailable = true;
+                reason = 'Rolle gilt für alle Branches (allBranches = true)';
+            }
+            else {
+                const roleBranch = role.branches.find(rb => rb.branch.id === branch.id);
+                if (roleBranch) {
+                    isAvailable = true;
+                    reason = 'Rolle ist für diese Branch zugewiesen (RoleBranch Eintrag)';
+                }
+                else {
+                    isAvailable = false;
+                    reason = 'Rolle ist nicht für diese Branch zugewiesen (kein RoleBranch Eintrag)';
+                }
+            }
+            return {
+                branch: { id: branch.id, name: branch.name },
+                isAssignedToUser: userBranches.some(ub => ub.branchId === branch.id),
+                isAvailableForActiveRole: isAvailable,
+                reason
+            };
+        });
+        res.json({
+            user,
+            organizationId: req.organizationId,
+            allOrgBranches,
+            userBranches: userBranches.map(ub => ({
+                branchId: ub.branchId,
+                branchName: ub.branch.name,
+                lastUsed: ub.lastUsed
+            })),
+            activeRole: activeRole ? {
+                roleId: activeRole.role.id,
+                roleName: activeRole.role.name,
+                allBranches: activeRole.role.allBranches,
+                organizationId: activeRole.role.organizationId,
+                roleBranches: activeRole.role.branches.map(rb => ({
+                    branchId: rb.branch.id,
+                    branchName: rb.branch.name
+                }))
+            } : null,
+            allUserRoles: userRoles.map(ur => ({
+                roleId: ur.role.id,
+                roleName: ur.role.name,
+                allBranches: ur.role.allBranches,
+                lastUsed: ur.lastUsed
+            })),
+            branchAvailability,
+            summary: {
+                totalOrgBranches: allOrgBranches.length,
+                assignedBranches: userBranches.length,
+                activeRoleName: (activeRole === null || activeRole === void 0 ? void 0 : activeRole.role.name) || 'Keine',
+                branchesVisibleInHeader: branchAvailability.filter(ba => ba.isAssignedToUser && (ba.isAvailableForActiveRole === true || ba.isAvailableForActiveRole === null)).length
+            }
+        });
+    }
+    catch (error) {
+        console.error('Error in debugUserBranches:', error);
+        res.status(500).json({
+            message: 'Fehler beim Debug-Abruf',
+            error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+        });
+    }
+});
+exports.debugUserBranches = debugUserBranches;
 //# sourceMappingURL=userController.js.map

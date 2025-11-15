@@ -160,7 +160,8 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                                     select: {
                                         id: true,
                                         name: true,
-                                        displayName: true
+                                        displayName: true,
+                                        logo: true
                                     }
                                 }
                             }
@@ -214,6 +215,17 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             userId: user.id,
             roleId: activeRole.roleId
         }, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '24h' });
+        // Prüfe Profilvollständigkeit (username, email, language - country NICHT nötig)
+        const isComplete = !!(user.username &&
+            user.email &&
+            user.language);
+        // Update profileComplete, falls noch nicht gesetzt
+        if (isComplete !== user.profileComplete) {
+            yield prisma.user.update({
+                where: { id: user.id },
+                data: { profileComplete: isComplete }
+            });
+        }
         // Bereite die Benutzerinformationen für die Antwort vor
         const userResponse = {
             id: user.id,
@@ -221,6 +233,8 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
+            language: user.language,
+            profileComplete: isComplete,
             roles: user.roles.map(r => ({
                 role: {
                     id: r.role.id,
@@ -229,7 +243,8 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                     organization: r.role.organization ? {
                         id: r.role.organization.id,
                         name: r.role.organization.name,
-                        displayName: r.role.organization.displayName
+                        displayName: r.role.organization.displayName,
+                        logo: r.role.organization.logo
                     } : null
                 },
                 lastUsed: r.lastUsed
@@ -282,7 +297,8 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                                     select: {
                                         id: true,
                                         name: true,
-                                        displayName: true
+                                        displayName: true,
+                                        logo: true
                                     }
                                 }
                             }
@@ -308,7 +324,8 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     organization: r.role.organization ? {
                         id: r.role.organization.id,
                         name: r.role.organization.name,
-                        displayName: r.role.organization.displayName
+                        displayName: r.role.organization.displayName,
+                        logo: r.role.organization.logo
                     } : null
                 },
                 lastUsed: r.lastUsed

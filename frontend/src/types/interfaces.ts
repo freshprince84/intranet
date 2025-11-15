@@ -52,6 +52,7 @@ export interface Organization {
   id: number;
   name: string;
   displayName: string | null;
+  logo?: string | null;
 }
 
 export interface Role {

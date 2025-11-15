@@ -211,6 +211,32 @@ export const addDocument = async (req: Request, res: Response) => {
                 if (userOrganization && userOrganization.country === 'CO') {
                   // Erstelle Admin-Onboarding-Task
                   await TaskAutomationService.createAdminOnboardingTask(userId, userOrganization.id);
+                  
+                  // Markiere Identitätsdokument-To-Do als erledigt, falls vorhanden
+                  try {
+                    const identificationDocumentTask = await prisma.task.findFirst({
+                      where: {
+                        organizationId: userOrganization.id,
+                        responsibleId: userId,
+                        OR: [
+                          { title: { contains: 'Subir documento de identidad' } },
+                          { title: { contains: 'Identitätsdokument hochladen' } }
+                        ],
+                        status: { not: 'done' }
+                      }
+                    });
+                    
+                    if (identificationDocumentTask) {
+                      await prisma.task.update({
+                        where: { id: identificationDocumentTask.id },
+                        data: { status: 'done' }
+                      });
+                      console.log(`[addDocument] Identitätsdokument-To-Do als erledigt markiert: Task ID ${identificationDocumentTask.id} für User ${userId}`);
+                    }
+                  } catch (taskUpdateError) {
+                    console.error('[addDocument] Fehler beim Markieren des Identitätsdokument-To-Dos als erledigt:', taskUpdateError);
+                    // Fehler blockiert nicht die Dokumentenerstellung
+                  }
                 }
               } catch (recognitionError) {
                 console.error('[addDocument] Fehler bei automatischer Dokumentenerkennung:', recognitionError);

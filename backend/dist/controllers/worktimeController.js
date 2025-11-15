@@ -76,6 +76,12 @@ const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (!user) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
+        // Prüfe ob bankDetails ausgefüllt ist (erforderlich für Zeiterfassung)
+        if (!user.bankDetails || user.bankDetails.trim() === '') {
+            return res.status(403).json({
+                message: 'Bitte geben Sie zuerst Ihre Bankverbindung im Profil ein, bevor Sie die Zeiterfassung nutzen können.'
+            });
+        }
         // Verwende direkt das aktuelle Datum oder das übergebene Startdatum
         const now = startTime ? new Date(startTime) : new Date();
         // Erstelle das Datum für den Anfang und das Ende des aktuellen Tages (entsprechend getWorktimes)
