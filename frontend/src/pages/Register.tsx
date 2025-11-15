@@ -42,13 +42,10 @@ const Register: React.FC = () => {
     
     setLoading(true);
     try {
-      // Aktuelle Sprache aus i18n nehmen
-      const currentLanguage = i18n.language || 'de';
-      
       await authService.register({
         email: formData.email,
         password: formData.password,
-        language: currentLanguage
+        language: formData.language
       });
       navigate('/dashboard');
     } catch (err: any) {
@@ -126,6 +123,26 @@ const Register: React.FC = () => {
                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
                 placeholder={t('register.confirmPasswordPlaceholder')}
               />
+            </div>
+            <div>
+              <label htmlFor="language" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                {t('register.language')} <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="language"
+                id="language"
+                value={formData.language}
+                onChange={(e) => {
+                  setFormData({ ...formData, language: e.target.value });
+                  i18n.changeLanguage(e.target.value);
+                }}
+                required
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              >
+                <option value="es">{t('languages.es')}</option>
+                <option value="de">{t('languages.de')}</option>
+                <option value="en">{t('languages.en')}</option>
+              </select>
             </div>
           </div>
           <div>

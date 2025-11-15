@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import axiosInstance from '../config/axios.ts';
@@ -58,8 +58,9 @@ const OnboardingContext = createContext<OnboardingContextType | undefined>(undef
 
 export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: OnboardingStep[] }> = ({ children, steps }) => {
   const { user } = useAuth();
-  const { permissions, currentRole } = usePermissions();
+  const { permissions, currentRole, isProfileComplete } = usePermissions();
   const location = useLocation();
+  const navigate = useNavigate();
   const [isActive, setIsActive] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -126,9 +127,25 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
   const startTour = useCallback(async () => {
     if (!user) return;
 
+    // Prüfe ob Profil unvollständig ist (nur wenn User Mitglied einer Organisation ist)
+    const hasOrganization = user.roles?.some((r: any) => r.role.organization !== null) || false;
+    const profileIncomplete = hasOrganization && !isProfileComplete();
+    
+    // Finde Profil-Schritt
+    const profileStepIndex = filteredSteps.findIndex(s => s.id === 'profile_complete');
+    const shouldStartWithProfile = profileIncomplete && profileStepIndex !== -1;
+
+    // Wenn Profil unvollständig, starte mit Profil-Schritt
+    const initialStep = shouldStartWithProfile ? profileStepIndex : 0;
+    
     setIsActive(true);
-    setCurrentStep(0);
+    setCurrentStep(initialStep);
     setCompletedSteps([]);
+
+    // Navigiere zur Profil-Seite, wenn Profil unvollständig
+    if (shouldStartWithProfile && location.pathname !== '/profile') {
+      navigate('/profile');
+    }
 
     // Track Start-Event
     await trackEvent('tour', 'Onboarding Tour', 'started');
@@ -136,14 +153,14 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
     // Speichere Start-Zeitpunkt
     try {
       await axiosInstance.put(API_ENDPOINTS.USERS.ONBOARDING.PROGRESS, {
-        currentStep: 0,
+        currentStep: initialStep,
         completedSteps: [],
         onboardingStartedAt: new Date().toISOString()
       });
     } catch (error) {
       console.error('Fehler beim Speichern des Start-Zeitpunkts:', error);
     }
-  }, [user, trackEvent]);
+  }, [user, trackEvent, filteredSteps, isProfileComplete, location.pathname, navigate]);
 
   // Lade Onboarding-Status beim Start
   useEffect(() => {
@@ -162,20 +179,36 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
         setStatus(statusData);
 
         if (!statusData.onboardingCompleted) {
-          // Wenn Onboarding nicht abgeschlossen, lade Fortschritt
-          if (statusData.onboardingProgress) {
-            setCurrentStep(statusData.onboardingProgress.currentStep);
-            setCompletedSteps(statusData.onboardingProgress.completedSteps);
-          }
-          // Starte Tour automatisch, wenn noch nicht gestartet
-          // WICHTIG: Tour startet auch wenn User zu /profile umgeleitet wird
-          if (!statusData.onboardingStartedAt) {
-            // Warte noch etwas, damit UI vollständig geladen ist
-            setTimeout(async () => {
-              await startTour();
-            }, 500);
-          } else {
+          // Prüfe ob Profil vollständig ist (nur wenn User Mitglied einer Organisation ist)
+          const hasOrganization = user.roles?.some((r: any) => r.role.organization !== null) || false;
+          const profileComplete = hasOrganization ? isProfileComplete() : true; // Vor Organisation: Profil gilt als vollständig
+          
+          // Wenn Profil vollständig ist UND Tour bereits gestartet wurde, setze Tour fort
+          // Wenn Profil vollständig ist UND Tour noch nicht gestartet wurde, starte Tour NICHT
+          if (profileComplete && statusData.onboardingStartedAt) {
+            // Profil vollständig und Tour bereits gestartet → Tour fortsetzen
+            if (statusData.onboardingProgress) {
+              setCurrentStep(statusData.onboardingProgress.currentStep);
+              setCompletedSteps(statusData.onboardingProgress.completedSteps);
+            }
             setIsActive(true);
+          } else if (!profileComplete) {
+            // Profil unvollständig → Tour starten/forsetzen
+            if (statusData.onboardingProgress) {
+              setCurrentStep(statusData.onboardingProgress.currentStep);
+              setCompletedSteps(statusData.onboardingProgress.completedSteps);
+            }
+            if (!statusData.onboardingStartedAt) {
+              // Warte noch etwas, damit UI vollständig geladen ist
+              setTimeout(async () => {
+                await startTour();
+              }, 500);
+            } else {
+              setIsActive(true);
+            }
+          } else {
+            // Profil vollständig, aber Tour noch nicht gestartet → Tour nicht starten
+            setIsActive(false);
           }
         }
       } catch (error) {
@@ -333,10 +366,33 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
   ) => {
     const stepIndex = filteredSteps.findIndex(s => s.id === stepId);
     if (stepIndex !== -1 && !completedSteps.includes(stepIndex)) {
-      setCompletedSteps(prev => [...prev, stepIndex]);
+      const newCompletedSteps = [...completedSteps, stepIndex];
+      setCompletedSteps(newCompletedSteps);
       await trackEvent(stepId, stepTitle, 'completed', duration);
+      
+      // Wenn Profil-Schritt abgeschlossen, automatisch zum nächsten Schritt wechseln
+      if (stepId === 'profile_complete' && currentStep === stepIndex) {
+        // Warte kurz, damit UI aktualisiert werden kann
+        setTimeout(() => {
+          setCurrentStep(prevStep => {
+            if (prevStep < filteredSteps.length - 1) {
+              const nextStepIndex = prevStep + 1;
+              saveProgress(nextStepIndex, newCompletedSteps);
+              
+              // Navigiere zum Dashboard, wenn nächster Schritt dort ist
+              const nextStep = filteredSteps[nextStepIndex];
+              if (nextStep?.route && nextStep.route !== '/profile') {
+                navigate(nextStep.route);
+              }
+              
+              return nextStepIndex;
+            }
+            return prevStep;
+          });
+        }, 500);
+      }
     }
-  }, [filteredSteps, completedSteps, trackEvent]);
+  }, [filteredSteps, completedSteps, trackEvent, currentStep, saveProgress, navigate]);
 
   // Tour zurücksetzen
   const resetTour = useCallback(async () => {

@@ -241,7 +241,10 @@
     "completeProfile": "Please complete your profile by filling in all required fields.",
     "documents": "Identification Documents",
     "profileTab": "Profile",
-    "documentsTab": "Documents"
+    "documentsTab": "Documents",
+    "identificationDocument": "Identification Document",
+    "uploadDocument": "Upload Document",
+    "uploadDocumentHint": "Please upload your identification document (Cédula or Passport). The fields will be automatically filled."
   },
   "organization": {
     "title": "Organization",
@@ -2174,6 +2177,7 @@
     "loadError": "Error loading invoices"
   },
   "onboarding": {
+    "waiting": "Please complete your profile...",
     "welcome": {
       "title": "Welcome to the Intranet!",
       "description": "We'll guide you through the most important features of the application. This tour will show you step by step how to use the different features."
@@ -2190,6 +2194,10 @@
       "of": "of"
     },
     "steps": {
+      "profile_complete": {
+        "title": "Complete your profile",
+        "description": "To get started, you need to complete your profile with basic information. Please fill in the required fields: username, email, country, and language. Once saved, we'll continue with the tour."
+      },
       "welcome": {
         "title": "Welcome!",
         "description": "Welcome to the Intranet! This introduction tour will show you the most important features. You can skip it at any time or restart it later in the settings."

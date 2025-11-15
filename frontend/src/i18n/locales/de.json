@@ -241,7 +241,10 @@
     "completeProfile": "Bitte vervollständigen Sie Ihr Profil, indem Sie alle erforderlichen Felder ausfüllen.",
     "documents": "Identifikationsdokumente",
     "profileTab": "Profil",
-    "documentsTab": "Identifikationsdokumente"
+    "documentsTab": "Identifikationsdokumente",
+    "identificationDocument": "Identifikationsdokument",
+    "uploadDocument": "Dokument hochladen",
+    "uploadDocumentHint": "Bitte laden Sie Ihr Identifikationsdokument (Cédula oder Pasaporte) hoch. Die Felder werden automatisch ausgefüllt."
   },
   "requests": {
     "title": "Requests",
@@ -2240,6 +2243,7 @@
     "loadError": "Fehler beim Laden der Rechnungen"
   },
   "onboarding": {
+    "waiting": "Bitte vervollständigen Sie Ihr Profil...",
     "welcome": {
       "title": "Willkommen im Intranet!",
       "description": "Wir führen Sie durch die wichtigsten Funktionen der Anwendung. Diese Tour zeigt Ihnen Schritt für Schritt, wie Sie die verschiedenen Features nutzen können."
@@ -2256,6 +2260,10 @@
       "of": "von"
     },
     "steps": {
+      "profile_complete": {
+        "title": "Profil vervollständigen",
+        "description": "Um zu beginnen, müssen Sie Ihr Profil mit den grundlegenden Informationen vervollständigen. Bitte füllen Sie die Pflichtfelder aus: Benutzername, E-Mail, Land und Sprache. Nach dem Speichern setzen wir die Tour fort."
+      },
       "welcome": {
         "title": "Willkommen!",
         "description": "Herzlich willkommen im Intranet! Diese Einführungstour zeigt Ihnen die wichtigsten Funktionen. Sie können jederzeit überspringen oder später in den Einstellungen neu starten."
