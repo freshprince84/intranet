@@ -83,6 +83,13 @@ export const authMiddleware = async (
     const activeRole = user.roles.find(r => r.lastUsed);
     if (activeRole) {
       req.roleId = String(activeRole.role.id);
+      console.log(`[authMiddleware] ✅ Aktive Rolle gefunden: "${activeRole.role.name}" (ID: ${activeRole.role.id})`);
+    } else {
+      console.error(`[authMiddleware] ❌ Keine aktive Rolle gefunden für User ${user.id}`);
+      console.log(`[authMiddleware] Verfügbare Rollen: ${user.roles.length}`);
+      user.roles.forEach(r => {
+        console.log(`   - ${r.role.name} (ID: ${r.role.id}), lastUsed: ${r.lastUsed}`);
+      });
     }
     
     next();
