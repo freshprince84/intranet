@@ -11,7 +11,8 @@ const Register: React.FC = () => {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    language: i18n.language || 'de'
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);

@@ -60,15 +60,15 @@ export class WhatsAppMessageHandler {
         return await this.getLanguageResponse(branchId, normalizedPhone, 'requests_require_auth');
       }
 
-      // Keyword: "todos" / "to do's" - Liste aller Tasks
-      if (normalizedText === 'todos' || normalizedText === 'to do\'s' || normalizedText === 'todo' || normalizedText === 'to dos') {
+      // Keyword: "todos" / "to do's" - Liste aller Tasks (PLURAL für Liste)
+      if (normalizedText === 'todos' || normalizedText === 'to do\'s' || normalizedText === 'to dos') {
         if (user) {
           return await this.handleTodosKeyword(user.id, branchId, conversation);
         }
         return await this.getLanguageResponse(branchId, normalizedPhone, 'todos_require_auth');
       }
 
-      // Keyword: "request" - Starte Request-Erstellung
+      // Keyword: "request" - Starte Request-Erstellung (SINGULAR für Erstellung)
       if (normalizedText === 'request' && conversation.state === 'idle') {
         if (!user) {
           return await this.getLanguageResponse(branchId, normalizedPhone, 'request_creation_require_auth');
@@ -76,7 +76,7 @@ export class WhatsAppMessageHandler {
         return await this.startRequestCreation(normalizedPhone, branchId, conversation);
       }
 
-      // Keyword: "todo" - Starte Task-Erstellung
+      // Keyword: "todo" - Starte Task-Erstellung (SINGULAR für Erstellung)
       if (normalizedText === 'todo' && conversation.state === 'idle') {
         if (!user) {
           return await this.getLanguageResponse(branchId, normalizedPhone, 'task_creation_require_auth');
@@ -737,17 +737,6 @@ export class WhatsAppMessageHandler {
 
           const responsibleId = context.responsibleId;
           let description = messageText || 'Task via WhatsApp';
-          
-          // Füge Media-Info hinzu, falls vorhanden
-          if (mediaUrl) {
-            const language = LanguageDetectionService.detectLanguageFromPhoneNumber(phoneNumber);
-            const mediaNote: Record<string, string> = {
-              es: '\n\n📷 Imagen adjunta (Media ID: ' + mediaUrl + ')',
-              de: '\n\n📷 Bild angehängt (Media ID: ' + mediaUrl + ')',
-              en: '\n\n📷 Image attached (Media ID: ' + mediaUrl + ')'
-            };
-            description += mediaNote[language] || mediaNote.es;
-          }
 
           // Hole Quality Control User (erster Admin oder Verantwortlicher)
           const qualityControlUser = await prisma.user.findFirst({
@@ -792,6 +781,54 @@ export class WhatsAppMessageHandler {
               organizationId: branch?.organizationId || null
             }
           });
+
+          // Lade und speichere Media, falls vorhanden
+          if (mediaUrl) {
+            try {
+              console.log(`[WhatsApp Message Handler] Lade Media ${mediaUrl} für Task ${task.id}...`);
+              
+              const whatsappService = await WhatsAppService.getServiceForBranch(branchId);
+              const mediaData = await whatsappService.downloadMedia(mediaUrl);
+
+              // Speichere Media als TaskAttachment
+              const UPLOAD_DIR_TASK = path.join(__dirname, '../../uploads/task-attachments');
+              if (!fs.existsSync(UPLOAD_DIR_TASK)) {
+                fs.mkdirSync(UPLOAD_DIR_TASK, { recursive: true });
+              }
+
+              const uniqueFileName = `${uuidv4()}${path.extname(mediaData.fileName)}`;
+              const filePath = path.join(UPLOAD_DIR_TASK, uniqueFileName);
+
+              fs.writeFileSync(filePath, mediaData.buffer);
+
+              const attachment = await prisma.taskAttachment.create({
+                data: {
+                  taskId: task.id,
+                  fileName: mediaData.fileName,
+                  fileType: mediaData.mimeType,
+                  fileSize: mediaData.buffer.length,
+                  filePath: uniqueFileName
+                }
+              });
+
+              console.log(`[WhatsApp Message Handler] Media erfolgreich als Attachment gespeichert für Task ${task.id}, Attachment ID: ${attachment.id}`);
+
+              // Aktualisiere Beschreibung mit Markdown-Link zum Attachment
+              // Format: ![filename](/api/tasks/{taskId}/attachments/{attachmentId})
+              const attachmentUrl = `/api/tasks/${task.id}/attachments/${attachment.id}`;
+              const markdownImageLink = `\n\n![${mediaData.fileName}](${attachmentUrl})`;
+              
+              await prisma.task.update({
+                where: { id: task.id },
+                data: {
+                  description: description + markdownImageLink
+                }
+              });
+            } catch (error) {
+              console.error(`[WhatsApp Message Handler] Fehler beim Herunterladen/Speichern von Media:`, error);
+              // Weiter ohne Media - Task wurde bereits erstellt
+            }
+          }
 
           // Reset Conversation State
           await prisma.whatsAppConversation.update({
