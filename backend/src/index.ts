@@ -1,6 +1,11 @@
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Lade Environment-Variablen aus .env Datei
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-import path from 'path';
 import http from 'http';
 import authRoutes from './routes/auth';
 import userRoutes from './routes/users';
