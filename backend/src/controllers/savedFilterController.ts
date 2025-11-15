@@ -52,17 +52,22 @@ export const getUserSavedFilters = async (req: AuthenticatedRequest, res: Respon
         let sortDirections: SortDirection[] = [];
         if (filter.sortDirections) {
           try {
-            const parsed = JSON.parse(filter.sortDirections);
-            // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
-            if (Array.isArray(parsed)) {
-              sortDirections = parsed;
-            } else if (typeof parsed === 'object' && parsed !== null) {
-              // Altes Format: { "status": "asc", "branch": "desc" }
-              sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
-                column,
-                direction: direction as 'asc' | 'desc',
-                priority: index + 1
-              }));
+            // Prüfe, ob es ein "null" String ist
+            if (filter.sortDirections.trim() === 'null' || filter.sortDirections.trim() === '') {
+              sortDirections = [];
+            } else {
+              const parsed = JSON.parse(filter.sortDirections);
+              // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
+              if (Array.isArray(parsed)) {
+                sortDirections = parsed;
+              } else if (typeof parsed === 'object' && parsed !== null) {
+                // Altes Format: { "status": "asc", "branch": "desc" }
+                sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
+                  column,
+                  direction: direction as 'asc' | 'desc',
+                  priority: index + 1
+                }));
+              }
             }
           } catch (e) {
             console.error('Fehler beim Parsen von sortDirections:', e);
@@ -162,17 +167,22 @@ export const saveFilter = async (req: AuthenticatedRequest, res: Response) => {
       let sortDirections: SortDirection[] = [];
       if (filter.sortDirections) {
         try {
-          const parsed = JSON.parse(filter.sortDirections);
-          // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
-          if (Array.isArray(parsed)) {
-            sortDirections = parsed;
-          } else if (typeof parsed === 'object' && parsed !== null) {
-            // Altes Format: { "status": "asc", "branch": "desc" }
-            sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
-              column,
-              direction: direction as 'asc' | 'desc',
-              priority: index + 1
-            }));
+          // Prüfe, ob es ein "null" String ist
+          if (filter.sortDirections.trim() === 'null' || filter.sortDirections.trim() === '') {
+            sortDirections = [];
+          } else {
+            const parsed = JSON.parse(filter.sortDirections);
+            // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
+            if (Array.isArray(parsed)) {
+              sortDirections = parsed;
+            } else if (typeof parsed === 'object' && parsed !== null) {
+              // Altes Format: { "status": "asc", "branch": "desc" }
+              sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
+                column,
+                direction: direction as 'asc' | 'desc',
+                priority: index + 1
+              }));
+            }
           }
         } catch (e) {
           console.error('Fehler beim Parsen von sortDirections:', e);

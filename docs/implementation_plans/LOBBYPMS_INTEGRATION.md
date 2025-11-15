@@ -1030,6 +1030,11 @@ LOBBY_PMS: {
 - Routen: `/api/bold-payment/*`
 - Webhook: `/api/bold-payment/webhook`
 - Payment Link Erstellung, Status Abfrage, Automatische Status-Updates
+- **Authentifizierung**: AWS SigV4 (Region: `us-east-1`, Service: `execute-api`)
+- **Key-Zuordnung**: 
+  - Llave secreta → API Key → Secret Access Key
+  - Llave de identidad → Merchant ID → Access Key ID
+- **API URL**: `https://api.online.payments.bold.co`
 
 ### 3. TTLock (Türsystem) ✅
 - Service: `TTLockService`

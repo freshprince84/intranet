@@ -33,6 +33,7 @@ const ALL_PAGES = [
 const ALL_TABLES = [
   'requests',           // auf dashboard
   'tasks',             // auf worktracker
+  'reservations',      // auf worktracker (in To Do's Box)
   'users',             // auf organization_management
   'roles',             // auf organization_management
   'organization',      // auf organization_management
@@ -338,6 +339,7 @@ async function main() {
     userPermissionMap['table_consultation_invoices'] = 'both'; // consultations
     userPermissionMap['table_notifications'] = 'both';  // allgemein
     userPermissionMap['table_monthly_reports'] = 'both'; // consultations
+    userPermissionMap['table_reservations'] = 'both';    // worktracker (in To Do's Box)
     // NICHT: tasks, users, roles, team_worktime, worktime, branches (bleiben 'none')
     // users & roles bleiben 'none', damit Tabs sichtbar aber inaktiv sind (PRO-Markierung)
     
