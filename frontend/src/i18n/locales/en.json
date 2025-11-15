@@ -967,6 +967,10 @@
       "selectDate": "Select date",
       "currentDay": "Current day",
       "dynamicDay": "Current day (dynamic)",
+      "groups": {
+        "users": "Users",
+        "roles": "Roles"
+      },
       "sortAscending": "Sort ascending",
       "sortDescending": "Sort descending",
       "moveUp": "Increase priority",

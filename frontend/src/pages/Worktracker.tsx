@@ -5,9 +5,13 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
 import TableColumnConfig from '../components/TableColumnConfig.tsx';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon, EnvelopeIcon, PhoneIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
+import CreateReservationModal from '../components/reservations/CreateReservationModal.tsx';
+import { Reservation, ReservationStatus, PaymentStatus } from '../types/reservation.ts';
+import { useNavigate } from 'react-router-dom';
+import useMessage from '../hooks/useMessage.ts';
 import WorktimeTracker from '../components/WorktimeTracker.tsx';
 import WorktimeList from '../components/WorktimeList.tsx';
 import { API_ENDPOINTS, getTaskAttachmentUrl } from '../config/api.ts';
@@ -72,6 +76,9 @@ const defaultColumnOrder = ['title', 'responsibleAndQualityControl', 'status', '
 
 // Definiere eine tableId für die To-Dos Tabelle
 const TODOS_TABLE_ID = 'worktracker-todos';
+
+// Definiere eine tableId für die Reservations Tabelle
+const RESERVATIONS_TABLE_ID = 'worktracker-reservations';
 
 // Card-Einstellungen Standardwerte
 const defaultCardMetadata = ['title', 'status', 'responsible', 'qualityControl', 'branch', 'dueDate', 'description'];
@@ -140,6 +147,8 @@ const Worktracker: React.FC = () => {
     const { user } = useAuth();
     const { hasPermission } = usePermissions();
     const location = useLocation();
+    const navigate = useNavigate();
+    const { showMessage } = useMessage();
     
     // Definiere die verfügbaren Spalten für die Tabelle (dynamisch aus Übersetzungen)
     const availableColumns = useMemo(() => [
@@ -162,11 +171,31 @@ const Worktracker: React.FC = () => {
     const getStatusLabel = (status: Task['status']): string => {
         return getStatusText(status, 'task', t);
     };
+    // Tab-State
+    const [activeTab, setActiveTab] = useState<'todos' | 'reservations'>('todos');
+    
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState<Task['status'] | 'all'>('all');
+    
+    // Reservations-States
+    const [reservations, setReservations] = useState<Reservation[]>([]);
+    const [reservationsLoading, setReservationsLoading] = useState(false);
+    const [reservationsError, setReservationsError] = useState<string | null>(null);
+    const [reservationSearchTerm, setReservationSearchTerm] = useState('');
+    const [reservationFilterStatus, setReservationFilterStatus] = useState<ReservationStatus | 'all'>('all');
+    const [reservationFilterPaymentStatus, setReservationFilterPaymentStatus] = useState<PaymentStatus | 'all'>('all');
+    const [isCreateReservationModalOpen, setIsCreateReservationModalOpen] = useState(false);
+    const [syncingReservations, setSyncingReservations] = useState(false);
+    
+    // Reservations Filter States (analog zu Tasks)
+    const [reservationFilterConditions, setReservationFilterConditions] = useState<FilterCondition[]>([]);
+    const [reservationFilterLogicalOperators, setReservationFilterLogicalOperators] = useState<('AND' | 'OR')[]>([]);
+    const [reservationFilterSortDirections, setReservationFilterSortDirections] = useState<Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>>([]);
+    const [reservationActiveFilterName, setReservationActiveFilterName] = useState<string>('');
+    const [reservationSelectedFilterId, setReservationSelectedFilterId] = useState<number | null>(null);
     
     // State für erweiterte Filterbedingungen
     const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
@@ -280,6 +309,32 @@ const Worktracker: React.FC = () => {
             setLoading(false);
         }
     };
+
+    // Funktion zum Laden der Reservations
+    const loadReservations = async () => {
+        try {
+            setReservationsLoading(true);
+            setReservationsError(null);
+            const response = await axiosInstance.get(API_ENDPOINTS.RESERVATION.BASE);
+            const reservationsData = response.data?.data || response.data || [];
+            console.log('📋 Reservations geladen:', reservationsData.length, 'Reservations');
+            setReservations(reservationsData);
+        } catch (err: any) {
+            console.error('Fehler beim Laden der Reservations:', err);
+            const errorMessage = err.response?.data?.message || t('reservations.loadError', 'Fehler beim Laden der Reservations');
+            setReservationsError(errorMessage);
+            showMessage(errorMessage, 'error');
+        } finally {
+            setReservationsLoading(false);
+        }
+    };
+
+    // Lade Reservations, wenn Tab aktiv ist
+    useEffect(() => {
+        if (activeTab === 'reservations' && hasPermission('reservations', 'read', 'table')) {
+            loadReservations();
+        }
+    }, [activeTab]);
 
     // Lade Tasks beim ersten Render (nur einmal, auch bei React.StrictMode)
     useEffect(() => {
@@ -1182,8 +1237,36 @@ const Worktracker: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* Tab-Navigation */}
+                            <div className="border-b border-gray-200 dark:border-gray-700 mb-6 px-3 sm:px-4 md:px-6">
+                                <nav className="-mb-px flex space-x-8">
+                                    <button
+                                        onClick={() => setActiveTab('todos')}
+                                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                            activeTab === 'todos'
+                                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                        }`}
+                                    >
+                                        {t('tasks.title', "To Do's")}
+                                    </button>
+                                    {hasPermission('reservations', 'read', 'table') && (
+                                        <button
+                                            onClick={() => setActiveTab('reservations')}
+                                            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                                activeTab === 'reservations'
+                                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                            }`}
+                                        >
+                                            {t('reservations.title', 'Reservations')}
+                                        </button>
+                                    )}
+                                </nav>
+                            </div>
+
                             {/* Filter-Pane */}
-                            {isFilterModalOpen && (
+                            {isFilterModalOpen && activeTab === 'todos' && (
                                 <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
                                     <FilterPane
                                     columns={[...availableColumns, ...filterOnlyColumns]}
@@ -1576,9 +1659,9 @@ const Worktracker: React.FC = () => {
                         {/* Tasks - vollständiger Inhalt für Desktop-Ansicht */}
                         <div className="dashboard-tasks-wrapper bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 w-full mb-20">
                             <div className="flex items-center mb-4 justify-between px-3 sm:px-4 md:px-6">
-                                {/* Linke Seite: "Neuer Task"-Button */}
+                                {/* Linke Seite: "Neuer Task/Reservation"-Button */}
                                 <div className="flex items-center">
-                                    {hasPermission('tasks', 'write', 'table') && (
+                                    {activeTab === 'todos' && hasPermission('tasks', 'write', 'table') && (
                                         <button
                                             onClick={() => setIsCreateModalOpen(true)}
                                             className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
@@ -1590,23 +1673,69 @@ const Worktracker: React.FC = () => {
                                             <PlusIcon className="h-4 w-4" />
                                         </button>
                                     )}
+                                    {activeTab === 'reservations' && hasPermission('reservations', 'write', 'table') && (
+                                        <button
+                                            onClick={() => setIsCreateReservationModalOpen(true)}
+                                            className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                                            style={{ width: '30.19px', height: '30.19px' }}
+                                            title={t('reservations.createReservation.button', 'Neue Reservierung')}
+                                            aria-label={t('reservations.createReservation.button', 'Neue Reservierung')}
+                                        >
+                                            <PlusIcon className="h-4 w-4" />
+                                        </button>
+                                    )}
                                 </div>
                                 
                                 {/* Mitte: Titel */}
                                 <div className="flex items-center">
                                     <CheckCircleIcon className="h-6 w-6 mr-2 dark:text-white" />
-                                    <h2 className="text-xl font-semibold dark:text-white">{t('tasks.title')}</h2>
+                                    <h2 className="text-xl font-semibold dark:text-white">
+                                        {activeTab === 'todos' ? t('tasks.title') : t('reservations.title', 'Reservations')}
+                                    </h2>
                                 </div>
                                 
-                                {/* Rechte Seite: Suchfeld, Filter-Button, Status-Filter, Spalten-Konfiguration */}
+                                {/* Rechte Seite: Suchfeld, Sync-Button (nur Reservations), Filter-Button, Status-Filter, Spalten-Konfiguration */}
                                 <div className="flex items-center gap-1.5">
                                     <input
                                         type="text"
                                         placeholder={t('common.search') + '...'}
                                         className="w-[200px] px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                                        value={searchTerm}
-                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        value={activeTab === 'todos' ? searchTerm : reservationSearchTerm}
+                                        onChange={(e) => {
+                                            if (activeTab === 'todos') {
+                                                setSearchTerm(e.target.value);
+                                            } else {
+                                                setReservationSearchTerm(e.target.value);
+                                            }
+                                        }}
                                     />
+                                    
+                                    {/* Sync-Button für Reservations */}
+                                    {activeTab === 'reservations' && (
+                                        <button
+                                            onClick={async () => {
+                                                try {
+                                                    setSyncingReservations(true);
+                                                    await axiosInstance.post(API_ENDPOINTS.RESERVATIONS.SYNC);
+                                                    showMessage(t('reservations.syncSuccess', 'Reservations erfolgreich synchronisiert'), 'success');
+                                                    await loadReservations();
+                                                } catch (err: any) {
+                                                    console.error('Fehler beim Synchronisieren:', err);
+                                                    showMessage(
+                                                        err.response?.data?.message || t('reservations.syncError', 'Fehler beim Synchronisieren'),
+                                                        'error'
+                                                    );
+                                                } finally {
+                                                    setSyncingReservations(false);
+                                                }
+                                            }}
+                                            disabled={syncingReservations}
+                                            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            title={syncingReservations ? t('reservations.syncing', 'Synchronisiere...') : t('reservations.sync', 'Synchronisieren')}
+                                        >
+                                            <ArrowPathIcon className={`h-5 w-5 ${syncingReservations ? 'animate-spin' : ''}`} />
+                                        </button>
+                                    )}
                                     
                                     {/* View-Mode Toggle */}
                                     <button
@@ -1702,8 +1831,36 @@ const Worktracker: React.FC = () => {
                                 </div>
                             </div>
 
+                            {/* Tab-Navigation */}
+                            <div className="border-b border-gray-200 dark:border-gray-700 mb-6 px-3 sm:px-4 md:px-6">
+                                <nav className="-mb-px flex space-x-8">
+                                    <button
+                                        onClick={() => setActiveTab('todos')}
+                                        className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                            activeTab === 'todos'
+                                                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                        }`}
+                                    >
+                                        {t('tasks.title', "To Do's")}
+                                    </button>
+                                    {hasPermission('reservations', 'read', 'table') && (
+                                        <button
+                                            onClick={() => setActiveTab('reservations')}
+                                            className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                                                activeTab === 'reservations'
+                                                    ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                            }`}
+                                        >
+                                            {t('reservations.title', 'Reservations')}
+                                        </button>
+                                    )}
+                                </nav>
+                            </div>
+
                             {/* Filter-Pane */}
-                            {isFilterModalOpen && (
+                            {isFilterModalOpen && activeTab === 'todos' && (
                                 <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
                                     <FilterPane
                                     columns={[...availableColumns, ...filterOnlyColumns]}

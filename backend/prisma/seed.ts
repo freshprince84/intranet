@@ -531,19 +531,25 @@ async function main() {
         // Falls ID nicht 2 ist, müssen wir die Sequenz anpassen
         if (org2.id !== 2) {
           console.log(`⚠️ Organisation hat ID ${org2.id}, setze Sequenz zurück...`);
-          // Lösche org2 und erstelle neu mit ID 2
-          await prisma.organization.delete({ where: { id: org2.id } });
-          await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 1, true)`;
-          org2 = await prisma.organization.create({
-            data: {
-              name: 'mosaik',
-              displayName: 'Mosaik',
-              domain: 'mosaik.ch',
-              isActive: true,
-              maxUsers: 1000,
-              subscriptionPlan: 'enterprise'
-            }
-          });
+          // Versuche org2 zu löschen und neu zu erstellen (nur wenn keine Abhängigkeiten bestehen)
+          try {
+            await prisma.organization.delete({ where: { id: org2.id } });
+            await prisma.$executeRaw`SELECT setval('"Organization_id_seq"', 1, true)`;
+            org2 = await prisma.organization.create({
+              data: {
+                name: 'mosaik',
+                displayName: 'Mosaik',
+                domain: 'mosaik.ch',
+                isActive: true,
+                maxUsers: 1000,
+                subscriptionPlan: 'enterprise'
+              }
+            });
+          } catch (deleteError) {
+            // Organisation kann nicht gelöscht werden (Foreign Key Constraints) - verwende bestehende Organisation
+            console.log(`⚠️ Organisation ${org2.id} kann nicht gelöscht werden (Abhängigkeiten vorhanden), verwende bestehende Organisation`);
+            // org2 bleibt unverändert
+          }
         }
       } else {
         // Falls keine Organisation existiert, erstelle mit ID 2
@@ -1406,6 +1412,273 @@ async function main() {
       }
 
       console.log(`📊 Demo-Beratungen: ${consultationsCreated} erstellt`);
+    }
+
+    // ========================================
+    // 12. STANDARDFILTER FÜR ROLLEN UND BENUTZER ERSTELLEN
+    // ========================================
+    // WICHTIG: Diese Funktion wird in einem try-catch ausgeführt, damit sie auch bei Fehlern in anderen Seed-Bereichen ausgeführt wird
+    try {
+      console.log('🔍 Erstelle Standardfilter für Rollen und Benutzer...');
+    
+    /**
+     * Erstellt Filter-Gruppen und Filter für Rollen und Benutzer
+     * @param userId - ID des Benutzers, für den die Filter erstellt werden
+     * @param organizationId - ID der Organisation (null für globale Rollen)
+     */
+    async function createRoleAndUserFilters(userId: number, organizationId: number | null) {
+      try {
+        // Übersetzungen für Filter-Gruppen (DE als Standard)
+        const groupNames = {
+          roles: 'Rollen',
+          users: 'Benutzer'
+        };
+
+        // Hole alle Rollen der Organisation (oder globale Rollen wenn organizationId = null)
+        const roles = await prisma.role.findMany({
+          where: organizationId !== null 
+            ? { organizationId }
+            : { organizationId: null },
+          orderBy: { name: 'asc' }
+        });
+
+        // Hole alle aktiven Benutzer der Organisation
+        // Für standalone User (organizationId = null): nur eigene User-Daten
+        const userFilter = organizationId !== null
+          ? {
+              roles: {
+                some: {
+                  role: {
+                    organizationId
+                  }
+                }
+              },
+              active: true
+            }
+          : {
+              id: userId, // Nur eigene User-Daten für standalone User
+              active: true
+            };
+
+        const users = await prisma.user.findMany({
+          where: userFilter,
+          orderBy: [
+            { firstName: 'asc' },
+            { lastName: 'asc' }
+          ]
+        });
+
+        // Tabellen für die Filter
+        const tables = [
+          { id: 'requests-table', name: 'Requests' },
+          { id: 'worktracker-todos', name: 'ToDos' }
+        ];
+
+        for (const table of tables) {
+          // Erstelle oder hole Filter-Gruppen
+          let rolesGroup = await prisma.filterGroup.findFirst({
+            where: {
+              userId,
+              tableId: table.id,
+              name: groupNames.roles
+            }
+          });
+
+          if (!rolesGroup) {
+            // Finde die höchste order-Nummer für diese Tabelle
+            const maxOrder = await prisma.filterGroup.findFirst({
+              where: { userId, tableId: table.id },
+              orderBy: { order: 'desc' },
+              select: { order: true }
+            });
+            const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+
+            rolesGroup = await prisma.filterGroup.create({
+              data: {
+                userId,
+                tableId: table.id,
+                name: groupNames.roles,
+                order: newOrder
+              }
+            });
+            console.log(`  ✅ Filter-Gruppe "${groupNames.roles}" für ${table.name} erstellt`);
+          }
+
+          let usersGroup = await prisma.filterGroup.findFirst({
+            where: {
+              userId,
+              tableId: table.id,
+              name: groupNames.users
+            }
+          });
+
+          if (!usersGroup) {
+            const maxOrder = await prisma.filterGroup.findFirst({
+              where: { userId, tableId: table.id },
+              orderBy: { order: 'desc' },
+              select: { order: true }
+            });
+            const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+
+            usersGroup = await prisma.filterGroup.create({
+              data: {
+                userId,
+                tableId: table.id,
+                name: groupNames.users,
+                order: newOrder
+              }
+            });
+            console.log(`  ✅ Filter-Gruppe "${groupNames.users}" für ${table.name} erstellt`);
+          }
+
+          // Erstelle Filter für jede Rolle
+          for (const role of roles) {
+            const filterName = role.name;
+            
+            // Prüfe ob Filter bereits existiert
+            const existingFilter = await prisma.savedFilter.findFirst({
+              where: {
+                userId,
+                tableId: table.id,
+                name: filterName,
+                groupId: rolesGroup.id
+              }
+            });
+
+            if (!existingFilter) {
+              let conditions: any[] = [];
+              let operators: string[] = [];
+
+              if (table.id === 'requests-table') {
+                // Requests: requestedBy = role ODER responsible = role
+                conditions = [
+                  { column: 'requestedBy', operator: 'equals', value: `role-${role.id}` },
+                  { column: 'responsible', operator: 'equals', value: `role-${role.id}` }
+                ];
+                operators = ['OR'];
+              } else if (table.id === 'worktracker-todos') {
+                // ToDos: responsible = role
+                conditions = [
+                  { column: 'responsible', operator: 'equals', value: `role-${role.id}` }
+                ];
+                operators = [];
+              }
+
+              // Finde die höchste order-Nummer in der Gruppe
+              const maxOrder = await prisma.savedFilter.findFirst({
+                where: { groupId: rolesGroup.id },
+                orderBy: { order: 'desc' },
+                select: { order: true }
+              });
+              const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+
+              await prisma.savedFilter.create({
+                data: {
+                  userId,
+                  tableId: table.id,
+                  name: filterName,
+                  conditions: JSON.stringify(conditions),
+                  operators: JSON.stringify(operators),
+                  groupId: rolesGroup.id,
+                  order: newOrder
+                }
+              });
+              console.log(`    ✅ Filter "${filterName}" (Rolle) für ${table.name} erstellt`);
+            }
+          }
+
+          // Erstelle Filter für jeden Benutzer
+          for (const user of users) {
+            const filterName = `${user.firstName} ${user.lastName}`.trim() || user.username;
+            
+            // Prüfe ob Filter bereits existiert
+            const existingFilter = await prisma.savedFilter.findFirst({
+              where: {
+                userId,
+                tableId: table.id,
+                name: filterName,
+                groupId: usersGroup.id
+              }
+            });
+
+            if (!existingFilter) {
+              let conditions: any[] = [];
+              let operators: string[] = [];
+
+              if (table.id === 'requests-table') {
+                // Requests: requestedBy = user ODER responsible = user
+                conditions = [
+                  { column: 'requestedBy', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` }
+                ];
+                operators = ['OR'];
+              } else if (table.id === 'worktracker-todos') {
+                // ToDos: responsible = user ODER qualityControl = user
+                conditions = [
+                  { column: 'responsible', operator: 'equals', value: `user-${user.id}` },
+                  { column: 'qualityControl', operator: 'equals', value: `user-${user.id}` }
+                ];
+                operators = ['OR'];
+              }
+
+              // Finde die höchste order-Nummer in der Gruppe
+              const maxOrder = await prisma.savedFilter.findFirst({
+                where: { groupId: usersGroup.id },
+                orderBy: { order: 'desc' },
+                select: { order: true }
+              });
+              const newOrder = maxOrder ? maxOrder.order + 1 : 0;
+
+              await prisma.savedFilter.create({
+                data: {
+                  userId,
+                  tableId: table.id,
+                  name: filterName,
+                  conditions: JSON.stringify(conditions),
+                  operators: JSON.stringify(operators),
+                  groupId: usersGroup.id,
+                  order: newOrder
+                }
+              });
+              console.log(`    ✅ Filter "${filterName}" (Benutzer) für ${table.name} erstellt`);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`  ❌ Fehler beim Erstellen der Filter für User ${userId}:`, error);
+      }
+    }
+
+    // Hole alle Benutzer und erstelle Filter für jeden
+    const allUsers = await prisma.user.findMany({
+      include: {
+        roles: {
+          include: {
+            role: {
+              select: {
+                organizationId: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    for (const user of allUsers) {
+      // Bestimme organizationId aus der aktiven Rolle oder ersten Rolle
+      let organizationId: number | null = null;
+      const activeRole = user.roles.find(ur => ur.lastUsed) || user.roles[0];
+      if (activeRole?.role?.organizationId) {
+        organizationId = activeRole.role.organizationId;
+      }
+
+      await createRoleAndUserFilters(user.id, organizationId);
+    }
+
+      console.log('✅ Standardfilter für Rollen und Benutzer erstellt');
+    } catch (filterError) {
+      console.error('⚠️ Fehler beim Erstellen der Standardfilter (wird übersprungen):', filterError);
+      // Fehler wird geloggt, aber Seed wird fortgesetzt
     }
 
     // ========================================

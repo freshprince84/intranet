@@ -20,6 +20,8 @@ const auth_1 = require("../middleware/auth");
 const roleCheck_1 = require("../middleware/roleCheck");
 const settingsController_1 = require("../controllers/settingsController");
 const sharp_1 = __importDefault(require("sharp"));
+const client_1 = require("@prisma/client");
+const prisma = new client_1.PrismaClient();
 const router = (0, express_1.Router)();
 // Debug-Middleware für alle Settings-Routen
 router.use((req, res, next) => {
@@ -285,10 +287,10 @@ router.get('/test', (req, res) => {
     res.json({ message: 'Settings Test Route funktioniert' });
 });
 // POST /logo (nur für authentifizierte Benutzer)
-router.post('/logo', (req, res) => {
+router.post('/logo', auth_1.authenticateToken, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     console.log('Logo Upload Route erreicht');
     console.log('Request Headers:', req.headers);
-    upload.single('logo')(req, res, (err) => {
+    upload.single('logo')(req, res, (err) => __awaiter(void 0, void 0, void 0, function* () {
         if (err) {
             console.error('Upload Fehler:', err);
             return res.status(400).json({
@@ -301,13 +303,59 @@ router.post('/logo', (req, res) => {
             console.error('Keine Datei im Request gefunden');
             return res.status(400).json({ message: 'Keine Datei hochgeladen' });
         }
-        console.log('Datei erfolgreich hochgeladen:', req.file);
-        res.status(200).json({
-            message: 'Logo erfolgreich hochgeladen',
-            filename: req.file.filename
-        });
-    });
-});
+        try {
+            console.log('Datei erfolgreich hochgeladen:', req.file);
+            // Lese Logo als Base64
+            const fileData = fs_1.default.readFileSync(req.file.path);
+            const base64Data = fileData.toString('base64');
+            // MIME-Typ bestimmen
+            const ext = path_1.default.extname(req.file.path).toLowerCase();
+            let mimeType = 'image/png';
+            if (ext === '.jpg' || ext === '.jpeg')
+                mimeType = 'image/jpeg';
+            // Erstelle Data-URL
+            const base64Logo = `data:${mimeType};base64,${base64Data}`;
+            // Finde Organisation des Users
+            const userId = parseInt(req.userId || '0', 10);
+            if (!userId) {
+                return res.status(401).json({ message: 'Nicht authentifiziert' });
+            }
+            const userRole = yield prisma.userRole.findFirst({
+                where: {
+                    userId: userId,
+                    lastUsed: true
+                },
+                include: {
+                    role: {
+                        include: {
+                            organization: true
+                        }
+                    }
+                }
+            });
+            if (!(userRole === null || userRole === void 0 ? void 0 : userRole.role.organization)) {
+                return res.status(404).json({ message: 'Keine Organisation gefunden' });
+            }
+            // Speichere Logo in Datenbank
+            yield prisma.organization.update({
+                where: { id: userRole.role.organization.id },
+                data: { logo: base64Logo }
+            });
+            console.log('Logo erfolgreich in Datenbank gespeichert für Organisation:', userRole.role.organization.id);
+            res.status(200).json({
+                message: 'Logo erfolgreich hochgeladen',
+                filename: req.file.filename
+            });
+        }
+        catch (error) {
+            console.error('Fehler beim Speichern des Logos in Datenbank:', error);
+            res.status(500).json({
+                message: 'Fehler beim Speichern des Logos',
+                error: error instanceof Error ? error.message : 'Unbekannter Fehler'
+            });
+        }
+    }));
+}));
 // System-weite Benachrichtigungseinstellungen abrufen
 router.get('/notifications', settingsController_1.getNotificationSettings);
 // System-weite Benachrichtigungseinstellungen aktualisieren (nur Admin)

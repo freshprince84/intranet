@@ -750,6 +750,10 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
             });
         }
         const organization = userRole.role.organization;
+        // Korrigiere String 'null' zu echtem null
+        if (organization && organization.logo === 'null') {
+            organization.logo = null;
+        }
         // ✅ ENTschlüssele Settings für Response (Frontend braucht entschlüsselte Werte)
         if (organization.settings) {
             organization.settings = (0, encryption_1.decryptApiSettings)(organization.settings);
@@ -1081,12 +1085,18 @@ const updateOrganizationLanguage = (req, res) => __awaiter(void 0, void 0, void 
 exports.updateOrganizationLanguage = updateOrganizationLanguage;
 // Aktuelle Organisation aktualisieren (basierend auf User-Kontext)
 const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b, _c;
+    var _a, _b, _c, _d;
     try {
         const userId = req.userId;
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
+        // Debug: Logge Request-Body
+        console.log('=== REQUEST BODY DEBUG ===');
+        console.log('req.body.logo vorhanden:', !!req.body.logo);
+        console.log('req.body.logo type:', typeof req.body.logo);
+        console.log('req.body.logo length:', (_a = req.body.logo) === null || _a === void 0 ? void 0 : _a.length);
+        console.log('req.body keys:', Object.keys(req.body));
         // Validiere Eingabedaten
         const validatedData = updateOrganizationSchema.parse(req.body);
         // Hole die aktuelle Organisation des Users mit Berechtigungen
@@ -1118,10 +1128,11 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
         let updateData = Object.assign({}, validatedData);
         // Debug: Logge Logo-Daten
         console.log('=== ORGANIZATION UPDATE DEBUG ===');
-        console.log('validatedData.logo:', validatedData.logo ? `${validatedData.logo.substring(0, 50)}...` : 'null/undefined');
+        console.log('validatedData.logo:', validatedData.logo ? (validatedData.logo === 'null' ? 'String "null"' : `${validatedData.logo.substring(0, 50)}...`) : 'null/undefined');
         console.log('validatedData.logo type:', typeof validatedData.logo);
-        console.log('validatedData.logo length:', (_a = validatedData.logo) === null || _a === void 0 ? void 0 : _a.length);
-        console.log('updateData.logo:', updateData.logo ? `${updateData.logo.substring(0, 50)}...` : 'null/undefined');
+        console.log('validatedData.logo length:', (_b = validatedData.logo) === null || _b === void 0 ? void 0 : _b.length);
+        console.log('validatedData.logo === "null":', validatedData.logo === 'null');
+        console.log('updateData.logo:', updateData.logo ? (updateData.logo === 'null' ? 'String "null"' : `${updateData.logo.substring(0, 50)}...`) : 'null/undefined');
         if (validatedData.settings !== undefined) {
             const currentSettings = organization.settings || {};
             const newSettings = Object.assign(Object.assign({}, currentSettings), validatedData.settings);
@@ -1151,7 +1162,7 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
                 });
             }
             // ✅ TTLOCK PASSWORD: MD5-Hash für TTLock Password erstellen (falls vorhanden)
-            if (((_b = newSettings.doorSystem) === null || _b === void 0 ? void 0 : _b.password) && !newSettings.doorSystem.password.match(/^[a-f0-9]{32}$/i)) {
+            if (((_c = newSettings.doorSystem) === null || _c === void 0 ? void 0 : _c.password) && !newSettings.doorSystem.password.match(/^[a-f0-9]{32}$/i)) {
                 // Password ist noch nicht gehasht (32-stelliger MD5-Hash)
                 const crypto = require('crypto');
                 newSettings.doorSystem.password = crypto.createHash('md5').update(newSettings.doorSystem.password).digest('hex');
@@ -1179,11 +1190,14 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
         }
         // Debug: Logge updateData vor dem Speichern
         console.log('updateData vor Prisma Update:', Object.assign(Object.assign({}, updateData), { logo: updateData.logo ? `${updateData.logo.substring(0, 50)}...` : updateData.logo }));
-        // Stelle sicher, dass leere Strings als null gespeichert werden (nicht als leerer String)
+        // Stelle sicher, dass leere Strings und String 'null' als null gespeichert werden
         if (updateData.logo !== undefined) {
-            if (updateData.logo === '' || (typeof updateData.logo === 'string' && updateData.logo.trim() === '')) {
+            if (updateData.logo === '' ||
+                (typeof updateData.logo === 'string' && updateData.logo.trim() === '') ||
+                updateData.logo === 'null' ||
+                updateData.logo === null) {
                 updateData.logo = null;
-                console.log('Logo ist leerer String, setze auf null');
+                console.log('Logo ist leerer String oder String "null", setze auf null');
             }
         }
         // Aktualisiere Organisation
@@ -1219,7 +1233,7 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
         }
         // Debug: Logge gespeichertes Logo
         console.log('Gespeichertes Logo in DB:', updatedOrganization.logo ? `${updatedOrganization.logo.substring(0, 50)}...` : 'null');
-        console.log('Logo length:', (_c = updatedOrganization.logo) === null || _c === void 0 ? void 0 : _c.length);
+        console.log('Logo length:', (_d = updatedOrganization.logo) === null || _d === void 0 ? void 0 : _d.length);
         res.json(updatedOrganization);
     }
     catch (error) {

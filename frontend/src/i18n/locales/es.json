@@ -982,6 +982,10 @@
       "selectDate": "Seleccionar fecha",
       "currentDay": "Día actual",
       "dynamicDay": "Día actual (dinámico)",
+      "groups": {
+        "users": "Usuarios",
+        "roles": "Roles"
+      },
       "sortAscending": "Ordenar ascendente",
       "sortDescending": "Ordenar descendente",
       "moveUp": "Aumentar prioridad",

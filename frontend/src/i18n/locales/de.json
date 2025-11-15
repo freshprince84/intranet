@@ -837,6 +837,10 @@
       "selectDate": "Datum wählen",
       "currentDay": "Aktueller Tag",
       "dynamicDay": "Aktueller Tag (dynamisch)",
+      "groups": {
+        "users": "Benutzer",
+        "roles": "Rollen"
+      },
       "status": {
         "approval": "Zur Genehmigung",
         "approved": "Genehmigt",

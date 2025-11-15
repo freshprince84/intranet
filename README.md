@@ -17,10 +17,14 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [DOKUMENTATIONSSTANDARDS.md](docs/core/DOKUMENTATIONSSTANDARDS.md) - Standards für die Dokumentation
 - [CHANGELOG.md](docs/core/CHANGELOG.md) - Änderungsverlauf des Projekts
 - [VIBES.md](docs/core/VIBES.md) - Coding-Stil und Best Practices
+- [backlog.md](docs/core/backlog.md) - Projekt-Backlog
 
 ### Nutzerorientierte Dokumentation
 - [BENUTZERHANDBUCH.md](docs/user/BENUTZERHANDBUCH.md) - Anleitung für Endbenutzer
 - [ADMINISTRATORHANDBUCH.md](docs/user/ADMINISTRATORHANDBUCH.md) - Anleitung für Administratoren
+- [FRONTEND_ANLEITUNG.md](docs/user/FRONTEND_ANLEITUNG.md) - Frontend-Benutzeranleitung
+- [BENUTZERANLEITUNG_LEBENSZYKLUS.md](docs/user/BENUTZERANLEITUNG_LEBENSZYKLUS.md) - Benutzeranleitung für Mitarbeiterlebenszyklus
+- [MOBILE_APP_DOWNLOAD.md](docs/user/MOBILE_APP_DOWNLOAD.md) - Mobile App Download-Anleitung
 
 ### Entwicklungsdokumentation
 - [ENTWICKLUNGSUMGEBUNG.md](docs/core/ENTWICKLUNGSUMGEBUNG.md) - Setup der Entwicklungsumgebung
@@ -43,6 +47,25 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [ATTACHMENT_URL_FIX.md](docs/technical/ATTACHMENT_URL_FIX.md) - Attachment URL-Generierung und Fixes
 - [IMAGE_PREVIEW_IMPLEMENTATION.md](docs/technical/IMAGE_PREVIEW_IMPLEMENTATION.md) - Vollständige Anleitung zur Bildvorschau-Implementierung
 - [EXPANDABLE_DESCRIPTION_IMPLEMENTATION.md](docs/technical/EXPANDABLE_DESCRIPTION_IMPLEMENTATION.md) - Expandierbare Beschreibung in DataCard
+- [HETZNER_SERVER_SETUP.md](docs/technical/HETZNER_SERVER_SETUP.md) - Hetzner-Server-Setup
+- [EMAIL_SETUP.md](docs/technical/EMAIL_SETUP.md) - E-Mail-Konfiguration
+- [FIX_ANLEITUNG.md](docs/technical/FIX_ANLEITUNG.md) - Allgemeine Fix-Anleitung
+- [DEPLOYMENT_CHECKLIST.md](docs/technical/DEPLOYMENT_CHECKLIST.md) - Deployment-Checkliste
+- [DEPLOYMENT_MIT_DATEN_PLAN.md](docs/technical/DEPLOYMENT_MIT_DATEN_PLAN.md) - Deployment-Plan mit Datenübertragung
+- [GIT_MERGE_KONFLIKT_BEHEBEN.md](docs/technical/GIT_MERGE_KONFLIKT_BEHEBEN.md) - Git-Merge-Konflikt-Lösung
+- [MIGRATION_FIX_ANLEITUNG.md](docs/technical/MIGRATION_FIX_ANLEITUNG.md) - Migration-Fix-Anleitung
+- [SERVER_DB_UPDATE_ANLEITUNG.md](docs/technical/SERVER_DB_UPDATE_ANLEITUNG.md) - Server-Datenbank-Update-Anleitung
+- [SERVER_FIX_ORGANIZATIONID.md](docs/technical/SERVER_FIX_ORGANIZATIONID.md) - Server-Fix für organizationId
+- [SERVER_FRONTEND_FIX.md](docs/technical/SERVER_FRONTEND_FIX.md) - Server-Frontend-Fix
+- [QUICK_REFERENCE_API_KEYS.md](docs/technical/QUICK_REFERENCE_API_KEYS.md) - API-Keys-Referenz
+- [SCRIPTS_README.md](docs/technical/SCRIPTS_README.md) - Backend-Scripts-Übersicht
+- [DATEN_EXPORT_IMPORT.md](docs/technical/DATEN_EXPORT_IMPORT.md) - Daten-Export/Import-Dokumentation
+- [CEREBRO_IMPORT_ANLEITUNG.md](docs/technical/CEREBRO_IMPORT_ANLEITUNG.md) - Cerebro-Import-Anleitung
+- [WHATSAPP_WEBHOOK_SETUP.md](docs/technical/WHATSAPP_WEBHOOK_SETUP.md) - WhatsApp-Webhook-Setup
+- [WHATSAPP_WEBHOOK_SERVER_SETUP.md](docs/technical/WHATSAPP_WEBHOOK_SERVER_SETUP.md) - WhatsApp-Webhook-Server-Setup
+- [WHATSAPP_TOKEN_SETUP.md](docs/technical/WHATSAPP_TOKEN_SETUP.md) - WhatsApp-Token-Setup
+- [TROUBLESHOOTING_WHATSAPP_HETZNER.md](docs/technical/TROUBLESHOOTING_WHATSAPP_HETZNER.md) - WhatsApp-Troubleshooting auf Hetzner
+- [WO_HER_API_KEYS_BEKOMMEN.md](docs/technical/WO_HER_API_KEYS_BEKOMMEN.md) - API-Keys-Beschaffung
 - [NOTIFICATION_SYSTEM.md](docs/modules/NOTIFICATION_SYSTEM.md) - Benachrichtigungssystem und Trigger
 
 ### Modulspezifische Dokumentation
@@ -52,10 +75,13 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [MODUL_ABRECHNUNG.md](docs/modules/MODUL_ABRECHNUNG.md) - Lohnabrechnungsintegration
 - [MODUL_WORKTRACKER.md](docs/modules/MODUL_WORKTRACKER.md) - Task-Tracking und Arbeitszeit-Erfassung
 - [MODUL_DOKUMENT_ERKENNUNG.md](docs/modules/MODUL_DOKUMENT_ERKENNUNG.md) - KI-basierte Dokumentenerkennungsfunktion
+- [OCR_DOKUMENTATION.md](docs/modules/OCR_DOKUMENTATION.md) - OCR-Dokumentation für Dokumentenerkennung
 - [MODUL_FILTERSYSTEM.md](docs/modules/MODUL_FILTERSYSTEM.md) - Erweitertes Filtersystem mit benutzerdefinierten Filtern
 - [ROLE_SWITCH.md](docs/modules/ROLE_SWITCH.md) - Funktionalität zum Wechseln der Benutzerrollen
 - [WORKFLOW_AUTOMATISIERUNG.md](docs/modules/WORKFLOW_AUTOMATISIERUNG.md) - Workflow-Automatisierung für Task-Bearbeitung
 - [MODUL_CONSULTATIONS.md](docs/modules/MODUL_CONSULTATIONS.md) - Beratungsstunden-Verwaltung mit Client-Tracking
+- [WHATSAPP_TEMPLATE_ERSTELLUNG_ANLEITUNG.md](docs/modules/WHATSAPP_TEMPLATE_ERSTELLUNG_ANLEITUNG.md) - WhatsApp-Template-Erstellung (detailliert)
+- [WHATSAPP_TEMPLATE_ERSTELLUNG_QUICK_START.md](docs/modules/WHATSAPP_TEMPLATE_ERSTELLUNG_QUICK_START.md) - WhatsApp-Template-Erstellung (Quick Start)
 
 ### Implementierungspläne
 - [CONSULTATION_MODULE_IMPLEMENTATION.md](docs/implementation_plans/CONSULTATION_MODULE_IMPLEMENTATION.md) - Schritt-für-Schritt Plan für Consultation-Modul

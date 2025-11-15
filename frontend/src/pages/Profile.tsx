@@ -174,6 +174,7 @@ const Profile: React.FC = () => {
         normalWorkingHours: formData.normalWorkingHours ? parseFloat(formData.normalWorkingHours.toString()) : 7.6,
         birthday: formData.birthday || null,
         gender: formData.gender || null,
+        phoneNumber: formData.phoneNumber || null,
       };
 
       const response = await axiosInstance.put('/users/profile', dataToSend);
