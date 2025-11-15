@@ -69,6 +69,13 @@ const OnboardingTour: React.FC = () => {
   }
 
   const handleNext = async () => {
+    // Bei 'wait' Aktion: Nicht automatisch weiter, sondern warten bis Schritt abgeschlossen ist
+    if (currentStepData?.action === 'wait') {
+      // Schritt sollte bereits durch completeStep() abgeschlossen worden sein
+      // Wenn nicht, warte noch
+      return;
+    }
+    
     if (currentStepData) {
       const duration = Math.floor((Date.now() - stepStartTime) / 1000);
       await completeStep(currentStepData.id, t(currentStepData.title), duration);
@@ -119,15 +126,16 @@ const OnboardingTour: React.FC = () => {
         <div className="fixed inset-0 bg-transparent" aria-hidden="true" />
 
         {/* Modal */}
-        <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none overflow-y-auto">
           <Dialog.Panel
             className={`
               mx-auto max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-xl pointer-events-auto
-              ${modalPosition === 'center' ? 'transform-none' : ''}
+              ${modalPosition === 'center' ? 'transform-none my-auto' : ''}
               ${modalPosition === 'top' ? 'self-start mt-4' : ''}
               ${modalPosition === 'bottom' ? 'self-end mb-4' : ''}
               ${modalPosition === 'left' ? 'self-center mr-auto ml-4' : ''}
               ${modalPosition === 'right' ? 'self-center ml-auto mr-4' : ''}
+              max-h-[90vh] overflow-y-auto
             `}
           >
             {/* Fortschrittsbalken */}
@@ -161,7 +169,7 @@ const OnboardingTour: React.FC = () => {
 
             {/* Content */}
             <div className="px-6 py-4">
-              <p className="text-gray-700 dark:text-gray-300">
+              <p className="text-gray-700 dark:text-gray-300 break-words whitespace-pre-wrap">
                 {t(currentStepData.description)}
               </p>
             </div>
@@ -183,14 +191,16 @@ const OnboardingTour: React.FC = () => {
               </div>
 
               <div className="flex gap-2">
-                <button
-                  onClick={handleSkip}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                >
-                  {t('onboarding.navigation.skip')}
-                </button>
+                {currentStepData?.action !== 'wait' && (
+                  <button
+                    onClick={handleSkip}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-700 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    {t('onboarding.navigation.skip')}
+                  </button>
+                )}
                 {/* "Siguiente" Button nur anzeigen, wenn Schritt KEINE Navigation erfordert */}
-                {currentStepData?.action !== 'navigate' && (
+                {currentStepData?.action !== 'navigate' && currentStepData?.action !== 'wait' && (
                   currentStep === filteredSteps.length - 1 ? (
                     <button
                       onClick={handleComplete}
@@ -209,6 +219,11 @@ const OnboardingTour: React.FC = () => {
                       </div>
                     </button>
                   )
+                )}
+                {currentStepData?.action === 'wait' && (
+                  <div className="text-sm text-gray-600 dark:text-gray-400 px-4 py-2">
+                    {t('onboarding.waiting') || 'Bitte vervollständigen Sie Ihr Profil...'}
+                  </div>
                 )}
               </div>
             </div>

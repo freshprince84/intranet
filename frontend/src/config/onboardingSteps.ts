@@ -4,6 +4,22 @@ import { OnboardingStep } from '../contexts/OnboardingContext.tsx';
 // Diese werden basierend auf Berechtigungen gefiltert
 export const onboardingSteps: OnboardingStep[] = [
   // ============================================
+  // PROZESS 0: Profil vervollständigen (ERSTER SCHRITT)
+  // ============================================
+  {
+    id: 'profile_complete',
+    title: 'onboarding.steps.profile_complete.title',
+    description: 'onboarding.steps.profile_complete.description',
+    target: '[data-onboarding="profile-page"]',
+    position: 'center',
+    route: '/profile',
+    order: -1,
+    page: 'profile',
+    process: 'profile-completion',
+    action: 'wait', // Wartet auf Profil-Speicherung
+    roleFilter: ['User', 'Hamburger', 'Admin']
+  },
+  // ============================================
   // PROZESS 1: Dashboard-Übersicht
   // ============================================
   {

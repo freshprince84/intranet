@@ -10,6 +10,7 @@ import IdentificationDocumentList from '../components/IdentificationDocumentList
 import IdentificationDocumentForm from '../components/IdentificationDocumentForm.tsx';
 import LifecycleTab from '../components/LifecycleTab.tsx';
 import MyDocumentsTab from '../components/MyDocumentsTab.tsx';
+import { useOnboarding } from '../contexts/OnboardingContext.tsx';
 
 interface IdentificationDocument {
   id: number;
@@ -38,6 +39,7 @@ interface UserProfile {
   phoneNumber: string | null; // WhatsApp-Telefonnummer (mit Ländercode)
   identificationNumber: string | null; // Wird automatisch aus Dokument befüllt
   identificationDocuments?: IdentificationDocument[]; // Neuestes Dokument für Anzeige
+  roles?: { role: { organization: { id: number } | null } }[]; // Für hasOrganization Check
 }
 
 // Länder für die Auswahl - werden dynamisch aus Übersetzungen geladen
@@ -58,6 +60,7 @@ const Profile: React.FC = () => {
   const { user: authUser } = useAuth();
   const { showMessage } = useMessage();
   const { t } = useTranslation();
+  const { completeStep } = useOnboarding();
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
@@ -189,6 +192,23 @@ const Profile: React.FC = () => {
         setFormData(updatedData);
         showMessage('Profil erfolgreich aktualisiert', 'success');
         setIsEditing(false);
+        
+        // Prüfe ob Profil jetzt vollständig ist (für Tour)
+        const isComplete = !!(
+          updatedData.username &&
+          updatedData.email &&
+          updatedData.country &&
+          updatedData.language
+        );
+        
+        // Wenn Profil vollständig ist, schließe den Profil-Schritt ab
+        if (isComplete) {
+          try {
+            await completeStep('profile_complete', t('onboarding.steps.profile_complete.title') || 'Profil vervollständigen');
+          } catch (error) {
+            console.error('Fehler beim Abschließen des Profil-Schritts:', error);
+          }
+        }
       }
     } catch (error) {
       console.error('Error updating profile:', error);
@@ -223,7 +243,7 @@ const Profile: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen dark:bg-gray-900">
+    <div className="min-h-screen dark:bg-gray-900" data-onboarding="profile-page">
       <div className="max-w-7xl mx-auto py-0 px-2 -mt-6 sm:-mt-3 lg:-mt-3 sm:px-4 lg:px-6">
       {/* Warnung wenn Profil unvollständig */}
       {isProfileIncomplete() && (

@@ -338,8 +338,11 @@ export const getArticlesStructure = async (req: Request, res: Response) => {
  */
 export const createArticle = async (req: Request, res: Response) => {
     try {
+        console.log('[createArticle] Start - userId:', req.userId, 'organizationId:', (req as any).organizationId);
         const { title, content, parentId, isPublished = false } = req.body;
         const userId = parseInt(req.userId, 10);
+        
+        console.log('[createArticle] Request body:', { title, parentId, isPublished, contentLength: content?.length });
         
         if (!title) {
             return res.status(400).json({ message: 'Titel ist erforderlich' });
@@ -403,9 +406,15 @@ export const createArticle = async (req: Request, res: Response) => {
             WHERE uns."carticleCreate" = true
         `;
         
+        console.log('[createArticle] ✅ Artikel erfolgreich erstellt:', newArticle[0].id);
         res.status(201).json(newArticle[0]);
     } catch (error: any) {
-        console.error('Fehler beim Erstellen des Artikels:', error);
+        console.error('[createArticle] ❌ Fehler beim Erstellen des Artikels:', error);
+        console.error('[createArticle] Error details:', {
+            message: error?.message,
+            code: error?.code,
+            stack: error?.stack
+        });
         const errorMessage = error?.message || 'Fehler beim Erstellen des Artikels';
         const statusCode = error?.code === 'P2002' ? 409 : 500;
         res.status(statusCode).json({ 

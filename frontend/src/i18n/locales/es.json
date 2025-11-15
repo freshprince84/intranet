@@ -241,7 +241,10 @@
     "phoneNumber": "Número de teléfono",
     "phoneNumberHint": "Formato: +CódigoPaísNúmero (ej: +573001234567)",
     "profileTab": "Perfil",
-    "documentsTab": "Documentos"
+    "documentsTab": "Documentos",
+    "identificationDocument": "Documento de identificación",
+    "uploadDocument": "Subir documento",
+    "uploadDocumentHint": "Por favor, suba su documento de identificación (Cédula o Pasaporte). Los campos se completarán automáticamente."
   },
   "organization": {
     "title": "Organización",
@@ -2112,11 +2115,16 @@
       "complete": "Terminar tour",
       "restart": "Reiniciar tour"
     },
+    "waiting": "Por favor completa tu perfil...",
     "progress": {
       "step": "Paso",
       "of": "de"
     },
     "steps": {
+      "profile_complete": {
+        "title": "Completa tu perfil",
+        "description": "Para comenzar, necesitas completar tu perfil con la información básica. Por favor, completa los campos obligatorios: nombre de usuario, correo electrónico, país e idioma. Una vez guardado, continuaremos con el tour."
+      },
       "welcome": {
         "title": "¡Bienvenido!",
         "description": "¡Bienvenido a la Intranet! Este tour de introducción te mostrará las funciones más importantes. Puedes omitirlo en cualquier momento o reiniciarlo más tarde en la configuración."
