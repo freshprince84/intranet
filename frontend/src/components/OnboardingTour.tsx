@@ -30,12 +30,15 @@ const OnboardingTour: React.FC = () => {
 
   // Prüfe ob aktueller Schritt zur aktuellen Route passt
   // Bei Navigations-Schritten: Modal auch auf aktueller Route anzeigen (damit Link sichtbar ist)
+  // WICHTIG: Tour sollte auch auf /profile funktionieren (wenn User dorthin umgeleitet wurde)
   const isStepForCurrentRoute = currentStepData?.route 
     ? (currentStepData.action === 'navigate' 
         ? location.pathname === currentStepData.route || 
-          (currentStepData.route === '/dashboard' && location.pathname.startsWith('/dashboard'))
+          (currentStepData.route === '/dashboard' && location.pathname.startsWith('/dashboard')) ||
+          (currentStepData.route === '/profile' && location.pathname === '/profile')
         : location.pathname === currentStepData.route || 
-          (currentStepData.route === '/dashboard' && location.pathname.startsWith('/dashboard')))
+          (currentStepData.route === '/dashboard' && location.pathname.startsWith('/dashboard')) ||
+          (currentStepData.route === '/profile' && location.pathname === '/profile'))
     : true;
 
   // Mobile-Erkennung

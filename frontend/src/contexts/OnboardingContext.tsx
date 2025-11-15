@@ -102,70 +102,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
 
   const filteredSteps = filterStepsByPermissions(steps);
 
-  // Lade Onboarding-Status beim Start
-  useEffect(() => {
-    const loadStatus = async () => {
-      if (!user) {
-        setIsLoading(false);
-        return;
-      }
-
-      try {
-        const response = await axiosInstance.get(API_ENDPOINTS.USERS.ONBOARDING.STATUS);
-        const statusData: OnboardingStatus = response.data;
-        setStatus(statusData);
-
-        if (!statusData.onboardingCompleted) {
-          // Wenn Onboarding nicht abgeschlossen, lade Fortschritt
-          if (statusData.onboardingProgress) {
-            setCurrentStep(statusData.onboardingProgress.currentStep);
-            setCompletedSteps(statusData.onboardingProgress.completedSteps);
-          }
-          // Starte Tour automatisch, wenn noch nicht gestartet
-          if (!statusData.onboardingStartedAt) {
-            await startTour();
-          } else {
-            setIsActive(true);
-          }
-        }
-      } catch (error) {
-        console.error('Fehler beim Laden des Onboarding-Status:', error);
-        // Fallback: Lade aus LocalStorage
-        const savedProgress = localStorage.getItem('onboardingProgress');
-        if (savedProgress) {
-          try {
-            const progress = JSON.parse(savedProgress);
-            setCurrentStep(progress.currentStep || 0);
-            setCompletedSteps(progress.completedSteps || []);
-          } catch (e) {
-            console.error('Fehler beim Parsen des gespeicherten Fortschritts:', e);
-          }
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadStatus();
-  }, [user]);
-
-  // Speichere Fortschritt
-  const saveProgress = useCallback(async (step: number, completed: number[]) => {
-    const progress = { currentStep: step, completedSteps: completed };
-    
-    // LocalStorage als Fallback
-    localStorage.setItem('onboardingProgress', JSON.stringify(progress));
-    
-    // Backend-Speicherung
-    try {
-      await axiosInstance.put(API_ENDPOINTS.USERS.ONBOARDING.PROGRESS, progress);
-    } catch (error) {
-      console.error('Fehler beim Speichern des Fortschritts:', error);
-      // Fehler blockieren nicht die Tour
-    }
-  }, []);
-
-  // Track Event
+  // Track Event (MUSS VOR startTour definiert werden, da startTour es verwendet)
   const trackEvent = useCallback(async (
     stepId: string,
     stepTitle: string,
@@ -184,6 +121,107 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
       // Fehler blockieren nicht die Tour
     }
   }, []);
+
+  // Tour starten (MUSS VOR useEffect definiert werden, der es verwendet)
+  const startTour = useCallback(async () => {
+    if (!user) return;
+
+    setIsActive(true);
+    setCurrentStep(0);
+    setCompletedSteps([]);
+
+    // Track Start-Event
+    await trackEvent('tour', 'Onboarding Tour', 'started');
+
+    // Speichere Start-Zeitpunkt
+    try {
+      await axiosInstance.put(API_ENDPOINTS.USERS.ONBOARDING.PROGRESS, {
+        currentStep: 0,
+        completedSteps: [],
+        onboardingStartedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Fehler beim Speichern des Start-Zeitpunkts:', error);
+    }
+  }, [user, trackEvent]);
+
+  // Lade Onboarding-Status beim Start
+  useEffect(() => {
+    const loadStatus = async () => {
+      if (!user) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Warte kurz, damit User vollständig geladen ist (verhindert Race Condition)
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      try {
+        const response = await axiosInstance.get(API_ENDPOINTS.USERS.ONBOARDING.STATUS);
+        const statusData: OnboardingStatus = response.data;
+        setStatus(statusData);
+
+        if (!statusData.onboardingCompleted) {
+          // Wenn Onboarding nicht abgeschlossen, lade Fortschritt
+          if (statusData.onboardingProgress) {
+            setCurrentStep(statusData.onboardingProgress.currentStep);
+            setCompletedSteps(statusData.onboardingProgress.completedSteps);
+          }
+          // Starte Tour automatisch, wenn noch nicht gestartet
+          // WICHTIG: Tour startet auch wenn User zu /profile umgeleitet wird
+          if (!statusData.onboardingStartedAt) {
+            // Warte noch etwas, damit UI vollständig geladen ist
+            setTimeout(async () => {
+              await startTour();
+            }, 500);
+          } else {
+            setIsActive(true);
+          }
+        }
+      } catch (error) {
+        console.error('Fehler beim Laden des Onboarding-Status:', error);
+        // Fallback: Lade aus LocalStorage
+        const savedProgress = localStorage.getItem('onboardingProgress');
+        if (savedProgress) {
+          try {
+            const progress = JSON.parse(savedProgress);
+            setCurrentStep(progress.currentStep || 0);
+            setCompletedSteps(progress.completedSteps || []);
+          } catch (e) {
+            console.error('Fehler beim Parsen des gespeicherten Fortschritts:', e);
+          }
+        }
+        // Auch bei Fehler: Tour starten, wenn noch nicht gestartet (für neue User)
+        const savedStarted = localStorage.getItem('onboardingStartedAt');
+        if (!savedStarted) {
+          setTimeout(async () => {
+            await startTour();
+          }, 500);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadStatus();
+  }, [user, startTour]);
+
+  // Speichere Fortschritt
+  const saveProgress = useCallback(async (step: number, completed: number[]) => {
+    const progress = { currentStep: step, completedSteps: completed };
+    
+    // LocalStorage als Fallback
+    localStorage.setItem('onboardingProgress', JSON.stringify(progress));
+    
+    // Backend-Speicherung
+    try {
+      await axiosInstance.put(API_ENDPOINTS.USERS.ONBOARDING.PROGRESS, progress);
+    } catch (error) {
+      console.error('Fehler beim Speichern des Fortschritts:', error);
+      // Fehler blockieren nicht die Tour
+    }
+  }, []);
+
 
   // Automatischer Schritt-Wechsel bei Navigation (für action: 'navigate' Schritte)
   useEffect(() => {
@@ -227,28 +265,6 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
     }
   }, [location.pathname, isActive, currentStep, filteredSteps, completedSteps, saveProgress, trackEvent]);
 
-  // Tour starten
-  const startTour = useCallback(async () => {
-    if (!user) return;
-
-    setIsActive(true);
-    setCurrentStep(0);
-    setCompletedSteps([]);
-
-    // Track Start-Event
-    await trackEvent('tour', 'Onboarding Tour', 'started');
-
-    // Speichere Start-Zeitpunkt
-    try {
-      await axiosInstance.put(API_ENDPOINTS.USERS.ONBOARDING.PROGRESS, {
-        currentStep: 0,
-        completedSteps: [],
-        onboardingStartedAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Fehler beim Speichern des Start-Zeitpunkts:', error);
-    }
-  }, [user, trackEvent]);
 
   // Tour stoppen
   const stopTour = useCallback(async () => {

@@ -149,21 +149,44 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
 
   // Finde Attachment-Metadaten für einen Dateinamen oder URL
   const getAttachmentMetadata = (fileName: string, url?: string) => {
+    // Entferne Emojis und Whitespace vom Dateinamen für bessere Erkennung
+    const cleanFileName = fileName.replace(/^[\u{1F300}-\u{1F9FF}\s]+/u, '').trim();
+    
     // Versuche zuerst nach Dateiname zu suchen
     let metadata = attachmentMetadata.find(meta => meta.fileName === fileName);
+    
+    // Falls nicht gefunden, versuche mit bereinigtem Dateinamen
+    if (!metadata && cleanFileName !== fileName) {
+      metadata = attachmentMetadata.find(meta => meta.fileName === cleanFileName);
+    }
     
     // Falls nicht gefunden, versuche auch nach Dateiname ohne Groß-/Kleinschreibung
     if (!metadata) {
       metadata = attachmentMetadata.find(meta => meta.fileName.toLowerCase() === fileName.toLowerCase());
     }
     
+    // Falls immer noch nicht gefunden, versuche mit bereinigtem Dateinamen ohne Groß-/Kleinschreibung
+    if (!metadata && cleanFileName !== fileName) {
+      metadata = attachmentMetadata.find(meta => meta.fileName.toLowerCase() === cleanFileName.toLowerCase());
+    }
+    
     // Falls immer noch nicht gefunden und URL vorhanden, versuche die ID aus der URL zu extrahieren
     if (!metadata && url && attachmentMetadata.length > 0) {
-      // Versuche Attachment-ID aus URL zu extrahieren (z.B. /api/tasks/123/attachments/456 oder /api/requests/123/attachments/456)
-      const attachmentIdMatch = url.match(/\/(?:tasks|requests)\/\d+\/attachments\/(\d+)/);
+      // Versuche Attachment-ID aus URL zu extrahieren
+      // Format: /api/tasks/123/attachments/456 oder /api/requests/123/attachments/456
+      let attachmentIdMatch = url.match(/\/(?:tasks|requests)\/\d+\/attachments\/(\d+)/);
       if (attachmentIdMatch) {
         const attachmentId = parseInt(attachmentIdMatch[1], 10);
         metadata = attachmentMetadata.find(meta => meta.id === attachmentId);
+      }
+      
+      // Auch für Cerebro-Media-URLs: /api/cerebro/media/123/file
+      if (!metadata) {
+        attachmentIdMatch = url.match(/\/cerebro\/media\/(\d+)\/file/);
+        if (attachmentIdMatch) {
+          const mediaId = parseInt(attachmentIdMatch[1], 10);
+          metadata = attachmentMetadata.find(meta => meta.id === mediaId);
+        }
       }
     }
     
@@ -202,10 +225,20 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         
         // Falls Metadaten nicht per Dateiname gefunden wurden, versuche per URL-ID
         if (!metadata && attachment.url) {
-          const attachmentIdMatch = attachment.url.match(/\/attachments\/(\d+)/);
+          // Versuche Task/Request Attachment-ID
+          let attachmentIdMatch = attachment.url.match(/\/attachments\/(\d+)/);
           if (attachmentIdMatch) {
             const attachmentId = parseInt(attachmentIdMatch[1]);
             metadata = attachmentMetadata.find(meta => meta.id === attachmentId);
+          }
+          
+          // Falls nicht gefunden, versuche Cerebro-Media-ID
+          if (!metadata) {
+            attachmentIdMatch = attachment.url.match(/\/cerebro\/media\/(\d+)\/file/);
+            if (attachmentIdMatch) {
+              const mediaId = parseInt(attachmentIdMatch[1]);
+              metadata = attachmentMetadata.find(meta => meta.id === mediaId);
+            }
           }
         }
         
@@ -264,8 +297,9 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
           const urlMatchesPdf = url && url.match(/\.pdf(\?|$)/i);
           const fileNameEndsWithPdf = fileName.endsWith('.pdf');
           const isApiAttachmentPdf = url && (url.includes('/api/requests/attachments/') || url.includes('/api/tasks/attachments/')) && fileNameEndsWithPdf;
+          const isCerebroMediaPdf = url && url.includes('/cerebro/media/') && fileNameEndsWithPdf;
           
-          isPdf = urlEndsWithPdf || urlMatchesPdf || fileNameEndsWithPdf || isApiAttachmentPdf;
+          isPdf = urlEndsWithPdf || urlMatchesPdf || fileNameEndsWithPdf || isApiAttachmentPdf || isCerebroMediaPdf;
           
           console.log('🔍 PDF-Erkennung (ohne Metadaten):', {
             urlEndsWithPdf,
@@ -317,24 +351,29 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
                 />
               </div>
             ) : isExternalLink ? (
-              // Externer Link-Vorschau
+              // Externer Link-Vorschau mit iframe
               <div className="p-3">
-                <div className="flex items-center">
+                <div className="flex items-center mb-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                   </svg>
+                  <span className="text-sm font-medium dark:text-gray-200 flex-grow">{attachment.alt || url}</span>
                   <a 
                     href={url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                    className="ml-2 text-blue-600 dark:text-blue-400 hover:underline text-sm"
                   >
-                    {attachment.alt || url}
+                    Öffnen
                   </a>
                 </div>
-                <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 break-all">
-                  {url}
-                </div>
+                <iframe 
+                  src={url}
+                  className="w-full rounded border dark:border-gray-600"
+                  style={{ height: '400px' }}
+                  title={attachment.alt || 'Web-Vorschau'}
+                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+                />
               </div>
             ) : (
               // Andere Dateitypen

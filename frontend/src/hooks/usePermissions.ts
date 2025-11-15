@@ -303,12 +303,24 @@ export const usePermissions = () => {
     }, [user]);
 
     const isProfileComplete = useCallback((): boolean => {
+        // WICHTIG: profileComplete ist nur relevant, wenn User Mitglied einer Organisation ist
+        // Vor Organisation-Beitritt: Keine Profil-Blockierung
+        if (!user) return true; // Kein User = kein Blockieren
+        
+        // Prüfe ob User Mitglied einer Organisation ist
+        const hasOrganization = user.roles?.some(r => r.role.organization !== null) || false;
+        
+        // Wenn User KEINE Organisation hat: Profil-Blockierung deaktivieren
+        if (!hasOrganization) {
+            return true; // Keine Blockierung vor Organisation-Beitritt
+        }
+        
+        // Wenn User MIT Organisation: Prüfe profileComplete
         if (profileComplete !== null) {
             return profileComplete;
         }
         
         // Fallback: Lokale Prüfung
-        if (!user) return false;
         return !!(
             user.username &&
             user.email &&
