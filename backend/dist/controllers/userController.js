@@ -238,11 +238,15 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
         // Die Rolle aus dem Token als aktive Rolle markieren
         if (!isNaN(roleId)) {
-            const modifiedUser = Object.assign(Object.assign({}, user), { roles: user.roles.map(roleEntry => (Object.assign(Object.assign({}, roleEntry), { role: Object.assign(Object.assign({}, roleEntry.role), { organization: roleEntry.role.organization ? Object.assign(Object.assign({}, roleEntry.role.organization), { logo: roleEntry.role.organization.logo || null }) : null }), lastUsed: roleEntry.role.id === roleId }))) });
+            const modifiedUser = Object.assign(Object.assign({}, user), { roles: user.roles.map(roleEntry => (Object.assign(Object.assign({}, roleEntry), { role: Object.assign(Object.assign({}, roleEntry.role), { organization: roleEntry.role.organization ? Object.assign(Object.assign({}, roleEntry.role.organization), { 
+                            // Korrigiere String 'null' zu echtem null
+                            logo: roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo }) : null }), lastUsed: roleEntry.role.id === roleId }))) });
             return res.json(modifiedUser);
         }
         // Stelle sicher, dass das Logo-Feld explizit zurückgegeben wird
-        const userWithLogo = Object.assign(Object.assign({}, user), { roles: user.roles.map(roleEntry => (Object.assign(Object.assign({}, roleEntry), { role: Object.assign(Object.assign({}, roleEntry.role), { organization: roleEntry.role.organization ? Object.assign(Object.assign({}, roleEntry.role.organization), { logo: roleEntry.role.organization.logo || null }) : null }) }))) });
+        const userWithLogo = Object.assign(Object.assign({}, user), { roles: user.roles.map(roleEntry => (Object.assign(Object.assign({}, roleEntry), { role: Object.assign(Object.assign({}, roleEntry.role), { organization: roleEntry.role.organization ? Object.assign(Object.assign({}, roleEntry.role.organization), { 
+                        // Korrigiere String 'null' zu echtem null
+                        logo: roleEntry.role.organization.logo === 'null' || roleEntry.role.organization.logo === null || roleEntry.role.organization.logo === '' ? null : roleEntry.role.organization.logo }) : null }) }))) });
         res.json(userWithLogo);
     }
     catch (error) {

@@ -137,6 +137,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
 });
 exports.register = register;
 const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         let { username, password } = req.body;
         // Whitespace entfernen
@@ -226,6 +227,14 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 data: { profileComplete: isComplete }
             });
         }
+        // Debug: Logge Logo-Daten vor Login-Response
+        const activeRoleOrg = (_a = user.roles.find(r => r.lastUsed)) === null || _a === void 0 ? void 0 : _a.role.organization;
+        console.log('=== LOGIN LOGO DEBUG ===');
+        console.log('Active role organization:', activeRoleOrg ? {
+            id: activeRoleOrg.id,
+            name: activeRoleOrg.name,
+            logo: activeRoleOrg.logo ? (activeRoleOrg.logo === 'null' ? 'String "null" (WIRD KORRIGIERT)' : `${activeRoleOrg.logo.substring(0, 50)}...`) : 'null'
+        } : 'null');
         // Bereite die Benutzerinformationen für die Antwort vor
         const userResponse = {
             id: user.id,
@@ -244,7 +253,8 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                         id: r.role.organization.id,
                         name: r.role.organization.name,
                         displayName: r.role.organization.displayName,
-                        logo: r.role.organization.logo
+                        // Korrigiere String 'null' zu echtem null
+                        logo: r.role.organization.logo === 'null' || r.role.organization.logo === null || r.role.organization.logo === '' ? null : r.role.organization.logo
                     } : null
                 },
                 lastUsed: r.lastUsed

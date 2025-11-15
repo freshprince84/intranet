@@ -162,7 +162,7 @@ const metadata: MetadataItem[] = [
 - Button-Design: Gleicher Plus-Icon Button wie für Tasks
 - Nur anzeigen, wenn `hasPermission('reservations', 'write', 'table')`
 
-### 6. Filter und Suche für Reservations
+### 6. Filter und Suche für Reservations (mit Persistenz)
 
 **Datei**: `frontend/src/pages/Worktracker.tsx`
 
@@ -171,6 +171,10 @@ const metadata: MetadataItem[] = [
 - Suche für Reservations (Gast-Name, E-Mail, Telefon, Zimmernummer)
 - Filter-Pane erweitern: Wenn `activeTab === 'reservations'`, Reservations-spezifische Filter anzeigen
 - Filter-Logik: Reservations filtern statt Tasks
+- **Filter-Persistenz**: Filter für Reservations werden gespeichert (analog zu Tasks)
+  - Verwende `SavedFilterTags` Komponente
+  - Table-ID: `RESERVATIONS_TABLE_ID = 'worktracker-reservations'`
+  - Filter werden in der Datenbank gespeichert und können wieder geladen werden
 
 **Filter-Optionen**:
 - Status-Filter: Bestätigt, Eingecheckt, Ausgecheckt, Storniert, Nicht erschienen
@@ -194,10 +198,9 @@ const metadata: MetadataItem[] = [
 **Änderungen**:
 - View-Mode Toggle funktioniert auch für Reservations
 - Wenn `activeTab === 'reservations'`:
-  - Tabelle-Ansicht: Reservations-Tabelle (falls gewünscht, optional)
-  - Cards-Ansicht: Reservations als DataCards (Standard)
-
-**Hinweis**: Reservations werden primär als Cards angezeigt. Tabellen-Ansicht ist optional.
+  - **Tabelle-Ansicht**: Reservations-Tabelle (analog zu To Do's)
+  - **Cards-Ansicht**: Reservations als DataCards (Standard)
+- Beide Ansichten müssen vollständig implementiert werden (analog zu To Do's)
 
 ### 9. Navigation zu Reservation-Details
 
@@ -324,16 +327,16 @@ useEffect(() => {
    - Sync-Button synchronisiert Reservations
    - Loading-State wird angezeigt
 
-## Offene Fragen
+## Bestätigte Anforderungen
 
-1. **Berechtigungen**: Welche Entity wird für Reservations verwendet? (`reservations` mit `entityType: 'table'`?)
-2. **Tabellen-Ansicht**: Soll es eine Tabellen-Ansicht für Reservations geben, oder nur Cards?
-3. **Filter-Persistenz**: Sollen Filter für Reservations gespeichert werden (analog zu Tasks)?
+1. ✅ **Berechtigungen**: `reservations` mit `entityType: 'table'` (analog zu `tasks`)
+2. ✅ **Tabellen-Ansicht**: Beides (Tabelle und Cards), analog zu To Do's
+3. ✅ **Filter-Persistenz**: Ja, Filter werden gespeichert (analog zu Tasks)
 
 ## Nächste Schritte
 
 1. ✅ Plan erstellen und prüfen
-2. ⏳ Plan vom Benutzer bestätigen lassen
+2. ✅ Plan vom Benutzer bestätigt
 3. ⏳ Implementierung starten
 4. ⏳ Testing durchführen
 5. ⏳ Dokumentation aktualisieren

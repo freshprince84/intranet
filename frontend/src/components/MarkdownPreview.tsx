@@ -38,7 +38,8 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       isTemporary: match[2] === "wird nach dem Erstellen hochgeladen"
     }));
     
-    const linkMatches = Array.from(content.matchAll(/\[(.*?)\]\((.*?)\)/g))
+    // Markdown-Links: [Text](URL)
+    const markdownLinkMatches = Array.from(content.matchAll(/\[(.*?)\]\((.*?)\)/g))
       .filter(match => !match[0].startsWith('!')) // Bilder ausschließen
       .map(match => ({
         type: 'link',
@@ -47,14 +48,37 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
         isTemporary: match[2] === "wird nach dem Erstellen hochgeladen"
       }));
     
+    // Reine URLs (ohne Markdown-Format): http:// oder https://
+    // WICHTIG: Nur URLs die nicht bereits in Markdown-Links enthalten sind
+    // Regex: Findet URLs am Zeilenanfang, nach Whitespace, oder am Zeilenende
+    // Stoppt bei Whitespace, Zeilenende, oder schließenden Klammern
+    const urlRegex = /(?:^|[\s\n])(https?:\/\/[^\s\n\)\]\>]+)/g;
+    const rawUrlMatches: Array<{ type: string; alt: string; url: string; isTemporary: boolean }> = [];
+    const allMarkdownUrls = new Set([...imageMatches, ...markdownLinkMatches].map(m => m.url));
+    
+    let urlMatch;
+    while ((urlMatch = urlRegex.exec(content)) !== null) {
+      const url = urlMatch[1].trim();
+      // Überspringe URLs, die bereits in Markdown-Links enthalten sind
+      if (!allMarkdownUrls.has(url)) {
+        rawUrlMatches.push({
+          type: 'link',
+          alt: url, // Verwende URL als Alt-Text
+          url: url,
+          isTemporary: false
+        });
+      }
+    }
+    
     console.log('📋 extractAttachments:', {
       contentLength: content.length,
       imageMatches: imageMatches.length,
-      linkMatches: linkMatches.length,
-      links: linkMatches.map(l => ({ alt: l.alt, url: l.url }))
+      markdownLinkMatches: markdownLinkMatches.length,
+      rawUrlMatches: rawUrlMatches.length,
+      allLinks: [...markdownLinkMatches, ...rawUrlMatches].map(l => ({ alt: l.alt, url: l.url }))
     });
     
-    const allAttachments = [...imageMatches, ...linkMatches];
+    const allAttachments = [...imageMatches, ...markdownLinkMatches, ...rawUrlMatches];
     
     // Duplikate entfernen - gruppieren nach alt (Dateiname) und URL, nur eindeutige behalten
     const uniqueAttachments = allAttachments.reduce((acc, current) => {
@@ -612,6 +636,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
     console.log('📊 Externe Links gefunden:', externalLinksToRender.length, externalLinksToRender);
     
     // Ersetze externe Links aus dem Text (werden separat als Vorschau gerendert)
+    // 1. Markdown-Links: [Text](URL)
     processedContent = processedContent.replace(linkRegex, (match, alt, url) => {
       // Überspringe Links, die bereits als Bilder behandelt wurden
       if (match.startsWith('![')) {
@@ -630,13 +655,33 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
       const isImage = imageExtensions.test(url);
       const isPdf = pdfExtensions.test(url);
       
+      // Prüfe ob dieser Link in externalLinksToRender enthalten ist
+      const isInExternalLinks = externalLinksToRender.some(link => link.url === url);
+      
       // Entferne externe Links komplett (werden als Vorschau gerendert)
-      if (isExternalLink && !isCerebroMedia && !isAttachmentUrl && !isImage && !isPdf) {
+      if (isExternalLink && !isCerebroMedia && !isAttachmentUrl && !isImage && !isPdf && isInExternalLinks) {
         return '';
       }
       
       // Andere Links als Text mit Link-Referenz
       return `${alt} [Link]`;
+    });
+    
+    // 2. Reine URLs (ohne Markdown-Format): http:// oder https://
+    // Entferne URLs, die in externalLinksToRender enthalten sind
+    externalLinksToRender.forEach(link => {
+      const url = link.url;
+      // Erstelle Regex, die die URL findet (am Zeilenanfang, nach Whitespace, oder am Zeilenende)
+      const urlEscaped = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Finde URL mit optionalem Whitespace davor und danach
+      const urlRegex = new RegExp(`(?:^|[\\s\\n])(${urlEscaped})(?:[\\s\\n]|$)`, 'g');
+      processedContent = processedContent.replace(urlRegex, (match, urlMatch) => {
+        // Entferne die URL komplett (wird als Vorschau gerendert)
+        // Behalte nur Whitespace, wenn vorhanden
+        const before = match.substring(0, match.indexOf(urlMatch));
+        const after = match.substring(match.indexOf(urlMatch) + urlMatch.length);
+        return (before.trim() + ' ' + after.trim()).trim() || '';
+      });
     });
     
     // Entferne auch alle Leerzeilen, die durch das Entfernen der Links entstehen könnten

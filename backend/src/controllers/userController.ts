@@ -585,10 +585,15 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
 
         // Normalisiere Telefonnummer (falls vorhanden)
         let normalizedPhoneNumber: string | null = null;
-        if (phoneNumber && phoneNumber.trim() !== '') {
-            normalizedPhoneNumber = phoneNumber.replace(/[\s-]/g, '');
-            if (!normalizedPhoneNumber.startsWith('+')) {
-                normalizedPhoneNumber = '+' + normalizedPhoneNumber;
+        if (phoneNumber !== undefined) {
+            if (phoneNumber && phoneNumber.trim() !== '') {
+                normalizedPhoneNumber = phoneNumber.replace(/[\s-]/g, '');
+                if (!normalizedPhoneNumber.startsWith('+')) {
+                    normalizedPhoneNumber = '+' + normalizedPhoneNumber;
+                }
+            } else {
+                // Explizit auf null setzen, wenn phoneNumber leer oder null ist
+                normalizedPhoneNumber = null;
             }
         }
 

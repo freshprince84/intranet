@@ -121,7 +121,8 @@ const FilterRow: React.FC<FilterRowProps> = ({
       const token = localStorage.getItem('token');
       if (!token) return;
       
-      if (condition.column === 'responsible' || condition.column === 'qualityControl' || condition.column === 'responsibleAndQualityControl') {
+      // WICHTIG: requestedBy, responsible, qualityControl und responsibleAndQualityControl benötigen Dropdowns
+      if (condition.column === 'requestedBy' || condition.column === 'responsible' || condition.column === 'qualityControl' || condition.column === 'responsibleAndQualityControl') {
         // Benutzer laden (nur aktive Benutzer)
         setLoadingUsers(true);
         try {
@@ -133,8 +134,8 @@ const FilterRow: React.FC<FilterRowProps> = ({
           setLoadingUsers(false);
         }
         
-        // Rollen laden, aber nur wenn es sich um den Verantwortlichen handelt
-        if (condition.column === 'responsible' || condition.column === 'responsibleAndQualityControl') {
+        // Rollen laden für requestedBy, responsible und responsibleAndQualityControl (nicht für qualityControl)
+        if (condition.column === 'requestedBy' || condition.column === 'responsible' || condition.column === 'responsibleAndQualityControl') {
           setLoadingRoles(true);
           try {
             const response = await axiosInstance.get('/roles');
@@ -229,8 +230,9 @@ const FilterRow: React.FC<FilterRowProps> = ({
       }
     }
     
-    // Für Verantwortlicher ein Dropdown mit Benutzern und Rollen rendern
-    if (columnId === 'responsible' || columnId === 'responsibleAndQualityControl') {
+    // Für requestedBy, responsible und responsibleAndQualityControl ein Dropdown mit Benutzern und Rollen rendern
+    // WICHTIG: Diese Spalten müssen IMMER Dropdowns verwenden, keine Text-Eingabe
+    if (columnId === 'requestedBy' || columnId === 'responsible' || columnId === 'responsibleAndQualityControl') {
       return (
         <select
           className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
