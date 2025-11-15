@@ -571,12 +571,18 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             });
         }
 
+        // Logging für Debugging
+        console.log('[updateProfile] phoneNumber received:', phoneNumber, 'Type:', typeof phoneNumber);
+        console.log('[updateProfile] Request body size:', JSON.stringify(req.body).length, 'bytes');
+
         // Validiere Telefonnummer-Format falls vorhanden
         if (phoneNumber && phoneNumber.trim() !== '') {
             // Validiere Format: + gefolgt von 1-15 Ziffern
             const phoneRegex = /^\+[1-9]\d{1,14}$/;
             const normalizedPhone = phoneNumber.replace(/[\s-]/g, '');
+            console.log('[updateProfile] Normalized phone for validation:', normalizedPhone);
             if (!phoneRegex.test(normalizedPhone)) {
+                console.log('[updateProfile] Phone validation failed for:', normalizedPhone);
                 return res.status(400).json({
                     message: 'Ungültiges Telefonnummer-Format. Format: +LändercodeNummer (z.B. +573001234567)'
                 });
@@ -591,10 +597,14 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
                 if (!normalizedPhoneNumber.startsWith('+')) {
                     normalizedPhoneNumber = '+' + normalizedPhoneNumber;
                 }
+                console.log('[updateProfile] Final normalized phoneNumber:', normalizedPhoneNumber);
             } else {
                 // Explizit auf null setzen, wenn phoneNumber leer oder null ist
                 normalizedPhoneNumber = null;
+                console.log('[updateProfile] phoneNumber set to null (empty string)');
             }
+        } else {
+            console.log('[updateProfile] phoneNumber is undefined, not updating');
         }
 
         const updateData: Prisma.UserUpdateInput = {
@@ -610,6 +620,8 @@ export const updateProfile = async (req: AuthenticatedRequest & { body: UpdatePr
             ...(gender !== undefined && { gender: gender || null }),
             ...(phoneNumber !== undefined && { phoneNumber: normalizedPhoneNumber })
         };
+
+        console.log('[updateProfile] Update data:', JSON.stringify(updateData, null, 2));
 
         const updatedUser = await prisma.user.update({
             where: { id: userId },
