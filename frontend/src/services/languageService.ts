@@ -6,6 +6,33 @@ export interface LanguageResponse {
   language: string;
 }
 
+// localStorage Key für gespeicherte Sprache
+const LANGUAGE_STORAGE_KEY = 'app_language';
+
+// Helper-Funktionen für localStorage
+const getStoredLanguageFromStorage = (): string | null => {
+  try {
+    const stored = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (stored && ['de', 'es', 'en'].includes(stored)) {
+      return stored;
+    }
+    return null;
+  } catch (error) {
+    console.error('Fehler beim Lesen der gespeicherten Sprache:', error);
+    return null;
+  }
+};
+
+const setStoredLanguage = (language: string): void => {
+  try {
+    if (['de', 'es', 'en'].includes(language)) {
+      localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+    }
+  } catch (error) {
+    console.error('Fehler beim Speichern der Sprache:', error);
+  }
+};
+
 export const languageService = {
   // Aktive Sprache für aktuellen User abrufen
   getActiveLanguage: async (): Promise<string> => {
@@ -18,6 +45,9 @@ export const languageService = {
       if (i18n.language !== language) {
         await i18n.changeLanguage(language);
       }
+      
+      // Speichere die Sprache im localStorage
+      setStoredLanguage(language);
       
       return language;
     } catch (error) {
@@ -42,6 +72,9 @@ export const languageService = {
       
       // Setze i18n.language neu
       await i18n.changeLanguage(language);
+      
+      // Speichere die Sprache im localStorage
+      setStoredLanguage(language);
     } catch (error) {
       console.error('Fehler beim Setzen der Benutzer-Sprache:', error);
       throw error;
@@ -77,6 +110,12 @@ export const languageService = {
   // Sprache direkt setzen (ohne API-Call)
   setLanguage: async (language: string): Promise<void> => {
     await i18n.changeLanguage(language);
+    setStoredLanguage(language);
+  },
+
+  // Gespeicherte Sprache aus localStorage abrufen
+  getStoredLanguage: (): string | null => {
+    return getStoredLanguageFromStorage();
   }
 };
 
