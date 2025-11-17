@@ -87,8 +87,22 @@ export class TTLockService {
       throw new Error(`TTLock Username/Password ist nicht für Organisation ${this.organizationId} konfiguriert`);
     }
 
+    // Prüfe ob Client Secret verschlüsselt ist und entschlüssele es
+    let clientSecret = doorSystemSettings.clientSecret;
+    if (clientSecret && clientSecret.includes(':')) {
+      // Verschlüsselt - entschlüssele
+      const { decryptSecret } = await import('../utils/encryption');
+      try {
+        clientSecret = decryptSecret(clientSecret);
+        console.log('[TTLock] Client Secret erfolgreich entschlüsselt');
+      } catch (error) {
+        console.error('[TTLock] Fehler beim Entschlüsseln des Client Secrets:', error);
+        throw new Error('Client Secret konnte nicht entschlüsselt werden');
+      }
+    }
+    
     this.clientId = doorSystemSettings.clientId;
-    this.clientSecret = doorSystemSettings.clientSecret;
+    this.clientSecret = clientSecret;
     this.username = doorSystemSettings.username;
     this.password = doorSystemSettings.password; // Already MD5-hashed
     this.apiUrl = doorSystemSettings.apiUrl || 'https://euopen.ttlock.com';
