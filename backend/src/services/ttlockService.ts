@@ -346,43 +346,11 @@ export class TTLockService {
       }
       payload.append('keyboardPwdName', passcodeName || 'Guest Passcode');
       payload.append('keyboardPwdType', '3'); // 3 = period (temporärer Passcode)
-      
-      // WICHTIG: TTLock API akzeptiert keine Passcodes mit Enddatum in der Vergangenheit!
-      // startDate muss mindestens jetzt sein, endDate muss nach startDate liegen
-      const now = Date.now();
-      const originalStartTime = startDate.getTime();
-      const originalEndTime = endDate.getTime();
-      
-      // startDate: mindestens jetzt (nicht in der Vergangenheit)
-      const actualStartDate = Math.max(originalStartTime, now);
-      
-      // endDate: muss nach startDate liegen (mindestens 1 Tag später)
-      // Wenn endDate in der Vergangenheit oder gleich startDate, setze auf startDate + 1 Tag
-      let actualEndDate: number;
-      if (originalEndTime <= actualStartDate) {
-        // endDate ist in der Vergangenheit oder gleich startDate -> setze auf startDate + 1 Tag
-        actualEndDate = actualStartDate + 86400000; // +1 Tag
-      } else {
-        // endDate ist in der Zukunft -> verwende es, aber mindestens startDate + 1 Tag
-        actualEndDate = Math.max(originalEndTime, actualStartDate + 86400000);
-      }
-      
-      console.log('[TTLock] Date Validation:', {
-        originalStartDate: startDate.toISOString(),
-        originalEndDate: endDate.toISOString(),
-        actualStartDate: new Date(actualStartDate).toISOString(),
-        actualEndDate: new Date(actualEndDate).toISOString(),
-        now: new Date(now).toISOString(),
-        startDateInPast: originalStartTime < now,
-        endDateInPast: originalEndTime < now,
-        endDateBeforeStart: originalEndTime <= originalStartTime
-      });
-      
-      payload.append('startDate', actualStartDate.toString()); // Millisekunden!
-      payload.append('endDate', actualEndDate.toString()); // Millisekunden!
-      // addType: 1=via phone bluetooth (APP SDK), 2=via gateway/WiFi, 3=via NB-IoT
-      // WICHTIG: addType: 3 (NB-IoT) funktioniert für 10-stellige period Passcodes ohne App-Sync!
-      payload.append('addType', '3'); // 3 = via NB-IoT (funktioniert ohne App-Sync für 10-stellige period)
+      payload.append('startDate', startDate.getTime().toString()); // Millisekunden!
+      payload.append('endDate', endDate.getTime().toString()); // Millisekunden!
+      // addType: 1=via phone bluetooth (APP SDK), 2=via gateway/WiFi
+      // WICHTIG: addType: 1 funktioniert für 10-stellige period Passcodes ohne App-Sync!
+      payload.append('addType', '1'); // 1 = via phone bluetooth (funktioniert ohne App-Sync für 10-stellige period)
       payload.append('date', currentTimestamp.toString()); // Millisekunden
 
       // Debug: Zeige vollständigen Request
