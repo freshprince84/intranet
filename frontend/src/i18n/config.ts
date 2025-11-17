@@ -6,6 +6,29 @@ import deTranslations from './locales/de.json';
 import esTranslations from './locales/es.json';
 import enTranslations from './locales/en.json';
 
+// Bestimme initiale Sprache: localStorage → Browser-Sprache → Fallback
+const getInitialLanguage = (): string => {
+  // 1. Prüfe localStorage (falls vorhanden)
+  try {
+    const stored = localStorage.getItem('app_language');
+    if (stored && ['de', 'es', 'en'].includes(stored)) {
+      return stored;
+    }
+  } catch (error) {
+    // localStorage nicht verfügbar (z.B. in SSR), ignoriere Fehler
+  }
+
+  // 2. Browser-Sprache (wird von LanguageDetector erkannt, aber wir setzen hier schon einen Wert)
+  // LanguageDetector wird die Browser-Sprache automatisch erkennen, aber wir brauchen einen initialen Wert
+  const browserLang = navigator.language?.split('-')[0] || '';
+  if (['de', 'es', 'en'].includes(browserLang)) {
+    return browserLang;
+  }
+
+  // 3. Fallback
+  return 'de';
+};
+
 // Synchron initialisieren (ohne await, da .init() synchron ist bei react-i18next)
 i18n
   .use(LanguageDetector)
@@ -17,7 +40,7 @@ i18n
       en: { translation: enTranslations }
     },
     fallbackLng: 'de',
-    lng: 'de', // Standard-Sprache
+    lng: getInitialLanguage(), // Initiale Sprache aus localStorage oder Browser
     defaultNS: 'translation',
     ns: ['translation'],
     interpolation: {

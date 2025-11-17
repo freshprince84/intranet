@@ -28,9 +28,38 @@ interface LanguageProviderProps {
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) => {
   const { i18n } = useTranslation();
   const { user } = useAuth();
-  const [activeLanguage, setActiveLanguage] = useState<string>('de');
+  
+  // Initialisiere mit gespeicherter Sprache oder Browser-Sprache
+  const getInitialLanguage = (): string => {
+    // 1. Prüfe localStorage
+    const stored = languageService.getStoredLanguage();
+    if (stored) {
+      return stored;
+    }
+    
+    // 2. Browser-Sprache (i18n wurde bereits mit Browser-Sprache initialisiert)
+    const browserLanguage = i18n.language || 'de';
+    const supportedLanguages = ['de', 'es', 'en'];
+    if (supportedLanguages.includes(browserLanguage)) {
+      return browserLanguage;
+    }
+    
+    // 3. Fallback
+    return 'de';
+  };
+  
+  const [activeLanguage, setActiveLanguage] = useState<string>(getInitialLanguage());
   const [organizationLanguage, setOrganizationLanguage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+
+  // Setze initiale Sprache sofort (synchron)
+  useEffect(() => {
+    const initialLang = getInitialLanguage();
+    if (initialLang && i18n.language !== initialLang) {
+      i18n.changeLanguage(initialLang);
+      document.documentElement.lang = initialLang;
+    }
+  }, []); // Nur beim Mount
 
   // Lade aktive Sprache beim Mount oder wenn User sich ändert
   useEffect(() => {
@@ -54,8 +83,9 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
           }
         } catch (error) {
           console.error('Fehler beim Laden der Sprache:', error);
-          setActiveLanguage('de');
-          document.documentElement.lang = 'de';
+          const fallbackLang = 'de';
+          setActiveLanguage(fallbackLang);
+          document.documentElement.lang = fallbackLang;
         } finally {
           setIsLoading(false);
         }
@@ -73,6 +103,9 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
         if (i18n.language !== validLanguage) {
           i18n.changeLanguage(validLanguage);
         }
+        
+        // Speichere Browser-Sprache im localStorage
+        languageService.setLanguage(validLanguage);
         
         setIsLoading(false);
       }
@@ -96,6 +129,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
       setActiveLanguage(language);
       document.documentElement.lang = language;
       await i18n.changeLanguage(language);
+      // localStorage wird bereits in languageService.setUserLanguage gespeichert
     } catch (error) {
       console.error('Fehler beim Setzen der Benutzer-Sprache:', error);
       throw error;
@@ -113,6 +147,7 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({ children }) 
         setActiveLanguage(language);
         document.documentElement.lang = language;
         await i18n.changeLanguage(language);
+        // localStorage wird bereits in languageService.setLanguage gespeichert
       }
     } catch (error) {
       console.error('Fehler beim Setzen der Organisation-Sprache:', error);
