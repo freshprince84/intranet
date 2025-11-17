@@ -179,11 +179,24 @@ export class ReservationNotificationService {
           console.log(`[ReservationNotification] Check-in Date: ${reservation.checkInDate}`);
           console.log(`[ReservationNotification] Check-out Date: ${reservation.checkOutDate}`);
 
+          // WICHTIG: checkOutDate muss nach checkInDate liegen (mindestens 1 Tag später)
+          // Falls beide identisch sind (z.B. bei manuell erstellten Reservierungen), korrigiere
+          let actualCheckInDate = reservation.checkInDate;
+          let actualCheckOutDate = reservation.checkOutDate;
+          
+          // Prüfe ob beide Daten identisch oder checkOutDate vor checkInDate liegt
+          if (actualCheckOutDate.getTime() <= actualCheckInDate.getTime()) {
+            console.warn(`[ReservationNotification] ⚠️ checkOutDate ist identisch oder vor checkInDate - korrigiere auf checkInDate + 1 Tag`);
+            actualCheckOutDate = new Date(actualCheckInDate);
+            actualCheckOutDate.setDate(actualCheckOutDate.getDate() + 1); // +1 Tag
+            console.log(`[ReservationNotification] Korrigierte Check-out Date: ${actualCheckOutDate}`);
+          }
+
           // Erstelle Passcode für Check-in bis Check-out
           doorPin = await ttlockService.createTemporaryPasscode(
             lockId,
-            reservation.checkInDate,
-            reservation.checkOutDate,
+            actualCheckInDate,
+            actualCheckOutDate,
             `Guest: ${reservation.guestName}`
           );
 
