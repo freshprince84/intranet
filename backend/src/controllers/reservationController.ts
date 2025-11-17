@@ -505,9 +505,20 @@ export const generatePinAndSendNotification = async (req: Request, res: Response
     }
 
     console.log(`[Reservation] Generiere PIN und sende Mitteilung für Reservierung ${reservationId}`);
+    console.log(`[Reservation] Organization ID: ${organizationId}`);
 
     // Rufe Service-Methode auf, die unabhängig vom Check-in-Status funktioniert
-    await ReservationNotificationService.generatePinAndSendNotification(reservationId);
+    try {
+      await ReservationNotificationService.generatePinAndSendNotification(reservationId);
+      console.log(`[Reservation] ✅ PIN-Generierung abgeschlossen für Reservierung ${reservationId}`);
+    } catch (error) {
+      console.error(`[Reservation] ❌ Fehler bei PIN-Generierung für Reservierung ${reservationId}:`, error);
+      if (error instanceof Error) {
+        console.error(`[Reservation] Fehlermeldung: ${error.message}`);
+        console.error(`[Reservation] Stack: ${error.stack}`);
+      }
+      throw error;
+    }
 
     // Hole aktualisierte Reservierung
     const updatedReservation = await prisma.reservation.findUnique({
