@@ -149,13 +149,26 @@ export class ReservationNotificationService {
       let doorPin: string | null = null;
       let doorAppName: string | null = null;
 
+      console.log(`[ReservationNotification] Starte PIN-Generierung für Reservation ${reservationId}...`);
+      
       try {
         const ttlockService = new TTLockService(reservation.organizationId);
         const doorSystemSettings = decryptedSettings?.doorSystem;
 
+        console.log(`[ReservationNotification] Door System Settings:`, {
+          hasDoorSystem: !!doorSystemSettings,
+          hasLockIds: !!doorSystemSettings?.lockIds,
+          lockIds: doorSystemSettings?.lockIds,
+          lockIdsLength: doorSystemSettings?.lockIds?.length || 0
+        });
+
         if (doorSystemSettings?.lockIds && doorSystemSettings.lockIds.length > 0) {
           const lockId = doorSystemSettings.lockIds[0]; // Verwende ersten Lock
           doorAppName = 'TTLock'; // Oder aus Settings: doorSystemSettings.appName
+
+          console.log(`[ReservationNotification] Erstelle TTLock Passcode für Lock ID: ${lockId}`);
+          console.log(`[ReservationNotification] Check-in Date: ${reservation.checkInDate}`);
+          console.log(`[ReservationNotification] Check-out Date: ${reservation.checkOutDate}`);
 
           // Erstelle Passcode für Check-in bis Check-out
           doorPin = await ttlockService.createTemporaryPasscode(
@@ -164,6 +177,8 @@ export class ReservationNotificationService {
             reservation.checkOutDate,
             `Guest: ${reservation.guestName}`
           );
+
+          console.log(`[ReservationNotification] ✅ TTLock Passcode erfolgreich generiert: ${doorPin}`);
 
           // Speichere in Reservierung
           await prisma.reservation.update({
@@ -175,9 +190,17 @@ export class ReservationNotificationService {
               ttlLockPassword: doorPin
             }
           });
+
+          console.log(`[ReservationNotification] ✅ PIN in DB gespeichert für Reservation ${reservationId}`);
+        } else {
+          console.warn(`[ReservationNotification] ⚠️ Keine Lock IDs konfiguriert für Reservation ${reservationId}`);
         }
       } catch (error) {
-        console.error(`[ReservationNotification] Fehler beim Erstellen des TTLock Passcodes:`, error);
+        console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des TTLock Passcodes:`, error);
+        if (error instanceof Error) {
+          console.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
+          console.error(`[ReservationNotification] Stack: ${error.stack}`);
+        }
         // Weiter ohne PIN
       }
 
