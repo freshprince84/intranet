@@ -31,6 +31,8 @@ export interface Reservation {
   roomDescription?: string | null;
   status: ReservationStatus;
   paymentStatus: PaymentStatus;
+  amount?: number | string | null; // Betrag der Reservierung
+  currency?: string | null; // Währung (COP, USD, EUR, etc.)
   paymentLink?: string | null;
   doorPin?: string | null;
   doorAppName?: string | null;

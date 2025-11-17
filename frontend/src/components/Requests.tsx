@@ -10,7 +10,7 @@ import TableColumnConfig from './TableColumnConfig.tsx';
 import FilterPane from './FilterPane.tsx';
 import SavedFilterTags from './SavedFilterTags.tsx';
 import { FilterCondition } from './FilterRow.tsx';
-import { applyFilters, evaluateDateCondition } from '../utils/filterLogic.ts';
+import { applyFilters, evaluateDateCondition, evaluateUserRoleCondition } from '../utils/filterLogic.ts';
 import { getStatusColor, getStatusText } from '../utils/statusUtils.tsx';
 import { API_ENDPOINTS, getRequestAttachmentUrl } from '../config/api.ts';
 import { 
@@ -134,13 +134,26 @@ const cardToTableMapping: Record<string, string> = {
 
 // Helfer-Funktion: Tabellen-Spalte ausgeblendet -> Card-Metadaten ausblenden
 // WICHTIG: 'type' wird NICHT ausgeblendet, auch wenn die Tabellen-Spalte ausgeblendet ist
+// WICHTIG: Für 'requestedByResponsible' werden die Metadaten separat verwaltet
 const getHiddenCardMetadata = (hiddenTableColumns: string[]): Set<string> => {
   const hiddenCardMetadata = new Set<string>();
+  const requestedByResponsibleHidden = hiddenTableColumns.includes('requestedByResponsible');
+  
   hiddenTableColumns.forEach(tableCol => {
     // 'type' wird immer angezeigt, auch wenn Tabellen-Spalte ausgeblendet ist
     if (tableCol === 'type') {
       return; // Überspringe 'type', damit es immer sichtbar bleibt
     }
+    
+    // Spezielle Behandlung für requestedByResponsible: Wenn ausgeblendet, werden beide Metadaten ausgeblendet
+    if (tableCol === 'requestedByResponsible') {
+      if (requestedByResponsibleHidden) {
+        hiddenCardMetadata.add('requestedBy');
+        hiddenCardMetadata.add('responsible');
+      }
+      return; // Überspringe, da wir es bereits behandelt haben
+    }
+    
     const cardMetadata = tableToCardMapping[tableCol] || [];
     cardMetadata.forEach(cardMeta => {
       // Auch hier: 'type' nicht ausblenden
@@ -164,6 +177,15 @@ const getCardMetadataFromColumnOrder = (columnOrder: string[]): string[] => {
   // Sicherstellen, dass 'type' immer verfügbar ist (auch wenn in Tabellen-Ansicht ausgeblendet)
   if (!cardMetadata.includes('type')) {
     cardMetadata.push('type');
+  }
+  // Sicherstellen, dass requestedBy und responsible immer verfügbar sind, wenn requestedByResponsible in columnOrder ist
+  if (columnOrder.includes('requestedByResponsible')) {
+    if (!cardMetadata.includes('requestedBy')) {
+      cardMetadata.push('requestedBy');
+    }
+    if (!cardMetadata.includes('responsible')) {
+      cardMetadata.push('responsible');
+    }
   }
   // Beschreibung hinzufügen, wenn nicht schon vorhanden
   if (!cardMetadata.includes('description')) {
@@ -233,6 +255,9 @@ const Requests: React.FC = () => {
 
   // State für Paginierung
   const [displayLimit, setDisplayLimit] = useState<number>(10);
+  
+  // Ref um zu verfolgen, ob wir die hiddenColumns selbst ändern (verhindert Endlosschleife)
+  const isUpdatingHiddenColumnsRef = useRef(false);
 
   // View-Mode aus Settings laden
   const viewMode = settings.viewMode || 'cards';
@@ -258,10 +283,65 @@ const Requests: React.FC = () => {
     return getCardMetadataFromColumnOrder(settings.columnOrder || defaultColumnOrder);
   }, [settings.columnOrder]);
 
+  // Separater State für Metadaten-Sichtbarkeit von requestedBy/responsible
+  // Diese werden separat von der Tabellen-Spalte requestedByResponsible verwaltet
+  const [metadataVisibility, setMetadataVisibility] = useState<{requestedBy: boolean, responsible: boolean}>(() => {
+    // Initialisiere basierend auf aktuellen hiddenColumns
+    const requestedByResponsibleHidden = (settings.hiddenColumns || []).includes('requestedByResponsible');
+    return {
+      requestedBy: !requestedByResponsibleHidden,
+      responsible: !requestedByResponsibleHidden
+    };
+  });
+
+  // Synchronisiere metadataVisibility mit settings.hiddenColumns (nur wenn von außen geändert)
+  useEffect(() => {
+    // Überspringe Synchronisation, wenn wir selbst die hiddenColumns ändern
+    if (isUpdatingHiddenColumnsRef.current) {
+      isUpdatingHiddenColumnsRef.current = false;
+      return;
+    }
+    
+    const requestedByResponsibleHidden = (settings.hiddenColumns || []).includes('requestedByResponsible');
+    // Wenn requestedByResponsible ausgeblendet ist, sind beide ausgeblendet
+    // Wenn es nicht ausgeblendet ist, sind beide standardmäßig sichtbar (beim Neuladen)
+    setMetadataVisibility(prev => {
+      // Nur aktualisieren, wenn sich der Zustand geändert hat
+      if (requestedByResponsibleHidden) {
+        if (prev.requestedBy === true || prev.responsible === true) {
+          return { requestedBy: false, responsible: false };
+        }
+      } else {
+        // Wenn requestedByResponsible nicht ausgeblendet ist, aber beide aktuell ausgeblendet sind,
+        // dann wurden sie wahrscheinlich manuell ausgeblendet, also nicht überschreiben
+        // Nur wenn beide aktuell ausgeblendet sind UND requestedByResponsible nicht ausgeblendet ist,
+        // dann setzen wir beide auf true (beim Neuladen, wenn beide ausgeblendet waren)
+        if (prev.requestedBy === false && prev.responsible === false) {
+          return { requestedBy: true, responsible: true };
+        }
+      }
+      return prev;
+    });
+  }, [settings.hiddenColumns]);
+
   // Versteckte Card-Metadaten aus hiddenColumns ableiten
   const hiddenCardMetadata = useMemo(() => {
-    return getHiddenCardMetadata(settings.hiddenColumns || []);
-  }, [settings.hiddenColumns]);
+    const hidden = getHiddenCardMetadata(settings.hiddenColumns || []);
+    
+    // Überschreibe für requestedBy/responsible mit separatem State
+    if (!metadataVisibility.requestedBy) {
+      hidden.add('requestedBy');
+    } else {
+      hidden.delete('requestedBy');
+    }
+    if (!metadataVisibility.responsible) {
+      hidden.add('responsible');
+    } else {
+      hidden.delete('responsible');
+    }
+    
+    return hidden;
+  }, [settings.hiddenColumns, metadataVisibility]);
 
   // Sichtbare Card-Metadaten (alle Card-Metadaten minus versteckte)
   const visibleCardMetadata = useMemo(() => {
@@ -634,18 +714,24 @@ const Requests: React.FC = () => {
               return null;
             },
             'requestedBy': (req: Request, cond: FilterCondition) => {
-              const requestedByName = `${req.requestedBy.firstName} ${req.requestedBy.lastName}`.toLowerCase();
-              const value = (cond.value as string || '').toLowerCase();
-              if (cond.operator === 'contains') return requestedByName.includes(value);
-              if (cond.operator === 'equals') return requestedByName === value;
-              return null;
+              // Unterstützt user-{id} Format und Text-Fallback
+              const requestedByName = `${req.requestedBy.firstName} ${req.requestedBy.lastName}`;
+              return evaluateUserRoleCondition(
+                req.requestedBy.id,
+                null, // Requests haben keine Rollen
+                cond,
+                requestedByName
+              );
             },
             'responsible': (req: Request, cond: FilterCondition) => {
-              const responsibleName = `${req.responsible.firstName} ${req.responsible.lastName}`.toLowerCase();
-              const value = (cond.value as string || '').toLowerCase();
-              if (cond.operator === 'contains') return responsibleName.includes(value);
-              if (cond.operator === 'equals') return responsibleName === value;
-              return null;
+              // Unterstützt user-{id} Format und Text-Fallback
+              const responsibleName = `${req.responsible.firstName} ${req.responsible.lastName}`;
+              return evaluateUserRoleCondition(
+                req.responsible.id,
+                null, // Requests haben keine Rollen
+                cond,
+                responsibleName
+              );
             },
             'branch': (req: Request, cond: FilterCondition) => {
               const branchName = req.branch.name.toLowerCase();
@@ -896,16 +982,20 @@ const Requests: React.FC = () => {
           {/* Linke Seite: "Neuer Request"-Button */}
           <div className="flex items-center">
             {hasPermission('requests', 'write', 'table') && (
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
-                style={{ width: '30.19px', height: '30.19px' }}
-                title={t('requests.createRequest')}
-                aria-label={t('requests.createRequest')}
-                data-onboarding="create-request-button"
-              >
-                <PlusIcon className="h-4 w-4" />
-              </button>
+              <div className="relative group">
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                  style={{ width: '30.19px', height: '30.19px' }}
+                  aria-label={t('requests.createRequest')}
+                  data-onboarding="create-request-button"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                </button>
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                  {t('requests.createRequest')}
+                </div>
+              </div>
             )}
           </div>
           
@@ -926,34 +1016,41 @@ const Requests: React.FC = () => {
             />
             
             {/* View-Mode Toggle */}
-            <button
-              className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
-              }`}
-              onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
-              title={viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
-            >
-              {viewMode === 'table' ? (
-                <Squares2X2Icon className="h-5 w-5" />
-              ) : (
-                <TableCellsIcon className="h-5 w-5" />
-              )}
-            </button>
+            <div className="relative group">
+              <button
+                className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                  viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+                }`}
+                onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
+              >
+                {viewMode === 'table' ? (
+                  <Squares2X2Icon className="h-5 w-5" />
+                ) : (
+                  <TableCellsIcon className="h-5 w-5" />
+                )}
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
+              </div>
+            </div>
             
             {/* Filter-Button */}
-            <button
-              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
-              onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-              title={t('common.filter')}
-              style={{ position: 'relative' }}
-            >
-              <FunnelIcon className="h-5 w-5" />
-              {getActiveFilterCount() > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center z-10" style={{ position: 'absolute', top: '-0.25rem', right: '-0.25rem' }}>
-                  {getActiveFilterCount()}
-                </span>
-              )}
-            </button>
+            <div className="relative group">
+              <button
+                className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1`}
+                onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
+              >
+                <FunnelIcon className="h-5 w-5" />
+                {getActiveFilterCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center z-10" style={{ position: 'absolute', top: '-0.25rem', right: '-0.25rem' }}>
+                    {getActiveFilterCount()}
+                  </span>
+                )}
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('common.filter')}
+              </div>
+            </div>
             
             {/* Anzeige anpassen - bei beiden Ansichten */}
             <div className="ml-1">
@@ -981,25 +1078,37 @@ const Requests: React.FC = () => {
                     // Card-Metadaten-ID -> Tabellen-Spalten-ID
                     const tableColumnId = cardToTableMapping[columnId];
                     if (tableColumnId) {
-                      // Wenn requestedBy oder responsible ausgeblendet wird, verstecke requestedByResponsible
-                      // Wenn beide requestedBy und responsible ausgeblendet werden, verstecke requestedByResponsible
+                      // Spezielle Logik für requestedByResponsible - Metadaten separat verwalten
                       if (tableColumnId === 'requestedByResponsible') {
-                        // Prüfe ob beide bereits ausgeblendet sind
-                        const otherCardMeta = columnId === 'requestedBy' ? 'responsible' : 'requestedBy';
-                        const otherHidden = hiddenCardMetadata.has(otherCardMeta);
-                        const currentlyHidden = settings.hiddenColumns.includes(tableColumnId);
+                        // Toggle die Metadaten-Sichtbarkeit im separaten State
+                        const newMetadataVisibility = { ...metadataVisibility };
+                        if (columnId === 'requestedBy') {
+                          newMetadataVisibility.requestedBy = !newMetadataVisibility.requestedBy;
+                        } else if (columnId === 'responsible') {
+                          newMetadataVisibility.responsible = !newMetadataVisibility.responsible;
+                        }
+                        setMetadataVisibility(newMetadataVisibility);
                         
-                        if (currentlyHidden && !otherHidden) {
-                          // Eine der beiden wird wieder angezeigt, also requestedByResponsible wieder anzeigen
-                          toggleColumnVisibility(tableColumnId);
-                        } else if (!currentlyHidden && otherHidden) {
-                          // Die andere ist bereits ausgeblendet, also requestedByResponsible ausblenden
-                          toggleColumnVisibility(tableColumnId);
-                        } else if (!currentlyHidden) {
-                          // Erste wird ausgeblendet, noch nicht requestedByResponsible ausblenden
-                          // (wird erst ausgeblendet wenn beide ausgeblendet sind)
-                          // Für jetzt: einfach requestedByResponsible ausblenden wenn eine ausgeblendet wird
-                          toggleColumnVisibility(tableColumnId);
+                        // Aktualisiere hiddenColumns basierend auf Metadaten-Sichtbarkeit
+                        const newHiddenColumns = [...settings.hiddenColumns];
+                        const tableColumnIndex = newHiddenColumns.indexOf(tableColumnId);
+                        
+                        // Wenn beide Metadaten ausgeblendet sind, blende requestedByResponsible aus
+                        // Wenn mindestens eine sichtbar ist, blende requestedByResponsible ein
+                        if (!newMetadataVisibility.requestedBy && !newMetadataVisibility.responsible) {
+                          // Beide ausgeblendet → requestedByResponsible ausblenden
+                          if (tableColumnIndex === -1) {
+                            newHiddenColumns.push(tableColumnId);
+                            isUpdatingHiddenColumnsRef.current = true;
+                            updateHiddenColumns(newHiddenColumns);
+                          }
+                        } else {
+                          // Mindestens eine sichtbar → requestedByResponsible einblenden
+                          if (tableColumnIndex !== -1) {
+                            newHiddenColumns.splice(tableColumnIndex, 1);
+                            isUpdatingHiddenColumnsRef.current = true;
+                            updateHiddenColumns(newHiddenColumns);
+                          }
                         }
                       } else {
                         // Normale Spalte: direkt ein/ausblenden
@@ -1058,12 +1167,12 @@ const Requests: React.FC = () => {
             <FilterPane
             columns={[
               { id: 'title', label: t('requests.columns.title') },
-              { id: 'status', label: t('requests.columns.status') },
               { id: 'type', label: t('requests.columns.type') },
-              { id: 'requestedBy', label: t('requests.columns.requestedBy') },
-              { id: 'responsible', label: t('requests.columns.responsible') },
-              { id: 'branch', label: t('requests.columns.branch') },
-              { id: 'dueDate', label: t('requests.columns.dueDate') }
+              { id: 'requestedBy', label: t('requests.columns.requestedBy').replace(':', '') },
+              { id: 'responsible', label: t('requests.columns.responsible').replace(':', '') },
+              { id: 'dueDate', label: t('requests.columns.dueDate') },
+              { id: 'status', label: t('requests.columns.status') },
+              { id: 'branch', label: t('requests.columns.branch') }
             ]}
             onApply={applyFilterConditions}
             onReset={resetFilterConditions}
@@ -1186,11 +1295,10 @@ const Requests: React.FC = () => {
                                     <div className="ml-2 relative group">
                                       <button 
                                         className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                                        title={t('common.description')}
                                       >
                                         <InformationCircleIcon className="h-5 w-5" />
                                       </button>
-                                      <div className="hidden group-hover:block absolute left-0 mt-2 p-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 w-144 max-h-96 overflow-y-auto min-w-[36rem] z-10">
+                                      <div className="absolute left-0 mt-2 p-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 w-144 max-h-96 overflow-y-auto min-w-[36rem] z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                                         <MarkdownPreview content={request.description} showImagePreview={true} />
                                       </div>
                                     </div>
@@ -1213,7 +1321,12 @@ const Requests: React.FC = () => {
                                   <span className="text-lg">{getRequestTypeIcon(request.type)}</span>
                                   <span>{request.type ? t(`requests.types.${request.type}`) : t('requests.types.other')}</span>
                                   {request.isPrivate && (
-                                    <span className="ml-1 text-xs text-gray-500 dark:text-gray-400" title={t('createRequest.form.isPrivate')}>🔒</span>
+                                    <div className="relative group inline-block ml-1">
+                                      <span className="text-xs text-gray-500 dark:text-gray-400">🔒</span>
+                                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                        {t('createRequest.form.isPrivate')}
+                                      </div>
+                                    </div>
                                   )}
                                 </div>
                               </td>
@@ -1261,55 +1374,79 @@ const Requests: React.FC = () => {
                                   <div className="status-buttons">
                                   {request.status === 'approval' && hasPermission('requests', 'write', 'table') && (
                                     <>
-                                      <button
-                                        onClick={() => handleStatusChange(request.id, 'approved')}
-                                        className="p-1 bg-green-600 dark:bg-green-500 text-white rounded hover:bg-green-700 dark:hover:bg-green-600"
-                                        title={t('requests.actions.approve')}
-                                      >
-                                        <CheckIcon className="h-5 w-5" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleStatusChange(request.id, 'to_improve')}
-                                        className="p-1 bg-orange-600 dark:bg-orange-500 text-white rounded hover:bg-orange-700 dark:hover:bg-orange-600"
-                                        title={t('requests.actions.improve')}
-                                      >
-                                        <ExclamationTriangleIcon className="h-5 w-5" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleStatusChange(request.id, 'denied')}
-                                        className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
-                                        title={t('requests.actions.deny')}
-                                      >
-                                        <XMarkIcon className="h-5 w-5" />
-                                      </button>
+                                      <div className="relative group">
+                                        <button
+                                          onClick={() => handleStatusChange(request.id, 'approved')}
+                                          className="p-1 bg-green-600 dark:bg-green-500 text-white rounded hover:bg-green-700 dark:hover:bg-green-600"
+                                        >
+                                          <CheckIcon className="h-5 w-5" />
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                          {t('requests.actions.approve')}
+                                        </div>
+                                      </div>
+                                      <div className="relative group">
+                                        <button
+                                          onClick={() => handleStatusChange(request.id, 'to_improve')}
+                                          className="p-1 bg-orange-600 dark:bg-orange-500 text-white rounded hover:bg-orange-700 dark:hover:bg-orange-600"
+                                        >
+                                          <ExclamationTriangleIcon className="h-5 w-5" />
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                          {t('requests.actions.improve')}
+                                        </div>
+                                      </div>
+                                      <div className="relative group">
+                                        <button
+                                          onClick={() => handleStatusChange(request.id, 'denied')}
+                                          className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
+                                        >
+                                          <XMarkIcon className="h-5 w-5" />
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                          {t('requests.actions.deny')}
+                                        </div>
+                                      </div>
                                     </>
                                   )}
                                   {request.status === 'to_improve' && hasPermission('requests', 'write', 'table') && (
                                     <>
-                                      <button
-                                        onClick={() => handleStatusChange(request.id, 'approval')}
-                                        className="p-1 bg-yellow-600 dark:bg-yellow-500 text-white rounded hover:bg-yellow-700 dark:hover:bg-yellow-600"
-                                        title={t('requests.actions.recheck')}
-                                      >
-                                        <ArrowPathIcon className="h-5 w-5" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleStatusChange(request.id, 'denied')}
-                                        className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
-                                        title={t('requests.actions.deny')}
-                                      >
-                                        <XMarkIcon className="h-5 w-5" />
-                                      </button>
+                                      <div className="relative group">
+                                        <button
+                                          onClick={() => handleStatusChange(request.id, 'approval')}
+                                          className="p-1 bg-yellow-600 dark:bg-yellow-500 text-white rounded hover:bg-yellow-700 dark:hover:bg-yellow-600"
+                                        >
+                                          <ArrowPathIcon className="h-5 w-5" />
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                          {t('requests.actions.recheck')}
+                                        </div>
+                                      </div>
+                                      <div className="relative group">
+                                        <button
+                                          onClick={() => handleStatusChange(request.id, 'denied')}
+                                          className="p-1 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
+                                        >
+                                          <XMarkIcon className="h-5 w-5" />
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                          {t('requests.actions.deny')}
+                                        </div>
+                                      </div>
                                     </>
                                   )}
                                   {(request.status === 'approved' || request.status === 'denied') && hasPermission('requests', 'write', 'table') && (
-                                    <button
-                                      onClick={() => handleStatusChange(request.id, 'approval')}
-                                      className="p-1 bg-yellow-600 dark:bg-yellow-500 text-white rounded hover:bg-yellow-700 dark:hover:bg-yellow-600"
-                                      title={t('requests.actions.recheck')}
-                                    >
-                                      <ArrowPathIcon className="h-5 w-5" />
-                                    </button>
+                                    <div className="relative group">
+                                      <button
+                                        onClick={() => handleStatusChange(request.id, 'approval')}
+                                        className="p-1 bg-yellow-600 dark:bg-yellow-500 text-white rounded hover:bg-yellow-700 dark:hover:bg-yellow-600"
+                                      >
+                                        <ArrowPathIcon className="h-5 w-5" />
+                                      </button>
+                                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                        {t('requests.actions.recheck')}
+                                      </div>
+                                    </div>
                                   )}
                                   </div>
                                   {hasPermission('requests', 'write', 'table') && (
@@ -1324,13 +1461,17 @@ const Requests: React.FC = () => {
                                     </button>
                                   )}
                                   {hasPermission('requests', 'both', 'table') && (
-                                    <button
-                                      onClick={() => handleCopyRequest(request)}
-                                      className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 copy-button ml-0.5"
-                                      title={t('requests.actions.copy')}
-                                    >
-                                      <DocumentDuplicateIcon className="h-5 w-5" />
-                                    </button>
+                                    <div className="relative group">
+                                      <button
+                                        onClick={() => handleCopyRequest(request)}
+                                        className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 copy-button ml-0.5"
+                                      >
+                                        <DocumentDuplicateIcon className="h-5 w-5" />
+                                      </button>
+                                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                        {t('requests.actions.copy')}
+                                      </div>
+                                    </div>
                                   )}
                                 </div>
                               </td>
@@ -1443,98 +1584,130 @@ const Requests: React.FC = () => {
                       {/* Status-Buttons */}
                       {request.status === 'approval' && hasPermission('requests', 'write', 'table') && (
                         <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(request.id, 'approved');
-                            }}
-                            className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700"
-                            title={t('requests.actions.approve')}
-                          >
-                            <CheckIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(request.id, 'to_improve');
-                            }}
-                            className="p-1.5 bg-orange-600 text-white rounded hover:bg-orange-700"
-                            title={t('requests.actions.improve')}
-                          >
-                            <ExclamationTriangleIcon className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleStatusChange(request.id, 'denied');
-                            }}
-                            className="p-1.5 bg-red-600 text-white rounded hover:bg-red-700"
-                            title={t('requests.actions.deny')}
-                          >
-                            <XMarkIcon className="h-4 w-4" />
-                          </button>
+                          <div className="relative group">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(request.id, 'approved');
+                              }}
+                              className="p-1.5 bg-green-600 text-white rounded hover:bg-green-700"
+                            >
+                              <CheckIcon className="h-4 w-4" />
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('requests.actions.approve')}
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(request.id, 'to_improve');
+                              }}
+                              className="p-1.5 bg-orange-600 text-white rounded hover:bg-orange-700"
+                            >
+                              <ExclamationTriangleIcon className="h-4 w-4" />
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('requests.actions.improve')}
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(request.id, 'denied');
+                              }}
+                              className="p-1.5 bg-red-600 text-white rounded hover:bg-red-700"
+                            >
+                              <XMarkIcon className="h-4 w-4" />
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('requests.actions.deny')}
+                            </div>
+                          </div>
                         </>
                       )}
                       {request.status === 'to_improve' && hasPermission('requests', 'write', 'table') && (
                         <>
+                          <div className="relative group">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(request.id, 'approval');
+                              }}
+                              className="p-1.5 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                            >
+                              <ArrowPathIcon className="h-4 w-4" />
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('requests.actions.recheck')}
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleStatusChange(request.id, 'denied');
+                              }}
+                              className="p-1.5 bg-red-600 text-white rounded hover:bg-red-700"
+                            >
+                              <XMarkIcon className="h-4 w-4" />
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('requests.actions.deny')}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {(request.status === 'approved' || request.status === 'denied') && hasPermission('requests', 'write', 'table') && (
+                        <div className="relative group">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleStatusChange(request.id, 'approval');
                             }}
                             className="p-1.5 bg-yellow-600 text-white rounded hover:bg-yellow-700"
-                            title={t('requests.actions.recheck')}
                           >
                             <ArrowPathIcon className="h-4 w-4" />
                           </button>
+                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                            {t('requests.actions.recheck')}
+                          </div>
+                        </div>
+                      )}
+                      {hasPermission('requests', 'write', 'table') && (
+                        <div className="relative group">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleStatusChange(request.id, 'denied');
+                              setSelectedRequest(request);
+                              setIsEditModalOpen(true);
                             }}
-                            className="p-1.5 bg-red-600 text-white rounded hover:bg-red-700"
-                            title={t('requests.actions.deny')}
+                            className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                           >
-                            <XMarkIcon className="h-4 w-4" />
+                            <PencilIcon className="h-4 w-4" />
                           </button>
-                        </>
-                      )}
-                      {(request.status === 'approved' || request.status === 'denied') && hasPermission('requests', 'write', 'table') && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleStatusChange(request.id, 'approval');
-                          }}
-                          className="p-1.5 bg-yellow-600 text-white rounded hover:bg-yellow-700"
-                          title={t('requests.actions.recheck')}
-                        >
-                          <ArrowPathIcon className="h-4 w-4" />
-                        </button>
-                      )}
-                      {hasPermission('requests', 'write', 'table') && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedRequest(request);
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                          title={t('common.edit')}
-                        >
-                          <PencilIcon className="h-4 w-4" />
-                        </button>
+                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                            {t('common.edit')}
+                          </div>
+                        </div>
                       )}
                       {hasPermission('requests', 'both', 'table') && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCopyRequest(request);
-                          }}
-                          className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                          title={t('requests.actions.copy')}
-                        >
-                          <DocumentDuplicateIcon className="h-4 w-4" />
-                        </button>
+                        <div className="relative group">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyRequest(request);
+                            }}
+                            className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                          >
+                            <DocumentDuplicateIcon className="h-4 w-4" />
+                          </button>
+                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                            {t('requests.actions.copy')}
+                          </div>
+                        </div>
                       )}
                     </div>
                   );
@@ -1571,13 +1744,17 @@ const Requests: React.FC = () => {
         {/* "Mehr anzeigen" Button */}
         {filteredAndSortedRequests.length > displayLimit && (
           <div className="mt-4 flex justify-center">
-            <button
-              className="p-2 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
-              onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
-              title={`${t('common.showMore')} (${filteredAndSortedRequests.length - displayLimit} ${t('common.remaining')})`}
-            >
-              <ChevronDownIcon className="h-5 w-5" />
-            </button>
+            <div className="relative group">
+              <button
+                className="p-2 text-blue-600 dark:text-blue-400 bg-white dark:bg-gray-700 border border-blue-300 dark:border-gray-600 rounded-md hover:bg-blue-50 dark:hover:bg-gray-600"
+                onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+              >
+                <ChevronDownIcon className="h-5 w-5" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {`${t('common.showMore')} (${filteredAndSortedRequests.length - displayLimit} ${t('common.remaining')})`}
+              </div>
+            </div>
           </div>
         )}
     </>

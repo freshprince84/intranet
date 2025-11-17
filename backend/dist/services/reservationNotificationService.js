@@ -108,6 +108,67 @@ class ReservationNotificationService {
         });
     }
     /**
+     * Generiert PIN-Code und sendet Mitteilung (unabhängig von Check-in-Status)
+     *
+     * @param reservationId - ID der Reservierung
+     */
+    static generatePinAndSendNotification(reservationId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            var _a;
+            try {
+                const reservation = yield prisma.reservation.findUnique({
+                    where: { id: reservationId },
+                    include: { organization: true }
+                });
+                if (!reservation) {
+                    throw new Error(`Reservierung ${reservationId} nicht gefunden`);
+                }
+                const settings = reservation.organization.settings;
+                const notificationChannels = ((_a = settings === null || settings === void 0 ? void 0 : settings.lobbyPms) === null || _a === void 0 ? void 0 : _a.notificationChannels) || ['email'];
+                // Erstelle TTLock Passcode
+                let doorPin = null;
+                let doorAppName = null;
+                try {
+                    const ttlockService = new ttlockService_1.TTLockService(reservation.organizationId);
+                    const doorSystemSettings = settings === null || settings === void 0 ? void 0 : settings.doorSystem;
+                    if ((doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds) && doorSystemSettings.lockIds.length > 0) {
+                        const lockId = doorSystemSettings.lockIds[0]; // Verwende ersten Lock
+                        doorAppName = 'TTLock'; // Oder aus Settings: doorSystemSettings.appName
+                        // Erstelle Passcode für Check-in bis Check-out
+                        doorPin = yield ttlockService.createTemporaryPasscode(lockId, reservation.checkInDate, reservation.checkOutDate, `Guest: ${reservation.guestName}`);
+                        // Speichere in Reservierung
+                        yield prisma.reservation.update({
+                            where: { id: reservation.id },
+                            data: {
+                                doorPin,
+                                doorAppName,
+                                ttlLockId: lockId,
+                                ttlLockPassword: doorPin
+                            }
+                        });
+                    }
+                }
+                catch (error) {
+                    console.error(`[ReservationNotification] Fehler beim Erstellen des TTLock Passcodes:`, error);
+                    // Weiter ohne PIN
+                }
+                // Versende Benachrichtigungen
+                if (notificationChannels.includes('email') && reservation.guestEmail) {
+                    yield this.sendCheckInConfirmationEmail(reservation, doorPin, doorAppName);
+                }
+                if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
+                    const whatsappService = new whatsappService_1.WhatsAppService(reservation.organizationId);
+                    yield whatsappService.sendCheckInConfirmation(reservation.guestName, reservation.guestPhone, reservation.roomNumber || 'N/A', reservation.roomDescription || 'N/A', doorPin || 'N/A', doorAppName || 'TTLock');
+                }
+                console.log(`[ReservationNotification] PIN generiert und Mitteilung versendet für Reservierung ${reservationId}`);
+            }
+            catch (error) {
+                console.error(`[ReservationNotification] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:`, error);
+                throw error;
+            }
+        });
+    }
+    /**
      * Sendet Check-in-Bestätigung nach erfolgreichem Check-in
      *
      * @param reservationId - ID der Reservierung

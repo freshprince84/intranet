@@ -435,6 +435,78 @@ export const getAllReservations = async (req: Request, res: Response) => {
 };
 
 /**
+ * POST /api/reservations/:id/generate-pin-and-send
+ * Generiert PIN-Code und sendet Mitteilung (unabhängig von Zahlungsstatus/Check-in-Status)
+ */
+export const generatePinAndSendNotification = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const reservationId = parseInt(id, 10);
+    const organizationId = req.organizationId;
+
+    if (isNaN(reservationId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ungültige Reservierungs-ID'
+      });
+    }
+
+    if (!organizationId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Organisation-ID fehlt'
+      });
+    }
+
+    // Prüfe ob Reservierung existiert und zur Organisation gehört
+    const reservation = await prisma.reservation.findFirst({
+      where: {
+        id: reservationId,
+        organizationId: organizationId
+      }
+    });
+
+    if (!reservation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reservierung nicht gefunden oder gehört nicht zur Organisation'
+      });
+    }
+
+    console.log(`[Reservation] Generiere PIN und sende Mitteilung für Reservierung ${reservationId}`);
+
+    // Rufe Service-Methode auf, die unabhängig vom Check-in-Status funktioniert
+    await ReservationNotificationService.generatePinAndSendNotification(reservationId);
+
+    // Hole aktualisierte Reservierung
+    const updatedReservation = await prisma.reservation.findUnique({
+      where: { id: reservationId },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            displayName: true
+          }
+        }
+      }
+    });
+
+    res.json({
+      success: true,
+      data: updatedReservation,
+      message: 'PIN-Code generiert und Mitteilung versendet'
+    });
+  } catch (error) {
+    console.error('[Reservation] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung'
+    });
+  }
+};
+
+/**
  * GET /api/reservations/:id
  * Holt eine Reservierung nach ID
  */

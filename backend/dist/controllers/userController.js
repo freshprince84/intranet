@@ -52,6 +52,7 @@ exports.debugUserBranches = exports.getOnboardingAnalytics = exports.resetOnboar
 const client_1 = require("@prisma/client");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const notificationController_1 = require("./notificationController");
+const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const lifecycleService_1 = require("../services/lifecycleService");
 const prisma = new client_1.PrismaClient();
@@ -164,6 +165,10 @@ const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                     include: {
                         branch: true
                     }
+                },
+                identificationDocuments: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1 // Neuestes Dokument
                 }
             }
         });
@@ -460,12 +465,17 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 message: 'Ungültiger gender-Wert. Erlaubt: male, female, other'
             });
         }
+        // Logging für Debugging
+        console.log('[updateProfile] phoneNumber received:', phoneNumber, 'Type:', typeof phoneNumber);
+        console.log('[updateProfile] Request body size:', JSON.stringify(req.body).length, 'bytes');
         // Validiere Telefonnummer-Format falls vorhanden
         if (phoneNumber && phoneNumber.trim() !== '') {
             // Validiere Format: + gefolgt von 1-15 Ziffern
             const phoneRegex = /^\+[1-9]\d{1,14}$/;
             const normalizedPhone = phoneNumber.replace(/[\s-]/g, '');
+            console.log('[updateProfile] Normalized phone for validation:', normalizedPhone);
             if (!phoneRegex.test(normalizedPhone)) {
+                console.log('[updateProfile] Phone validation failed for:', normalizedPhone);
                 return res.status(400).json({
                     message: 'Ungültiges Telefonnummer-Format. Format: +LändercodeNummer (z.B. +573001234567)'
                 });
@@ -479,13 +489,19 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 if (!normalizedPhoneNumber.startsWith('+')) {
                     normalizedPhoneNumber = '+' + normalizedPhoneNumber;
                 }
+                console.log('[updateProfile] Final normalized phoneNumber:', normalizedPhoneNumber);
             }
             else {
                 // Explizit auf null setzen, wenn phoneNumber leer oder null ist
                 normalizedPhoneNumber = null;
+                console.log('[updateProfile] phoneNumber set to null (empty string)');
             }
         }
+        else {
+            console.log('[updateProfile] phoneNumber is undefined, not updating');
+        }
         const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract !== undefined && { contract: contract || null })), (salary && { salary: parseFloat(salary) })), (normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (gender !== undefined && { gender: gender || null })), (phoneNumber !== undefined && { phoneNumber: normalizedPhoneNumber }));
+        console.log('[updateProfile] Update data:', JSON.stringify(updateData, null, 2));
         const updatedUser = yield prisma.user.update({
             where: { id: userId },
             data: updateData,
@@ -792,10 +808,14 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
             }
         });
         // Benachrichtigung an den Benutzer senden, dessen Rollen aktualisiert wurden
+        const userLang = yield (0, translations_1.getUserLanguage)(userId);
+        console.log(`[updateUserRoles] User ${userId} Sprache: ${userLang}`);
+        const userNotificationText = (0, translations_1.getUserNotificationText)(userLang, 'roles_updated', true);
+        console.log(`[updateUserRoles] User Notification Text: ${userNotificationText.title} - ${userNotificationText.message}`);
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: userId,
-            title: 'Deine Rollen wurden aktualisiert',
-            message: `Deine Benutzerrollen wurden aktualisiert. Melde dich bei Fragen an einen Administrator.`,
+            title: userNotificationText.title,
+            message: userNotificationText.message,
             type: client_1.NotificationType.user,
             relatedEntityId: userId,
             relatedEntityType: 'update'
@@ -815,10 +835,14 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
                 } })
         });
         for (const admin of admins) {
+            const adminLang = yield (0, translations_1.getUserLanguage)(admin.id);
+            console.log(`[updateUserRoles] Admin ${admin.id} Sprache: ${adminLang}`);
+            const adminNotificationText = (0, translations_1.getUserNotificationText)(adminLang, 'roles_updated', false, `${updatedUser.firstName} ${updatedUser.lastName}`);
+            console.log(`[updateUserRoles] Admin Notification Text: ${adminNotificationText.title} - ${adminNotificationText.message}`);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: admin.id,
-                title: 'Benutzerrollen aktualisiert',
-                message: `Die Rollen für "${updatedUser.firstName} ${updatedUser.lastName}" wurden aktualisiert.`,
+                title: adminNotificationText.title,
+                message: adminNotificationText.message,
                 type: client_1.NotificationType.user,
                 relatedEntityId: userId,
                 relatedEntityType: 'update'
@@ -955,10 +979,12 @@ const updateUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
             }
         });
         // Benachrichtigung an den Benutzer senden, dessen Branches aktualisiert wurden
+        const userLang = yield (0, translations_1.getUserLanguage)(userId);
+        const userNotificationText = (0, translations_1.getUserNotificationText)(userLang, 'branches_updated', true);
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: userId,
-            title: 'Deine Niederlassungen wurden aktualisiert',
-            message: `Deine zugewiesenen Niederlassungen wurden aktualisiert. Melde dich bei Fragen an einen Administrator.`,
+            title: userNotificationText.title,
+            message: userNotificationText.message,
             type: client_1.NotificationType.user,
             relatedEntityId: userId,
             relatedEntityType: 'update'
@@ -978,10 +1004,12 @@ const updateUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 } })
         });
         for (const admin of admins) {
+            const adminLang = yield (0, translations_1.getUserLanguage)(admin.id);
+            const adminNotificationText = (0, translations_1.getUserNotificationText)(adminLang, 'branches_updated', false, `${updatedUser.firstName} ${updatedUser.lastName}`);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: admin.id,
-                title: 'Benutzer-Niederlassungen aktualisiert',
-                message: `Die Niederlassungen für "${updatedUser.firstName} ${updatedUser.lastName}" wurden aktualisiert.`,
+                title: adminNotificationText.title,
+                message: adminNotificationText.message,
                 type: client_1.NotificationType.user,
                 relatedEntityId: userId,
                 relatedEntityType: 'update'
@@ -1385,10 +1413,12 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
         });
         for (const admin of admins) {
+            const adminLang = yield (0, translations_1.getUserLanguage)(admin.id);
+            const notificationText = (0, translations_1.getUserNotificationText)(adminLang, 'created', false, `${firstName} ${lastName}`);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: admin.id,
-                title: 'Neuer Benutzer erstellt',
-                message: `Ein neuer Benutzer "${firstName} ${lastName}" (${email}) wurde erstellt.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: client_1.NotificationType.user,
                 relatedEntityId: user.id,
                 relatedEntityType: 'create'
@@ -1552,10 +1582,12 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             console.log(`[EPS Required] Contract nicht gesetzt oder leer für User ${userId}`);
         }
         // Benachrichtigung für den aktualisierten Benutzer senden
+        const userLang = yield (0, translations_1.getUserLanguage)(updatedUser.id);
+        const userNotificationText = (0, translations_1.getUserNotificationText)(userLang, 'updated', true);
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: updatedUser.id,
-            title: 'Dein Profil wurde aktualisiert',
-            message: 'Dein Benutzerprofil wurde aktualisiert.',
+            title: userNotificationText.title,
+            message: userNotificationText.message,
             type: client_1.NotificationType.user,
             relatedEntityId: updatedUser.id,
             relatedEntityType: 'update'
@@ -1575,10 +1607,12 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 } })
         });
         for (const admin of admins) {
+            const adminLang = yield (0, translations_1.getUserLanguage)(admin.id);
+            const notificationText = (0, translations_1.getUserNotificationText)(adminLang, 'updated', false, `${updatedUser.firstName} ${updatedUser.lastName}`);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: admin.id,
-                title: 'Benutzerprofil aktualisiert',
-                message: `Das Profil von "${updatedUser.firstName} ${updatedUser.lastName}" wurde aktualisiert.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: client_1.NotificationType.user,
                 relatedEntityId: updatedUser.id,
                 relatedEntityType: 'update'
@@ -1653,10 +1687,12 @@ const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 } })
         });
         for (const admin of admins) {
+            const adminLang = yield (0, translations_1.getUserLanguage)(admin.id);
+            const notificationText = (0, translations_1.getUserNotificationText)(adminLang, 'deleted', false, `${user.firstName} ${user.lastName}`);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: admin.id,
-                title: 'Benutzer gelöscht',
-                message: `Der Benutzer "${user.firstName} ${user.lastName}" (${user.username}) wurde gelöscht.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: client_1.NotificationType.user,
                 relatedEntityId: userId,
                 relatedEntityType: 'delete'
@@ -1712,7 +1748,7 @@ exports.getOnboardingStatus = getOnboardingStatus;
 const updateOnboardingProgress = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.userId, 10);
-        const { currentStep, completedSteps } = req.body;
+        const { currentStep, completedSteps, dismissedSteps } = req.body;
         if (typeof currentStep !== 'number' || !Array.isArray(completedSteps)) {
             return res.status(400).json({ message: 'Ungültige Fortschrittsdaten' });
         }
@@ -1721,7 +1757,8 @@ const updateOnboardingProgress = (req, res) => __awaiter(void 0, void 0, void 0,
             data: {
                 onboardingProgress: {
                     currentStep,
-                    completedSteps
+                    completedSteps,
+                    dismissedSteps: dismissedSteps || []
                 },
                 onboardingStartedAt: req.body.onboardingStartedAt ? new Date(req.body.onboardingStartedAt) : undefined
             }

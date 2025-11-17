@@ -101,8 +101,10 @@ const OnboardingTour: React.FC = () => {
     if (isDismissingRef.current) return; // Verhindere mehrfache Aufrufe
     isDismissingRef.current = true;
     try {
-      // Tour komplett stoppen (nicht nur Modal schließen)
-      await stopTour();
+      // Schritt als dismissed markieren (wie X-Button)
+      await dismissModal();
+      // Zum nächsten Schritt weitergehen
+      nextStep();
     } finally {
       setTimeout(() => {
         isDismissingRef.current = false;

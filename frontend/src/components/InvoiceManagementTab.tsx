@@ -642,45 +642,57 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
           Beratungsrechnungen
         </h2>
         <div className="flex items-center space-x-2">
-          <button
-            onClick={() => setIsFilterModalOpen(true)}
-            className={`p-2 rounded-md ${
-              filterConditions.length > 0
-                ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
-                : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-            } hover:bg-gray-200 dark:hover:bg-gray-600 relative`}
-            title={t('common.filter')}
-          >
-            <FunnelIcon className="h-5 w-5" />
-            {filterConditions.length > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
-                {filterConditions.length}
-              </span>
-            )}
-          </button>
+          <div className="relative group">
+            <button
+              onClick={() => setIsFilterModalOpen(true)}
+              className={`p-2 rounded-md ${
+                filterConditions.length > 0
+                  ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                  : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+              } hover:bg-gray-200 dark:hover:bg-gray-600 relative`}
+            >
+              <FunnelIcon className="h-5 w-5" />
+              {filterConditions.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
+                  {filterConditions.length}
+                </span>
+              )}
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('common.filter')}
+            </div>
+          </div>
           {/* View-Mode Toggle */}
-          <button
-            type="button"
-            className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
-              viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
-            }`}
-            onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
-            title={viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
-          >
-            {viewMode === 'table' ? (
-              <Squares2X2Icon className="h-5 w-5" />
-            ) : (
-              <TableCellsIcon className="h-5 w-5" />
-            )}
-          </button>
+          <div className="relative group">
+            <button
+              type="button"
+              className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+              }`}
+              onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
+            >
+              {viewMode === 'table' ? (
+                <Squares2X2Icon className="h-5 w-5" />
+              ) : (
+                <TableCellsIcon className="h-5 w-5" />
+              )}
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
+            </div>
+          </div>
           
-          <button
-            onClick={() => setIsColumnConfigOpen(true)}
-            className="p-2 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
-            title={viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
-          >
-            <ArrowsUpDownIcon className="h-5 w-5" />
-          </button>
+          <div className="relative group">
+            <button
+              onClick={() => setIsColumnConfigOpen(true)}
+              className="p-2 bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              <ArrowsUpDownIcon className="h-5 w-5" />
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {viewMode === 'cards' ? t('tableColumn.sortAndDisplay') : t('tableColumn.configure')}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -758,17 +770,21 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                   <tr className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     {isColumnVisible('expand') && (
                       <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => toggleExpanded(invoice.id)}
-                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                          title={expandedRows.has(invoice.id) ? t('common.collapse') : t('common.expand')}
-                        >
-                          <ChevronDownIcon 
-                            className={`h-4 w-4 transition-transform ${
-                              expandedRows.has(invoice.id) ? 'rotate-180' : ''
-                            }`} 
-                          />
-                        </button>
+                        <div className="relative group">
+                          <button
+                            onClick={() => toggleExpanded(invoice.id)}
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                          >
+                            <ChevronDownIcon 
+                              className={`h-4 w-4 transition-transform ${
+                                expandedRows.has(invoice.id) ? 'rotate-180' : ''
+                              }`} 
+                            />
+                          </button>
+                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                            {expandedRows.has(invoice.id) ? t('common.collapse') : t('common.expand')}
+                          </div>
+                        </div>
                       </td>
                     )}
 
@@ -818,30 +834,42 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                     {isColumnVisible('actions') && (
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-2">
-                          <button
-                            onClick={() => openEditSidepane(invoice)}
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            title={t('common.edit')}
-                          >
-                            <PencilIcon className="h-5 w-5" />
-                          </button>
-                          {canDownloadInvoices && (
+                          <div className="relative group">
                             <button
-                              onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
-                              className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                              title={t('invoices.downloadPDF')}
+                              onClick={() => openEditSidepane(invoice)}
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                             >
-                              <DocumentArrowDownIcon className="h-5 w-5" />
+                              <PencilIcon className="h-5 w-5" />
                             </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('common.edit')}
+                            </div>
+                          </div>
+                          {canDownloadInvoices && (
+                            <div className="relative group">
+                              <button
+                                onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
+                                className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                              >
+                                <DocumentArrowDownIcon className="h-5 w-5" />
+                              </button>
+                              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                {t('invoices.downloadPDF')}
+                              </div>
+                            </div>
                           )}
                           {canEditInvoices && invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
-                            <button
-                              onClick={() => handleMarkAsPaid(invoice.id)}
-                              className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
-                              title={t('invoices.markAsPaid')}
-                            >
-                              <CurrencyDollarIcon className="h-5 w-5" />
-                            </button>
+                            <div className="relative group">
+                              <button
+                                onClick={() => handleMarkAsPaid(invoice.id)}
+                                className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+                              >
+                                <CurrencyDollarIcon className="h-5 w-5" />
+                              </button>
+                              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                {t('invoices.markAsPaid')}
+                              </div>
+                            </div>
                           )}
                         </div>
                       </td>
@@ -1053,30 +1081,42 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                 // Action-Buttons
                 const actions = (
                   <div className="flex items-center justify-end space-x-2">
-                    <button
-                      onClick={() => openEditSidepane(invoice)}
-                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                      title={t('common.edit')}
-                    >
-                      <PencilIcon className="h-5 w-5" />
-                    </button>
-                    {canDownloadInvoices && (
+                    <div className="relative group">
                       <button
-                        onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
-                        className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                        title={t('invoice.downloadPdfTitle')}
+                        onClick={() => openEditSidepane(invoice)}
+                        className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                       >
-                        <DocumentArrowDownIcon className="h-5 w-5" />
+                        <PencilIcon className="h-5 w-5" />
                       </button>
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('common.edit')}
+                      </div>
+                    </div>
+                    {canDownloadInvoices && (
+                      <div className="relative group">
+                        <button
+                          onClick={() => handleDownloadPdf(invoice.id, invoice.invoiceNumber)}
+                          className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                        >
+                          <DocumentArrowDownIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('invoice.downloadPdfTitle')}
+                        </div>
+                      </div>
                     )}
                     {canEditInvoices && invoice.status !== 'PAID' && invoice.status !== 'CANCELLED' && (
-                      <button
-                        onClick={() => handleMarkAsPaid(invoice.id)}
-                        className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
-                        title="Als bezahlt markieren"
-                      >
-                        <CurrencyDollarIcon className="h-5 w-5" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          onClick={() => handleMarkAsPaid(invoice.id)}
+                          className="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-300"
+                        >
+                          <CurrencyDollarIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          Als bezahlt markieren
+                        </div>
+                      </div>
                     )}
                   </div>
                 );
@@ -1429,13 +1469,17 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                                       value={item.unitPrice}
                                       className="mt-1 block w-full rounded-md border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                                     />
-                                    <button
-                                      type="button"
-                                      className="mt-1 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                      title={t('invoices.deletePosition')}
-                                    >
-                                      <TrashIcon className="h-4 w-4" />
-                                    </button>
+                                    <div className="relative group mt-1">
+                                      <button
+                                        type="button"
+                                        className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                      >
+                                        <TrashIcon className="h-4 w-4" />
+                                      </button>
+                                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                        {t('invoices.deletePosition')}
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
@@ -1482,21 +1526,29 @@ const InvoiceManagementTab: React.FC<InvoiceManagementTabProps> = ({ selectedInv
                   {/* Footer */}
                   <div className="flex-shrink-0 px-4 py-4 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
                     <div className="flex justify-end space-x-3">
-                      <button
-                        type="button"
-                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                        onClick={closeEditSidepane}
-                        title={t('common.cancel')}
-                      >
-                        <XMarkIcon className="h-5 w-5" />
-                      </button>
-                      <button
-                        type="button"
-                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
-                        title={t('common.save')}
-                      >
-                        <CheckIcon className="h-5 w-5" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          type="button"
+                          className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                          onClick={closeEditSidepane}
+                        >
+                          <XMarkIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('common.cancel')}
+                        </div>
+                      </div>
+                      <div className="relative group">
+                        <button
+                          type="button"
+                          className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
+                        >
+                          <CheckIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('common.save')}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

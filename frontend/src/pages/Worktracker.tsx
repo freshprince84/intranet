@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
 import TableColumnConfig from '../components/TableColumnConfig.tsx';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon, EnvelopeIcon, PhoneIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon, EnvelopeIcon, PhoneIcon, LinkIcon, CurrencyDollarIcon, ClockIcon, KeyIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import CreateReservationModal from '../components/reservations/CreateReservationModal.tsx';
@@ -19,6 +19,7 @@ import axiosInstance from '../config/axios.ts';
 import FilterPane from '../components/FilterPane.tsx';
 import { FilterCondition } from '../components/FilterRow.tsx';
 import SavedFilterTags from '../components/SavedFilterTags.tsx';
+import { applyFilters, evaluateDateCondition, evaluateUserRoleCondition, evaluateResponsibleAndQualityControl } from '../utils/filterLogic.ts';
 import { toast } from 'react-toastify';
 import MarkdownPreview from '../components/MarkdownPreview.tsx';
 import { getExpiryStatus, getExpiryColorClasses, createDueDateMetadataItem } from '../utils/expiryUtils.ts';
@@ -145,7 +146,7 @@ const getCardMetadataFromColumnOrder = (columnOrder: string[]): string[] => {
 const Worktracker: React.FC = () => {
     const { t } = useTranslation();
     const { user } = useAuth();
-    const { hasPermission } = usePermissions();
+    const { hasPermission, permissions } = usePermissions();
     const location = useLocation();
     const navigate = useNavigate();
     const { showMessage } = useMessage();
@@ -164,6 +165,27 @@ const Worktracker: React.FC = () => {
     const filterOnlyColumns = useMemo(() => [
         { id: 'responsible', label: t('tasks.columns.responsible'), shortLabel: t('tasks.columns.responsible').substring(0, 3) },
         { id: 'qualityControl', label: t('tasks.columns.qualityControl'), shortLabel: t('tasks.columns.qualityControl').substring(0, 2) },
+    ], [t]);
+    
+    // Reservations-Spalten
+    const availableReservationColumns = useMemo(() => [
+        { id: 'guestName', label: t('reservations.columns.guestName', 'Gast'), shortLabel: t('reservations.columns.guestName', 'Gast').substring(0, 4) },
+        { id: 'status', label: t('reservations.columns.status', 'Status'), shortLabel: t('reservations.columns.status', 'Status').substring(0, 3) },
+        { id: 'paymentStatus', label: t('reservations.columns.paymentStatus', 'Zahlungsstatus'), shortLabel: t('reservations.columns.paymentStatus', 'Zahlungsstatus').substring(0, 3) },
+        { id: 'checkInDate', label: t('reservations.columns.checkInDate', 'Check-in'), shortLabel: t('reservations.columns.checkInDate', 'Check-in').substring(0, 5) },
+        { id: 'checkOutDate', label: t('reservations.columns.checkOutDate', 'Check-out'), shortLabel: t('reservations.columns.checkOutDate', 'Check-out').substring(0, 5) },
+        { id: 'roomNumber', label: t('reservations.columns.roomNumber', 'Zimmer'), shortLabel: t('reservations.columns.roomNumber', 'Zimmer').substring(0, 3) },
+        { id: 'guestEmail', label: t('reservations.columns.guestEmail', 'E-Mail'), shortLabel: t('reservations.columns.guestEmail', 'E-Mail').substring(0, 3) },
+        { id: 'guestPhone', label: t('reservations.columns.guestPhone', 'Telefon'), shortLabel: t('reservations.columns.guestPhone', 'Telefon').substring(0, 3) },
+        { id: 'amount', label: t('reservations.columns.amount', 'Betrag'), shortLabel: t('reservations.columns.amount', 'Betrag').substring(0, 3) },
+        { id: 'arrivalTime', label: t('reservations.columns.arrivalTime', 'Ankunftszeit'), shortLabel: t('reservations.columns.arrivalTime', 'Ankunftszeit').substring(0, 3) },
+        { id: 'actions', label: t('reservations.columns.actions', 'Aktionen'), shortLabel: t('common.actions').substring(0, 3) },
+    ], [t]);
+    
+    // Reservations Filter-Spalten (zusätzliche Spalten nur für Filter)
+    const reservationFilterOnlyColumns = useMemo(() => [
+        { id: 'onlineCheckInCompleted', label: t('reservations.columns.onlineCheckInCompleted', 'Online Check-in'), shortLabel: t('reservations.columns.onlineCheckInCompleted', 'Online Check-in').substring(0, 3) },
+        { id: 'doorPin', label: t('reservations.columns.doorPin', 'Tür-PIN'), shortLabel: t('reservations.columns.doorPin', 'Tür-PIN').substring(0, 3) },
     ], [t]);
     
     // Status-Übersetzungen (verwende zentrale Utils mit Übersetzungsunterstützung)
@@ -189,6 +211,7 @@ const Worktracker: React.FC = () => {
     const [reservationFilterPaymentStatus, setReservationFilterPaymentStatus] = useState<PaymentStatus | 'all'>('all');
     const [isCreateReservationModalOpen, setIsCreateReservationModalOpen] = useState(false);
     const [syncingReservations, setSyncingReservations] = useState(false);
+    const [generatingPinForReservation, setGeneratingPinForReservation] = useState<number | null>(null);
     
     // Reservations Filter States (analog zu Tasks)
     const [reservationFilterConditions, setReservationFilterConditions] = useState<FilterCondition[]>([]);
@@ -214,20 +237,45 @@ const Worktracker: React.FC = () => {
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
     const [copiedTask, setCopiedTask] = useState<Task | null>(null);
 
-    // Tabellen-Einstellungen laden
+    // Tabellen-Einstellungen laden - Tasks
     const {
-        settings,
-        isLoading: isLoadingSettings,
-        updateColumnOrder,
-        updateHiddenColumns,
-        toggleColumnVisibility,
-        isColumnVisible,
-        updateViewMode
+        settings: tasksSettings,
+        isLoading: isLoadingTasksSettings,
+        updateColumnOrder: updateTasksColumnOrder,
+        updateHiddenColumns: updateTasksHiddenColumns,
+        toggleColumnVisibility: toggleTasksColumnVisibility,
+        isColumnVisible: isTasksColumnVisible,
+        updateViewMode: updateTasksViewMode
     } = useTableSettings('worktracker_tasks', {
         defaultColumnOrder,
         defaultHiddenColumns: [],
         defaultViewMode: 'cards'
     });
+    
+    // Tabellen-Einstellungen laden - Reservations
+    const defaultReservationColumnOrder = ['guestName', 'status', 'paymentStatus', 'checkInDate', 'checkOutDate', 'roomNumber', 'actions'];
+    const {
+        settings: reservationsSettings,
+        isLoading: isLoadingReservationsSettings,
+        updateColumnOrder: updateReservationsColumnOrder,
+        updateHiddenColumns: updateReservationsHiddenColumns,
+        toggleColumnVisibility: toggleReservationsColumnVisibility,
+        isColumnVisible: isReservationsColumnVisible,
+        updateViewMode: updateReservationsViewMode
+    } = useTableSettings('worktracker-reservations', {
+        defaultColumnOrder: defaultReservationColumnOrder,
+        defaultHiddenColumns: [],
+        defaultViewMode: 'cards'
+    });
+    
+    // Dynamische Settings basierend auf activeTab
+    const settings = activeTab === 'todos' ? tasksSettings : reservationsSettings;
+    const isLoadingSettings = activeTab === 'todos' ? isLoadingTasksSettings : isLoadingReservationsSettings;
+    const updateColumnOrder = activeTab === 'todos' ? updateTasksColumnOrder : updateReservationsColumnOrder;
+    const updateHiddenColumns = activeTab === 'todos' ? updateTasksHiddenColumns : updateReservationsHiddenColumns;
+    const toggleColumnVisibility = activeTab === 'todos' ? toggleTasksColumnVisibility : toggleReservationsColumnVisibility;
+    const isColumnVisible = activeTab === 'todos' ? isTasksColumnVisible : isReservationsColumnVisible;
+    const updateViewMode = activeTab === 'todos' ? updateTasksViewMode : updateReservationsViewMode;
 
     const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
     const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -307,6 +355,23 @@ const Worktracker: React.FC = () => {
             setError(t('worktime.messages.tasksLoadError'));
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleGeneratePinAndSend = async (reservationId: number) => {
+        try {
+            setGeneratingPinForReservation(reservationId);
+            await reservationService.generatePinAndSend(reservationId);
+            showMessage(t('reservations.pinGeneratedAndSent', 'PIN-Code generiert und Mitteilung versendet'), 'success');
+            await loadReservations(); // Aktualisiere Liste
+        } catch (error: any) {
+            console.error('Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
+            showMessage(
+                error.response?.data?.message || t('reservations.pinGenerateError', 'Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung'),
+                'error'
+            );
+        } finally {
+            setGeneratingPinForReservation(null);
         }
     };
 
@@ -535,72 +600,96 @@ const Worktracker: React.FC = () => {
         // Zurück-Button (links)
         if (task.status === 'in_progress' && isResponsibleForTask(task)) {
             buttons.push(
-                <button
-                    key="back"
-                    onClick={() => handleStatusChange(task.id, 'open')}
-                    className="p-1.5 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
-                    title={t('tasks.actions.backToOpen')}
-                >
-                    <ArrowLeftIcon className="h-5 w-5" />
-                </button>
+                <div className="relative group">
+                    <button
+                        key="back"
+                        onClick={() => handleStatusChange(task.id, 'open')}
+                        className="p-1.5 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
+                    >
+                        <ArrowLeftIcon className="h-5 w-5" />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('tasks.actions.backToOpen')}
+                    </div>
+                </div>
             );
         } else if (task.status === 'quality_control' && isResponsibleForTask(task)) {
             buttons.push(
-                <button
-                    key="back"
-                    onClick={() => handleStatusChange(task.id, 'in_progress')}
-                    className="p-1.5 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
-                    title={t('tasks.actions.backToInProgress')}
-                >
-                    <ArrowLeftIcon className="h-5 w-5" />
-                </button>
+                <div className="relative group">
+                    <button
+                        key="back"
+                        onClick={() => handleStatusChange(task.id, 'in_progress')}
+                        className="p-1.5 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
+                    >
+                        <ArrowLeftIcon className="h-5 w-5" />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('tasks.actions.backToInProgress')}
+                    </div>
+                </div>
             );
         } else if (task.status === 'done' && isQualityControlForTask(task)) {
             buttons.push(
-                <button
-                    key="back"
-                    onClick={() => handleStatusChange(task.id, 'quality_control')}
-                    className="p-2 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
-                    title={t('tasks.actions.backToQualityControl')}
-                >
-                    <ArrowLeftIcon className="h-6 w-6" />
-                </button>
+                <div className="relative group">
+                    <button
+                        key="back"
+                        onClick={() => handleStatusChange(task.id, 'quality_control')}
+                        className="p-2 bg-red-600 dark:bg-red-500 text-white rounded hover:bg-red-700 dark:hover:bg-red-600"
+                    >
+                        <ArrowLeftIcon className="h-6 w-6" />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('tasks.actions.backToQualityControl')}
+                    </div>
+                </div>
             );
         }
 
         // Weiter-Button (rechts)
         if (task.status === 'open' && isResponsibleForTask(task)) {
             buttons.push(
-                <button
-                    key="forward"
-                    onClick={() => handleStatusChange(task.id, 'in_progress')}
-                    className="p-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600"
-                    title={t('tasks.actions.setInProgress')}
-                >
-                    <ArrowRightIcon className="h-5 w-5" />
-                </button>
+                <div className="relative group">
+                    <button
+                        key="forward"
+                        onClick={() => handleStatusChange(task.id, 'in_progress')}
+                        className="p-1.5 bg-blue-600 dark:bg-blue-500 text-white rounded hover:bg-blue-700 dark:hover:bg-blue-600"
+                    >
+                        <ArrowRightIcon className="h-5 w-5" />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('tasks.actions.setInProgress')}
+                    </div>
+                </div>
             );
         } else if (task.status === 'in_progress' && isResponsibleForTask(task)) {
             buttons.push(
-                <button
-                    key="forward"
-                    onClick={() => handleStatusChange(task.id, 'quality_control')}
-                    className="p-1.5 bg-purple-600 dark:bg-purple-500 text-white rounded hover:bg-purple-700 dark:hover:bg-purple-600"
-                    title={t('tasks.actions.setQualityControl')}
-                >
-                    <ArrowRightIcon className="h-5 w-5" />
-                </button>
+                <div className="relative group">
+                    <button
+                        key="forward"
+                        onClick={() => handleStatusChange(task.id, 'quality_control')}
+                        className="p-1.5 bg-purple-600 dark:bg-purple-500 text-white rounded hover:bg-purple-700 dark:hover:bg-purple-600"
+                    >
+                        <ArrowRightIcon className="h-5 w-5" />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('tasks.actions.setQualityControl')}
+                    </div>
+                </div>
             );
         } else if (task.status === 'quality_control' && isQualityControlForTask(task)) {
             buttons.push(
-                <button
-                    key="forward"
-                    onClick={() => handleStatusChange(task.id, 'done')}
-                    className="p-1.5 bg-green-600 dark:bg-green-500 text-white rounded hover:bg-green-700 dark:hover:bg-green-600"
-                    title={t('tasks.actions.markDone')}
-                >
-                    <ArrowRightIcon className="h-5 w-5" />
-                </button>
+                <div className="relative group">
+                    <button
+                        key="forward"
+                        onClick={() => handleStatusChange(task.id, 'done')}
+                        className="p-1.5 bg-green-600 dark:bg-green-500 text-white rounded hover:bg-green-700 dark:hover:bg-green-600"
+                    >
+                        <ArrowRightIcon className="h-5 w-5" />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('tasks.actions.markDone')}
+                    </div>
+                </div>
             );
         }
 
@@ -629,11 +718,35 @@ const Worktracker: React.FC = () => {
         setSelectedFilterId(null);
     };
     
+    // Reservations Filter Functions
+    const applyReservationFilterConditions = (conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+        setReservationFilterConditions(conditions);
+        setReservationFilterLogicalOperators(operators);
+        if (sortDirections !== undefined) {
+            const validSortDirections = Array.isArray(sortDirections) ? sortDirections : [];
+            setReservationFilterSortDirections(validSortDirections);
+        }
+    };
+    
+    const resetReservationFilterConditions = () => {
+        setReservationFilterConditions([]);
+        setReservationFilterLogicalOperators([]);
+        setReservationFilterSortDirections([]);
+        setReservationActiveFilterName('');
+        setReservationSelectedFilterId(null);
+    };
+    
     // Filter Change Handler (Controlled Mode)
     const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
-        setActiveFilterName(name);
-        setSelectedFilterId(id);
-        applyFilterConditions(conditions, operators, sortDirections);
+        if (activeTab === 'todos') {
+            setActiveFilterName(name);
+            setSelectedFilterId(id);
+            applyFilterConditions(conditions, operators, sortDirections);
+        } else {
+            setReservationActiveFilterName(name);
+            setReservationSelectedFilterId(id);
+            applyReservationFilterConditions(conditions, operators, sortDirections);
+        }
     };
 
     const getStatusPriority = (status: Task['status']): number => {
@@ -704,179 +817,112 @@ const Worktracker: React.FC = () => {
                 
                 // Wenn erweiterte Filterbedingungen definiert sind, wende diese an
                 if (filterConditions.length > 0) {
-                    // Implementiere die logische Verknüpfung der Bedingungen (UND/ODER)
-                    let result = filterConditions.length > 0;
-                    
-                    for (let i = 0; i < filterConditions.length; i++) {
-                        const condition = filterConditions[i];
-                        let conditionMet = false;
-                        
-                        switch (condition.column) {
-                            case 'title':
-                                if (condition.operator === 'equals') {
-                                    conditionMet = task.title === condition.value;
-                                } else if (condition.operator === 'contains') {
-                                    conditionMet = task.title.toLowerCase().includes((condition.value as string || '').toLowerCase());
-                                } else if (condition.operator === 'startsWith') {
-                                    conditionMet = task.title.toLowerCase().startsWith((condition.value as string || '').toLowerCase());
-                                } else if (condition.operator === 'endsWith') {
-                                    conditionMet = task.title.toLowerCase().endsWith((condition.value as string || '').toLowerCase());
-                                }
-                                break;
-                            
-                            case 'status':
-                                if (condition.operator === 'equals') {
-                                    conditionMet = task.status === condition.value;
-                                } else if (condition.operator === 'notEquals') {
-                                    conditionMet = task.status !== condition.value;
-                                }
-                                break;
-                            
-                            case 'responsible':
-                                const responsibleValue = condition.value as string || '';
-                                
-                                if (responsibleValue.startsWith('user-')) {
-                                    // Vergleiche mit Benutzer-ID
-                                    const userId = parseInt(responsibleValue.replace('user-', ''));
-                                    conditionMet = !!task.responsible && task.responsible.id === userId;
-                                } else if (responsibleValue.startsWith('role-')) {
-                                    // Vergleiche mit Rollen-ID
-                                    const roleId = parseInt(responsibleValue.replace('role-', ''));
-                                    conditionMet = !!task.role && task.role.id === roleId;
-                                } else if (responsibleValue === '') {
-                                    // Leerer Wert entspricht allen
-                                    conditionMet = true;
-                                } else if (condition.operator === 'equals') {
-                                    // Fallback für Texteingabe (alte Implementierung)
-                                    const responsibleName = task.responsible
-                                        ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase()
-                                        : task.role
-                                            ? task.role.name.toLowerCase()
-                                            : '';
-                                    conditionMet = responsibleName === responsibleValue.toLowerCase();
-                                } else if (condition.operator === 'contains') {
-                                    // Fallback für Texteingabe (alte Implementierung)
-                                    const responsibleName = task.responsible
-                                        ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase()
-                                        : task.role
-                                            ? task.role.name.toLowerCase()
-                                            : '';
-                                    conditionMet = responsibleName.includes(responsibleValue.toLowerCase());
-                                }
-                                break;
-                            
-                            case 'qualityControl':
-                                const qualityControlValue = condition.value as string || '';
-                                
-                                if (qualityControlValue.startsWith('user-')) {
-                                    // Vergleiche mit Benutzer-ID
-                                    const userId = parseInt(qualityControlValue.replace('user-', ''));
-                                    conditionMet = !!task.qualityControl && task.qualityControl.id === userId;
-                                } else if (qualityControlValue === '') {
-                                    // Leerer Wert entspricht allen
-                                    conditionMet = true;
-                                } else if (condition.operator === 'equals') {
-                                    // Fallback für Texteingabe (alte Implementierung)
-                                    const qualityControlName = task.qualityControl
-                                        ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase()
-                                        : '';
-                                    conditionMet = qualityControlName === qualityControlValue.toLowerCase();
-                                } else if (condition.operator === 'contains') {
-                                    // Fallback für Texteingabe (alte Implementierung)
-                                    const qualityControlName = task.qualityControl
-                                        ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase()
-                                        : '';
-                                    conditionMet = qualityControlName.includes(qualityControlValue.toLowerCase());
-                                }
-                                break;
-                            
-                            // Für den kombinierten Filter responsibleAndQualityControl
-                            case 'responsibleAndQualityControl':
-                                const combinedValue = condition.value as string || '';
-                                
-                                if (combinedValue.startsWith('user-')) {
-                                    // Vergleiche mit Benutzer-ID für beide Felder
-                                    const userId = parseInt(combinedValue.replace('user-', ''));
-                                    conditionMet = 
-                                        (!!task.responsible && task.responsible.id === userId) || 
-                                        (!!task.qualityControl && task.qualityControl.id === userId);
-                                } else if (combinedValue.startsWith('role-')) {
-                                    // Bei Rollen nur mit Verantwortlichem vergleichen
-                                    const roleId = parseInt(combinedValue.replace('role-', ''));
-                                    conditionMet = !!task.role && task.role.id === roleId;
-                                } else if (combinedValue === '') {
-                                    // Leerer Wert entspricht allen
-                                    conditionMet = true;
-                                } else if (condition.operator === 'equals') {
-                                    // Fallback für Texteingabe (alte Implementierung)
-                                    const responsibleName = task.responsible
-                                        ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase()
-                                        : task.role
-                                            ? task.role.name.toLowerCase()
-                                            : '';
-                                    const qualityControlName = task.qualityControl
-                                        ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase()
-                                        : '';
-                                    conditionMet = 
-                                        responsibleName === combinedValue.toLowerCase() || 
-                                        qualityControlName === combinedValue.toLowerCase();
-                                } else if (condition.operator === 'contains') {
-                                    // Fallback für Texteingabe (alte Implementierung)
-                                    const responsibleName = task.responsible
-                                        ? `${task.responsible.firstName} ${task.responsible.lastName}`.toLowerCase()
-                                        : task.role
-                                            ? task.role.name.toLowerCase()
-                                            : '';
-                                    const qualityControlName = task.qualityControl
-                                        ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`.toLowerCase()
-                                        : '';
-                                    conditionMet = 
-                                        responsibleName.includes(combinedValue.toLowerCase()) || 
-                                        qualityControlName.includes(combinedValue.toLowerCase());
-                                }
-                                break;
-                            
-                            case 'branch':
-                                const branchName = task.branch.name.toLowerCase();
-                                
-                                if (condition.operator === 'equals') {
-                                    conditionMet = branchName === (condition.value as string || '').toLowerCase();
-                                } else if (condition.operator === 'contains') {
-                                    conditionMet = branchName.includes((condition.value as string || '').toLowerCase());
-                                }
-                                break;
-                            
-                            case 'dueDate':
-                                if (!task.dueDate) {
-                                    conditionMet = false;
-                                    break;
-                                }
-                                
-                                const taskDate = new Date(task.dueDate);
-                                
-                                if (condition.operator === 'equals') {
-                                    const filterDate = new Date(condition.value as string);
-                                    conditionMet = taskDate.toDateString() === filterDate.toDateString();
-                                } else if (condition.operator === 'before') {
-                                    const filterDate = new Date(condition.value as string);
-                                    conditionMet = taskDate < filterDate;
-                                } else if (condition.operator === 'after') {
-                                    const filterDate = new Date(condition.value as string);
-                                    conditionMet = taskDate > filterDate;
-                                }
-                                break;
+                    // Column-Evaluatoren für Tasks mit korrekter User/Role-Logik
+                    const columnEvaluators: any = {
+                        'title': (task: Task, cond: FilterCondition) => {
+                            const value = (cond.value as string || '').toLowerCase();
+                            const title = task.title.toLowerCase();
+                            if (cond.operator === 'equals') return task.title === cond.value;
+                            if (cond.operator === 'contains') return title.includes(value);
+                            if (cond.operator === 'startsWith') return title.startsWith(value);
+                            if (cond.operator === 'endsWith') return title.endsWith(value);
+                            return null;
+                        },
+                        'status': (task: Task, cond: FilterCondition) => {
+                            if (cond.operator === 'equals') return task.status === cond.value;
+                            if (cond.operator === 'notEquals') return task.status !== cond.value;
+                            return null;
+                        },
+                        'responsible': (task: Task, cond: FilterCondition) => {
+                            // Unterstützt user-{id} und role-{id} Format
+                            const responsibleName = task.responsible
+                                ? `${task.responsible.firstName} ${task.responsible.lastName}`
+                                : task.role
+                                    ? task.role.name
+                                    : '';
+                            return evaluateUserRoleCondition(
+                                task.responsible?.id || null,
+                                task.role?.id || null,
+                                cond,
+                                responsibleName
+                            );
+                        },
+                        'qualityControl': (task: Task, cond: FilterCondition) => {
+                            // Unterstützt nur user-{id} Format (keine Rollen)
+                            const qualityControlName = task.qualityControl
+                                ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`
+                                : '';
+                            return evaluateUserRoleCondition(
+                                task.qualityControl?.id || null,
+                                null, // QualityControl hat keine Rollen
+                                cond,
+                                qualityControlName
+                            );
+                        },
+                        'responsibleAndQualityControl': (task: Task, cond: FilterCondition) => {
+                            // Unterstützt user-{id} und role-{id} Format für beide Felder
+                            const responsibleName = task.responsible
+                                ? `${task.responsible.firstName} ${task.responsible.lastName}`
+                                : task.role
+                                    ? task.role.name
+                                    : '';
+                            const qualityControlName = task.qualityControl
+                                ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`
+                                : '';
+                            return evaluateResponsibleAndQualityControl(
+                                task.responsible?.id || null,
+                                task.role?.id || null,
+                                task.qualityControl?.id || null,
+                                cond,
+                                responsibleName,
+                                qualityControlName
+                            );
+                        },
+                        'branch': (task: Task, cond: FilterCondition) => {
+                            const branchName = task.branch.name.toLowerCase();
+                            const value = (cond.value as string || '').toLowerCase();
+                            if (cond.operator === 'equals') return branchName === value;
+                            if (cond.operator === 'contains') return branchName.includes(value);
+                            return null;
+                        },
+                        'dueDate': (task: Task, cond: FilterCondition) => {
+                            return evaluateDateCondition(task.dueDate, cond);
                         }
-                        
-                        // Verknüpfe das Ergebnis dieser Bedingung mit dem Gesamtergebnis
-                        if (i === 0) {
-                            result = conditionMet;
-                        } else {
-                            const operator = filterLogicalOperators[i - 1];
-                            result = operator === 'AND' ? (result && conditionMet) : (result || conditionMet);
+                    };
+
+                    const getFieldValue = (task: Task, columnId: string): any => {
+                        switch (columnId) {
+                            case 'title': return task.title;
+                            case 'status': return task.status;
+                            case 'responsible': return task.responsible
+                                ? `${task.responsible.firstName} ${task.responsible.lastName}`
+                                : task.role
+                                    ? task.role.name
+                                    : '';
+                            case 'qualityControl': return task.qualityControl
+                                ? `${task.qualityControl.firstName} ${task.qualityControl.lastName}`
+                                : '';
+                            case 'responsibleAndQualityControl': return task.responsible
+                                ? `${task.responsible.firstName} ${task.responsible.lastName}`
+                                : task.role
+                                    ? task.role.name
+                                    : '';
+                            case 'branch': return task.branch.name;
+                            case 'dueDate': return task.dueDate;
+                            default: return (task as any)[columnId];
                         }
-                    }
+                    };
+
+                    // Wende Filter mit zentraler Logik an (nur für dieses einzelne Item)
+                    const filtered = applyFilters(
+                        [task],
+                        filterConditions,
+                        filterLogicalOperators,
+                        getFieldValue,
+                        columnEvaluators
+                    );
                     
-                    if (!result) return false;
+                    if (filtered.length === 0) return false;
                 }
                 
                 return true;
@@ -1091,10 +1137,11 @@ const Worktracker: React.FC = () => {
         const currentOrder = settings.columnOrder || [];
         // Sicherstellen, dass keine undefined/null Werte im Array sind
         const validOrder = currentOrder.filter(id => id != null && typeof id === 'string');
-        // Fehlende Spalten aus defaultColumnOrder hinzufügen
-        const missingColumns = defaultColumnOrder.filter(id => !validOrder.includes(id));
+        // Fehlende Spalten aus defaultColumnOrder hinzufügen (dynamisch basierend auf activeTab)
+        const defaultOrder = activeTab === 'todos' ? defaultColumnOrder : defaultReservationColumnOrder;
+        const missingColumns = defaultOrder.filter(id => !validOrder.includes(id));
         return [...validOrder, ...missingColumns];
-    }, [settings.columnOrder]);
+    }, [settings.columnOrder, activeTab, defaultColumnOrder, defaultReservationColumnOrder]);
 
     const visibleColumnIds = completeColumnOrder.filter(id => id != null && typeof id === 'string' && isColumnVisible(id));
 
@@ -1189,15 +1236,19 @@ const Worktracker: React.FC = () => {
                                 {/* Linke Seite: "Neuer Task"-Button */}
                                 <div className="flex items-center">
                                     {hasPermission('tasks', 'write', 'table') && (
-                                        <button 
-                                            onClick={() => setIsCreateModalOpen(true)}
-                                            className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
-                                            style={{ width: '30.19px', height: '30.19px' }}
-                                            title={t('tasks.createTask')}
-                                            aria-label={t('tasks.createTask')}
-                                        >
-                                            <PlusIcon className="h-4 w-4" />
-                                        </button>
+                                        <div className="relative group">
+                                            <button 
+                                                onClick={() => setIsCreateModalOpen(true)}
+                                                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                                                style={{ width: '30.19px', height: '30.19px' }}
+                                                aria-label={t('tasks.createTask')}
+                                            >
+                                                <PlusIcon className="h-4 w-4" />
+                                            </button>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {t('tasks.createTask')}
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                                 
@@ -1218,48 +1269,71 @@ const Worktracker: React.FC = () => {
                                     />
                                     
                                     {/* View-Mode Toggle */}
-                                    <button
-                                        className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                                            viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
-                                        }`}
-                                        onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
-                                        title={viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
-                                    >
-                                        {viewMode === 'table' ? (
-                                            <Squares2X2Icon className="h-5 w-5" />
-                                        ) : (
-                                            <TableCellsIcon className="h-5 w-5" />
-                                        )}
-                                    </button>
+                                    <div className="relative group">
+                                        <button
+                                            className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                                viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+                                            }`}
+                                            onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
+                                        >
+                                            {viewMode === 'table' ? (
+                                                <Squares2X2Icon className="h-5 w-5" />
+                                            ) : (
+                                                <TableCellsIcon className="h-5 w-5" />
+                                            )}
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
+                                        </div>
+                                    </div>
                                     
                                     {/* Filter-Button */}
-                                    <button
-                                        className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
-                                        onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-                                        title={t('common.filter')}
-                                    >
-                                        <FunnelIcon className="h-5 w-5" />
-                                        {getActiveFilterCount() > 0 && (
-                                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
-                                                {getActiveFilterCount()}
-                                            </span>
-                                        )}
-                                    </button>
+                                    <div className="relative group ml-1">
+                                        <button
+                                            className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} relative`}
+                                            onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
+                                        >
+                                            <FunnelIcon className="h-5 w-5" />
+                                            {getActiveFilterCount() > 0 && (
+                                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                                                    {getActiveFilterCount()}
+                                                </span>
+                                            )}
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {t('common.filter')}
+                                        </div>
+                                    </div>
                                     
                                     {/* Spalten-Konfiguration */}
                                     <div className="ml-1">
                                         <TableColumnConfig 
-                                            columns={viewMode === 'cards'
-                                                ? [
-                                                    { id: 'title', label: t('tasks.columns.title') },
-                                                    { id: 'status', label: t('tasks.columns.status') },
-                                                    { id: 'responsible', label: t('tasks.columns.responsible') },
-                                                    { id: 'qualityControl', label: t('tasks.columns.qualityControl') },
-                                                    { id: 'branch', label: t('tasks.columns.branch') },
-                                                    { id: 'dueDate', label: t('tasks.columns.dueDate') },
-                                                    { id: 'description', label: t('tasks.columns.description') }
-                                                ]
-                                                : availableColumns}
+                                            columns={activeTab === 'todos'
+                                                ? (viewMode === 'cards'
+                                                    ? [
+                                                        { id: 'title', label: t('tasks.columns.title') },
+                                                        { id: 'status', label: t('tasks.columns.status') },
+                                                        { id: 'responsible', label: t('tasks.columns.responsible') },
+                                                        { id: 'qualityControl', label: t('tasks.columns.qualityControl') },
+                                                        { id: 'branch', label: t('tasks.columns.branch') },
+                                                        { id: 'dueDate', label: t('tasks.columns.dueDate') },
+                                                        { id: 'description', label: t('tasks.columns.description') }
+                                                    ]
+                                                    : availableColumns)
+                                                : (viewMode === 'cards'
+                                                    ? [
+                                                        { id: 'guestName', label: t('reservations.columns.guestName', 'Gast') },
+                                                        { id: 'status', label: t('reservations.columns.status', 'Status') },
+                                                        { id: 'paymentStatus', label: t('reservations.columns.paymentStatus', 'Zahlungsstatus') },
+                                                        { id: 'checkInDate', label: t('reservations.columns.checkInDate', 'Check-in') },
+                                                        { id: 'checkOutDate', label: t('reservations.columns.checkOutDate', 'Check-out') },
+                                                        { id: 'roomNumber', label: t('reservations.columns.roomNumber', 'Zimmer') },
+                                                        { id: 'guestEmail', label: t('reservations.columns.guestEmail', 'E-Mail') },
+                                                        { id: 'guestPhone', label: t('reservations.columns.guestPhone', 'Telefon') },
+                                                        { id: 'amount', label: t('reservations.columns.amount', 'Betrag') },
+                                                        { id: 'arrivalTime', label: t('reservations.columns.arrivalTime', 'Ankunftszeit') }
+                                                    ]
+                                                    : availableReservationColumns)}
                                             visibleColumns={viewMode === 'cards'
                                                 ? Array.from(visibleCardMetadata)
                                                 : visibleColumnIds}
@@ -1271,7 +1345,30 @@ const Worktracker: React.FC = () => {
                                                     // Für Cards: Mapping zurück zu Tabellen-Spalten
                                                     const tableColumn = cardToTableMapping[columnId];
                                                     if (tableColumn) {
-                                                        toggleColumnVisibility(tableColumn);
+                                                        // Spezielle Logik für responsibleAndQualityControl
+                                                        if (tableColumn === 'responsibleAndQualityControl') {
+                                                            // Prüfe ob beide bereits ausgeblendet sind
+                                                            const otherCardMeta = columnId === 'responsible' ? 'qualityControl' : 'responsible';
+                                                            const otherHidden = hiddenCardMetadata.has(otherCardMeta);
+                                                            const currentlyHidden = settings.hiddenColumns.includes(tableColumn);
+                                                            
+                                                            if (currentlyHidden && !otherHidden) {
+                                                                // Eine der beiden wird wieder angezeigt, also responsibleAndQualityControl wieder anzeigen
+                                                                toggleColumnVisibility(tableColumn);
+                                                            } else if (!currentlyHidden && otherHidden) {
+                                                                // Die andere ist bereits ausgeblendet, also responsibleAndQualityControl ausblenden
+                                                                toggleColumnVisibility(tableColumn);
+                                                            } else if (!currentlyHidden) {
+                                                                // Erste wird ausgeblendet, responsibleAndQualityControl ausblenden
+                                                                toggleColumnVisibility(tableColumn);
+                                                            } else {
+                                                                // Beide sind ausgeblendet, eine wird wieder angezeigt
+                                                                toggleColumnVisibility(tableColumn);
+                                                            }
+                                                        } else {
+                                                            // Normale Spalte: direkt ein/ausblenden
+                                                            toggleColumnVisibility(tableColumn);
+                                                        }
                                                     }
                                                 } else {
                                                     toggleColumnVisibility(columnId);
@@ -1359,16 +1456,16 @@ const Worktracker: React.FC = () => {
                             )}
 
                             {/* Gespeicherte Filter als Tags anzeigen */}
-                            {activeTab === 'todos' && (
+                            {(
                                 <div className={viewMode === 'cards' ? '-mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6' : 'px-3 sm:px-4 md:px-6'}>
                                     <SavedFilterTags
-                                    tableId={TODOS_TABLE_ID}
-                                    onSelectFilter={applyFilterConditions}
-                                    onReset={resetFilterConditions}
-                                    activeFilterName={activeFilterName}
-                                    selectedFilterId={selectedFilterId}
+                                    tableId={activeTab === 'todos' ? TODOS_TABLE_ID : RESERVATIONS_TABLE_ID}
+                                    onSelectFilter={activeTab === 'todos' ? applyFilterConditions : applyReservationFilterConditions}
+                                    onReset={activeTab === 'todos' ? resetFilterConditions : resetReservationFilterConditions}
+                                    activeFilterName={activeTab === 'todos' ? activeFilterName : reservationActiveFilterName}
+                                    selectedFilterId={activeTab === 'todos' ? selectedFilterId : reservationSelectedFilterId}
                                     onFilterChange={handleFilterChange}
-                                    defaultFilterName={t('tasks.filters.current')}
+                                    defaultFilterName={activeTab === 'todos' ? t('tasks.filters.current') : t('reservations.filters.current', 'Aktuell')}
                                 />
                                 </div>
                             )}
@@ -1459,11 +1556,13 @@ const Worktracker: React.FC = () => {
                                                                                 <div className="ml-2 relative group">
                                                                                     <button 
                                                                                         className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                                                                                        title={t('tasks.showDescription')}
                                                                                     >
                                                                                         <InformationCircleIcon className="h-5 w-5" />
                                                                                     </button>
-                                                                                    <div className="hidden group-hover:block absolute left-0 mt-2 p-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 w-144 max-h-96 overflow-y-auto min-w-[36rem] z-10">
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('tasks.showDescription')}
+                                                                                    </div>
+                                                                                    <div className="absolute left-0 mt-2 p-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 w-144 max-h-96 overflow-y-auto min-w-[36rem] z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                                                                                         <MarkdownPreview content={task.description} showImagePreview={true} />
                                                                                     </div>
                                                                                 </div>
@@ -1523,34 +1622,46 @@ const Worktracker: React.FC = () => {
                                                                                 {renderStatusButtons(task)}
                                                                             </div>
                                                                             {hasPermission('tasks', 'write', 'table') && (
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        setSelectedTask(task);
-                                                                                        setIsEditModalOpen(true);
-                                                                                    }}
-                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                    title={t('common.edit')}
-                                                                                >
-                                                                                    <PencilIcon className="h-4 w-4" />
-                                                                                </button>
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            setSelectedTask(task);
+                                                                                            setIsEditModalOpen(true);
+                                                                                        }}
+                                                                                        className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                    >
+                                                                                        <PencilIcon className="h-4 w-4" />
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('common.edit')}
+                                                                                    </div>
+                                                                                </div>
                                                                             )}
                                                                             {hasPermission('tasks', 'both', 'table') && (
-                                                                                <button
-                                                                                    onClick={() => handleCopyTask(task)}
-                                                                                    className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                                                                                    title={t('tasks.actions.copy')}
-                                                                                >
-                                                                                    <DocumentDuplicateIcon className="h-4 w-4" />
-                                                                                </button>
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={() => handleCopyTask(task)}
+                                                                                        className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                                                                                    >
+                                                                                        <DocumentDuplicateIcon className="h-4 w-4" />
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('tasks.actions.copy')}
+                                                                                    </div>
+                                                                                </div>
                                                                             )}
                                                                             {hasPermission('tasks', 'delete', 'table') && (
-                                                                                <button
-                                                                                    onClick={() => handleDeleteTask(task.id)}
-                                                                                    className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                                                                    title={t('common.delete')}
-                                                                                >
-                                                                                    <TrashIcon className="h-4 w-4" />
-                                                                                </button>
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={() => handleDeleteTask(task.id)}
+                                                                                        className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                                                                    >
+                                                                                        <TrashIcon className="h-4 w-4" />
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('common.delete')}
+                                                                                    </div>
+                                                                                </div>
                                                                             )}
                                                                         </div>
                                                                     </td>
@@ -1567,8 +1678,8 @@ const Worktracker: React.FC = () => {
                                     </tbody>
                                 </table>
                             </div>
-                            ) : (
-                                /* Card-Ansicht - ohne Box-Schattierung, Cards auf voller Breite */
+                            ) : activeTab === 'todos' ? (
+                                /* Card-Ansicht - Tasks - ohne Box-Schattierung, Cards auf voller Breite */
                                 <div className="-mx-3 sm:-mx-4 md:-mx-6">
                                     {loading ? (
                                         <div className="flex justify-center py-12">
@@ -1668,23 +1779,26 @@ const Worktracker: React.FC = () => {
                                                                     setSelectedTask(task);
                                                                     setIsEditModalOpen(true);
                                                                 }}
-                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                title={t('common.edit')}
-                                                            >
+                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                >
                                                                 <PencilIcon className="h-4 w-4" />
                                                             </button>
                                                         )}
                                                         {hasPermission('tasks', 'both', 'table') && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCopyTask(task);
-                                                                }}
-                                                                className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                                                                title={t('tasks.actions.copy')}
-                                                            >
-                                                                <DocumentDuplicateIcon className="h-4 w-4" />
-                                                            </button>
+                                                            <div className="relative group">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleCopyTask(task);
+                                                                    }}
+                                                                    className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                                                                >
+                                                                    <DocumentDuplicateIcon className="h-4 w-4" />
+                                                                </button>
+                                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                    {t('tasks.actions.copy')}
+                                                                </div>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 );
@@ -1707,7 +1821,7 @@ const Worktracker: React.FC = () => {
                                         </CardGrid>
                                     )}
                                 </div>
-                            )}
+                            ) : null}
                             
                             {/* "Mehr anzeigen" Button - Mobil - Tasks */}
                             {activeTab === 'todos' && filteredAndSortedTasks.length > displayLimit && (
@@ -1755,7 +1869,7 @@ const Worktracker: React.FC = () => {
                                                 // Metadaten für Reservation-Card
                                                 const metadata: MetadataItem[] = [];
                                                 
-                                                // Haupt-Metadaten: Check-in/Check-out
+                                                // Haupt-Metadaten: Check-in/Check-out (rechts oben, unverändert)
                                                 metadata.push({
                                                     icon: <CalendarIcon className="h-4 w-4" />,
                                                     label: t('reservations.checkInOut', 'Check-in/Check-out'),
@@ -1773,58 +1887,206 @@ const Worktracker: React.FC = () => {
                                                     });
                                                 }
                                                 
-                                                // Rechts: E-Mail
+                                                // Links: Telefon/Email unter Titel (gleiche Zeile wie Status)
                                                 if (reservation.guestEmail) {
                                                     metadata.push({
                                                         icon: <EnvelopeIcon className="h-4 w-4" />,
                                                         label: t('reservations.email', 'E-Mail'),
                                                         value: reservation.guestEmail,
-                                                        section: 'right'
+                                                        section: 'left'
                                                     });
-                                                }
-                                                
-                                                // Rechts: Telefon
-                                                if (reservation.guestPhone) {
+                                                } else if (reservation.guestPhone) {
                                                     metadata.push({
                                                         icon: <PhoneIcon className="h-4 w-4" />,
                                                         label: t('reservations.phone', 'Telefon'),
                                                         value: reservation.guestPhone,
+                                                        section: 'left'
+                                                    });
+                                                }
+                                                
+                                                // Mitte: Zahlungslink (gleiche Höhe wie Payment Status)
+                                                if (reservation.paymentLink) {
+                                                    metadata.push({
+                                                        icon: <LinkIcon className="h-4 w-4" />,
+                                                        label: t('reservations.paymentLink', 'Zahlungslink'),
+                                                        value: (
+                                                            <a 
+                                                                href={reservation.paymentLink} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                                            >
+                                                                {reservation.paymentLink.length > 30 
+                                                                    ? `${reservation.paymentLink.substring(0, 30)}...` 
+                                                                    : reservation.paymentLink}
+                                                            </a>
+                                                        ),
+                                                        section: 'center'
+                                                    });
+                                                }
+                                                
+                                                // Mitte: Check-in Link (direkt unter Zahlungslink)
+                                                const checkInLink = `${window.location.origin}/check-in/${reservation.id}`;
+                                                metadata.push({
+                                                    icon: <LinkIcon className="h-4 w-4" />,
+                                                    label: t('reservations.checkInLink', 'Check-in Link'),
+                                                    value: (
+                                                        <a 
+                                                            href={checkInLink} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                                        >
+                                                            {checkInLink.length > 30 
+                                                                ? `${checkInLink.substring(0, 30)}...` 
+                                                                : checkInLink}
+                                                        </a>
+                                                    ),
+                                                    section: 'center'
+                                                });
+                                                
+                                                // Rechts: Reservation Status als erstes Badge (mit Label)
+                                                metadata.push({
+                                                    label: t('reservations.status', 'Status'),
+                                                    value: (
+                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${getReservationStatusColor(reservation.status)}`}>
+                                                            {t(`reservations.status.${reservation.status}`, reservation.status)}
+                                                        </span>
+                                                    ),
+                                                    section: 'right'
+                                                });
+                                                
+                                                // Rechts: Payment Status als zweites Badge (direkt unter Reservation Status)
+                                                metadata.push({
+                                                    label: t('reservations.paymentStatus', 'Zahlungsstatus'),
+                                                    value: (
+                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${getPaymentStatusColor(reservation.paymentStatus)}`}>
+                                                            {t(`reservations.paymentStatus.${reservation.paymentStatus}`, reservation.paymentStatus)}
+                                                        </span>
+                                                    ),
+                                                    section: 'right'
+                                                });
+                                                
+                                                // Betrag und Währung (wenn vorhanden)
+                                                if (reservation.amount) {
+                                                    const amountValue = typeof reservation.amount === 'string' 
+                                                        ? parseFloat(reservation.amount).toFixed(2)
+                                                        : typeof reservation.amount === 'number'
+                                                        ? reservation.amount.toFixed(2)
+                                                        : '0.00';
+                                                    metadata.push({
+                                                        icon: <CurrencyDollarIcon className="h-4 w-4" />,
+                                                        label: t('reservations.amount', 'Betrag'),
+                                                        value: `${amountValue} ${reservation.currency || 'COP'}`,
                                                         section: 'right'
                                                     });
                                                 }
                                                 
-                                                // Action-Buttons
-                                                const actionButtons = (
+                                                // Ankunftszeit (wenn vorhanden)
+                                                if (reservation.arrivalTime) {
+                                                    const formatDateTime = (dateString: string) => {
+                                                        try {
+                                                            return format(new Date(dateString), 'dd.MM.yyyy HH:mm', { locale: de });
+                                                        } catch {
+                                                            return dateString;
+                                                        }
+                                                    };
+                                                    metadata.push({
+                                                        icon: <ClockIcon className="h-4 w-4" />,
+                                                        label: t('reservations.arrivalTime', 'Ankunftszeit'),
+                                                        value: formatDateTime(reservation.arrivalTime),
+                                                        section: 'right'
+                                                    });
+                                                }
+                                                
+                                                // Tür-PIN (wenn vorhanden)
+                                                if (reservation.doorPin) {
+                                                    metadata.push({
+                                                        icon: <KeyIcon className="h-4 w-4" />,
+                                                        label: reservation.doorAppName || t('reservations.doorPin', 'Tür-PIN'),
+                                                        value: reservation.doorPin,
+                                                        section: 'right'
+                                                    });
+                                                }
+                                                
+                                                // Online Check-in Status
+                                                if (reservation.onlineCheckInCompleted) {
+                                                    metadata.push({
+                                                        icon: <CheckCircleIcon className="h-4 w-4 text-green-600" />,
+                                                        label: t('reservations.onlineCheckIn', 'Online Check-in'),
+                                                        value: t('reservations.completed', 'Abgeschlossen'),
+                                                        section: 'right'
+                                                    });
+                                                }
+                                                
+                                                // Versendete Nachricht (als Chatverlauf formatiert)
+                                                if (reservation.sentMessage) {
+                                                    const formatMessageDate = (dateString: string | null) => {
+                                                        if (!dateString) return '';
+                                                        try {
+                                                            return format(new Date(dateString), 'dd.MM.yyyy HH:mm', { locale: de });
+                                                        } catch {
+                                                            return dateString;
+                                                        }
+                                                    };
+                                                    
+                                                    metadata.push({
+                                                        label: t('reservations.sentMessage', 'Versendete Nachricht'),
+                                                        value: reservation.sentMessageAt 
+                                                            ? `${t('reservations.sentAt', 'Versendet am')} ${formatMessageDate(reservation.sentMessageAt)}`
+                                                            : '',
+                                                        descriptionContent: reservation.sentMessage, // String direkt übergeben, DataCard formatiert es
+                                                        section: 'full'
+                                                    });
+                                                }
+                                                
+                                                // Action-Button für PIN-Generierung und Mitteilungsversand
+                                                const hasWritePermission = hasPermission('reservations', 'write', 'table');
+                                                // Debug: Log für Berechtigungsprüfung (nur für erste Reservation) - IMMER loggen
+                                                if (reservation.id === filteredAndSortedReservations[0]?.id) {
+                                                    console.log('[Reservations] Berechtigungsprüfung:', {
+                                                        hasWritePermission,
+                                                        reservationId: reservation.id,
+                                                        entity: 'reservations',
+                                                        accessLevel: 'write',
+                                                        entityType: 'table',
+                                                        actionButtonsWillBeCreated: hasWritePermission
+                                                    });
+                                                }
+                                                const actionButtons = hasWritePermission ? (
                                                     <div className="flex items-center space-x-2">
-                                                        {hasPermission('reservations', 'write', 'table') && (
+                                                        <div className="relative group">
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    navigate(`/reservations/${reservation.id}`);
+                                                                    handleGeneratePinAndSend(reservation.id);
                                                                 }}
-                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                title={t('common.viewDetails', 'Details anzeigen')}
+                                                                disabled={generatingPinForReservation === reservation.id}
+                                                                className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title={t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
                                                             >
-                                                                <InformationCircleIcon className="h-4 w-4" />
+                                                                {generatingPinForReservation === reservation.id ? (
+                                                                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                                                                ) : (
+                                                                    <KeyIcon className="h-4 w-4" />
+                                                                )}
                                                             </button>
-                                                        )}
+                                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                );
+                                                ) : null;
                                                 
                                                 return (
                                                     <DataCard
                                                         key={reservation.id}
                                                         title={reservation.guestName}
                                                         subtitle={reservation.lobbyReservationId ? `ID: ${reservation.lobbyReservationId}` : undefined}
-                                                        status={{
-                                                            label: t(`reservations.status.${reservation.status}`, reservation.status),
-                                                            color: getReservationStatusColor(reservation.status),
-                                                            onPreviousClick: undefined,
-                                                            onNextClick: undefined
-                                                        }}
                                                         metadata={metadata}
                                                         actions={actionButtons}
-                                                        onClick={() => navigate(`/reservations/${reservation.id}`)}
                                                     />
                                                 );
                                             })}
@@ -1937,16 +2199,20 @@ const Worktracker: React.FC = () => {
                                                                 <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                     <div className="flex space-x-2 action-buttons">
                                                                         {hasPermission('reservations', 'write', 'table') && (
-                                                                            <button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    navigate(`/reservations/${reservation.id}`);
-                                                                                }}
-                                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                title={t('common.viewDetails', 'Details anzeigen')}
-                                                                            >
-                                                                                <InformationCircleIcon className="h-4 w-4" />
-                                                                            </button>
+                                                                            <div className="relative group">
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        navigate(`/reservations/${reservation.id}`);
+                                                                                    }}
+                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                >
+                                                                                    <InformationCircleIcon className="h-4 w-4" />
+                                                                                </button>
+                                                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                    {t('common.viewDetails', 'Details anzeigen')}
+                                                                                </div>
+                                                                            </div>
                                                                         )}
                                                                     </div>
                                                                 </td>
@@ -1992,27 +2258,35 @@ const Worktracker: React.FC = () => {
                                 {/* Linke Seite: "Neuer Task/Reservation"-Button */}
                                 <div className="flex items-center">
                                     {activeTab === 'todos' && hasPermission('tasks', 'write', 'table') && (
-                                        <button
-                                            onClick={() => setIsCreateModalOpen(true)}
-                                            className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
-                                            style={{ width: '30.19px', height: '30.19px' }}
-                                            title={t('tasks.createTask')}
-                                            aria-label={t('tasks.createTask')}
-                                            data-onboarding="create-task-button"
-                                        >
-                                            <PlusIcon className="h-4 w-4" />
-                                        </button>
+                                        <div className="relative group">
+                                            <button
+                                                onClick={() => setIsCreateModalOpen(true)}
+                                                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                                                style={{ width: '30.19px', height: '30.19px' }}
+                                                aria-label={t('tasks.createTask')}
+                                                data-onboarding="create-task-button"
+                                            >
+                                                <PlusIcon className="h-4 w-4" />
+                                            </button>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {t('tasks.createTask')}
+                                            </div>
+                                        </div>
                                     )}
                                     {activeTab === 'reservations' && hasPermission('reservations', 'write', 'table') && (
-                                        <button
-                                            onClick={() => setIsCreateReservationModalOpen(true)}
-                                            className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
-                                            style={{ width: '30.19px', height: '30.19px' }}
-                                            title={t('reservations.createReservation.button', 'Neue Reservierung')}
-                                            aria-label={t('reservations.createReservation.button', 'Neue Reservierung')}
-                                        >
-                                            <PlusIcon className="h-4 w-4" />
-                                        </button>
+                                        <div className="relative group">
+                                            <button
+                                                onClick={() => setIsCreateReservationModalOpen(true)}
+                                                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                                                style={{ width: '30.19px', height: '30.19px' }}
+                                                aria-label={t('reservations.createReservation.button', 'Neue Reservierung')}
+                                            >
+                                                <PlusIcon className="h-4 w-4" />
+                                            </button>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {t('reservations.createReservation.button', 'Neue Reservierung')}
+                                            </div>
+                                        </div>
                                     )}
                                 </div>
                                 
@@ -2042,74 +2316,101 @@ const Worktracker: React.FC = () => {
                                     
                                     {/* Sync-Button für Reservations */}
                                     {activeTab === 'reservations' && (
-                                        <button
-                                            onClick={async () => {
-                                                try {
-                                                    setSyncingReservations(true);
-                                                    await axiosInstance.post(API_ENDPOINTS.RESERVATIONS.SYNC);
-                                                    showMessage(t('reservations.syncSuccess', 'Reservations erfolgreich synchronisiert'), 'success');
-                                                    await loadReservations();
-                                                } catch (err: any) {
-                                                    console.error('Fehler beim Synchronisieren:', err);
-                                                    showMessage(
-                                                        err.response?.data?.message || t('reservations.syncError', 'Fehler beim Synchronisieren'),
-                                                        'error'
-                                                    );
-                                                } finally {
-                                                    setSyncingReservations(false);
-                                                }
-                                            }}
-                                            disabled={syncingReservations}
-                                            className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                            title={syncingReservations ? t('reservations.syncing', 'Synchronisiere...') : t('reservations.sync', 'Synchronisieren')}
-                                        >
-                                            <ArrowPathIcon className={`h-5 w-5 ${syncingReservations ? 'animate-spin' : ''}`} />
-                                        </button>
+                                        <div className="relative group">
+                                            <button
+                                                onClick={async () => {
+                                                    try {
+                                                        setSyncingReservations(true);
+                                                        await axiosInstance.post(API_ENDPOINTS.RESERVATIONS.SYNC);
+                                                        showMessage(t('reservations.syncSuccess', 'Reservations erfolgreich synchronisiert'), 'success');
+                                                        await loadReservations();
+                                                    } catch (err: any) {
+                                                        console.error('Fehler beim Synchronisieren:', err);
+                                                        showMessage(
+                                                            err.response?.data?.message || t('reservations.syncError', 'Fehler beim Synchronisieren'),
+                                                            'error'
+                                                        );
+                                                    } finally {
+                                                        setSyncingReservations(false);
+                                                    }
+                                                }}
+                                                disabled={syncingReservations}
+                                                className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                            >
+                                                <ArrowPathIcon className={`h-5 w-5 ${syncingReservations ? 'animate-spin' : ''}`} />
+                                            </button>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {syncingReservations ? t('reservations.syncing', 'Synchronisiere...') : t('reservations.sync', 'Synchronisieren')}
+                                            </div>
+                                        </div>
                                     )}
                                     
                                     {/* View-Mode Toggle */}
-                                    <button
-                                        className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                                            viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
-                                        }`}
-                                        onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
-                                        title={viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
-                                    >
-                                        {viewMode === 'table' ? (
-                                            <Squares2X2Icon className="h-5 w-5" />
-                                        ) : (
-                                            <TableCellsIcon className="h-5 w-5" />
-                                        )}
-                                    </button>
+                                    <div className="relative group">
+                                        <button
+                                            className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                                                viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+                                            }`}
+                                            onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
+                                        >
+                                            {viewMode === 'table' ? (
+                                                <Squares2X2Icon className="h-5 w-5" />
+                                            ) : (
+                                                <TableCellsIcon className="h-5 w-5" />
+                                            )}
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
+                                        </div>
+                                    </div>
                                     
                                     {/* Filter-Button */}
-                                    <button
-                                        className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
-                                        onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-                                        title={t('common.filter')}
-                                    >
-                                        <FunnelIcon className="h-5 w-5" />
-                                        {getActiveFilterCount() > 0 && (
-                                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
-                                                {getActiveFilterCount()}
-                                            </span>
-                                        )}
-                                    </button>
+                                    <div className="relative group ml-1">
+                                        <button
+                                            className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} relative`}
+                                            onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
+                                        >
+                                            <FunnelIcon className="h-5 w-5" />
+                                            {getActiveFilterCount() > 0 && (
+                                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                                                    {getActiveFilterCount()}
+                                                </span>
+                                            )}
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {t('common.filter')}
+                                        </div>
+                                    </div>
                                     
                                     {/* Spalten-Konfiguration */}
                                     <div className="ml-1">
                                         <TableColumnConfig
-                                            columns={viewMode === 'cards'
-                                                ? [
-                                                    { id: 'title', label: t('tasks.columns.title') },
-                                                    { id: 'status', label: t('tasks.columns.status') },
-                                                    { id: 'responsible', label: t('tasks.columns.responsible') },
-                                                    { id: 'qualityControl', label: t('tasks.columns.qualityControl') },
-                                                    { id: 'branch', label: t('tasks.columns.branch') },
-                                                    { id: 'dueDate', label: t('tasks.columns.dueDate') },
-                                                    { id: 'description', label: t('tasks.columns.description') }
-                                                ]
-                                                : availableColumns}
+                                            columns={activeTab === 'todos'
+                                                ? (viewMode === 'cards'
+                                                    ? [
+                                                        { id: 'title', label: t('tasks.columns.title') },
+                                                        { id: 'status', label: t('tasks.columns.status') },
+                                                        { id: 'responsible', label: t('tasks.columns.responsible') },
+                                                        { id: 'qualityControl', label: t('tasks.columns.qualityControl') },
+                                                        { id: 'branch', label: t('tasks.columns.branch') },
+                                                        { id: 'dueDate', label: t('tasks.columns.dueDate') },
+                                                        { id: 'description', label: t('tasks.columns.description') }
+                                                    ]
+                                                    : availableColumns)
+                                                : (viewMode === 'cards'
+                                                    ? [
+                                                        { id: 'guestName', label: t('reservations.columns.guestName', 'Gast') },
+                                                        { id: 'status', label: t('reservations.columns.status', 'Status') },
+                                                        { id: 'paymentStatus', label: t('reservations.columns.paymentStatus', 'Zahlungsstatus') },
+                                                        { id: 'checkInDate', label: t('reservations.columns.checkInDate', 'Check-in') },
+                                                        { id: 'checkOutDate', label: t('reservations.columns.checkOutDate', 'Check-out') },
+                                                        { id: 'roomNumber', label: t('reservations.columns.roomNumber', 'Zimmer') },
+                                                        { id: 'guestEmail', label: t('reservations.columns.guestEmail', 'E-Mail') },
+                                                        { id: 'guestPhone', label: t('reservations.columns.guestPhone', 'Telefon') },
+                                                        { id: 'amount', label: t('reservations.columns.amount', 'Betrag') },
+                                                        { id: 'arrivalTime', label: t('reservations.columns.arrivalTime', 'Ankunftszeit') }
+                                                    ]
+                                                    : availableReservationColumns)}
                                             visibleColumns={viewMode === 'cards'
                                                 ? Array.from(visibleCardMetadata)
                                                 : visibleColumnIds}
@@ -2120,7 +2421,30 @@ const Worktracker: React.FC = () => {
                                                 if (viewMode === 'cards') {
                                                     const tableColumn = cardToTableMapping[columnId];
                                                     if (tableColumn) {
-                                                        toggleColumnVisibility(tableColumn);
+                                                        // Spezielle Logik für responsibleAndQualityControl
+                                                        if (tableColumn === 'responsibleAndQualityControl') {
+                                                            // Prüfe ob beide bereits ausgeblendet sind
+                                                            const otherCardMeta = columnId === 'responsible' ? 'qualityControl' : 'responsible';
+                                                            const otherHidden = hiddenCardMetadata.has(otherCardMeta);
+                                                            const currentlyHidden = settings.hiddenColumns.includes(tableColumn);
+                                                            
+                                                            if (currentlyHidden && !otherHidden) {
+                                                                // Eine der beiden wird wieder angezeigt, also responsibleAndQualityControl wieder anzeigen
+                                                                toggleColumnVisibility(tableColumn);
+                                                            } else if (!currentlyHidden && otherHidden) {
+                                                                // Die andere ist bereits ausgeblendet, also responsibleAndQualityControl ausblenden
+                                                                toggleColumnVisibility(tableColumn);
+                                                            } else if (!currentlyHidden) {
+                                                                // Erste wird ausgeblendet, responsibleAndQualityControl ausblenden
+                                                                toggleColumnVisibility(tableColumn);
+                                                            } else {
+                                                                // Beide sind ausgeblendet, eine wird wieder angezeigt
+                                                                toggleColumnVisibility(tableColumn);
+                                                            }
+                                                        } else {
+                                                            // Normale Spalte: direkt ein/ausblenden
+                                                            toggleColumnVisibility(tableColumn);
+                                                        }
                                                     }
                                                 } else {
                                                     toggleColumnVisibility(columnId);
@@ -2207,13 +2531,13 @@ const Worktracker: React.FC = () => {
 
                             {/* Gespeicherte Filter als Tags anzeigen */}
                             <SavedFilterTags
-                                tableId={TODOS_TABLE_ID}
-                                onSelectFilter={applyFilterConditions}
-                                onReset={resetFilterConditions}
-                                activeFilterName={activeFilterName}
-                                selectedFilterId={selectedFilterId}
+                                tableId={activeTab === 'todos' ? TODOS_TABLE_ID : RESERVATIONS_TABLE_ID}
+                                onSelectFilter={activeTab === 'todos' ? applyFilterConditions : applyReservationFilterConditions}
+                                onReset={activeTab === 'todos' ? resetFilterConditions : resetReservationFilterConditions}
+                                activeFilterName={activeTab === 'todos' ? activeFilterName : reservationActiveFilterName}
+                                selectedFilterId={activeTab === 'todos' ? selectedFilterId : reservationSelectedFilterId}
                                 onFilterChange={handleFilterChange}
-                                defaultFilterName={t('tasks.filters.current')}
+                                defaultFilterName={activeTab === 'todos' ? t('tasks.filters.current') : t('reservations.filters.current', 'Aktuell')}
                             />
 
                             {/* Tabelle oder Cards */}
@@ -2302,11 +2626,13 @@ const Worktracker: React.FC = () => {
                                                                                 <div className="ml-2 relative group">
                                                                                     <button 
                                                                                         className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                                                                                        title={t('tasks.showDescription')}
                                                                                     >
                                                                                         <InformationCircleIcon className="h-5 w-5" />
                                                                                     </button>
-                                                                                    <div className="hidden group-hover:block absolute left-0 mt-2 p-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 w-144 max-h-96 overflow-y-auto min-w-[36rem] z-10">
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('tasks.showDescription')}
+                                                                                    </div>
+                                                                                    <div className="absolute left-0 mt-2 p-2 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-lg rounded-md border border-gray-200 dark:border-gray-700 w-144 max-h-96 overflow-y-auto min-w-[36rem] z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                                                                                         <MarkdownPreview content={task.description} showImagePreview={true} />
                                                                                     </div>
                                                                                 </div>
@@ -2366,34 +2692,46 @@ const Worktracker: React.FC = () => {
                                                                                 {renderStatusButtons(task)}
                                                                             </div>
                                                                             {hasPermission('tasks', 'write', 'table') && (
-                                                                                <button
-                                                                                    onClick={() => {
-                                                                                        setSelectedTask(task);
-                                                                                        setIsEditModalOpen(true);
-                                                                                    }}
-                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                    title={t('common.edit')}
-                                                                                >
-                                                                                    <PencilIcon className="h-4 w-4" />
-                                                                                </button>
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            setSelectedTask(task);
+                                                                                            setIsEditModalOpen(true);
+                                                                                        }}
+                                                                                        className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                    >
+                                                                                        <PencilIcon className="h-4 w-4" />
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('common.edit')}
+                                                                                    </div>
+                                                                                </div>
                                                                             )}
                                                                             {hasPermission('tasks', 'both', 'table') && (
-                                                                                <button
-                                                                                    onClick={() => handleCopyTask(task)}
-                                                                                    className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                                                                                    title={t('tasks.actions.copy')}
-                                                                                >
-                                                                                    <DocumentDuplicateIcon className="h-4 w-4" />
-                                                                                </button>
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={() => handleCopyTask(task)}
+                                                                                        className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                                                                                    >
+                                                                                        <DocumentDuplicateIcon className="h-4 w-4" />
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('tasks.actions.copy')}
+                                                                                    </div>
+                                                                                </div>
                                                                             )}
                                                                             {hasPermission('tasks', 'delete', 'table') && (
-                                                                                <button
-                                                                                    onClick={() => handleDeleteTask(task.id)}
-                                                                                    className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                                                                    title={t('common.delete')}
-                                                                                >
-                                                                                    <TrashIcon className="h-4 w-4" />
-                                                                                </button>
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={() => handleDeleteTask(task.id)}
+                                                                                        className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                                                                    >
+                                                                                        <TrashIcon className="h-4 w-4" />
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('common.delete')}
+                                                                                    </div>
+                                                                                </div>
                                                                             )}
                                                                         </div>
                                                                     </td>
@@ -2410,8 +2748,8 @@ const Worktracker: React.FC = () => {
                                     </tbody>
                                 </table>
                             </div>
-                            ) : (
-                                /* Card-Ansicht - ohne Box-Schattierung, Cards auf voller Breite */
+                            ) : activeTab === 'todos' ? (
+                                /* Card-Ansicht - Tasks - ohne Box-Schattierung, Cards auf voller Breite */
                                 <div className="-mx-3 sm:-mx-4 md:-mx-6">
                                     {loading ? (
                                         <div className="flex justify-center py-12">
@@ -2511,23 +2849,26 @@ const Worktracker: React.FC = () => {
                                                                     setSelectedTask(task);
                                                                     setIsEditModalOpen(true);
                                                                 }}
-                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                title={t('common.edit')}
-                                                            >
+                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                >
                                                                 <PencilIcon className="h-4 w-4" />
                                                             </button>
                                                         )}
                                                         {hasPermission('tasks', 'both', 'table') && (
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    handleCopyTask(task);
-                                                                }}
-                                                                className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                                                                title={t('tasks.actions.copy')}
-                                                            >
-                                                                <DocumentDuplicateIcon className="h-4 w-4" />
-                                                            </button>
+                                                            <div className="relative group">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleCopyTask(task);
+                                                                    }}
+                                                                    className="p-1.5 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                                                                >
+                                                                    <DocumentDuplicateIcon className="h-4 w-4" />
+                                                                </button>
+                                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                    {t('tasks.actions.copy')}
+                                                                </div>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 );
@@ -2550,7 +2891,7 @@ const Worktracker: React.FC = () => {
                                         </CardGrid>
                                     )}
                                 </div>
-                            )}
+                            ) : null}
                             
                             {/* "Mehr anzeigen" Button - Desktop - Tasks */}
                             {activeTab === 'todos' && filteredAndSortedTasks.length > displayLimit && (
@@ -2598,7 +2939,7 @@ const Worktracker: React.FC = () => {
                                                 // Metadaten für Reservation-Card
                                                 const metadata: MetadataItem[] = [];
                                                 
-                                                // Haupt-Metadaten: Check-in/Check-out
+                                                // Haupt-Metadaten: Check-in/Check-out (rechts oben, unverändert)
                                                 metadata.push({
                                                     icon: <CalendarIcon className="h-4 w-4" />,
                                                     label: t('reservations.checkInOut', 'Check-in/Check-out'),
@@ -2616,58 +2957,195 @@ const Worktracker: React.FC = () => {
                                                     });
                                                 }
                                                 
-                                                // Rechts: E-Mail
+                                                // Links: Telefon/Email unter Titel (gleiche Zeile wie Status)
                                                 if (reservation.guestEmail) {
                                                     metadata.push({
                                                         icon: <EnvelopeIcon className="h-4 w-4" />,
                                                         label: t('reservations.email', 'E-Mail'),
                                                         value: reservation.guestEmail,
-                                                        section: 'right'
+                                                        section: 'left'
                                                     });
-                                                }
-                                                
-                                                // Rechts: Telefon
-                                                if (reservation.guestPhone) {
+                                                } else if (reservation.guestPhone) {
                                                     metadata.push({
                                                         icon: <PhoneIcon className="h-4 w-4" />,
                                                         label: t('reservations.phone', 'Telefon'),
                                                         value: reservation.guestPhone,
+                                                        section: 'left'
+                                                    });
+                                                }
+                                                
+                                                // Mitte: Zahlungslink (gleiche Höhe wie Payment Status)
+                                                if (reservation.paymentLink) {
+                                                    metadata.push({
+                                                        icon: <LinkIcon className="h-4 w-4" />,
+                                                        label: t('reservations.paymentLink', 'Zahlungslink'),
+                                                        value: (
+                                                            <a 
+                                                                href={reservation.paymentLink} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                                            >
+                                                                {reservation.paymentLink.length > 30 
+                                                                    ? `${reservation.paymentLink.substring(0, 30)}...` 
+                                                                    : reservation.paymentLink}
+                                                            </a>
+                                                        ),
+                                                        section: 'center'
+                                                    });
+                                                }
+                                                
+                                                // Mitte: Check-in Link (direkt unter Zahlungslink)
+                                                const checkInLink = `${window.location.origin}/check-in/${reservation.id}`;
+                                                metadata.push({
+                                                    icon: <LinkIcon className="h-4 w-4" />,
+                                                    label: t('reservations.checkInLink', 'Check-in Link'),
+                                                    value: (
+                                                        <a 
+                                                            href={checkInLink} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="text-blue-600 dark:text-blue-400 hover:underline break-all"
+                                                        >
+                                                            {checkInLink.length > 30 
+                                                                ? `${checkInLink.substring(0, 30)}...` 
+                                                                : checkInLink}
+                                                        </a>
+                                                    ),
+                                                    section: 'center'
+                                                });
+                                                
+                                                // Rechts: Reservation Status als erstes Badge (mit Label)
+                                                metadata.push({
+                                                    label: t('reservations.status', 'Status'),
+                                                    value: (
+                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${getReservationStatusColor(reservation.status)}`}>
+                                                            {t(`reservations.status.${reservation.status}`, reservation.status)}
+                                                        </span>
+                                                    ),
+                                                    section: 'right'
+                                                });
+                                                
+                                                // Rechts: Payment Status als zweites Badge (direkt unter Reservation Status)
+                                                metadata.push({
+                                                    label: t('reservations.paymentStatus', 'Zahlungsstatus'),
+                                                    value: (
+                                                        <span className={`px-2 py-1 rounded text-xs font-medium ${getPaymentStatusColor(reservation.paymentStatus)}`}>
+                                                            {t(`reservations.paymentStatus.${reservation.paymentStatus}`, reservation.paymentStatus)}
+                                                        </span>
+                                                    ),
+                                                    section: 'right'
+                                                });
+                                                
+                                                // Betrag und Währung (wenn vorhanden)
+                                                if (reservation.amount) {
+                                                    const amountValue = typeof reservation.amount === 'string' 
+                                                        ? parseFloat(reservation.amount).toFixed(2)
+                                                        : typeof reservation.amount === 'number'
+                                                        ? reservation.amount.toFixed(2)
+                                                        : '0.00';
+                                                    metadata.push({
+                                                        icon: <CurrencyDollarIcon className="h-4 w-4" />,
+                                                        label: t('reservations.amount', 'Betrag'),
+                                                        value: `${amountValue} ${reservation.currency || 'COP'}`,
                                                         section: 'right'
                                                     });
                                                 }
                                                 
-                                                // Action-Buttons
-                                                const actionButtons = (
+                                                // Ankunftszeit (wenn vorhanden)
+                                                if (reservation.arrivalTime) {
+                                                    const formatDateTime = (dateString: string) => {
+                                                        try {
+                                                            return format(new Date(dateString), 'dd.MM.yyyy HH:mm', { locale: de });
+                                                        } catch {
+                                                            return dateString;
+                                                        }
+                                                    };
+                                                    metadata.push({
+                                                        icon: <ClockIcon className="h-4 w-4" />,
+                                                        label: t('reservations.arrivalTime', 'Ankunftszeit'),
+                                                        value: formatDateTime(reservation.arrivalTime),
+                                                        section: 'right'
+                                                    });
+                                                }
+                                                
+                                                // Tür-PIN (wenn vorhanden)
+                                                if (reservation.doorPin) {
+                                                    metadata.push({
+                                                        icon: <KeyIcon className="h-4 w-4" />,
+                                                        label: reservation.doorAppName || t('reservations.doorPin', 'Tür-PIN'),
+                                                        value: reservation.doorPin,
+                                                        section: 'right'
+                                                    });
+                                                }
+                                                
+                                                // Online Check-in Status
+                                                if (reservation.onlineCheckInCompleted) {
+                                                    metadata.push({
+                                                        icon: <CheckCircleIcon className="h-4 w-4 text-green-600" />,
+                                                        label: t('reservations.onlineCheckIn', 'Online Check-in'),
+                                                        value: t('reservations.completed', 'Abgeschlossen'),
+                                                        section: 'right'
+                                                    });
+                                                }
+                                                
+                                                // Versendete Nachricht (als Chatverlauf formatiert)
+                                                if (reservation.sentMessage) {
+                                                    const formatMessageDate = (dateString: string | null) => {
+                                                        if (!dateString) return '';
+                                                        try {
+                                                            return format(new Date(dateString), 'dd.MM.yyyy HH:mm', { locale: de });
+                                                        } catch {
+                                                            return dateString;
+                                                        }
+                                                    };
+                                                    
+                                                    metadata.push({
+                                                        label: t('reservations.sentMessage', 'Versendete Nachricht'),
+                                                        value: reservation.sentMessageAt 
+                                                            ? `${t('reservations.sentAt', 'Versendet am')} ${formatMessageDate(reservation.sentMessageAt)}`
+                                                            : '',
+                                                        descriptionContent: reservation.sentMessage, // String direkt übergeben, DataCard formatiert es
+                                                        section: 'full'
+                                                    });
+                                                }
+                                                
+                                                // Action-Button für PIN-Generierung und Mitteilungsversand
+                                                const hasWritePermission = hasPermission('reservations', 'write', 'table');
+                                                const actionButtons = hasWritePermission ? (
                                                     <div className="flex items-center space-x-2">
-                                                        {hasPermission('reservations', 'write', 'table') && (
+                                                        <div className="relative group">
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    navigate(`/reservations/${reservation.id}`);
+                                                                    handleGeneratePinAndSend(reservation.id);
                                                                 }}
-                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                title={t('common.viewDetails', 'Details anzeigen')}
+                                                                disabled={generatingPinForReservation === reservation.id}
+                                                                className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                title={t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
                                                             >
-                                                                <InformationCircleIcon className="h-4 w-4" />
+                                                                {generatingPinForReservation === reservation.id ? (
+                                                                    <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                                                                ) : (
+                                                                    <KeyIcon className="h-4 w-4" />
+                                                                )}
                                                             </button>
-                                                        )}
+                                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                );
+                                                ) : null;
                                                 
                                                 return (
                                                     <DataCard
                                                         key={reservation.id}
                                                         title={reservation.guestName}
                                                         subtitle={reservation.lobbyReservationId ? `ID: ${reservation.lobbyReservationId}` : undefined}
-                                                        status={{
-                                                            label: t(`reservations.status.${reservation.status}`, reservation.status),
-                                                            color: getReservationStatusColor(reservation.status),
-                                                            onPreviousClick: undefined,
-                                                            onNextClick: undefined
-                                                        }}
                                                         metadata={metadata}
                                                         actions={actionButtons}
-                                                        onClick={() => navigate(`/reservations/${reservation.id}`)}
                                                     />
                                                 );
                                             })}
@@ -2780,16 +3258,20 @@ const Worktracker: React.FC = () => {
                                                                 <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                     <div className="flex space-x-2 action-buttons">
                                                                         {hasPermission('reservations', 'write', 'table') && (
-                                                                            <button
-                                                                                onClick={(e) => {
-                                                                                    e.stopPropagation();
-                                                                                    navigate(`/reservations/${reservation.id}`);
-                                                                                }}
-                                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                title={t('common.viewDetails', 'Details anzeigen')}
-                                                                            >
-                                                                                <InformationCircleIcon className="h-4 w-4" />
-                                                                            </button>
+                                                                            <div className="relative group">
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
+                                                                                        navigate(`/reservations/${reservation.id}`);
+                                                                                    }}
+                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                >
+                                                                                    <InformationCircleIcon className="h-4 w-4" />
+                                                                                </button>
+                                                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                    {t('common.viewDetails', 'Details anzeigen')}
+                                                                                </div>
+                                                                            </div>
                                                                         )}
                                                                     </div>
                                                                 </td>

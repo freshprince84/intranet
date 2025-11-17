@@ -161,24 +161,15 @@ const Profile: React.FC = () => {
       if (!formData.email?.trim()) {
         throw new Error('E-Mail ist erforderlich');
       }
-      if (!formData.firstName?.trim()) {
-        throw new Error('Vorname ist erforderlich');
-      }
-      if (!formData.lastName?.trim()) {
-        throw new Error('Nachname ist erforderlich');
-      }
+      // firstName, lastName, birthday werden nur von KI aus Dokument gesetzt, nicht manuell validiert
 
       // Nur die benötigten Felder senden (nicht identificationDocuments, roles, etc.)
+      // Contract, Salary, Normal Working Hours werden zu Lifecycle verschoben
+      // firstName, lastName, birthday werden nur von KI aus Dokument gesetzt, nicht manuell editierbar
       const dataToSend = {
         username: formData.username,
         email: formData.email,
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        birthday: formData.birthday || null,
         bankDetails: formData.bankDetails || null,
-        contract: formData.contract || null,
-        salary: formData.salary ? parseFloat(formData.salary.toString()) : null,
-        normalWorkingHours: formData.normalWorkingHours ? parseFloat(formData.normalWorkingHours.toString()) : 7.6,
         gender: formData.gender || null,
         phoneNumber: formData.phoneNumber || null,
       };
@@ -374,6 +365,7 @@ const Profile: React.FC = () => {
 
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              {/* 1. Username, Email (nebeneinander - 2 Spalten) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('profile.username')}
@@ -402,26 +394,7 @@ const Profile: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.country')}
-                </label>
-                <select
-                  name="country"
-                  value={isEditing ? formData.country || '' : user.country || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">{t('profile.selectCountry')}</option>
-                  {COUNTRIES.map((country) => (
-                    <option key={country.code} value={country.code}>
-                      {country.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
+              {/* 2. Language (allein - 1 Spalte) */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('profile.language')} <span className="text-red-500">*</span>
@@ -443,7 +416,7 @@ const Profile: React.FC = () => {
                 </select>
               </div>
 
-              {/* Dokumenten-Upload (prominent, nach country/language) */}
+              {/* 3. Dokumenten-Upload (prominent - volle Breite) */}
               {user && (
                 <div className="sm:col-span-2">
                   <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
@@ -493,160 +466,118 @@ const Profile: React.FC = () => {
                 </div>
               )}
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.phoneNumber')}
-                </label>
-                <input
-                  type="tel"
-                  name="phoneNumber"
-                  value={isEditing ? formData.phoneNumber || '' : user.phoneNumber || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  placeholder="+573001234567"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                />
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  {t('profile.phoneNumberHint')}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.firstName')}
-                </label>
-                <input
-                  type="text"
-                  name="firstName"
-                  value={isEditing ? formData.firstName || '' : user.firstName || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.lastName')}
-                </label>
-                <input
-                  type="text"
-                  name="lastName"
-                  value={isEditing ? formData.lastName || '' : user.lastName || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.birthday')}
-                </label>
-                <input
-                  type="date"
-                  name="birthday"
-                  value={isEditing ? formData.birthday || '' : user.birthday || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.bankDetails')}
-                </label>
-                <input
-                  type="text"
-                  name="bankDetails"
-                  value={isEditing ? formData.bankDetails || '' : user.bankDetails || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.contract')}
-                </label>
-                <input
-                  type="text"
-                  name="contract"
-                  value={isEditing ? formData.contract || '' : user.contract || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.salary')}
-                </label>
-                <input
-                  type="number"
-                  name="salary"
-                  value={isEditing ? formData.salary || '' : user.salary || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.normalWorkingHours')}
-                </label>
-                <input
-                  type="number"
-                  name="normalWorkingHours"
-                  value={isEditing ? formData.normalWorkingHours || '' : user.normalWorkingHours || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {t('profile.gender')}
-                </label>
-                <select
-                  name="gender"
-                  value={isEditing ? formData.gender || '' : user.gender || ''}
-                  onChange={handleInputChange}
-                  disabled={!isEditing}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                >
-                  <option value="">{t('profile.selectGender')}</option>
-                  <option value="male">{t('profile.genderMale')}</option>
-                  <option value="female">{t('profile.genderFemale')}</option>
-                  <option value="other">{t('profile.genderOther')}</option>
-                </select>
-              </div>
-
-              {/* Identifikationsdokument-Daten (readonly, aus IdentificationDocument) */}
+              {/* 4. ID-Dokument-Daten (readonly, alle Felder - korrekte Reihenfolge) */}
               {user.identificationDocuments && user.identificationDocuments.length > 0 && (
                 <>
                   {(() => {
                     const latestDoc = user.identificationDocuments[0];
                     return (
                       <>
+                        {/* 1. Vorname */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            {t('profile.identificationType')}
+                            {t('profile.firstName')}
                           </label>
                           <input
                             type="text"
-                            value={latestDoc.documentType || ''}
+                            value={user.firstName || ''}
                             disabled
                             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
                             readOnly
                           />
                         </div>
 
+                        {/* 2. Nachname */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('profile.lastName')}
+                          </label>
+                          <input
+                            type="text"
+                            value={user.lastName || ''}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                            readOnly
+                          />
+                        </div>
+
+                        {/* 3. Geburtsdatum */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('profile.birthday')}
+                          </label>
+                          <input
+                            type="text"
+                            value={user.birthday ? new Date(user.birthday).toISOString().split('T')[0] : ''}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                            readOnly
+                          />
+                        </div>
+
+                        {/* 4. Land */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('profile.country')}
+                          </label>
+                          <input
+                            type="text"
+                            value={user.country ? COUNTRIES.find(c => c.code === user.country)?.name || user.country : ''}
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                            readOnly
+                          />
+                        </div>
+
+                        {/* 5. Geschlecht (editierbar, falls KI nicht richtig erkannt hat) */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('profile.gender')}
+                          </label>
+                          <select
+                            name="gender"
+                            value={isEditing ? formData.gender || '' : user.gender || ''}
+                            onChange={handleInputChange}
+                            disabled={!isEditing}
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                          >
+                            <option value="">{t('profile.selectGender')}</option>
+                            <option value="male">{t('profile.genderMale')}</option>
+                            <option value="female">{t('profile.genderFemale')}</option>
+                            <option value="other">{t('profile.genderOther')}</option>
+                          </select>
+                        </div>
+
+                        {/* 6. Dokument-Typ */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('profile.identificationType')}
+                          </label>
+                          <input
+                            type="text"
+                            value={
+                              latestDoc.documentType
+                                ? (() => {
+                                    const typeMap: Record<string, string> = {
+                                      passport: t('identificationDocuments.types.passport'),
+                                      national_id: t('identificationDocuments.types.national_id'),
+                                      driving_license: t('identificationDocuments.types.driving_license'),
+                                      residence_permit: t('identificationDocuments.types.residence_permit'),
+                                      work_permit: t('identificationDocuments.types.work_permit'),
+                                      tax_id: t('identificationDocuments.types.tax_id'),
+                                      social_security: t('identificationDocuments.types.social_security'),
+                                    };
+                                    return typeMap[latestDoc.documentType] || latestDoc.documentType;
+                                  })()
+                                : ''
+                            }
+                            disabled
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                            readOnly
+                          />
+                        </div>
+
+                        {/* 7. Dokument-Nummer */}
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             {t('profile.identificationNumber')}
@@ -660,19 +591,23 @@ const Profile: React.FC = () => {
                           />
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                            {t('profile.identificationIssuingCountry')}
-                          </label>
-                          <input
-                            type="text"
-                            value={latestDoc.issuingCountry || ''}
-                            disabled
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
-                            readOnly
-                          />
-                        </div>
+                        {/* 8. Ausstellungsdatum */}
+                        {latestDoc.issueDate && (
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              {t('profile.identificationIssueDate') || 'Ausstellungsdatum'}
+                            </label>
+                            <input
+                              type="text"
+                              value={new Date(latestDoc.issueDate).toISOString().split('T')[0]}
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                              readOnly
+                            />
+                          </div>
+                        )}
 
+                        {/* 9. Ablaufdatum */}
                         {latestDoc.expiryDate && (
                           <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -692,6 +627,42 @@ const Profile: React.FC = () => {
                   })()}
                 </>
               )}
+
+              {/* 5. Phone Number (allein - 1 Spalte, da Geschlecht jetzt in ID-Dokument-Daten) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('profile.phoneNumber')}
+                </label>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  value={isEditing ? formData.phoneNumber || '' : user.phoneNumber || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  placeholder="+573001234567"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {t('profile.phoneNumberHint')}
+                </p>
+              </div>
+
+              {/* 6. Finanzdaten (Bank Details - 1 Spalte) */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('profile.bankDetails')}
+                </label>
+                <input
+                  type="text"
+                  name="bankDetails"
+                  value={isEditing ? formData.bankDetails || '' : user.bankDetails || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              {/* Contract, Salary, Normal Working Hours ENTFERNEN - werden zu Lifecycle verschoben */}
             </div>
 
             {isEditing && (

@@ -257,7 +257,8 @@ export const API_ENDPOINTS = {
         BASE: '/reservations',
         CREATE: '/reservations',
         BY_ID: (id: number) => `/reservations/${id}`,
-        UPDATE_GUEST_CONTACT: (id: number) => `/reservations/${id}/guest-contact`
+        UPDATE_GUEST_CONTACT: (id: number) => `/reservations/${id}/guest-contact`,
+        GENERATE_PIN_AND_SEND: (id: number) => `/reservations/${id}/generate-pin-and-send`
     },
     // TTLock (Türsystem)
     TTLOCK: {

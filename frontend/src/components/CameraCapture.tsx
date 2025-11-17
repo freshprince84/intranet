@@ -94,13 +94,17 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
     return (
       <div className="p-4 text-center dark:bg-gray-800 dark:text-white">
         <p className="mb-4">{t('camera.onlyMobile')}</p>
-        <button 
-          className="p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
-          onClick={onCancel}
-          title={t('camera.back')}
-        >
-          <XMarkIcon className="h-5 w-5" />
-        </button>
+        <div className="relative group">
+          <button 
+            className="p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
+            onClick={onCancel}
+          >
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+            {t('camera.back')}
+          </div>
+        </div>
       </div>
     );
   }
@@ -112,13 +116,17 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
       {error && (
         <div className="error bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded mb-4">
           <p>{error}</p>
-          <button 
-            className="mt-2 p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
-            onClick={onCancel}
-            title={t('camera.back')}
-          >
-            <XMarkIcon className="h-5 w-5" />
-          </button>
+          <div className="relative group mt-2">
+            <button 
+              className="p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
+              onClick={onCancel}
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('camera.back')}
+            </div>
+          </div>
         </div>
       )}
       
@@ -134,20 +142,28 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
           </div>
           
           <div className="flex justify-between">
-            <button 
-              className="p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
-              onClick={onCancel}
-              title="Abbrechen"
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
-            <button 
-              className="p-2 bg-blue-500 dark:bg-blue-600 text-white rounded-md hover:bg-blue-600 dark:hover:bg-blue-700"
-              onClick={captureImage}
-              title="Foto aufnehmen"
-            >
-              <CameraIcon className="h-5 w-5" />
-            </button>
+            <div className="relative group">
+              <button 
+                className="p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
+                onClick={onCancel}
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                Abbrechen
+              </div>
+            </div>
+            <div className="relative group">
+              <button 
+                className="p-2 bg-blue-500 dark:bg-blue-600 text-white rounded-md hover:bg-blue-600 dark:hover:bg-blue-700"
+                onClick={captureImage}
+              >
+                <CameraIcon className="h-5 w-5" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                Foto aufnehmen
+              </div>
+            </div>
           </div>
         </>
       ) : !error && capturedImage ? (
@@ -161,20 +177,28 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onCancel }) =>
           </div>
           
           <div className="flex justify-between">
-            <button 
-              className="p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
-              onClick={retakeImage}
-              title="Neu aufnehmen"
-            >
-              <ArrowPathIcon className="h-5 w-5" />
-            </button>
-            <button 
-              className="p-2 bg-green-500 dark:bg-green-600 text-white rounded-md hover:bg-green-600 dark:hover:bg-green-700"
-              onClick={confirmImage}
-              title="Verwenden"
-            >
-              <CheckIcon className="h-5 w-5" />
-            </button>
+            <div className="relative group">
+              <button 
+                className="p-2 bg-gray-200 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600 rounded-md"
+                onClick={retakeImage}
+              >
+                <ArrowPathIcon className="h-5 w-5" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                Neu aufnehmen
+              </div>
+            </div>
+            <div className="relative group">
+              <button 
+                className="p-2 bg-green-500 dark:bg-green-600 text-white rounded-md hover:bg-green-600 dark:hover:bg-green-700"
+                onClick={confirmImage}
+              >
+                <CheckIcon className="h-5 w-5" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                Verwenden
+              </div>
+            </div>
           </div>
         </>
       ) : null}

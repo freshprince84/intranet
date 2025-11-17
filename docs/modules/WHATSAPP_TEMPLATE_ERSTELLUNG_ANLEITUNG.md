@@ -44,8 +44,10 @@ Für die Reservierungs-Funktionalität benötigst du folgende Templates:
   - ⚠️ **WICHTIG**: Name muss exakt so sein (wird im Code verwendet)
 - **Category**: `UTILITY` (für Service-Nachrichten)
   - Alternative: `MARKETING` (wenn Marketing-Nachricht)
-- **Language**: `Spanish (es)` oder `German (de)`
-  - ⚠️ **WICHTIG**: Muss mit der Sprache im Code übereinstimmen (aktuell: `es`)
+- **Language**: `English (en)`, `Spanish (es)` oder `German (de)`
+  - ⚠️ **WICHTIG**: Muss mit der Sprache im Code übereinstimmen
+  - **Aktuell**: Template wurde mit "English (en)" erstellt (Code verwendet Standard 'en' ✅)
+  - **Hinweis**: Template-Text kann in anderer Sprache sein als die Template-Sprache
 
 ### 2.3 Template-Body erstellen
 
@@ -312,19 +314,20 @@ tail -f backend/logs/app.log | grep "WhatsApp"
 - [ ] Zugriff auf Message Templates
 
 ### Template-Erstellung
-- [ ] Template `reservation_checkin_invitation` erstellt
+- [x] Template `reservation_checkin_invitation` erstellt
 - [ ] Template `reservation_checkin_confirmation` erstellt
 - [ ] Template `reservation_confirmation` erstellt (optional)
-- [ ] Alle Templates eingereicht für Genehmigung
+- [x] Template `reservation_checkin_invitation` eingereicht für Genehmigung
 
 ### Genehmigung
-- [ ] Template `reservation_checkin_invitation` genehmigt
+- [x] Template `reservation_checkin_invitation` genehmigt ✅ (2025-01-XX)
 - [ ] Template `reservation_checkin_confirmation` genehmigt
 - [ ] Template `reservation_confirmation` genehmigt (optional)
 
 ### Konfiguration
-- [ ] Template-Namen in Environment-Variablen gesetzt (optional)
-- [ ] Code deployed mit Template-Support
+- [x] Template-Namen im Code konfiguriert (Standard-Wert: `reservation_checkin_invitation`)
+- [x] Template-Sprache konfiguriert: Standard 'en' ist korrekt ✅ (Template wurde mit "English" erstellt)
+- [x] Code deployed mit Template-Support (Hybrid-Ansatz implementiert)
 
 ### Testing
 - [ ] Test mit aktivem 24h-Fenster erfolgreich
@@ -338,9 +341,15 @@ tail -f backend/logs/app.log | grep "WhatsApp"
 Nach erfolgreicher Template-Erstellung und Genehmigung:
 
 1. ✅ **Code ist bereits implementiert** (Hybrid-Ansatz)
-2. ✅ **Templates werden automatisch verwendet** (bei Bedarf)
-3. 📊 **Monitoring**: Prüfe Logs für Template-Verwendung
-4. 💰 **Kosten überwachen**: Template Messages sind teurer
+2. ✅ **Template `reservation_checkin_invitation` bewilligt** (2025-01-XX)
+3. ✅ **Template-Sprache konfiguriert**: Standard 'en' ist korrekt (Template wurde mit "English" erstellt)
+4. ⏳ **Template testen** (mit und ohne 24h-Fenster)
+5. ⏳ **Weitere Templates einreichen** (optional: `reservation_checkin_confirmation`)
+6. ⏳ **Für später**: Template auf Spanisch umstellen oder neue spanische Version erstellen
+7. 📊 **Monitoring**: Prüfe Logs für Template-Verwendung
+8. 💰 **Kosten überwachen**: Template Messages sind teurer
+
+**Siehe**: `docs/modules/WHATSAPP_TEMPLATE_BEWILLIGUNG_NÄCHSTE_SCHRITTE.md` für detaillierte nächste Schritte
 
 ---
 

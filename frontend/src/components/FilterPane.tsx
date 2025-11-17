@@ -5,7 +5,7 @@ import FilterRow, { FilterCondition } from './FilterRow.tsx';
 import FilterLogicalOperator from './FilterLogicalOperator.tsx';
 import axiosInstance from '../config/axios.ts';
 import { API_ENDPOINTS } from '../config/api.ts';
-import { toast } from 'react-toastify';
+import useMessage from '../hooks/useMessage.ts';
 
 interface TableColumn {
   id: string;
@@ -41,6 +41,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   tableId
 }) => {
   const { t } = useTranslation();
+  const { showMessage } = useMessage();
   // Initialisiere mit einem leeren Filter, wenn keine gespeicherten Filter vorhanden sind
   const [conditions, setConditions] = useState<FilterCondition[]>(
     savedConditions && savedConditions.length > 0 
@@ -333,13 +334,13 @@ const FilterPane: React.FC<FilterPaneProps> = ({
   // Funktion zum Speichern des aktuellen Filters
   const handleSaveFilter = async () => {
     if (!filterName.trim()) {
-      toast.error(t('filter.noName'));
+      showMessage(t('filter.noName'), 'error');
       return;
     }
 
     // Prüfe, ob der Name ein reservierter Standardfilter-Name ist
     if (filterName === 'Archiv' || filterName === 'Aktuell') {
-      toast.error(t('filter.reservedNames'));
+      showMessage(t('filter.reservedNames'), 'error');
       return;
     }
 
@@ -349,7 +350,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     );
     
     if (standardFilterExists) {
-      toast.error(t('filter.cannotOverwriteStandard'));
+      showMessage(t('filter.cannotOverwriteStandard'), 'error');
       return;
     }
 
@@ -357,7 +358,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     const validConditions = conditions.filter(c => c.column !== '');
     
     if (validConditions.length === 0) {
-      toast.error(t('filter.noConditions'));
+      showMessage(t('filter.noConditions'), 'error');
       return;
     }
 
@@ -365,7 +366,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
       const token = localStorage.getItem('token');
       
       if (!token) {
-        toast.error(t('filter.notAuthenticated'));
+        showMessage(t('filter.notAuthenticated'), 'error');
         return;
       }
       
@@ -380,12 +381,17 @@ const FilterPane: React.FC<FilterPaneProps> = ({
         }
       );
       
-      toast.success(t('filter.saveSuccess'));
+      showMessage(t('filter.saveSuccess'), 'success');
       setShowSaveInput(false);
       setFilterName('');
+      
+      // Aktualisiere die Filter-Tags sofort, damit der neue Filter angezeigt wird
+      if ((window as any).refreshSavedFilters) {
+        (window as any).refreshSavedFilters();
+      }
     } catch (err) {
       console.error('Fehler beim Speichern des Filters:', err);
-      toast.error(t('filter.saveError'));
+      showMessage(t('filter.saveError'), 'error');
     }
   };
   
@@ -393,7 +399,7 @@ const FilterPane: React.FC<FilterPaneProps> = ({
     <div className="mt-4 p-4 bg-white dark:bg-gray-800 rounded-lg">
       <h3 className="text-base font-medium text-gray-700 dark:text-gray-200 mb-3">{t('filter.title')}</h3>
       
-      <div className="space-y-0">
+      <div className="space-y-2">
         {conditions.map((condition, index) => (
           <React.Fragment key={index}>
             <FilterRow

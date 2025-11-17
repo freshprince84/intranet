@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
-  Tooltip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -274,7 +273,7 @@ const NotificationList: React.FC = () => {
                     </div>
                     <div className="ml-4 flex-shrink-0 flex space-x-2">
                       {!notification.read && (
-                        <Tooltip title={t('notifications.markAsRead', { defaultValue: 'Als gelesen markieren' })}>
+                        <div className="relative group">
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
@@ -284,9 +283,12 @@ const NotificationList: React.FC = () => {
                           >
                             <CheckIcon className="h-5 w-5" />
                           </button>
-                        </Tooltip>
+                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                            {t('notifications.markAsRead', { defaultValue: 'Als gelesen markieren' })}
+                          </div>
+                        </div>
                       )}
-                      <Tooltip title={t('notification.deleteTitle')}>
+                      <div className="relative group">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -296,7 +298,10 @@ const NotificationList: React.FC = () => {
                         >
                           <TrashIcon className="h-5 w-5" />
                         </button>
-                      </Tooltip>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('notification.deleteTitle')}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
+import { getUserLanguage, getSystemNotificationText } from '../utils/translations';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 
 const prisma = new PrismaClient();
@@ -118,10 +119,12 @@ export const stopUserWorktime = async (req: Request, res: Response) => {
     });
 
     // Erstelle eine Benachrichtigung für den Benutzer
+    const userLang = await getUserLanguage(Number(userId));
+    const notificationText = getSystemNotificationText(userLang, 'worktime_manager_stop', undefined, undefined, worktime.branch.name);
     await createNotificationIfEnabled({
       userId: Number(userId),
-      title: 'Zeiterfassung durch Vorgesetzten beendet',
-      message: `Ihre Zeiterfassung für ${worktime.branch.name} wurde von einem Vorgesetzten beendet.`,
+      title: notificationText.title,
+      message: notificationText.message,
       type: NotificationType.worktime_manager_stop,
       relatedEntityId: worktime.id,
       relatedEntityType: 'worktime_manager_stop'
@@ -262,10 +265,12 @@ export const updateUserWorktime = async (req: Request, res: Response) => {
     });
 
     // Erstelle eine Benachrichtigung für den Benutzer
+    const userLang = await getUserLanguage(worktime.userId);
+    const notificationText = getSystemNotificationText(userLang, 'worktime_updated', undefined, undefined, worktime.branch.name);
     await createNotificationIfEnabled({
       userId: worktime.userId,
-      title: 'Zeiterfassung aktualisiert',
-      message: `Ihre Zeiterfassung für ${worktime.branch.name} wurde von einem Vorgesetzten aktualisiert.`,
+      title: notificationText.title,
+      message: notificationText.message,
       type: NotificationType.worktime_manager_stop,
       relatedEntityId: worktime.id,
       relatedEntityType: 'worktime_update'
@@ -330,10 +335,12 @@ export const updateApprovedOvertimeHours = async (req: Request, res: Response) =
     });
 
     // Erstelle eine Benachrichtigung für den Benutzer
+    const userLang = await getUserLanguage(Number(userId));
+    const notificationText = getSystemNotificationText(userLang, 'overtime_updated', undefined, undefined, undefined, approvedOvertimeHours);
     await createNotificationIfEnabled({
       userId: Number(userId),
-      title: 'Bewilligte Überstunden aktualisiert',
-      message: `Ihre bewilligten Überstunden wurden auf ${approvedOvertimeHours} Stunden aktualisiert.`,
+      title: notificationText.title,
+      message: notificationText.message,
       type: NotificationType.worktime,
       relatedEntityId: updatedUser.id,
       relatedEntityType: 'overtime_update'

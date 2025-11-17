@@ -32,6 +32,7 @@ interface OnboardingStatus {
   onboardingProgress: {
     currentStep: number;
     completedSteps: number[];
+    dismissedSteps?: number[]; // Schritte die vom User weggeklickt wurden
   } | null;
   onboardingStartedAt: string | null;
   onboardingCompletedAt: string | null;
@@ -68,6 +69,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
   const [isActive, setIsActive] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [dismissedSteps, setDismissedSteps] = useState<number[]>([]); // Schritte die vom User weggeklickt wurden
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [status, setStatus] = useState<OnboardingStatus | null>(null);
   const [modalDismissed, setModalDismissed] = useState<boolean>(false); // Modal temporär geschlossen
@@ -254,6 +256,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
       await axiosInstance.put(API_ENDPOINTS.USERS.ONBOARDING.PROGRESS, {
         currentStep: initialStep,
         completedSteps: [],
+        dismissedSteps: [],
         onboardingStartedAt: new Date().toISOString()
       });
     } catch (error) {
@@ -287,17 +290,24 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
             // Profil vollständig und Tour bereits gestartet → Tour fortsetzen
             if (statusData.onboardingProgress) {
               setCurrentStep(statusData.onboardingProgress.currentStep);
-              setCompletedSteps(statusData.onboardingProgress.completedSteps);
+              setCompletedSteps(statusData.onboardingProgress.completedSteps || []);
+              setDismissedSteps(statusData.onboardingProgress.dismissedSteps || []);
             }
             setIsActive(true);
-            if (!modalDismissedRef.current) {
+            // Prüfe ob aktueller Schritt dismissed ist
+            const currentStepIndex = statusData.onboardingProgress?.currentStep || 0;
+            if (statusData.onboardingProgress?.dismissedSteps?.includes(currentStepIndex)) {
+              setModalDismissed(true);
+              modalDismissedRef.current = true;
+            } else if (!modalDismissedRef.current) {
               setModalDismissed(false);
             }
           } else if (!profileComplete) {
             // Profil unvollständig → Tour starten/fortsetzen
             if (statusData.onboardingProgress) {
               setCurrentStep(statusData.onboardingProgress.currentStep);
-              setCompletedSteps(statusData.onboardingProgress.completedSteps);
+              setCompletedSteps(statusData.onboardingProgress.completedSteps || []);
+              setDismissedSteps(statusData.onboardingProgress.dismissedSteps || []);
             }
             if (!statusData.onboardingStartedAt) {
               setTimeout(() => {
@@ -305,7 +315,11 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
               }, 500);
             } else {
               setIsActive(true);
-              if (!modalDismissedRef.current) {
+              const currentStepIndex = statusData.onboardingProgress?.currentStep || 0;
+              if (statusData.onboardingProgress?.dismissedSteps?.includes(currentStepIndex)) {
+                setModalDismissed(true);
+                modalDismissedRef.current = true;
+              } else if (!modalDismissedRef.current) {
                 setModalDismissed(false);
               }
             }
@@ -313,7 +327,8 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
             // Profil vollständig, aber keine Organisation → Tour starten mit Organisation-Schritt
             if (statusData.onboardingProgress) {
               setCurrentStep(statusData.onboardingProgress.currentStep);
-              setCompletedSteps(statusData.onboardingProgress.completedSteps);
+              setCompletedSteps(statusData.onboardingProgress.completedSteps || []);
+              setDismissedSteps(statusData.onboardingProgress.dismissedSteps || []);
             }
             if (!statusData.onboardingStartedAt) {
               setTimeout(() => {
@@ -321,7 +336,11 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
               }, 500);
             } else {
               setIsActive(true);
-              if (!modalDismissedRef.current) {
+              const currentStepIndex = statusData.onboardingProgress?.currentStep || 0;
+              if (statusData.onboardingProgress?.dismissedSteps?.includes(currentStepIndex)) {
+                setModalDismissed(true);
+                modalDismissedRef.current = true;
+              } else if (!modalDismissedRef.current) {
                 setModalDismissed(false);
               }
             }
@@ -333,7 +352,11 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
               }, 500);
             } else {
               setIsActive(true);
-              if (!modalDismissedRef.current) {
+              const currentStepIndex = statusData.onboardingProgress?.currentStep || 0;
+              if (statusData.onboardingProgress?.dismissedSteps?.includes(currentStepIndex)) {
+                setModalDismissed(true);
+                modalDismissedRef.current = true;
+              } else if (!modalDismissedRef.current) {
                 setModalDismissed(false);
               }
             }
@@ -373,8 +396,12 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
   }, [user]); // startTour aus Dependencies entfernt, da es zu häufigen Re-Renders führt
 
   // Speichere Fortschritt
-  const saveProgress = useCallback(async (step: number, completed: number[]) => {
-    const progress = { currentStep: step, completedSteps: completed };
+  const saveProgress = useCallback(async (step: number, completed: number[], dismissed?: number[]) => {
+    const progress = { 
+      currentStep: step, 
+      completedSteps: completed,
+      dismissedSteps: dismissed !== undefined ? dismissed : dismissedSteps
+    };
     
     // LocalStorage als Fallback
     localStorage.setItem('onboardingProgress', JSON.stringify(progress));
@@ -386,7 +413,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
       console.error('Fehler beim Speichern des Fortschritts:', error);
       // Fehler blockieren nicht die Tour
     }
-  }, []);
+  }, [dismissedSteps]);
 
 
   // Automatischer Schritt-Wechsel bei Navigation (für action: 'navigate' Schritte)
@@ -426,7 +453,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
         const newStep = currentStep + 1;
         setCurrentStep(newStep);
         setCompletedSteps(newCompletedSteps);
-        saveProgress(newStep, newCompletedSteps);
+        saveProgress(newStep, newCompletedSteps, dismissedSteps);
       }
     }
   }, [location.pathname, isActive, currentStep, filteredSteps, completedSteps, saveProgress, trackEvent]);
@@ -467,21 +494,47 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
 
   // Modal temporär schließen (nicht die Tour stoppen)
   // WICHTIG: Verhindere, dass Modal sofort wieder geöffnet wird
-  const dismissModal = useCallback(() => {
+  // Speichere dismissed Step persistent, damit er beim nächsten Login nicht mehr angezeigt wird
+  // Wird sowohl vom X-Button als auch von "Omitir" verwendet
+  const dismissModal = useCallback(async () => {
     setModalDismissed(true);
     // Setze Ref, damit useEffect nicht sofort wieder öffnet
     modalDismissedRef.current = true;
-  }, []);
+    
+    // Speichere aktuellen Schritt als dismissed
+    if (currentStep !== undefined && !dismissedSteps.includes(currentStep)) {
+      const newDismissedSteps = [...dismissedSteps, currentStep];
+      setDismissedSteps(newDismissedSteps);
+      
+      // Speichere persistent im Backend
+      try {
+        await saveProgress(currentStep, completedSteps, newDismissedSteps);
+      } catch (error) {
+        console.error('Fehler beim Speichern des dismissed Steps:', error);
+      }
+    }
+    
+    // Track Skip-Event für Analytics
+    if (filteredSteps[currentStep]) {
+      await trackEvent(
+        filteredSteps[currentStep].id,
+        filteredSteps[currentStep].title,
+        'skipped'
+      );
+    }
+  }, [currentStep, dismissedSteps, completedSteps, saveProgress, filteredSteps, trackEvent]);
 
   // Modal wieder anzeigen
   const showModal = useCallback(() => {
     setModalDismissed(false);
   }, []);
 
-  // Tour stoppen
+  // Tour stoppen (wird aufgerufen wenn User die Tour komplett abbrechen möchte)
+  // WICHTIG: "Omitir" ruft jetzt dismissModal() auf, nicht stopTour()
   const stopTour = useCallback(async () => {
     setIsActive(false);
-    setModalDismissed(false);
+    setModalDismissed(true);
+    modalDismissedRef.current = true;
     
     // Track Cancel-Event
     if (filteredSteps[currentStep]) {
@@ -490,6 +543,14 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
         filteredSteps[currentStep].title,
         'cancelled'
       );
+    }
+    
+    // Tour als abgeschlossen markieren (nur wenn explizit gewünscht)
+    try {
+      await axiosInstance.put(API_ENDPOINTS.USERS.ONBOARDING.COMPLETE);
+      setStatus(prev => prev ? { ...prev, onboardingCompleted: true } : null);
+    } catch (error) {
+      console.error('Fehler beim Markieren der Tour als abgeschlossen:', error);
     }
   }, [currentStep, filteredSteps, trackEvent]);
 
@@ -510,12 +571,12 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
     if (currentStep < filteredSteps.length - 1) {
       const newStep = currentStep + 1;
       setCurrentStep(newStep);
-      saveProgress(newStep, completedSteps);
+      saveProgress(newStep, completedSteps, dismissedSteps);
     } else {
       // Tour beenden
       completeTour();
     }
-  }, [currentStep, filteredSteps.length, completedSteps, saveProgress, completeTour]);
+  }, [currentStep, filteredSteps.length, completedSteps, dismissedSteps, saveProgress, completeTour]);
 
   // Vorheriger Schritt
   const previousStep = useCallback(() => {
@@ -557,7 +618,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
           setCurrentStep(prevStep => {
             if (prevStep < filteredSteps.length - 1) {
               const nextStepIndex = prevStep + 1;
-              saveProgress(nextStepIndex, newCompletedSteps);
+              saveProgress(nextStepIndex, newCompletedSteps, dismissedSteps);
               
               // Navigiere zum Dashboard, wenn nächster Schritt dort ist
               const nextStep = filteredSteps[nextStepIndex];
@@ -579,7 +640,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
           setCurrentStep(prevStep => {
             if (prevStep < filteredSteps.length - 1) {
               const nextStepIndex = prevStep + 1;
-              saveProgress(nextStepIndex, newCompletedSteps);
+              saveProgress(nextStepIndex, newCompletedSteps, dismissedSteps);
               
               // Navigiere zum nächsten Schritt
               const nextStep = filteredSteps[nextStepIndex];
@@ -601,7 +662,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
           setCurrentStep(prevStep => {
             if (prevStep < filteredSteps.length - 1) {
               const nextStepIndex = prevStep + 1;
-              saveProgress(nextStepIndex, newCompletedSteps);
+              saveProgress(nextStepIndex, newCompletedSteps, dismissedSteps);
               
               // Navigiere zum nächsten Schritt (switch_role_after_join oder welcome)
               const nextStep = filteredSteps[nextStepIndex];
@@ -626,7 +687,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
             // Warte kurz, damit UI aktualisiert werden kann
             setTimeout(() => {
               setCurrentStep(orgStepIndex);
-              saveProgress(orgStepIndex, newCompletedSteps);
+              saveProgress(orgStepIndex, newCompletedSteps, dismissedSteps);
               
               // Navigiere zur Organisation-Seite
               const orgStep = filteredSteps[orgStepIndex];

@@ -64,12 +64,20 @@ Das Filtersystem-Modul bietet eine umfassende Lösung für das Filtern von Daten
 
 ## Technische Details
 
+### Filter-Standards
+
+**WICHTIG:** Alle Filter müssen den aktuellen Standards entsprechen. Siehe:
+- **Standards-Dokumentation:** `docs/modules/MODUL_FILTERSYSTEM_STANDARDS.md`
+- **Standardisierungs-Plan:** `docs/implementation_plans/FILTER_STANDARDISIERUNG_PLAN.md`
+- **Referenz-Implementierung:** `frontend/src/components/Requests.tsx`
+
 ### Filterlogik
 
 Die Filterlogik ist in den folgenden Komponenten implementiert:
 - `FilterPane.tsx`: Hauptkomponente für die Filterverwaltung
 - `FilterRow.tsx`: Komponente für einzelne Filterbedingungen
 - `FilterLogicalOperator.tsx`: Komponente für logische Operatoren (UND/ODER)
+- `filterLogic.ts`: Zentrale Filter-Logik-Funktionen (`applyFilters`, `evaluateDateCondition`, `evaluateUserRoleCondition`)
 
 ### HTTP-Methoden und API-Integration
 

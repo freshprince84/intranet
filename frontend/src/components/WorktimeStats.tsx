@@ -269,22 +269,6 @@ const WorktimeStats: React.FC = () => {
         }
     };
 
-    const handleWeekChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const newWeekInput = e.target.value;
-        if (!newWeekInput) return;
-        
-        setSelectedWeekInput(newWeekInput);
-        
-        // Konvertiere das Wochenformat in ein Datum für die API
-        const newWeekDate = convertWeekToDate(newWeekInput);
-        setSelectedWeekDate(newWeekDate);
-        
-        // Explizit Daten neu laden
-        queueMicrotask(() => {
-            fetchStatsWithDate(newWeekDate, false);
-        });
-    };
-    
     const handleQuinzenaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newQuinzenaInput = e.target.value;
         if (!newQuinzenaInput) return;
@@ -482,11 +466,26 @@ const WorktimeStats: React.FC = () => {
                         />
                     ) : (
                         <input
-                            type="week"
+                            type="text"
+                            pattern="\d{4}-W\d{2}"
+                            placeholder="YYYY-Www"
                             value={selectedWeekInput}
-                            onChange={handleWeekChange}
-                            max={currentWeekInput}
-                            className="border border-gray-300 dark:border-gray-600 rounded-md text-base sm:text-sm h-8 sm:h-10 px-3 dark:bg-gray-700 dark:text-white"
+                            onChange={(e) => {
+                                const value = e.target.value;
+                                // Format: YYYY-Www
+                                if (/^\d{4}-W\d{1,2}$/.test(value) || value === '') {
+                                    setSelectedWeekInput(value);
+                                    if (value.match(/^\d{4}-W\d{2}$/)) {
+                                        const newDate = convertWeekToDate(value);
+                                        setSelectedWeekDate(newDate);
+                                        // Explizit Daten neu laden
+                                        queueMicrotask(() => {
+                                            fetchStatsWithDate(newDate, false);
+                                        });
+                                    }
+                                }
+                            }}
+                            className="border border-gray-300 dark:border-gray-600 rounded-md text-base sm:text-sm h-8 sm:h-10 px-3 dark:bg-gray-700 dark:text-white w-28"
                             title={t('worktime.stats.weekFormat')}
                         />
                     )}

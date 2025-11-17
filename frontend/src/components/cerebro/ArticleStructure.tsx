@@ -346,7 +346,7 @@ const ArticleStructure: React.FC<ArticleStructureProps> = ({ mdFiles }) => {
                   <HPlusIcon className="h-5 w-5" />
                 </button>
                 {/* Tooltip */}
-                <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block bg-gray-800 dark:bg-gray-700 text-white text-xs rounded py-1 px-2 whitespace-nowrap">
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
                   {t('cerebro.actions.createArticle')}
                 </div>
               </div>

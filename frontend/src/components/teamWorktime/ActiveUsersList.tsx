@@ -8,6 +8,7 @@ import EditWorktimeModal from './EditWorktimeModal.tsx';
 import FilterPane from '../FilterPane.tsx';
 import SavedFilterTags from '../SavedFilterTags.tsx';
 import { FilterCondition } from '../FilterRow.tsx';
+import { applyFilters } from '../../utils/filterLogic.ts';
 import { useTableSettings } from '../../hooks/useTableSettings.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import { createLocalDate } from '../../utils/dateUtils.ts';
@@ -458,66 +459,64 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
       
       // Wenn erweiterte Filterbedingungen definiert sind, wende diese an
       if (filterConditions.length > 0) {
-        // Implementiere die logische Verknüpfung der Bedingungen (UND/ODER)
-        let result = filterConditions.length > 0;
-        
-        for (let i = 0; i < filterConditions.length; i++) {
-          const condition = filterConditions[i];
-          let conditionMet = false;
-          
-          switch (condition.column) {
-            case 'name':
-              if (condition.operator === 'equals') {
-                conditionMet = fullName === (condition.value as string || '').toLowerCase();
-              } else if (condition.operator === 'contains') {
-                conditionMet = fullName.includes((condition.value as string || '').toLowerCase());
-              } else if (condition.operator === 'startsWith') {
-                conditionMet = fullName.startsWith((condition.value as string || '').toLowerCase());
-              }
-              break;
-            
-            case 'branch':
-              if (condition.operator === 'equals') {
-                conditionMet = branch === (condition.value as string || '').toLowerCase();
-              } else if (condition.operator === 'contains') {
-                conditionMet = branch.includes((condition.value as string || '').toLowerCase());
-              } else if (condition.operator === 'startsWith') {
-                conditionMet = branch.startsWith((condition.value as string || '').toLowerCase());
-              }
-              break;
-            
-            case 'hasActiveWorktime':
-              if (condition.operator === 'equals') {
-                const isActive = (condition.value === 'true');
-                conditionMet = group.hasActiveWorktime === isActive;
-              }
-              break;
-              
-            case 'duration':
-              if (condition.operator === 'greaterThan') {
-                const minDuration = parseInt(condition.value as string || '0') * 60 * 60 * 1000; // Stunden in Millisekunden
-                conditionMet = group.totalDuration > minDuration;
-              } else if (condition.operator === 'lessThan') {
-                const maxDuration = parseInt(condition.value as string || '0') * 60 * 60 * 1000; // Stunden in Millisekunden
-                conditionMet = group.totalDuration < maxDuration;
-              } else if (condition.operator === 'equals') {
-                const targetDuration = parseInt(condition.value as string || '0') * 60 * 60 * 1000; // Stunden in Millisekunden
-                const tolerance = 30 * 60 * 1000; // 30 Minuten Toleranz
-                conditionMet = Math.abs(group.totalDuration - targetDuration) <= tolerance;
-              }
-              break;
+        // Column-Evaluatoren für WorktimeGroups
+        const columnEvaluators: any = {
+          'name': (group: WorktimeGroup, cond: FilterCondition) => {
+            const fullName = `${group.user.firstName} ${group.user.lastName}`.toLowerCase();
+            const value = (cond.value as string || '').toLowerCase();
+            if (cond.operator === 'equals') return fullName === value;
+            if (cond.operator === 'contains') return fullName.includes(value);
+            if (cond.operator === 'startsWith') return fullName.startsWith(value);
+            if (cond.operator === 'endsWith') return fullName.endsWith(value);
+            return null;
+          },
+          'branch': (group: WorktimeGroup, cond: FilterCondition) => {
+            const branchName = group.branch.name.toLowerCase();
+            const value = (cond.value as string || '').toLowerCase();
+            if (cond.operator === 'equals') return branchName === value;
+            if (cond.operator === 'contains') return branchName.includes(value);
+            if (cond.operator === 'startsWith') return branchName.startsWith(value);
+            if (cond.operator === 'endsWith') return branchName.endsWith(value);
+            return null;
+          },
+          'hasActiveWorktime': (group: WorktimeGroup, cond: FilterCondition) => {
+            if (cond.operator === 'equals') {
+              const isActive = (cond.value === 'true' || cond.value === true);
+              return group.hasActiveWorktime === isActive;
+            }
+            return null;
+          },
+          'duration': (group: WorktimeGroup, cond: FilterCondition) => {
+            const minDuration = parseInt(cond.value as string || '0') * 60 * 60 * 1000; // Stunden in Millisekunden
+            if (cond.operator === 'greaterThan') return group.totalDuration > minDuration;
+            if (cond.operator === 'lessThan') return group.totalDuration < minDuration;
+            if (cond.operator === 'equals') {
+              const tolerance = 30 * 60 * 1000; // 30 Minuten Toleranz
+              return Math.abs(group.totalDuration - minDuration) <= tolerance;
+            }
+            return null;
           }
-          
-          // Verknüpfe das Ergebnis dieser Bedingung mit dem Gesamtergebnis
-          if (i === 0) {
-            result = conditionMet;
-          } else {
-            const operator = filterLogicalOperators[i - 1];
-            result = operator === 'AND' ? (result && conditionMet) : (result || conditionMet);
+        };
+
+        const getFieldValue = (group: WorktimeGroup, columnId: string): any => {
+          switch (columnId) {
+            case 'name': return `${group.user.firstName} ${group.user.lastName}`;
+            case 'branch': return group.branch.name;
+            case 'hasActiveWorktime': return group.hasActiveWorktime;
+            case 'duration': return group.totalDuration;
+            case 'startTime': return group.startTime;
+            case 'endTime': return group.endTime;
+            default: return (group as any)[columnId];
           }
-        }
-        
-        if (!result) return false;
+        };
+
+        filtered = applyFilters(
+          filtered,
+          filterConditions,
+          filterLogicalOperators,
+          getFieldValue,
+          columnEvaluators
+        );
       }
       
       return true;
@@ -911,16 +910,20 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         {/* Datumsauswahl mit Pfeilen - linksbündig */}
         <div className="flex items-center gap-0.5">
           {/* Links-Pfeil (zurück) */}
-          <button
-            type="button"
-            onClick={handlePreviousDay}
-            className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            title={t('common.previousDay')}
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
+          <div className="relative group">
+            <button
+              type="button"
+              onClick={handlePreviousDay}
+              className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('common.previousDay')}
+            </div>
+          </div>
 
           {/* Datumsfeld */}
           <div className="relative w-[180px]">
@@ -935,16 +938,20 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
 
           {/* Rechts-Pfeil (vorwärts) - nur wenn Datum < heute */}
           {isDateBeforeToday && (
-            <button
-              type="button"
-              onClick={handleNextDay}
-              className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              title={t('common.nextDay')}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={handleNextDay}
+                className="p-1 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('common.nextDay')}
+              </div>
+            </div>
           )}
         </div>
 
@@ -959,35 +966,43 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
           />
           
           {/* View-Mode Toggle */}
-          <button
-            type="button"
-            className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ml-1 ${
-              viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
-            }`}
-            onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
-            title={viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
-          >
-            {viewMode === 'table' ? (
-              <Squares2X2Icon className="h-5 w-5" />
-            ) : (
-              <TableCellsIcon className="h-5 w-5" />
-            )}
-          </button>
+          <div className="relative group ml-1">
+            <button
+              type="button"
+              className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+              }`}
+              onClick={() => updateViewMode(viewMode === 'table' ? 'cards' : 'table')}
+            >
+              {viewMode === 'table' ? (
+                <Squares2X2Icon className="h-5 w-5" />
+              ) : (
+                <TableCellsIcon className="h-5 w-5" />
+              )}
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
+            </div>
+          </div>
           
           {/* Filter-Button */}
-          <button
-            type="button"
-            className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
-            title={t('common.showFilter')}
-          >
-            <FunnelIcon className="h-5 w-5" />
-            {getActiveFilterCount() > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center z-10" style={{ position: 'absolute', top: '-0.25rem', right: '-0.25rem' }}>
-                {getActiveFilterCount()}
-              </span>
-            )}
-          </button>
+          <div className="relative group ml-1">
+            <button
+              type="button"
+              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} relative`}
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+            >
+              <FunnelIcon className="h-5 w-5" />
+              {getActiveFilterCount() > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center z-10" style={{ position: 'absolute', top: '-0.25rem', right: '-0.25rem' }}>
+                  {getActiveFilterCount()}
+                </span>
+              )}
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('common.showFilter')}
+            </div>
+          </div>
           
           {/* Spalten-Konfiguration */}
           <div className="ml-1">
@@ -1182,22 +1197,30 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                             <td key={columnId} className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                               <div className="flex flex-row space-x-2 justify-end items-center">
                                 {group.hasActiveWorktime && (
-                                  <button
-                                    onClick={() => handleOpenStopModal(group)}
-                                    className="p-1 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-                                    title={t('teamWorktime.actions.stopTracking')}
-                                  >
-                                    <StopIcon className="h-5 w-5 text-white fill-white" />
-                                  </button>
+                                  <div className="relative group">
+                                    <button
+                                      onClick={() => handleOpenStopModal(group)}
+                                      className="p-1 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+                                    >
+                                      <StopIcon className="h-5 w-5 text-white fill-white" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                      {t('teamWorktime.actions.stopTracking')}
+                                    </div>
+                                  </div>
                                 )}
                                 {hasPermission('team_worktime_control', 'both', 'page') && hasPermission('team_worktime', 'both', 'table') && (
-                                  <button
-                                    onClick={() => handleOpenEditModal(group)}
-                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 edit-button"
-                                    title={t('teamWorktime.actions.editWorktimes')}
-                                  >
-                                    <PencilIcon className="h-5 w-5" />
-                                  </button>
+                                  <div className="relative group">
+                                    <button
+                                      onClick={() => handleOpenEditModal(group)}
+                                      className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300 edit-button"
+                                    >
+                                      <PencilIcon className="h-5 w-5" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                      {t('teamWorktime.actions.editWorktimes')}
+                                    </div>
+                                  </div>
                                 )}
                               </div>
                             </td>
@@ -1363,22 +1386,30 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
                 const actions = (
                   <div className="flex flex-row space-x-2 justify-end items-center">
                     {group.hasActiveWorktime && (
-                      <button
-                        onClick={() => handleOpenStopModal(group)}
-                        className="p-1 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
-                        title={t('teamWorktime.actions.stopTracking')}
-                      >
-                        <StopIcon className="h-5 w-5 text-white fill-white" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          onClick={() => handleOpenStopModal(group)}
+                          className="p-1 bg-red-600 text-white rounded hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+                        >
+                          <StopIcon className="h-5 w-5 text-white fill-white" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('teamWorktime.actions.stopTracking')}
+                        </div>
+                      </div>
                     )}
                     {hasPermission('team_worktime_control', 'both', 'page') && hasPermission('team_worktime', 'both', 'table') && (
-                      <button
-                        onClick={() => handleOpenEditModal(group)}
-                        className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
-                        title={t('teamWorktime.actions.editWorktimes')}
-                      >
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          onClick={() => handleOpenEditModal(group)}
+                          className="text-blue-600 dark:text-blue-400 hover:text-blue-900 dark:hover:text-blue-300"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('teamWorktime.actions.editWorktimes')}
+                        </div>
+                      </div>
                     )}
                   </div>
                 );

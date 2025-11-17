@@ -293,7 +293,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({
               
               {/* Vorschau beim Hover - nur anzeigen wenn URL verfügbar */}
               {url && url !== "wird nach dem Erstellen hochgeladen" && (
-                <div className="hidden group-hover:block absolute z-10 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg p-2 rounded-md -bottom-2 left-1/2 transform -translate-x-1/2 translate-y-full max-w-xs">
+                <div className="absolute z-10 bg-white dark:bg-gray-800 border dark:border-gray-700 shadow-lg p-2 rounded-md -bottom-2 left-1/2 transform -translate-x-1/2 translate-y-full max-w-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                   {attachment.type === 'image' ? (
                     <img 
                       src={url} 

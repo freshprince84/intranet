@@ -1,7 +1,7 @@
 import express from 'express';
 import { authMiddleware } from '../middleware/auth';
 import { organizationMiddleware } from '../middleware/organization';
-import { getAllReservations, createReservation, updateGuestContact, getReservationById } from '../controllers/reservationController';
+import { getAllReservations, createReservation, updateGuestContact, getReservationById, generatePinAndSendNotification } from '../controllers/reservationController';
 
 const router = express.Router();
 
@@ -24,6 +24,11 @@ router.post('/', (req, res, next) => {
 });
 router.get('/:id', getReservationById);
 router.put('/:id/guest-contact', updateGuestContact);
+router.post('/:id/generate-pin-and-send', (req, res, next) => {
+  console.log('[Reservations Route] POST /:id/generate-pin-and-send aufgerufen');
+  console.log('[Reservations Route] Reservation ID:', req.params.id);
+  generatePinAndSendNotification(req, res).catch(next);
+});
 
 export default router;
 

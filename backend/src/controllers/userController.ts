@@ -6,6 +6,7 @@ import { Request, Response } from 'express';
 import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
 import bcrypt from 'bcrypt';
 import { createNotificationIfEnabled } from './notificationController';
+import { getUserLanguage, getUserNotificationText } from '../utils/translations';
 import { organizationMiddleware, getUserOrganizationFilter, getDataIsolationFilter } from '../middleware/organization';
 import { LifecycleService } from '../services/lifecycleService';
 
@@ -184,6 +185,10 @@ export const getUserById = async (req: Request, res: Response) => {
                     include: {
                         branch: true
                     }
+                },
+                identificationDocuments: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1 // Neuestes Dokument
                 }
             }
         });
@@ -961,10 +966,14 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
         });
 
         // Benachrichtigung an den Benutzer senden, dessen Rollen aktualisiert wurden
+        const userLang = await getUserLanguage(userId);
+        console.log(`[updateUserRoles] User ${userId} Sprache: ${userLang}`);
+        const userNotificationText = getUserNotificationText(userLang, 'roles_updated', true);
+        console.log(`[updateUserRoles] User Notification Text: ${userNotificationText.title} - ${userNotificationText.message}`);
         await createNotificationIfEnabled({
             userId: userId,
-            title: 'Deine Rollen wurden aktualisiert',
-            message: `Deine Benutzerrollen wurden aktualisiert. Melde dich bei Fragen an einen Administrator.`,
+            title: userNotificationText.title,
+            message: userNotificationText.message,
             type: NotificationType.user,
             relatedEntityId: userId,
             relatedEntityType: 'update'
@@ -990,10 +999,14 @@ export const updateUserRoles = async (req: Request<{ id: string }, {}, UpdateUse
         });
 
         for (const admin of admins) {
+            const adminLang = await getUserLanguage(admin.id);
+            console.log(`[updateUserRoles] Admin ${admin.id} Sprache: ${adminLang}`);
+            const adminNotificationText = getUserNotificationText(adminLang, 'roles_updated', false, `${updatedUser.firstName} ${updatedUser.lastName}`);
+            console.log(`[updateUserRoles] Admin Notification Text: ${adminNotificationText.title} - ${adminNotificationText.message}`);
             await createNotificationIfEnabled({
                 userId: admin.id,
-                title: 'Benutzerrollen aktualisiert',
-                message: `Die Rollen für "${updatedUser.firstName} ${updatedUser.lastName}" wurden aktualisiert.`,
+                title: adminNotificationText.title,
+                message: adminNotificationText.message,
                 type: NotificationType.user,
                 relatedEntityId: userId,
                 relatedEntityType: 'update'
@@ -1158,10 +1171,12 @@ export const updateUserBranches = async (req: Request<{ id: string }, {}, Update
         });
 
         // Benachrichtigung an den Benutzer senden, dessen Branches aktualisiert wurden
+        const userLang = await getUserLanguage(userId);
+        const userNotificationText = getUserNotificationText(userLang, 'branches_updated', true);
         await createNotificationIfEnabled({
             userId: userId,
-            title: 'Deine Niederlassungen wurden aktualisiert',
-            message: `Deine zugewiesenen Niederlassungen wurden aktualisiert. Melde dich bei Fragen an einen Administrator.`,
+            title: userNotificationText.title,
+            message: userNotificationText.message,
             type: NotificationType.user,
             relatedEntityId: userId,
             relatedEntityType: 'update'
@@ -1187,10 +1202,12 @@ export const updateUserBranches = async (req: Request<{ id: string }, {}, Update
         });
 
         for (const admin of admins) {
+            const adminLang = await getUserLanguage(admin.id);
+            const adminNotificationText = getUserNotificationText(adminLang, 'branches_updated', false, `${updatedUser.firstName} ${updatedUser.lastName}`);
             await createNotificationIfEnabled({
                 userId: admin.id,
-                title: 'Benutzer-Niederlassungen aktualisiert',
-                message: `Die Niederlassungen für "${updatedUser.firstName} ${updatedUser.lastName}" wurden aktualisiert.`,
+                title: adminNotificationText.title,
+                message: adminNotificationText.message,
                 type: NotificationType.user,
                 relatedEntityId: userId,
                 relatedEntityType: 'update'
@@ -1676,10 +1693,12 @@ export const createUser = async (req: Request, res: Response) => {
         });
 
         for (const admin of admins) {
+            const adminLang = await getUserLanguage(admin.id);
+            const notificationText = getUserNotificationText(adminLang, 'created', false, `${firstName} ${lastName}`);
             await createNotificationIfEnabled({
                 userId: admin.id,
-                title: 'Neuer Benutzer erstellt',
-                message: `Ein neuer Benutzer "${firstName} ${lastName}" (${email}) wurde erstellt.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: NotificationType.user,
                 relatedEntityId: user.id,
                 relatedEntityType: 'create'
@@ -1872,10 +1891,12 @@ export const updateUser = async (req: Request, res: Response) => {
         }
 
         // Benachrichtigung für den aktualisierten Benutzer senden
+        const userLang = await getUserLanguage(updatedUser.id);
+        const userNotificationText = getUserNotificationText(userLang, 'updated', true);
         await createNotificationIfEnabled({
             userId: updatedUser.id,
-            title: 'Dein Profil wurde aktualisiert',
-            message: 'Dein Benutzerprofil wurde aktualisiert.',
+            title: userNotificationText.title,
+            message: userNotificationText.message,
             type: NotificationType.user,
             relatedEntityId: updatedUser.id,
             relatedEntityType: 'update'
@@ -1901,10 +1922,12 @@ export const updateUser = async (req: Request, res: Response) => {
         });
 
         for (const admin of admins) {
+            const adminLang = await getUserLanguage(admin.id);
+            const notificationText = getUserNotificationText(adminLang, 'updated', false, `${updatedUser.firstName} ${updatedUser.lastName}`);
             await createNotificationIfEnabled({
                 userId: admin.id,
-                title: 'Benutzerprofil aktualisiert',
-                message: `Das Profil von "${updatedUser.firstName} ${updatedUser.lastName}" wurde aktualisiert.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: NotificationType.user,
                 relatedEntityId: updatedUser.id,
                 relatedEntityType: 'update'
@@ -1988,10 +2011,12 @@ export const deleteUser = async (req: Request, res: Response) => {
         });
 
         for (const admin of admins) {
+            const adminLang = await getUserLanguage(admin.id);
+            const notificationText = getUserNotificationText(adminLang, 'deleted', false, `${user.firstName} ${user.lastName}`);
             await createNotificationIfEnabled({
                 userId: admin.id,
-                title: 'Benutzer gelöscht',
-                message: `Der Benutzer "${user.firstName} ${user.lastName}" (${user.username}) wurde gelöscht.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: NotificationType.user,
                 relatedEntityId: userId,
                 relatedEntityType: 'delete'
@@ -2050,7 +2075,7 @@ export const getOnboardingStatus = async (req: AuthenticatedRequest, res: Respon
 export const updateOnboardingProgress = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const userId = parseInt(req.userId, 10);
-        const { currentStep, completedSteps } = req.body;
+        const { currentStep, completedSteps, dismissedSteps } = req.body;
 
         if (typeof currentStep !== 'number' || !Array.isArray(completedSteps)) {
             return res.status(400).json({ message: 'Ungültige Fortschrittsdaten' });
@@ -2061,7 +2086,8 @@ export const updateOnboardingProgress = async (req: AuthenticatedRequest, res: R
             data: {
                 onboardingProgress: {
                     currentStep,
-                    completedSteps
+                    completedSteps,
+                    dismissedSteps: dismissedSteps || []
                 } as Prisma.JsonValue,
                 onboardingStartedAt: req.body.onboardingStartedAt ? new Date(req.body.onboardingStartedAt) : undefined
             }

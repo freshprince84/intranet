@@ -125,6 +125,89 @@ export class ReservationNotificationService {
   }
 
   /**
+   * Generiert PIN-Code und sendet Mitteilung (unabhängig von Check-in-Status)
+   * 
+   * @param reservationId - ID der Reservierung
+   */
+  static async generatePinAndSendNotification(reservationId: number): Promise<void> {
+    try {
+      const reservation = await prisma.reservation.findUnique({
+        where: { id: reservationId },
+        include: { organization: true }
+      });
+
+      if (!reservation) {
+        throw new Error(`Reservierung ${reservationId} nicht gefunden`);
+      }
+
+      const settings = reservation.organization.settings as any;
+      const notificationChannels = settings?.lobbyPms?.notificationChannels || ['email'];
+
+      // Erstelle TTLock Passcode
+      let doorPin: string | null = null;
+      let doorAppName: string | null = null;
+
+      try {
+        const ttlockService = new TTLockService(reservation.organizationId);
+        const doorSystemSettings = settings?.doorSystem;
+
+        if (doorSystemSettings?.lockIds && doorSystemSettings.lockIds.length > 0) {
+          const lockId = doorSystemSettings.lockIds[0]; // Verwende ersten Lock
+          doorAppName = 'TTLock'; // Oder aus Settings: doorSystemSettings.appName
+
+          // Erstelle Passcode für Check-in bis Check-out
+          doorPin = await ttlockService.createTemporaryPasscode(
+            lockId,
+            reservation.checkInDate,
+            reservation.checkOutDate,
+            `Guest: ${reservation.guestName}`
+          );
+
+          // Speichere in Reservierung
+          await prisma.reservation.update({
+            where: { id: reservation.id },
+            data: {
+              doorPin,
+              doorAppName,
+              ttlLockId: lockId,
+              ttlLockPassword: doorPin
+            }
+          });
+        }
+      } catch (error) {
+        console.error(`[ReservationNotification] Fehler beim Erstellen des TTLock Passcodes:`, error);
+        // Weiter ohne PIN
+      }
+
+      // Versende Benachrichtigungen
+      if (notificationChannels.includes('email') && reservation.guestEmail) {
+        await this.sendCheckInConfirmationEmail(
+          reservation,
+          doorPin,
+          doorAppName
+        );
+      }
+
+      if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
+        const whatsappService = new WhatsAppService(reservation.organizationId);
+        await whatsappService.sendCheckInConfirmation(
+          reservation.guestName,
+          reservation.guestPhone,
+          reservation.roomNumber || 'N/A',
+          reservation.roomDescription || 'N/A',
+          doorPin || 'N/A',
+          doorAppName || 'TTLock'
+        );
+      }
+
+      console.log(`[ReservationNotification] PIN generiert und Mitteilung versendet für Reservierung ${reservationId}`);
+    } catch (error) {
+      console.error(`[ReservationNotification] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Sendet Check-in-Bestätigung nach erfolgreichem Check-in
    * 
    * @param reservationId - ID der Reservierung

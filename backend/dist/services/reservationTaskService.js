@@ -13,6 +13,7 @@ exports.ReservationTaskService = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("../controllers/notificationController");
 const client_2 = require("@prisma/client");
+const translations_1 = require("../utils/translations");
 const prisma = new client_1.PrismaClient();
 /**
  * Service für Reservierungs-Task-Management
@@ -65,10 +66,12 @@ class ReservationTaskService {
                 }
                 // Benachrichtigung für Quality Control
                 if (task.qualityControlId) {
+                    const userLang = yield (0, translations_1.getUserLanguage)(task.qualityControlId);
+                    const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'check_in_started', task.title, undefined, undefined, (_a = task.reservation) === null || _a === void 0 ? void 0 : _a.guestName);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId: task.qualityControlId,
-                        title: 'Check-in gestartet',
-                        message: `Check-in für ${((_a = task.reservation) === null || _a === void 0 ? void 0 : _a.guestName) || 'Gast'} wurde gestartet`,
+                        title: notificationText.title,
+                        message: notificationText.message,
                         type: client_2.NotificationType.task,
                         relatedEntityId: task.id,
                         relatedEntityType: 'update'
@@ -130,10 +133,12 @@ class ReservationTaskService {
                 }
                 // Benachrichtigung für Quality Control
                 if (task.qualityControlId) {
+                    const userLang = yield (0, translations_1.getUserLanguage)(task.qualityControlId);
+                    const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'check_in_completed', task.title || '', undefined, undefined, (_a = task.reservation) === null || _a === void 0 ? void 0 : _a.guestName);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId: task.qualityControlId,
-                        title: 'Check-in abgeschlossen',
-                        message: `Check-in für ${((_a = task.reservation) === null || _a === void 0 ? void 0 : _a.guestName) || 'Gast'} wurde abgeschlossen`,
+                        title: notificationText.title,
+                        message: notificationText.message,
                         type: client_2.NotificationType.task,
                         relatedEntityId: task.id,
                         relatedEntityType: 'update'

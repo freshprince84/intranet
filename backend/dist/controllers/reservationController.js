@@ -9,11 +9,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getReservationById = exports.getAllReservations = exports.createReservation = exports.updateGuestContact = void 0;
+exports.getReservationById = exports.generatePinAndSendNotification = exports.getAllReservations = exports.createReservation = exports.updateGuestContact = void 0;
 const client_1 = require("@prisma/client");
 const whatsappService_1 = require("../services/whatsappService");
 const boldPaymentService_1 = require("../services/boldPaymentService");
 const ttlockService_1 = require("../services/ttlockService");
+const reservationNotificationService_1 = require("../services/reservationNotificationService");
 const prisma = new client_1.PrismaClient();
 /**
  * Utility: Erkennt ob ein String eine Telefonnummer oder Email ist
@@ -380,6 +381,71 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.getAllReservations = getAllReservations;
+/**
+ * POST /api/reservations/:id/generate-pin-and-send
+ * Generiert PIN-Code und sendet Mitteilung (unabhängig von Zahlungsstatus/Check-in-Status)
+ */
+const generatePinAndSendNotification = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const reservationId = parseInt(id, 10);
+        const organizationId = req.organizationId;
+        if (isNaN(reservationId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Ungültige Reservierungs-ID'
+            });
+        }
+        if (!organizationId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Organisation-ID fehlt'
+            });
+        }
+        // Prüfe ob Reservierung existiert und zur Organisation gehört
+        const reservation = yield prisma.reservation.findFirst({
+            where: {
+                id: reservationId,
+                organizationId: organizationId
+            }
+        });
+        if (!reservation) {
+            return res.status(404).json({
+                success: false,
+                message: 'Reservierung nicht gefunden oder gehört nicht zur Organisation'
+            });
+        }
+        console.log(`[Reservation] Generiere PIN und sende Mitteilung für Reservierung ${reservationId}`);
+        // Rufe Service-Methode auf, die unabhängig vom Check-in-Status funktioniert
+        yield reservationNotificationService_1.ReservationNotificationService.generatePinAndSendNotification(reservationId);
+        // Hole aktualisierte Reservierung
+        const updatedReservation = yield prisma.reservation.findUnique({
+            where: { id: reservationId },
+            include: {
+                organization: {
+                    select: {
+                        id: true,
+                        name: true,
+                        displayName: true
+                    }
+                }
+            }
+        });
+        res.json({
+            success: true,
+            data: updatedReservation,
+            message: 'PIN-Code generiert und Mitteilung versendet'
+        });
+    }
+    catch (error) {
+        console.error('[Reservation] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
+        res.status(500).json({
+            success: false,
+            message: error instanceof Error ? error.message : 'Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung'
+        });
+    }
+});
+exports.generatePinAndSendNotification = generatePinAndSendNotification;
 /**
  * GET /api/reservations/:id
  * Holt eine Reservierung nach ID

@@ -727,31 +727,39 @@ const EditRequestModal = ({
                 {attachment.fileName}
               </span>
               <div className="flex ml-2">
-                <button
-                  type="button"
-                  onClick={() => handleDownloadAttachment(attachment)}
-                  className="text-blue-600 hover:text-blue-900 mr-1"
-                  title={t('createRequest.editRequest.form.download')}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => attachment.id !== undefined && handleDeleteAttachment(attachment.id)}
-                  className="text-red-600 hover:text-red-900 ml-1"
-                  title={t('createRequest.editRequest.form.remove')}
-                  disabled={attachment.id === undefined}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                <div className="relative group mr-1">
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadAttachment(attachment)}
+                    className="text-blue-600 hover:text-blue-900"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </button>
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                    {t('createRequest.editRequest.form.download')}
+                  </div>
+                </div>
+                <div className="relative group ml-1">
+                  <button
+                    type="button"
+                    onClick={() => attachment.id !== undefined && handleDeleteAttachment(attachment.id)}
+                    className="text-red-600 hover:text-red-900"
+                    disabled={attachment.id === undefined}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                    {t('createRequest.editRequest.form.remove')}
+                  </div>
+                </div>
               </div>
               {/* Tooltip für Bildvorschau bei Bild-Dateien */}
               {attachment.fileType.startsWith('image/') && attachment.id && (
-                <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
+                <div className="absolute z-10 bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                   <img 
                     src={getRequestAttachmentUrl(request.id, attachment.id)}
                     alt={attachment.fileName}
@@ -778,20 +786,24 @@ const EditRequestModal = ({
                 {attachment.fileName}
               </span>
               <div className="flex ml-2">
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTemporaryAttachment(index)}
-                  className="text-red-600 hover:text-red-900 ml-1"
-                  title={t('createRequest.editRequest.form.remove')}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                <div className="relative group ml-1">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTemporaryAttachment(index)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                    {t('createRequest.editRequest.form.remove')}
+                  </div>
+                </div>
               </div>
               {/* Tooltip für Bildvorschau bei Bild-Dateien */}
               {attachment.fileType.startsWith('image/') && attachment.file && (
-                <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
+                <div className="absolute z-10 bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                   <img 
                     src={URL.createObjectURL(attachment.file)}
                     alt={attachment.fileName}
@@ -837,16 +849,20 @@ const EditRequestModal = ({
             onDragOver={handleDragOver}
           />
           {/* Heftklammer-Icon zum Hinzufügen von Dateien */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
-            title={t('createRequest.editRequest.form.fileUpload')}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-            </svg>
-          </button>
+          <div className="relative group absolute bottom-2 left-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('createRequest.editRequest.form.fileUpload')}
+            </div>
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -966,26 +982,34 @@ const EditRequestModal = ({
           </button>
         )}
         <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-            title={t('createRequest.editRequest.form.cancel')}
-          >
-            <XMarkIcon className="h-5 w-5" />
-          </button>
-          <button
-            type="submit"
-            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title={loading ? t('createRequest.editRequest.form.saving') : t('createRequest.editRequest.form.save')}
-            disabled={loading}
-          >
-            {loading ? (
-              <ArrowPathIcon className="h-5 w-5 animate-spin" />
-            ) : (
-              <CheckIcon className="h-5 w-5" />
-            )}
-          </button>
+          <div className="relative group">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('createRequest.editRequest.form.cancel')}
+            </div>
+          </div>
+          <div className="relative group">
+            <button
+              type="submit"
+              className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              disabled={loading}
+            >
+              {loading ? (
+                <ArrowPathIcon className="h-5 w-5 animate-spin" />
+              ) : (
+                <CheckIcon className="h-5 w-5" />
+              )}
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {loading ? t('createRequest.editRequest.form.saving') : t('createRequest.editRequest.form.save')}
+            </div>
+          </div>
         </div>
       </div>
     </form>

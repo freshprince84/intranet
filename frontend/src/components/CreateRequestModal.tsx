@@ -457,20 +457,24 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 {attachment.fileName}
               </span>
               <div className="flex ml-2">
-                <button
-                  type="button"
-                  onClick={() => handleRemoveTemporaryAttachment(index)}
-                  className="text-red-600 hover:text-red-900 ml-1"
-                  title={t('createRequest.form.remove')}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                <div className="relative group ml-1">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTemporaryAttachment(index)}
+                    className="text-red-600 hover:text-red-900"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                    {t('createRequest.form.remove')}
+                  </div>
+                </div>
               </div>
               {/* Tooltip für Bildvorschau bei Bild-Dateien */}
               {attachment.fileType.startsWith('image/') && attachment.file && (
-                <div className="absolute z-10 invisible group-hover:visible bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200">
+                <div className="absolute z-10 bg-white p-2 rounded-md shadow-lg -top-32 left-0 border border-gray-200 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
                   <img 
                     src={URL.createObjectURL(attachment.file)}
                     alt={attachment.fileName}
@@ -568,16 +572,20 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                       placeholder={t('createRequest.form.descriptionPlaceholder')}
                     />
                     {/* Heftklammer-Icon zum Hinzufügen von Dateien */}
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
-                      title={t('createRequest.form.addFile')}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                      </svg>
-                    </button>
+                    <div className="relative group absolute bottom-2 left-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                        </svg>
+                      </button>
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('createRequest.form.addFile')}
+                      </div>
+                    </div>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -680,26 +688,34 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                 </div>
 
                 <div className="flex justify-end pt-4 gap-2">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                    title={t('createRequest.form.cancel')}
-                  >
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="submit"
-                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                    title={loading ? t('createRequest.form.creating') : t('createRequest.form.create')}
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <CheckIcon className="h-5 w-5" />
-                    )}
-                  </button>
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      onClick={onClose}
+                      className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                      {t('createRequest.form.cancel')}
+                    </div>
+                  </div>
+                  <div className="relative group">
+                    <button
+                      type="submit"
+                      className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <CheckIcon className="h-5 w-5" />
+                      )}
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                      {loading ? t('createRequest.form.creating') : t('createRequest.form.create')}
+                    </div>
+                  </div>
                 </div>
               </form>
             </div>
@@ -786,16 +802,20 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
                   placeholder={t('createRequest.form.descriptionPlaceholder')}
                 />
                 {/* Heftklammer-Icon zum Hinzufügen von Dateien */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-2 left-2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
-                  title={t('createRequest.form.addFile')}
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                  </svg>
-                </button>
+                <div className="relative group absolute bottom-2 left-2">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-400 focus:outline-none"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                    </svg>
+                  </button>
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                    {t('createRequest.form.addFile')}
+                  </div>
+                </div>
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -898,26 +918,34 @@ const CreateRequestModal = ({ isOpen, onClose, onRequestCreated }: CreateRequest
             </div>
 
             <div className="flex justify-end pt-4 gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                title={t('createRequest.form.cancel')}
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-              <button
-                type="submit"
-                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-                title={loading ? t('createRequest.form.creating') : t('createRequest.form.create')}
-                disabled={loading}
-              >
-                {loading ? (
-                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                ) : (
-                  <CheckIcon className="h-5 w-5" />
-                )}
-              </button>
+              <div className="relative group">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                  {t('createRequest.form.cancel')}
+                </div>
+              </div>
+              <div className="relative group">
+                <button
+                  type="submit"
+                  className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <CheckIcon className="h-5 w-5" />
+                  )}
+                </button>
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                  {loading ? t('createRequest.form.creating') : t('createRequest.form.create')}
+                </div>
+              </div>
             </div>
           </form>
         </div>

@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.TaskAutomationService = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("../controllers/notificationController");
+const translations_1 = require("../utils/translations");
 const client_2 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 /**
@@ -233,10 +234,12 @@ class TaskAutomationService {
                             }
                         });
                         for (const legalUser of legalUsers) {
+                            const userLang = yield (0, translations_1.getUserLanguage)(legalUser.id);
+                            const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'new_onboarding_task', task.title);
                             yield (0, notificationController_1.createNotificationIfEnabled)({
                                 userId: legalUser.id,
-                                title: 'Neuer Onboarding-Task',
-                                message: `Ein neuer Task wurde zugewiesen: ${task.title}`,
+                                title: notificationText.title,
+                                message: notificationText.message,
                                 type: client_2.NotificationType.task,
                                 relatedEntityId: task.id,
                                 relatedEntityType: 'create'
@@ -392,10 +395,12 @@ class TaskAutomationService {
                             }
                         });
                         for (const hrUser of hrUsers) {
+                            const userLang = yield (0, translations_1.getUserLanguage)(hrUser.id);
+                            const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'new_offboarding_task', task.title);
                             yield (0, notificationController_1.createNotificationIfEnabled)({
                                 userId: hrUser.id,
-                                title: 'Neuer Offboarding-Task',
-                                message: `Ein neuer Task wurde zugewiesen: ${task.title}`,
+                                title: notificationText.title,
+                                message: notificationText.message,
                                 type: client_2.NotificationType.task,
                                 relatedEntityId: task.id,
                                 relatedEntityType: 'create'
@@ -527,10 +532,12 @@ class TaskAutomationService {
                     }
                 });
                 for (const legalUser of legalUsers) {
+                    const userLang = yield (0, translations_1.getUserLanguage)(legalUser.id);
+                    const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'new_social_security_task', task.title);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId: legalUser.id,
-                        title: 'Neuer Sozialversicherungs-Task',
-                        message: `Ein neuer Task wurde zugewiesen: ${task.title}`,
+                        title: notificationText.title,
+                        message: notificationText.message,
                         type: client_2.NotificationType.task,
                         relatedEntityId: task.id,
                         relatedEntityType: 'create'
@@ -663,10 +670,12 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     }
                 });
                 for (const receptionUser of receptionUsers) {
+                    const userLang = yield (0, translations_1.getUserLanguage)(receptionUser.id);
+                    const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'check_in_started', task.title, undefined, undefined, reservation.guestName);
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId: receptionUser.id,
-                        title: 'Neue Reservierung',
-                        message: `Neue Reservierung für Check-in: ${reservation.guestName}`,
+                        title: notificationText.title,
+                        message: notificationText.message,
                         type: client_2.NotificationType.task,
                         relatedEntityId: task.id,
                         relatedEntityType: 'create'

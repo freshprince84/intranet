@@ -567,8 +567,8 @@
       "title": "Título",
       "status": "Estado",
       "requestedByResponsible": "Solicitado por / Responsable",
-      "requestedBy": "Solicitado por",
-      "responsible": "Responsable",
+      "requestedBy": "De:",
+      "responsible": "Para:",
       "branch": "Sucursal",
       "dueDate": "Vencimiento",
       "actions": "Acciones",
@@ -1024,6 +1024,10 @@
       "greaterThan": "mayor que",
       "lessThan": "menor que",
       "notEquals": "≠"
+    },
+    "logicalOperators": {
+      "and": "Y",
+      "or": "O"
     },
     "ungroup": "Desagrupar",
     "delete": "Eliminar Filtro",

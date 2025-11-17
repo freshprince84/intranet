@@ -18,6 +18,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteRequest = exports.updateRequest = exports.createRequest = exports.getRequestById = exports.getAllRequests = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
+const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
@@ -281,23 +282,42 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         };
         // Benachrichtigungen erstellen
         // 1. Für den Verantwortlichen
+        console.log(`[createRequest] RequesterId: ${requesterId}, ResponsibleId: ${responsibleId}`);
         if (requesterId !== responsibleId) {
-            yield (0, notificationController_1.createNotificationIfEnabled)({
-                userId: request.requesterId,
-                relatedEntityId: request.id,
-                relatedEntityType: 'create',
-                type: client_1.NotificationType.request,
-                title: `Neuer Request: ${request.title}`,
-                message: `Du hast einen neuen Request erstellt: ${request.title}`
-            });
-            yield (0, notificationController_1.createNotificationIfEnabled)({
-                userId: request.responsibleId,
-                relatedEntityId: request.id,
-                relatedEntityType: 'create',
-                type: client_1.NotificationType.request,
-                title: `Neuer Request: ${request.title}`,
-                message: `Dir wurde ein neuer Request zugewiesen: ${request.title}`
-            });
+            try {
+                const requesterLang = yield (0, translations_1.getUserLanguage)(request.requesterId);
+                console.log(`[createRequest] Requester Sprache: ${requesterLang}`);
+                const requesterNotificationText = (0, translations_1.getRequestNotificationText)(requesterLang, 'created', request.title, true);
+                console.log(`[createRequest] Erstelle Notification für Requester ${request.requesterId}: ${requesterNotificationText.title}`);
+                const requesterCreated = yield (0, notificationController_1.createNotificationIfEnabled)({
+                    userId: request.requesterId,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'create',
+                    type: client_1.NotificationType.request,
+                    title: requesterNotificationText.title,
+                    message: requesterNotificationText.message
+                });
+                console.log(`[createRequest] Requester Notification erstellt: ${requesterCreated}`);
+                const responsibleLang = yield (0, translations_1.getUserLanguage)(request.responsibleId);
+                console.log(`[createRequest] Responsible Sprache: ${responsibleLang}`);
+                const responsibleNotificationText = (0, translations_1.getRequestNotificationText)(responsibleLang, 'created', request.title, false);
+                console.log(`[createRequest] Erstelle Notification für Responsible ${request.responsibleId}: ${responsibleNotificationText.title}`);
+                const responsibleCreated = yield (0, notificationController_1.createNotificationIfEnabled)({
+                    userId: request.responsibleId,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'create',
+                    type: client_1.NotificationType.request,
+                    title: responsibleNotificationText.title,
+                    message: responsibleNotificationText.message
+                });
+                console.log(`[createRequest] Responsible Notification erstellt: ${responsibleCreated}`);
+            }
+            catch (notificationError) {
+                console.error('[createRequest] Fehler beim Erstellen der Notifications:', notificationError);
+            }
+        }
+        else {
+            console.log(`[createRequest] Requester und Responsible sind identisch, keine Notifications erstellt`);
         }
         res.status(201).json(formattedRequest);
     }
@@ -401,34 +421,40 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Benachrichtigungen bei Statusänderungen
         if (status && status !== existingRequest.status) {
             // Benachrichtigung für den Ersteller
+            const userLang = yield (0, translations_1.getUserLanguage)(updatedRequest.requesterId);
+            const notificationText = (0, translations_1.getRequestNotificationText)(userLang, 'status_changed', updatedRequest.title, true, status);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: updatedRequest.requesterId,
                 relatedEntityId: updatedRequest.id,
                 relatedEntityType: 'status',
                 type: client_1.NotificationType.request,
-                title: `Statusänderung: ${updatedRequest.title}`,
-                message: `Der Status deines Requests "${updatedRequest.title}" wurde zu "${status}" geändert.`
+                title: notificationText.title,
+                message: notificationText.message
             });
         }
         // Benachrichtigung bei Verantwortlichkeitsänderung
         if (responsible_id && parseInt(responsible_id) !== existingRequest.responsibleId) {
             // Benachrichtigung für den alten Verantwortlichen
+            const oldResponsibleLang = yield (0, translations_1.getUserLanguage)(existingRequest.responsibleId);
+            const oldNotificationText = (0, translations_1.getRequestNotificationText)(oldResponsibleLang, 'responsibility_changed', updatedRequest.title, false, undefined, true);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: existingRequest.responsibleId,
                 relatedEntityId: updatedRequest.id,
                 relatedEntityType: 'update',
                 type: client_1.NotificationType.request,
-                title: `Verantwortlichkeit geändert: ${updatedRequest.title}`,
-                message: `Die Verantwortlichkeit für den Request "${updatedRequest.title}" wurde geändert.`
+                title: oldNotificationText.title,
+                message: oldNotificationText.message
             });
             // Benachrichtigung für den neuen Verantwortlichen
+            const newResponsibleLang = yield (0, translations_1.getUserLanguage)(parseInt(responsible_id));
+            const newNotificationText = (0, translations_1.getRequestNotificationText)(newResponsibleLang, 'responsibility_changed', updatedRequest.title, false, undefined, false);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: parseInt(responsible_id),
                 relatedEntityId: updatedRequest.id,
                 relatedEntityType: 'update',
                 type: client_1.NotificationType.request,
-                title: `Neuer Request: ${updatedRequest.title}`,
-                message: `Dir wurde ein Request zugewiesen: ${updatedRequest.title}`
+                title: newNotificationText.title,
+                message: newNotificationText.message
             });
         }
         // Wenn der Request genehmigt wird und createTodo aktiv ist, erstelle einen Task
@@ -450,13 +476,15 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             // Benachrichtigungen für den Task
             if (updatedRequest.requesterId !== updatedRequest.responsibleId) {
                 // Benachrichtigung für den Verantwortlichen
+                const userLang = yield (0, translations_1.getUserLanguage)(updatedRequest.responsibleId);
+                const notificationText = (0, translations_1.getRequestNotificationText)(userLang, 'new_task_from_request', task.title);
                 yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: updatedRequest.responsibleId,
                     relatedEntityId: task.id,
                     relatedEntityType: 'create',
                     type: client_1.NotificationType.task,
-                    title: `Neuer Task: ${task.title}`,
-                    message: `Dir wurde ein neuer Task zugewiesen: ${task.title}`
+                    title: notificationText.title,
+                    message: notificationText.message
                 });
             }
         }
@@ -551,13 +579,15 @@ const deleteRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(404).json({ message: 'Request nicht gefunden' });
         }
         // Benachrichtigung für den Ersteller
+        const userLang = yield (0, translations_1.getUserLanguage)(request.requesterId);
+        const notificationText = (0, translations_1.getRequestNotificationText)(userLang, 'deleted', request.title);
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: request.requesterId,
             relatedEntityId: request.id,
             relatedEntityType: 'delete',
             type: client_1.NotificationType.request,
-            title: `Request gelöscht: ${request.title}`,
-            message: `Dein Request "${request.title}" wurde gelöscht.`
+            title: notificationText.title,
+            message: notificationText.message
         });
         // Lösche den Request
         yield prisma.request.delete({

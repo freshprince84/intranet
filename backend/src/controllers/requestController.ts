@@ -5,6 +5,7 @@
 import { Request, Response } from 'express';
 import { PrismaClient, Prisma, RequestStatus, RequestType, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
+import { getUserLanguage, getRequestNotificationText } from '../utils/translations';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
 import path from 'path';
@@ -347,24 +348,41 @@ export const createRequest = async (req: Request<{}, {}, CreateRequestBody>, res
 
         // Benachrichtigungen erstellen
         // 1. Für den Verantwortlichen
+        console.log(`[createRequest] RequesterId: ${requesterId}, ResponsibleId: ${responsibleId}`);
         if (requesterId !== responsibleId) {
-            await createNotificationIfEnabled({
-                userId: request.requesterId,
-                relatedEntityId: request.id,
-                relatedEntityType: 'create',
-                type: NotificationType.request,
-                title: `Neuer Request: ${request.title}`,
-                message: `Du hast einen neuen Request erstellt: ${request.title}`
-            });
+            try {
+                const requesterLang = await getUserLanguage(request.requesterId);
+                console.log(`[createRequest] Requester Sprache: ${requesterLang}`);
+                const requesterNotificationText = getRequestNotificationText(requesterLang, 'created', request.title, true);
+                console.log(`[createRequest] Erstelle Notification für Requester ${request.requesterId}: ${requesterNotificationText.title}`);
+                const requesterCreated = await createNotificationIfEnabled({
+                    userId: request.requesterId,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'create',
+                    type: NotificationType.request,
+                    title: requesterNotificationText.title,
+                    message: requesterNotificationText.message
+                });
+                console.log(`[createRequest] Requester Notification erstellt: ${requesterCreated}`);
 
-            await createNotificationIfEnabled({
-                userId: request.responsibleId,
-                relatedEntityId: request.id,
-                relatedEntityType: 'create',
-                type: NotificationType.request,
-                title: `Neuer Request: ${request.title}`,
-                message: `Dir wurde ein neuer Request zugewiesen: ${request.title}`
-            });
+                const responsibleLang = await getUserLanguage(request.responsibleId);
+                console.log(`[createRequest] Responsible Sprache: ${responsibleLang}`);
+                const responsibleNotificationText = getRequestNotificationText(responsibleLang, 'created', request.title, false);
+                console.log(`[createRequest] Erstelle Notification für Responsible ${request.responsibleId}: ${responsibleNotificationText.title}`);
+                const responsibleCreated = await createNotificationIfEnabled({
+                    userId: request.responsibleId,
+                    relatedEntityId: request.id,
+                    relatedEntityType: 'create',
+                    type: NotificationType.request,
+                    title: responsibleNotificationText.title,
+                    message: responsibleNotificationText.message
+                });
+                console.log(`[createRequest] Responsible Notification erstellt: ${responsibleCreated}`);
+            } catch (notificationError) {
+                console.error('[createRequest] Fehler beim Erstellen der Notifications:', notificationError);
+            }
+        } else {
+            console.log(`[createRequest] Requester und Responsible sind identisch, keine Notifications erstellt`);
         }
 
         res.status(201).json(formattedRequest);
@@ -498,36 +516,42 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
         // Benachrichtigungen bei Statusänderungen
         if (status && status !== existingRequest.status) {
             // Benachrichtigung für den Ersteller
+            const userLang = await getUserLanguage(updatedRequest.requesterId);
+            const notificationText = getRequestNotificationText(userLang, 'status_changed', updatedRequest.title, true, status);
             await createNotificationIfEnabled({
                 userId: updatedRequest.requesterId,
                 relatedEntityId: updatedRequest.id,
                 relatedEntityType: 'status',
                 type: NotificationType.request,
-                title: `Statusänderung: ${updatedRequest.title}`,
-                message: `Der Status deines Requests "${updatedRequest.title}" wurde zu "${status}" geändert.`
+                title: notificationText.title,
+                message: notificationText.message
             });
         }
 
         // Benachrichtigung bei Verantwortlichkeitsänderung
         if (responsible_id && parseInt(responsible_id) !== existingRequest.responsibleId) {
             // Benachrichtigung für den alten Verantwortlichen
+            const oldResponsibleLang = await getUserLanguage(existingRequest.responsibleId);
+            const oldNotificationText = getRequestNotificationText(oldResponsibleLang, 'responsibility_changed', updatedRequest.title, false, undefined, true);
             await createNotificationIfEnabled({
                 userId: existingRequest.responsibleId,
                 relatedEntityId: updatedRequest.id,
                 relatedEntityType: 'update',
                 type: NotificationType.request,
-                title: `Verantwortlichkeit geändert: ${updatedRequest.title}`,
-                message: `Die Verantwortlichkeit für den Request "${updatedRequest.title}" wurde geändert.`
+                title: oldNotificationText.title,
+                message: oldNotificationText.message
             });
 
             // Benachrichtigung für den neuen Verantwortlichen
+            const newResponsibleLang = await getUserLanguage(parseInt(responsible_id));
+            const newNotificationText = getRequestNotificationText(newResponsibleLang, 'responsibility_changed', updatedRequest.title, false, undefined, false);
             await createNotificationIfEnabled({
                 userId: parseInt(responsible_id),
                 relatedEntityId: updatedRequest.id,
                 relatedEntityType: 'update',
                 type: NotificationType.request,
-                title: `Neuer Request: ${updatedRequest.title}`,
-                message: `Dir wurde ein Request zugewiesen: ${updatedRequest.title}`
+                title: newNotificationText.title,
+                message: newNotificationText.message
             });
         }
 
@@ -552,13 +576,15 @@ export const updateRequest = async (req: Request<{ id: string }, {}, UpdateReque
             // Benachrichtigungen für den Task
             if (updatedRequest.requesterId !== updatedRequest.responsibleId) {
                 // Benachrichtigung für den Verantwortlichen
+                const userLang = await getUserLanguage(updatedRequest.responsibleId);
+                const notificationText = getRequestNotificationText(userLang, 'new_task_from_request', task.title);
                 await createNotificationIfEnabled({
                     userId: updatedRequest.responsibleId,
                     relatedEntityId: task.id,
                     relatedEntityType: 'create',
                     type: NotificationType.task,
-                    title: `Neuer Task: ${task.title}`,
-                    message: `Dir wurde ein neuer Task zugewiesen: ${task.title}`
+                    title: notificationText.title,
+                    message: notificationText.message
                 });
             }
         }
@@ -669,13 +695,15 @@ export const deleteRequest = async (req: Request<{ id: string }>, res: Response)
         }
 
         // Benachrichtigung für den Ersteller
+        const userLang = await getUserLanguage(request.requesterId);
+        const notificationText = getRequestNotificationText(userLang, 'deleted', request.title);
         await createNotificationIfEnabled({
             userId: request.requesterId,
             relatedEntityId: request.id,
             relatedEntityType: 'delete',
             type: NotificationType.request,
-            title: `Request gelöscht: ${request.title}`,
-            message: `Dein Request "${request.title}" wurde gelöscht.`
+            title: notificationText.title,
+            message: notificationText.message
         });
 
         // Lösche den Request

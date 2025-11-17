@@ -568,8 +568,8 @@
       "status": "Status",
       "type": "Type",
       "requestedByResponsible": "Requested by / Responsible",
-      "requestedBy": "Requested by",
-      "responsible": "Responsible",
+      "requestedBy": "De:",
+      "responsible": "Para:",
       "branch": "Branch",
       "dueDate": "Due Date",
       "actions": "Actions"
@@ -1009,6 +1009,10 @@
       "greaterThan": "greater than",
       "lessThan": "less than",
       "notEquals": "≠"
+    },
+    "logicalOperators": {
+      "and": "AND",
+      "or": "OR"
     },
     "ungroup": "Ungroup",
     "delete": "Delete Filter",

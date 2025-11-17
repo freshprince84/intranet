@@ -561,12 +561,12 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                     // toZonedTime konvertiert UTC in lokale Zeit (gibt Date-Objekt zurück, das die lokale Zeit repräsentiert)
                     const startTimeLocal = (0, date_fns_tz_1.toZonedTime)(entry.startTime, entry.timezone);
                     const nowLocal = (0, date_fns_tz_1.toZonedTime)(nowUtc, entry.timezone);
-                    // Extrahiere die lokalen Zeitkomponenten und berechne die Differenz
-                    // WICHTIG: getTime() gibt immer UTC zurück, daher müssen wir die lokalen Komponenten manuell vergleichen
-                    const startLocalMs = Date.UTC(startTimeLocal.getFullYear(), startTimeLocal.getMonth(), startTimeLocal.getDate(), startTimeLocal.getHours(), startTimeLocal.getMinutes(), startTimeLocal.getSeconds(), startTimeLocal.getMilliseconds());
-                    const nowLocalMs = Date.UTC(nowLocal.getFullYear(), nowLocal.getMonth(), nowLocal.getDate(), nowLocal.getHours(), nowLocal.getMinutes(), nowLocal.getSeconds(), nowLocal.getMilliseconds());
-                    // Berechne die Differenz in der lokalen Zeitzone (in Millisekunden)
-                    const diffMs = nowLocalMs - startLocalMs;
+                    // KORREKT: Verwende fromZonedTime() um lokale Zeit in UTC umzuwandeln
+                    // Dann berechne die Differenz in UTC (korrekt, da beide in UTC sind)
+                    const startTimeUtc = (0, date_fns_tz_1.fromZonedTime)(startTimeLocal, entry.timezone);
+                    const nowUtcCorrected = (0, date_fns_tz_1.fromZonedTime)(nowLocal, entry.timezone);
+                    // Berechne Differenz in UTC (korrekt, da beide in UTC sind)
+                    const diffMs = nowUtcCorrected.getTime() - startTimeUtc.getTime();
                     // Addiere die Differenz zu startTime (UTC), um effectiveEndTime (UTC) zu erhalten
                     effectiveEndTime = new Date(entry.startTime.getTime() + diffMs);
                     console.log(`Zeitzonen-Korrektur für aktive Zeitmessung (ID: ${entry.id}):`);

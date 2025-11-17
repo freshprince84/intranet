@@ -65,6 +65,7 @@ Folgende Hauptsysteme sind im Intranet-Projekt implementiert:
 - **Einheitliches Suchfeld-Design**
 - **Mobile App (React Native)** - Mobile Version des Intranet-Systems
 - **Consultation-Modul** - Beratungsstunden-Verwaltung mit Client-Tracking
+- **LobbyPMS-Integration** - Property Management System Integration mit automatisierten Check-in-Prozessen
 - **Abrechnungsmodul (in Planung)** - Swiss QR-Rechnungen für Beratungsstunden
 
 ## Implementierungspläne
@@ -72,7 +73,18 @@ Folgende Hauptsysteme sind im Intranet-Projekt implementiert:
 Für die strukturierte Umsetzung neuer Module existieren detaillierte Schritt-für-Schritt Pläne:
 
 - **Consultation-Modul** - Vollständig in 3 Teilen dokumentiert
-- **Abrechnungsmodul** - Plan für Swiss QR-Rechnungen mit Zahlungsverfolgung
+  - [CONSULTATION_MODULE_IMPLEMENTATION.md](../implementation_plans/CONSULTATION_MODULE_IMPLEMENTATION.md) - Hauptplan
+  - [CONSULTATION_MODULE_IMPLEMENTATION_PART2.md](../implementation_plans/CONSULTATION_MODULE_IMPLEMENTATION_PART2.md) - Frontend-Implementierung
+  - [CONSULTATION_MODULE_IMPLEMENTATION_PART3.md](../implementation_plans/CONSULTATION_MODULE_IMPLEMENTATION_PART3.md) - Erweiterte Features
+  - [CONSULTATION_INVOICE_IMPLEMENTATION.md](../implementation_plans/CONSULTATION_INVOICE_IMPLEMENTATION.md) - Abrechnungsmodul
+
+- **LobbyPMS-Integration** - Vollständige Integration mit LobbyPMS, Bold Payment, TTLock, SIRE, WhatsApp
+  - [LOBBYPMS_INTEGRATION.md](../implementation_plans/LOBBYPMS_INTEGRATION.md) - Haupt-Implementierungsplan
+  - [LOBBYPMS_SETUP_ANLEITUNG.md](../implementation_plans/LOBBYPMS_SETUP_ANLEITUNG.md) - Setup- und Konfigurationsanleitung
+  - [LOBBYPMS_USE_CASES_UND_PROZESSE.md](../implementation_plans/LOBBYPMS_USE_CASES_UND_PROZESSE.md) - Detaillierte Use Cases und Prozess-Flows
+  - [LOBBYPMS_WO_IM_SYSTEM_SEHEN.md](../implementation_plans/LOBBYPMS_WO_IM_SYSTEM_SEHEN.md) - Wo im System Use Cases zu finden sind
+  - [LOBBYPMS_MOCK_DATEN.md](../implementation_plans/LOBBYPMS_MOCK_DATEN.md) - Mock-Daten für Tests
+
 - **Mitarbeiterlebenszyklus** - Vollständiger Lebenszyklus (Onboarding bis Offboarding) für Kolumbien
   - [MITARBEITERLEBENSZYKLUS_IMPLEMENTATION.md](../implementation_plans/MITARBEITERLEBENSZYKLUS_IMPLEMENTATION.md) - Haupt-Implementierungsplan
   - [MITARBEITERLEBENSZYKLUS_PROZESS.md](../implementation_plans/MITARBEITERLEBENSZYKLUS_PROZESS.md) - Detaillierte Prozessbeschreibung

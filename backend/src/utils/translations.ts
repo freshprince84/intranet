@@ -33,11 +33,13 @@ export async function getUserLanguage(userId: number): Promise<string> {
     });
 
     if (!user) {
+      console.log(`[getUserLanguage] User ${userId} nicht gefunden, Fallback: de`);
       return 'de'; // Fallback
     }
 
     // Priorität 1: User-Sprache
     if (user.language && user.language.trim() !== '') {
+      console.log(`[getUserLanguage] User ${userId} Sprache: ${user.language} (aus User.language)`);
       return user.language;
     }
 
@@ -46,11 +48,13 @@ export async function getUserLanguage(userId: number): Promise<string> {
     if (userRole?.role?.organization) {
       const orgSettings = userRole.role.organization.settings as any;
       if (orgSettings?.language) {
+        console.log(`[getUserLanguage] User ${userId} Sprache: ${orgSettings.language} (aus Organisation)`);
         return orgSettings.language;
       }
     }
 
     // Priorität 3: Fallback
+    console.log(`[getUserLanguage] User ${userId} Sprache: de (Fallback)`);
     return 'de';
   } catch (error) {
     console.error('Fehler beim Abrufen der User-Sprache:', error);
@@ -134,6 +138,685 @@ export function getWorktimeNotificationText(
         title: translations.stopTitle,
         message: translations.stopMessage(branchName || '')
       };
+  }
+}
+
+/**
+ * Typ für Task-Notification-Übersetzungen
+ */
+type TaskNotificationTranslations = {
+  assigned: (taskTitle: string) => { title: string; message: string };
+  qualityControlAssigned: (taskTitle: string) => { title: string; message: string };
+  statusChanged: (taskTitle: string, oldStatus: string, newStatus: string) => { title: string; message: string };
+  updated: (taskTitle: string) => { title: string; message: string };
+  deleted: (taskTitle: string) => { title: string; message: string };
+  onboardingCompleted: () => { title: string; message: string };
+  newOnboardingTask: (taskTitle: string) => { title: string; message: string };
+  newOffboardingTask: (taskTitle: string) => { title: string; message: string };
+  newSocialSecurityTask: (taskTitle: string) => { title: string; message: string };
+  checkInStarted: (guestName: string) => { title: string; message: string };
+  checkInCompleted: (guestName: string) => { title: string; message: string };
+};
+
+/**
+ * Typ für Request-Notification-Übersetzungen
+ */
+type RequestNotificationTranslations = {
+  created: (requestTitle: string, isRequester: boolean) => { title: string; message: string };
+  statusChanged: (requestTitle: string, status: string) => { title: string; message: string };
+  responsibilityChanged: (requestTitle: string, isOld: boolean) => { title: string; message: string };
+  assigned: (requestTitle: string) => { title: string; message: string };
+  deleted: (requestTitle: string) => { title: string; message: string };
+  newTaskFromRequest: (taskTitle: string) => { title: string; message: string };
+};
+
+/**
+ * Typ für User-Notification-Übersetzungen
+ */
+type UserNotificationTranslations = {
+  rolesUpdated: (isSelf: boolean, userName?: string) => { title: string; message: string };
+  branchesUpdated: (isSelf: boolean, userName?: string) => { title: string; message: string };
+  created: (userName: string) => { title: string; message: string };
+  updated: (isSelf: boolean, userName?: string) => { title: string; message: string };
+  deleted: (userName: string) => { title: string; message: string };
+};
+
+/**
+ * Typ für Role-Notification-Übersetzungen
+ */
+type RoleNotificationTranslations = {
+  created: (roleName: string) => { title: string; message: string };
+  updated: (roleName: string, isSelf: boolean) => { title: string; message: string };
+  deleted: (roleName: string, isSelf: boolean) => { title: string; message: string };
+};
+
+/**
+ * Typ für System-Notification-Übersetzungen
+ */
+type SystemNotificationTranslations = {
+  monthlyReportCreated: (periodStart: string, periodEnd: string) => { title: string; message: string };
+  monthlyReportError: () => { title: string; message: string };
+  worktimeManagerStop: (branchName: string) => { title: string; message: string };
+  worktimeUpdated: (branchName: string) => { title: string; message: string };
+  overtimeUpdated: (hours: number) => { title: string; message: string };
+};
+
+/**
+ * Übersetzungen für Task-Notifications
+ */
+const taskNotifications: Record<string, TaskNotificationTranslations> = {
+  de: {
+    assigned: (taskTitle: string) => ({
+      title: 'Neuer Task zugewiesen',
+      message: `Dir wurde ein neuer Task zugewiesen: ${taskTitle}`
+    }),
+    qualityControlAssigned: (taskTitle: string) => ({
+      title: 'Neue Qualitätskontrolle zugewiesen',
+      message: `Du wurdest als Qualitätskontrolle für einen neuen Task zugewiesen: ${taskTitle}`
+    }),
+    statusChanged: (taskTitle: string, oldStatus: string, newStatus: string) => ({
+      title: 'Task-Status geändert',
+      message: `Der Status des Tasks "${taskTitle}" wurde von "${oldStatus}" zu "${newStatus}" geändert.`
+    }),
+    updated: (taskTitle: string) => ({
+      title: 'Task aktualisiert',
+      message: `Der Task "${taskTitle}" wurde aktualisiert.`
+    }),
+    deleted: (taskTitle: string) => ({
+      title: 'Task gelöscht',
+      message: `Der Task "${taskTitle}" wurde gelöscht.`
+    }),
+    onboardingCompleted: () => ({
+      title: 'Onboarding abgeschlossen',
+      message: 'Ihr Onboarding wurde abgeschlossen. Sie können nun alle Funktionen nutzen.'
+    }),
+    newOnboardingTask: (taskTitle: string) => ({
+      title: 'Neuer Onboarding-Task',
+      message: `Ein neuer Task wurde zugewiesen: ${taskTitle}`
+    }),
+    newOffboardingTask: (taskTitle: string) => ({
+      title: 'Neuer Offboarding-Task',
+      message: `Ein neuer Task wurde zugewiesen: ${taskTitle}`
+    }),
+    newSocialSecurityTask: (taskTitle: string) => ({
+      title: 'Neuer Sozialversicherungs-Task',
+      message: `Ein neuer Task wurde zugewiesen: ${taskTitle}`
+    }),
+    checkInStarted: (guestName: string) => ({
+      title: 'Check-in gestartet',
+      message: `Check-in für ${guestName} wurde gestartet`
+    }),
+    checkInCompleted: (guestName: string) => ({
+      title: 'Check-in abgeschlossen',
+      message: `Check-in für ${guestName} wurde abgeschlossen`
+    })
+  },
+  es: {
+    assigned: (taskTitle: string) => ({
+      title: 'Nueva tarea asignada',
+      message: `Se te ha asignado una nueva tarea: ${taskTitle}`
+    }),
+    qualityControlAssigned: (taskTitle: string) => ({
+      title: 'Nuevo control de calidad asignado',
+      message: `Has sido asignado como control de calidad para una nueva tarea: ${taskTitle}`
+    }),
+    statusChanged: (taskTitle: string, oldStatus: string, newStatus: string) => ({
+      title: 'Estado de tarea cambiado',
+      message: `El estado de la tarea "${taskTitle}" ha sido cambiado de "${oldStatus}" a "${newStatus}".`
+    }),
+    updated: (taskTitle: string) => ({
+      title: 'Tarea actualizada',
+      message: `La tarea "${taskTitle}" ha sido actualizada.`
+    }),
+    deleted: (taskTitle: string) => ({
+      title: 'Tarea eliminada',
+      message: `La tarea "${taskTitle}" ha sido eliminada.`
+    }),
+    onboardingCompleted: () => ({
+      title: 'Onboarding completado',
+      message: 'Tu onboarding ha sido completado. Ahora puedes usar todas las funciones.'
+    }),
+    newOnboardingTask: (taskTitle: string) => ({
+      title: 'Nueva tarea de onboarding',
+      message: `Se ha asignado una nueva tarea: ${taskTitle}`
+    }),
+    newOffboardingTask: (taskTitle: string) => ({
+      title: 'Nueva tarea de offboarding',
+      message: `Se ha asignado una nueva tarea: ${taskTitle}`
+    }),
+    newSocialSecurityTask: (taskTitle: string) => ({
+      title: 'Nueva tarea de seguridad social',
+      message: `Se ha asignado una nueva tarea: ${taskTitle}`
+    }),
+    checkInStarted: (guestName: string) => ({
+      title: 'Check-in iniciado',
+      message: `El check-in para ${guestName} ha sido iniciado`
+    }),
+    checkInCompleted: (guestName: string) => ({
+      title: 'Check-in completado',
+      message: `El check-in para ${guestName} ha sido completado`
+    })
+  },
+  en: {
+    assigned: (taskTitle: string) => ({
+      title: 'New task assigned',
+      message: `A new task has been assigned to you: ${taskTitle}`
+    }),
+    qualityControlAssigned: (taskTitle: string) => ({
+      title: 'New quality control assigned',
+      message: `You have been assigned as quality control for a new task: ${taskTitle}`
+    }),
+    statusChanged: (taskTitle: string, oldStatus: string, newStatus: string) => ({
+      title: 'Task status changed',
+      message: `The status of task "${taskTitle}" has been changed from "${oldStatus}" to "${newStatus}".`
+    }),
+    updated: (taskTitle: string) => ({
+      title: 'Task updated',
+      message: `The task "${taskTitle}" has been updated.`
+    }),
+    deleted: (taskTitle: string) => ({
+      title: 'Task deleted',
+      message: `The task "${taskTitle}" has been deleted.`
+    }),
+    onboardingCompleted: () => ({
+      title: 'Onboarding completed',
+      message: 'Your onboarding has been completed. You can now use all functions.'
+    }),
+    newOnboardingTask: (taskTitle: string) => ({
+      title: 'New onboarding task',
+      message: `A new task has been assigned: ${taskTitle}`
+    }),
+    newOffboardingTask: (taskTitle: string) => ({
+      title: 'New offboarding task',
+      message: `A new task has been assigned: ${taskTitle}`
+    }),
+    newSocialSecurityTask: (taskTitle: string) => ({
+      title: 'New social security task',
+      message: `A new task has been assigned: ${taskTitle}`
+    }),
+    checkInStarted: (guestName: string) => ({
+      title: 'Check-in started',
+      message: `Check-in for ${guestName} has been started`
+    }),
+    checkInCompleted: (guestName: string) => ({
+      title: 'Check-in completed',
+      message: `Check-in for ${guestName} has been completed`
+    })
+  }
+};
+
+/**
+ * Übersetzungen für Request-Notifications
+ */
+const requestNotifications: Record<string, RequestNotificationTranslations> = {
+  de: {
+    created: (requestTitle: string, isRequester: boolean) => ({
+      title: `Neuer Request: ${requestTitle}`,
+      message: isRequester 
+        ? `Du hast einen neuen Request erstellt: ${requestTitle}`
+        : `Dir wurde ein neuer Request zugewiesen: ${requestTitle}`
+    }),
+    statusChanged: (requestTitle: string, status: string) => ({
+      title: `Statusänderung: ${requestTitle}`,
+      message: `Der Status deines Requests "${requestTitle}" wurde zu "${status}" geändert.`
+    }),
+    responsibilityChanged: (requestTitle: string, isOld: boolean) => ({
+      title: `Verantwortlichkeit geändert: ${requestTitle}`,
+      message: isOld
+        ? `Die Verantwortlichkeit für den Request "${requestTitle}" wurde geändert.`
+        : `Dir wurde ein Request zugewiesen: ${requestTitle}`
+    }),
+    assigned: (requestTitle: string) => ({
+      title: `Neuer Request: ${requestTitle}`,
+      message: `Dir wurde ein Request zugewiesen: ${requestTitle}`
+    }),
+    deleted: (requestTitle: string) => ({
+      title: `Request gelöscht: ${requestTitle}`,
+      message: `Dein Request "${requestTitle}" wurde gelöscht.`
+    }),
+    newTaskFromRequest: (taskTitle: string) => ({
+      title: `Neuer Task: ${taskTitle}`,
+      message: `Dir wurde ein neuer Task zugewiesen: ${taskTitle}`
+    })
+  },
+  es: {
+    created: (requestTitle: string, isRequester: boolean) => ({
+      title: `Nueva solicitud: ${requestTitle}`,
+      message: isRequester
+        ? `Has creado una nueva solicitud: ${requestTitle}`
+        : `Se te ha asignado una nueva solicitud: ${requestTitle}`
+    }),
+    statusChanged: (requestTitle: string, status: string) => ({
+      title: `Cambio de estado: ${requestTitle}`,
+      message: `El estado de tu solicitud "${requestTitle}" ha sido cambiado a "${status}".`
+    }),
+    responsibilityChanged: (requestTitle: string, isOld: boolean) => ({
+      title: `Responsabilidad cambiada: ${requestTitle}`,
+      message: isOld
+        ? `La responsabilidad de la solicitud "${requestTitle}" ha sido cambiada.`
+        : `Se te ha asignado una solicitud: ${requestTitle}`
+    }),
+    assigned: (requestTitle: string) => ({
+      title: `Nueva solicitud: ${requestTitle}`,
+      message: `Se te ha asignado una solicitud: ${requestTitle}`
+    }),
+    deleted: (requestTitle: string) => ({
+      title: `Solicitud eliminada: ${requestTitle}`,
+      message: `Tu solicitud "${requestTitle}" ha sido eliminada.`
+    }),
+    newTaskFromRequest: (taskTitle: string) => ({
+      title: `Nueva tarea: ${taskTitle}`,
+      message: `Se te ha asignado una nueva tarea: ${taskTitle}`
+    })
+  },
+  en: {
+    created: (requestTitle: string, isRequester: boolean) => ({
+      title: `New request: ${requestTitle}`,
+      message: isRequester
+        ? `You have created a new request: ${requestTitle}`
+        : `A new request has been assigned to you: ${requestTitle}`
+    }),
+    statusChanged: (requestTitle: string, status: string) => ({
+      title: `Status change: ${requestTitle}`,
+      message: `The status of your request "${requestTitle}" has been changed to "${status}".`
+    }),
+    responsibilityChanged: (requestTitle: string, isOld: boolean) => ({
+      title: `Responsibility changed: ${requestTitle}`,
+      message: isOld
+        ? `The responsibility for request "${requestTitle}" has been changed.`
+        : `A request has been assigned to you: ${requestTitle}`
+    }),
+    assigned: (requestTitle: string) => ({
+      title: `New request: ${requestTitle}`,
+      message: `A request has been assigned to you: ${requestTitle}`
+    }),
+    deleted: (requestTitle: string) => ({
+      title: `Request deleted: ${requestTitle}`,
+      message: `Your request "${requestTitle}" has been deleted.`
+    }),
+    newTaskFromRequest: (taskTitle: string) => ({
+      title: `New task: ${taskTitle}`,
+      message: `A new task has been assigned to you: ${taskTitle}`
+    })
+  }
+};
+
+/**
+ * Übersetzungen für User-Notifications
+ */
+const userNotifications: Record<string, UserNotificationTranslations> = {
+  de: {
+    rolesUpdated: (isSelf: boolean, userName?: string) => ({
+      title: isSelf ? 'Deine Rollen wurden aktualisiert' : 'Benutzerrollen aktualisiert',
+      message: isSelf
+        ? 'Deine Benutzerrollen wurden aktualisiert. Melde dich bei Fragen an einen Administrator.'
+        : `Die Rollen für "${userName}" wurden aktualisiert.`
+    }),
+    branchesUpdated: (isSelf: boolean, userName?: string) => ({
+      title: isSelf ? 'Deine Niederlassungen wurden aktualisiert' : 'Benutzer-Niederlassungen aktualisiert',
+      message: isSelf
+        ? 'Deine zugewiesenen Niederlassungen wurden aktualisiert. Melde dich bei Fragen an einen Administrator.'
+        : `Die Niederlassungen für "${userName}" wurden aktualisiert.`
+    }),
+    created: (userName: string) => ({
+      title: 'Neuer Benutzer erstellt',
+      message: `Ein neuer Benutzer "${userName}" wurde erstellt.`
+    }),
+    updated: (isSelf: boolean, userName?: string) => ({
+      title: isSelf ? 'Dein Profil wurde aktualisiert' : 'Benutzerprofil aktualisiert',
+      message: isSelf
+        ? 'Dein Profil wurde aktualisiert.'
+        : `Das Profil für "${userName}" wurde aktualisiert.`
+    }),
+    deleted: (userName: string) => ({
+      title: 'Benutzer gelöscht',
+      message: `Der Benutzer "${userName}" wurde gelöscht.`
+    })
+  },
+  es: {
+    rolesUpdated: (isSelf: boolean, userName?: string) => ({
+      title: isSelf ? 'Tus roles han sido actualizados' : 'Roles de usuario actualizados',
+      message: isSelf
+        ? 'Tus roles de usuario han sido actualizados. Contacta a un administrador si tienes preguntas.'
+        : `Los roles para "${userName}" han sido actualizados.`
+    }),
+    branchesUpdated: (isSelf: boolean, userName?: string) => ({
+      title: isSelf ? 'Tus sucursales han sido actualizadas' : 'Sucursales de usuario actualizadas',
+      message: isSelf
+        ? 'Tus sucursales asignadas han sido actualizadas. Contacta a un administrador si tienes preguntas.'
+        : `Las sucursales para "${userName}" han sido actualizadas.`
+    }),
+    created: (userName: string) => ({
+      title: 'Nuevo usuario creado',
+      message: `Se ha creado un nuevo usuario "${userName}".`
+    }),
+    updated: (isSelf: boolean, userName?: string) => ({
+      title: isSelf ? 'Tu perfil ha sido actualizado' : 'Perfil de usuario actualizado',
+      message: isSelf
+        ? 'Tu perfil ha sido actualizado.'
+        : `El perfil para "${userName}" ha sido actualizado.`
+    }),
+    deleted: (userName: string) => ({
+      title: 'Usuario eliminado',
+      message: `El usuario "${userName}" ha sido eliminado.`
+    })
+  },
+  en: {
+    rolesUpdated: (isSelf: boolean, userName?: string) => ({
+      title: isSelf ? 'Your roles have been updated' : 'User roles updated',
+      message: isSelf
+        ? 'Your user roles have been updated. Contact an administrator if you have questions.'
+        : `The roles for "${userName}" have been updated.`
+    }),
+    branchesUpdated: (isSelf: boolean, userName?: string) => ({
+      title: isSelf ? 'Your branches have been updated' : 'User branches updated',
+      message: isSelf
+        ? 'Your assigned branches have been updated. Contact an administrator if you have questions.'
+        : `The branches for "${userName}" have been updated.`
+    }),
+    created: (userName: string) => ({
+      title: 'New user created',
+      message: `A new user "${userName}" has been created.`
+    }),
+    updated: (isSelf: boolean, userName?: string) => ({
+      title: isSelf ? 'Your profile has been updated' : 'User profile updated',
+      message: isSelf
+        ? 'Your profile has been updated.'
+        : `The profile for "${userName}" has been updated.`
+    }),
+    deleted: (userName: string) => ({
+      title: 'User deleted',
+      message: `The user "${userName}" has been deleted.`
+    })
+  }
+};
+
+/**
+ * Übersetzungen für Role-Notifications
+ */
+const roleNotifications: Record<string, RoleNotificationTranslations> = {
+  de: {
+    created: (roleName: string) => ({
+      title: 'Neue Rolle erstellt',
+      message: `Eine neue Rolle "${roleName}" wurde erstellt.`
+    }),
+    updated: (roleName: string, isSelf: boolean) => ({
+      title: isSelf ? 'Deine Rolle wurde aktualisiert' : 'Rolle aktualisiert',
+      message: isSelf
+        ? `Die Rolle "${roleName}", die dir zugewiesen ist, wurde aktualisiert.`
+        : `Die Rolle "${roleName}" wurde aktualisiert.`
+    }),
+    deleted: (roleName: string, isSelf: boolean) => ({
+      title: isSelf ? 'Rolle entfernt' : 'Rolle gelöscht',
+      message: isSelf
+        ? `Die Rolle "${roleName}", die dir zugewiesen war, wurde gelöscht.`
+        : `Die Rolle "${roleName}" wurde gelöscht.`
+    })
+  },
+  es: {
+    created: (roleName: string) => ({
+      title: 'Nuevo rol creado',
+      message: `Se ha creado un nuevo rol "${roleName}".`
+    }),
+    updated: (roleName: string, isSelf: boolean) => ({
+      title: isSelf ? 'Tu rol ha sido actualizado' : 'Rol actualizado',
+      message: isSelf
+        ? `El rol "${roleName}" que te fue asignado ha sido actualizado.`
+        : `El rol "${roleName}" ha sido actualizado.`
+    }),
+    deleted: (roleName: string, isSelf: boolean) => ({
+      title: isSelf ? 'Rol eliminado' : 'Rol eliminado',
+      message: isSelf
+        ? `El rol "${roleName}" que te fue asignado ha sido eliminado.`
+        : `El rol "${roleName}" ha sido eliminado.`
+    })
+  },
+  en: {
+    created: (roleName: string) => ({
+      title: 'New role created',
+      message: `A new role "${roleName}" has been created.`
+    }),
+    updated: (roleName: string, isSelf: boolean) => ({
+      title: isSelf ? 'Your role has been updated' : 'Role updated',
+      message: isSelf
+        ? `The role "${roleName}" assigned to you has been updated.`
+        : `The role "${roleName}" has been updated.`
+    }),
+    deleted: (roleName: string, isSelf: boolean) => ({
+      title: isSelf ? 'Role removed' : 'Role deleted',
+      message: isSelf
+        ? `The role "${roleName}" assigned to you has been deleted.`
+        : `The role "${roleName}" has been deleted.`
+    })
+  }
+};
+
+/**
+ * Übersetzungen für System-Notifications
+ */
+const systemNotifications: Record<string, SystemNotificationTranslations> = {
+  de: {
+    monthlyReportCreated: (periodStart: string, periodEnd: string) => ({
+      title: 'Monatsabrechnung erstellt',
+      message: `Ihre automatische Monatsabrechnung für den Zeitraum ${periodStart} - ${periodEnd} wurde erfolgreich erstellt.`
+    }),
+    monthlyReportError: () => ({
+      title: 'Fehler bei Monatsabrechnung',
+      message: 'Bei der automatischen Erstellung Ihrer Monatsabrechnung ist ein Fehler aufgetreten. Bitte erstellen Sie diese manuell.'
+    }),
+    worktimeManagerStop: (branchName: string) => ({
+      title: 'Zeiterfassung durch Vorgesetzten beendet',
+      message: `Ihre Zeiterfassung für ${branchName} wurde von einem Vorgesetzten beendet.`
+    }),
+    worktimeUpdated: (branchName: string) => ({
+      title: 'Zeiterfassung aktualisiert',
+      message: `Ihre Zeiterfassung für ${branchName} wurde von einem Vorgesetzten aktualisiert.`
+    }),
+    overtimeUpdated: (hours: number) => ({
+      title: 'Bewilligte Überstunden aktualisiert',
+      message: `Ihre bewilligten Überstunden wurden auf ${hours} Stunden aktualisiert.`
+    })
+  },
+  es: {
+    monthlyReportCreated: (periodStart: string, periodEnd: string) => ({
+      title: 'Informe mensual creado',
+      message: `Su informe mensual automático para el período ${periodStart} - ${periodEnd} ha sido creado exitosamente.`
+    }),
+    monthlyReportError: () => ({
+      title: 'Error en informe mensual',
+      message: 'Ocurrió un error al crear automáticamente su informe mensual. Por favor, créelo manualmente.'
+    }),
+    worktimeManagerStop: (branchName: string) => ({
+      title: 'Registro de tiempo detenido por supervisor',
+      message: `Su registro de tiempo para ${branchName} ha sido detenido por un supervisor.`
+    }),
+    worktimeUpdated: (branchName: string) => ({
+      title: 'Registro de tiempo actualizado',
+      message: `Su registro de tiempo para ${branchName} ha sido actualizado por un supervisor.`
+    }),
+    overtimeUpdated: (hours: number) => ({
+      title: 'Horas extras aprobadas actualizadas',
+      message: `Sus horas extras aprobadas han sido actualizadas a ${hours} horas.`
+    })
+  },
+  en: {
+    monthlyReportCreated: (periodStart: string, periodEnd: string) => ({
+      title: 'Monthly report created',
+      message: `Your automatic monthly report for the period ${periodStart} - ${periodEnd} has been successfully created.`
+    }),
+    monthlyReportError: () => ({
+      title: 'Monthly report error',
+      message: 'An error occurred while automatically creating your monthly report. Please create it manually.'
+    }),
+    worktimeManagerStop: (branchName: string) => ({
+      title: 'Time tracking stopped by manager',
+      message: `Your time tracking for ${branchName} has been stopped by a manager.`
+    }),
+    worktimeUpdated: (branchName: string) => ({
+      title: 'Time tracking updated',
+      message: `Your time tracking for ${branchName} has been updated by a manager.`
+    }),
+    overtimeUpdated: (hours: number) => ({
+      title: 'Approved overtime updated',
+      message: `Your approved overtime has been updated to ${hours} hours.`
+    })
+  }
+};
+
+/**
+ * Gibt die übersetzte Notification-Nachricht für Task-Events zurück
+ */
+export function getTaskNotificationText(
+  language: string,
+  type: 'assigned' | 'quality_control_assigned' | 'status_changed' | 'updated' | 'deleted' | 'onboarding_completed' | 'new_onboarding_task' | 'new_offboarding_task' | 'new_social_security_task' | 'check_in_started' | 'check_in_completed',
+  taskTitle: string,
+  oldStatus?: string,
+  newStatus?: string,
+  guestName?: string
+): { title: string; message: string } {
+  const lang = language in taskNotifications ? language : 'de';
+  const translations = taskNotifications[lang];
+
+  switch (type) {
+    case 'assigned':
+      return translations.assigned(taskTitle);
+    case 'quality_control_assigned':
+      return translations.qualityControlAssigned(taskTitle);
+    case 'status_changed':
+      return translations.statusChanged(taskTitle, oldStatus || '', newStatus || '');
+    case 'updated':
+      return translations.updated(taskTitle);
+    case 'deleted':
+      return translations.deleted(taskTitle);
+    case 'onboarding_completed':
+      return translations.onboardingCompleted();
+    case 'new_onboarding_task':
+      return translations.newOnboardingTask(taskTitle);
+    case 'new_offboarding_task':
+      return translations.newOffboardingTask(taskTitle);
+    case 'new_social_security_task':
+      return translations.newSocialSecurityTask(taskTitle);
+    case 'check_in_started':
+      return translations.checkInStarted(guestName || 'Gast');
+    case 'check_in_completed':
+      return translations.checkInCompleted(guestName || 'Gast');
+    default:
+      return translations.updated(taskTitle);
+  }
+}
+
+/**
+ * Gibt die übersetzte Notification-Nachricht für Request-Events zurück
+ */
+export function getRequestNotificationText(
+  language: string,
+  type: 'created' | 'status_changed' | 'responsibility_changed' | 'assigned' | 'deleted' | 'new_task_from_request',
+  requestTitle: string,
+  isRequester?: boolean,
+  status?: string,
+  isOld?: boolean,
+  taskTitle?: string
+): { title: string; message: string } {
+  const lang = language in requestNotifications ? language : 'de';
+  const translations = requestNotifications[lang];
+
+  switch (type) {
+    case 'created':
+      return translations.created(requestTitle, isRequester || false);
+    case 'status_changed':
+      return translations.statusChanged(requestTitle, status || '');
+    case 'responsibility_changed':
+      return translations.responsibilityChanged(requestTitle, isOld || false);
+    case 'assigned':
+      return translations.assigned(requestTitle);
+    case 'deleted':
+      return translations.deleted(requestTitle);
+    case 'new_task_from_request':
+      return translations.newTaskFromRequest(taskTitle || requestTitle);
+    default:
+      return translations.created(requestTitle, false);
+  }
+}
+
+/**
+ * Gibt die übersetzte Notification-Nachricht für User-Events zurück
+ */
+export function getUserNotificationText(
+  language: string,
+  type: 'roles_updated' | 'branches_updated' | 'created' | 'updated' | 'deleted',
+  isSelf: boolean,
+  userName?: string
+): { title: string; message: string } {
+  const lang = language in userNotifications ? language : 'de';
+  const translations = userNotifications[lang];
+
+  switch (type) {
+    case 'roles_updated':
+      return translations.rolesUpdated(isSelf, userName);
+    case 'branches_updated':
+      return translations.branchesUpdated(isSelf, userName);
+    case 'created':
+      return translations.created(userName || '');
+    case 'updated':
+      return translations.updated(isSelf, userName);
+    case 'deleted':
+      return translations.deleted(userName || '');
+    default:
+      return translations.updated(isSelf, userName);
+  }
+}
+
+/**
+ * Gibt die übersetzte Notification-Nachricht für Role-Events zurück
+ */
+export function getRoleNotificationText(
+  language: string,
+  type: 'created' | 'updated' | 'deleted',
+  roleName: string,
+  isSelf: boolean
+): { title: string; message: string } {
+  const lang = language in roleNotifications ? language : 'de';
+  const translations = roleNotifications[lang];
+
+  switch (type) {
+    case 'created':
+      return translations.created(roleName);
+    case 'updated':
+      return translations.updated(roleName, isSelf);
+    case 'deleted':
+      return translations.deleted(roleName, isSelf);
+    default:
+      return translations.updated(roleName, isSelf);
+  }
+}
+
+/**
+ * Gibt die übersetzte Notification-Nachricht für System-Events zurück
+ */
+export function getSystemNotificationText(
+  language: string,
+  type: 'monthly_report_created' | 'monthly_report_error' | 'worktime_manager_stop' | 'worktime_updated' | 'overtime_updated',
+  periodStart?: string,
+  periodEnd?: string,
+  branchName?: string,
+  hours?: number
+): { title: string; message: string } {
+  const lang = language in systemNotifications ? language : 'de';
+  const translations = systemNotifications[lang];
+
+  switch (type) {
+    case 'monthly_report_created':
+      return translations.monthlyReportCreated(periodStart || '', periodEnd || '');
+    case 'monthly_report_error':
+      return translations.monthlyReportError();
+    case 'worktime_manager_stop':
+      return translations.worktimeManagerStop(branchName || '');
+    case 'worktime_updated':
+      return translations.worktimeUpdated(branchName || '');
+    case 'overtime_updated':
+      return translations.overtimeUpdated(hours || 0);
+    default:
+      return translations.monthlyReportError();
   }
 }
 
