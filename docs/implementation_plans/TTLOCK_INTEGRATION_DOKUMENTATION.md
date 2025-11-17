@@ -5,9 +5,9 @@
 
 ## Übersicht
 
-Die TTLock Integration ermöglicht die automatische Erstellung von Passcodes für Gäste bei Check-in. Das System verwendet **period Passcodes** (`keyboardPwdType: 3`), die ohne App-Synchronisation funktionieren.
+Die TTLock Integration ermöglicht die automatische Erstellung von Passcodes für Gäste bei Check-in. Das System verwendet **permanente Passcodes** (`keyboardPwdType: 2`), die ohne Gateway besser funktionieren als Period-Passcodes.
 
-**WICHTIG**: **10-stellige period Passcodes** (`keyboardPwdType: 3`) funktionieren ohne App-Sync (getestet und dokumentiert). Diese Lösung wurde am 2025-11-17 wiederhergestellt.
+**WICHTIG**: **9-stellige permanente Passcodes** (`keyboardPwdType: 2`) funktionieren ohne Gateway besser, da sie keine Zeit-Synchronisation benötigen. Diese Lösung wurde am 2025-11-17 implementiert.
 
 ## Konfiguration
 
@@ -21,10 +21,10 @@ Alle Einstellungen können pro Organisation über das Frontend konfiguriert werd
 - **Username**: TTLock App Username (z.B. `+573024498991` oder `3024498991`)
 - **Password**: TTLock App Password (wird MD5-gehasht gespeichert)
 - **Passcode-Typ**: 
-  - `auto`: 10-stellige Passcodes (period, ohne Synchronisation)
+  - `auto`: 9-stellige permanente Passcodes (ohne Gateway besser als Period-Passcodes)
   - `custom`: 4-stellige Passcodes (erfordert Synchronisation)
   
-**Hinweis**: `auto` generiert 10-stellige period Passcodes, die ohne App-Sync funktionieren.
+**Hinweis**: `auto` generiert 9-stellige permanente Passcodes, die ohne Gateway besser funktionieren.
 
 ### Backend (Settings Schema)
 
@@ -58,23 +58,26 @@ async createTemporaryPasscode(
 ```
 
 **Passcode-Typen**:
-- **Auto (10-stellig, period)**: 
-  - Generiert: `Math.floor(1000000000 + Math.random() * 9000000000).toString()`
-  - `keyboardPwdType: 3` (period/temporär, mit Start/Endzeit)
-  - Funktioniert ohne Gateway/Synchronisation
+- **Auto (9-stellig, permanent)**: 
+  - Generiert: `Math.floor(100000000 + Math.random() * 900000000).toString()` (9-stellig)
+  - `keyboardPwdType: 2` (permanent, keine Start/Endzeit)
+  - Funktioniert ohne Gateway besser als Period-Passcodes
+  - Keine Zeit-Synchronisation erforderlich
   - Wird direkt über die API aktiviert
+  - **Muss innerhalb von 24 Stunden nach Erstellung verwendet werden**
   
-- **Custom (4-stellig, period)**:
+- **Custom (4-stellig, permanent)**:
   - Generiert: `Math.floor(1000 + Math.random() * 9000).toString()`
-  - `keyboardPwdType: 3` (period/temporär, mit Start/Endzeit)
+  - `keyboardPwdType: 2` (permanent, keine Start/Endzeit)
   - Erfordert Bluetooth-Synchronisation über TTLock App
   - Passcode wird in der API erstellt, aber erst nach Synchronisation aktiv
 
 **WICHTIG**: 
-- **10-stellige period Passcodes** (`keyboardPwdType: 3`) funktionieren ohne App-Sync (getestet und dokumentiert)
-- `startDate` und `endDate` werden gesetzt (Millisekunden)
+- **9-stellige permanente Passcodes** (`keyboardPwdType: 2`) funktionieren ohne Gateway besser
+- **KEINE** `startDate`/`endDate` werden gesetzt für permanente Passcodes
 - `addType: 1` (via phone bluetooth) wird verwendet
 - **KEINE Codes werden gelöscht** beim Erstellen eines neuen Codes - nur neuer Code wird hinzugefügt
+- Permanente Passcodes müssen innerhalb von 24 Stunden nach Erstellung verwendet werden
 
 ### Authentifizierung
 
@@ -127,27 +130,29 @@ const passcode = await ttlockService.createTemporaryPasscode(
 
 ## Wichtige Hinweise
 
-### Period Passcodes (keyboardPwdType: 3)
+### Permanente Passcodes (keyboardPwdType: 2)
 
-- **10-stellige Passcodes** funktionieren ohne App-Synchronisation
-- **Start/Endzeit** wird gesetzt (Check-in bis Check-out)
+- **9-stellige Passcodes** funktionieren ohne Gateway besser als Period-Passcodes
+- **KEINE Start/Endzeit** wird gesetzt (permanent)
 - **addType: 1** (via phone bluetooth) wird verwendet
-- **Passcode-Länge**: 10-stellig für `auto`, 4-stellig für `custom`
+- **Passcode-Länge**: 9-stellig für `auto`, 4-stellig für `custom`
+- **Müssen innerhalb von 24 Stunden nach Erstellung verwendet werden**
 
 ### Ohne Gateway
 
-- **10-stellige period Passcodes** funktionieren ohne Synchronisation
-- `addType: 1` wird verwendet, funktioniert ohne App-Sync
+- **9-stellige permanente Passcodes** funktionieren besser als Period-Passcodes
+- Keine Zeit-Synchronisation erforderlich
+- `addType: 1` wird verwendet
 
 ### Mit Gateway
 
-- **10-stellige period Passcodes** funktionieren direkt ohne Synchronisation
+- **9-stellige permanente Passcodes** funktionieren direkt ohne Synchronisation
 - Gateway ermöglicht direkte Aktivierung über WiFi
 
 ### Passcode-Typ Auswahl
 
-- **Auto**: Generiert **10-stellige period Passcodes** - funktioniert ohne App-Sync
-- **Custom**: Generiert **4-stellige period Passcodes** - erfordert App-Sync
+- **Auto**: Generiert **9-stellige permanente Passcodes** - funktioniert ohne Gateway besser
+- **Custom**: Generiert **4-stellige permanente Passcodes** - erfordert App-Sync
 
 ## Deployment (Hetzner Server)
 

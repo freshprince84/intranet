@@ -346,15 +346,12 @@ export class TTLockService {
         payload.append('keyboardPwd', generatedPasscode);
       }
       payload.append('keyboardPwdName', passcodeName || 'Guest Passcode');
-      payload.append('keyboardPwdType', '3'); // 3 = period (temporärer Passcode)
-      // WICHTIG: Period Passcodes benötigen startDate/endDate!
-      // Die Daten werden von reservationNotificationService korrigiert falls identisch
-      payload.append('startDate', startDate.getTime().toString()); // Millisekunden!
-      payload.append('endDate', endDate.getTime().toString()); // Millisekunden!
+      payload.append('keyboardPwdType', '2'); // 2 = permanent (keine Start/Endzeit)
+      // WICHTIG: Permanente Passcodes benötigen KEINE startDate/endDate!
+      // Permanente Passcodes funktionieren ohne Gateway besser als Period-Passcodes
       // addType: 1=via phone bluetooth (APP SDK), 2=via gateway/WiFi
-      // WICHTIG: addType: 1 funktioniert für 10-stellige period Passcodes ohne App-Sync!
       // Kein Gateway vorhanden, daher addType: 1
-      payload.append('addType', '1'); // 1 = via phone bluetooth (funktioniert ohne App-Sync für 10-stellige period)
+      payload.append('addType', '1'); // 1 = via phone bluetooth
       payload.append('date', currentTimestamp.toString()); // Millisekunden
 
       // Debug: Zeige vollständigen Request
