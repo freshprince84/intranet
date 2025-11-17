@@ -6,6 +6,7 @@ import { Organization } from '../../types/organization.ts';
 import { usePermissions } from '../../hooks/usePermissions.ts';
 import useMessage from '../../hooks/useMessage.ts';
 import { useOrganization } from '../../contexts/OrganizationContext.tsx';
+import { useAuth } from '../../hooks/useAuth.tsx';
 import CreateOrganizationModal from './CreateOrganizationModal.tsx';
 import JoinOrganizationModal from './JoinOrganizationModal.tsx';
 import EditOrganizationModal from './EditOrganizationModal.tsx';
@@ -36,6 +37,7 @@ const OrganizationSettings: React.FC = () => {
   const { showMessage } = useMessage();
   const { t } = useTranslation();
   const { refreshOrganization } = useOrganization();
+  const { fetchCurrentUser } = useAuth();
 
   const fetchOrganization = useCallback(async () => {
     try {
@@ -132,9 +134,12 @@ const OrganizationSettings: React.FC = () => {
     fetchOrganization();
   };
 
-  const handleJoinSuccess = () => {
+  const handleJoinSuccess = async () => {
     // Nach Beitritt: Organisation neu laden
     fetchOrganization();
+    // WICHTIG: User-Rollen neu laden, damit neue Rolle sichtbar wird
+    // OnboardingContext erkennt dann automatisch die neue Rolle
+    await fetchCurrentUser();
   };
 
   return (

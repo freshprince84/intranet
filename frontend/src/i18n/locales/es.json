@@ -2149,7 +2149,7 @@
   "onboarding": {
     "welcome": {
       "title": "¡Bienvenido a la Intranet!",
-      "description": "Te guiaremos a través de las funciones más importantes de la aplicación. Este tour te mostrará paso a paso cómo usar las diferentes características."
+      "description": "¡Bienvenido a la Intranet! A continuación, debe unirse a una organización o crear una nueva. Puede navegar a la página de organización usted mismo para crear una organización o unirse a una."
     },
     "navigation": {
       "back": "Atrás",

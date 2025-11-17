@@ -23,7 +23,7 @@ export interface OnboardingStep {
     accessLevel: 'read' | 'write' | 'both';
   }[];
   roleFilter?: string[]; // Rollen, für die dieser Schritt angezeigt wird
-  showCondition?: 'hasInactiveOrgRole'; // Bedingung, wann dieser Schritt angezeigt werden soll
+  showCondition?: 'hasInactiveOrgRole' | 'needsIdentificationDocument' | 'hasNoOrganization'; // Bedingung, wann dieser Schritt angezeigt werden soll
 }
 
 // Onboarding-Status-Interface
@@ -238,13 +238,9 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
       setModalDismissed(false);
     }
 
-    // Navigiere zur entsprechenden Seite
-    if (!profileComplete && location.pathname !== '/profile') {
-      navigate('/profile');
-    } else if (!hasOrganization && organizationStepIndex !== -1 && location.pathname !== '/organization') {
-      navigate('/organization');
-    } else if (location.pathname !== '/dashboard') {
-      // Immer zum Dashboard navigieren (für Welcome-Schritt)
+    // Nur initial zum Dashboard navigieren, wenn Tour startet
+    // KEINE automatischen Navigationen zu anderen Seiten - User entscheidet selbst
+    if (location.pathname !== '/dashboard') {
       navigate('/dashboard');
     }
 
@@ -262,7 +258,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
     } catch (error) {
       console.error('Fehler beim Speichern des Start-Zeitpunkts:', error);
     }
-  }, [user, trackEvent, filteredSteps, isProfileComplete, location.pathname, navigate]);
+  }, [user, trackEvent, filteredSteps, isProfileComplete, location.pathname, navigate]); // navigate wird nur für initial Dashboard-Navigation verwendet
 
   // Lade Onboarding-Status beim Start
   useEffect(() => {
@@ -473,12 +469,10 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
     if (isActive && modalDismissedRef.current && previousPathname.current !== location.pathname) {
       previousPathname.current = location.pathname;
       
-      // Prüfe ob Profil vollständig ist (nur wenn User Mitglied einer Organisation ist)
-      const hasOrganization = user?.roles?.some((r: any) => r.role.organization !== null) || false;
-      const profileComplete = hasOrganization ? isProfileComplete() : true; // Vor Organisation: Profil gilt als vollständig
-      
-      // Nur wenn Profil unvollständig ist, Modal wieder anzeigen
-      if (!profileComplete) {
+      // Modal immer wieder anzeigen, wenn User navigiert (außer wenn dismissed)
+      // WICHTIG: Nur wenn aktueller Schritt nicht dismissed ist
+      const currentStepIndex = currentStep;
+      if (!dismissedSteps.includes(currentStepIndex)) {
         // Modal bei jedem Route-Wechsel wieder anzeigen (Dashboard, Settings, etc.)
         // WICHTIG: Kleine Verzögerung, damit Route-Wechsel abgeschlossen ist
         const timer = setTimeout(() => {
@@ -490,7 +484,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
       // Route hat sich geändert, aber Modal war nicht geschlossen → Pathname aktualisieren
       previousPathname.current = location.pathname;
     }
-  }, [location.pathname, isActive, user, isProfileComplete]); // modalDismissed aus Dependencies entfernt
+  }, [location.pathname, isActive, currentStep, dismissedSteps]); // modalDismissed aus Dependencies entfernt
 
   // Modal temporär schließen (nicht die Tour stoppen)
   // WICHTIG: Verhindere, dass Modal sofort wieder geöffnet wird
@@ -620,11 +614,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
               const nextStepIndex = prevStep + 1;
               saveProgress(nextStepIndex, newCompletedSteps, dismissedSteps);
               
-              // Navigiere zum Dashboard, wenn nächster Schritt dort ist
-              const nextStep = filteredSteps[nextStepIndex];
-              if (nextStep?.route && nextStep.route !== '/profile') {
-                navigate(nextStep.route);
-              }
+              // KEINE Navigation - User entscheidet selbst, wohin er navigiert
               
               return nextStepIndex;
             }
@@ -642,11 +632,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
               const nextStepIndex = prevStep + 1;
               saveProgress(nextStepIndex, newCompletedSteps, dismissedSteps);
               
-              // Navigiere zum nächsten Schritt
-              const nextStep = filteredSteps[nextStepIndex];
-              if (nextStep?.route) {
-                navigate(nextStep.route);
-              }
+              // KEINE Navigation - User entscheidet selbst, wohin er navigiert
               
               return nextStepIndex;
             }
@@ -664,11 +650,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
               const nextStepIndex = prevStep + 1;
               saveProgress(nextStepIndex, newCompletedSteps, dismissedSteps);
               
-              // Navigiere zum nächsten Schritt (switch_role_after_join oder welcome)
-              const nextStep = filteredSteps[nextStepIndex];
-              if (nextStep?.route) {
-                navigate(nextStep.route);
-              }
+              // KEINE Navigation - User entscheidet selbst, wohin er navigiert
               
               return nextStepIndex;
             }
@@ -677,7 +659,7 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
         }, 500);
       }
       
-      // Wenn welcome Schritt abgeschlossen und User keine Organisation hat, automatisch zur Organisation navigieren
+      // Wenn welcome Schritt abgeschlossen und User keine Organisation hat, automatisch zum Organisation-Schritt wechseln
       if (stepId === 'welcome' && currentStep === stepIndex) {
         const hasOrganization = user?.roles?.some((r: any) => r.role.organization !== null) || false;
         if (!hasOrganization) {
@@ -689,17 +671,13 @@ export const OnboardingProvider: React.FC<{ children: React.ReactNode; steps: On
               setCurrentStep(orgStepIndex);
               saveProgress(orgStepIndex, newCompletedSteps, dismissedSteps);
               
-              // Navigiere zur Organisation-Seite
-              const orgStep = filteredSteps[orgStepIndex];
-              if (orgStep?.route) {
-                navigate(orgStep.route);
-              }
+              // KEINE Navigation - User entscheidet selbst, wohin er navigiert
             }, 500);
           }
         }
       }
     }
-  }, [filteredSteps, completedSteps, trackEvent, currentStep, saveProgress, navigate, user]);
+  }, [filteredSteps, completedSteps, trackEvent, currentStep, saveProgress, dismissedSteps, user]);
 
   // Automatischer Schritt-Wechsel wenn User einer Organisation beigetreten ist
   useEffect(() => {

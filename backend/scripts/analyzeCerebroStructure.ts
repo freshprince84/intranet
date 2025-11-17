@@ -299,6 +299,11 @@ async function main() {
   try {
     const result = await analyzeCerebroStructure();
     printAnalysisResults(result);
+    
+    // Schreibe auch JSON-Export für einfacheren Abruf
+    const outputPath = path.join(__dirname, '../../cerebro_analysis_result.json');
+    fs.writeFileSync(outputPath, JSON.stringify(result, null, 2));
+    console.log(`\n💾 Ergebnisse auch gespeichert in: ${outputPath}`);
   } catch (error) {
     console.error('❌ Fehler bei der Analyse:', error);
     throw error;

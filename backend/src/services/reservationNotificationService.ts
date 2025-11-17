@@ -181,23 +181,33 @@ export class ReservationNotificationService {
 
       // Versende Benachrichtigungen
       if (notificationChannels.includes('email') && reservation.guestEmail) {
-        await this.sendCheckInConfirmationEmail(
-          reservation,
-          doorPin,
-          doorAppName
-        );
+        try {
+          await this.sendCheckInConfirmationEmail(
+            reservation,
+            doorPin,
+            doorAppName
+          );
+        } catch (error) {
+          console.error(`[ReservationNotification] Fehler beim Versenden der E-Mail:`, error);
+          // Weiter ohne E-Mail
+        }
       }
 
       if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
-        const whatsappService = new WhatsAppService(reservation.organizationId);
-        await whatsappService.sendCheckInConfirmation(
-          reservation.guestName,
-          reservation.guestPhone,
-          reservation.roomNumber || 'N/A',
-          reservation.roomDescription || 'N/A',
-          doorPin || 'N/A',
-          doorAppName || 'TTLock'
-        );
+        try {
+          const whatsappService = new WhatsAppService(reservation.organizationId);
+          await whatsappService.sendCheckInConfirmation(
+            reservation.guestName,
+            reservation.guestPhone,
+            reservation.roomNumber || 'N/A',
+            reservation.roomDescription || 'N/A',
+            doorPin || 'N/A',
+            doorAppName || 'TTLock'
+          );
+        } catch (error) {
+          console.error(`[ReservationNotification] Fehler beim Versenden der WhatsApp-Nachricht:`, error);
+          // Weiter ohne WhatsApp - PIN wurde bereits generiert
+        }
       }
 
       console.log(`[ReservationNotification] PIN generiert und Mitteilung versendet für Reservierung ${reservationId}`);

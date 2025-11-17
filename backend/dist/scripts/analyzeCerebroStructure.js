@@ -301,7 +301,7 @@ function printAnalysisResults(result) {
  */
 function main() {
     return __awaiter(this, void 0, void 0, function () {
-        var result, error_1;
+        var result, outputPath, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -310,6 +310,9 @@ function main() {
                 case 1:
                     result = _a.sent();
                     printAnalysisResults(result);
+                    outputPath = path_1.default.join(__dirname, '../../cerebro_analysis_result.json');
+                    fs_1.default.writeFileSync(outputPath, JSON.stringify(result, null, 2));
+                    console.log("\n\uD83D\uDCBE Ergebnisse auch gespeichert in: ".concat(outputPath));
                     return [3 /*break*/, 5];
                 case 2:
                     error_1 = _a.sent();

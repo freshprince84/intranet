@@ -418,8 +418,19 @@ export class WhatsAppService {
     try {
       // Versuche zuerst Session Message (24h-Fenster)
       console.log(`[WhatsApp Service] Versuche Session Message (24h-Fenster) für ${to}...`);
-      return await this.sendMessage(to, message);
+      const sessionResult = await this.sendMessage(to, message);
+      if (sessionResult) {
+        console.log(`[WhatsApp Service] ✅ Session Message erfolgreich gesendet an ${to}`);
+        return true;
+      } else {
+        console.warn(`[WhatsApp Service] ⚠️ Session Message gab false zurück für ${to}`);
+        throw new Error('Session Message gab false zurück');
+      }
     } catch (error) {
+      // Detailliertes Logging des Fehlers
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`[WhatsApp Service] Fehler bei Session Message für ${to}:`, errorMessage);
+      
       // Prüfe ob Fehler "outside 24h window" ist
       if (this.isOutside24HourWindowError(error)) {
         console.log(`[WhatsApp Service] ⚠️ 24h-Fenster abgelaufen, verwende Template Message...`);
@@ -431,6 +442,7 @@ export class WhatsAppService {
 
         // Fallback: Template Message
         try {
+          console.log(`[WhatsApp Service] Lade Settings für Template Message...`);
           await this.loadSettings();
           
           if (!this.axiosInstance || !this.phoneNumberId) {
@@ -438,6 +450,7 @@ export class WhatsAppService {
           }
 
           const normalizedPhone = this.normalizePhoneNumber(to);
+          console.log(`[WhatsApp Service] Normalisierte Telefonnummer: ${normalizedPhone}`);
           
           // Formatiere Template-Parameter
           const formattedParams = templateParams?.map(text => ({
@@ -445,17 +458,31 @@ export class WhatsAppService {
             text: text
           })) || [];
 
+          console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
+
           // Template-Sprache aus Environment-Variable oder Standard (Standard: Englisch)
           const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en';
+          console.log(`[WhatsApp Service] Template-Sprache: ${languageCode}`);
           
-          return await this.sendViaWhatsAppBusiness(normalizedPhone, message, templateName, formattedParams, languageCode);
+          const templateResult = await this.sendViaWhatsAppBusiness(normalizedPhone, message, templateName, formattedParams, languageCode);
+          if (templateResult) {
+            console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to}`);
+            return true;
+          } else {
+            console.error(`[WhatsApp Service] ❌ Template Message gab false zurück für ${to}`);
+            throw new Error('Template Message gab false zurück');
+          }
         } catch (templateError) {
-          console.error('[WhatsApp Service] Fehler bei Template Message:', templateError);
+          console.error('[WhatsApp Service] ❌ Fehler bei Template Message:', templateError);
+          const templateErrorMessage = templateError instanceof Error ? templateError.message : String(templateError);
+          console.error('[WhatsApp Service] Template Error Details:', templateErrorMessage);
           throw templateError;
         }
       } else {
         // Anderer Fehler - weiterwerfen
-        console.error('[WhatsApp Service] Unbekannter Fehler bei Session Message:', error);
+        console.error('[WhatsApp Service] ❌ Unbekannter Fehler bei Session Message:', error);
+        const errorDetails = error instanceof Error ? error.message : String(error);
+        console.error('[WhatsApp Service] Error Details:', errorDetails);
         throw error;
       }
     }

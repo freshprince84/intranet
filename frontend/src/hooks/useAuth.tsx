@@ -55,6 +55,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
     }, []);
 
+    // Event-Listener für automatische Logout-Weiterleitung bei 401-Fehlern
+    useEffect(() => {
+        const handleAuthLogout = () => {
+            setUser(null);
+            setIsLoading(false);
+        };
+        
+        window.addEventListener('auth:logout', handleAuthLogout);
+        
+        return () => {
+            window.removeEventListener('auth:logout', handleAuthLogout);
+        };
+    }, []);
+
     const fetchCurrentUser = async (signal?: AbortSignal) => {
         try {
             const response = await axiosInstance.get('/users/profile', {
