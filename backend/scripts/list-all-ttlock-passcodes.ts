@@ -131,10 +131,16 @@ async function listAllTTLockPasscodes() {
         console.error('❌ Fehler beim Abrufen der Passcodes:');
         console.error(`   errcode: ${responseData.errcode}`);
         console.error(`   errmsg: ${responseData.errmsg || 'Unknown error'}`);
+        console.error(`   Vollständige Response:`, JSON.stringify(responseData, null, 2));
       }
 
     } catch (error: any) {
       console.error('❌ Fehler:', error.response?.data || error.message);
+      if (error.response) {
+        console.error('   Status:', error.response.status);
+        console.error('   Headers:', error.response.headers);
+        console.error('   Data:', JSON.stringify(error.response.data, null, 2));
+      }
     }
 
   } catch (error) {
