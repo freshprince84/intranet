@@ -349,8 +349,9 @@ export class TTLockService {
       // WICHTIG: Permanente Passcodes benötigen KEINE startDate/endDate!
       // Test: Funktioniert permanente Lösung ohne Zeitprobleme?
       // addType: 1=via phone bluetooth (APP SDK), 2=via gateway/WiFi
-      // WICHTIG: addType: 1 funktioniert für 10-stellige period Passcodes ohne App-Sync!
-      payload.append('addType', '1'); // 1 = via phone bluetooth (funktioniert ohne App-Sync für 10-stellige period)
+      // WICHTIG: Für Fernzugriff ohne App-Sync braucht es addType: 2 (Gateway)!
+      // addType: 1 erfordert Bluetooth-Sync, addType: 2 funktioniert über Internet
+      payload.append('addType', '2'); // 2 = via gateway/WiFi (funktioniert ohne App-Sync über Internet)
       payload.append('date', currentTimestamp.toString()); // Millisekunden
 
       // Debug: Zeige vollständigen Request
