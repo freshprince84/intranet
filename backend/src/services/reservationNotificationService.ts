@@ -142,8 +142,15 @@ export class ReservationNotificationService {
 
       // Entschlüssele Settings
       const { decryptApiSettings } = await import('../utils/encryption');
+      console.log(`[ReservationNotification] Entschlüssele Settings für Reservation ${reservationId}...`);
       const decryptedSettings = decryptApiSettings(reservation.organization.settings as any);
       const notificationChannels = decryptedSettings?.lobbyPms?.notificationChannels || ['email'];
+
+      console.log(`[ReservationNotification] Settings entschlüsselt:`, {
+        hasDoorSystem: !!decryptedSettings?.doorSystem,
+        doorSystemProvider: decryptedSettings?.doorSystem?.provider,
+        doorSystemLockIds: decryptedSettings?.doorSystem?.lockIds
+      });
 
       // Erstelle TTLock Passcode
       let doorPin: string | null = null;
