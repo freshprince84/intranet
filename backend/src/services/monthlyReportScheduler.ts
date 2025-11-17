@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { generateAutomaticMonthlyReport } from '../controllers/monthlyConsultationReportController';
 import { createNotificationIfEnabled } from '../controllers/notificationController';
 import { NotificationType } from '../validation/notificationValidation';
+import { getUserLanguage, getSystemNotificationText } from '../utils/translations';
 
 const prisma = new PrismaClient();
 
@@ -12,7 +13,7 @@ interface MockRequest {
 
 interface MockResponse {
   status: (code: number) => MockResponse;
-  json: (data: any) => MockResponse;
+  json: (data: any) => MockResponse | Promise<MockResponse>;
 }
 
 /**
@@ -85,16 +86,23 @@ export const checkAndGenerateMonthlyReports = async (): Promise<void> => {
             lastStatusCode = code;
             return mockRes;
           },
-          json: (data: any) => {
+          json: async (data: any) => {
             if (data.message && !data.message.includes('Für diesen Zeitraum existiert bereits')) {
               console.log(`Automatische Monatsabrechnung für Benutzer ${userSettings.userId}: ${data.message}`);
               
               // Bei Erfolg: Benachrichtigung senden
               if (lastStatusCode === 201 || lastStatusCode === 200) {
+                const userLang = await getUserLanguage(userSettings.userId);
+                const notificationText = getSystemNotificationText(
+                  userLang,
+                  'monthly_report_created',
+                  periodStart.toLocaleDateString('de-DE'),
+                  periodEnd.toLocaleDateString('de-DE')
+                );
                 createNotificationIfEnabled({
                   userId: userSettings.userId,
-                  title: 'Monatsabrechnung erstellt',
-                  message: `Ihre automatische Monatsabrechnung für den Zeitraum ${periodStart.toLocaleDateString('de-DE')} - ${periodEnd.toLocaleDateString('de-DE')} wurde erfolgreich erstellt.`,
+                  title: notificationText.title,
+                  message: notificationText.message,
                   type: NotificationType.system,
                   relatedEntityId: data.id || null,
                   relatedEntityType: 'monthly_report_generated'
@@ -113,10 +121,12 @@ export const checkAndGenerateMonthlyReports = async (): Promise<void> => {
         
         // Fehler-Benachrichtigung senden
         try {
+          const userLang = await getUserLanguage(userSettings.userId);
+          const notificationText = getSystemNotificationText(userLang, 'monthly_report_error');
           await createNotificationIfEnabled({
             userId: userSettings.userId,
-            title: 'Fehler bei Monatsabrechnung',
-            message: 'Bei der automatischen Erstellung Ihrer Monatsabrechnung ist ein Fehler aufgetreten. Bitte erstellen Sie diese manuell.',
+            title: notificationText.title,
+            message: notificationText.message,
             type: NotificationType.system,
             relatedEntityType: 'monthly_report_error'
           });

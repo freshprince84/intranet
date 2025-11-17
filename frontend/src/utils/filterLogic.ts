@@ -169,6 +169,7 @@ export const applyFilters = <T>(
 
 /**
  * Helper function to evaluate date conditions with proper date comparison
+ * Supports __TODAY__ as a dynamic date value
  */
 export const evaluateDateCondition = (
   dateValue: Date | string | null | undefined,
@@ -183,18 +184,33 @@ export const evaluateDateCondition = (
     return false;
   }
 
-  const conditionDate = new Date(condition.value as string);
-  if (isNaN(conditionDate.getTime())) {
-    return false;
+  // Handle __TODAY__ dynamic date
+  let conditionDate: Date;
+  if (condition.value === '__TODAY__') {
+    // Get today's date in local timezone (set to midnight)
+    const localToday = new Date();
+    localToday.setHours(0, 0, 0, 0);
+    conditionDate = localToday;
+  } else {
+    conditionDate = new Date(condition.value as string);
+    if (isNaN(conditionDate.getTime())) {
+      return false;
+    }
   }
+
+  // Normalize both dates to midnight for accurate comparison
+  const normalizedDate = new Date(date);
+  normalizedDate.setHours(0, 0, 0, 0);
+  const normalizedConditionDate = new Date(conditionDate);
+  normalizedConditionDate.setHours(0, 0, 0, 0);
 
   switch (condition.operator) {
     case 'equals':
-      return date.toDateString() === conditionDate.toDateString();
+      return normalizedDate.getTime() === normalizedConditionDate.getTime();
     case 'before':
-      return date < conditionDate;
+      return normalizedDate < normalizedConditionDate;
     case 'after':
-      return date > conditionDate;
+      return normalizedDate > normalizedConditionDate;
     default:
       return true;
   }
@@ -216,14 +232,24 @@ export const evaluateUserRoleCondition = (
   if (value.startsWith('user-')) {
     const targetUserId = parseInt(value.replace('user-', ''), 10);
     if (isNaN(targetUserId)) return false;
-    return userId === targetUserId;
+    const matches = userId === targetUserId;
+    // Unterstütze notEquals Operator
+    if (condition.operator === 'notEquals') {
+      return !matches;
+    }
+    return matches;
   }
   
   // Handle role-{id} format
   if (value.startsWith('role-')) {
     const targetRoleId = parseInt(value.replace('role-', ''), 10);
     if (isNaN(targetRoleId)) return false;
-    return roleId === targetRoleId;
+    const matches = roleId === targetRoleId;
+    // Unterstütze notEquals Operator
+    if (condition.operator === 'notEquals') {
+      return !matches;
+    }
+    return matches;
   }
   
   // Empty value matches all
@@ -237,6 +263,8 @@ export const evaluateUserRoleCondition = (
     const valueLower = value.toLowerCase();
     if (condition.operator === 'equals') {
       return textValueLower === valueLower;
+    } else if (condition.operator === 'notEquals') {
+      return textValueLower !== valueLower;
     } else if (condition.operator === 'contains') {
       return textValueLower.includes(valueLower);
     }
@@ -262,14 +290,24 @@ export const evaluateResponsibleAndQualityControl = (
   if (value.startsWith('user-')) {
     const targetUserId = parseInt(value.replace('user-', ''), 10);
     if (isNaN(targetUserId)) return false;
-    return (responsibleId === targetUserId) || (qualityControlId === targetUserId);
+    const matches = (responsibleId === targetUserId) || (qualityControlId === targetUserId);
+    // Unterstütze notEquals Operator
+    if (condition.operator === 'notEquals') {
+      return !matches;
+    }
+    return matches;
   }
   
   // Handle role-{id} format - only matches with responsible role
   if (value.startsWith('role-')) {
     const targetRoleId = parseInt(value.replace('role-', ''), 10);
     if (isNaN(targetRoleId)) return false;
-    return responsibleRoleId === targetRoleId;
+    const matches = responsibleRoleId === targetRoleId;
+    // Unterstütze notEquals Operator
+    if (condition.operator === 'notEquals') {
+      return !matches;
+    }
+    return matches;
   }
   
   // Empty value matches all
@@ -281,6 +319,8 @@ export const evaluateResponsibleAndQualityControl = (
   const valueLower = value.toLowerCase();
   if (condition.operator === 'equals') {
     return (responsibleText?.toLowerCase() === valueLower) || (qualityControlText?.toLowerCase() === valueLower);
+  } else if (condition.operator === 'notEquals') {
+    return (responsibleText?.toLowerCase() !== valueLower) && (qualityControlText?.toLowerCase() !== valueLower);
   } else if (condition.operator === 'contains') {
     return (responsibleText?.toLowerCase().includes(valueLower)) || (qualityControlText?.toLowerCase().includes(valueLower));
   }

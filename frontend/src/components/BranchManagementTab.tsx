@@ -37,23 +37,31 @@ const BranchCard: React.FC<{
                 
                 <div className="flex space-x-2">
                     {canEdit && (
-                        <button
-                            onClick={() => onEdit(branch)}
-                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
-                            title={t('common.edit', { defaultValue: 'Bearbeiten' })}
-                        >
-                            <PencilIcon className="h-5 w-5" />
-                        </button>
+                        <div className="relative group">
+                            <button
+                                onClick={() => onEdit(branch)}
+                                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
+                            >
+                                <PencilIcon className="h-5 w-5" />
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                {t('common.edit', { defaultValue: 'Bearbeiten' })}
+                            </div>
+                        </div>
                     )}
                     
                     {canDelete && (
-                        <button
-                            onClick={() => onDelete(branch.id)}
-                            className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1"
-                            title={t('common.delete', { defaultValue: 'Löschen' })}
-                        >
-                            <TrashIcon className="h-5 w-5" />
-                        </button>
+                        <div className="relative group">
+                            <button
+                                onClick={() => onDelete(branch.id)}
+                                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1"
+                            >
+                                <TrashIcon className="h-5 w-5" />
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                {t('common.delete', { defaultValue: 'Löschen' })}
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
@@ -446,15 +454,19 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                     {/* Linke Seite: "Neue Niederlassung erstellen"-Button */}
                     <div className="flex items-center">
                         {canCreate && (
-                            <button
-                                onClick={handleCreate}
-                                className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
-                                style={{ width: '30.19px', height: '30.19px' }}
-                                title={t('branches.create', { defaultValue: 'Neue Niederlassung' })}
-                                aria-label={t('branches.create', { defaultValue: 'Neue Niederlassung' })}
-                            >
-                                <PlusIcon className="h-4 w-4" />
-                            </button>
+                            <div className="relative group">
+                                <button
+                                    onClick={handleCreate}
+                                    className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
+                                    style={{ width: '30.19px', height: '30.19px' }}
+                                    aria-label={t('branches.create', { defaultValue: 'Neue Niederlassung' })}
+                                >
+                                    <PlusIcon className="h-4 w-4" />
+                                </button>
+                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                    {t('branches.create', { defaultValue: 'Neue Niederlassung' })}
+                                </div>
+                            </div>
                         )}
                     </div>
                     
@@ -470,18 +482,22 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
-                        <button
-                            className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1 relative`}
-                            onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-                            title={t('common.filter', { defaultValue: 'Filter' })}
-                        >
-                            <FunnelIcon className="w-5 h-5" />
-                            {getActiveFilterCount() > 0 && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
-                                    {getActiveFilterCount()}
-                                </span>
-                            )}
-                        </button>
+                        <div className="relative group ml-1">
+                            <button
+                                className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} relative`}
+                                onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
+                            >
+                                <FunnelIcon className="w-5 h-5" />
+                                {getActiveFilterCount() > 0 && (
+                                    <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                                        {getActiveFilterCount()}
+                                    </span>
+                                )}
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                {t('common.filter', { defaultValue: 'Filter' })}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -833,21 +849,29 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
 
                                         {/* Buttons */}
                                         <div className="flex justify-end pt-4 gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={handleCloseModal}
-                                                className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                                                title={t('common.cancel', { defaultValue: 'Abbrechen' })}
-                                            >
-                                                <XMarkIcon className="h-5 w-5" />
-                                            </button>
-                                            <button
-                                                type="submit"
-                                                className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
-                                                title={editingBranch ? t('common.update', { defaultValue: 'Aktualisieren' }) : t('common.create', { defaultValue: 'Erstellen' })}
-                                            >
-                                                <CheckIcon className="h-5 w-5" />
-                                            </button>
+                                            <div className="relative group">
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCloseModal}
+                                                    className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                                >
+                                                    <XMarkIcon className="h-5 w-5" />
+                                                </button>
+                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                    {t('common.cancel', { defaultValue: 'Abbrechen' })}
+                                                </div>
+                                            </div>
+                                            <div className="relative group">
+                                                <button
+                                                    type="submit"
+                                                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
+                                                >
+                                                    <CheckIcon className="h-5 w-5" />
+                                                </button>
+                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                    {editingBranch ? t('common.update', { defaultValue: 'Aktualisieren' }) : t('common.create', { defaultValue: 'Erstellen' })}
+                                                </div>
+                                            </div>
                                         </div>
                                     </form>
                                 </Dialog.Panel>
@@ -1164,21 +1188,29 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
 
                                 {/* Buttons */}
                                 <div className="flex justify-end pt-4 gap-2 px-6 pb-6 border-t dark:border-gray-700">
-                                    <button
-                                        type="button"
-                                        onClick={handleCloseModal}
-                                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                                        title={t('common.cancel', { defaultValue: 'Abbrechen' })}
-                                    >
-                                        <XMarkIcon className="h-5 w-5" />
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
-                                        title={editingBranch ? t('common.update', { defaultValue: 'Aktualisieren' }) : t('common.create', { defaultValue: 'Erstellen' })}
-                                    >
-                                        <CheckIcon className="h-5 w-5" />
-                                    </button>
+                                    <div className="relative group">
+                                        <button
+                                            type="button"
+                                            onClick={handleCloseModal}
+                                            className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                                        >
+                                            <XMarkIcon className="h-5 w-5" />
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {t('common.cancel', { defaultValue: 'Abbrechen' })}
+                                        </div>
+                                    </div>
+                                    <div className="relative group">
+                                        <button
+                                            type="submit"
+                                            className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
+                                        >
+                                            <CheckIcon className="h-5 w-5" />
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {editingBranch ? t('common.update', { defaultValue: 'Aktualisieren' }) : t('common.create', { defaultValue: 'Erstellen' })}
+                                        </div>
+                                    </div>
                                 </div>
                             </form>
                         </div>

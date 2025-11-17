@@ -353,23 +353,31 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
           {getStatusBadge(lifecycle.status)}
             {/* Offboarding-Start-Button (nur für HR/Admin, nur wenn Status = "active") */}
             {(isHR() || isAdmin()) && lifecycle.status === 'active' && (
-              <button
-                onClick={() => setIsOffboardingStartModalOpen(true)}
-                className="p-2 bg-orange-600 dark:bg-orange-700 text-white rounded-md hover:bg-orange-700 dark:hover:bg-orange-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-                title={t('lifecycle.offboarding.startButton', { defaultValue: 'Offboarding starten' })}
-              >
-                <ArrowRightIcon className="h-5 w-5" />
-              </button>
+              <div className="relative group">
+                <button
+                  onClick={() => setIsOffboardingStartModalOpen(true)}
+                  className="p-2 bg-orange-600 dark:bg-orange-700 text-white rounded-md hover:bg-orange-700 dark:hover:bg-orange-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                >
+                  <ArrowRightIcon className="h-5 w-5" />
+                </button>
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                  {t('lifecycle.offboarding.startButton', { defaultValue: 'Offboarding starten' })}
+                </div>
+              </div>
             )}
             {/* Offboarding-Abschluss-Button (nur für HR/Admin, nur wenn Status = "offboarding") */}
             {(isHR() || isAdmin()) && lifecycle.status === 'offboarding' && (
-              <button
-                onClick={() => setIsOffboardingCompleteModalOpen(true)}
-                className="p-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                title={t('lifecycle.offboarding.complete.button', { defaultValue: 'Offboarding abschließen' })}
-              >
-                <CheckCircleIcon className="h-5 w-5" />
-              </button>
+              <div className="relative group">
+                <button
+                  onClick={() => setIsOffboardingCompleteModalOpen(true)}
+                  className="p-2 bg-red-600 dark:bg-red-700 text-white rounded-md hover:bg-red-700 dark:hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  <CheckCircleIcon className="h-5 w-5" />
+                </button>
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                  {t('lifecycle.offboarding.complete.button', { defaultValue: 'Offboarding abschließen' })}
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -402,13 +410,17 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                 <span className="text-gray-400 italic text-sm">{t('lifecycle.notSet', { defaultValue: 'Nicht gesetzt' })}</span>
               )}
               {(isHR() || isAdmin()) && (
-                <button
-                  onClick={() => handleEditContractDates()}
-                  className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition"
-                  title={t('lifecycle.edit', { defaultValue: 'Bearbeiten' })}
-                >
-                  <PencilIcon className="h-4 w-4" />
-                </button>
+                <div className="relative group">
+                  <button
+                    onClick={() => handleEditContractDates()}
+                    className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition"
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                  </button>
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                    {t('lifecycle.edit', { defaultValue: 'Bearbeiten' })}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -423,13 +435,17 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                 <span className="text-gray-400 italic text-sm">{t('lifecycle.notSet', { defaultValue: 'Nicht gesetzt' })}</span>
               )}
               {(isHR() || isAdmin()) && (
-                <button
-                  onClick={() => handleEditContractDates()}
-                  className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition"
-                  title={t('lifecycle.edit', { defaultValue: 'Bearbeiten' })}
-                >
-                  <PencilIcon className="h-4 w-4" />
-                </button>
+                <div className="relative group">
+                  <button
+                    onClick={() => handleEditContractDates()}
+                    className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded transition"
+                  >
+                    <PencilIcon className="h-4 w-4" />
+                  </button>
+                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                    {t('lifecycle.edit', { defaultValue: 'Bearbeiten' })}
+                  </div>
+                </div>
               )}
             </div>
           </div>
@@ -568,15 +584,19 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
             {t('lifecycle.certificates')}
           </h3>
           {(isHR() || isAdmin()) && (
-            <button
-              onClick={() => setIsCertificateCreateModalOpen(true)}
-              className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
-              style={{ width: '30.19px', height: '30.19px' }}
-              title={t('lifecycle.createCertificate')}
-              aria-label={t('lifecycle.createCertificate')}
-            >
-              <PlusIcon className="h-4 w-4" />
-            </button>
+            <div className="relative group">
+              <button
+                onClick={() => setIsCertificateCreateModalOpen(true)}
+                className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
+                style={{ width: '30.19px', height: '30.19px' }}
+                aria-label={t('lifecycle.createCertificate')}
+              >
+                <PlusIcon className="h-4 w-4" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('lifecycle.createCertificate')}
+              </div>
+            </div>
           )}
         </div>
 
@@ -623,26 +643,34 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
                     {(isHR() || isAdmin()) && (
-                      <button
-                        onClick={() => setEditingCertificate(cert)}
-                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
-                        title={t('lifecycle.edit')}
-                      >
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          onClick={() => setEditingCertificate(cert)}
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('lifecycle.edit')}
+                        </div>
+                      </div>
                     )}
-                    <button
-                      onClick={() => handleDownloadCertificate(cert.id)}
-                      disabled={downloadingCertId === cert.id}
-                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={t('lifecycle.download')}
-                    >
-                      {downloadingCertId === cert.id ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                      ) : (
-                        <ArrowDownTrayIcon className="h-5 w-5" />
-                      )}
-                    </button>
+                    <div className="relative group">
+                      <button
+                        onClick={() => handleDownloadCertificate(cert.id)}
+                        disabled={downloadingCertId === cert.id}
+                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {downloadingCertId === cert.id ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        ) : (
+                          <ArrowDownTrayIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('lifecycle.download')}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -655,15 +683,19 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
         <div className="flex items-center mb-4">
           {(isHR() || isAdmin()) && (
-            <button
-              onClick={() => setIsContractCreateModalOpen(true)}
-              className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center mr-3"
-              style={{ width: '30.19px', height: '30.19px' }}
-              title={t('lifecycle.createContract')}
-              aria-label={t('lifecycle.createContract')}
-            >
-              <PlusIcon className="h-4 w-4" />
-            </button>
+            <div className="relative group mr-3">
+              <button
+                onClick={() => setIsContractCreateModalOpen(true)}
+                className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
+                style={{ width: '30.19px', height: '30.19px' }}
+                aria-label={t('lifecycle.createContract')}
+              >
+                <PlusIcon className="h-4 w-4" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('lifecycle.createContract')}
+              </div>
+            </div>
           )}
           <h3 className="text-lg font-semibold dark:text-white flex items-center">
             <DocumentTextIcon className="h-5 w-5 mr-2" />
@@ -726,26 +758,34 @@ const LifecycleView: React.FC<LifecycleViewProps> = ({ userId, userName }) => {
                   </div>
                   <div className="flex items-center space-x-2 ml-4">
                     {(isHR() || isAdmin()) && (
-                      <button
-                        onClick={() => setEditingContract(contract)}
-                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
-                        title={t('lifecycle.edit')}
-                      >
-                        <PencilIcon className="h-5 w-5" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          onClick={() => setEditingContract(contract)}
+                          className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition"
+                        >
+                          <PencilIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('lifecycle.edit')}
+                        </div>
+                      </div>
                     )}
-                    <button
-                      onClick={() => handleDownloadContract(contract.id)}
-                      disabled={downloadingContractId === contract.id}
-                      className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={t('lifecycle.download')}
-                    >
-                      {downloadingContractId === contract.id ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                      ) : (
-                        <ArrowDownTrayIcon className="h-5 w-5" />
-                      )}
-                    </button>
+                    <div className="relative group">
+                      <button
+                        onClick={() => handleDownloadContract(contract.id)}
+                        disabled={downloadingContractId === contract.id}
+                        className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {downloadingContractId === contract.id ? (
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                        ) : (
+                          <ArrowDownTrayIcon className="h-5 w-5" />
+                        )}
+                      </button>
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {t('lifecycle.download')}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

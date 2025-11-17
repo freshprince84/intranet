@@ -18,6 +18,7 @@ const taskValidation_1 = require("../validation/taskValidation");
 const notificationController_1 = require("./notificationController");
 const organization_1 = require("../middleware/organization");
 const lifecycleService_1 = require("../services/lifecycleService");
+const translations_1 = require("../utils/translations");
 const prisma = new client_1.PrismaClient();
 const userSelect = {
     id: true,
@@ -185,24 +186,30 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         });
         // Benachrichtigung für den Verantwortlichen erstellen, nur wenn ein Benutzer zugewiesen ist
         if (taskData.responsibleId) {
+            const userLang = yield (0, translations_1.getUserLanguage)(taskData.responsibleId);
+            const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'assigned', taskData.title);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: taskData.responsibleId,
-                title: 'Neuer Task zugewiesen',
-                message: `Dir wurde ein neuer Task zugewiesen: ${taskData.title}`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: client_1.NotificationType.task,
                 relatedEntityId: task.id,
                 relatedEntityType: 'create'
             });
         }
         // Benachrichtigung für die Qualitätskontrolle erstellen
-        yield (0, notificationController_1.createNotificationIfEnabled)({
-            userId: taskData.qualityControlId,
-            title: 'Neue Qualitätskontrolle zugewiesen',
-            message: `Du wurdest als Qualitätskontrolle für einen neuen Task zugewiesen: ${taskData.title}`,
-            type: client_1.NotificationType.task,
-            relatedEntityId: task.id,
-            relatedEntityType: 'create'
-        });
+        if (taskData.qualityControlId) {
+            const userLang = yield (0, translations_1.getUserLanguage)(taskData.qualityControlId);
+            const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'quality_control_assigned', taskData.title);
+            yield (0, notificationController_1.createNotificationIfEnabled)({
+                userId: taskData.qualityControlId,
+                title: notificationText.title,
+                message: notificationText.message,
+                type: client_1.NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'create'
+            });
+        }
         res.status(201).json(task);
     }
     catch (error) {
@@ -417,10 +424,12 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                                 console.log(`[updateTask] Starte Lifecycle für User ${onboardingUserId} nach Admin-Onboarding`);
                                 yield lifecycleService_1.LifecycleService.startLifecycleAfterOnboarding(onboardingUserId, task.organizationId);
                                 // Benachrichtigung an User
+                                const userLang = yield (0, translations_1.getUserLanguage)(onboardingUserId);
+                                const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'onboarding_completed', task.title);
                                 yield (0, notificationController_1.createNotificationIfEnabled)({
                                     userId: onboardingUserId,
-                                    title: 'Onboarding abgeschlossen',
-                                    message: 'Ihr Onboarding wurde abgeschlossen. Sie können nun alle Funktionen nutzen.',
+                                    title: notificationText.title,
+                                    message: notificationText.message,
                                     type: client_1.NotificationType.user,
                                     relatedEntityId: onboardingUserId,
                                     relatedEntityType: 'update'
@@ -509,31 +518,39 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
             // Benachrichtigung für den Verantwortlichen, nur wenn ein Benutzer zugewiesen ist
             if (task.responsibleId) {
+                const userLang = yield (0, translations_1.getUserLanguage)(task.responsibleId);
+                const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'status_changed', task.title, currentTask.status, updateData.status);
                 yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: task.responsibleId,
-                    title: 'Task-Status geändert',
-                    message: `Der Status des Tasks "${task.title}" wurde von "${currentTask.status}" zu "${updateData.status}" geändert.`,
+                    title: notificationText.title,
+                    message: notificationText.message,
                     type: client_1.NotificationType.task,
                     relatedEntityId: task.id,
                     relatedEntityType: 'status'
                 });
             }
             // Benachrichtigung für die Qualitätskontrolle
-            yield (0, notificationController_1.createNotificationIfEnabled)({
-                userId: task.qualityControlId,
-                title: 'Task-Status geändert',
-                message: `Der Status des Tasks "${task.title}" wurde von "${currentTask.status}" zu "${updateData.status}" geändert.`,
-                type: client_1.NotificationType.task,
-                relatedEntityId: task.id,
-                relatedEntityType: 'status'
-            });
+            if (task.qualityControlId) {
+                const userLang = yield (0, translations_1.getUserLanguage)(task.qualityControlId);
+                const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'status_changed', task.title, currentTask.status, updateData.status);
+                yield (0, notificationController_1.createNotificationIfEnabled)({
+                    userId: task.qualityControlId,
+                    title: notificationText.title,
+                    message: notificationText.message,
+                    type: client_1.NotificationType.task,
+                    relatedEntityId: task.id,
+                    relatedEntityType: 'status'
+                });
+            }
         }
         // Benachrichtigung bei Änderung des Verantwortlichen
         else if (updateData.responsibleId && updateData.responsibleId !== currentTask.responsibleId) {
+            const userLang = yield (0, translations_1.getUserLanguage)(updateData.responsibleId);
+            const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'assigned', task.title);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: updateData.responsibleId,
-                title: 'Task zugewiesen',
-                message: `Dir wurde der Task "${task.title}" zugewiesen.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: client_1.NotificationType.task,
                 relatedEntityId: task.id,
                 relatedEntityType: 'update'
@@ -541,10 +558,12 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         // Benachrichtigung bei Änderung der Qualitätskontrolle
         else if (updateData.qualityControlId && updateData.qualityControlId !== currentTask.qualityControlId) {
+            const userLang = yield (0, translations_1.getUserLanguage)(updateData.qualityControlId);
+            const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'quality_control_assigned', task.title);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: updateData.qualityControlId,
-                title: 'Qualitätskontrolle zugewiesen',
-                message: `Du wurdest als Qualitätskontrolle für den Task "${task.title}" zugewiesen.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: client_1.NotificationType.task,
                 relatedEntityId: task.id,
                 relatedEntityType: 'update'
@@ -554,10 +573,12 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         else if (Object.keys(updateData).length > 0) {
             // Benachrichtigung für den Verantwortlichen, nur wenn ein Benutzer zugewiesen ist
             if (task.responsibleId) {
+                const userLang = yield (0, translations_1.getUserLanguage)(task.responsibleId);
+                const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'updated', task.title);
                 yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: task.responsibleId,
-                    title: 'Task aktualisiert',
-                    message: `Der Task "${task.title}" wurde aktualisiert.`,
+                    title: notificationText.title,
+                    message: notificationText.message,
                     type: client_1.NotificationType.task,
                     relatedEntityId: task.id,
                     relatedEntityType: 'update'
@@ -565,10 +586,12 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
             // Benachrichtigung für die Qualitätskontrolle
             if (task.qualityControlId && (!task.responsibleId || task.responsibleId !== task.qualityControlId)) {
+                const userLang = yield (0, translations_1.getUserLanguage)(task.qualityControlId);
+                const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'updated', task.title);
                 yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: task.qualityControlId,
-                    title: 'Task aktualisiert',
-                    message: `Der Task "${task.title}" wurde aktualisiert.`,
+                    title: notificationText.title,
+                    message: notificationText.message,
                     type: client_1.NotificationType.task,
                     relatedEntityId: task.id,
                     relatedEntityType: 'update'
@@ -632,10 +655,12 @@ const deleteTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         });
         // Benachrichtigung für den Verantwortlichen, nur wenn ein Benutzer zugewiesen ist
         if (task.responsibleId) {
+            const userLang = yield (0, translations_1.getUserLanguage)(task.responsibleId);
+            const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'deleted', task.title);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: task.responsibleId,
-                title: 'Task gelöscht',
-                message: `Der Task "${task.title}" wurde gelöscht.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: client_1.NotificationType.task,
                 relatedEntityId: taskId,
                 relatedEntityType: 'delete'
@@ -643,10 +668,12 @@ const deleteTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         // Benachrichtigung für die Qualitätskontrolle
         if (task.qualityControlId && (!task.responsibleId || task.responsibleId !== task.qualityControlId)) {
+            const userLang = yield (0, translations_1.getUserLanguage)(task.qualityControlId);
+            const notificationText = (0, translations_1.getTaskNotificationText)(userLang, 'deleted', task.title);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: task.qualityControlId,
-                title: 'Task gelöscht',
-                message: `Der Task "${task.title}" wurde gelöscht.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: client_1.NotificationType.task,
                 relatedEntityId: taskId,
                 relatedEntityType: 'delete'

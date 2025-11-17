@@ -254,8 +254,8 @@
       "status": "Status",
       "type": "Typ",
       "requestedByResponsible": "Von / Für",
-      "requestedBy": "Von",
-      "responsible": "Für",
+      "requestedBy": "De:",
+      "responsible": "Para:",
       "branch": "Niederlassung",
       "dueDate": "Fälligkeit",
       "actions": "Aktionen"
@@ -879,6 +879,10 @@
       "isEqual": "ist gleich",
       "greaterThan": "länger als",
       "lessThan": "kürzer als"
+    },
+    "logicalOperators": {
+      "and": "UND",
+      "or": "ODER"
     }
   },
   "tableColumn": {

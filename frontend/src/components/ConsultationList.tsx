@@ -29,6 +29,7 @@ import LinkTaskModal from './LinkTaskModal.tsx';
 import FilterPane from './FilterPane.tsx';
 import SavedFilterTags from './SavedFilterTags.tsx';
 import { FilterCondition } from './FilterRow.tsx';
+import { applyFilters, evaluateDateCondition } from '../utils/filterLogic.ts';
 import * as consultationApi from '../api/consultationApi.ts';
 import * as clientApi from '../api/clientApi.ts';
 import { format } from 'date-fns';
@@ -645,126 +646,108 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
       );
     }
 
-    // Erweiterte Filter
+    // Erweiterte Filter mit zentraler Filter-Logik
     if (filterConditions.length > 0) {
-      filtered = filtered.filter((consultation) => {
-        let result = true;
-        
-        for (let i = 0; i < filterConditions.length; i++) {
-          const condition = filterConditions[i];
-          let conditionResult = false;
+      // Column-Evaluatoren für Consultations
+      const columnEvaluators: any = {
+        'client': (consultation: Consultation, cond: FilterCondition) => {
+          const clientName = consultation.client?.name?.toLowerCase() || '';
+          const value = (cond.value as string || '').toLowerCase();
+          if (cond.operator === 'contains') return clientName.includes(value);
+          if (cond.operator === 'equals') return clientName === value;
+          if (cond.operator === 'startsWith') return clientName.startsWith(value);
+          if (cond.operator === 'endsWith') return clientName.endsWith(value);
+          return null;
+        },
+        'branch': (consultation: Consultation, cond: FilterCondition) => {
+          const branchName = consultation.branch?.name?.toLowerCase() || '';
+          const value = (cond.value as string || '').toLowerCase();
+          if (cond.operator === 'contains') return branchName.includes(value);
+          if (cond.operator === 'equals') return branchName === value;
+          if (cond.operator === 'startsWith') return branchName.startsWith(value);
+          if (cond.operator === 'endsWith') return branchName.endsWith(value);
+          return null;
+        },
+        'notes': (consultation: Consultation, cond: FilterCondition) => {
+          const notes = consultation.notes?.toLowerCase() || '';
+          const value = (cond.value as string || '').toLowerCase();
+          if (cond.operator === 'contains') return notes.includes(value);
+          if (cond.operator === 'equals') return notes === value;
+          if (cond.operator === 'startsWith') return notes.startsWith(value);
+          if (cond.operator === 'endsWith') return notes.endsWith(value);
+          return null;
+        },
+        'startTime': (consultation: Consultation, cond: FilterCondition) => {
+          return evaluateDateCondition(consultation.startTime, cond);
+        },
+        'duration': (consultation: Consultation, cond: FilterCondition) => {
+          const duration = calculateDurationInMinutes(consultation.startTime, consultation.endTime);
+          const filterValue = Number(cond.value) * 60; // Convert hours to minutes
+          if (cond.operator === 'greater_than') return duration > filterValue;
+          if (cond.operator === 'less_than') return duration < filterValue;
+          if (cond.operator === 'equals') return Math.abs(duration - filterValue) < 30; // 30-minute tolerance
+          return null;
+        },
+        'invoiceStatus': (consultation: Consultation, cond: FilterCondition) => {
+          const isInvoiced = isConsultationInvoiced(consultation);
+          const isInMonthlyReport = isConsultationInMonthlyReport(consultation);
+          const filterValueLower = String(cond.value).toLowerCase();
           
-          switch (condition.column) {
-            case 'client':
-              conditionResult = consultation.client?.name?.toLowerCase().includes(String(condition.value).toLowerCase()) || false;
-              break;
-            case 'branch':
-              conditionResult = consultation.branch?.name?.toLowerCase().includes(String(condition.value).toLowerCase()) || false;
-              break;
-            case 'notes':
-              conditionResult = consultation.notes?.toLowerCase().includes(String(condition.value).toLowerCase()) || false;
-              break;
-            case 'startTime':
-              const consultationDate = new Date(consultation.startTime).toISOString().split('T')[0];
-              let filterDate = String(condition.value);
-              
-              // Dynamische Datums-Marker verarbeiten
-              if (filterDate === '__TODAY__') {
-                // ✅ KORREKT: Lokale Zeit verwenden (Timezone-Dokumentation befolgen)
-                const localToday = new Date();
-                const correctedToday = new Date(localToday.getTime() - localToday.getTimezoneOffset() * 60000);
-                filterDate = correctedToday.toISOString().split('T')[0];
-              } else if (filterDate === '__WEEK_FROM_TODAY__') {
-                // ✅ KORREKT: Lokale Zeit verwenden (Timezone-Dokumentation befolgen)
-                const localToday = new Date();
-                const correctedToday = new Date(localToday.getTime() - localToday.getTimezoneOffset() * 60000);
-                const weekFromToday = new Date(correctedToday);
-                weekFromToday.setDate(correctedToday.getDate() + 7); // Heute + 7 Tage
-                filterDate = weekFromToday.toISOString().split('T')[0];
-              }
-              
-              switch (condition.operator) {
-                case 'after':
-                  conditionResult = consultationDate >= filterDate;
-                  break;
-                case 'before':
-                  conditionResult = consultationDate < filterDate;
-                  break;
-                case 'equals':
-                  conditionResult = consultationDate === filterDate;
-                  break;
-                default:
-                  conditionResult = false;
-              }
-              break;
-            case 'duration':
-              const duration = calculateDurationInMinutes(consultation.startTime, consultation.endTime);
-              const filterValue = Number(condition.value) * 60; // Convert hours to minutes
-              switch (condition.operator) {
-                case 'greater_than':
-                  conditionResult = duration > filterValue;
-                  break;
-                case 'less_than':
-                  conditionResult = duration < filterValue;
-                  break;
-                case 'equals':
-                  conditionResult = Math.abs(duration - filterValue) < 30; // 30-minute tolerance
-                  break;
-                default:
-                  conditionResult = false;
-              }
-              break;
-            case 'invoiceStatus':
-              const isInvoiced = isConsultationInvoiced(consultation);
-              const isInMonthlyReport = isConsultationInMonthlyReport(consultation);
-              const filterValueLower = String(condition.value).toLowerCase();
-              
-              if (filterValueLower === 'abgerechnet' || filterValueLower === 'invoiced' || filterValueLower === 'ja') {
-                conditionResult = isInvoiced || isInMonthlyReport;
-              } else if (filterValueLower === 'nicht abgerechnet' || filterValueLower === 'not invoiced' || filterValueLower === 'nein') {
-                conditionResult = !isInvoiced && !isInMonthlyReport;
-              } else if (filterValueLower === 'einzelrechnung' || filterValueLower === 'invoice') {
-                conditionResult = isInvoiced;
-              } else if (filterValueLower === 'monatsbericht' || filterValueLower === 'monthly report') {
-                conditionResult = isInMonthlyReport;
-              } else {
-                // Exact status match wenn ein spezifischer Status eingegeben wurde
-                if (isInvoiced) {
-                  const invoiceInfo = getConsultationInvoiceInfo(consultation);
-                  const statusText = invoiceInfo ? getInvoiceStatusText(invoiceInfo.status as any).toLowerCase() : '';
-                  conditionResult = statusText.includes(filterValueLower);
-                } else if (isInMonthlyReport) {
-                  const monthlyReportInfo = getConsultationMonthlyReportInfo(consultation);
-                  if (monthlyReportInfo) {
-                    const statusText = monthlyReportInfo.status === 'GENERATED' ? 'erstellt' : 
-                                     monthlyReportInfo.status === 'SENT' ? 'gesendet' : 'archiviert';
-                    conditionResult = statusText.includes(filterValueLower);
-                  } else {
-                    conditionResult = false;
-                  }
-                } else {
-                  conditionResult = false;
-                }
-              }
-              break;
-            default:
-              conditionResult = false;
-          }
-          
-          if (i === 0) {
-            result = conditionResult;
+          if (filterValueLower === 'abgerechnet' || filterValueLower === 'invoiced' || filterValueLower === 'ja') {
+            return isInvoiced || isInMonthlyReport;
+          } else if (filterValueLower === 'nicht abgerechnet' || filterValueLower === 'not invoiced' || filterValueLower === 'nein') {
+            return !isInvoiced && !isInMonthlyReport;
+          } else if (filterValueLower === 'einzelrechnung' || filterValueLower === 'invoice') {
+            return isInvoiced;
+          } else if (filterValueLower === 'monatsbericht' || filterValueLower === 'monthly report') {
+            return isInMonthlyReport;
           } else {
-            const operator = filterLogicalOperators[i - 1];
-            if (operator === 'AND') {
-              result = result && conditionResult;
+            // Exact status match wenn ein spezifischer Status eingegeben wurde
+            if (isInvoiced) {
+              const invoiceInfo = getConsultationInvoiceInfo(consultation);
+              const statusText = invoiceInfo ? getInvoiceStatusText(invoiceInfo.status as any).toLowerCase() : '';
+              return statusText.includes(filterValueLower);
+            } else if (isInMonthlyReport) {
+              const monthlyReportInfo = getConsultationMonthlyReportInfo(consultation);
+              if (monthlyReportInfo) {
+                const statusText = monthlyReportInfo.status === 'GENERATED' ? 'erstellt' : 
+                                 monthlyReportInfo.status === 'SENT' ? 'gesendet' : 'archiviert';
+                return statusText.includes(filterValueLower);
+              } else {
+                return false;
+              }
             } else {
-              result = result || conditionResult;
+              return false;
             }
           }
         }
-        
-        return result;
-      });
+      };
+
+      const getFieldValue = (consultation: Consultation, columnId: string): any => {
+        switch (columnId) {
+          case 'client': return consultation.client?.name || '';
+          case 'branch': return consultation.branch?.name || '';
+          case 'notes': return consultation.notes || '';
+          case 'startTime': return consultation.startTime;
+          case 'duration': return calculateDurationInMinutes(consultation.startTime, consultation.endTime);
+          case 'invoiceStatus': {
+            const isInvoiced = isConsultationInvoiced(consultation);
+            const isInMonthlyReport = isConsultationInMonthlyReport(consultation);
+            if (isInvoiced) return 'invoiced';
+            if (isInMonthlyReport) return 'monthly_report';
+            return 'not_invoiced';
+          }
+          default: return (consultation as any)[columnId];
+        }
+      };
+
+      filtered = applyFilters(
+        filtered,
+        filterConditions,
+        filterLogicalOperators,
+        getFieldValue,
+        columnEvaluators
+      );
     }
 
     return filtered;
@@ -937,28 +920,36 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             
-            <button
-              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
-              onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-              title={t('consultations.advancedFilters')}
-            >
-              <FunnelIcon className="h-5 w-5" />
-              {getActiveFilterCount() > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
-                  {getActiveFilterCount()}
-                </span>
-              )}
-            </button>
+            <div className="relative group ml-1">
+              <button
+                className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} relative`}
+                onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+              >
+                <FunnelIcon className="h-5 w-5" />
+                {getActiveFilterCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center">
+                    {getActiveFilterCount()}
+                  </span>
+                )}
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('consultations.advancedFilters')}
+              </div>
+            </div>
 
             {/* Rechnung erstellen Button */}
             {canCreateInvoice() && (
-              <button
-                onClick={handleCreateInvoice}
-                className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors ml-2"
-                title={t('consultations.createInvoiceFromFiltered')}
-              >
-                <DocumentTextIcon className="h-5 w-5" />
-              </button>
+              <div className="relative group ml-2">
+                <button
+                  onClick={handleCreateInvoice}
+                  className="p-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors"
+                >
+                  <DocumentTextIcon className="h-5 w-5" />
+                </button>
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                  {t('consultations.createInvoiceFromFiltered')}
+                </div>
+              </div>
             )}
           </div>
         </div>
@@ -1084,13 +1075,17 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                     </div>
                                     {billingStatus.info && 'invoiceNumber' in billingStatus.info && (
                                       <div className="flex items-center space-x-1">
-                                        <button
-                                          onClick={() => navigateToInvoices(billingStatus.info?.id)}
-                                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium hover:opacity-80 cursor-pointer ${getInvoiceStatusColor(billingStatus.info.status as any)}`}
-                                          title={`Rechnung ${billingStatus.info.invoiceNumber} vom ${format(new Date(billingStatus.info.issueDate), 'dd.MM.yyyy', { locale: de })}`}
-                                        >
-                                          {getInvoiceStatusText(billingStatus.info.status as any)}
-                                        </button>
+                                        <div className="relative group">
+                                          <button
+                                            onClick={() => navigateToInvoices(billingStatus.info?.id)}
+                                            className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium hover:opacity-80 cursor-pointer ${getInvoiceStatusColor(billingStatus.info.status as any)}`}
+                                          >
+                                            {getInvoiceStatusText(billingStatus.info.status as any)}
+                                          </button>
+                                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {`Rechnung ${billingStatus.info.invoiceNumber} vom ${format(new Date(billingStatus.info.issueDate), 'dd.MM.yyyy', { locale: de })}`}
+                                          </div>
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -1110,14 +1105,18 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                     </div>
                                     {billingStatus.info && 'reportNumber' in billingStatus.info && (
                                       <div className="flex items-center space-x-1">
-                                        <button 
-                                          onClick={() => navigateToMonthlyReports(billingStatus.info?.id)}
-                                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 hover:opacity-80 cursor-pointer"
-                                          title={`Monatsbericht ${billingStatus.info.reportNumber}`}
-                                        >
-                                          {billingStatus.info.status === 'GENERATED' ? t('analytics.monthlyReports.status.generated') : 
-                                           billingStatus.info.status === 'SENT' ? t('analytics.monthlyReports.status.sent') : t('analytics.monthlyReports.status.archived')}
-                                        </button>
+                                        <div className="relative group">
+                                          <button 
+                                            onClick={() => navigateToMonthlyReports(billingStatus.info?.id)}
+                                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300 hover:opacity-80 cursor-pointer"
+                                          >
+                                            {billingStatus.info.status === 'GENERATED' ? t('analytics.monthlyReports.status.generated') : 
+                                             billingStatus.info.status === 'SENT' ? t('analytics.monthlyReports.status.sent') : t('analytics.monthlyReports.status.archived')}
+                                          </button>
+                                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {`Monatsbericht ${billingStatus.info.reportNumber}`}
+                                          </div>
+                                        </div>
                                       </div>
                                     )}
                                   </div>
@@ -1140,22 +1139,30 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                     onChange={(e) => setEditingTimeValue(e.target.value)}
                                     className="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 w-full"
                                   />
-                                  <button
-                                    onClick={() => handleTimeSave(consultation.id)}
-                                    className="p-0.5 text-green-600 hover:text-green-700"
-                                    title={t('common.save')}
-                                  >
-                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    onClick={handleTimeCancel}
-                                    className="p-0.5 text-red-600 hover:text-red-700"
-                                    title={t('common.cancel')}
-                                  >
-                                    <XMarkIcon className="h-3 w-3" />
-                                  </button>
+                                  <div className="relative group">
+                                    <button
+                                      onClick={() => handleTimeSave(consultation.id)}
+                                      className="p-0.5 text-green-600 hover:text-green-700"
+                                    >
+                                      <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                      {t('common.save')}
+                                    </div>
+                                  </div>
+                                  <div className="relative group">
+                                    <button
+                                      onClick={handleTimeCancel}
+                                      className="p-0.5 text-red-600 hover:text-red-700"
+                                    >
+                                      <XMarkIcon className="h-3 w-3" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                      {t('common.cancel')}
+                                    </div>
+                                  </div>
                                 </div>
                               ) : editingTimeId === consultation.id && editingTimeType === 'endTime' ? (
                                 <div className="flex items-center space-x-1">
@@ -1165,22 +1172,30 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                     onChange={(e) => setEditingTimeValue(e.target.value)}
                                     className="text-xs rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700 w-full"
                                   />
-                                  <button
-                                    onClick={() => handleTimeSave(consultation.id)}
-                                    className="p-0.5 text-green-600 hover:text-green-700"
-                                    title={t('common.save')}
-                                  >
-                                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    onClick={handleTimeCancel}
-                                    className="p-0.5 text-red-600 hover:text-red-700"
-                                    title={t('common.cancel')}
-                                  >
-                                    <XMarkIcon className="h-3 w-3" />
-                                  </button>
+                                  <div className="relative group">
+                                    <button
+                                      onClick={() => handleTimeSave(consultation.id)}
+                                      className="p-0.5 text-green-600 hover:text-green-700"
+                                    >
+                                      <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                      {t('common.save')}
+                                    </div>
+                                  </div>
+                                  <div className="relative group">
+                                    <button
+                                      onClick={handleTimeCancel}
+                                      className="p-0.5 text-red-600 hover:text-red-700"
+                                    >
+                                      <XMarkIcon className="h-3 w-3" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                      {t('common.cancel')}
+                                    </div>
+                                  </div>
                                 </div>
                               ) : (
                                 <div className="flex items-center space-x-1">
@@ -1257,22 +1272,30 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                           {/* Action Icons in der rechten oberen Ecke */}
                           <div className="absolute top-0 right-0 flex items-center space-x-1 z-10">
                             {hasPermission('consultations', 'write') && (
-                              <button
-                                onClick={() => handleLinkTask(consultation.id)}
-                                className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded"
-                                title={t('consultations.linkTask')}
-                              >
-                                <LinkIcon className="h-4 w-4" />
-                              </button>
+                              <div className="relative group">
+                                <button
+                                  onClick={() => handleLinkTask(consultation.id)}
+                                  className="p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 rounded"
+                                >
+                                  <LinkIcon className="h-4 w-4" />
+                                </button>
+                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                  {t('consultations.linkTask')}
+                                </div>
+                              </div>
                             )}
                             {hasPermission('consultations', 'write') && consultation.endTime && (
-                              <button
-                                onClick={() => handleDeleteConsultation(consultation.id)}
-                                className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded"
-                                title={t('consultations.delete')}
-                              >
-                                <TrashIcon className="h-4 w-4" />
-                              </button>
+                              <div className="relative group">
+                                <button
+                                  onClick={() => handleDeleteConsultation(consultation.id)}
+                                  className="p-1 text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded"
+                                >
+                                  <TrashIcon className="h-4 w-4" />
+                                </button>
+                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                  {t('consultations.delete')}
+                                </div>
+                              </div>
                             )}
                           </div>
                           
@@ -1287,20 +1310,28 @@ const ConsultationList = forwardRef<ConsultationListRef, ConsultationListProps>(
                                 placeholder={t('consultations.notesPlaceholder')}
                               />
                               <div className="flex justify-end space-x-2">
-                                <button
-                                  onClick={handleNotesCancel}
-                                  className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                                  title={t('common.cancel')}
-                                >
-                                  <XMarkIcon className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => handleNotesSave(consultation.id)}
-                                  className="p-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-md"
-                                  title={t('common.save')}
-                                >
-                                  <CheckIcon className="h-4 w-4" />
-                                </button>
+                                <div className="relative group">
+                                  <button
+                                    onClick={handleNotesCancel}
+                                    className="p-1.5 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                                  >
+                                    <XMarkIcon className="h-4 w-4" />
+                                  </button>
+                                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                    {t('common.cancel')}
+                                  </div>
+                                </div>
+                                <div className="relative group">
+                                  <button
+                                    onClick={() => handleNotesSave(consultation.id)}
+                                    className="p-1.5 bg-blue-600 text-white hover:bg-blue-700 rounded-md"
+                                  >
+                                    <CheckIcon className="h-4 w-4" />
+                                  </button>
+                                  <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                    {t('common.save')}
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           ) : (

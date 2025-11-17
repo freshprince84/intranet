@@ -7,6 +7,7 @@ import { CheckIcon, PlusIcon, PencilIcon, DocumentTextIcon, UserCircleIcon, Shie
 import useMessage from '../hooks/useMessage.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import IdentificationDocumentList from './IdentificationDocumentList.tsx';
+import IdentificationDocumentForm from './IdentificationDocumentForm.tsx';
 import LifecycleView from './LifecycleView.tsx';
 import { useSidepane } from '../contexts/SidepaneContext.tsx';
 
@@ -95,6 +96,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
   const [isMobile, setIsMobile] = useState<boolean>(window.innerWidth < 640);
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const { openSidepane, closeSidepane } = useSidepane();
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [newUserFormData, setNewUserFormData] = useState({
     email: '',
     password: '',
@@ -403,23 +405,19 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
       // Validierung
       if (!userFormData.username?.trim()) throw new Error('Benutzername ist erforderlich');
       if (!userFormData.email?.trim()) throw new Error('E-Mail ist erforderlich');
-      if (!userFormData.firstName?.trim()) throw new Error('Vorname ist erforderlich');
-      if (!userFormData.lastName?.trim()) throw new Error('Nachname ist erforderlich');
+      // firstName, lastName, birthday werden nur von KI aus Dokument gesetzt, nicht manuell validiert
 
       // Bereite die Daten korrekt vor
+      // Contract, Salary, Normal Working Hours werden zu Lifecycle verschoben
+      // firstName, lastName, birthday werden nur von KI aus Dokument gesetzt, nicht manuell editierbar
       const dataToSend = {
-        ...userFormData,
-        // Korrekte Behandlung von numerischen Werten
-        salary: userFormData.salary === null || userFormData.salary === undefined || userFormData.salary === '' as any
-          ? null 
-          : typeof userFormData.salary === 'string' 
-            ? parseFloat(userFormData.salary) 
-            : userFormData.salary,
-        normalWorkingHours: userFormData.normalWorkingHours === null || userFormData.normalWorkingHours === undefined || userFormData.normalWorkingHours === '' as any
-          ? 7.6 
-          : typeof userFormData.normalWorkingHours === 'string' 
-            ? parseFloat(userFormData.normalWorkingHours) 
-            : userFormData.normalWorkingHours,
+        username: userFormData.username,
+        email: userFormData.email,
+        bankDetails: userFormData.bankDetails || null,
+        gender: userFormData.gender || null,
+        phoneNumber: userFormData.phoneNumber || null,
+        language: userFormData.language || null,
+        // Payroll-Felder bleiben (sind separate Sektion)
         hourlyRate: userFormData.hourlyRate === null || userFormData.hourlyRate === undefined || userFormData.hourlyRate === '' as any
           ? null 
           : typeof userFormData.hourlyRate === 'string' 
@@ -430,7 +428,8 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
           : typeof userFormData.monthlySalary === 'string' 
             ? parseFloat(userFormData.monthlySalary) 
             : userFormData.monthlySalary,
-        birthday: userFormData.birthday || null
+        payrollCountry: userFormData.payrollCountry || null,
+        contractType: userFormData.contractType || null,
       };
 
       console.log('Sende Daten zum Server:', dataToSend);
@@ -463,11 +462,6 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
         
         showMessage('Benutzerprofil erfolgreich aktualisiert', 'success');
         setIsEditingUser(false);
-        
-        // Lifecycle-Daten neu laden, falls Vertragstyp geändert wurde
-        if (dataToSend.contract !== undefined) {
-          setLifecycleRefreshKey(prev => prev + 1);
-        }
       }
     } catch (err) {
       console.error('Fehler beim Speichern der Benutzerdaten:', err);
@@ -742,15 +736,19 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
           {/* Linke Seite: "Neuer Benutzer"-Button */}
           <div className="flex items-center pt-8">
             {isAdmin() && (
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
-                style={{ width: '30.19px', height: '30.19px' }}
-                title={t('users.create')}
-                aria-label={t('users.create')}
-              >
-                <PlusIcon className="h-4 w-4" />
-              </button>
+              <div className="relative group">
+                <button
+                  onClick={() => setIsCreateModalOpen(true)}
+                  className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
+                  style={{ width: '30.19px', height: '30.19px' }}
+                  aria-label={t('users.create')}
+                >
+                  <PlusIcon className="h-4 w-4" />
+                </button>
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                  {t('users.create')}
+                </div>
+              </div>
             )}
           </div>
           
@@ -867,8 +865,9 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
           {/* Benutzerdetails Formular */}
           {activeUserTab === 'details' && (
               <form onSubmit={handleUserSubmit} className="p-6">
-              {/* Bestehender Code für Benutzerdetails */}
+              {/* Benutzerdetails - gleiche Reihenfolge wie Profile.tsx */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {/* 1. Username, Email (nebeneinander - 2 Spalten) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('users.form.username')}
@@ -895,45 +894,247 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   />
                 </div>
 
+                {/* 2. Language (allein - 1 Spalte) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('users.form.firstName')}
+                    {t('profile.language')} <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    name="firstName"
-                    value={userFormData.firstName || ''}
+                  <select
+                    name="language"
+                    value={userFormData.language || 'es'}
                     onChange={handleUserInputChange}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  />
+                    required
+                  >
+                    {LANGUAGES.map((language) => (
+                      <option key={language.code} value={language.code}>
+                        {language.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
 
+                {/* 3. Dokumenten-Upload (prominent - volle Breite) */}
+                {selectedUser && (
+                  <div className="sm:col-span-2">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-1">
+                            {t('profile.identificationDocument') || 'Identifikationsdokument'}
+                          </h3>
+                          <p className="text-xs text-blue-700 dark:text-blue-300">
+                            {t('profile.uploadDocumentHint') || 'Bitte laden Sie das Identifikationsdokument (Cédula oder Pasaporte) hoch. Die Felder werden automatisch ausgefüllt.'}
+                          </p>
+                        </div>
+                        {!showDocumentUpload && (
+                          <button
+                            type="button"
+                            onClick={() => setShowDocumentUpload(true)}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
+                          >
+                            <DocumentTextIcon className="h-5 w-5 inline mr-2" />
+                            {t('profile.uploadDocument') || 'Dokument hochladen'}
+                          </button>
+                        )}
+                      </div>
+                      {showDocumentUpload && (
+                        <div className="mt-4">
+                          <IdentificationDocumentForm
+                            userId={selectedUser.id}
+                            onDocumentSaved={async () => {
+                              setShowDocumentUpload(false);
+                              await fetchUserDetails(selectedUser.id); // Aktualisiere Profil nach Upload
+                              showMessage('Dokument erfolgreich hochgeladen. Felder werden automatisch ausgefüllt.', 'success');
+                            }}
+                            onCancel={() => setShowDocumentUpload(false)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. ID-Dokument-Daten (readonly, alle Felder - korrekte Reihenfolge) */}
+                {selectedUser.identificationDocuments && selectedUser.identificationDocuments.length > 0 && (
+                  <>
+                    {(() => {
+                      const latestDoc = selectedUser.identificationDocuments[0];
+                      return (
+                        <>
+                          {/* 1. Vorname */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              {t('users.form.firstName')}
+                            </label>
+                            <input
+                              type="text"
+                              value={selectedUser.firstName || ''}
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                              readOnly
+                            />
+                          </div>
+
+                          {/* 2. Nachname */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              {t('users.form.lastName')}
+                            </label>
+                            <input
+                              type="text"
+                              value={selectedUser.lastName || ''}
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                              readOnly
+                            />
+                          </div>
+
+                          {/* 3. Geburtsdatum */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              {t('profile.birthday')}
+                            </label>
+                            <input
+                              type="text"
+                              value={selectedUser.birthday ? new Date(selectedUser.birthday).toISOString().split('T')[0] : ''}
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                              readOnly
+                            />
+                          </div>
+
+                          {/* 4. Land */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              {t('profile.country')}
+                            </label>
+                            <input
+                              type="text"
+                              value={selectedUser.country ? COUNTRIES.find(c => c.code === selectedUser.country)?.name || selectedUser.country : ''}
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                              readOnly
+                            />
+                          </div>
+
+                          {/* 5. Geschlecht (editierbar, falls KI nicht richtig erkannt hat) */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              {t('profile.gender')}
+                            </label>
+                            <select
+                              name="gender"
+                              value={userFormData.gender || ''}
+                              onChange={handleUserInputChange}
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
+                            >
+                              <option value="">{t('profile.selectGender')}</option>
+                              <option value="male">{t('profile.genderMale')}</option>
+                              <option value="female">{t('profile.genderFemale')}</option>
+                              <option value="other">{t('profile.genderOther')}</option>
+                            </select>
+                          </div>
+
+                          {/* 6. Dokument-Typ */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              {t('profile.identificationType')}
+                            </label>
+                            <input
+                              type="text"
+                              value={
+                                latestDoc.documentType
+                                  ? (() => {
+                                      const typeMap: Record<string, string> = {
+                                        passport: t('identificationDocuments.types.passport'),
+                                        national_id: t('identificationDocuments.types.national_id'),
+                                        driving_license: t('identificationDocuments.types.driving_license'),
+                                        residence_permit: t('identificationDocuments.types.residence_permit'),
+                                        work_permit: t('identificationDocuments.types.work_permit'),
+                                        tax_id: t('identificationDocuments.types.tax_id'),
+                                        social_security: t('identificationDocuments.types.social_security'),
+                                      };
+                                      return typeMap[latestDoc.documentType] || latestDoc.documentType;
+                                    })()
+                                  : ''
+                              }
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                              readOnly
+                            />
+                          </div>
+
+                          {/* 7. Dokument-Nummer */}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                              {t('profile.identificationNumber')}
+                            </label>
+                            <input
+                              type="text"
+                              value={selectedUser.identificationNumber || latestDoc.documentNumber || ''}
+                              disabled
+                              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                              readOnly
+                            />
+                          </div>
+
+                          {/* 8. Ausstellungsdatum */}
+                          {latestDoc.issueDate && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                {t('profile.identificationIssueDate') || 'Ausstellungsdatum'}
+                              </label>
+                              <input
+                                type="text"
+                                value={new Date(latestDoc.issueDate).toISOString().split('T')[0]}
+                                disabled
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                                readOnly
+                              />
+                            </div>
+                          )}
+
+                          {/* 9. Ablaufdatum */}
+                          {latestDoc.expiryDate && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                {t('profile.identificationExpiryDate')}
+                              </label>
+                              <input
+                                type="text"
+                                value={new Date(latestDoc.expiryDate).toISOString().split('T')[0]}
+                                disabled
+                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white bg-gray-100 dark:bg-gray-800"
+                                readOnly
+                              />
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </>
+                )}
+
+                {/* 5. Phone Number (allein - 1 Spalte, da Geschlecht jetzt in ID-Dokument-Daten) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('users.form.lastName')}
+                    {t('profile.phoneNumber')}
                   </label>
                   <input
-                    type="text"
-                    name="lastName"
-                    value={userFormData.lastName || ''}
+                    type="tel"
+                    name="phoneNumber"
+                    value={userFormData.phoneNumber || ''}
                     onChange={handleUserInputChange}
+                    placeholder="+573001234567"
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
                   />
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {t('profile.phoneNumberHint')}
+                  </p>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('profile.birthday')}
-                  </label>
-                  <input
-                    type="date"
-                    name="birthday"
-                    value={userFormData.birthday || ''}
-                    onChange={handleUserInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-
+                {/* 6. Finanzdaten (Bank Details - 1 Spalte) */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     {t('profile.bankDetails')}
@@ -947,87 +1148,7 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('profile.contract')}
-                  </label>
-                  <select
-                    name="contract"
-                    value={userFormData.contract || ''}
-                    onChange={handleUserInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  >
-                    <option value="">{t('common.pleaseSelect', { defaultValue: 'Bitte auswählen...' })}</option>
-                    {CONTRACT_TYPES.map((type) => (
-                      <option key={type.code} value={type.code}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('profile.salary')}
-                  </label>
-                  <input
-                    type="number"
-                    name="salary"
-                    value={userFormData.salary === null || userFormData.salary === undefined ? '' : userFormData.salary}
-                    onChange={handleUserInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('users.form.normalWorkingHours')}
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    name="normalWorkingHours"
-                    value={userFormData.normalWorkingHours === null || userFormData.normalWorkingHours === undefined ? '7.6' : userFormData.normalWorkingHours}
-                    onChange={handleUserInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('profile.country')}
-                  </label>
-                  <select
-                    name="country"
-                    value={userFormData.country || 'CO'}
-                    onChange={handleUserInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  >
-                    {COUNTRIES.map((country) => (
-                      <option key={country.code} value={country.code}>
-                        {country.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    {t('profile.language')}
-                  </label>
-                  <select
-                    name="language"
-                    value={userFormData.language || 'es'}
-                    onChange={handleUserInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md dark:bg-gray-700 dark:text-white"
-                  >
-                    {LANGUAGES.map((language) => (
-                      <option key={language.code} value={language.code}>
-                        {language.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* Contract, Salary, Normal Working Hours ENTFERNEN - werden zu Lifecycle verschoben */}
               </div>
 
               {/* Lohnabrechnung-Einstellungen */}
@@ -1117,21 +1238,29 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
 
               {isEditingUser && (
                 <div className="mt-4 flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={handleCancelEdit}
-                    className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                    title={t('common.cancel')}
-                  >
-                    <XMarkIcon className="h-5 w-5" />
-                  </button>
-                  <button
-                    type="submit"
-                    className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
-                    title={t('common.save')}
-                  >
-                    <CheckIcon className="h-5 w-5" />
-                  </button>
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      onClick={handleCancelEdit}
+                      className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                      {t('common.cancel')}
+                    </div>
+                  </div>
+                  <div className="relative group">
+                    <button
+                      type="submit"
+                      className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
+                    >
+                      <CheckIcon className="h-5 w-5" />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                      {t('common.save')}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1149,12 +1278,11 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                 {isAdmin() && (
                   <button
                     onClick={handleToggleActive}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`relative group flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                       selectedUser.active
                         ? 'bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30'
                         : 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400 dark:hover:bg-green-900/30'
                     }`}
-                    title={selectedUser.active ? t('users.deactivate') : t('users.activate')}
                   >
                     {selectedUser.active ? (
                       <>
@@ -1534,21 +1662,29 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     
                     {/* Footer */}
                     <div className="mt-6 flex justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() => setIsCreateModalOpen(false)}
-                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                        title={t('common.cancel')}
-                      >
-                        <XMarkIcon className="h-5 w-5" />
-                      </button>
-                      <button
-                        type="submit"
-                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
-                        title={t('organisation.createUser.create')}
-                      >
-                        <CheckIcon className="h-5 w-5" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => setIsCreateModalOpen(false)}
+                          className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                        >
+                          <XMarkIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('common.cancel')}
+                        </div>
+                      </div>
+                      <div className="relative group">
+                        <button
+                          type="submit"
+                          className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
+                        >
+                          <CheckIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('organisation.createUser.create')}
+                        </div>
+                      </div>
                     </div>
                   </form>
                 </Dialog.Panel>
@@ -1656,21 +1792,29 @@ const UserManagementTab = ({ onError }: UserManagementTabProps): JSX.Element => 
                     
                     {/* Footer */}
                     <div className="flex justify-end gap-3 border-t dark:border-gray-700 pt-4 px-4 flex-shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setIsCreateModalOpen(false)}
-                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-                        title={t('common.cancel')}
-                      >
-                        <XMarkIcon className="h-5 w-5" />
-                      </button>
-                      <button
-                        type="submit"
-                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
-                        title={t('organisation.createUser.create')}
-                      >
-                        <CheckIcon className="h-5 w-5" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => setIsCreateModalOpen(false)}
+                          className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
+                        >
+                          <XMarkIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('common.cancel')}
+                        </div>
+                      </div>
+                      <div className="relative group">
+                        <button
+                          type="submit"
+                          className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800"
+                        >
+                          <CheckIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('organisation.createUser.create')}
+                        </div>
+                      </div>
                     </div>
                   </form>
                 </div>

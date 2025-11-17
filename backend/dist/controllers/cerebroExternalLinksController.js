@@ -101,11 +101,28 @@ const extractMetadata = (url) => __awaiter(void 0, void 0, void 0, function* () 
             thumbnail = $('meta[property="og:image"]').attr('content') ||
                 $('meta[name="twitter:image"]').attr('content') ||
                 '';
+            // Stelle sicher, dass relative URLs absolut werden
+            if (thumbnail && !thumbnail.startsWith('http')) {
+                try {
+                    const urlObj = new URL(url);
+                    thumbnail = new URL(thumbnail, `${urlObj.protocol}//${urlObj.host}`).toString();
+                }
+                catch (e) {
+                    console.error('[extractMetadata] Fehler beim Konvertieren der Thumbnail-URL:', e);
+                }
+            }
         }
+        console.log('[extractMetadata] Extrahierte Metadaten:', {
+            url,
+            title,
+            thumbnail: thumbnail || '(kein Thumbnail)',
+            type
+        });
         return { type, title, thumbnail };
     }
     catch (error) {
-        console.error('Fehler beim Extrahieren der Metadaten:', error);
+        console.error('[extractMetadata] Fehler beim Extrahieren der Metadaten:', (error === null || error === void 0 ? void 0 : error.message) || error);
+        console.error('[extractMetadata] Stack:', error === null || error === void 0 ? void 0 : error.stack);
         return { type: 'link', title: url, thumbnail: '' };
     }
 });
@@ -248,12 +265,18 @@ const getLinkPreview = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!url || typeof url !== 'string') {
             return res.status(400).json({ message: 'URL ist erforderlich' });
         }
+        console.log('[getLinkPreview] Lade Metadaten für URL:', url);
         // Metadaten extrahieren
         const metadata = yield extractMetadata(url);
+        console.log('[getLinkPreview] Metadaten erhalten:', {
+            title: metadata.title,
+            thumbnail: metadata.thumbnail,
+            type: metadata.type
+        });
         res.status(200).json(metadata);
     }
     catch (error) {
-        console.error('Fehler beim Generieren der Link-Vorschau:', error);
+        console.error('[getLinkPreview] Fehler beim Generieren der Link-Vorschau:', error);
         res.status(500).json({ message: 'Fehler beim Generieren der Link-Vorschau' });
     }
 });

@@ -43,6 +43,11 @@ interface Role {
   name: string;
 }
 
+interface Branch {
+  id: number;
+  name: string;
+}
+
 const getOperatorsByColumnType = (columnId: string, t: (key: string) => string): { value: string; label: string }[] => {
   // Standard-Text-Operatoren
   const textOperators = [
@@ -104,18 +109,20 @@ const FilterRow: React.FC<FilterRowProps> = ({
 }) => {
   const { t } = useTranslation();
   const [operators, setOperators] = useState<{ value: string; label: string }[]>([]);
-  // States für Benutzer und Rollen
+  // States für Benutzer, Rollen und Branches
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(false);
+  const [loadingBranches, setLoadingBranches] = useState(false);
   
   // Operatoren aktualisieren, wenn sich die Spalte ändert
   useEffect(() => {
     setOperators(getOperatorsByColumnType(condition.column, t));
   }, [condition.column, t]);
   
-  // Laden der Benutzer und Rollen, wenn benötigt
+  // Laden der Benutzer, Rollen und Branches, wenn benötigt
   useEffect(() => {
     const loadUsersAndRoles = async () => {
       const token = localStorage.getItem('token');
@@ -145,6 +152,19 @@ const FilterRow: React.FC<FilterRowProps> = ({
           } finally {
             setLoadingRoles(false);
           }
+        }
+      }
+      
+      // Branches laden für branch-Spalte
+      if (condition.column === 'branch') {
+        setLoadingBranches(true);
+        try {
+          const response = await axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE);
+          setBranches(response.data);
+        } catch (error) {
+          console.error('Fehler beim Laden der Branches:', error);
+        } finally {
+          setLoadingBranches(false);
         }
       }
     };
@@ -297,6 +317,51 @@ const FilterRow: React.FC<FilterRowProps> = ({
       );
     }
     
+    // Für Typ ein Dropdown rendern (nur für Requests)
+    if (columnId === 'type') {
+      const isRequestTable = columns.some(col => col.id === 'requestedBy' || col.id === 'createTodo');
+      if (isRequestTable) {
+        return (
+          <select
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+            value={value as string || ''}
+            onChange={(e) => onChange(e.target.value)}
+          >
+            <option value="">{t('filter.row.pleaseSelect')}</option>
+            <option value="vacation">{t('requests.types.vacation')}</option>
+            <option value="improvement_suggestion">{t('requests.types.improvement_suggestion')}</option>
+            <option value="sick_leave">{t('requests.types.sick_leave')}</option>
+            <option value="employment_certificate">{t('requests.types.employment_certificate')}</option>
+            <option value="other">{t('requests.types.other')}</option>
+          </select>
+        );
+      }
+    }
+    
+    // Für Branch ein Dropdown rendern
+    if (columnId === 'branch') {
+      return (
+        <select
+          className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md text-xs w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          value={value as string || ''}
+          onChange={(e) => onChange(e.target.value)}
+          disabled={loadingBranches}
+        >
+          <option value="">{t('filter.row.pleaseSelect')}</option>
+          {branches.length > 0 && (
+            branches.map(branch => (
+              <option key={branch.id} value={branch.name}>
+                {branch.name}
+              </option>
+            ))
+          )}
+          {loadingBranches && (
+            <option value="" disabled>{t('filter.row.loadingData')}</option>
+          )}
+        </select>
+      );
+    }
+    
     // Für Datumsfelder ein Datumseingabefeld rendern
     if (columnId === 'dueDate' || columnId === 'startTime') {
       // Prüfe ob der Wert eine Variable ist
@@ -354,9 +419,9 @@ const FilterRow: React.FC<FilterRowProps> = ({
   };
   
   return (
-    <div className="flex items-center space-x-2 mb-0">
-      {/* Spalten-Auswahl */}
-      <div className="w-1/3">
+    <div className="flex items-center gap-2">
+      {/* Spalten-Auswahl - feste Breite */}
+      <div className="w-[180px] flex-shrink-0">
         <select
           className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
           value={condition.column}
@@ -376,8 +441,8 @@ const FilterRow: React.FC<FilterRowProps> = ({
         </select>
       </div>
       
-      {/* Operator-Auswahl */}
-      <div className="w-1/4">
+      {/* Operator-Auswahl - feste Breite */}
+      <div className="w-[140px] flex-shrink-0">
         <select
           className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-xs bg-white dark:bg-gray-800 text-gray-900 dark:text-white w-full"
           value={condition.operator}
@@ -391,8 +456,8 @@ const FilterRow: React.FC<FilterRowProps> = ({
         </select>
       </div>
       
-      {/* Wert-Eingabe */}
-      <div className="w-1/3">
+      {/* Wert-Eingabe - flexibel */}
+      <div className="flex-1 min-w-0">
         {renderValueInput(
           condition.column, 
           condition.operator, 
@@ -401,88 +466,112 @@ const FilterRow: React.FC<FilterRowProps> = ({
         )}
       </div>
       
-      {/* Sortierrichtung und Priorität (nur wenn Spalte ausgewählt ist) */}
-      {condition.column !== '' && onSortDirectionChange && (
-        <div className="flex-shrink-0 flex items-center gap-1">
-          {/* Prioritäts-Anzeige und -Steuerung */}
-          {sortPriority !== undefined && sortPriority > 0 && (
-            <div className="flex flex-col items-center gap-0.5">
-              {canMoveUp && onPriorityChange && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPriorityChange(sortPriority - 1);
-                  }}
-                  className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-500 rounded transition-colors"
-                  title={t('filter.row.moveUp')}
-                >
-                  <ChevronUpIcon className="h-3 w-3" />
-                </button>
-              )}
-              <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded min-w-[1.5rem] text-center">
-                {sortPriority}
-              </span>
-              {canMoveDown && onPriorityChange && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onPriorityChange(sortPriority + 1);
-                  }}
-                  className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-500 rounded transition-colors"
-                  title={t('filter.row.moveDown')}
-                >
-                  <ChevronDownIcon className="h-3 w-3" />
-                </button>
-              )}
-            </div>
-          )}
-          
-          {/* Sortierrichtung-Button */}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              const currentDirection = sortDirection || 'asc';
-              const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
-              onSortDirectionChange(newDirection);
-            }}
-            className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 rounded-md transition-colors border border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400"
-            title={(sortDirection || 'asc') === 'asc' ? t('filter.row.sortAscending') : t('filter.row.sortDescending')}
-          >
-            {(sortDirection || 'asc') === 'asc' ? (
-              <ArrowUpIcon className="h-4 w-4" />
-            ) : (
-              <ArrowDownIcon className="h-4 w-4" />
+      {/* Sortierrichtung und Priorität (nur wenn Spalte ausgewählt ist) - feste Breite */}
+      <div className="w-[60px] flex-shrink-0 flex items-center justify-center">
+        {condition.column !== '' && onSortDirectionChange && (
+          <div className="flex items-center gap-1">
+            {/* Prioritäts-Anzeige und -Steuerung */}
+            {sortPriority !== undefined && sortPriority > 0 && (
+              <div className="flex flex-col items-center gap-0.5">
+                {canMoveUp && onPriorityChange && (
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPriorityChange(sortPriority - 1);
+                      }}
+                      className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-500 rounded transition-colors"
+                    >
+                      <ChevronUpIcon className="h-3 w-3" />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                      {t('filter.row.moveUp')}
+                    </div>
+                  </div>
+                )}
+                <span className="text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 px-1.5 py-0.5 rounded min-w-[1.5rem] text-center">
+                  {sortPriority}
+                </span>
+                {canMoveDown && onPriorityChange && (
+                  <div className="relative group">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPriorityChange(sortPriority + 1);
+                      }}
+                      className="p-0.5 text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-500 rounded transition-colors"
+                    >
+                      <ChevronDownIcon className="h-3 w-3" />
+                    </button>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                      {t('filter.row.moveDown')}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
-          </button>
-        </div>
-      )}
+            
+            {/* Sortierrichtung-Button */}
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const currentDirection = sortDirection || 'asc';
+                  const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+                  onSortDirectionChange(newDirection);
+                }}
+                className="p-1.5 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 rounded-md transition-colors border border-gray-300 dark:border-gray-600 hover:border-blue-500 dark:hover:border-blue-400"
+              >
+                {(sortDirection || 'asc') === 'asc' ? (
+                  <ArrowUpIcon className="h-4 w-4" />
+                ) : (
+                  <ArrowDownIcon className="h-4 w-4" />
+                )}
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {(sortDirection || 'asc') === 'asc' ? t('filter.row.sortAscending') : t('filter.row.sortDescending')}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
       
-      {/* Aktions-Buttons */}
-      <div className="flex gap-1">
-        {/* Löschen-Button (nicht für die erste Zeile, wenn sie die einzige ist) */}
-        <button
-          type="button"
-          onClick={onDelete}
-          className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500 rounded-md transition-colors"
-          disabled={isFirst && !isLast}
-          title={t('filter.row.removeCondition')}
-        >
-          <TrashIcon className="h-4 w-4" />
-        </button>
-        
-        {/* Hinzufügen-Button (nur in der letzten Zeile) */}
-        {isLast && (
+      {/* Aktions-Buttons - feste Breite mit Platzhalter */}
+      <div className="w-[60px] flex-shrink-0 flex gap-1 justify-end">
+        {/* Löschen-Button */}
+        <div className="relative group">
           <button
             type="button"
-            onClick={onAdd}
-            className="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 rounded-md transition-colors"
-            title={t('filter.row.addCondition')}
+            onClick={onDelete}
+            className="p-1 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-500 rounded-md transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            disabled={isFirst && !isLast}
           >
-            <PlusCircleIcon className="h-4 w-4" />
+            <TrashIcon className="h-4 w-4" />
           </button>
+          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+            {t('filter.row.removeCondition')}
+          </div>
+        </div>
+        
+        {/* Hinzufügen-Button oder Platzhalter */}
+        {isLast ? (
+          <div className="relative group">
+            <button
+              type="button"
+              onClick={onAdd}
+              className="p-1 text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-500 rounded-md transition-colors"
+            >
+              <PlusCircleIcon className="h-4 w-4" />
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('filter.row.addCondition')}
+            </div>
+          </div>
+        ) : (
+          <div className="w-[28px] flex-shrink-0" /> // Platzhalter für vertikale Bündigkeit
         )}
       </div>
     </div>

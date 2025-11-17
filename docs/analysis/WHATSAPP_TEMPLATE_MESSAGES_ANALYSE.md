@@ -336,14 +336,21 @@ payload.template = {
 ## Nächste Schritte
 
 1. ✅ **Analyse abgeschlossen** (dieses Dokument)
-2. ⏳ **Template in Meta erstellen** (manuell, 1-2 Tage Genehmigung)
-3. ⏳ **Code anpassen** (Hybrid-Ansatz implementieren)
-4. ⏳ **Testing** (beide Szenarien testen)
+2. ✅ **Template in Meta erstellen** (manuell, 1-2 Tage Genehmigung)
+3. ✅ **Code anpassen** (Hybrid-Ansatz implementieren)
+4. ✅ **Template `reservation_checkin_invitation` bewilligt** (2025-01-XX)
+5. ✅ **Template-Sprache konfiguriert**: Standard 'en' ist korrekt (Template wurde mit "English" erstellt)
+6. ⏳ **Testing** (beide Szenarien testen)
+7. ⏳ **Weitere Templates einreichen** (optional: `reservation_checkin_confirmation`)
+8. ⏳ **Für später**: Template auf Spanisch umstellen oder neue spanische Version erstellen
+
+**Siehe**: `docs/modules/WHATSAPP_TEMPLATE_BEWILLIGUNG_NÄCHSTE_SCHRITTE.md` für detaillierte nächste Schritte
 
 ## Referenzen
 
 - **Meta WhatsApp Business API Docs**: https://developers.facebook.com/docs/whatsapp
 - **Template Messages**: https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-message-templates
 - **24-Hour Window**: https://developers.facebook.com/docs/whatsapp/cloud-api/guides/send-messages
+
 
 

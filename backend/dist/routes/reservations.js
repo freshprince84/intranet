@@ -26,5 +26,10 @@ router.post('/', (req, res, next) => {
 });
 router.get('/:id', reservationController_1.getReservationById);
 router.put('/:id/guest-contact', reservationController_1.updateGuestContact);
+router.post('/:id/generate-pin-and-send', (req, res, next) => {
+    console.log('[Reservations Route] POST /:id/generate-pin-and-send aufgerufen');
+    console.log('[Reservations Route] Reservation ID:', req.params.id);
+    (0, reservationController_1.generatePinAndSendNotification)(req, res).catch(next);
+});
 exports.default = router;
 //# sourceMappingURL=reservations.js.map

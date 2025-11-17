@@ -391,40 +391,48 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
           />
           
           {/* View-Mode Toggle */}
-          <button
-            className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
-              viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
-            }`}
-            onClick={() => {
-              const newMode = viewMode === 'table' ? 'cards' : 'table';
-              setViewMode(newMode);
-              if (updateViewMode) {
-                updateViewMode(newMode);
-              }
-            }}
-            title={viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
-          >
-            {viewMode === 'table' ? (
-              <Squares2X2Icon className="h-5 w-5" />
-            ) : (
-              <TableCellsIcon className="h-5 w-5" />
-            )}
-          </button>
+          <div className="relative group">
+            <button
+              className={`p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                viewMode === 'cards' ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : ''
+              }`}
+              onClick={() => {
+                const newMode = viewMode === 'table' ? 'cards' : 'table';
+                setViewMode(newMode);
+                if (updateViewMode) {
+                  updateViewMode(newMode);
+                }
+              }}
+            >
+              {viewMode === 'table' ? (
+                <Squares2X2Icon className="h-5 w-5" />
+              ) : (
+                <TableCellsIcon className="h-5 w-5" />
+              )}
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {viewMode === 'table' ? t('common.viewAsCards') : t('common.viewAsTable')}
+            </div>
+          </div>
           
           {/* Filter-Button */}
-          <button
-            className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} ml-1 relative`}
-            onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
-            title={t('common.filter')}
-            style={{ position: 'relative' }}
-          >
-            <FunnelIcon className="h-5 w-5" />
-            {getActiveFilterCount() > 0 && (
-              <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center z-10">
-                {getActiveFilterCount()}
-              </span>
-            )}
-          </button>
+          <div className="relative group ml-1">
+            <button
+              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700'} relative`}
+              onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+              style={{ position: 'relative' }}
+            >
+              <FunnelIcon className="h-5 w-5" />
+              {getActiveFilterCount() > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center z-10">
+                  {getActiveFilterCount()}
+                </span>
+              )}
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('common.filter')}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -640,38 +648,50 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                       {/* Balken */}
                       <div className="absolute inset-0 flex items-end justify-around gap-2 pr-8 pb-1">
                         <div className="flex flex-col items-center gap-1 flex-1">
-                          <div 
-                            className="w-full bg-green-500 dark:bg-green-600 rounded-t"
-                            style={{ 
-                              height: `${frequencyData.summary.completedTasks > 0 ? (frequencyData.summary.completedTasks / frequencyData.summary.totalTasks) * 100 : 0}%`,
-                              minHeight: frequencyData.summary.completedTasks > 0 ? '4px' : '0px'
-                            }}
-                            title={`${t('analytics.todo.frequency.completed')}: ${frequencyData.summary.completedTasks}`}
-                          ></div>
+                          <div className="relative group w-full">
+                            <div 
+                              className="w-full bg-green-500 dark:bg-green-600 rounded-t"
+                              style={{ 
+                                height: `${frequencyData.summary.completedTasks > 0 ? (frequencyData.summary.completedTasks / frequencyData.summary.totalTasks) * 100 : 0}%`,
+                                minHeight: frequencyData.summary.completedTasks > 0 ? '4px' : '0px'
+                              }}
+                            ></div>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {`${t('analytics.todo.frequency.completed')}: ${frequencyData.summary.completedTasks}`}
+                            </div>
+                          </div>
                           <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{t('analytics.todo.frequency.completed')}</span>
                           <span className="text-xs text-gray-500 dark:text-gray-500">{frequencyData.summary.completedTasks}</span>
                         </div>
                         <div className="flex flex-col items-center gap-1 flex-1">
-                          <div 
-                            className="w-full bg-yellow-500 dark:bg-yellow-600 rounded-t"
-                            style={{ 
-                              height: `${frequencyData.summary.totalTasks - frequencyData.summary.completedTasks - frequencyData.summary.neverCompletedTasks > 0 ? ((frequencyData.summary.totalTasks - frequencyData.summary.completedTasks - frequencyData.summary.neverCompletedTasks) / frequencyData.summary.totalTasks) * 100 : 0}%`,
-                              minHeight: frequencyData.summary.totalTasks - frequencyData.summary.completedTasks - frequencyData.summary.neverCompletedTasks > 0 ? '4px' : '0px'
-                            }}
-                            title={`${t('tasks.status.open')}: ${frequencyData.summary.totalTasks - frequencyData.summary.completedTasks - frequencyData.summary.neverCompletedTasks}`}
-                          ></div>
+                          <div className="relative group w-full">
+                            <div 
+                              className="w-full bg-yellow-500 dark:bg-yellow-600 rounded-t"
+                              style={{ 
+                                height: `${frequencyData.summary.totalTasks - frequencyData.summary.completedTasks - frequencyData.summary.neverCompletedTasks > 0 ? ((frequencyData.summary.totalTasks - frequencyData.summary.completedTasks - frequencyData.summary.neverCompletedTasks) / frequencyData.summary.totalTasks) * 100 : 0}%`,
+                                minHeight: frequencyData.summary.totalTasks - frequencyData.summary.completedTasks - frequencyData.summary.neverCompletedTasks > 0 ? '4px' : '0px'
+                              }}
+                            ></div>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {`${t('tasks.status.open')}: ${frequencyData.summary.totalTasks - frequencyData.summary.completedTasks - frequencyData.summary.neverCompletedTasks}`}
+                            </div>
+                          </div>
                           <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{t('tasks.status.open')}</span>
                           <span className="text-xs text-gray-500 dark:text-gray-500">{frequencyData.summary.totalTasks - frequencyData.summary.completedTasks - frequencyData.summary.neverCompletedTasks}</span>
                         </div>
                         <div className="flex flex-col items-center gap-1 flex-1">
-                          <div 
-                            className="w-full bg-red-500 dark:bg-red-600 rounded-t"
-                            style={{ 
-                              height: `${frequencyData.summary.neverCompletedTasks > 0 ? (frequencyData.summary.neverCompletedTasks / frequencyData.summary.totalTasks) * 100 : 0}%`,
-                              minHeight: frequencyData.summary.neverCompletedTasks > 0 ? '4px' : '0px'
-                            }}
-                            title={`${t('analytics.todo.frequency.neverCompleted')}: ${frequencyData.summary.neverCompletedTasks}`}
-                          ></div>
+                          <div className="relative group w-full">
+                            <div 
+                              className="w-full bg-red-500 dark:bg-red-600 rounded-t"
+                              style={{ 
+                                height: `${frequencyData.summary.neverCompletedTasks > 0 ? (frequencyData.summary.neverCompletedTasks / frequencyData.summary.totalTasks) * 100 : 0}%`,
+                                minHeight: frequencyData.summary.neverCompletedTasks > 0 ? '4px' : '0px'
+                              }}
+                            ></div>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {`${t('analytics.todo.frequency.neverCompleted')}: ${frequencyData.summary.neverCompletedTasks}`}
+                            </div>
+                          </div>
                           <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">{t('analytics.todo.frequency.neverCompleted')}</span>
                           <span className="text-xs text-gray-500 dark:text-gray-500">{frequencyData.summary.neverCompletedTasks}</span>
                         </div>
@@ -784,17 +804,21 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                                   <div className="flex items-center gap-2">
                                     <span>{shift.linkedTasksCount}</span>
                                     {shift.linkedTasksCount > 0 && (
-                                      <button
-                                        onClick={() => toggleShiftExpand(shift.workTimeId)}
-                                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                        title={t('analytics.todo.shift.showTodos')}
-                                      >
-                                        {isExpanded ? (
-                                          <ChevronUpIcon className="h-4 w-4" />
-                                        ) : (
-                                          <ChevronDownIcon className="h-4 w-4" />
-                                        )}
-                                      </button>
+                                      <div className="relative group">
+                                        <button
+                                          onClick={() => toggleShiftExpand(shift.workTimeId)}
+                                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                        >
+                                          {isExpanded ? (
+                                            <ChevronUpIcon className="h-4 w-4" />
+                                          ) : (
+                                            <ChevronDownIcon className="h-4 w-4" />
+                                          )}
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                          {t('analytics.todo.shift.showTodos')}
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
                                 </td>
@@ -945,62 +969,82 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
               {/* Balken */}
               <div className="absolute inset-0 flex items-end justify-around gap-1 sm:gap-2 pr-8 pb-1">
                 <div className="flex flex-col items-center gap-1 flex-1">
-                  <div 
-                    className="w-full bg-green-500 dark:bg-green-600 rounded-t transition-all hover:opacity-80"
-                    style={{ 
-                      height: `${stats.total > 0 ? (stats.done / stats.total) * 100 : 0}%`,
-                      minHeight: stats.done > 0 ? '4px' : '0px'
-                    }}
-                    title={`${t('analytics.todo.frequency.completed')}: ${stats.done}`}
-                  ></div>
+                  <div className="relative group w-full">
+                    <div 
+                      className="w-full bg-green-500 dark:bg-green-600 rounded-t transition-all hover:opacity-80"
+                      style={{ 
+                        height: `${stats.total > 0 ? (stats.done / stats.total) * 100 : 0}%`,
+                        minHeight: stats.done > 0 ? '4px' : '0px'
+                      }}
+                    ></div>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                      {`${t('analytics.todo.frequency.completed')}: ${stats.done}`}
+                    </div>
+                  </div>
                   <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">{t('analytics.todo.frequency.completed')}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-500">{stats.done}</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 flex-1">
-                  <div 
-                    className="w-full bg-blue-500 dark:bg-blue-600 rounded-t transition-all hover:opacity-80"
-                    style={{ 
-                      height: `${stats.total > 0 ? (stats.inProgress / stats.total) * 100 : 0}%`,
-                      minHeight: stats.inProgress > 0 ? '4px' : '0px'
-                    }}
-                    title={`${t('analytics.todo.stats.inProgress')}: ${stats.inProgress}`}
-                  ></div>
+                  <div className="relative group w-full">
+                    <div 
+                      className="w-full bg-blue-500 dark:bg-blue-600 rounded-t transition-all hover:opacity-80"
+                      style={{ 
+                        height: `${stats.total > 0 ? (stats.inProgress / stats.total) * 100 : 0}%`,
+                        minHeight: stats.inProgress > 0 ? '4px' : '0px'
+                      }}
+                    ></div>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                      {`${t('analytics.todo.stats.inProgress')}: ${stats.inProgress}`}
+                    </div>
+                  </div>
                   <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">{t('analytics.todo.stats.inProgress')}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-500">{stats.inProgress}</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 flex-1">
-                  <div 
-                    className="w-full bg-purple-500 dark:bg-purple-600 rounded-t transition-all hover:opacity-80"
-                    style={{ 
-                      height: `${stats.total > 0 ? (stats.qualityControl / stats.total) * 100 : 0}%`,
-                      minHeight: stats.qualityControl > 0 ? '4px' : '0px'
-                    }}
-                    title={`${t('analytics.todo.stats.qualityControl')}: ${stats.qualityControl}`}
-                  ></div>
+                  <div className="relative group w-full">
+                    <div 
+                      className="w-full bg-purple-500 dark:bg-purple-600 rounded-t transition-all hover:opacity-80"
+                      style={{ 
+                        height: `${stats.total > 0 ? (stats.qualityControl / stats.total) * 100 : 0}%`,
+                        minHeight: stats.qualityControl > 0 ? '4px' : '0px'
+                      }}
+                    ></div>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                      {`${t('analytics.todo.stats.qualityControl')}: ${stats.qualityControl}`}
+                    </div>
+                  </div>
                   <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">{t('analytics.todo.columns.qualityControl')}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-500">{stats.qualityControl}</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 flex-1">
-                  <div 
-                    className="w-full bg-yellow-500 dark:bg-yellow-600 rounded-t transition-all hover:opacity-80"
-                    style={{ 
-                      height: `${stats.total > 0 ? (stats.open / stats.total) * 100 : 0}%`,
-                      minHeight: stats.open > 0 ? '4px' : '0px'
-                    }}
-                    title={`${t('tasks.status.open')}: ${stats.open}`}
-                  ></div>
+                  <div className="relative group w-full">
+                    <div 
+                      className="w-full bg-yellow-500 dark:bg-yellow-600 rounded-t transition-all hover:opacity-80"
+                      style={{ 
+                        height: `${stats.total > 0 ? (stats.open / stats.total) * 100 : 0}%`,
+                        minHeight: stats.open > 0 ? '4px' : '0px'
+                      }}
+                    ></div>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                      {`${t('tasks.status.open')}: ${stats.open}`}
+                    </div>
+                  </div>
                   <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">{t('tasks.status.open')}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-500">{stats.open}</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 flex-1">
-                  <div 
-                    className="w-full bg-red-500 dark:bg-red-600 rounded-t transition-all hover:opacity-80"
-                    style={{ 
-                      height: `${stats.total > 0 ? (stats.improval / stats.total) * 100 : 0}%`,
-                      minHeight: stats.improval > 0 ? '4px' : '0px'
-                    }}
-                    title={`${t('tasks.status.improval')}: ${stats.improval}`}
-                  ></div>
+                  <div className="relative group w-full">
+                    <div 
+                      className="w-full bg-red-500 dark:bg-red-600 rounded-t transition-all hover:opacity-80"
+                      style={{ 
+                        height: `${stats.total > 0 ? (stats.improval / stats.total) * 100 : 0}%`,
+                        minHeight: stats.improval > 0 ? '4px' : '0px'
+                      }}
+                    ></div>
+                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                      {`${t('tasks.status.improval')}: ${stats.improval}`}
+                    </div>
+                  </div>
                   <span className="text-xs text-gray-600 dark:text-gray-400 font-medium text-center">{t('tasks.status.improval')}</span>
                   <span className="text-xs text-gray-500 dark:text-gray-500">{stats.improval}</span>
                 </div>
@@ -1062,17 +1106,21 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                                 <td key={columnId} className="px-3 sm:px-4 md:px-6 py-4 text-sm font-medium text-gray-900 dark:text-white">
                                   <div className="flex items-center gap-2">
                                     {hasStatusHistory && (
-                                      <button
-                                        onClick={() => toggleTodoExpand(todo.id)}
-                                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                                        title="Status-Historie anzeigen"
-                                      >
-                                        {isExpanded ? (
-                                          <ChevronUpIcon className="h-4 w-4" />
-                                        ) : (
-                                          <ChevronDownIcon className="h-4 w-4" />
-                                        )}
-                                      </button>
+                                      <div className="relative group">
+                                        <button
+                                          onClick={() => toggleTodoExpand(todo.id)}
+                                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                                        >
+                                          {isExpanded ? (
+                                            <ChevronUpIcon className="h-4 w-4" />
+                                          ) : (
+                                            <ChevronDownIcon className="h-4 w-4" />
+                                          )}
+                                        </button>
+                                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                          Status-Historie anzeigen
+                                        </div>
+                                      </div>
                                     )}
                                     <span>{todo.title}</span>
                                   </div>

@@ -293,33 +293,45 @@ const RoleCard: React.FC<{
         
         <div className="flex space-x-2">
           {canCopy && (
-            <button
-              onClick={() => onCopy(role)}
-              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
-              title={t('roles.actions.copy')}
-            >
-              <DocumentDuplicateIcon className="h-5 w-5" />
-            </button>
+            <div className="relative group">
+              <button
+                onClick={() => onCopy(role)}
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
+              >
+                <DocumentDuplicateIcon className="h-5 w-5" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('roles.actions.copy')}
+              </div>
+            </div>
           )}
           
           {canEdit && (
-            <button
-              onClick={() => onEdit(role)}
-              className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
-              title={t('roles.actions.edit')}
-            >
-              <PencilIcon className="h-5 w-5" />
-            </button>
+            <div className="relative group">
+              <button
+                onClick={() => onEdit(role)}
+                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 p-1"
+              >
+                <PencilIcon className="h-5 w-5" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('roles.actions.edit')}
+              </div>
+            </div>
           )}
           
           {canDelete && (
-            <button
-              onClick={() => onDelete(role.id)}
-              className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1"
-              title={t('roles.actions.delete')}
-            >
-              <TrashIcon className="h-5 w-5" />
-            </button>
+            <div className="relative group">
+              <button
+                onClick={() => onDelete(role.id)}
+                className="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 p-1"
+              >
+                <TrashIcon className="h-5 w-5" />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {t('roles.actions.delete')}
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -1185,13 +1197,17 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           {/* "Mehr anzeigen" Button - Mobil */}
           {filteredAndSortedRoles.length > displayLimit && (
             <div className="mt-4 flex justify-center">
-              <button
-                className="p-2 text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700 dark:hover:bg-gray-700"
-                onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
-                title={`Mehr anzeigen (${filteredAndSortedRoles.length - displayLimit} verbleibend)`}
-              >
-                <ChevronDownIcon className="h-5 w-5" />
-              </button>
+              <div className="relative group">
+                <button
+                  className="p-2 text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700 dark:hover:bg-gray-700"
+                  onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+                >
+                  <ChevronDownIcon className="h-5 w-5" />
+                </button>
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                  {`Mehr anzeigen (${filteredAndSortedRoles.length - displayLimit} verbleibend)`}
+                </div>
+              </div>
             </div>
           )}
         </>
@@ -1218,13 +1234,17 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           {/* "Mehr anzeigen" Button - Desktop */}
           {filteredAndSortedRoles.length > displayLimit && (
             <div className="mt-4 flex justify-center">
-              <button
-                className="p-2 text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700 dark:hover:bg-gray-700"
-                onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
-                title={`Mehr anzeigen (${filteredAndSortedRoles.length - displayLimit} verbleibend)`}
-              >
-                <ChevronDownIcon className="h-5 w-5" />
-              </button>
+              <div className="relative group">
+                <button
+                  className="p-2 text-blue-600 bg-white border border-blue-300 rounded-md hover:bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-gray-700 dark:hover:bg-gray-700"
+                  onClick={() => setDisplayLimit(prevLimit => prevLimit + 10)}
+                >
+                  <ChevronDownIcon className="h-5 w-5" />
+                </button>
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                  {`Mehr anzeigen (${filteredAndSortedRoles.length - displayLimit} verbleibend)`}
+                </div>
+              </div>
             </div>
           )}
         </>
@@ -1324,15 +1344,19 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
           {/* Linke Seite: "Neue Rolle erstellen"-Button */}
           <div className="flex items-center">
             {!readOnly && hasPermission('roles', 'write', 'table') && (
-              <button
-                onClick={() => setIsModalOpen(true)}
-                className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
-                style={{ width: '30.19px', height: '30.19px' }}
-                title={t('roles.createRole')}
-                aria-label={t('roles.createRole')}
-              >
-                <PlusIcon className="h-4 w-4" />
-              </button>
+              <div className="relative group">
+                <button
+                  onClick={() => setIsModalOpen(true)}
+                  className="bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-700 border border-blue-200 dark:border-gray-700 shadow-sm flex items-center justify-center"
+                  style={{ width: '30.19px', height: '30.19px' }}
+                  aria-label={t('roles.createRole')}
+                >
+                  <PlusIcon className="h-4 w-4" />
+                </button>
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                  {t('roles.createRole')}
+                </div>
+              </div>
             )}
           </div>
           
@@ -1348,18 +1372,22 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <button
-              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'} ml-1 relative`}
-              onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
-              title="Filter"
-            >
-              <FunnelIcon className="w-5 h-5" />
-              {getActiveFilterCount() > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
-                  {getActiveFilterCount()}
-                </span>
-              )}
-            </button>
+            <div className="relative group ml-1">
+              <button
+                className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 text-blue-600' : 'hover:bg-gray-100'}`}
+                onClick={() => setIsFilterModalOpen(!isFilterModalOpen)}
+              >
+                <FunnelIcon className="w-5 h-5" />
+                {getActiveFilterCount() > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 text-white rounded-full text-xs flex items-center justify-center">
+                    {getActiveFilterCount()}
+                  </span>
+                )}
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                Filter
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1516,54 +1544,78 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">{t('roles.form.detailedPermissions')}</label>
                         {/* Bulk Actions - kompakt integriert */}
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setAllPagePermissions('both')}
-                            className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
-                            title={t('roles.form.activateAllPages')}
-                          >
-                            {t('roles.form.pagesChecked')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAllPagePermissions('none')}
-                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            title={t('roles.form.deactivateAllPages')}
-                          >
-                            {t('roles.form.pagesUnchecked')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAllTablePermissions('both')}
-                            className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800"
-                            title={t('roles.form.activateAllTables')}
-                          >
-                            {t('roles.form.tablesChecked')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAllTablePermissions('none')}
-                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            title={t('roles.form.deactivateAllTables')}
-                          >
-                            {t('roles.form.tablesUnchecked')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAllButtonPermissions('both')}
-                            className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800"
-                            title={t('roles.form.activateAllButtons')}
-                          >
-                            {t('roles.form.buttonsChecked')}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAllButtonPermissions('none')}
-                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            title={t('roles.form.deactivateAllButtons')}
-                          >
-                            {t('roles.form.buttonsUnchecked')}
-                          </button>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllPagePermissions('both')}
+                              className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                            >
+                              {t('roles.form.pagesChecked')}
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('roles.form.activateAllPages')}
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllPagePermissions('none')}
+                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            >
+                              {t('roles.form.pagesUnchecked')}
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('roles.form.deactivateAllPages')}
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllTablePermissions('both')}
+                              className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800"
+                            >
+                              {t('roles.form.tablesChecked')}
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('roles.form.activateAllTables')}
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllTablePermissions('none')}
+                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            >
+                              {t('roles.form.tablesUnchecked')}
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('roles.form.deactivateAllTables')}
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllButtonPermissions('both')}
+                              className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800"
+                            >
+                              {t('roles.form.buttonsChecked')}
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('roles.form.activateAllButtons')}
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllButtonPermissions('none')}
+                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            >
+                              {t('roles.form.buttonsUnchecked')}
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              {t('roles.form.deactivateAllButtons')}
+                            </div>
+                          </div>
                         </div>
                     </div>
                     
@@ -1767,21 +1819,29 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                   
                   {/* Footer */}
                   <div className="px-6 py-4 bg-gray-50 dark:bg-gray-700 flex justify-end gap-2 border-t dark:border-gray-600 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setIsModalOpen(false)}
-                      className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                      title="Abbrechen"
-                    >
-                      <XMarkIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      type="submit"
-                      className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800"
-                      title={editingRole ? 'Aktualisieren' : 'Erstellen'}
-                    >
-                      <CheckIcon className="h-5 w-5" />
-                    </button>
+                    <div className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => setIsModalOpen(false)}
+                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                      >
+                        <XMarkIcon className="h-5 w-5" />
+                      </button>
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        Abbrechen
+                      </div>
+                    </div>
+                    <div className="relative group">
+                      <button
+                        type="submit"
+                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 dark:bg-blue-700 dark:hover:bg-blue-800"
+                      >
+                        <CheckIcon className="h-5 w-5" />
+                      </button>
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {editingRole ? 'Aktualisieren' : 'Erstellen'}
+                      </div>
+                    </div>
                   </div>
                 </form>
               </Dialog.Panel>
@@ -1856,54 +1916,78 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Detaillierte Berechtigungen</label>
                         {/* Bulk Actions */}
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => setAllPagePermissions('both')}
-                            className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
-                            title="Alle Seiten aktivieren"
-                          >
-                            Seiten ✓
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAllPagePermissions('none')}
-                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            title="Alle Seiten deaktivieren"
-                          >
-                            Seiten ✗
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAllTablePermissions('both')}
-                            className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800"
-                            title="Alle Tabellen aktivieren"
-                          >
-                            Tabellen ✓
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAllTablePermissions('none')}
-                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            title="Alle Tabellen deaktivieren"
-                          >
-                            Tabellen ✗
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAllButtonPermissions('both')}
-                            className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800"
-                            title="Alle Buttons aktivieren"
-                          >
-                            Buttons ✓
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setAllButtonPermissions('none')}
-                            className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
-                            title="Alle Buttons deaktivieren"
-                          >
-                            Buttons ✗
-                          </button>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllPagePermissions('both')}
+                              className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded hover:bg-blue-200 dark:hover:bg-blue-800"
+                            >
+                              Seiten ✓
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              Alle Seiten aktivieren
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllPagePermissions('none')}
+                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            >
+                              Seiten ✗
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              Alle Seiten deaktivieren
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllTablePermissions('both')}
+                              className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded hover:bg-green-200 dark:hover:bg-green-800"
+                            >
+                              Tabellen ✓
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              Alle Tabellen aktivieren
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllTablePermissions('none')}
+                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            >
+                              Tabellen ✗
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              Alle Tabellen deaktivieren
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllButtonPermissions('both')}
+                              className="px-2 py-1 text-xs bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-200 dark:hover:bg-purple-800"
+                            >
+                              Buttons ✓
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              Alle Buttons aktivieren
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => setAllButtonPermissions('none')}
+                              className="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600"
+                            >
+                              Buttons ✗
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                              Alle Buttons deaktivieren
+                            </div>
+                          </div>
                         </div>
                       </div>
                       
@@ -2095,21 +2179,29 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
 
                     {/* Buttons */}
                     <div className="flex justify-end pt-4 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsModalOpen(false)}
-                        className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
-                        title="Abbrechen"
-                      >
-                        <XMarkIcon className="h-5 w-5" />
-                      </button>
-                      <button
-                        type="submit"
-                        className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
-                        title={editingRole ? 'Aktualisieren' : 'Erstellen'}
-                      >
-                        <CheckIcon className="h-5 w-5" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          type="button"
+                          onClick={() => setIsModalOpen(false)}
+                          className="p-2 text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+                        >
+                          <XMarkIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          Abbrechen
+                        </div>
+                      </div>
+                      <div className="relative group">
+                        <button
+                          type="submit"
+                          className="p-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 dark:bg-blue-700 dark:hover:bg-blue-800 transition-colors"
+                        >
+                          <CheckIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {editingRole ? 'Aktualisieren' : 'Erstellen'}
+                        </div>
+                      </div>
                     </div>
                   </form>
                 </div>

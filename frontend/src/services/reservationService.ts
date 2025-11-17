@@ -1,5 +1,6 @@
 import axiosInstance from '../config/axios.ts';
 import { Reservation } from '../types/reservation.ts';
+import { API_ENDPOINTS } from '../config/api.ts';
 
 // WICHTIG: axiosInstance hat bereits baseURL mit /api, daher nur /reservations hier
 const API_BASE = '/reservations';
@@ -38,6 +39,14 @@ export const reservationService = {
     const response = await axiosInstance.put(`${API_BASE}/${id}/guest-contact`, {
       contact
     });
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Generiert PIN-Code und sendet Mitteilung (unabhängig von Zahlungsstatus/Check-in-Status)
+   */
+  async generatePinAndSend(id: number): Promise<Reservation> {
+    const response = await axiosInstance.post(API_ENDPOINTS.RESERVATION.GENERATE_PIN_AND_SEND(id));
     return response.data.data || response.data;
   }
 };

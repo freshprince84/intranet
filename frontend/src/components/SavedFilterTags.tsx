@@ -685,20 +685,24 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
           
           return (
           <div key={group.id} className="relative flex-shrink-0">
-            <button
-              onClick={() => toggleGroupDropdown(group.id)}
-              onDragOver={(e) => handleDragOver(e, group.id, 'group')}
-              onDrop={(e) => handleDrop(e, group.id, 'group')}
-              className={`flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors ${
-                dragOverGroupId === group.id ? 'ring-2 ring-purple-500' : ''
-              } ${activeFilterInGroup ? 'ring-2 ring-purple-500' : ''}`}
-              title={activeFilterInGroup ? displayName : `${group.name} (${group.filters.length})`}
-            >
-              <span className="truncate max-w-[100px]">
-                {displayName}
-              </span>
-              <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${openGroupDropdowns.has(group.id) ? 'rotate-180' : ''}`} />
-            </button>
+            <div className="relative group">
+              <button
+                onClick={() => toggleGroupDropdown(group.id)}
+                onDragOver={(e) => handleDragOver(e, group.id, 'group')}
+                onDrop={(e) => handleDrop(e, group.id, 'group')}
+                className={`flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors ${
+                  dragOverGroupId === group.id ? 'ring-2 ring-purple-500' : ''
+                } ${activeFilterInGroup ? 'ring-2 ring-purple-500' : ''}`}
+              >
+                <span className="truncate max-w-[100px]">
+                  {displayName}
+                </span>
+                <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${openGroupDropdowns.has(group.id) ? 'rotate-180' : ''}`} />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                {activeFilterInGroup ? displayName : `${group.name} (${group.filters.length})`}
+              </div>
+            </div>
             
             {/* Gruppen-Dropdown */}
             {openGroupDropdowns.has(group.id) && (
@@ -715,7 +719,6 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                     } ${isStandardFilter(filter.name) ? 'font-bold' : ''}`}
-                    title={translateFilterName(filter.name)}
                   >
                     <span className="truncate flex-1">{translateFilterName(filter.name)}</span>
                   </div>
@@ -739,50 +742,66 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                         onClick={(e) => e.stopPropagation()}
                       />
                       <div className="flex gap-2 mt-2 justify-end">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSaveGroupName(group.id);
-                          }}
-                          className="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                          title="Speichern"
-                        >
-                          <CheckIcon className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleCancelEditGroup();
-                          }}
-                          className="p-2 rounded-md bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
-                          title="Abbrechen"
-                        >
-                          <XMarkIcon className="h-4 w-4" />
-                        </button>
+                        <div className="relative group">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSaveGroupName(group.id);
+                            }}
+                            className="p-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                          >
+                            <CheckIcon className="h-4 w-4" />
+                          </button>
+                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                            Speichern
+                          </div>
+                        </div>
+                        <div className="relative group">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCancelEditGroup();
+                            }}
+                            className="p-2 rounded-md bg-gray-300 dark:bg-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-400 dark:hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                            Abbrechen
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ) : (
                     <>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartEditGroup(group);
-                        }}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left transition-colors"
-                        title="Gruppe umbenennen"
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleUngroupFilters(group.id);
-                        }}
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left transition-colors"
-                        title={t('filter.ungroup')}
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleStartEditGroup(group);
+                          }}
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left transition-colors"
+                        >
+                          <PencilIcon className="h-4 w-4" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          Gruppe umbenennen
+                        </div>
+                      </div>
+                      <div className="relative group">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleUngroupFilters(group.id);
+                          }}
+                          className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 w-full text-left transition-colors"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('filter.ungroup')}
+                        </div>
+                      </div>
                     </>
                   )}
                 </div>
@@ -802,7 +821,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
             onDrop={(e) => handleDrop(e, filter.id, 'filter')}
             onDragEnd={handleDragEnd}
             onClick={() => !filter.isPlaceholder && handleSelectFilter(filter)}
-            className={`flex items-center px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors flex-shrink-0 ${
+            className={`relative group flex items-center px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors flex-shrink-0 ${
               filter.isPlaceholder
                 ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 animate-pulse cursor-default'
                 : draggedFilterId === filter.id
@@ -813,7 +832,6 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                       ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-700'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
             } ${!filter.isPlaceholder && isStandardFilter(filter.name) ? 'font-bold' : ''}`}
-            title={filter.isPlaceholder ? t('common.loading') : translateFilterName(filter.name)}
           >
             <span className="truncate max-w-[100px]">
               {filter.isPlaceholder && filter.name === '████████' ? (
@@ -823,28 +841,39 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
               )}
             </span>
             {!filter.isPlaceholder && !isStandardFilter(filter.name) && (
-              <button
-                onClick={(e) => handleDeleteFilter(e, filter.id)}
-                className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
-                title={t('filter.delete')}
-              >
-                <XMarkIcon className="h-4 w-4" />
-              </button>
+              <div className="relative group ml-2">
+                <button
+                  onClick={(e) => handleDeleteFilter(e, filter.id)}
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
+                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                  {t('filter.delete')}
+                </div>
+              </div>
             )}
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {filter.isPlaceholder ? t('common.loading') : translateFilterName(filter.name)}
+            </div>
           </div>
         ))}
         
         {/* Dropdown nur bei echten Filtern und Platzmangel */}
         {!showOptimisticFilters && sortedFilters.length > visibleTagCount && (
           <div className="relative flex-shrink-0">
-            <button
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
-              title="Weitere Filter anzeigen"
-            >
-              <span>+{sortedFilters.length - visibleTagCount}</span>
-              <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
-            </button>
+            <div className="relative group">
+              <button
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
+              >
+                <span>+{sortedFilters.length - visibleTagCount}</span>
+                <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                Weitere Filter anzeigen
+              </div>
+            </div>
             
             {/* Dropdown-Menu */}
             {isDropdownOpen && (
@@ -861,21 +890,24 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                         ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                     } ${isStandardFilter(filter.name) ? 'font-bold' : ''}`}
-                    title={translateFilterName(filter.name)}
                   >
                     <span className="truncate flex-1">{translateFilterName(filter.name)}</span>
                     {!isStandardFilter(filter.name) && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteFilter(e, filter.id);
-                          setIsDropdownOpen(false);
-                        }}
-                        className="ml-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none flex-shrink-0"
-                        title={t('filter.delete')}
-                      >
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
+                      <div className="relative group ml-2 flex-shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFilter(e, filter.id);
+                            setIsDropdownOpen(false);
+                          }}
+                          className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
+                        >
+                          <XMarkIcon className="h-4 w-4" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('filter.delete')}
+                        </div>
+                      </div>
                     )}
                   </div>
                 ))}

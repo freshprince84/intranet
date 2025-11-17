@@ -36,18 +36,24 @@ const getUserSavedFilters = (req, res) => __awaiter(void 0, void 0, void 0, func
                 let sortDirections = [];
                 if (filter.sortDirections) {
                     try {
-                        const parsed = JSON.parse(filter.sortDirections);
-                        // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
-                        if (Array.isArray(parsed)) {
-                            sortDirections = parsed;
+                        // Prüfe, ob es ein "null" String ist
+                        if (filter.sortDirections.trim() === 'null' || filter.sortDirections.trim() === '') {
+                            sortDirections = [];
                         }
-                        else if (typeof parsed === 'object' && parsed !== null) {
-                            // Altes Format: { "status": "asc", "branch": "desc" }
-                            sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
-                                column,
-                                direction: direction,
-                                priority: index + 1
-                            }));
+                        else {
+                            const parsed = JSON.parse(filter.sortDirections);
+                            // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
+                            if (Array.isArray(parsed)) {
+                                sortDirections = parsed;
+                            }
+                            else if (typeof parsed === 'object' && parsed !== null) {
+                                // Altes Format: { "status": "asc", "branch": "desc" }
+                                sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
+                                    column,
+                                    direction: direction,
+                                    priority: index + 1
+                                }));
+                            }
                         }
                     }
                     catch (e) {
@@ -141,18 +147,24 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             let sortDirections = [];
             if (filter.sortDirections) {
                 try {
-                    const parsed = JSON.parse(filter.sortDirections);
-                    // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
-                    if (Array.isArray(parsed)) {
-                        sortDirections = parsed;
+                    // Prüfe, ob es ein "null" String ist
+                    if (filter.sortDirections.trim() === 'null' || filter.sortDirections.trim() === '') {
+                        sortDirections = [];
                     }
-                    else if (typeof parsed === 'object' && parsed !== null) {
-                        // Altes Format: { "status": "asc", "branch": "desc" }
-                        sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
-                            column,
-                            direction: direction,
-                            priority: index + 1
-                        }));
+                    else {
+                        const parsed = JSON.parse(filter.sortDirections);
+                        // Migration: Altes Format (Record) zu neuem Format (Array) konvertieren
+                        if (Array.isArray(parsed)) {
+                            sortDirections = parsed;
+                        }
+                        else if (typeof parsed === 'object' && parsed !== null) {
+                            // Altes Format: { "status": "asc", "branch": "desc" }
+                            sortDirections = Object.entries(parsed).map(([column, direction], index) => ({
+                                column,
+                                direction: direction,
+                                priority: index + 1
+                            }));
+                        }
                     }
                 }
                 catch (e) {

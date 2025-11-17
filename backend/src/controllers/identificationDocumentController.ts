@@ -178,6 +178,35 @@ export const addDocument = async (req: Request, res: Response) => {
                   userUpdateData.gender = recognizedData.gender;
                 }
                 if (recognizedData.documentNumber) userUpdateData.identificationNumber = recognizedData.documentNumber;
+                
+                // Setze country aus issuingCountry (falls vorhanden)
+                // issuingCountry kann direkt im recognizedData sein oder aus dem manuell eingegebenen Dokument
+                const countryToMap = recognizedData.issuingCountry || issuingCountry;
+                if (countryToMap) {
+                  // Mappe issuingCountry zu country-Code (z.B. "Colombia" -> "CO", "Switzerland" -> "CH")
+                  const countryMapping: Record<string, string> = {
+                    'Colombia': 'CO',
+                    'CO': 'CO',
+                    'Switzerland': 'CH',
+                    'CH': 'CH',
+                    'Swiss': 'CH',
+                    'Germany': 'DE',
+                    'DE': 'DE',
+                    'Deutschland': 'DE',
+                    'Austria': 'AT',
+                    'AT': 'AT',
+                    'Österreich': 'AT'
+                  };
+                  
+                  const issuingCountryStr = countryToMap.toString().trim();
+                  const mappedCountry = countryMapping[issuingCountryStr] || issuingCountryStr.toUpperCase();
+                  
+                  // Validiere, dass es ein gültiger Country-Code ist
+                  if (['CO', 'CH', 'DE', 'AT'].includes(mappedCountry)) {
+                    userUpdateData.country = mappedCountry;
+                    console.log(`[addDocument] Country aus issuingCountry erkannt: ${issuingCountryStr} -> ${mappedCountry}`);
+                  }
+                }
 
                 // Update User, falls Daten erkannt wurden
                 if (Object.keys(userUpdateData).length > 0) {

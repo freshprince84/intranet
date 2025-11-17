@@ -512,17 +512,21 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                   ref={selectedReportId === report.id ? selectedReportRef : null}
                 >
                   <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
-                    <button
-                      onClick={() => toggleExpanded(report.id)}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                      title={expandedRows.has(report.id) ? t('common.collapse') : t('common.expand')}
-                    >
-                      <ChevronDownIcon 
-                        className={`h-4 w-4 transition-transform ${
-                          expandedRows.has(report.id) ? 'rotate-180' : ''
-                        }`} 
-                      />
-                    </button>
+                    <div className="relative group">
+                      <button
+                        onClick={() => toggleExpanded(report.id)}
+                        className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                      >
+                        <ChevronDownIcon 
+                          className={`h-4 w-4 transition-transform ${
+                            expandedRows.has(report.id) ? 'rotate-180' : ''
+                          }`} 
+                        />
+                      </button>
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        {expandedRows.has(report.id) ? t('common.collapse') : t('common.expand')}
+                      </div>
+                    </div>
                   </td>
                   <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -552,13 +556,17 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
-                      <button
-                        onClick={() => downloadPDF(report)}
-                        className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                        title={t('analytics.monthlyReports.downloadTitle')}
-                      >
-                        <DocumentArrowDownIcon className="h-5 w-5" />
-                      </button>
+                      <div className="relative group">
+                        <button
+                          onClick={() => downloadPDF(report)}
+                          className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                        >
+                          <DocumentArrowDownIcon className="h-5 w-5" />
+                        </button>
+                        <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                          {t('analytics.monthlyReports.downloadTitle')}
+                        </div>
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -606,13 +614,17 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                                         {Number(item.totalHours).toFixed(2)} h
                                       </td>
                                       <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">
-                                        <button
-                                          onClick={() => openClientConsultationsSidepane(item.clientId, item.clientName, report.id)}
-                                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                          title={t('analytics.monthlyReports.editConsultationsTitle')}
-                                        >
-                                          <PencilIcon className="h-4 w-4" />
-                                        </button>
+                                        <div className="relative group">
+                                          <button
+                                            onClick={() => openClientConsultationsSidepane(item.clientId, item.clientName, report.id)}
+                                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                          >
+                                            <PencilIcon className="h-4 w-4" />
+                                          </button>
+                                          <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                            {t('analytics.monthlyReports.editConsultationsTitle')}
+                                          </div>
+                                        </div>
                                       </td>
                                     </tr>
                                   ))}
@@ -692,13 +704,17 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                 // Action-Buttons
                 const actions = (
                   <div className="flex items-center justify-end space-x-2">
-                    <button
-                      onClick={() => downloadPDF(report)}
-                      className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                      title="PDF herunterladen"
-                    >
-                      <DocumentArrowDownIcon className="h-5 w-5" />
-                    </button>
+                    <div className="relative group">
+                      <button
+                        onClick={() => downloadPDF(report)}
+                        className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                      >
+                        <DocumentArrowDownIcon className="h-5 w-5" />
+                      </button>
+                      <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                        PDF herunterladen
+                      </div>
+                    </div>
                   </div>
                 );
 
@@ -741,13 +757,17 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                                   {Number(item.totalHours).toFixed(2)} h
                                 </td>
                                 <td className="px-4 py-2 text-sm text-gray-900 dark:text-gray-200">
-                                  <button
-                                    onClick={() => openClientConsultationsSidepane(item.clientId, item.clientName, report.id)}
-                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                    title={t('analytics.monthlyReports.editConsultationsTitle')}
-                                  >
-                                    <PencilIcon className="h-4 w-4" />
-                                  </button>
+                                  <div className="relative group">
+                                    <button
+                                      onClick={() => openClientConsultationsSidepane(item.clientId, item.clientName, report.id)}
+                                      className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                    >
+                                      <PencilIcon className="h-4 w-4" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                      {t('analytics.monthlyReports.editConsultationsTitle')}
+                                    </div>
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -895,20 +915,28 @@ const MonthlyReportsTab: React.FC<MonthlyReportsTabProps> = ({ selectedReportId 
                                   </div>
                                 </div>
                                 <div className="flex items-center space-x-2 ml-4">
-                                  <button
-                                    type="button"
-                                    className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
-                                    title={t('common.save')}
-                                  >
-                                    <CheckIcon className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                                    title={t('common.delete')}
-                                  >
-                                    <TrashIcon className="h-4 w-4" />
-                                  </button>
+                                  <div className="relative group">
+                                    <button
+                                      type="button"
+                                      className="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300"
+                                    >
+                                      <CheckIcon className="h-4 w-4" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                      {t('common.save')}
+                                    </div>
+                                  </div>
+                                  <div className="relative group">
+                                    <button
+                                      type="button"
+                                      className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                                    >
+                                      <TrashIcon className="h-4 w-4" />
+                                    </button>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                      {t('common.delete')}
+                                    </div>
+                                  </div>
                                 </div>
                               </div>
                             </div>

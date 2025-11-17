@@ -100,9 +100,10 @@ router.put('/media/:id', auth_1.authenticateToken, (0, permissionMiddleware_1.ch
 router.delete('/media/:id', auth_1.authenticateToken, (0, permissionMiddleware_1.checkPermission)('cerebro_media', 'write', 'cerebro'), cerebroMediaController.deleteMedia);
 // -------------------- Externe Links Routen --------------------
 // Öffentliche Routen
+// WICHTIG: Spezifische Routen ZUERST, dann parametrisierte Routen
+router.get('/links/preview', cerebroExternalLinksController.getLinkPreview);
 router.get('/links/carticle/:carticleId', cerebroExternalLinksController.getLinksByArticle);
 router.get('/links/:id', cerebroExternalLinksController.getLinkById);
-router.get('/links/preview', cerebroExternalLinksController.getLinkPreview);
 // Geschützte Routen
 router.post('/links', auth_1.authenticateToken, (0, permissionMiddleware_1.checkPermission)('cerebro_links', 'write', 'cerebro'), cerebroExternalLinksController.createExternalLink);
 router.put('/links/:id', auth_1.authenticateToken, (0, permissionMiddleware_1.checkPermission)('cerebro_links', 'write', 'cerebro'), cerebroExternalLinksController.updateLink);

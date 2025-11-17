@@ -1,5 +1,6 @@
 import { PrismaClient, Reservation } from '@prisma/client';
 import { createNotificationIfEnabled } from '../controllers/notificationController';
+import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
 import { NotificationType } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -248,10 +249,12 @@ export class TaskAutomationService {
           });
 
           for (const legalUser of legalUsers) {
+            const userLang = await getUserLanguage(legalUser.id);
+            const notificationText = getTaskNotificationText(userLang, 'new_onboarding_task', task.title);
             await createNotificationIfEnabled({
               userId: legalUser.id,
-              title: 'Neuer Onboarding-Task',
-              message: `Ein neuer Task wurde zugewiesen: ${task.title}`,
+              title: notificationText.title,
+              message: notificationText.message,
               type: NotificationType.task,
               relatedEntityId: task.id,
               relatedEntityType: 'create'
@@ -418,10 +421,12 @@ export class TaskAutomationService {
           });
 
           for (const hrUser of hrUsers) {
+            const userLang = await getUserLanguage(hrUser.id);
+            const notificationText = getTaskNotificationText(userLang, 'new_offboarding_task', task.title);
             await createNotificationIfEnabled({
               userId: hrUser.id,
-              title: 'Neuer Offboarding-Task',
-              message: `Ein neuer Task wurde zugewiesen: ${task.title}`,
+              title: notificationText.title,
+              message: notificationText.message,
               type: NotificationType.task,
               relatedEntityId: task.id,
               relatedEntityType: 'create'
@@ -567,10 +572,12 @@ export class TaskAutomationService {
       });
 
       for (const legalUser of legalUsers) {
+        const userLang = await getUserLanguage(legalUser.id);
+        const notificationText = getTaskNotificationText(userLang, 'new_social_security_task', task.title);
         await createNotificationIfEnabled({
           userId: legalUser.id,
-          title: 'Neuer Sozialversicherungs-Task',
-          message: `Ein neuer Task wurde zugewiesen: ${task.title}`,
+          title: notificationText.title,
+          message: notificationText.message,
           type: NotificationType.task,
           relatedEntityId: task.id,
           relatedEntityType: 'create'
@@ -717,10 +724,12 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
       });
 
       for (const receptionUser of receptionUsers) {
+        const userLang = await getUserLanguage(receptionUser.id);
+        const notificationText = getTaskNotificationText(userLang, 'check_in_started', task.title, undefined, undefined, reservation.guestName);
         await createNotificationIfEnabled({
           userId: receptionUser.id,
-          title: 'Neue Reservierung',
-          message: `Neue Reservierung für Check-in: ${reservation.guestName}`,
+          title: notificationText.title,
+          message: notificationText.message,
           type: NotificationType.task,
           relatedEntityId: task.id,
           relatedEntityType: 'create'

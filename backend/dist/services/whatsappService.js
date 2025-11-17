@@ -463,6 +463,8 @@ ${checkInLink}
 Por favor, realiza el pago por adelantado:
 ${paymentLink}
 
+Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago. ¡Gracias!
+
 ¡Te esperamos mañana!`;
             // Template-Name aus Environment oder Settings (Standard: reservation_checkin_invitation)
             const templateName = process.env.WHATSAPP_TEMPLATE_CHECKIN_INVITATION || 'reservation_checkin_invitation';

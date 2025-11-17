@@ -14,6 +14,7 @@ const client_1 = require("@prisma/client");
 const monthlyConsultationReportController_1 = require("../controllers/monthlyConsultationReportController");
 const notificationController_1 = require("../controllers/notificationController");
 const notificationValidation_1 = require("../validation/notificationValidation");
+const translations_1 = require("../utils/translations");
 const prisma = new client_1.PrismaClient();
 /**
  * Überprüft und erstellt automatische Monatsabrechnungen für alle Benutzer
@@ -75,15 +76,17 @@ const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, f
                         lastStatusCode = code;
                         return mockRes;
                     },
-                    json: (data) => {
+                    json: (data) => __awaiter(void 0, void 0, void 0, function* () {
                         if (data.message && !data.message.includes('Für diesen Zeitraum existiert bereits')) {
                             console.log(`Automatische Monatsabrechnung für Benutzer ${userSettings.userId}: ${data.message}`);
                             // Bei Erfolg: Benachrichtigung senden
                             if (lastStatusCode === 201 || lastStatusCode === 200) {
+                                const userLang = yield (0, translations_1.getUserLanguage)(userSettings.userId);
+                                const notificationText = (0, translations_1.getSystemNotificationText)(userLang, 'monthly_report_created', periodStart.toLocaleDateString('de-DE'), periodEnd.toLocaleDateString('de-DE'));
                                 (0, notificationController_1.createNotificationIfEnabled)({
                                     userId: userSettings.userId,
-                                    title: 'Monatsabrechnung erstellt',
-                                    message: `Ihre automatische Monatsabrechnung für den Zeitraum ${periodStart.toLocaleDateString('de-DE')} - ${periodEnd.toLocaleDateString('de-DE')} wurde erfolgreich erstellt.`,
+                                    title: notificationText.title,
+                                    message: notificationText.message,
                                     type: notificationValidation_1.NotificationType.system,
                                     relatedEntityId: data.id || null,
                                     relatedEntityType: 'monthly_report_generated'
@@ -91,7 +94,7 @@ const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, f
                             }
                         }
                         return mockRes;
-                    }
+                    })
                 };
                 // Rufe die automatische Generierung auf
                 yield (0, monthlyConsultationReportController_1.generateAutomaticMonthlyReport)(mockReq, mockRes);
@@ -100,10 +103,12 @@ const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, f
                 console.error(`Fehler bei automatischer Monatsabrechnung für Benutzer ${userSettings.userId}:`, userError);
                 // Fehler-Benachrichtigung senden
                 try {
+                    const userLang = yield (0, translations_1.getUserLanguage)(userSettings.userId);
+                    const notificationText = (0, translations_1.getSystemNotificationText)(userLang, 'monthly_report_error');
                     yield (0, notificationController_1.createNotificationIfEnabled)({
                         userId: userSettings.userId,
-                        title: 'Fehler bei Monatsabrechnung',
-                        message: 'Bei der automatischen Erstellung Ihrer Monatsabrechnung ist ein Fehler aufgetreten. Bitte erstellen Sie diese manuell.',
+                        title: notificationText.title,
+                        message: notificationText.message,
                         type: notificationValidation_1.NotificationType.system,
                         relatedEntityType: 'monthly_report_error'
                     });

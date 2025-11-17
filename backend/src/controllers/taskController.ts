@@ -8,6 +8,7 @@ import { validateTask, TaskData } from '../validation/taskValidation';
 import { createNotificationIfEnabled } from './notificationController';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 import { LifecycleService } from '../services/lifecycleService';
+import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
 
 const prisma = new PrismaClient();
 
@@ -207,10 +208,12 @@ export const createTask = async (req: Request<{}, {}, TaskData>, res: Response) 
         
         // Benachrichtigung für den Verantwortlichen erstellen, nur wenn ein Benutzer zugewiesen ist
         if (taskData.responsibleId) {
+            const userLang = await getUserLanguage(taskData.responsibleId);
+            const notificationText = getTaskNotificationText(userLang, 'assigned', taskData.title);
             await createNotificationIfEnabled({
                 userId: taskData.responsibleId,
-                title: 'Neuer Task zugewiesen',
-                message: `Dir wurde ein neuer Task zugewiesen: ${taskData.title}`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: NotificationType.task,
                 relatedEntityId: task.id,
                 relatedEntityType: 'create'
@@ -218,14 +221,18 @@ export const createTask = async (req: Request<{}, {}, TaskData>, res: Response) 
         }
 
         // Benachrichtigung für die Qualitätskontrolle erstellen
-        await createNotificationIfEnabled({
-            userId: taskData.qualityControlId,
-            title: 'Neue Qualitätskontrolle zugewiesen',
-            message: `Du wurdest als Qualitätskontrolle für einen neuen Task zugewiesen: ${taskData.title}`,
-            type: NotificationType.task,
-            relatedEntityId: task.id,
-            relatedEntityType: 'create'
-        });
+        if (taskData.qualityControlId) {
+            const userLang = await getUserLanguage(taskData.qualityControlId);
+            const notificationText = getTaskNotificationText(userLang, 'quality_control_assigned', taskData.title);
+            await createNotificationIfEnabled({
+                userId: taskData.qualityControlId,
+                title: notificationText.title,
+                message: notificationText.message,
+                type: NotificationType.task,
+                relatedEntityId: task.id,
+                relatedEntityType: 'create'
+            });
+        }
         
         res.status(201).json(task);
     } catch (error) {
@@ -461,10 +468,12 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
                             await LifecycleService.startLifecycleAfterOnboarding(onboardingUserId, task.organizationId);
                             
                             // Benachrichtigung an User
+                            const userLang = await getUserLanguage(onboardingUserId);
+                            const notificationText = getTaskNotificationText(userLang, 'onboarding_completed', task.title);
                             await createNotificationIfEnabled({
                                 userId: onboardingUserId,
-                                title: 'Onboarding abgeschlossen',
-                                message: 'Ihr Onboarding wurde abgeschlossen. Sie können nun alle Funktionen nutzen.',
+                                title: notificationText.title,
+                                message: notificationText.message,
                                 type: NotificationType.user,
                                 relatedEntityId: onboardingUserId,
                                 relatedEntityType: 'update'
@@ -556,10 +565,12 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
             
             // Benachrichtigung für den Verantwortlichen, nur wenn ein Benutzer zugewiesen ist
             if (task.responsibleId) {
+                const userLang = await getUserLanguage(task.responsibleId);
+                const notificationText = getTaskNotificationText(userLang, 'status_changed', task.title, currentTask.status, updateData.status);
                 await createNotificationIfEnabled({
                     userId: task.responsibleId,
-                    title: 'Task-Status geändert',
-                    message: `Der Status des Tasks "${task.title}" wurde von "${currentTask.status}" zu "${updateData.status}" geändert.`,
+                    title: notificationText.title,
+                    message: notificationText.message,
                     type: NotificationType.task,
                     relatedEntityId: task.id,
                     relatedEntityType: 'status'
@@ -567,21 +578,27 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
             }
             
             // Benachrichtigung für die Qualitätskontrolle
-            await createNotificationIfEnabled({
-                userId: task.qualityControlId,
-                title: 'Task-Status geändert',
-                message: `Der Status des Tasks "${task.title}" wurde von "${currentTask.status}" zu "${updateData.status}" geändert.`,
-                type: NotificationType.task,
-                relatedEntityId: task.id,
-                relatedEntityType: 'status'
-            });
+            if (task.qualityControlId) {
+                const userLang = await getUserLanguage(task.qualityControlId);
+                const notificationText = getTaskNotificationText(userLang, 'status_changed', task.title, currentTask.status, updateData.status);
+                await createNotificationIfEnabled({
+                    userId: task.qualityControlId,
+                    title: notificationText.title,
+                    message: notificationText.message,
+                    type: NotificationType.task,
+                    relatedEntityId: task.id,
+                    relatedEntityType: 'status'
+                });
+            }
         } 
         // Benachrichtigung bei Änderung des Verantwortlichen
         else if (updateData.responsibleId && updateData.responsibleId !== currentTask.responsibleId) {
+            const userLang = await getUserLanguage(updateData.responsibleId);
+            const notificationText = getTaskNotificationText(userLang, 'assigned', task.title);
             await createNotificationIfEnabled({
                 userId: updateData.responsibleId,
-                title: 'Task zugewiesen',
-                message: `Dir wurde der Task "${task.title}" zugewiesen.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: NotificationType.task,
                 relatedEntityId: task.id,
                 relatedEntityType: 'update'
@@ -589,10 +606,12 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
         }
         // Benachrichtigung bei Änderung der Qualitätskontrolle
         else if (updateData.qualityControlId && updateData.qualityControlId !== currentTask.qualityControlId) {
+            const userLang = await getUserLanguage(updateData.qualityControlId);
+            const notificationText = getTaskNotificationText(userLang, 'quality_control_assigned', task.title);
             await createNotificationIfEnabled({
                 userId: updateData.qualityControlId,
-                title: 'Qualitätskontrolle zugewiesen',
-                message: `Du wurdest als Qualitätskontrolle für den Task "${task.title}" zugewiesen.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: NotificationType.task,
                 relatedEntityId: task.id,
                 relatedEntityType: 'update'
@@ -602,10 +621,12 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
         else if (Object.keys(updateData).length > 0) {
             // Benachrichtigung für den Verantwortlichen, nur wenn ein Benutzer zugewiesen ist
             if (task.responsibleId) {
+                const userLang = await getUserLanguage(task.responsibleId);
+                const notificationText = getTaskNotificationText(userLang, 'updated', task.title);
                 await createNotificationIfEnabled({
                     userId: task.responsibleId,
-                    title: 'Task aktualisiert',
-                    message: `Der Task "${task.title}" wurde aktualisiert.`,
+                    title: notificationText.title,
+                    message: notificationText.message,
                     type: NotificationType.task,
                     relatedEntityId: task.id,
                     relatedEntityType: 'update'
@@ -614,10 +635,12 @@ export const updateTask = async (req: Request<TaskParams, {}, Partial<TaskData>>
             
             // Benachrichtigung für die Qualitätskontrolle
             if (task.qualityControlId && (!task.responsibleId || task.responsibleId !== task.qualityControlId)) {
+                const userLang = await getUserLanguage(task.qualityControlId);
+                const notificationText = getTaskNotificationText(userLang, 'updated', task.title);
                 await createNotificationIfEnabled({
                     userId: task.qualityControlId,
-                    title: 'Task aktualisiert',
-                    message: `Der Task "${task.title}" wurde aktualisiert.`,
+                    title: notificationText.title,
+                    message: notificationText.message,
                     type: NotificationType.task,
                     relatedEntityId: task.id,
                     relatedEntityType: 'update'
@@ -690,10 +713,12 @@ export const deleteTask = async (req: Request<TaskParams>, res: Response) => {
 
         // Benachrichtigung für den Verantwortlichen, nur wenn ein Benutzer zugewiesen ist
         if (task.responsibleId) {
+            const userLang = await getUserLanguage(task.responsibleId);
+            const notificationText = getTaskNotificationText(userLang, 'deleted', task.title);
             await createNotificationIfEnabled({
                 userId: task.responsibleId,
-                title: 'Task gelöscht',
-                message: `Der Task "${task.title}" wurde gelöscht.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: NotificationType.task,
                 relatedEntityId: taskId,
                 relatedEntityType: 'delete'
@@ -702,10 +727,12 @@ export const deleteTask = async (req: Request<TaskParams>, res: Response) => {
         
         // Benachrichtigung für die Qualitätskontrolle
         if (task.qualityControlId && (!task.responsibleId || task.responsibleId !== task.qualityControlId)) {
+            const userLang = await getUserLanguage(task.qualityControlId);
+            const notificationText = getTaskNotificationText(userLang, 'deleted', task.title);
             await createNotificationIfEnabled({
                 userId: task.qualityControlId,
-                title: 'Task gelöscht',
-                message: `Der Task "${task.title}" wurde gelöscht.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: NotificationType.task,
                 relatedEntityId: taskId,
                 relatedEntityType: 'delete'

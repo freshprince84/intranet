@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateRoleBranches = exports.getRoleBranches = exports.getRolePermissions = exports.deleteRole = exports.updateRole = exports.createRole = exports.getRoleById = exports.getAllRoles = exports.isRoleAvailableForBranch = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
+const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const prisma = new client_1.PrismaClient();
 const userSelect = {
@@ -254,10 +255,12 @@ const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     } })
             });
             for (const admin of admins) {
+                const adminLang = yield (0, translations_1.getUserLanguage)(admin.id);
+                const notificationText = (0, translations_1.getRoleNotificationText)(adminLang, 'created', name, false);
                 yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: admin.id,
-                    title: 'Neue Rolle erstellt',
-                    message: `Eine neue Rolle "${name}" wurde erstellt.`,
+                    title: notificationText.title,
+                    message: notificationText.message,
                     type: client_1.NotificationType.role,
                     relatedEntityId: role.id,
                     relatedEntityType: 'create'
@@ -433,10 +436,12 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
         });
         for (const admin of admins) {
+            const adminLang = yield (0, translations_1.getUserLanguage)(admin.id);
+            const notificationText = (0, translations_1.getRoleNotificationText)(adminLang, 'updated', updatedRole.name, false);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: admin.id,
-                title: 'Rolle aktualisiert',
-                message: `Die Rolle "${updatedRole.name}" wurde aktualisiert.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: client_1.NotificationType.role,
                 relatedEntityId: updatedRole.id,
                 relatedEntityType: 'update'
@@ -457,10 +462,12 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         for (const user of usersWithRole) {
             // Nicht an Administratoren senden, die bereits benachrichtigt wurden
             if (!admins.some(admin => admin.id === user.id)) {
+                const userLang = yield (0, translations_1.getUserLanguage)(user.id);
+                const notificationText = (0, translations_1.getRoleNotificationText)(userLang, 'updated', updatedRole.name, true);
                 yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: user.id,
-                    title: 'Deine Rolle wurde aktualisiert',
-                    message: `Die Rolle "${updatedRole.name}", die dir zugewiesen ist, wurde aktualisiert.`,
+                    title: notificationText.title,
+                    message: notificationText.message,
                     type: client_1.NotificationType.role,
                     relatedEntityId: updatedRole.id,
                     relatedEntityType: 'update'
@@ -562,10 +569,12 @@ const deleteRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
         });
         for (const admin of admins) {
+            const adminLang = yield (0, translations_1.getUserLanguage)(admin.id);
+            const notificationText = (0, translations_1.getRoleNotificationText)(adminLang, 'deleted', role.name, false);
             yield (0, notificationController_1.createNotificationIfEnabled)({
                 userId: admin.id,
-                title: 'Rolle gelöscht',
-                message: `Die Rolle "${role.name}" wurde gelöscht.`,
+                title: notificationText.title,
+                message: notificationText.message,
                 type: client_1.NotificationType.role,
                 relatedEntityId: roleId,
                 relatedEntityType: 'delete'
@@ -575,10 +584,12 @@ const deleteRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         for (const user of usersWithRole) {
             // Nicht an Administratoren senden, die bereits benachrichtigt wurden
             if (!admins.some(admin => admin.id === user.id)) {
+                const userLang = yield (0, translations_1.getUserLanguage)(user.id);
+                const notificationText = (0, translations_1.getRoleNotificationText)(userLang, 'deleted', role.name, true);
                 yield (0, notificationController_1.createNotificationIfEnabled)({
                     userId: user.id,
-                    title: 'Rolle entfernt',
-                    message: `Die Rolle "${role.name}", die dir zugewiesen war, wurde gelöscht.`,
+                    title: notificationText.title,
+                    message: notificationText.message,
                     type: client_1.NotificationType.role,
                     relatedEntityId: roleId,
                     relatedEntityType: 'delete'

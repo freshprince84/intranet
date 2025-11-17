@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateApprovedOvertimeHours = exports.updateUserWorktime = exports.getUserWorktimesByDay = exports.stopUserWorktime = exports.getActiveTeamWorktimes = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
+const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const prisma = new client_1.PrismaClient();
 /**
@@ -100,10 +101,12 @@ const stopUserWorktime = (req, res) => __awaiter(void 0, void 0, void 0, functio
             }
         });
         // Erstelle eine Benachrichtigung für den Benutzer
+        const userLang = yield (0, translations_1.getUserLanguage)(Number(userId));
+        const notificationText = (0, translations_1.getSystemNotificationText)(userLang, 'worktime_manager_stop', undefined, undefined, worktime.branch.name);
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: Number(userId),
-            title: 'Zeiterfassung durch Vorgesetzten beendet',
-            message: `Ihre Zeiterfassung für ${worktime.branch.name} wurde von einem Vorgesetzten beendet.`,
+            title: notificationText.title,
+            message: notificationText.message,
             type: client_1.NotificationType.worktime_manager_stop,
             relatedEntityId: worktime.id,
             relatedEntityType: 'worktime_manager_stop'
@@ -220,10 +223,12 @@ const updateUserWorktime = (req, res) => __awaiter(void 0, void 0, void 0, funct
             }
         });
         // Erstelle eine Benachrichtigung für den Benutzer
+        const userLang = yield (0, translations_1.getUserLanguage)(worktime.userId);
+        const notificationText = (0, translations_1.getSystemNotificationText)(userLang, 'worktime_updated', undefined, undefined, worktime.branch.name);
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: worktime.userId,
-            title: 'Zeiterfassung aktualisiert',
-            message: `Ihre Zeiterfassung für ${worktime.branch.name} wurde von einem Vorgesetzten aktualisiert.`,
+            title: notificationText.title,
+            message: notificationText.message,
             type: client_1.NotificationType.worktime_manager_stop,
             relatedEntityId: worktime.id,
             relatedEntityType: 'worktime_update'
@@ -277,10 +282,12 @@ const updateApprovedOvertimeHours = (req, res) => __awaiter(void 0, void 0, void
             }
         });
         // Erstelle eine Benachrichtigung für den Benutzer
+        const userLang = yield (0, translations_1.getUserLanguage)(Number(userId));
+        const notificationText = (0, translations_1.getSystemNotificationText)(userLang, 'overtime_updated', undefined, undefined, undefined, approvedOvertimeHours);
         yield (0, notificationController_1.createNotificationIfEnabled)({
             userId: Number(userId),
-            title: 'Bewilligte Überstunden aktualisiert',
-            message: `Ihre bewilligten Überstunden wurden auf ${approvedOvertimeHours} Stunden aktualisiert.`,
+            title: notificationText.title,
+            message: notificationText.message,
             type: client_1.NotificationType.worktime,
             relatedEntityId: updatedUser.id,
             relatedEntityType: 'overtime_update'

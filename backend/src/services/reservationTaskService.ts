@@ -1,6 +1,7 @@
 import { PrismaClient, Reservation, TaskStatus } from '@prisma/client';
 import { createNotificationIfEnabled } from '../controllers/notificationController';
 import { NotificationType } from '@prisma/client';
+import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
 
 const prisma = new PrismaClient();
 
@@ -59,10 +60,12 @@ export class ReservationTaskService {
 
       // Benachrichtigung für Quality Control
       if (task.qualityControlId) {
+        const userLang = await getUserLanguage(task.qualityControlId);
+        const notificationText = getTaskNotificationText(userLang, 'check_in_started', task.title, undefined, undefined, task.reservation?.guestName);
         await createNotificationIfEnabled({
           userId: task.qualityControlId,
-          title: 'Check-in gestartet',
-          message: `Check-in für ${task.reservation?.guestName || 'Gast'} wurde gestartet`,
+          title: notificationText.title,
+          message: notificationText.message,
           type: NotificationType.task,
           relatedEntityId: task.id,
           relatedEntityType: 'update'
@@ -131,10 +134,12 @@ export class ReservationTaskService {
 
       // Benachrichtigung für Quality Control
       if (task.qualityControlId) {
+        const userLang = await getUserLanguage(task.qualityControlId);
+        const notificationText = getTaskNotificationText(userLang, 'check_in_completed', task.title || '', undefined, undefined, task.reservation?.guestName);
         await createNotificationIfEnabled({
           userId: task.qualityControlId,
-          title: 'Check-in abgeschlossen',
-          message: `Check-in für ${task.reservation?.guestName || 'Gast'} wurde abgeschlossen`,
+          title: notificationText.title,
+          message: notificationText.message,
           type: NotificationType.task,
           relatedEntityId: task.id,
           relatedEntityType: 'update'

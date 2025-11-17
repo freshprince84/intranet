@@ -195,13 +195,16 @@ const Sidebar: React.FC = () => {
                         
                         if (isDisabled) {
                             return (
-                                <span
-                                    key={item.path}
-                                    className={`flex flex-col items-center justify-center px-0.5 py-1 text-[10px] text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50`}
-                                    title={t('profile.completeProfile')}
-                                >
-                                    {content}
-                                </span>
+                                <div key={item.path} className="relative group">
+                                    <span
+                                        className={`flex flex-col items-center justify-center px-0.5 py-1 text-[10px] text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50`}
+                                    >
+                                        {content}
+                                    </span>
+                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                        {t('profile.completeProfile')}
+                                    </div>
+                                </div>
                             );
                         }
                         
@@ -248,13 +251,16 @@ const Sidebar: React.FC = () => {
                                         
                                         if (isDisabled) {
                                             return (
-                                                <span
-                                                    key={item.path}
-                                                    className="flex items-center px-4 py-3 text-sm text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
-                                                    title={t('profile.completeProfile')}
-                                                >
-                                                    {content}
-                                                </span>
+                                                <div key={item.path} className="relative group">
+                                                    <span
+                                                        className="flex items-center px-4 py-3 text-sm text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50"
+                                                    >
+                                                        {content}
+                                                    </span>
+                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                        {t('profile.completeProfile')}
+                                                    </div>
+                                                </div>
                                             );
                                         }
                                         
@@ -286,16 +292,20 @@ const Sidebar: React.FC = () => {
             <nav className={`${isCollapsed ? 'w-12' : 'w-56'} transition-all duration-300 h-full flex flex-col`}>
                 <div className={`${isCollapsed ? 'px-2' : 'px-3 pr-2'} py-4 flex-1 flex flex-col`}>
                     <div className="flex justify-end mb-8">
-                        <button
-                            onClick={toggleCollapsed}
-                            className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
-                            title={isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
-                        >
-                            {isCollapsed ? 
-                                <ArrowRightIcon className="h-6 w-6" /> :
-                                <ArrowLeftIcon className="h-6 w-6" />
-                            }
-                        </button>
+                        <div className="relative group">
+                            <button
+                                onClick={toggleCollapsed}
+                                className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
+                            >
+                                {isCollapsed ? 
+                                    <ArrowRightIcon className="h-6 w-6" /> :
+                                    <ArrowLeftIcon className="h-6 w-6" />
+                                }
+                            </button>
+                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                {isCollapsed ? t('sidebar.expand') : t('sidebar.collapse')}
+                            </div>
+                        </div>
                     </div>
                     <ul className="space-y-6 flex-1 flex flex-col">
                         {/* Hauptmenüelemente (Group: main) */}
@@ -316,12 +326,16 @@ const Sidebar: React.FC = () => {
                             return (
                                 <li key={item.path}>
                                     {isDisabled ? (
-                                        <span
-                                            className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50`}
-                                            title={t('profile.completeProfile')}
-                                        >
-                                            {content}
-                                        </span>
+                                        <div className="relative group">
+                                            <span
+                                                className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50`}
+                                            >
+                                                {content}
+                                            </span>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {t('profile.completeProfile')}
+                                            </div>
+                                        </div>
                                     ) : (
                                         <Link 
                                             to={item.path} 
@@ -358,12 +372,16 @@ const Sidebar: React.FC = () => {
                             return (
                                 <li key={item.path}>
                                     {isDisabled ? (
-                                        <span
-                                            className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base group relative text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50`}
-                                            title={t('profile.completeProfile')}
-                                        >
-                                            {content}
-                                        </span>
+                                        <div className="relative group">
+                                            <span
+                                                className={`flex ${isCollapsed ? 'justify-center' : 'items-center'} gap-3 text-base text-gray-400 dark:text-gray-600 cursor-not-allowed opacity-50`}
+                                            >
+                                                {content}
+                                            </span>
+                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                {t('profile.completeProfile')}
+                                            </div>
+                                        </div>
                                     ) : (
                                         <Link 
                                             to={item.path} 
