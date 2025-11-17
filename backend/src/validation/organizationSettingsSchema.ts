@@ -28,7 +28,9 @@ const doorSystemSchema = z.object({
   username: z.string().optional(),
   password: z.string().optional(), // MD5-hashed password
   accessToken: z.string().optional(),
-  lockIds: z.array(z.string()).optional(),
+  lockIds: z.array(z.union([z.string(), z.number()])).transform((val) => 
+    val.map(id => String(id))
+  ).optional(),
   passcodeType: z.enum(['auto', 'custom']).optional(), // 'auto' = 10-stellig (ohne Sync), 'custom' = 4-stellig (mit Sync)
 }).optional();
 
