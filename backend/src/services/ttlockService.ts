@@ -345,9 +345,9 @@ export class TTLockService {
         payload.append('keyboardPwd', generatedPasscode);
       }
       payload.append('keyboardPwdName', passcodeName || 'Guest Passcode');
-      payload.append('keyboardPwdType', '3'); // 3 = period (temporärer Passcode)
-      payload.append('startDate', startDate.getTime().toString()); // Millisekunden!
-      payload.append('endDate', endDate.getTime().toString()); // Millisekunden!
+      payload.append('keyboardPwdType', '2'); // 2 = permanent (keine Start/Endzeit)
+      // WICHTIG: Permanente Passcodes benötigen KEINE startDate/endDate!
+      // Test: Funktioniert permanente Lösung ohne Zeitprobleme?
       // addType: 1=via phone bluetooth (APP SDK), 2=via gateway/WiFi
       // WICHTIG: addType: 1 funktioniert für 10-stellige period Passcodes ohne App-Sync!
       payload.append('addType', '1'); // 1 = via phone bluetooth (funktioniert ohne App-Sync für 10-stellige period)
