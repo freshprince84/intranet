@@ -210,13 +210,29 @@ export const decryptApiSettings = (settings: any): any => {
     }
   }
 
+  // TTLock Client ID
+  if (decrypted.doorSystem?.clientId) {
+    try {
+      if (decrypted.doorSystem.clientId.includes(':')) {
+        decrypted.doorSystem = {
+          ...decrypted.doorSystem,
+          clientId: decryptSecret(decrypted.doorSystem.clientId)
+        };
+      }
+    } catch (error) {
+      console.error('Error decrypting TTLock client ID:', error);
+    }
+  }
+
   // TTLock Client Secret
   if (decrypted.doorSystem?.clientSecret) {
     try {
-      decrypted.doorSystem = {
-        ...decrypted.doorSystem,
-        clientSecret: decryptSecret(decrypted.doorSystem.clientSecret)
-      };
+      if (decrypted.doorSystem.clientSecret.includes(':')) {
+        decrypted.doorSystem = {
+          ...decrypted.doorSystem,
+          clientSecret: decryptSecret(decrypted.doorSystem.clientSecret)
+        };
+      }
     } catch (error) {
       console.error('Error decrypting TTLock client secret:', error);
     }
