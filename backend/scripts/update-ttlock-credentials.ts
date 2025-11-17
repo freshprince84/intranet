@@ -41,16 +41,12 @@ async function updateTTLockCredentials() {
     console.log('🔐 Verschlüssele Credentials...');
 
     // Aktualisiere Settings
-    if (!settings.apiKey) {
-      settings.apiKey = {};
+    if (!settings.doorSystem) {
+      settings.doorSystem = {};
     }
 
-    if (!settings.apiKey.doorSystem) {
-      settings.apiKey.doorSystem = {};
-    }
-
-    settings.apiKey.doorSystem.clientId = encryptedClientId;
-    settings.apiKey.doorSystem.clientSecret = encryptedClientSecret;
+    settings.doorSystem.clientId = encryptedClientId;
+    settings.doorSystem.clientSecret = encryptedClientSecret;
 
     // Speichere in Datenbank
     await prisma.organization.update({
