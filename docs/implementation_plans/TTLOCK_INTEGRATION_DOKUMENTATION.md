@@ -5,10 +5,9 @@
 
 ## Übersicht
 
-Die TTLock Integration ermöglicht die automatische Erstellung von Passcodes für Gäste bei Check-in. Das System unterstützt zwei Passcode-Typen:
+Die TTLock Integration ermöglicht die automatische Erstellung von Passcodes für Gäste bei Check-in. Das System verwendet **permanente Passcodes** (`keyboardPwdType: 2`), die ohne App-Synchronisation funktionieren.
 
-1. **Automatisch (10-stellig)**: Funktioniert ohne Gateway/Synchronisation
-2. **Benutzerdefiniert (4-stellig)**: Erfordert Bluetooth-Synchronisation über TTLock App
+**WICHTIG**: Für permanente Passcodes (`keyboardPwdType: 2`) muss der Passcode **6-9 Ziffern lang** sein. **9-stellige Passcodes funktionieren ohne App-Sync** (herausgefunden und getestet).
 
 ## Konfiguration
 
@@ -22,8 +21,10 @@ Alle Einstellungen können pro Organisation über das Frontend konfiguriert werd
 - **Username**: TTLock App Username (z.B. `+573024498991` oder `3024498991`)
 - **Password**: TTLock App Password (wird MD5-gehasht gespeichert)
 - **Passcode-Typ**: 
-  - `auto`: 10-stellige Passcodes (ohne Synchronisation)
-  - `custom`: 4-stellige Passcodes (erfordert Synchronisation)
+  - `auto`: 9-stellige Passcodes (permanent, ohne Synchronisation)
+  - `custom`: 9-stellige Passcodes (permanent, ohne Synchronisation)
+  
+**Hinweis**: Beide Typen generieren 9-stellige permanente Passcodes, die ohne App-Sync funktionieren.
 
 ### Backend (Settings Schema)
 
@@ -57,15 +58,22 @@ async createTemporaryPasscode(
 ```
 
 **Passcode-Typen**:
-- **Auto (10-stellig)**: 
-  - Generiert: `Math.floor(1000000000 + Math.random() * 9000000000).toString()`
+- **Auto (9-stellig, permanent)**: 
+  - Generiert: `Math.floor(100000000 + Math.random() * 900000000).toString()`
+  - `keyboardPwdType: 2` (permanent, keine Start/Endzeit)
   - Funktioniert ohne Gateway/Synchronisation
   - Wird direkt über die API aktiviert
   
-- **Custom (4-stellig)**:
-  - Generiert: `Math.floor(1000 + Math.random() * 9000).toString()`
-  - Erfordert Bluetooth-Synchronisation über TTLock App
-  - Passcode wird in der API erstellt, aber erst nach Synchronisation aktiv
+- **Custom (9-stellig, permanent)**:
+  - Generiert: `Math.floor(100000000 + Math.random() * 900000000).toString()`
+  - `keyboardPwdType: 2` (permanent, keine Start/Endzeit)
+  - Funktioniert ohne Gateway/Synchronisation
+  - Wird direkt über die API aktiviert
+
+**WICHTIG**: 
+- Permanente Passcodes (`keyboardPwdType: 2`) müssen **6-9 Ziffern lang** sein
+- **9-stellige Passcodes funktionieren ohne App-Sync** (herausgefunden und getestet)
+- `addType: 2` (Gateway) wird zuerst versucht, Fallback auf `addType: 1` (Bluetooth) wenn Gateway nicht verfügbar
 
 ### Authentifizierung
 
@@ -118,21 +126,27 @@ const passcode = await ttlockService.createTemporaryPasscode(
 
 ## Wichtige Hinweise
 
+### Permanente Passcodes (keyboardPwdType: 2)
+
+- **9-stellige Passcodes** funktionieren ohne App-Synchronisation
+- **Keine Start/Endzeit** erforderlich (permanent)
+- **addType: 2** (Gateway) wird zuerst versucht, Fallback auf **addType: 1** (Bluetooth) wenn Gateway nicht verfügbar
+- **Passcode-Länge**: Muss 6-9 Ziffern lang sein (9-stellig funktioniert ohne Sync)
+
 ### Ohne Gateway
 
-- **10-stellige Passcodes** funktionieren ohne Synchronisation
-- **4-stellige Passcodes** erfordern Bluetooth-Synchronisation über TTLock App
-- Synchronisation erfolgt manuell: TTLock App öffnen → Lock auswählen → Passcodes synchronisieren
+- **9-stellige permanente Passcodes** funktionieren ohne Synchronisation
+- Fallback auf `addType: 1` (Bluetooth) wenn Gateway nicht verfügbar, dann ist App-Sync erforderlich
 
 ### Mit Gateway
 
-- Alle Passcode-Typen funktionieren ohne Synchronisation
-- Gateway ermöglicht direkte Aktivierung über WiFi
+- **9-stellige permanente Passcodes** funktionieren direkt ohne Synchronisation
+- Gateway ermöglicht direkte Aktivierung über WiFi (`addType: 2`)
 
 ### Passcode-Typ Auswahl
 
-- **Empfohlen**: `auto` (10-stellig) für Produktion ohne Gateway
-- **Nur wenn nötig**: `custom` (4-stellig) wenn kürzere Codes gewünscht sind (erfordert Synchronisation)
+- **Beide Typen** (`auto` und `custom`) generieren **9-stellige permanente Passcodes**
+- **Empfohlen**: Beide funktionieren ohne App-Sync (9-stellig)
 
 ## Deployment (Hetzner Server)
 
@@ -164,12 +178,12 @@ echo $ENCRYPTION_KEY
 
 ### Passcode funktioniert nicht
 
-1. **10-stelliger Passcode**: Sollte direkt funktionieren
-2. **4-stelliger Passcode**: 
-   - TTLock App öffnen
-   - Lock auswählen
-   - Passcodes synchronisieren
+1. **9-stelliger permanenter Passcode**: Sollte direkt funktionieren (ohne App-Sync)
+2. **Falls Gateway nicht verfügbar**: 
+   - System versucht automatisch `addType: 1` (Bluetooth)
+   - Dann ist App-Sync erforderlich: TTLock App öffnen → Lock auswählen → Passcodes synchronisieren
    - Prüfen ob Passcode in der App sichtbar ist
+3. **Passcode-Länge prüfen**: Muss 6-9 Ziffern lang sein (9-stellig funktioniert ohne Sync)
 
 ### Authentifizierungsfehler
 
@@ -223,6 +237,13 @@ echo $ENCRYPTION_KEY
 - `frontend/src/i18n/locales/*.json` - Übersetzungen (DE, EN, ES)
 
 ## Changelog
+
+### 2025-11-17
+- ✅ Permanente Passcodes (`keyboardPwdType: 2`) implementiert
+- ✅ 9-stellige Passcodes für permanente Codes (funktionieren ohne App-Sync)
+- ✅ Gateway-Fallback: `addType: 2` zuerst, dann `addType: 1` wenn Gateway nicht verfügbar
+- ✅ Passcode-Länge: 6-9 Ziffern für permanente Codes (9-stellig funktioniert ohne Sync)
+- ✅ Dokumentation aktualisiert
 
 ### 2025-01-20
 - ✅ Passcode-Typ konfigurierbar pro Organisation
