@@ -241,10 +241,17 @@ export const createReservation = async (req: Request, res: Response) => {
 
     // Erkenne ob es Telefonnummer oder Email ist
     const contactType = detectContactType(contact.trim());
+    
+    // WICHTIG: checkOutDate muss nach checkInDate liegen (mindestens 1 Tag später)
+    // Beim funktionierenden Code 7149923045 waren die Daten unterschiedlich
+    const checkInDate = new Date();
+    const checkOutDate = new Date(checkInDate);
+    checkOutDate.setDate(checkOutDate.getDate() + 1); // +1 Tag
+    
     const reservationData: any = {
       guestName: guestName.trim(),
-      checkInDate: new Date(), // Placeholder - wird nicht abgefragt
-      checkOutDate: new Date(), // Placeholder - wird nicht abgefragt
+      checkInDate: checkInDate,
+      checkOutDate: checkOutDate, // Mindestens 1 Tag nach checkInDate
       status: ReservationStatus.confirmed,
       paymentStatus: PaymentStatus.pending,
       amount: amount,
