@@ -47,6 +47,14 @@ async function updateTTLockCorrectCredentials() {
     console.log(`   API URL: ${correctApiUrl}`);
     console.log(`   Passcode-Typ: ${correctPasscodeType}\n`);
 
+    // Entschlüssele aktuelle Settings, um zu prüfen, ob Client Secret bereits verschlüsselt ist
+    const { decryptApiSettings } = await import('../src/utils/encryption');
+    const decryptedCurrentSettings = decryptApiSettings(currentSettings);
+    
+    // Prüfe ob Client Secret bereits verschlüsselt ist
+    const currentClientSecret = decryptedCurrentSettings?.doorSystem?.clientSecret;
+    const isAlreadyEncrypted = currentClientSecret && currentClientSecret.includes(':');
+    
     const newSettings = {
       ...currentSettings,
       doorSystem: {
@@ -54,7 +62,8 @@ async function updateTTLockCorrectCredentials() {
         provider: 'ttlock',
         apiUrl: correctApiUrl,
         clientId: correctClientId,
-        clientSecret: correctClientSecret, // Wird in encryptApiSettings verschlüsselt
+        // Nur verschlüsseln, wenn es noch nicht verschlüsselt ist
+        clientSecret: isAlreadyEncrypted ? currentSettings.doorSystem?.clientSecret : correctClientSecret,
         username: correctUsername,
         password: correctPasswordHash, // MD5-Hash (wird NICHT nochmal verschlüsselt)
         passcodeType: correctPasscodeType,
@@ -62,6 +71,13 @@ async function updateTTLockCorrectCredentials() {
         lockIds: currentSettings.doorSystem?.lockIds || []
       }
     };
+    
+    // Wenn Client Secret noch nicht verschlüsselt ist, muss es verschlüsselt werden
+    if (!isAlreadyEncrypted) {
+      console.log('⚠️  Client Secret ist noch nicht verschlüsselt - wird verschlüsselt');
+    } else {
+      console.log('✅ Client Secret ist bereits verschlüsselt - wird nicht erneut verschlüsselt');
+    }
 
     // Verschlüssele Settings (verschlüsselt Client Secret automatisch)
     let encryptedSettings;
