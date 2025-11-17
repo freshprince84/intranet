@@ -7,7 +7,7 @@
 
 Die TTLock Integration ermöglicht die automatische Erstellung von Passcodes für Gäste bei Check-in. Das System verwendet **permanente Passcodes** (`keyboardPwdType: 2`), die ohne App-Synchronisation funktionieren.
 
-**WICHTIG**: Für permanente Passcodes (`keyboardPwdType: 2`) muss der Passcode **6-9 Ziffern lang** sein. **9-stellige Passcodes funktionieren ohne App-Sync** (herausgefunden und getestet).
+**WICHTIG**: Für permanente Passcodes (`keyboardPwdType: 2`) muss der Passcode **GENAU 9 Ziffern lang** sein (nicht 8, nicht 10!). **GENAU 9-stellige Passcodes funktionieren ohne App-Sync** (getestet und dokumentiert am 2025-11-17).
 
 ## Konfiguration
 
@@ -71,9 +71,11 @@ async createTemporaryPasscode(
   - Wird direkt über die API aktiviert
 
 **WICHTIG**: 
-- Permanente Passcodes (`keyboardPwdType: 2`) müssen **6-9 Ziffern lang** sein
-- **9-stellige Passcodes funktionieren ohne App-Sync** (herausgefunden und getestet)
+- Permanente Passcodes (`keyboardPwdType: 2`) müssen **GENAU 9 Ziffern lang** sein (nicht 8, nicht 10!)
+- **GENAU 9-stellige Passcodes funktionieren ohne App-Sync** (getestet und dokumentiert am 2025-11-17)
+- Code generiert IMMER genau 9-stellige Codes: `100000000` bis `999999999` mit Validierung
 - `addType: 2` (Gateway) wird zuerst versucht, Fallback auf `addType: 1` (Bluetooth) wenn Gateway nicht verfügbar
+- **KEINE Codes werden gelöscht** beim Erstellen eines neuen Codes - nur neuer Code wird hinzugefügt
 
 ### Authentifizierung
 
@@ -131,7 +133,7 @@ const passcode = await ttlockService.createTemporaryPasscode(
 - **9-stellige Passcodes** funktionieren ohne App-Synchronisation
 - **Keine Start/Endzeit** erforderlich (permanent)
 - **addType: 2** (Gateway) wird zuerst versucht, Fallback auf **addType: 1** (Bluetooth) wenn Gateway nicht verfügbar
-- **Passcode-Länge**: Muss 6-9 Ziffern lang sein (9-stellig funktioniert ohne Sync)
+- **Passcode-Länge**: Muss **GENAU 9 Ziffern lang** sein (nicht 8, nicht 10!) - funktioniert ohne Sync
 
 ### Ohne Gateway
 
@@ -183,7 +185,7 @@ echo $ENCRYPTION_KEY
    - System versucht automatisch `addType: 1` (Bluetooth)
    - Dann ist App-Sync erforderlich: TTLock App öffnen → Lock auswählen → Passcodes synchronisieren
    - Prüfen ob Passcode in der App sichtbar ist
-3. **Passcode-Länge prüfen**: Muss 6-9 Ziffern lang sein (9-stellig funktioniert ohne Sync)
+3. **Passcode-Länge prüfen**: Muss **GENAU 9 Ziffern lang** sein (nicht 8, nicht 10!) - Code validiert automatisch
 
 ### Authentifizierungsfehler
 
@@ -240,10 +242,11 @@ echo $ENCRYPTION_KEY
 
 ### 2025-11-17
 - ✅ Permanente Passcodes (`keyboardPwdType: 2`) implementiert
-- ✅ 9-stellige Passcodes für permanente Codes (funktionieren ohne App-Sync)
+- ✅ **GENAU 9-stellige Passcodes** für permanente Codes (funktionieren ohne App-Sync)
+- ✅ Passcode-Generierung mit Validierung: IMMER genau 9 Ziffern (nicht 8, nicht 10!)
 - ✅ Gateway-Fallback: `addType: 2` zuerst, dann `addType: 1` wenn Gateway nicht verfügbar
-- ✅ Passcode-Länge: 6-9 Ziffern für permanente Codes (9-stellig funktioniert ohne Sync)
-- ✅ Dokumentation aktualisiert
+- ✅ **KEINE Codes werden gelöscht** beim Erstellen eines neuen Codes
+- ✅ Dokumentation aktualisiert mit exakter Passcode-Länge
 
 ### 2025-01-20
 - ✅ Passcode-Typ konfigurierbar pro Organisation
