@@ -473,29 +473,84 @@ export class BoldPaymentService {
               try {
                 const whatsappService = new WhatsAppService(updatedReservation.organizationId);
                 
-                const message = `Hola ${updatedReservation.guestName},
+                // Wenn TTLock Code vorhanden, verwende sendCheckInConfirmation (mit Template-Fallback)
+                if (ttlockCode) {
+                  const roomNumber = updatedReservation.roomNumber || 'N/A';
+                  const roomDescription = updatedReservation.roomDescription || 'N/A';
+                  
+                  console.log(`[Bold Payment Webhook] Versende Check-in-Bestätigung mit PIN für Reservierung ${reservation.id}...`);
+                  const whatsappSuccess = await whatsappService.sendCheckInConfirmation(
+                    updatedReservation.guestName,
+                    updatedReservation.guestPhone,
+                    roomNumber,
+                    roomDescription,
+                    ttlockCode,
+                    'TTLock'
+                  );
+                  
+                  if (whatsappSuccess) {
+                    const message = `Hola ${updatedReservation.guestName},
 
 ¡Gracias por tu pago!
 
-${ttlockCode ? `Tu código de acceso TTLock:
+Tu código de acceso TTLock:
 ${ttlockCode}
 
-` : ''}¡Te esperamos!`;
-
-                await whatsappService.sendMessage(updatedReservation.guestPhone, message);
-
-                // Speichere versendete Nachricht
-                await prisma.reservation.update({
-                  where: { id: reservation.id },
-                  data: {
-                    sentMessage: message,
-                    sentMessageAt: new Date()
+¡Te esperamos!`;
+                    
+                    // Speichere versendete Nachricht
+                    await prisma.reservation.update({
+                      where: { id: reservation.id },
+                      data: {
+                        sentMessage: message,
+                        sentMessageAt: new Date()
+                      }
+                    });
+                    
+                    console.log(`[Bold Payment Webhook] ✅ WhatsApp-Nachricht mit TTLock Code erfolgreich versendet für Reservierung ${reservation.id}`);
+                  } else {
+                    console.error(`[Bold Payment Webhook] ❌ WhatsApp-Nachricht konnte nicht versendet werden (sendCheckInConfirmation gab false zurück)`);
                   }
-                });
+                } else {
+                  // Kein TTLock Code - sende einfache Bestätigung
+                  const message = `Hola ${updatedReservation.guestName},
 
-                console.log(`[Bold Payment Webhook] WhatsApp-Nachricht mit TTLock Code versendet für Reservierung ${reservation.id}`);
+¡Gracias por tu pago!
+
+¡Te esperamos!`;
+
+                  console.log(`[Bold Payment Webhook] Versende einfache Zahlungsbestätigung (ohne PIN) für Reservierung ${reservation.id}...`);
+                  const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
+                  const templateParams = [updatedReservation.guestName];
+                  
+                  const whatsappSuccess = await whatsappService.sendMessageWithFallback(
+                    updatedReservation.guestPhone,
+                    message,
+                    templateName,
+                    templateParams
+                  );
+
+                  if (whatsappSuccess) {
+                    // Speichere versendete Nachricht
+                    await prisma.reservation.update({
+                      where: { id: reservation.id },
+                      data: {
+                        sentMessage: message,
+                        sentMessageAt: new Date()
+                      }
+                    });
+                    
+                    console.log(`[Bold Payment Webhook] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservation.id}`);
+                  } else {
+                    console.error(`[Bold Payment Webhook] ❌ WhatsApp-Nachricht konnte nicht versendet werden (sendMessageWithFallback gab false zurück)`);
+                  }
+                }
               } catch (whatsappError) {
-                console.error('[Bold Payment Webhook] Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
+                console.error('[Bold Payment Webhook] ❌ Fehler beim Versenden der WhatsApp-Nachricht:', whatsappError);
+                if (whatsappError instanceof Error) {
+                  console.error('[Bold Payment Webhook] Fehlermeldung:', whatsappError.message);
+                  console.error('[Bold Payment Webhook] Stack:', whatsappError.stack);
+                }
                 // Fehler nicht weiterwerfen
               }
             }
