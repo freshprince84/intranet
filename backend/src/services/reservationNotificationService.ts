@@ -242,7 +242,12 @@ export class ReservationNotificationService {
         }
       }
 
-      console.log(`[ReservationNotification] PIN generiert und Mitteilung versendet für Reservierung ${reservationId}`);
+      // Prüfe ob PIN tatsächlich generiert wurde
+      if (doorPin) {
+        console.log(`[ReservationNotification] ✅ PIN generiert und Mitteilung versendet für Reservierung ${reservationId}`);
+      } else {
+        console.warn(`[ReservationNotification] ⚠️ PIN konnte nicht generiert werden, aber Mitteilung versendet für Reservierung ${reservationId}`);
+      }
     } catch (error) {
       console.error(`[ReservationNotification] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:`, error);
       throw error;

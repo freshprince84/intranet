@@ -534,10 +534,15 @@ export const generatePinAndSendNotification = async (req: Request, res: Response
       }
     });
 
+    // Prüfe ob PIN tatsächlich generiert wurde
+    const pinGenerated = updatedReservation?.doorPin !== null && updatedReservation?.doorPin !== undefined;
+    
     res.json({
       success: true,
       data: updatedReservation,
-      message: 'PIN-Code generiert und Mitteilung versendet'
+      message: pinGenerated 
+        ? 'PIN-Code generiert und Mitteilung versendet'
+        : 'Mitteilung versendet, aber PIN-Code konnte nicht generiert werden (TTLock Fehler)'
     });
   } catch (error) {
     console.error('[Reservation] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:', error);
