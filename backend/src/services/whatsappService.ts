@@ -142,6 +142,8 @@ export class WhatsAppService {
         provider: whatsappSettings?.provider,
         hasApiKey: !!whatsappSettings?.apiKey,
         apiKeyLength: whatsappSettings?.apiKey?.length || 0,
+        apiKeyContainsColon: whatsappSettings?.apiKey?.includes(':') || false,
+        apiKeyStart: whatsappSettings?.apiKey?.substring(0, 30) || 'N/A',
         hasPhoneNumberId: !!whatsappSettings?.phoneNumberId,
         phoneNumberId: whatsappSettings?.phoneNumberId
       });
@@ -306,24 +308,21 @@ export class WhatsAppService {
     }
 
     try {
-      const payload: any = {
-        messaging_product: 'whatsapp',
-        to: to,
-        type: 'text',
-        text: {
-          body: message
-        }
-      };
+      let payload: any;
 
       // Wenn Template angegeben, verwende Template-Nachricht
       if (template) {
-        // Template-Sprache: Parameter > Environment-Variable > Standard (Standard: Englisch)
-        const languageCode = templateLanguage || process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en';
+        // Template-Sprache: Parameter > Environment-Variable > Standard (Standard: Spanisch, da Templates auf Spanisch sind)
+        const languageCode = templateLanguage || process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
         
-        payload.type = 'template';
-        payload.template = {
-          name: template,
-          language: { code: languageCode }
+        payload = {
+          messaging_product: 'whatsapp',
+          to: to,
+          type: 'template',
+          template: {
+            name: template,
+            language: { code: languageCode }
+          }
         };
 
         // Füge Template-Parameter hinzu, falls vorhanden
@@ -335,6 +334,16 @@ export class WhatsAppService {
             }
           ];
         }
+      } else {
+        // Normale Text-Nachricht (Session Message)
+        payload = {
+          messaging_product: 'whatsapp',
+          to: to,
+          type: 'text',
+          text: {
+            body: message
+          }
+        };
       }
 
       console.log(`[WhatsApp Business] Sende Nachricht an ${to} via Phone Number ID ${this.phoneNumberId}`);
@@ -354,6 +363,14 @@ export class WhatsAppService {
 
       console.log(`[WhatsApp Business] ✅ Nachricht erfolgreich gesendet. Status: ${response.status}`);
       console.log(`[WhatsApp Business] Response:`, JSON.stringify(response.data, null, 2));
+      
+      // Prüfe ob Message-ID zurückgegeben wurde
+      if (response.data?.messages?.[0]?.id) {
+        const messageId = response.data.messages[0].id;
+        console.log(`[WhatsApp Business] Message-ID: ${messageId}`);
+        console.log(`[WhatsApp Business] ⚠️ WICHTIG: Status 200 bedeutet nur, dass die API die Nachricht akzeptiert hat.`);
+        console.log(`[WhatsApp Business] ⚠️ Die tatsächliche Zustellung kann über Webhook-Status-Updates verfolgt werden.`);
+      }
 
       return response.status === 200;
     } catch (error) {
@@ -460,8 +477,8 @@ export class WhatsAppService {
 
           console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
 
-          // Template-Sprache aus Environment-Variable oder Standard (Standard: Englisch)
-          const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'en';
+          // Template-Sprache aus Environment-Variable oder Standard (Standard: Spanisch, da Templates auf Spanisch sind)
+          const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
           console.log(`[WhatsApp Service] Template-Sprache: ${languageCode}`);
           
           const templateResult = await this.sendViaWhatsAppBusiness(normalizedPhone, message, templateName, formattedParams, languageCode);
