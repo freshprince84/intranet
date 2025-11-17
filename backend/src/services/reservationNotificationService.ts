@@ -146,6 +146,8 @@ export class ReservationNotificationService {
       const decryptedSettings = decryptApiSettings(reservation.organization.settings as any);
       const notificationChannels = decryptedSettings?.lobbyPms?.notificationChannels || ['email'];
 
+      console.log(`[ReservationNotification] Notification Channels:`, notificationChannels);
+      console.log(`[ReservationNotification] Guest Phone: ${reservation.guestPhone || 'N/A'}`);
       console.log(`[ReservationNotification] Settings entschlüsselt:`, {
         hasDoorSystem: !!decryptedSettings?.doorSystem,
         doorSystemProvider: decryptedSettings?.doorSystem?.provider,
