@@ -195,7 +195,7 @@ export class ReservationNotificationService {
             data: {
               doorPin,
               doorAppName,
-              ttlLockId: lockId,
+              ttlLockId: String(lockId), // Konvertiere zu String für Prisma
               ttlLockPassword: doorPin
             }
           });
@@ -320,7 +320,7 @@ export class ReservationNotificationService {
             data: {
               doorPin,
               doorAppName,
-              ttlLockId: lockId,
+              ttlLockId: String(lockId), // Konvertiere zu String für Prisma
               ttlLockPassword: doorPin
             }
           });
