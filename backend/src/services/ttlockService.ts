@@ -346,8 +346,23 @@ export class TTLockService {
       }
       payload.append('keyboardPwdName', passcodeName || 'Guest Passcode');
       payload.append('keyboardPwdType', '3'); // 3 = period (temporärer Passcode)
-      payload.append('startDate', startDate.getTime().toString()); // Millisekunden!
-      payload.append('endDate', endDate.getTime().toString()); // Millisekunden!
+      
+      // WICHTIG: startDate muss in der Zukunft liegen (mindestens jetzt)
+      // endDate muss nach startDate liegen
+      const now = Date.now();
+      const actualStartDate = Math.max(startDate.getTime(), now);
+      const actualEndDate = Math.max(endDate.getTime(), actualStartDate + 86400000); // Mindestens 1 Tag später
+      
+      console.log('[TTLock] Date Validation:', {
+        originalStartDate: startDate.toISOString(),
+        originalEndDate: endDate.toISOString(),
+        actualStartDate: new Date(actualStartDate).toISOString(),
+        actualEndDate: new Date(actualEndDate).toISOString(),
+        now: new Date(now).toISOString()
+      });
+      
+      payload.append('startDate', actualStartDate.toString()); // Millisekunden!
+      payload.append('endDate', actualEndDate.toString()); // Millisekunden!
       // addType: 1=via phone bluetooth (APP SDK), 2=via gateway/WiFi
       // WICHTIG: addType: 1 funktioniert für 10-stellige period Passcodes ohne App-Sync!
       payload.append('addType', '1'); // 1 = via phone bluetooth (funktioniert ohne App-Sync für 10-stellige period)
