@@ -194,7 +194,7 @@ export class TTLockService {
         hasPassword: !!this.password,
         passwordLength: this.password?.length || 0
       });
-
+      
       const response = await axios.post<TTLockResponse<TTLockAccessToken>>(
         `${oauthUrl}/oauth2/token`,
         new URLSearchParams({
@@ -329,9 +329,11 @@ export class TTLockService {
         generatedPasscode = Math.floor(1000 + Math.random() * 9000).toString();
         console.log('[TTLock] Verwende benutzerdefinierten 4-stelligen Passcode (erfordert Synchronisation)');
       } else {
-        // Automatisch generierter 10-stelliger Passcode (funktioniert ohne Synchronisation)
-        generatedPasscode = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-        console.log('[TTLock] Verwende automatisch generierten 10-stelligen Passcode (ohne Synchronisation)');
+        // Automatisch generierter Passcode (funktioniert ohne Synchronisation)
+        // TEST: 9-stelliger Code (wie funktionierender Code 149923045)
+        // Falls 9-stellig nicht funktioniert, zurück zu 10-stellig
+        generatedPasscode = Math.floor(100000000 + Math.random() * 900000000).toString(); // 9-stellig
+        console.log('[TTLock] Verwende automatisch generierten 9-stelligen Passcode (ohne Synchronisation) - TEST');
       }
       
       const payload = new URLSearchParams();
