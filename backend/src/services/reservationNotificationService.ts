@@ -140,8 +140,10 @@ export class ReservationNotificationService {
         throw new Error(`Reservierung ${reservationId} nicht gefunden`);
       }
 
-      const settings = reservation.organization.settings as any;
-      const notificationChannels = settings?.lobbyPms?.notificationChannels || ['email'];
+      // Entschlüssele Settings
+      const { decryptApiSettings } = await import('../utils/encryption');
+      const decryptedSettings = decryptApiSettings(reservation.organization.settings as any);
+      const notificationChannels = decryptedSettings?.lobbyPms?.notificationChannels || ['email'];
 
       // Erstelle TTLock Passcode
       let doorPin: string | null = null;
@@ -149,7 +151,7 @@ export class ReservationNotificationService {
 
       try {
         const ttlockService = new TTLockService(reservation.organizationId);
-        const doorSystemSettings = settings?.doorSystem;
+        const doorSystemSettings = decryptedSettings?.doorSystem;
 
         if (doorSystemSettings?.lockIds && doorSystemSettings.lockIds.length > 0) {
           const lockId = doorSystemSettings.lockIds[0]; // Verwende ersten Lock
