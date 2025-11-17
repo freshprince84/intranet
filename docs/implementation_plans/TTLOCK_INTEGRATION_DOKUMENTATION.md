@@ -176,12 +176,37 @@ echo $ENCRYPTION_KEY
 - Prüfe ob Username/Password korrekt sind
 - Prüfe ob Password MD5-gehasht ist (32 hex characters)
 - Prüfe ob Client ID/Secret korrekt sind
+- **WICHTIG**: Client Secret muss aus dem TTLock Developer Portal kopiert werden (nicht aus dem Frontend!)
+- **WICHTIG**: Client Secret wird in der DB verschlüsselt gespeichert, aber beim Lesen automatisch entschlüsselt
 
 ### API-Fehler
 
 - Prüfe ob `apiUrl` korrekt ist (`https://euopen.ttlock.com`)
 - Prüfe ob `date` Parameter in Millisekunden ist (nicht Sekunden)
 - Prüfe ob Lock ID korrekt ist
+
+### Button "PIN generieren & Mitteilung versenden" gibt Fehler
+
+**Häufige Ursachen:**
+
+1. **TTLock-Authentifizierung fehlgeschlagen**:
+   - Client ID/Secret falsch → Prüfe TTLock Developer Portal
+   - Username/Password falsch → Prüfe MD5-Hash des Passwords
+   - Lock IDs nicht gesetzt → Lock IDs müssen in Settings gespeichert sein
+
+2. **WhatsApp-Fehler stoppt Prozess** (BEHOBEN):
+   - Seit 2025-11-17: WhatsApp-Fehler stoppen den Prozess nicht mehr
+   - PIN wird generiert, auch wenn WhatsApp-Nachricht fehlschlägt
+   - Fehler wird geloggt, aber Prozess läuft weiter
+
+3. **E-Mail-Fehler stoppt Prozess** (BEHOBEN):
+   - Seit 2025-11-17: E-Mail-Fehler stoppen den Prozess nicht mehr
+   - PIN wird generiert, auch wenn E-Mail fehlschlägt
+
+**Lösung:**
+- TTLock-Credentials im Frontend prüfen (Organisation → API Tab → TTLock)
+- Bei Problemen: Script `update-ttlock-correct-credentials.ts` ausführen
+- Lock IDs automatisch abrufen: Script `save-ttlock-lock-id.ts` ausführen
 
 ## Dateien
 

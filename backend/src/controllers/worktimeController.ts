@@ -617,19 +617,44 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
         }
       }
       
-      // Prüfe, ob die Zeitmessung überhaupt im Zeitraum liegt
-      // Wenn startTime vor dem Zeitraum liegt, beginne die Berechnung beim Periodenstart
-      const actualStartTime = entry.startTime < periodStartUtc ? periodStartUtc : entry.startTime;
+      // Für aktive Zeitmessungen: Berechne Differenz direkt (wie im Modal)
+      // Für abgeschlossene Zeitmessungen: Verwende die Periodenbegrenzung
+      let actualStartTime: Date;
+      let actualEndTime: Date;
+      let hoursWorked: number;
       
-      // Wenn effectiveEndTime nach dem Zeitraum liegt, begrenze auf Periodenende
-      const actualEndTime = effectiveEndTime > periodEndUtc ? periodEndUtc : effectiveEndTime;
+      if (entry.endTime === null) {
+        // Aktive Zeitmessung: DIREKTE DIFFERENZ wie im Modal
+        // Entferne 'Z' vom startTime-String und berechne Differenz
+        const startTimeISO = entry.startTime.toISOString();
+        const startISOString = startTimeISO.endsWith('Z') 
+          ? startTimeISO.substring(0, startTimeISO.length - 1)
+          : startTimeISO;
+        const startTimeDate = new Date(startISOString);
+        const diffMs = nowUtc.getTime() - startTimeDate.getTime();
+        hoursWorked = diffMs / (1000 * 60 * 60);
+        
+        // Für Verteilung: Verwende entry.startTime und effectiveEndTime (nicht begrenzt)
+        actualStartTime = entry.startTime;
+        actualEndTime = effectiveEndTime;
+      } else {
+        // Abgeschlossene Zeitmessung: Verwende Periodenbegrenzung
+        actualStartTime = entry.startTime < periodStartUtc ? periodStartUtc : entry.startTime;
+        actualEndTime = effectiveEndTime > periodEndUtc ? periodEndUtc : effectiveEndTime;
+        
+        // Nur berechnen, wenn tatsächlich Zeit im Zeitraum liegt
+        if (actualStartTime < actualEndTime) {
+          // Berechnung der Arbeitszeit in Millisekunden
+          const workTime = actualEndTime.getTime() - actualStartTime.getTime();
+          // Umrechnung in Stunden
+          hoursWorked = workTime / (1000 * 60 * 60);
+        } else {
+          hoursWorked = 0;
+        }
+      }
       
       // Nur berechnen, wenn tatsächlich Zeit im Zeitraum liegt
-      if (actualStartTime < actualEndTime) {
-        // Berechnung der Arbeitszeit in Millisekunden
-        const workTime = actualEndTime.getTime() - actualStartTime.getTime();
-        // Umrechnung in Stunden
-        const hoursWorked = workTime / (1000 * 60 * 60);
+      if (hoursWorked > 0 && actualStartTime < actualEndTime) {
         
         // Für die Verteilung auf Tage: Verwende lokale Zeit wenn timezone vorhanden
         if (entry.timezone) {
@@ -641,9 +666,13 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
             day: '2-digit'
           });
           
+          // WICHTIG: Für sameDay-Prüfung verwende effectiveEndTime (vor Begrenzung), nicht actualEndTime
+          // Denn actualEndTime kann durch periodEndUtc begrenzt sein, was zu falscher Tag-Erkennung führt
+          const endTimeForDayCheck = effectiveEndTime;
+          
           // Extrahiere lokale Datumskomponenten für Start und Ende
           const startParts = formatter.formatToParts(actualStartTime);
-          const endParts = formatter.formatToParts(actualEndTime);
+          const endParts = formatter.formatToParts(endTimeForDayCheck);
           
           const startYear = parseInt(startParts.find(p => p.type === 'year')?.value || '0');
           const startMonth = parseInt(startParts.find(p => p.type === 'month')?.value || '0') - 1;

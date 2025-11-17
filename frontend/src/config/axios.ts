@@ -58,7 +58,11 @@ instance.interceptors.request.use(
   }
 );
 
-// Response-Interceptor für Debugging
+// Flag zur Verhinderung von mehrfachen Weiterleitungen
+let isRedirecting = false;
+const REDIRECT_TIMEOUT = 100; // ms
+
+// Response-Interceptor für Debugging und automatische Weiterleitung bei 401
 instance.interceptors.response.use(
   (response) => {
     // Debug-Logging deaktiviert (zu viele Logs)
@@ -68,7 +72,48 @@ instance.interceptors.response.use(
     // }
     return response;
   },
-  (error) => {
+  async (error) => {
+    // Bei 401 Unauthorized: Token abgelaufen oder ungültig
+    if (error.response?.status === 401) {
+      // Endpoints ausschließen, die 401 zurückgeben können, aber nicht Token-Ablauf bedeuten
+      const excludedPaths = ['/auth/login', '/auth/logout'];
+      const requestPath = error.config?.url || '';
+      
+      // Prüfe ob Endpoint ausgeschlossen werden soll
+      const shouldExclude = excludedPaths.some(path => requestPath.includes(path));
+      
+      // Prüfe ob bereits auf Login-Seite
+      const isOnLoginPage = window.location.pathname === '/login';
+      
+      // Prüfe ob bereits Weiterleitung läuft
+      if (isRedirecting) {
+        return Promise.reject(error);
+      }
+      
+      // Nur weiterleiten wenn nicht ausgeschlossen und nicht bereits auf Login
+      if (!shouldExclude && !isOnLoginPage) {
+        isRedirecting = true;
+        
+        // Token entfernen
+        localStorage.removeItem('token');
+        delete instance.defaults.headers.common['Authorization'];
+        delete axios.defaults.headers.common['Authorization'];
+        
+        // User-State zurücksetzen über Custom Event
+        window.dispatchEvent(new CustomEvent('auth:logout'));
+        
+        // Kurze Verzögerung, um sicherzustellen, dass Event verarbeitet wird
+        setTimeout(() => {
+          // Sofortige Weiterleitung zum Login
+          window.location.href = '/login';
+        }, REDIRECT_TIMEOUT);
+      }
+      
+      // Fehler weiterwerfen (für ErrorHandler, falls gewünscht)
+      return Promise.reject(error);
+    }
+    
+    // Andere Fehler normal behandeln
     console.error('Fehler im Response Interceptor:', error);
     return Promise.reject(error);
   }

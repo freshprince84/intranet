@@ -145,11 +145,15 @@ ${ttlockCode}
 
         // Sende WhatsApp-Nachricht (mit Fallback auf Template)
         const whatsappService = new WhatsAppService(reservation.organizationId);
-        const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_confirmation';
+        // Verwende existierendes Template: reservation_checkin_invitation
+        const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
+        // Template-Parameter: {{1}} = Gast-Name, {{2}} = Check-in-Link, {{3}} = Payment-Link
+        // Erstelle Check-in-Link für Template
+        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+        const checkInLink = `${frontendUrl}/check-in/${updatedReservation.id}`;
         const templateParams = [
           updatedReservation.guestName,
-          checkInDateStr,
-          checkOutDateStr,
+          checkInLink,
           paymentLink
         ];
         await whatsappService.sendMessageWithFallback(
@@ -307,20 +311,31 @@ ${paymentLink}
 ¡Te esperamos!`;
 
         // Sende WhatsApp-Nachricht (mit Fallback auf Template)
+        console.log(`[Reservation] Initialisiere WhatsApp Service für Organisation ${reservation.organizationId}...`);
         const whatsappService = new WhatsAppService(reservation.organizationId);
-        const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_confirmation';
+        // Verwende existierendes Template: reservation_checkin_invitation
+        const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
+        // Template-Parameter: {{1}} = Gast-Name, {{2}} = Check-in-Link, {{3}} = Payment-Link
         const templateParams = [
           reservation.guestName,
-          `${amount} ${currency}`,
           checkInLink,
           paymentLink
         ];
-        await whatsappService.sendMessageWithFallback(
+        
+        console.log(`[Reservation] Versuche WhatsApp-Nachricht zu senden an ${reservation.guestPhone}...`);
+        console.log(`[Reservation] Template Name: ${templateName}`);
+        console.log(`[Reservation] Template Params: ${JSON.stringify(templateParams)}`);
+        
+        const whatsappSuccess = await whatsappService.sendMessageWithFallback(
           reservation.guestPhone,
           sentMessage,
           templateName,
           templateParams
         );
+
+        if (!whatsappSuccess) {
+          throw new Error('WhatsApp-Nachricht konnte nicht versendet werden (sendMessageWithFallback gab false zurück)');
+        }
 
         sentMessageAt = new Date();
 
@@ -335,15 +350,31 @@ ${paymentLink}
           }
         });
 
-        console.log(`[Reservation] Reservierung ${reservation.id} erstellt und WhatsApp-Nachricht versendet`);
+        console.log(`[Reservation] ✅ Reservierung ${reservation.id} erstellt und WhatsApp-Nachricht erfolgreich versendet`);
       } catch (error) {
-        console.error('[Reservation] Fehler beim Versenden der WhatsApp-Nachricht:', error);
+        console.error('[Reservation] ❌ Fehler beim Versenden der WhatsApp-Nachricht:', error);
         console.error('[Reservation] Error Details:', JSON.stringify(error, null, 2));
         
-        // Prüfe ob es ein WhatsApp-Token-Problem ist
+        // Detaillierte Fehleranalyse
         const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : undefined;
+        
+        console.error('[Reservation] Fehlermeldung:', errorMessage);
+        if (errorStack) {
+          console.error('[Reservation] Stack Trace:', errorStack);
+        }
+        
+        // Prüfe spezifische Fehlertypen
         if (errorMessage.includes('access token') || errorMessage.includes('OAuthException') || errorMessage.includes('Session has expired')) {
           console.error('[Reservation] ⚠️ WhatsApp Access Token ist abgelaufen! Bitte neuen Token in den Organisationseinstellungen eintragen.');
+        } else if (errorMessage.includes('API Key') || errorMessage.includes('nicht konfiguriert')) {
+          console.error('[Reservation] ⚠️ WhatsApp API Key fehlt oder ist nicht korrekt konfiguriert!');
+        } else if (errorMessage.includes('Phone Number ID')) {
+          console.error('[Reservation] ⚠️ WhatsApp Phone Number ID fehlt oder ist nicht korrekt konfiguriert!');
+        } else if (errorMessage.includes('Settings nicht gefunden')) {
+          console.error('[Reservation] ⚠️ WhatsApp Settings nicht gefunden für Organisation!');
+        } else if (errorMessage.includes('ENCRYPTION_KEY')) {
+          console.error('[Reservation] ⚠️ ENCRYPTION_KEY fehlt in den Environment-Variablen!');
         }
         
         // Fehler nicht weiterwerfen, Reservierung wurde bereits erstellt

@@ -2223,7 +2223,7 @@
     "waiting": "Please complete your profile...",
     "welcome": {
       "title": "Welcome to the Intranet!",
-      "description": "We'll guide you through the most important features of the application. This tour will show you step by step how to use the different features."
+      "description": "Welcome to the Intranet! Next, you need to join an organization or create a new one. You can navigate to the organization page yourself to create an organization or join one."
     },
     "navigation": {
       "back": "Back",

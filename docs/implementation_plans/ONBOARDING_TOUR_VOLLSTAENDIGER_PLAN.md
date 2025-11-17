@@ -3,7 +3,7 @@
 ## Status
 **Erstellt:** 2024  
 **Letzte Aktualisierung:** 2024  
-**Status:** Planungsphase - Noch nicht implementiert
+**Status:** ✅ Implementiert - Alle Änderungen umgesetzt
 
 ## Übersicht
 
@@ -321,13 +321,13 @@ const { fetchCurrentUser } = useAuth();
 
 ## Implementierungsreihenfolge
 
-1. ✅ **Schritt 1:** Alle automatischen Navigationen entfernen
-2. ✅ **Schritt 2:** Modal auf allen Seiten anzeigen
-3. ✅ **Schritt 3:** Modal nach Navigation wieder anzeigen
-4. ✅ **Schritt 4:** Reihenfolge der Schritte korrigieren
-5. ✅ **Schritt 5:** User-Reload nach Org-Beitritt
-6. ✅ **Schritt 6:** Welcome-Beschreibung anpassen
-7. ✅ **Schritt 7:** Prüfung: Rolle im Menü sichtbar
+1. ✅ **Schritt 1:** Alle automatischen Navigationen entfernen - **FERTIG**
+2. ✅ **Schritt 2:** Modal auf allen Seiten anzeigen - **FERTIG**
+3. ✅ **Schritt 3:** Modal nach Navigation wieder anzeigen - **FERTIG**
+4. ✅ **Schritt 4:** Reihenfolge der Schritte korrigieren - **FERTIG**
+5. ✅ **Schritt 5:** User-Reload nach Org-Beitritt - **FERTIG**
+6. ✅ **Schritt 6:** Welcome-Beschreibung anpassen - **FERTIG**
+7. ✅ **Schritt 7:** Prüfung: Rolle im Menü sichtbar - **FERTIG** (Rollen werden korrekt angezeigt)
 
 ## Test-Szenarien
 
@@ -381,10 +381,50 @@ const { fetchCurrentUser } = useAuth();
 3. **Ist Rolle wirklich im Menü sichtbar?**
    - Muss geprüft werden in Header.tsx
 
+## Implementierungsdetails
+
+### Durchgeführte Änderungen
+
+#### 1. Automatische Navigationen entfernt
+- ✅ Alle `navigate()` Aufrufe in `completeStep` entfernt
+- ✅ Alle `navigate()` Aufrufe in `startTour` entfernt (außer initial Dashboard)
+- ✅ `navigate` aus Dependencies von `completeStep` entfernt
+
+#### 2. Modal auf allen Seiten angezeigt
+- ✅ `isStepForCurrentRoute` auf `true` gesetzt
+- ✅ Modal wird jetzt auf allen Seiten angezeigt, wenn Schritt aktiv ist
+
+#### 3. Modal nach Navigation wieder angezeigt
+- ✅ `useEffect` angepasst: Modal wird immer wieder angezeigt (außer wenn dismissed)
+- ✅ Prüfung auf `dismissedSteps` statt nur auf Profil-Vollständigkeit
+
+#### 4. Reihenfolge korrigiert
+- ✅ `switch_role_after_join`: order von 0 auf 0.5 geändert
+- ✅ `upload_identification_document`: order von 1 auf 0.75 geändert
+
+#### 5. User-Reload nach Org-Beitritt
+- ✅ `handleJoinSuccess` erweitert: `fetchCurrentUser()` wird aufgerufen
+- ✅ `useAuth` importiert
+
+#### 6. Welcome-Beschreibung angepasst
+- ✅ Deutsch: "Sie können selbst zur Organisationsseite navigieren"
+- ✅ Englisch: "You can navigate to the organization page yourself"
+- ✅ Spanisch: "Puede navegar a la página de organización usted mismo"
+
+#### 7. Interface aktualisiert
+- ✅ `showCondition` Typ erweitert: `'hasInactiveOrgRole' | 'needsIdentificationDocument' | 'hasNoOrganization'`
+
+### Wichtige Hinweise
+
+**Automatischer Schritt-Wechsel für Navigations-Schritte:**
+- Es gibt noch einen `useEffect` (Zeile 419-455), der automatisch zum nächsten Schritt wechselt, wenn User zu einer Ziel-Route navigiert hat
+- Dies betrifft nur Schritte mit `action: 'navigate'` (z.B. worktracker_menu, cerebro_menu)
+- Dies ist OK, da diese Schritte explizit den User auffordern zu navigieren
+- Der User navigiert selbst, und dann wechselt der Schritt automatisch - keine automatische Navigation
+
 ## Nächste Schritte
 
-1. Plan durchgehen und bestätigen
-2. Implementierung starten
-3. Test-Szenarien durchführen
-4. Dokumentation aktualisieren
+1. ✅ Implementierung abgeschlossen
+2. ⏳ Test-Szenarien durchführen
+3. ⏳ Dokumentation finalisieren
 

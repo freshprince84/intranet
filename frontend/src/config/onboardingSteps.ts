@@ -47,7 +47,7 @@ export const onboardingSteps: OnboardingStep[] = [
     target: '[data-onboarding="switch-role-menu"]',
     position: 'bottom',
     route: '/dashboard',
-    order: 0,
+    order: 0.5, // Nach Org-Beitritt, vor Dokumenten-Upload
     page: 'dashboard',
     process: 'role-switch',
     action: 'wait', // Wartet auf Rollenwechsel
@@ -56,7 +56,7 @@ export const onboardingSteps: OnboardingStep[] = [
     showCondition: 'hasInactiveOrgRole'
   },
   // ============================================
-  // PROZESS 0.6: Identitätsdokument hochladen (nur Kolumbien)
+  // PROZESS 0.75: Identitätsdokument hochladen (nur Kolumbien)
   // ============================================
   {
     id: 'upload_identification_document',
@@ -65,7 +65,7 @@ export const onboardingSteps: OnboardingStep[] = [
     target: '[data-onboarding="upload-document-button"]',
     position: 'bottom',
     route: '/profile',
-    order: 1,
+    order: 0.75, // Nach Rollenwechsel, vor normaler Tour
     page: 'profile',
     process: 'document-upload',
     action: 'wait', // Wartet auf Dokumenten-Upload

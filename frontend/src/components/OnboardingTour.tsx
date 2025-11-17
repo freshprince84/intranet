@@ -31,20 +31,10 @@ const OnboardingTour: React.FC = () => {
   // Aktueller Schritt
   const currentStepData = filteredSteps[currentStep];
 
-  // Prüfe ob aktueller Schritt zur aktuellen Route passt
-  // Bei Navigations-Schritten: Modal auch auf aktueller Route anzeigen (damit Link sichtbar ist)
-  // WICHTIG: Tour sollte auch auf /profile und /organization funktionieren (wenn User dorthin umgeleitet wurde)
-  const isStepForCurrentRoute = currentStepData?.route 
-    ? (currentStepData.action === 'navigate' 
-        ? location.pathname === currentStepData.route || 
-          (currentStepData.route === '/dashboard' && location.pathname.startsWith('/dashboard')) ||
-          (currentStepData.route === '/profile' && location.pathname === '/profile') ||
-          (currentStepData.route === '/organization' && location.pathname === '/organization')
-        : location.pathname === currentStepData.route || 
-          (currentStepData.route === '/dashboard' && location.pathname.startsWith('/dashboard')) ||
-          (currentStepData.route === '/profile' && location.pathname === '/profile') ||
-          (currentStepData.route === '/organization' && location.pathname === '/organization'))
-    : true;
+  // Modal wird auf ALLEN Seiten angezeigt, wenn Schritt aktiv ist
+  // User kann selbst navigieren, Modal folgt ihm und wird auf jeder Seite wieder angezeigt
+  // (außer wenn Schritt dismissed ist - wird durch modalDismissed geprüft)
+  const isStepForCurrentRoute = true; // Modal wird auf allen Seiten angezeigt
 
   // Mobile-Erkennung
   useEffect(() => {
