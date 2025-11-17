@@ -230,7 +230,7 @@ export class ReservationNotificationService {
       if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
         try {
           const whatsappService = new WhatsAppService(reservation.organizationId);
-          await whatsappService.sendCheckInConfirmation(
+          const whatsappSuccess = await whatsappService.sendCheckInConfirmation(
             reservation.guestName,
             reservation.guestPhone,
             reservation.roomNumber || 'N/A',
@@ -238,9 +238,24 @@ export class ReservationNotificationService {
             doorPin || 'N/A',
             doorAppName || 'TTLock'
           );
+          if (whatsappSuccess) {
+            console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
+          } else {
+            console.warn(`[ReservationNotification] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservierung ${reservationId}`);
+          }
         } catch (error) {
-          console.error(`[ReservationNotification] Fehler beim Versenden der WhatsApp-Nachricht:`, error);
-          // Weiter ohne WhatsApp - PIN wurde bereits generiert
+          console.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
+          if (error instanceof Error) {
+            console.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
+          }
+          // Weiter ohne WhatsApp - PIN wurde bereits generiert (oder versucht)
+        }
+      } else {
+        if (!notificationChannels.includes('whatsapp')) {
+          console.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);
+        }
+        if (!reservation.guestPhone) {
+          console.log(`[ReservationNotification] Keine Guest Phone für Reservierung ${reservationId}`);
         }
       }
 
