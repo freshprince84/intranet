@@ -6,6 +6,75 @@ import crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
+// Helper: Erstellt Passcode direkt mit TTLockService
+async function createPasscodeWithService(
+  ttlockService: TTLockService,
+  lockId: string,
+  addType: string,
+  length: number,
+  name: string
+): Promise<{ success: boolean; passcode?: string; error?: string }> {
+  try {
+    // Generiere Passcode
+    let generatedPasscode: string;
+    if (length === 9) {
+      generatedPasscode = Math.floor(100000000 + Math.random() * 900000000).toString();
+    } else {
+      generatedPasscode = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+    }
+
+    // Hole Access Token
+    const accessToken = await (ttlockService as any).getAccessToken();
+    
+    // Lade Settings für API URL
+    await (ttlockService as any).loadSettings();
+    const apiUrl = (ttlockService as any).apiUrl || 'https://euopen.ttlock.com';
+    const clientId = (ttlockService as any).clientId;
+    
+    const currentTimestamp = Date.now();
+
+    // Erstelle Request Payload
+    const payload = new URLSearchParams();
+    payload.append('clientId', clientId);
+    payload.append('accessToken', accessToken);
+    payload.append('lockId', lockId);
+    payload.append('keyboardPwd', generatedPasscode);
+    payload.append('keyboardPwdName', name);
+    payload.append('keyboardPwdType', '2'); // 2 = permanent
+    payload.append('addType', addType); // 1 = bluetooth, 2 = gateway/WiFi
+    payload.append('date', currentTimestamp.toString());
+
+    // Sende Request
+    const axiosInstance = (ttlockService as any).axiosInstance;
+    const response = await axiosInstance.post('/v3/keyboardPwd/add', payload, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+
+    const responseData = response.data as any;
+
+    if (responseData.errcode === 0 || responseData.keyboardPwdId) {
+      return {
+        success: true,
+        passcode: generatedPasscode
+      };
+    } else {
+      const errorMsg = responseData.errmsg || `Unknown error (errcode: ${responseData.errcode})`;
+      return {
+        success: false,
+        error: errorMsg
+      };
+    }
+  } catch (error: any) {
+    const errorMsg = error.response?.data?.errmsg || error.message || 'Unknown error';
+    return {
+      success: false,
+      error: errorMsg
+    };
+  }
+}
+
 /**
  * Script: Erstellt 4 Test-Passcodes mit allen Kombinationen:
  * 1. addType: 1, 9-stellig
@@ -53,47 +122,12 @@ async function createTestPasscodes() {
     const lockId = doorSystemSettings.lockIds[0];
     console.log(`✅ Verwende Lock ID: ${lockId}\n`);
 
-    // Entschlüssele Client Secret falls nötig
-    let clientSecret = doorSystemSettings.clientSecret;
-    if (clientSecret && clientSecret.includes(':')) {
-      const { decryptSecret } = await import('../src/utils/encryption');
-      clientSecret = decryptSecret(clientSecret);
-    }
-
-    const apiUrl = doorSystemSettings.apiUrl || 'https://euopen.ttlock.com';
-    const username = doorSystemSettings.username;
-    const password = doorSystemSettings.password; // Already MD5-hashed
-
-    // Hole Access Token
-    console.log('🔐 Hole Access Token...');
-    const tokenResponse = await axios.post(
-      `${apiUrl}/oauth2/token`,
-      new URLSearchParams({
-        client_id: doorSystemSettings.clientId,
-        client_secret: clientSecret,
-        username: username,
-        password: password
-      }),
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        }
-      }
-    );
-
-    const tokenData = tokenResponse.data as any;
-    const accessToken = tokenData.errcode === 0 && tokenData.data
-      ? tokenData.data.access_token
-      : tokenData.access_token;
-
-    if (!accessToken) {
-      throw new Error('Access Token konnte nicht abgerufen werden!');
-    }
-
-    console.log('✅ Access Token erhalten\n');
-
-    // Aktuelle Zeit für date Parameter
-    const currentTimestamp = Date.now();
+    // Verwende TTLockService für korrekte API-URL und OAuth
+    console.log('🔐 Initialisiere TTLockService...');
+    const ttlockService = new TTLockService(1);
+    await (ttlockService as any).loadSettings();
+    const apiUrl = (ttlockService as any).apiUrl || 'https://euopen.ttlock.com';
+    console.log(`🌐 Verwende API URL: ${apiUrl}\n`);
 
     // Test-Kombinationen
     const combinations = [
@@ -111,73 +145,25 @@ async function createTestPasscodes() {
     }> = [];
 
     for (const combo of combinations) {
-      try {
-        console.log(`\n📝 Erstelle: ${combo.name}...`);
-
-        // Generiere Passcode
-        let generatedPasscode: string;
-        if (combo.length === 9) {
-          generatedPasscode = Math.floor(100000000 + Math.random() * 900000000).toString();
-        } else {
-          generatedPasscode = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-        }
-
-        console.log(`   Generierter Passcode: ${generatedPasscode}`);
-
-        // Erstelle Request Payload
-        const payload = new URLSearchParams();
-        payload.append('clientId', doorSystemSettings.clientId);
-        payload.append('accessToken', accessToken);
-        payload.append('lockId', lockId);
-        payload.append('keyboardPwd', generatedPasscode);
-        payload.append('keyboardPwdName', combo.name);
-        payload.append('keyboardPwdType', '2'); // 2 = permanent
-        payload.append('addType', combo.addType); // 1 = bluetooth, 2 = gateway/WiFi
-        payload.append('date', currentTimestamp.toString());
-
-        console.log(`   Request Parameter:`);
-        console.log(`     keyboardPwdType: 2 (permanent)`);
-        console.log(`     addType: ${combo.addType}`);
-        console.log(`     keyboardPwd: ${generatedPasscode} (${combo.length} Stellen)`);
-
-        // Sende Request
-        const response = await axios.post(
-          `${apiUrl}/v3/keyboardPwd/add`,
-          payload,
-          {
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded'
-            }
-          }
-        );
-
-        const responseData = response.data as any;
-
-        if (responseData.errcode === 0 || responseData.keyboardPwdId) {
-          console.log(`   ✅ Erfolg! keyboardPwdId: ${responseData.keyboardPwdId || 'N/A'}`);
-          results.push({
-            combination: combo.name,
-            success: true,
-            passcode: generatedPasscode
-          });
-        } else {
-          const errorMsg = responseData.errmsg || `Unknown error (errcode: ${responseData.errcode})`;
-          console.log(`   ❌ Fehler: ${errorMsg}`);
-          results.push({
-            combination: combo.name,
-            success: false,
-            error: errorMsg
-          });
-        }
-      } catch (error: any) {
-        const errorMsg = error.response?.data?.errmsg || error.message || 'Unknown error';
-        console.log(`   ❌ Fehler: ${errorMsg}`);
-        results.push({
-          combination: combo.name,
-          success: false,
-          error: errorMsg
-        });
+      console.log(`\n📝 Erstelle: ${combo.name}...`);
+      const result = await createPasscodeWithService(
+        ttlockService,
+        lockId,
+        combo.addType,
+        combo.length,
+        combo.name
+      );
+      
+      if (result.success) {
+        console.log(`   ✅ Erfolg! Passcode: ${result.passcode}`);
+      } else {
+        console.log(`   ❌ Fehler: ${result.error}`);
       }
+      
+      results.push({
+        combination: combo.name,
+        ...result
+      });
     }
 
     // Zusammenfassung
