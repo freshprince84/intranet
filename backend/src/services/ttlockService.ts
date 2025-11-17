@@ -170,6 +170,17 @@ export class TTLockService {
         ? 'https://api.sciener.com' 
         : this.apiUrl;
       
+      console.log('[TTLock] OAuth Request Details:', {
+        oauthUrl: `${oauthUrl}/oauth2/token`,
+        hasClientId: !!this.clientId,
+        clientIdLength: this.clientId?.length || 0,
+        hasClientSecret: !!this.clientSecret,
+        clientSecretLength: this.clientSecret?.length || 0,
+        hasUsername: !!this.username,
+        hasPassword: !!this.password,
+        passwordLength: this.password?.length || 0
+      });
+
       const response = await axios.post<TTLockResponse<TTLockAccessToken>>(
         `${oauthUrl}/oauth2/token`,
         new URLSearchParams({
@@ -476,13 +487,15 @@ export class TTLockService {
       // TTLock API gibt entweder errcode=0 mit data zurück, oder direkt list
       if (responseData.errcode === 0 && responseData.data) {
         // Format: { errcode: 0, data: [{ lockId: ... }] }
-        return responseData.data.map((lock: any) => lock.lockId);
+        return responseData.data.map((lock: any) => String(lock.lockId || lock.id));
       } else if (responseData.list && Array.isArray(responseData.list)) {
         // Format: { list: [{ lockId: ... }], pageNo: 1, ... }
         console.log('[TTLock] Lock List Response:', JSON.stringify(responseData, null, 2));
         const lockIds = responseData.list.map((lock: any) => {
           // Lock ID kann in verschiedenen Feldern sein: lockId, id, etc.
-          return lock.lockId || lock.id || lock.lock_id || Object.values(lock)[0];
+          const id = lock.lockId || lock.id || lock.lock_id || Object.values(lock)[0];
+          // Konvertiere zu String (TTLock API gibt Zahlen zurück)
+          return id ? String(id) : null;
         }).filter((id: any) => id); // Filtere undefined/null
         console.log('[TTLock] Extracted Lock IDs:', lockIds);
         return lockIds;
