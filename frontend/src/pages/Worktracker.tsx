@@ -3351,10 +3351,10 @@ const Worktracker: React.FC = () => {
                 isOpen={isCreateReservationModalOpen}
                 onClose={() => setIsCreateReservationModalOpen(false)}
                 onReservationCreated={async (newReservation) => {
+                    // Wechsle zum Reservations-Tab
+                    setActiveTab('reservations');
                     // Lade Reservations neu, um den aktualisierten Status zu erhalten
                     await loadReservations();
-                    // Navigiere zur Detailansicht
-                    navigate(`/reservations/${newReservation.id}`);
                 }}
             />
         </div>

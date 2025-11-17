@@ -1,0 +1,318 @@
+# WhatsApp Templates - Vollständige Liste für Meta Business Suite
+
+**Datum**: 2025-11-17  
+**Status**: 📋 Übersicht aller benötigten Templates
+
+## ⚠️ WICHTIGE REGELN
+
+- **Template-Namen**: Müssen EXAKT mit den Namen im Code übereinstimmen (Kleinbuchstaben, Unterstriche)
+- **Category**: `UTILITY` (für Service-Nachrichten)
+- **Language**: `Spanish (es)` ⚠️ **WICHTIG: Template-Sprache muss mit der Text-Sprache übereinstimmen!**
+  - Wenn Text auf Spanisch → Language: `Spanish (es)`
+  - Wenn Text auf Englisch → Language: `English (en)`
+- **Variablen**: Keine Leerzeichen in `{{1}}`, `{{2}}`, etc.
+- **Genehmigung**: 1-2 Tage Wartezeit
+
+---
+
+## Template 1: Check-in-Einladung ✅ (WIRD VERWENDET)
+
+**Name**: `reservation_checkin_invitation`  
+**Category**: `UTILITY`  
+**Language**: `Spanish (es)` ⚠️ **WICHTIG: Template-Text ist auf Spanisch, daher muss Language "Spanish (es)" sein!**  
+**Status**: ✅ Existiert (muss genehmigt sein)
+
+### Template-Body:
+
+```
+Hola {{1}},
+
+¡Nos complace darte la bienvenida a La Familia Hostel!
+
+Como llegarás después de las 22:00, puedes realizar el check-in en línea ahora:
+{{2}}
+
+Por favor, realiza el pago por adelantado:
+{{3}}
+
+Por favor, escríbenos brevemente una vez que hayas completado tanto el check-in como el pago. ¡Gracias!
+
+¡Te esperamos mañana!
+```
+
+### Variablen:
+- `{{1}}` = Gast-Name (z.B. "Patrick")
+- `{{2}}` = Check-in-Link (z.B. "http://localhost:3000/check-in/12")
+- `{{3}}` = Payment-Link (z.B. "https://checkout.bold.co/payment/LNK_...")
+
+### Verwendung im Code:
+- **Datei**: `backend/src/controllers/reservationController.ts`
+- **Methode**: `createReservation()` - Zeile 317
+- **Methode**: `updateGuestContact()` - Zeile 149
+- **Datei**: `backend/src/services/whatsappService.ts`
+- **Methode**: `sendCheckInInvitation()` - Zeile 553
+
+---
+
+## Template 2: Check-in-Bestätigung
+
+**Name**: `reservation_checkin_confirmation`  
+**Category**: `UTILITY`  
+**Language**: `Spanish (es)` ⚠️ **WICHTIG: Template-Text ist auf Spanisch, daher muss Language "Spanish (es)" sein!**  
+**Status**: ⏳ Muss erstellt werden
+
+### Template-Body:
+
+```
+Hola {{1}},
+
+¡Tu check-in se ha completado exitosamente!
+
+Información de tu habitación:
+- Habitación: {{2}}
+- Descripción: {{3}}
+
+Acceso:
+- PIN de la puerta: {{4}}
+- App: {{5}}
+
+¡Te deseamos una estancia agradable!
+```
+
+### Variablen:
+- `{{1}}` = Gast-Name (z.B. "Patrick")
+- `{{2}}` = Zimmernummer (z.B. "101")
+- `{{3}}` = Zimmerbeschreibung (z.B. "Zimmer mit Balkon")
+- `{{4}}` = Tür-PIN (z.B. "1234")
+- `{{5}}` = App-Name (z.B. "TTLock")
+
+### Verwendung im Code:
+- **Datei**: `backend/src/services/whatsappService.ts`
+- **Methode**: `sendCheckInConfirmation()` - Zeile 596
+
+---
+
+## Template 3: Reservierungsbestätigung (OPTIONAL - NICHT VERWENDET)
+
+**Name**: `reservation_confirmation`  
+**Category**: `UTILITY`  
+**Language**: `Spanish (es)` ⚠️ **WICHTIG: Template-Text ist auf Spanisch, daher muss Language "Spanish (es)" sein!**  
+**Status**: ⏳ Optional (wird aktuell NICHT verwendet)
+
+### Template-Body:
+
+```
+Hola {{1}},
+
+¡Bienvenido a La Familia Hostel!
+
+Tu reserva ha sido confirmada:
+- Entrada: {{2}}
+- Salida: {{3}}
+
+Por favor, realiza el pago:
+{{4}}
+
+¡Te esperamos!
+```
+
+### Variablen:
+- `{{1}}` = Gast-Name
+- `{{2}}` = Check-in Datum
+- `{{3}}` = Check-out Datum
+- `{{4}}` = Payment-Link
+
+### Hinweis:
+- **Wird aktuell NICHT verwendet** - Code verwendet stattdessen `reservation_checkin_invitation`
+- Kann später implementiert werden, wenn gewünscht
+
+---
+
+## Template 4: Check-in-Erinnerung (OPTIONAL)
+
+**Name**: `reservation_checkin_reminder`  
+**Category**: `UTILITY`  
+**Language**: `Spanish (es)`  
+**Status**: ⏳ Optional (noch nicht im Code implementiert)
+
+### Template-Body:
+
+```
+Hola {{1}},
+
+Recordatorio: Tu check-in es hoy.
+
+Por favor, completa el check-in en línea:
+{{2}}
+
+Si ya lo has completado, por favor escríbenos brevemente. ¡Gracias!
+```
+
+### Variablen:
+- `{{1}}` = Gast-Name
+- `{{2}}` = Check-in-Link
+
+---
+
+## Template 5: Zahlungserinnerung (OPTIONAL)
+
+**Name**: `reservation_payment_reminder`  
+**Category**: `UTILITY`  
+**Language**: `Spanish (es)`  
+**Status**: ⏳ Optional (noch nicht im Code implementiert)
+
+### Template-Body:
+
+```
+Hola {{1}},
+
+Recordatorio: Por favor, completa el pago de tu reserva.
+
+Link de pago:
+{{2}}
+
+Si ya has pagado, por favor escríbenos brevemente. ¡Gracias!
+```
+
+### Variablen:
+- `{{1}}` = Gast-Name
+- `{{2}}` = Payment-Link
+
+---
+
+## Template 6: Allgemeine Erinnerung (OPTIONAL)
+
+**Name**: `reservation_general_reminder`  
+**Category**: `UTILITY`  
+**Language**: `Spanish (es)`  
+**Status**: ⏳ Optional (noch nicht im Code implementiert)
+
+### Template-Body:
+
+```
+Hola {{1}},
+
+Recordatorio: Por favor, completa el check-in y el pago de tu reserva.
+
+Check-in: {{2}}
+Pago: {{3}}
+
+Una vez completados ambos, por favor escríbenos brevemente. ¡Gracias!
+```
+
+### Variablen:
+- `{{1}}` = Gast-Name
+- `{{2}}` = Check-in-Link
+- `{{3}}` = Payment-Link
+
+---
+
+## 🇬🇧 ENGLISCHE TEMPLATES (Optional)
+
+Falls du später englische Templates erstellen möchtest, kannst du separate Templates mit englischen Texten erstellen:
+
+### Beispiel: Englische Check-in-Einladung
+
+**Name**: `reservation_checkin_invitation_en` (oder gleicher Name mit englischer Sprache)  
+**Category**: `UTILITY`  
+**Language**: `English (en)`  
+**Status**: ⏳ Optional
+
+**Template-Body:**
+```
+Hello {{1}},
+
+We are pleased to welcome you to La Familia Hostel!
+
+As you will arrive after 22:00, you can complete the online check-in now:
+{{2}}
+
+Please make the payment in advance:
+{{3}}
+
+Please write us briefly once you have completed both the check-in and payment. Thank you!
+
+We look forward to seeing you tomorrow!
+```
+
+**Hinweis:**
+- Du kannst Templates mit dem **gleichen Namen** in **verschiedenen Sprachen** erstellen
+- Oder du verwendest **verschiedene Namen** (z.B. `reservation_checkin_invitation_en` für Englisch, `reservation_checkin_invitation_es` für Spanisch)
+- Im Code kannst du dann die Sprache über `WHATSAPP_TEMPLATE_LANGUAGE` steuern oder verschiedene Template-Namen verwenden
+
+---
+
+## 📋 ZUSAMMENFASSUNG
+
+### ✅ ERFORDERLICH (wird im Code verwendet):
+
+1. **`reservation_checkin_invitation`** ✅
+   - Wird verwendet bei: Reservierungserstellung, Kontaktaktualisierung, Check-in-Einladung
+   - **MUSS genehmigt sein!**
+
+### ⏳ EMPFOHLEN (wird im Code verwendet):
+
+2. **`reservation_checkin_confirmation`** ⏳
+   - Wird verwendet bei: Check-in-Bestätigung
+   - **Sollte erstellt werden**
+
+### ⏳ OPTIONAL (noch nicht im Code implementiert):
+
+3. `reservation_confirmation` - Reservierungsbestätigung (wird aktuell NICHT verwendet)
+4. `reservation_checkin_reminder` - Check-in-Erinnerung
+5. `reservation_payment_reminder` - Zahlungserinnerung
+6. `reservation_general_reminder` - Allgemeine Erinnerung
+
+---
+
+## 🎯 PRIORITÄTEN
+
+### Sofort erforderlich:
+1. ✅ **`reservation_checkin_invitation`** - MUSS genehmigt sein (wird aktuell verwendet)
+
+### Nächste Schritte:
+2. ⏳ **`reservation_checkin_confirmation`** - Sollte erstellt werden (wird im Code verwendet)
+
+### Später:
+3. Templates 3-6 können später erstellt werden, wenn benötigt
+
+---
+
+## 📝 CHECKLISTE FÜR META BUSINESS SUITE
+
+### Template 1: Check-in-Einladung
+- [ ] Gehe zu: https://business.facebook.com
+- [ ] WhatsApp Business Account → Message Templates
+- [ ] Prüfe ob Template `reservation_checkin_invitation` existiert
+- [ ] Prüfe Status: Muss "APPROVED" sein
+- [ ] Prüfe Language: Muss "Spanish (es)" sein (weil Text auf Spanisch ist)
+- [ ] Prüfe Phone Number ID: Muss mit `852832151250618` übereinstimmen
+
+### Template 2: Check-in-Bestätigung
+- [ ] Create Template
+- [ ] Name: `reservation_checkin_confirmation` (exakt!)
+- [ ] Category: `UTILITY`
+- [ ] Language: `Spanish (es)` ⚠️ **WICHTIG: Template-Text ist auf Spanisch!**
+- [ ] Body-Text einfügen (siehe oben)
+- [ ] Variablen: `{{1}}`, `{{2}}`, `{{3}}`, `{{4}}`, `{{5}}`
+- [ ] Save → Submit for Review
+
+---
+
+## ⚠️ WICHTIGE HINWEISE
+
+1. **Template-Namen müssen EXAKT übereinstimmen** (Kleinbuchstaben, Unterstriche)
+2. **Template-Sprache muss mit Text-Sprache übereinstimmen**:
+   - Spanischer Text → Language: `Spanish (es)`
+   - Englischer Text → Language: `English (en)`
+3. **Phone Number ID muss übereinstimmen**: `852832151250618`
+4. **Template muss genehmigt sein** (Status: APPROVED) bevor es verwendet werden kann
+5. **Variablen-Reihenfolge ist wichtig**: `{{1}}`, `{{2}}`, `{{3}}` müssen in der richtigen Reihenfolge sein
+6. **Code ist bereits angepasst**: Standard ist jetzt 'es' (Spanisch) für spanische Templates
+7. **Für englische Templates**: Setze `WHATSAPP_TEMPLATE_LANGUAGE=en` in `.env` oder verwende separate Template-Namen
+
+---
+
+**Erstellt**: 2025-11-17  
+**Version**: 1.0
+

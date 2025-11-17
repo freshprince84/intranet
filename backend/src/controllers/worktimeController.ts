@@ -666,27 +666,16 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
             day: '2-digit'
           });
           
-          // WICHTIG: Für sameDay-Prüfung verwende effectiveEndTime (vor Begrenzung), nicht actualEndTime
-          // Denn actualEndTime kann durch periodEndUtc begrenzt sein, was zu falscher Tag-Erkennung führt
-          const endTimeForDayCheck = effectiveEndTime;
-          
-          // Extrahiere lokale Datumskomponenten für Start und Ende
+          // Extrahiere lokale Datumskomponenten für Start
           const startParts = formatter.formatToParts(actualStartTime);
-          const endParts = formatter.formatToParts(endTimeForDayCheck);
-          
           const startYear = parseInt(startParts.find(p => p.type === 'year')?.value || '0');
           const startMonth = parseInt(startParts.find(p => p.type === 'month')?.value || '0') - 1;
           const startDay = parseInt(startParts.find(p => p.type === 'day')?.value || '0');
           
-          const endYear = parseInt(endParts.find(p => p.type === 'year')?.value || '0');
-          const endMonth = parseInt(endParts.find(p => p.type === 'month')?.value || '0') - 1;
-          const endDay = parseInt(endParts.find(p => p.type === 'day')?.value || '0');
-          
-          // Prüfe ob Start und Ende auf dem gleichen lokalen Tag liegen
-          const sameDay = startYear === endYear && startMonth === endMonth && startDay === endDay;
-          
-          if (sameDay) {
-            // Einfach: Alles diesem Tag zuordnen
+          // WICHTIG: Für aktive Zeitmessungen - immer dem Starttag zuordnen
+          // Auch wenn die Zeitmessung über Mitternacht hinausgeht, gehört sie zum Starttag
+          if (entry.endTime === null) {
+            // Aktive Zeitmessung: Alles dem Starttag zuordnen
             const dateString = `${startYear}-${String(startMonth + 1).padStart(2, '0')}-${String(startDay).padStart(2, '0')}`;
             const dayEntry = periodData.find(d => d.date === dateString);
             
@@ -701,6 +690,30 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
               console.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
             }
           } else {
+            // Abgeschlossene Zeitmessung: Prüfe ob Start und Ende auf dem gleichen lokalen Tag liegen
+            const endParts = formatter.formatToParts(actualEndTime);
+            const endYear = parseInt(endParts.find(p => p.type === 'year')?.value || '0');
+            const endMonth = parseInt(endParts.find(p => p.type === 'month')?.value || '0') - 1;
+            const endDay = parseInt(endParts.find(p => p.type === 'day')?.value || '0');
+            
+            const sameDay = startYear === endYear && startMonth === endMonth && startDay === endDay;
+            
+            if (sameDay) {
+              // Einfach: Alles diesem Tag zuordnen
+              const dateString = `${startYear}-${String(startMonth + 1).padStart(2, '0')}-${String(startDay).padStart(2, '0')}`;
+              const dayEntry = periodData.find(d => d.date === dateString);
+              
+              if (dayEntry) {
+                const oldHours = dayEntry.hours;
+                dayEntry.hours += hoursWorked;
+                
+                if (hoursWorked > 0 && oldHours === 0) {
+                  daysWorked++;
+                }
+              } else {
+                console.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
+              }
+            } else {
             // Mehrere Tage: Verteile proportional
             // Iteriere über alle betroffenen lokalen Tage
             let currentYear = startYear;
@@ -793,6 +806,7 @@ export const getWorktimeStats = async (req: Request, res: Response) => {
               currentYear = nextDate.getFullYear();
               currentMonth = nextDate.getMonth();
               currentDay = nextDate.getDate();
+            }
             }
           }
         } else {
