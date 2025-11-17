@@ -28,6 +28,7 @@ import DataCard, { MetadataItem } from '../components/shared/DataCard.tsx';
 import CardGrid from '../components/shared/CardGrid.tsx';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
+import { reservationService } from '../services/reservationService.ts';
 
 interface Task {
     id: number;
