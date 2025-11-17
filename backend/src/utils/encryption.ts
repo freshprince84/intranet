@@ -259,14 +259,18 @@ export const decryptApiSettings = (settings: any): any => {
   // WhatsApp API Key & Secret
   if (decrypted.whatsapp?.apiKey) {
     try {
+      // Versuche immer zu entschlüsseln, wenn der String ein ':' enthält (verschlüsseltes Format)
       if (decrypted.whatsapp.apiKey.includes(':')) {
         decrypted.whatsapp = {
           ...decrypted.whatsapp,
           apiKey: decryptSecret(decrypted.whatsapp.apiKey)
         };
       }
+      // Wenn kein ':' vorhanden ist, ist der Token bereits unverschlüsselt (für Migration)
     } catch (error) {
       console.error('Error decrypting WhatsApp API key:', error);
+      // Bei Fehler: Token ist möglicherweise bereits unverschlüsselt
+      console.log('Token wird als unverschlüsselt behandelt');
     }
   }
   if (decrypted.whatsapp?.apiSecret) {
