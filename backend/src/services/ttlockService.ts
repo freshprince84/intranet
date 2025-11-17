@@ -338,18 +338,14 @@ export class TTLockService {
       payload.append('clientId', this.clientId || '');
       payload.append('accessToken', accessToken);
       payload.append('lockId', lockId.toString());
-      // keyboardPwd: Optional wenn API Passcode generieren soll, Required für personalisierte Codes
-      if (generatedPasscode) {
-        payload.append('keyboardPwd', generatedPasscode);
-      }
+      // keyboardPwd: Required für personalisierte Codes (permanent)
+      payload.append('keyboardPwd', generatedPasscode!); // Immer setzen für permanente Codes
       payload.append('keyboardPwdName', passcodeName || 'Guest Passcode');
-      payload.append('keyboardPwdType', '3'); // 3 = period (temporärer Passcode)
-      payload.append('startDate', startDate.getTime().toString()); // Millisekunden!
-      payload.append('endDate', endDate.getTime().toString()); // Millisekunden!
+      payload.append('keyboardPwdType', '2'); // 2 = permanent (keine Start/Endzeit)
+      // startDate/endDate werden NICHT gesetzt für permanente Passcodes
       // addType: 1=via phone bluetooth (APP SDK), 2=via gateway/WiFi
-      // WICHTIG: addType: 1 erstellt den Passcode, aber er muss über die TTLock App synchronisiert werden!
-      // Der Passcode wird in der API erstellt, aber erst nach Bluetooth-Synchronisation aktiv
-      payload.append('addType', '1'); // 1 = via phone bluetooth (erfordert App-Synchronisation)
+      // Versuche zuerst addType: 2 (Gateway), falls nicht verfügbar: addType: 1
+      payload.append('addType', '2'); // 2 = via gateway/WiFi (direkt, ohne Synchronisation)
       payload.append('date', currentTimestamp.toString()); // Millisekunden
 
       // Debug: Zeige vollständigen Request
@@ -357,17 +353,49 @@ export class TTLockService {
       console.log('[TTLock] Request Payload (stringified):', payload.toString());
       console.log('[TTLock] Request Payload (as object):', Object.fromEntries(payload));
       
-      const response = await this.axiosInstance.post<TTLockResponse<TTLockPasscode>>(
+      // Versuche zuerst mit addType: 2 (Gateway)
+      let response = await this.axiosInstance.post<TTLockResponse<TTLockPasscode>>(
         '/v3/keyboardPwd/add',
         payload,
         {
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded'
-          }
+          },
+          validateStatus: () => true // Akzeptiere alle Status-Codes für Fehlerbehandlung
         }
       );
 
-      const responseData = response.data as any;
+      let responseData = response.data as any;
+      
+      // Prüfe ob Gateway-Fehler (Lock nicht mit Gateway verbunden)
+      if (responseData.errcode === -2012 || responseData.errmsg?.includes('Gateway') || responseData.errmsg?.includes('gateway')) {
+        console.log('[TTLock] ⚠️ Lock ist nicht mit Gateway verbunden, versuche addType: 1 (via phone bluetooth)...');
+        
+        // Fallback: addType: 1 (via phone bluetooth)
+        const payload2 = new URLSearchParams();
+        payload2.append('clientId', this.clientId || '');
+        payload2.append('accessToken', accessToken);
+        payload2.append('lockId', lockId.toString());
+        payload2.append('keyboardPwd', generatedPasscode!);
+        payload2.append('keyboardPwdName', passcodeName || 'Guest Passcode');
+        payload2.append('keyboardPwdType', '2'); // 2 = permanent
+        payload2.append('addType', '1'); // 1 = via phone bluetooth
+        payload2.append('date', currentTimestamp.toString());
+        
+        response = await this.axiosInstance.post<TTLockResponse<TTLockPasscode>>(
+          '/v3/keyboardPwd/add',
+          payload2,
+          {
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            validateStatus: () => true
+          }
+        );
+        
+        responseData = response.data as any;
+        console.log('[TTLock] ⚠️ Passcode mit addType: 1 erstellt - muss über TTLock App synchronisiert werden!');
+      }
     
       // TTLock API gibt entweder errcode=0 mit data zurück, oder direkt keyboardPwdId
       // Wenn keyboardPwd weggelassen wurde, generiert die API den Passcode automatisch
