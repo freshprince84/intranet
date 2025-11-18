@@ -516,7 +516,7 @@ export const generatePinAndSendNotification = async (req: Request, res: Response
 
     // Rufe Service-Methode auf, die unabhängig vom Check-in-Status funktioniert
     try {
-      await ReservationNotificationService.generatePinAndSendNotification(reservationId);
+    await ReservationNotificationService.generatePinAndSendNotification(reservationId);
       console.log(`[Reservation] ✅ PIN-Generierung abgeschlossen für Reservierung ${reservationId}`);
     } catch (error) {
       console.error(`[Reservation] ❌ Fehler bei PIN-Generierung für Reservierung ${reservationId}:`, error);
@@ -543,7 +543,7 @@ export const generatePinAndSendNotification = async (req: Request, res: Response
 
     // Prüfe ob PIN tatsächlich generiert wurde
     const pinGenerated = updatedReservation?.doorPin !== null && updatedReservation?.doorPin !== undefined;
-    
+
     res.json({
       success: true,
       data: updatedReservation,

@@ -146,7 +146,7 @@ exports.encryptApiSettings = encryptApiSettings;
  * @returns Settings mit entschlüsselten API-Keys
  */
 const decryptApiSettings = (settings) => {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e, _f, _g, _h;
     if (!settings || typeof settings !== 'object') {
         return settings;
     }
@@ -166,17 +166,30 @@ const decryptApiSettings = (settings) => {
             // Bei Fehler: Key bleibt wie er ist (verschlüsselt oder unverschlüsselt)
         }
     }
-    // TTLock Client Secret
-    if ((_b = decrypted.doorSystem) === null || _b === void 0 ? void 0 : _b.clientSecret) {
+    // TTLock Client ID
+    if ((_b = decrypted.doorSystem) === null || _b === void 0 ? void 0 : _b.clientId) {
         try {
-            decrypted.doorSystem = Object.assign(Object.assign({}, decrypted.doorSystem), { clientSecret: (0, exports.decryptSecret)(decrypted.doorSystem.clientSecret) });
+            if (decrypted.doorSystem.clientId.includes(':')) {
+                decrypted.doorSystem = Object.assign(Object.assign({}, decrypted.doorSystem), { clientId: (0, exports.decryptSecret)(decrypted.doorSystem.clientId) });
+            }
+        }
+        catch (error) {
+            console.error('Error decrypting TTLock client ID:', error);
+        }
+    }
+    // TTLock Client Secret
+    if ((_c = decrypted.doorSystem) === null || _c === void 0 ? void 0 : _c.clientSecret) {
+        try {
+            if (decrypted.doorSystem.clientSecret.includes(':')) {
+                decrypted.doorSystem = Object.assign(Object.assign({}, decrypted.doorSystem), { clientSecret: (0, exports.decryptSecret)(decrypted.doorSystem.clientSecret) });
+            }
         }
         catch (error) {
             console.error('Error decrypting TTLock client secret:', error);
         }
     }
     // SIRE API Key & Secret
-    if ((_c = decrypted.sire) === null || _c === void 0 ? void 0 : _c.apiKey) {
+    if ((_d = decrypted.sire) === null || _d === void 0 ? void 0 : _d.apiKey) {
         try {
             decrypted.sire = Object.assign(Object.assign({}, decrypted.sire), { apiKey: (0, exports.decryptSecret)(decrypted.sire.apiKey) });
         }
@@ -184,7 +197,7 @@ const decryptApiSettings = (settings) => {
             console.error('Error decrypting SIRE API key:', error);
         }
     }
-    if ((_d = decrypted.sire) === null || _d === void 0 ? void 0 : _d.apiSecret) {
+    if ((_e = decrypted.sire) === null || _e === void 0 ? void 0 : _e.apiSecret) {
         try {
             decrypted.sire = Object.assign(Object.assign({}, decrypted.sire), { apiSecret: (0, exports.decryptSecret)(decrypted.sire.apiSecret) });
         }
@@ -193,7 +206,7 @@ const decryptApiSettings = (settings) => {
         }
     }
     // Bold Payment API Key
-    if ((_e = decrypted.boldPayment) === null || _e === void 0 ? void 0 : _e.apiKey) {
+    if ((_f = decrypted.boldPayment) === null || _f === void 0 ? void 0 : _f.apiKey) {
         try {
             decrypted.boldPayment = Object.assign(Object.assign({}, decrypted.boldPayment), { apiKey: (0, exports.decryptSecret)(decrypted.boldPayment.apiKey) });
         }
@@ -202,17 +215,21 @@ const decryptApiSettings = (settings) => {
         }
     }
     // WhatsApp API Key & Secret
-    if ((_f = decrypted.whatsapp) === null || _f === void 0 ? void 0 : _f.apiKey) {
+    if ((_g = decrypted.whatsapp) === null || _g === void 0 ? void 0 : _g.apiKey) {
         try {
+            // Versuche immer zu entschlüsseln, wenn der String ein ':' enthält (verschlüsseltes Format)
             if (decrypted.whatsapp.apiKey.includes(':')) {
                 decrypted.whatsapp = Object.assign(Object.assign({}, decrypted.whatsapp), { apiKey: (0, exports.decryptSecret)(decrypted.whatsapp.apiKey) });
             }
+            // Wenn kein ':' vorhanden ist, ist der Token bereits unverschlüsselt (für Migration)
         }
         catch (error) {
             console.error('Error decrypting WhatsApp API key:', error);
+            // Bei Fehler: Token ist möglicherweise bereits unverschlüsselt
+            console.log('Token wird als unverschlüsselt behandelt');
         }
     }
-    if ((_g = decrypted.whatsapp) === null || _g === void 0 ? void 0 : _g.apiSecret) {
+    if ((_h = decrypted.whatsapp) === null || _h === void 0 ? void 0 : _h.apiSecret) {
         try {
             if (decrypted.whatsapp.apiSecret.includes(':')) {
                 decrypted.whatsapp = Object.assign(Object.assign({}, decrypted.whatsapp), { apiSecret: (0, exports.decryptSecret)(decrypted.whatsapp.apiSecret) });

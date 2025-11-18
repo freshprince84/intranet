@@ -228,10 +228,10 @@ export const decryptApiSettings = (settings: any): any => {
   if (decrypted.doorSystem?.clientSecret) {
     try {
       if (decrypted.doorSystem.clientSecret.includes(':')) {
-        decrypted.doorSystem = {
-          ...decrypted.doorSystem,
-          clientSecret: decryptSecret(decrypted.doorSystem.clientSecret)
-        };
+      decrypted.doorSystem = {
+        ...decrypted.doorSystem,
+        clientSecret: decryptSecret(decrypted.doorSystem.clientSecret)
+      };
       }
     } catch (error) {
       console.error('Error decrypting TTLock client secret:', error);

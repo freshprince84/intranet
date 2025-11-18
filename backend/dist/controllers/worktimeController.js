@@ -544,6 +544,7 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
         let daysWorked = 0;
         // Für jeden Zeiteintrag berechnen wir die Arbeitszeit in Stunden
         entries.forEach(entry => {
+            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
             // Bestimme effektive Endzeit: Entweder gespeicherte Endzeit oder aktuelle Zeit (für aktive Zeitmessungen)
             let effectiveEndTime;
             if (entry.endTime) {
@@ -554,76 +555,85 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 // Aktive Zeitmessung: Berechne aktuelle Zeit in der Zeitzone des Eintrags
                 // WICHTIG: Wenn entry.timezone gespeichert ist, müssen wir die aktuelle Zeit
                 // in dieser Zeitzone berechnen, nicht in UTC, um die korrekte Differenz zu erhalten
+                // KORREKT: Wie im WorktimeTracker - direkte UTC-Differenz berechnen
+                // Die Differenz zwischen zwei UTC-Zeiten ist immer korrekt, unabhängig von der Zeitzone
+                // effectiveEndTime ist einfach nowUtc (aktuelle UTC-Zeit)
+                effectiveEndTime = nowUtc;
+                // Für Logging: Berechne Differenz und konvertiere zu lokaler Zeit (falls timezone vorhanden)
                 if (entry.timezone) {
-                    // WICHTIG: Für aktive Zeitmessungen müssen wir die Differenz in der lokalen Zeitzone berechnen
-                    // Problem: startTime ist in UTC gespeichert, aber repräsentiert lokale Zeit
-                    // Lösung: Konvertiere beide Zeiten in die lokale Zeitzone und berechne die Differenz der lokalen Zeitkomponenten
-                    // toZonedTime konvertiert UTC in lokale Zeit (gibt Date-Objekt zurück, das die lokale Zeit repräsentiert)
+                    const diffMs = nowUtc.getTime() - entry.startTime.getTime();
                     const startTimeLocal = (0, date_fns_tz_1.toZonedTime)(entry.startTime, entry.timezone);
                     const nowLocal = (0, date_fns_tz_1.toZonedTime)(nowUtc, entry.timezone);
-                    // KORREKT: Verwende fromZonedTime() um lokale Zeit in UTC umzuwandeln
-                    // Dann berechne die Differenz in UTC (korrekt, da beide in UTC sind)
-                    const startTimeUtc = (0, date_fns_tz_1.fromZonedTime)(startTimeLocal, entry.timezone);
-                    const nowUtcCorrected = (0, date_fns_tz_1.fromZonedTime)(nowLocal, entry.timezone);
-                    // Berechne Differenz in UTC (korrekt, da beide in UTC sind)
-                    const diffMs = nowUtcCorrected.getTime() - startTimeUtc.getTime();
-                    // Addiere die Differenz zu startTime (UTC), um effectiveEndTime (UTC) zu erhalten
-                    effectiveEndTime = new Date(entry.startTime.getTime() + diffMs);
                     console.log(`Zeitzonen-Korrektur für aktive Zeitmessung (ID: ${entry.id}):`);
                     console.log(`  Timezone: ${entry.timezone}`);
                     console.log(`  StartTime (UTC): ${entry.startTime.toISOString()}`);
                     console.log(`  StartTime (Local): ${(0, date_fns_1.format)(startTimeLocal, 'yyyy-MM-dd HH:mm:ss')} (${entry.timezone})`);
                     console.log(`  Now (UTC): ${nowUtc.toISOString()}`);
                     console.log(`  Now (Local): ${(0, date_fns_1.format)(nowLocal, 'yyyy-MM-dd HH:mm:ss')} (${entry.timezone})`);
-                    console.log(`  Diff (Local): ${(diffMs / (1000 * 60 * 60)).toFixed(2)}h`);
+                    console.log(`  Diff (UTC): ${(diffMs / (1000 * 60 * 60)).toFixed(2)}h`);
                     console.log(`  EffectiveEndTime (UTC): ${effectiveEndTime.toISOString()}`);
                 }
+            }
+            // Für aktive Zeitmessungen: Berechne Differenz direkt (wie im Modal)
+            // Für abgeschlossene Zeitmessungen: Verwende die Periodenbegrenzung
+            let actualStartTime;
+            let actualEndTime;
+            let hoursWorked;
+            if (entry.endTime === null) {
+                // Aktive Zeitmessung: DIREKTE DIFFERENZ wie im Modal
+                // Entferne 'Z' vom startTime-String und berechne Differenz
+                const startTimeISO = entry.startTime.toISOString();
+                const startISOString = startTimeISO.endsWith('Z')
+                    ? startTimeISO.substring(0, startTimeISO.length - 1)
+                    : startTimeISO;
+                const startTimeDate = new Date(startISOString);
+                const diffMs = nowUtc.getTime() - startTimeDate.getTime();
+                hoursWorked = diffMs / (1000 * 60 * 60);
+                // Für Verteilung: Verwende entry.startTime und effectiveEndTime (nicht begrenzt)
+                actualStartTime = entry.startTime;
+                actualEndTime = effectiveEndTime;
+            }
+            else {
+                // Abgeschlossene Zeitmessung: Verwende Periodenbegrenzung
+                actualStartTime = entry.startTime < periodStartUtc ? periodStartUtc : entry.startTime;
+                actualEndTime = effectiveEndTime > periodEndUtc ? periodEndUtc : effectiveEndTime;
+                // Nur berechnen, wenn tatsächlich Zeit im Zeitraum liegt
+                if (actualStartTime < actualEndTime) {
+                    // Berechnung der Arbeitszeit in Millisekunden
+                    const workTime = actualEndTime.getTime() - actualStartTime.getTime();
+                    // Umrechnung in Stunden
+                    hoursWorked = workTime / (1000 * 60 * 60);
+                }
                 else {
-                    // Fallback: Wenn keine Zeitzone gespeichert ist, verwende UTC direkt
-                    effectiveEndTime = nowUtc;
-                    console.warn(`Aktive Zeitmessung (ID: ${entry.id}) hat keine Zeitzone gespeichert, verwende UTC`);
+                    hoursWorked = 0;
                 }
             }
-            // Prüfe, ob die Zeitmessung überhaupt im Zeitraum liegt
-            // Wenn startTime vor dem Zeitraum liegt, beginne die Berechnung beim Periodenstart
-            const actualStartTime = entry.startTime < periodStartUtc ? periodStartUtc : entry.startTime;
-            // Wenn effectiveEndTime nach dem Zeitraum liegt, begrenze auf Periodenende
-            const actualEndTime = effectiveEndTime > periodEndUtc ? periodEndUtc : effectiveEndTime;
             // Nur berechnen, wenn tatsächlich Zeit im Zeitraum liegt
-            if (actualStartTime < actualEndTime) {
-                // Berechnung der Arbeitszeit in Millisekunden
-                const workTime = actualEndTime.getTime() - actualStartTime.getTime();
-                // Umrechnung in Stunden
-                const hoursWorked = workTime / (1000 * 60 * 60);
-                // Für die Verteilung auf Tage: Wir müssen jeden Tag einzeln berechnen
-                // wenn die Zeitmessung über mehrere Tage geht
-                const startDate = new Date(actualStartTime);
-                const endDate = new Date(actualEndTime);
-                // Iteriere über alle Tage, die von dieser Zeitmessung betroffen sind
-                let currentDate = new Date(startDate);
-                currentDate.setUTCHours(0, 0, 0, 0);
-                while (currentDate <= endDate) {
-                    // Berechne Start- und Endzeit für diesen Tag
-                    const dayStart = currentDate > startDate ? currentDate : startDate;
-                    const dayEnd = new Date(currentDate);
-                    dayEnd.setUTCHours(23, 59, 59, 999);
-                    const dayEndActual = dayEnd < endDate ? dayEnd : endDate;
-                    // Berechne Stunden für diesen Tag
-                    const dayWorkTime = dayEndActual.getTime() - dayStart.getTime();
-                    const dayHours = dayWorkTime / (1000 * 60 * 60);
-                    if (dayHours > 0) {
-                        // Extrahiere das Datum im UTC-Format
-                        const year = currentDate.getUTCFullYear();
-                        const month = String(currentDate.getUTCMonth() + 1).padStart(2, '0');
-                        const dayOfMonth = String(currentDate.getUTCDate()).padStart(2, '0');
-                        const dateString = `${year}-${month}-${dayOfMonth}`;
-                        // Finde entsprechenden Tag in periodData
+            if (hoursWorked > 0 && actualStartTime < actualEndTime) {
+                // Für die Verteilung auf Tage: Verwende lokale Zeit wenn timezone vorhanden
+                if (entry.timezone) {
+                    // Verwende Intl.DateTimeFormat um lokale Zeitkomponenten zu extrahieren
+                    const formatter = new Intl.DateTimeFormat('en-US', {
+                        timeZone: entry.timezone,
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit'
+                    });
+                    // Extrahiere lokale Datumskomponenten für Start
+                    const startParts = formatter.formatToParts(actualStartTime);
+                    const startYear = parseInt(((_a = startParts.find(p => p.type === 'year')) === null || _a === void 0 ? void 0 : _a.value) || '0');
+                    const startMonth = parseInt(((_b = startParts.find(p => p.type === 'month')) === null || _b === void 0 ? void 0 : _b.value) || '0') - 1;
+                    const startDay = parseInt(((_c = startParts.find(p => p.type === 'day')) === null || _c === void 0 ? void 0 : _c.value) || '0');
+                    // WICHTIG: Für aktive Zeitmessungen - immer dem Starttag zuordnen
+                    // Auch wenn die Zeitmessung über Mitternacht hinausgeht, gehört sie zum Starttag
+                    if (entry.endTime === null) {
+                        // Aktive Zeitmessung: Alles dem Starttag zuordnen
+                        const dateString = `${startYear}-${String(startMonth + 1).padStart(2, '0')}-${String(startDay).padStart(2, '0')}`;
                         const dayEntry = periodData.find(d => d.date === dateString);
                         if (dayEntry) {
                             const oldHours = dayEntry.hours;
-                            dayEntry.hours += dayHours;
-                            // Tage mit Arbeit zählen (nur wenn vorher 0 Stunden waren)
-                            if (dayHours > 0 && oldHours === 0) {
+                            dayEntry.hours += hoursWorked;
+                            if (hoursWorked > 0 && oldHours === 0) {
                                 daysWorked++;
                             }
                         }
@@ -631,8 +641,155 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
                             console.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
                         }
                     }
-                    // Nächster Tag
-                    currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                    else {
+                        // Abgeschlossene Zeitmessung: Prüfe ob Start und Ende auf dem gleichen lokalen Tag liegen
+                        const endParts = formatter.formatToParts(actualEndTime);
+                        const endYear = parseInt(((_d = endParts.find(p => p.type === 'year')) === null || _d === void 0 ? void 0 : _d.value) || '0');
+                        const endMonth = parseInt(((_e = endParts.find(p => p.type === 'month')) === null || _e === void 0 ? void 0 : _e.value) || '0') - 1;
+                        const endDay = parseInt(((_f = endParts.find(p => p.type === 'day')) === null || _f === void 0 ? void 0 : _f.value) || '0');
+                        const sameDay = startYear === endYear && startMonth === endMonth && startDay === endDay;
+                        if (sameDay) {
+                            // Einfach: Alles diesem Tag zuordnen
+                            const dateString = `${startYear}-${String(startMonth + 1).padStart(2, '0')}-${String(startDay).padStart(2, '0')}`;
+                            const dayEntry = periodData.find(d => d.date === dateString);
+                            if (dayEntry) {
+                                const oldHours = dayEntry.hours;
+                                dayEntry.hours += hoursWorked;
+                                if (hoursWorked > 0 && oldHours === 0) {
+                                    daysWorked++;
+                                }
+                            }
+                            else {
+                                console.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
+                            }
+                        }
+                        else {
+                            // Mehrere Tage: Verteile proportional
+                            // Iteriere über alle betroffenen lokalen Tage
+                            let currentYear = startYear;
+                            let currentMonth = startMonth;
+                            let currentDay = startDay;
+                            while (currentYear < endYear ||
+                                (currentYear === endYear && currentMonth < endMonth) ||
+                                (currentYear === endYear && currentMonth === endMonth && currentDay <= endDay)) {
+                                // Erstelle UTC-Date-Objekte für Tagesbeginn und -ende (als UTC interpretiert)
+                                const dayStartUtcTemp = new Date(Date.UTC(currentYear, currentMonth, currentDay, 0, 0, 0, 0));
+                                const dayEndUtcTemp = new Date(Date.UTC(currentYear, currentMonth, currentDay, 23, 59, 59, 999));
+                                // Konvertiere zu lokaler Zeit, um die korrekten UTC-Zeitpunkte zu erhalten
+                                const dayStartLocal = (0, date_fns_tz_1.toZonedTime)(dayStartUtcTemp, entry.timezone);
+                                const dayEndLocal = (0, date_fns_tz_1.toZonedTime)(dayEndUtcTemp, entry.timezone);
+                                // Setze die korrekten Stunden/Minuten/Sekunden für Start und Ende
+                                if (currentYear === startYear && currentMonth === startMonth && currentDay === startDay) {
+                                    // Verwende die lokalen Komponenten vom Start
+                                    const startPartsFull = new Intl.DateTimeFormat('en-US', {
+                                        timeZone: entry.timezone,
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        second: '2-digit',
+                                        hour12: false
+                                    }).formatToParts(actualStartTime);
+                                    const startHour = parseInt(((_g = startPartsFull.find(p => p.type === 'hour')) === null || _g === void 0 ? void 0 : _g.value) || '0');
+                                    const startMinute = parseInt(((_h = startPartsFull.find(p => p.type === 'minute')) === null || _h === void 0 ? void 0 : _h.value) || '0');
+                                    const startSecond = parseInt(((_j = startPartsFull.find(p => p.type === 'second')) === null || _j === void 0 ? void 0 : _j.value) || '0');
+                                    dayStartLocal.setHours(startHour, startMinute, startSecond, 0);
+                                }
+                                else {
+                                    dayStartLocal.setHours(0, 0, 0, 0);
+                                }
+                                if (currentYear === endYear && currentMonth === endMonth && currentDay === endDay) {
+                                    // Verwende die lokalen Komponenten vom Ende
+                                    const endPartsFull = new Intl.DateTimeFormat('en-US', {
+                                        timeZone: entry.timezone,
+                                        year: 'numeric',
+                                        month: '2-digit',
+                                        day: '2-digit',
+                                        hour: '2-digit',
+                                        minute: '2-digit',
+                                        second: '2-digit',
+                                        hour12: false
+                                    }).formatToParts(actualEndTime);
+                                    const endHour = parseInt(((_k = endPartsFull.find(p => p.type === 'hour')) === null || _k === void 0 ? void 0 : _k.value) || '0');
+                                    const endMinute = parseInt(((_l = endPartsFull.find(p => p.type === 'minute')) === null || _l === void 0 ? void 0 : _l.value) || '0');
+                                    const endSecond = parseInt(((_m = endPartsFull.find(p => p.type === 'second')) === null || _m === void 0 ? void 0 : _m.value) || '0');
+                                    dayEndLocal.setHours(endHour, endMinute, endSecond, 999);
+                                }
+                                else {
+                                    dayEndLocal.setHours(23, 59, 59, 999);
+                                }
+                                // Konvertiere lokale Zeiten zurück zu UTC für Berechnung
+                                const dayStartUtc = (0, date_fns_tz_1.fromZonedTime)(dayStartLocal, entry.timezone);
+                                const dayEndUtc = (0, date_fns_tz_1.fromZonedTime)(dayEndLocal, entry.timezone);
+                                // Begrenze auf actualStartTime und actualEndTime
+                                const dayStartActual = dayStartUtc < actualStartTime ? actualStartTime : dayStartUtc;
+                                const dayEndActual = dayEndUtc > actualEndTime ? actualEndTime : dayEndUtc;
+                                // Berechne Stunden für diesen Tag
+                                const dayWorkTime = dayEndActual.getTime() - dayStartActual.getTime();
+                                const dayHours = dayWorkTime / (1000 * 60 * 60);
+                                if (dayHours > 0) {
+                                    const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentDay).padStart(2, '0')}`;
+                                    const dayEntry = periodData.find(d => d.date === dateString);
+                                    if (dayEntry) {
+                                        const oldHours = dayEntry.hours;
+                                        dayEntry.hours += dayHours;
+                                        if (dayHours > 0 && oldHours === 0) {
+                                            daysWorked++;
+                                        }
+                                    }
+                                    else {
+                                        console.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
+                                    }
+                                }
+                                // Nächster lokaler Tag
+                                const nextDate = new Date(currentYear, currentMonth, currentDay + 1);
+                                currentYear = nextDate.getFullYear();
+                                currentMonth = nextDate.getMonth();
+                                currentDay = nextDate.getDate();
+                            }
+                        }
+                    }
+                }
+                else {
+                    // Fallback: UTC-Verteilung wenn keine Zeitzone gespeichert
+                    const startDate = new Date(actualStartTime);
+                    const endDate = new Date(actualEndTime);
+                    // Iteriere über alle Tage, die von dieser Zeitmessung betroffen sind
+                    let currentDate = new Date(startDate);
+                    currentDate.setUTCHours(0, 0, 0, 0);
+                    while (currentDate <= endDate) {
+                        // Berechne Start- und Endzeit für diesen Tag
+                        const dayStart = currentDate > startDate ? currentDate : startDate;
+                        const dayEnd = new Date(currentDate);
+                        dayEnd.setUTCHours(23, 59, 59, 999);
+                        const dayEndActual = dayEnd < endDate ? dayEnd : endDate;
+                        // Berechne Stunden für diesen Tag
+                        const dayWorkTime = dayEndActual.getTime() - dayStart.getTime();
+                        const dayHours = dayWorkTime / (1000 * 60 * 60);
+                        if (dayHours > 0) {
+                            // Extrahiere das Datum im UTC-Format
+                            const year = currentDate.getUTCFullYear();
+                            const month = String(currentDate.getUTCMonth() + 1).padStart(2, '0');
+                            const dayOfMonth = String(currentDate.getUTCDate()).padStart(2, '0');
+                            const dateString = `${year}-${month}-${dayOfMonth}`;
+                            // Finde entsprechenden Tag in periodData
+                            const dayEntry = periodData.find(d => d.date === dateString);
+                            if (dayEntry) {
+                                const oldHours = dayEntry.hours;
+                                dayEntry.hours += dayHours;
+                                // Tage mit Arbeit zählen (nur wenn vorher 0 Stunden waren)
+                                if (dayHours > 0 && oldHours === 0) {
+                                    daysWorked++;
+                                }
+                            }
+                            else {
+                                console.warn(`Datum ${dateString} liegt nicht in der ${isQuinzena ? 'Quinzena' : 'Woche'} von ${periodStartStr} bis ${periodEndStr}!`);
+                            }
+                        }
+                        // Nächster Tag
+                        currentDate.setUTCDate(currentDate.getUTCDate() + 1);
+                    }
                 }
                 // Addiere die Gesamtstunden (nur für den Zeitraum)
                 totalHours += hoursWorked;

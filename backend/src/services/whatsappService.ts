@@ -320,8 +320,8 @@ export class WhatsAppService {
           to: to,
           type: 'template',
           template: {
-            name: template,
-            language: { code: languageCode }
+          name: template,
+          language: { code: languageCode }
           }
         };
 

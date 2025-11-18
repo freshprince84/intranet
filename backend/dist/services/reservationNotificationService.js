@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -114,7 +147,7 @@ class ReservationNotificationService {
      */
     static generatePinAndSendNotification(reservationId) {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a;
+            var _a, _b, _c, _d;
             try {
                 const reservation = yield prisma.reservation.findUnique({
                     where: { id: reservationId },
@@ -123,44 +156,119 @@ class ReservationNotificationService {
                 if (!reservation) {
                     throw new Error(`Reservierung ${reservationId} nicht gefunden`);
                 }
-                const settings = reservation.organization.settings;
-                const notificationChannels = ((_a = settings === null || settings === void 0 ? void 0 : settings.lobbyPms) === null || _a === void 0 ? void 0 : _a.notificationChannels) || ['email'];
+                // Entschlüssele Settings
+                const { decryptApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                console.log(`[ReservationNotification] Entschlüssele Settings für Reservation ${reservationId}...`);
+                const decryptedSettings = decryptApiSettings(reservation.organization.settings);
+                const notificationChannels = ((_a = decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.lobbyPms) === null || _a === void 0 ? void 0 : _a.notificationChannels) || ['email'];
+                console.log(`[ReservationNotification] Notification Channels:`, notificationChannels);
+                console.log(`[ReservationNotification] Guest Phone: ${reservation.guestPhone || 'N/A'}`);
+                console.log(`[ReservationNotification] Settings entschlüsselt:`, {
+                    hasDoorSystem: !!(decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.doorSystem),
+                    doorSystemProvider: (_b = decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.doorSystem) === null || _b === void 0 ? void 0 : _b.provider,
+                    doorSystemLockIds: (_c = decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.doorSystem) === null || _c === void 0 ? void 0 : _c.lockIds
+                });
                 // Erstelle TTLock Passcode
                 let doorPin = null;
                 let doorAppName = null;
+                console.log(`[ReservationNotification] Starte PIN-Generierung für Reservation ${reservationId}...`);
                 try {
                     const ttlockService = new ttlockService_1.TTLockService(reservation.organizationId);
-                    const doorSystemSettings = settings === null || settings === void 0 ? void 0 : settings.doorSystem;
+                    const doorSystemSettings = decryptedSettings === null || decryptedSettings === void 0 ? void 0 : decryptedSettings.doorSystem;
+                    console.log(`[ReservationNotification] Door System Settings:`, {
+                        hasDoorSystem: !!doorSystemSettings,
+                        hasLockIds: !!(doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds),
+                        lockIds: doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds,
+                        lockIdsLength: ((_d = doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds) === null || _d === void 0 ? void 0 : _d.length) || 0
+                    });
                     if ((doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.lockIds) && doorSystemSettings.lockIds.length > 0) {
                         const lockId = doorSystemSettings.lockIds[0]; // Verwende ersten Lock
                         doorAppName = 'TTLock'; // Oder aus Settings: doorSystemSettings.appName
+                        console.log(`[ReservationNotification] Erstelle TTLock Passcode für Lock ID: ${lockId}`);
+                        console.log(`[ReservationNotification] Check-in Date: ${reservation.checkInDate}`);
+                        console.log(`[ReservationNotification] Check-out Date: ${reservation.checkOutDate}`);
+                        // WICHTIG: checkOutDate muss nach checkInDate liegen (mindestens 1 Tag später)
+                        // Falls beide identisch sind (z.B. bei manuell erstellten Reservierungen), korrigiere
+                        let actualCheckInDate = reservation.checkInDate;
+                        let actualCheckOutDate = reservation.checkOutDate;
+                        // Prüfe ob beide Daten identisch oder checkOutDate vor checkInDate liegt
+                        if (actualCheckOutDate.getTime() <= actualCheckInDate.getTime()) {
+                            console.warn(`[ReservationNotification] ⚠️ checkOutDate ist identisch oder vor checkInDate - korrigiere auf checkInDate + 1 Tag`);
+                            actualCheckOutDate = new Date(actualCheckInDate);
+                            actualCheckOutDate.setDate(actualCheckOutDate.getDate() + 1); // +1 Tag
+                            console.log(`[ReservationNotification] Korrigierte Check-out Date: ${actualCheckOutDate}`);
+                        }
                         // Erstelle Passcode für Check-in bis Check-out
-                        doorPin = yield ttlockService.createTemporaryPasscode(lockId, reservation.checkInDate, reservation.checkOutDate, `Guest: ${reservation.guestName}`);
+                        doorPin = yield ttlockService.createTemporaryPasscode(lockId, actualCheckInDate, actualCheckOutDate, `Guest: ${reservation.guestName}`);
+                        console.log(`[ReservationNotification] ✅ TTLock Passcode erfolgreich generiert: ${doorPin}`);
                         // Speichere in Reservierung
                         yield prisma.reservation.update({
                             where: { id: reservation.id },
                             data: {
                                 doorPin,
                                 doorAppName,
-                                ttlLockId: lockId,
+                                ttlLockId: String(lockId), // Konvertiere zu String für Prisma
                                 ttlLockPassword: doorPin
                             }
                         });
+                        console.log(`[ReservationNotification] ✅ PIN in DB gespeichert für Reservation ${reservationId}`);
+                    }
+                    else {
+                        console.warn(`[ReservationNotification] ⚠️ Keine Lock IDs konfiguriert für Reservation ${reservationId}`);
                     }
                 }
                 catch (error) {
-                    console.error(`[ReservationNotification] Fehler beim Erstellen des TTLock Passcodes:`, error);
+                    console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des TTLock Passcodes:`, error);
+                    if (error instanceof Error) {
+                        console.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
+                        console.error(`[ReservationNotification] Stack: ${error.stack}`);
+                    }
                     // Weiter ohne PIN
                 }
                 // Versende Benachrichtigungen
                 if (notificationChannels.includes('email') && reservation.guestEmail) {
-                    yield this.sendCheckInConfirmationEmail(reservation, doorPin, doorAppName);
+                    try {
+                        yield this.sendCheckInConfirmationEmail(reservation, doorPin, doorAppName);
+                    }
+                    catch (error) {
+                        console.error(`[ReservationNotification] Fehler beim Versenden der E-Mail:`, error);
+                        // Weiter ohne E-Mail
+                    }
                 }
                 if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
-                    const whatsappService = new whatsappService_1.WhatsAppService(reservation.organizationId);
-                    yield whatsappService.sendCheckInConfirmation(reservation.guestName, reservation.guestPhone, reservation.roomNumber || 'N/A', reservation.roomDescription || 'N/A', doorPin || 'N/A', doorAppName || 'TTLock');
+                    try {
+                        const whatsappService = new whatsappService_1.WhatsAppService(reservation.organizationId);
+                        const whatsappSuccess = yield whatsappService.sendCheckInConfirmation(reservation.guestName, reservation.guestPhone, reservation.roomNumber || 'N/A', reservation.roomDescription || 'N/A', doorPin || 'N/A', doorAppName || 'TTLock');
+                        if (whatsappSuccess) {
+                            console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservierung ${reservationId}`);
+                        }
+                        else {
+                            console.warn(`[ReservationNotification] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservierung ${reservationId}`);
+                        }
+                    }
+                    catch (error) {
+                        console.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
+                        if (error instanceof Error) {
+                            console.error(`[ReservationNotification] Fehlermeldung: ${error.message}`);
+                        }
+                        // Weiter ohne WhatsApp - PIN wurde bereits generiert (oder versucht)
+                    }
                 }
-                console.log(`[ReservationNotification] PIN generiert und Mitteilung versendet für Reservierung ${reservationId}`);
+                else {
+                    if (!notificationChannels.includes('whatsapp')) {
+                        console.log(`[ReservationNotification] WhatsApp nicht in Notification Channels für Reservierung ${reservationId}`);
+                    }
+                    if (!reservation.guestPhone) {
+                        console.log(`[ReservationNotification] Keine Guest Phone für Reservierung ${reservationId}`);
+                    }
+                }
+                // Prüfe ob PIN tatsächlich generiert wurde
+                if (doorPin) {
+                    console.log(`[ReservationNotification] ✅ PIN generiert und Mitteilung versendet für Reservierung ${reservationId}`);
+                }
+                else {
+                    console.warn(`[ReservationNotification] ⚠️ PIN konnte nicht generiert werden, aber Mitteilung versendet für Reservierung ${reservationId}`);
+                }
             }
             catch (error) {
                 console.error(`[ReservationNotification] Fehler beim Generieren des PIN-Codes und Versenden der Mitteilung:`, error);
@@ -206,7 +314,7 @@ class ReservationNotificationService {
                             data: {
                                 doorPin,
                                 doorAppName,
-                                ttlLockId: lockId,
+                                ttlLockId: String(lockId), // Konvertiere zu String für Prisma
                                 ttlLockPassword: doorPin
                             }
                         });

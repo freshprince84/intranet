@@ -159,7 +159,7 @@ export class ReservationNotificationService {
       let doorAppName: string | null = null;
 
       console.log(`[ReservationNotification] Starte PIN-Generierung für Reservation ${reservationId}...`);
-      
+
       try {
         const ttlockService = new TTLockService(reservation.organizationId);
         const doorSystemSettings = decryptedSettings?.doorSystem;
