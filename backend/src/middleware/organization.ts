@@ -39,8 +39,11 @@ export const organizationMiddleware = async (req: Request, res: Response, next: 
     });
 
     if (!userRole) {
+      console.error('[organizationMiddleware] Keine aktive Rolle gefunden für userId:', userId);
       return res.status(404).json({ message: 'Keine aktive Rolle gefunden' });
     }
+    
+    console.log('[organizationMiddleware] UserRole gefunden:', userRole.id, 'OrganizationId:', userRole.role.organizationId);
 
     // Füge Organisations-Kontext zum Request hinzu
     // WICHTIG: Kann NULL sein für standalone User (Hamburger-Rolle)

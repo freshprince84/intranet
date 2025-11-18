@@ -224,7 +224,8 @@ export const API_ENDPOINTS = {
         BASE: '/payroll',
         HOURS: '/payroll/hours',
         CALCULATE: '/payroll/calculate',
-        PDF: (payrollId: number) => `/payroll/pdf/${payrollId}`
+        PDF: (payrollId: number) => `/payroll/pdf/${payrollId}`,
+        PREFILL_HOURS: '/payroll/prefill-hours'
     },
     // Database Management
     DATABASE: {

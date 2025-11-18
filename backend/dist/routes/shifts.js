@@ -14,16 +14,7 @@ router.get('/test', (req, res) => {
 });
 // Alle Routen mit Authentifizierung schützen
 router.use(auth_1.authMiddleware);
-router.use((req, res, next) => {
-    console.log('[Shifts Route] Vor organizationMiddleware');
-    console.log('[Shifts Route] userId:', req.userId);
-    next();
-}, organization_1.organizationMiddleware);
-router.use((req, res, next) => {
-    console.log('[Shifts Route] Nach organizationMiddleware');
-    console.log('[Shifts Route] organizationId:', req.organizationId);
-    next();
-});
+router.use(organization_1.organizationMiddleware);
 // ShiftTemplate-Routen
 router.get('/templates', shiftTemplateController_1.getAllShiftTemplates);
 router.get('/templates/:id', shiftTemplateController_1.getShiftTemplateById);

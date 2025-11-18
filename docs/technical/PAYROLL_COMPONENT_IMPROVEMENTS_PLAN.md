@@ -1,7 +1,12 @@
 # Plan: PayrollComponent - Verbesserungen (Land/Sprache & Automatische Stunden)
 
 **Datum**: 2025-01-XX  
-**Status**: 📋 Analyse abgeschlossen, Plan erstellt
+**Status**: ✅ Analyse abgeschlossen, Plan finalisiert, bereit für Implementierung
+
+**Kritische Probleme identifiziert:**
+- ❌ Perioden-Auswahl fehlt komplett (periodStart immer `new Date()`)
+- ❌ PDF hat hardcodierte deutsche Texte
+- ❌ User-Daten fehlen `payrollCountry` im Frontend
 
 ## Überblick
 
@@ -827,14 +832,74 @@ const canEditPayroll = hasPermission('payroll', 'write') || hasPermission('payro
 
 Nach der Implementierung testen:
 
+**Phase 1:**
 - [ ] Übersetzungen funktionieren (DE, ES, EN)
 - [ ] Land-Anzeige korrekt (CH/CO)
 - [ ] Währung korrekt (CHF/COP)
+- [ ] Hardcodierte Texte ersetzt
+
+**Phase 2 (KRITISCH):**
+- [ ] Perioden-Auswahl funktioniert
+- [ ] Standard-Periode wird korrekt berechnet (CH: Monat, CO: Quinzena)
+- [ ] Validierung: periodStart < periodEnd
+- [ ] Validierung: Doppelte Perioden werden erkannt
+- [ ] Perioden können manuell geändert werden
+
+**Phase 3 (KRITISCH):**
+- [ ] PDF wird in korrekter Sprache generiert
+- [ ] PDF-Texte sind übersetzt (DE, ES, EN)
+- [ ] PDF-Datum-Format korrekt
+
+**Phase 4:**
 - [ ] Stunden werden automatisch vorausgefüllt
 - [ ] Kategorisierung korrekt (regular, overtime, night, etc.)
-- [ ] Berechtigungen funktionieren (read-only vs. editierbar)
 - [ ] Feiertags-Erkennung funktioniert (Kolumbien)
 - [ ] Nachtzeit-Erkennung funktioniert (22:00-06:00 CO, 20:00-06:00 CH)
 - [ ] Sonntags-Erkennung funktioniert
 - [ ] Überstunden-Berechnung korrekt
+
+**Phase 5:**
+- [ ] Berechtigungen funktionieren (read-only vs. editierbar)
+- [ ] Input-Felder disabled bei read-only
+- [ ] Speichern-Button disabled bei read-only
+
+---
+
+## Risiken und Mitigation
+
+### Risiko 1: Perioden-Überschneidungen
+**Risiko**: Mehrere Abrechnungen für gleiche Periode möglich
+**Mitigation**: Validierung im Backend vor dem Speichern
+
+### Risiko 2: Falsche Perioden-Berechnung
+**Risiko**: Perioden werden falsch berechnet (z.B. falscher Monat)
+**Mitigation**: Unit-Tests für `getPayrollEndDate` und Perioden-Berechnung
+
+### Risiko 3: Feiertagsliste unvollständig
+**Risiko**: Feiertage werden nicht erkannt
+**Mitigation**: Initial nur Kolumbien (fest codiert), später erweiterbar
+
+### Risiko 4: Kategorisierungs-Logik komplex
+**Risiko**: Stunden werden falsch kategorisiert (z.B. Nachtstunden)
+**Mitigation**: Detaillierte Tests, Edge Cases prüfen (z.B. über Mitternacht)
+
+### Risiko 5: Performance bei vielen WorkTime-Einträgen
+**Risiko**: Kategorisierung langsam bei vielen Einträgen
+**Mitigation**: Optimierung, ggf. Caching
+
+### Risiko 6: Zeitzonen-Probleme
+**Risiko**: Falsche Kategorisierung durch Zeitzonen-Unterschiede
+**Mitigation**: UTC verwenden, Zeitzone aus WorkTime.timezone berücksichtigen
+
+### Risiko 7: User-Daten fehlen
+**Risiko**: `users` Array enthält nicht alle benötigten Felder (z.B. `payrollCountry`)
+**Aktuell**: `fetchUsers` verwendet `API_ENDPOINTS.USERS.BASE` → gibt vollständige User-Objekte zurück
+**Problem**: Frontend verwendet nur `{ id, firstName, lastName }` → `payrollCountry` fehlt
+**Mitigation**: 
+- Frontend: User-Interface erweitern um `payrollCountry`
+- Oder: Separater API-Call für User-Details beim Auswählen
+
+### Risiko 8: Organisation-Daten fehlen
+**Risiko**: `organization` ist null oder hat keine `country`/`settings.language`
+**Mitigation**: Fallback-Logik implementieren (User.payrollCountry > Organization.country > User.country)
 

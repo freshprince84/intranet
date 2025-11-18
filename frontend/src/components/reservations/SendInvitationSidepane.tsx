@@ -60,16 +60,21 @@ Por favor, realiza el pago:
     }
   }, [isOpen, reservation]);
 
-  // Preview-Nachricht generieren (mit Platzhaltern)
+  // Preview-Nachricht generieren (mit echten Links)
   useEffect(() => {
     if (customMessage) {
+      // Generiere Check-in-Link (analog zu Worktracker.tsx)
+      const checkInLink = `${window.location.origin}/check-in/${reservation.id}`;
+      // Verwende bestehenden Payment-Link oder Fallback
+      const paymentLink = reservation.paymentLink || '[Zahlungslink wird erstellt]';
+      
       let preview = customMessage
         .replace(/\{\{guestName\}\}/g, reservation.guestName)
-        .replace(/\{\{checkInLink\}\}/g, '[Check-in-Link]')
-        .replace(/\{\{paymentLink\}\}/g, '[Zahlungslink]');
+        .replace(/\{\{checkInLink\}\}/g, checkInLink)
+        .replace(/\{\{paymentLink\}\}/g, paymentLink);
       setPreviewMessage(preview);
     }
-  }, [customMessage, reservation.guestName]);
+  }, [customMessage, reservation.guestName, reservation.paymentLink, reservation.id]);
 
   // Responsive-Verhalten
   useEffect(() => {

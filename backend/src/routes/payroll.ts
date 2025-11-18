@@ -1,5 +1,5 @@
 import express from 'express';
-import { saveWorkHours, calculatePayroll, getPayrolls, generatePayrollPDF } from '../controllers/payrollController';
+import { saveWorkHours, calculatePayroll, getPayrolls, generatePayrollPDF, getPrefilledHours } from '../controllers/payrollController';
 import { authenticateToken } from '../middleware/auth';
 
 const router = express.Router();
@@ -18,5 +18,8 @@ router.get('/', getPayrolls);
 
 // PDF generieren
 router.get('/pdf/:payrollId', generatePayrollPDF);
+
+// Vorausgefüllte Stunden abrufen
+router.get('/prefill-hours', getPrefilledHours);
 
 export default router; 
