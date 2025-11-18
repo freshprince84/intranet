@@ -232,7 +232,10 @@ app.use('/api/whatsapp', whatsapp_1.default);
 // Reservierungen (manuelle Erstellung) - MUSS nach lobby-pms kommen
 console.log('[App] Registriere /api/reservations Route...');
 console.log('[App] reservationRoutes:', reservations_1.default ? 'geladen' : 'FEHLT!');
-app.use('/api/reservations', reservations_1.default);
+app.use('/api/reservations', (req, res, next) => {
+    console.log(`[App] Reservations Route aufgerufen: ${req.method} ${req.path}`);
+    next();
+}, reservations_1.default);
 console.log('[App] /api/reservations Route registriert');
 // 404 Handler
 app.use((req, res) => {

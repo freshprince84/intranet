@@ -130,11 +130,15 @@ ${ttlockCode}
 ` : ''}¡Te esperamos!`;
                 // Sende WhatsApp-Nachricht (mit Fallback auf Template)
                 const whatsappService = new whatsappService_1.WhatsAppService(reservation.organizationId);
-                const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_confirmation';
+                // Verwende existierendes Template: reservation_checkin_invitation
+                const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
+                // Template-Parameter: {{1}} = Gast-Name, {{2}} = Check-in-Link, {{3}} = Payment-Link
+                // Erstelle Check-in-Link für Template
+                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+                const checkInLink = `${frontendUrl}/check-in/${updatedReservation.id}`;
                 const templateParams = [
                     updatedReservation.guestName,
-                    checkInDateStr,
-                    checkOutDateStr,
+                    checkInLink,
                     paymentLink
                 ];
                 yield whatsappService.sendMessageWithFallback(updatedReservation.guestPhone, sentMessage, templateName, templateParams);
@@ -207,10 +211,15 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         // Erkenne ob es Telefonnummer oder Email ist
         const contactType = detectContactType(contact.trim());
+        // WICHTIG: checkOutDate muss nach checkInDate liegen (mindestens 1 Tag später)
+        // Beim funktionierenden Code 7149923045 waren die Daten unterschiedlich
+        const checkInDate = new Date();
+        const checkOutDate = new Date(checkInDate);
+        checkOutDate.setDate(checkOutDate.getDate() + 1); // +1 Tag
         const reservationData = {
             guestName: guestName.trim(),
-            checkInDate: new Date(), // Placeholder - wird nicht abgefragt
-            checkOutDate: new Date(), // Placeholder - wird nicht abgefragt
+            checkInDate: checkInDate,
+            checkOutDate: checkOutDate, // Mindestens 1 Tag nach checkInDate
             status: client_1.ReservationStatus.confirmed,
             paymentStatus: client_1.PaymentStatus.pending,
             amount: amount,
@@ -266,15 +275,23 @@ ${paymentLink}
 
 ¡Te esperamos!`;
                 // Sende WhatsApp-Nachricht (mit Fallback auf Template)
+                console.log(`[Reservation] Initialisiere WhatsApp Service für Organisation ${reservation.organizationId}...`);
                 const whatsappService = new whatsappService_1.WhatsAppService(reservation.organizationId);
-                const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_confirmation';
+                // Verwende existierendes Template: reservation_checkin_invitation
+                const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
+                // Template-Parameter: {{1}} = Gast-Name, {{2}} = Check-in-Link, {{3}} = Payment-Link
                 const templateParams = [
                     reservation.guestName,
-                    `${amount} ${currency}`,
                     checkInLink,
                     paymentLink
                 ];
-                yield whatsappService.sendMessageWithFallback(reservation.guestPhone, sentMessage, templateName, templateParams);
+                console.log(`[Reservation] Versuche WhatsApp-Nachricht zu senden an ${reservation.guestPhone}...`);
+                console.log(`[Reservation] Template Name: ${templateName}`);
+                console.log(`[Reservation] Template Params: ${JSON.stringify(templateParams)}`);
+                const whatsappSuccess = yield whatsappService.sendMessageWithFallback(reservation.guestPhone, sentMessage, templateName, templateParams);
+                if (!whatsappSuccess) {
+                    throw new Error('WhatsApp-Nachricht konnte nicht versendet werden (sendMessageWithFallback gab false zurück)');
+                }
                 sentMessageAt = new Date();
                 // Speichere versendete Nachricht und Payment Link in Reservierung
                 yield prisma.reservation.update({
@@ -286,15 +303,33 @@ ${paymentLink}
                         status: 'notification_sent'
                     }
                 });
-                console.log(`[Reservation] Reservierung ${reservation.id} erstellt und WhatsApp-Nachricht versendet`);
+                console.log(`[Reservation] ✅ Reservierung ${reservation.id} erstellt und WhatsApp-Nachricht erfolgreich versendet`);
             }
             catch (error) {
-                console.error('[Reservation] Fehler beim Versenden der WhatsApp-Nachricht:', error);
+                console.error('[Reservation] ❌ Fehler beim Versenden der WhatsApp-Nachricht:', error);
                 console.error('[Reservation] Error Details:', JSON.stringify(error, null, 2));
-                // Prüfe ob es ein WhatsApp-Token-Problem ist
+                // Detaillierte Fehleranalyse
                 const errorMessage = error instanceof Error ? error.message : String(error);
+                const errorStack = error instanceof Error ? error.stack : undefined;
+                console.error('[Reservation] Fehlermeldung:', errorMessage);
+                if (errorStack) {
+                    console.error('[Reservation] Stack Trace:', errorStack);
+                }
+                // Prüfe spezifische Fehlertypen
                 if (errorMessage.includes('access token') || errorMessage.includes('OAuthException') || errorMessage.includes('Session has expired')) {
                     console.error('[Reservation] ⚠️ WhatsApp Access Token ist abgelaufen! Bitte neuen Token in den Organisationseinstellungen eintragen.');
+                }
+                else if (errorMessage.includes('API Key') || errorMessage.includes('nicht konfiguriert')) {
+                    console.error('[Reservation] ⚠️ WhatsApp API Key fehlt oder ist nicht korrekt konfiguriert!');
+                }
+                else if (errorMessage.includes('Phone Number ID')) {
+                    console.error('[Reservation] ⚠️ WhatsApp Phone Number ID fehlt oder ist nicht korrekt konfiguriert!');
+                }
+                else if (errorMessage.includes('Settings nicht gefunden')) {
+                    console.error('[Reservation] ⚠️ WhatsApp Settings nicht gefunden für Organisation!');
+                }
+                else if (errorMessage.includes('ENCRYPTION_KEY')) {
+                    console.error('[Reservation] ⚠️ ENCRYPTION_KEY fehlt in den Environment-Variablen!');
                 }
                 // Fehler nicht weiterwerfen, Reservierung wurde bereits erstellt
                 // Status bleibt auf 'confirmed', da Nachricht nicht versendet wurde
@@ -416,8 +451,20 @@ const generatePinAndSendNotification = (req, res) => __awaiter(void 0, void 0, v
             });
         }
         console.log(`[Reservation] Generiere PIN und sende Mitteilung für Reservierung ${reservationId}`);
+        console.log(`[Reservation] Organization ID: ${organizationId}`);
         // Rufe Service-Methode auf, die unabhängig vom Check-in-Status funktioniert
-        yield reservationNotificationService_1.ReservationNotificationService.generatePinAndSendNotification(reservationId);
+        try {
+            yield reservationNotificationService_1.ReservationNotificationService.generatePinAndSendNotification(reservationId);
+            console.log(`[Reservation] ✅ PIN-Generierung abgeschlossen für Reservierung ${reservationId}`);
+        }
+        catch (error) {
+            console.error(`[Reservation] ❌ Fehler bei PIN-Generierung für Reservierung ${reservationId}:`, error);
+            if (error instanceof Error) {
+                console.error(`[Reservation] Fehlermeldung: ${error.message}`);
+                console.error(`[Reservation] Stack: ${error.stack}`);
+            }
+            throw error;
+        }
         // Hole aktualisierte Reservierung
         const updatedReservation = yield prisma.reservation.findUnique({
             where: { id: reservationId },
@@ -431,10 +478,14 @@ const generatePinAndSendNotification = (req, res) => __awaiter(void 0, void 0, v
                 }
             }
         });
+        // Prüfe ob PIN tatsächlich generiert wurde
+        const pinGenerated = (updatedReservation === null || updatedReservation === void 0 ? void 0 : updatedReservation.doorPin) !== null && (updatedReservation === null || updatedReservation === void 0 ? void 0 : updatedReservation.doorPin) !== undefined;
         res.json({
             success: true,
             data: updatedReservation,
-            message: 'PIN-Code generiert und Mitteilung versendet'
+            message: pinGenerated
+                ? 'PIN-Code generiert und Mitteilung versendet'
+                : 'Mitteilung versendet, aber PIN-Code konnte nicht generiert werden (TTLock Fehler)'
         });
     }
     catch (error) {

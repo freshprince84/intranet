@@ -24,12 +24,13 @@ router.post('/', (req, res, next) => {
     console.log('[Reservations Route] Body:', req.body);
     (0, reservationController_1.createReservation)(req, res).catch(next);
 });
-router.get('/:id', reservationController_1.getReservationById);
-router.put('/:id/guest-contact', reservationController_1.updateGuestContact);
+// WICHTIG: Spezifischere Routen ZUERST, sonst wird /:id/generate-pin-and-send als /:id interpretiert!
 router.post('/:id/generate-pin-and-send', (req, res, next) => {
     console.log('[Reservations Route] POST /:id/generate-pin-and-send aufgerufen');
     console.log('[Reservations Route] Reservation ID:', req.params.id);
     (0, reservationController_1.generatePinAndSendNotification)(req, res).catch(next);
 });
+router.put('/:id/guest-contact', reservationController_1.updateGuestContact);
+router.get('/:id', reservationController_1.getReservationById);
 exports.default = router;
 //# sourceMappingURL=reservations.js.map

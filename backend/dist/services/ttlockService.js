@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -63,8 +96,22 @@ class TTLockService {
             if (!(doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.username) || !(doorSystemSettings === null || doorSystemSettings === void 0 ? void 0 : doorSystemSettings.password)) {
                 throw new Error(`TTLock Username/Password ist nicht für Organisation ${this.organizationId} konfiguriert`);
             }
+            // Prüfe ob Client Secret verschlüsselt ist und entschlüssele es
+            let clientSecret = doorSystemSettings.clientSecret;
+            if (clientSecret && clientSecret.includes(':')) {
+                // Verschlüsselt - entschlüssele
+                const { decryptSecret } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+                try {
+                    clientSecret = decryptSecret(clientSecret);
+                    console.log('[TTLock] Client Secret erfolgreich entschlüsselt');
+                }
+                catch (error) {
+                    console.error('[TTLock] Fehler beim Entschlüsseln des Client Secrets:', error);
+                    throw new Error('Client Secret konnte nicht entschlüsselt werden');
+                }
+            }
             this.clientId = doorSystemSettings.clientId;
-            this.clientSecret = doorSystemSettings.clientSecret;
+            this.clientSecret = clientSecret;
             this.username = doorSystemSettings.username;
             this.password = doorSystemSettings.password; // Already MD5-hashed
             this.apiUrl = doorSystemSettings.apiUrl || 'https://euopen.ttlock.com';
@@ -119,7 +166,7 @@ class TTLockService {
      */
     getAccessToken() {
         return __awaiter(this, void 0, void 0, function* () {
-            var _a, _b, _c, _d, _e;
+            var _a, _b, _c, _d, _e, _f, _g, _h;
             // Lade Settings falls noch nicht geladen
             if (!this.clientId || !this.clientSecret || !this.username || !this.password) {
                 yield this.loadSettings();
@@ -135,6 +182,16 @@ class TTLockService {
                 const oauthUrl = this.apiUrl.includes('euopen.ttlock.com')
                     ? 'https://api.sciener.com'
                     : this.apiUrl;
+                console.log('[TTLock] OAuth Request Details:', {
+                    oauthUrl: `${oauthUrl}/oauth2/token`,
+                    hasClientId: !!this.clientId,
+                    clientIdLength: ((_a = this.clientId) === null || _a === void 0 ? void 0 : _a.length) || 0,
+                    hasClientSecret: !!this.clientSecret,
+                    clientSecretLength: ((_b = this.clientSecret) === null || _b === void 0 ? void 0 : _b.length) || 0,
+                    hasUsername: !!this.username,
+                    hasPassword: !!this.password,
+                    passwordLength: ((_c = this.password) === null || _c === void 0 ? void 0 : _c.length) || 0
+                });
                 const response = yield axios_1.default.post(`${oauthUrl}/oauth2/token`, new URLSearchParams({
                     client_id: this.clientId || '',
                     client_secret: this.clientSecret || '',
@@ -179,12 +236,12 @@ class TTLockService {
             catch (error) {
                 if (axios_1.default.isAxiosError(error)) {
                     const axiosError = error;
-                    const errorMsg = ((_b = (_a = axiosError.response) === null || _a === void 0 ? void 0 : _a.data) === null || _b === void 0 ? void 0 : _b.errmsg) || axiosError.message;
+                    const errorMsg = ((_e = (_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.data) === null || _e === void 0 ? void 0 : _e.errmsg) || axiosError.message;
                     console.error('[TTLock] OAuth Request Error:', {
-                        status: (_c = axiosError.response) === null || _c === void 0 ? void 0 : _c.status,
-                        statusText: (_d = axiosError.response) === null || _d === void 0 ? void 0 : _d.statusText,
+                        status: (_f = axiosError.response) === null || _f === void 0 ? void 0 : _f.status,
+                        statusText: (_g = axiosError.response) === null || _g === void 0 ? void 0 : _g.statusText,
                         errmsg: errorMsg,
-                        data: (_e = axiosError.response) === null || _e === void 0 ? void 0 : _e.data
+                        data: (_h = axiosError.response) === null || _h === void 0 ? void 0 : _h.data
                     });
                     throw new Error(errorMsg);
                 }
@@ -257,26 +314,28 @@ class TTLockService {
                     console.log('[TTLock] Verwende benutzerdefinierten 4-stelligen Passcode (erfordert Synchronisation)');
                 }
                 else {
-                    // Automatisch generierter 10-stelliger Passcode (funktioniert ohne Synchronisation)
-                    generatedPasscode = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-                    console.log('[TTLock] Verwende automatisch generierten 10-stelligen Passcode (ohne Synchronisation)');
+                    // Automatisch generierter 9-stelliger Passcode (wie funktionierender Code 149923045)
+                    // 9-stellige Codes funktionieren ohne App-Sync (getestet am 13.11.2025)
+                    generatedPasscode = Math.floor(100000000 + Math.random() * 900000000).toString(); // 9-stellig
+                    console.log('[TTLock] Verwende automatisch generierten 9-stelligen Passcode (ohne Synchronisation)');
                 }
                 const payload = new URLSearchParams();
                 payload.append('clientId', this.clientId || '');
                 payload.append('accessToken', accessToken);
                 payload.append('lockId', lockId.toString());
-                // keyboardPwd: Optional wenn API Passcode generieren soll, Required für personalisierte Codes
+                // WICHTIG: keyboardPwd MUSS gesetzt werden für 9-stellige period Passcodes!
+                // 9-stellige period Passcodes funktionieren ohne App-Sync (getestet am 13.11.2025)
+                // Code 149923045 war funktionierend (9-stellig)
                 if (generatedPasscode) {
                     payload.append('keyboardPwd', generatedPasscode);
                 }
                 payload.append('keyboardPwdName', passcodeName || 'Guest Passcode');
-                payload.append('keyboardPwdType', '3'); // 3 = period (temporärer Passcode)
-                payload.append('startDate', startDate.getTime().toString()); // Millisekunden!
-                payload.append('endDate', endDate.getTime().toString()); // Millisekunden!
+                payload.append('keyboardPwdType', '2'); // 2 = permanent (keine Start/Endzeit)
+                // WICHTIG: Permanente Passcodes benötigen KEINE startDate/endDate!
+                // Permanente Passcodes funktionieren ohne Gateway besser als Period-Passcodes
                 // addType: 1=via phone bluetooth (APP SDK), 2=via gateway/WiFi
-                // WICHTIG: addType: 1 erstellt den Passcode, aber er muss über die TTLock App synchronisiert werden!
-                // Der Passcode wird in der API erstellt, aber erst nach Bluetooth-Synchronisation aktiv
-                payload.append('addType', '1'); // 1 = via phone bluetooth (erfordert App-Synchronisation)
+                // Kein Gateway vorhanden, daher addType: 1
+                payload.append('addType', '1'); // 1 = via phone bluetooth
                 payload.append('date', currentTimestamp.toString()); // Millisekunden
                 // Debug: Zeige vollständigen Request
                 console.log('[TTLock] Request URL:', `${this.axiosInstance.defaults.baseURL}/v3/keyboardPwd/add`);
@@ -289,44 +348,71 @@ class TTLockService {
                 });
                 const responseData = response.data;
                 // TTLock API gibt entweder errcode=0 mit data zurück, oder direkt keyboardPwdId
-                // Wenn keyboardPwd weggelassen wurde, generiert die API den Passcode automatisch
+                // Für 10-stellige period Passcodes: keyboardPwd wird gesetzt, API gibt keyboardPwdId zurück
                 if (responseData.errcode === 0) {
-                    // API gibt möglicherweise den generierten Passcode zurück
+                    // API gibt möglicherweise den Passcode zurück
                     if ((_a = responseData.data) === null || _a === void 0 ? void 0 : _a.keyboardPwd) {
-                        return responseData.data.keyboardPwd.toString();
+                        const passcode = responseData.data.keyboardPwd.toString();
+                        console.log('[TTLock] ✅ Passcode erfolgreich erstellt! Passcode:', passcode);
+                        return passcode;
                     }
                     else if ((_b = responseData.data) === null || _b === void 0 ? void 0 : _b.passcode) {
-                        return responseData.data.passcode.toString();
+                        const passcode = responseData.data.passcode.toString();
+                        console.log('[TTLock] ✅ Passcode erfolgreich erstellt! Passcode:', passcode);
+                        return passcode;
                     }
                     else if (responseData.keyboardPwd) {
-                        return responseData.keyboardPwd.toString();
+                        const passcode = responseData.keyboardPwd.toString();
+                        console.log('[TTLock] ✅ Passcode erfolgreich erstellt! Passcode:', passcode);
+                        return passcode;
                     }
                     // Falls kein Passcode zurückgegeben wird, verwende unseren generierten
-                    return generatedPasscode || 'ERROR_NO_PASSCODE';
+                    if (generatedPasscode) {
+                        console.log('[TTLock] ✅ Passcode erfolgreich erstellt! Verwende generierten Passcode:', generatedPasscode);
+                        return generatedPasscode;
+                    }
+                    throw new Error('API hat keinen Passcode zurückgegeben');
                 }
                 else if (responseData.keyboardPwdId) {
                     // Erfolg: API gibt keyboardPwdId zurück (kein errcode)
-                    console.log('[TTLock] Passcode erfolgreich erstellt! keyboardPwdId:', responseData.keyboardPwdId);
+                    console.log('[TTLock] ✅ Passcode erfolgreich erstellt! keyboardPwdId:', responseData.keyboardPwdId);
                     // Prüfe ob API den Passcode zurückgegeben hat
                     if (responseData.keyboardPwd) {
-                        return responseData.keyboardPwd.toString();
+                        const passcode = responseData.keyboardPwd.toString();
+                        console.log('[TTLock] Passcode:', passcode);
+                        return passcode;
                     }
                     else if (responseData.passcode) {
-                        return responseData.passcode.toString();
+                        const passcode = responseData.passcode.toString();
+                        console.log('[TTLock] Passcode:', passcode);
+                        return passcode;
                     }
-                    return generatedPasscode || 'ERROR_NO_PASSCODE';
+                    // Verwende unseren generierten Passcode
+                    if (generatedPasscode) {
+                        console.log('[TTLock] Verwende generierten Passcode:', generatedPasscode);
+                        return generatedPasscode;
+                    }
+                    return 'ERROR_NO_PASSCODE';
                 }
                 else if ((_c = responseData.data) === null || _c === void 0 ? void 0 : _c.passcode) {
-                    return responseData.data.passcode.toString();
+                    const passcode = responseData.data.passcode.toString();
+                    console.log('[TTLock] ✅ Passcode erfolgreich erstellt! Passcode:', passcode);
+                    return passcode;
                 }
                 else if ((_d = responseData.data) === null || _d === void 0 ? void 0 : _d.keyboardPwd) {
-                    return responseData.data.keyboardPwd.toString();
+                    const passcode = responseData.data.keyboardPwd.toString();
+                    console.log('[TTLock] ✅ Passcode erfolgreich erstellt! Passcode:', passcode);
+                    return passcode;
                 }
                 else if (responseData.passcode) {
-                    return responseData.passcode.toString();
+                    const passcode = responseData.passcode.toString();
+                    console.log('[TTLock] ✅ Passcode erfolgreich erstellt! Passcode:', passcode);
+                    return passcode;
                 }
                 else if (responseData.keyboardPwd) {
-                    return responseData.keyboardPwd.toString();
+                    const passcode = responseData.keyboardPwd.toString();
+                    console.log('[TTLock] ✅ Passcode erfolgreich erstellt! Passcode:', passcode);
+                    return passcode;
                 }
                 // Fehlerfall
                 const errorMsg = responseData.errmsg || `Unknown error (errcode: ${responseData.errcode})`;
@@ -413,14 +499,16 @@ class TTLockService {
                 // TTLock API gibt entweder errcode=0 mit data zurück, oder direkt list
                 if (responseData.errcode === 0 && responseData.data) {
                     // Format: { errcode: 0, data: [{ lockId: ... }] }
-                    return responseData.data.map((lock) => lock.lockId);
+                    return responseData.data.map((lock) => String(lock.lockId || lock.id));
                 }
                 else if (responseData.list && Array.isArray(responseData.list)) {
                     // Format: { list: [{ lockId: ... }], pageNo: 1, ... }
                     console.log('[TTLock] Lock List Response:', JSON.stringify(responseData, null, 2));
                     const lockIds = responseData.list.map((lock) => {
                         // Lock ID kann in verschiedenen Feldern sein: lockId, id, etc.
-                        return lock.lockId || lock.id || lock.lock_id || Object.values(lock)[0];
+                        const id = lock.lockId || lock.id || lock.lock_id || Object.values(lock)[0];
+                        // Konvertiere zu String (TTLock API gibt Zahlen zurück)
+                        return id ? String(id) : null;
                     }).filter((id) => id); // Filtere undefined/null
                     console.log('[TTLock] Extracted Lock IDs:', lockIds);
                     return lockIds;
