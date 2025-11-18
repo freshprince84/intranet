@@ -304,8 +304,9 @@ export class TTLockService {
       const currentTimestamp = Date.now(); // Millisekunden
       
       // WICHTIG: startDate muss in der Vergangenheit liegen, damit der Code sofort aktiv ist!
-      // Setze startDate auf heute 00:00:00 (Mitternacht), damit der Code definitiv aktiv ist
-      let actualStartDate = new Date(startDate);
+      // Setze startDate IMMER auf heute 00:00:00 (Mitternacht), unabhängig vom checkInDate!
+      // Die API akzeptiert kein startDate, das früher als heute ist!
+      let actualStartDate = new Date(); // ✅ IMMER heute (nicht checkInDate!)
       actualStartDate.setHours(0, 0, 0, 0); // Heute 00:00:00
       
       // WICHTIG: endDate muss mindestens 1 Tag nach startDate liegen
