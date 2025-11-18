@@ -1099,6 +1099,7 @@
       "duplicatePeriodError": "Ya existe una nómina para el período {{periodStart}} hasta {{periodEnd}}",
       "periodStart": "Inicio del período",
       "periodEnd": "Fin del período",
+      "noEditPermission": "No tiene permiso para editar nóminas. Solo puede ver los datos.",
       "contractTypes": {
         "tiempo_completo": "Tiempo Completo (>21 días/mes)",
         "tiempo_parcial_7": "Tiempo Parcial (≤7 días/mes)",
