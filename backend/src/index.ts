@@ -40,6 +40,8 @@ import reservationRoutes from './routes/reservations';
 import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 import { checkAndGenerateMonthlyReports, triggerMonthlyReportCheck } from './services/monthlyReportScheduler';
+import { ReservationScheduler } from './services/reservationScheduler';
+import { startWorkers, stopWorkers } from './queues';
 
 const app = express();
 
@@ -139,6 +141,15 @@ setInterval(async () => {
     }
   }
 }, MONTHLY_REPORT_CHECK_INTERVAL_MS);
+
+// Starte Reservation Scheduler
+ReservationScheduler.start();
+
+// Starte Queue Workers (wenn aktiviert)
+startWorkers().catch((error) => {
+  console.error('[App] Fehler beim Starten der Queue Workers:', error);
+  // Server startet trotzdem, aber Queue funktioniert nicht
+});
 
 // Eine direkte Test-Route für die Diagnose
 app.get('/api/test-route', (req: Request, res: Response) => {
@@ -251,16 +262,18 @@ server.listen(PORT, () => {
 });
 
 // Graceful Shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log('SIGTERM signal empfangen. Server wird heruntergefahren...');
+  await stopWorkers();
   server.close(() => {
     console.log('Server erfolgreich heruntergefahren.');
     process.exit(0);
   });
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
   console.log('SIGINT signal empfangen. Server wird heruntergefahren...');
+  await stopWorkers();
   server.close(() => {
     console.log('Server erfolgreich heruntergefahren.');
     process.exit(0);

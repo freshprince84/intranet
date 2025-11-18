@@ -414,11 +414,11 @@ const WorktimeStats: React.FC = () => {
                     <ChartBarIcon className="h-6 w-6 mr-2 dark:text-white" />
                     <h2 className="text-xl font-semibold dark:text-white">{t('worktime.stats.title')}</h2>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2 sm:space-x-4">
                     {/* Radio-Buttons für Woche/Quinzena - nur anzeigen wenn Kolumbien */}
                     {isColombia && (
-                        <div className="flex items-center gap-4">
-                            <label className="flex items-center gap-2 cursor-pointer">
+                        <div className="flex items-center gap-2 sm:gap-4">
+                            <label className="flex items-center gap-1 sm:gap-2 cursor-pointer">
                                 <input
                                     type="radio"
                                     name="periodType"
@@ -426,9 +426,9 @@ const WorktimeStats: React.FC = () => {
                                     onChange={() => handlePeriodChange(false)}
                                     className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
                                 />
-                                <span className="text-sm dark:text-white">{t('worktime.stats.week')}</span>
+                                <span className="text-sm dark:text-white whitespace-nowrap">{t('worktime.stats.week')}</span>
                             </label>
-                            <label className="flex items-center gap-2 cursor-pointer">
+                            <label className="flex items-center gap-1 sm:gap-2 cursor-pointer">
                                 <input
                                     type="radio"
                                     name="periodType"
@@ -436,7 +436,7 @@ const WorktimeStats: React.FC = () => {
                                     onChange={() => handlePeriodChange(true)}
                                     className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
                                 />
-                                <span className="text-sm dark:text-white">{t('worktime.stats.quinzena')}</span>
+                                <span className="text-sm dark:text-white whitespace-nowrap">{t('worktime.stats.quinzena')}</span>
                             </label>
                         </div>
                     )}

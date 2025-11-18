@@ -1729,3 +1729,30 @@ div.fixed.top-16.bottom-0.right-0.sidepane-panel-container {
     will-change: transform, opacity;
   }
 }
+
+/* ============================================
+   MOBILE OVERFLOW OPTIMIERUNGEN
+   ============================================ */
+
+/* Optimiertes horizontales Scrollen für Tab-Navigation und Filter-Tags */
+@media (max-width: 640px) {
+  /* Smooth scrolling auf iOS für horizontale Scroll-Container */
+  nav.overflow-x-auto,
+  div.overflow-x-auto[class*="flex"][class*="gap"] {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    overflow-y: hidden !important; /* Verhindere vertikales Scrollen */
+  }
+  
+  /* Verhindere Layout-Shifts beim Scrollen */
+  nav.overflow-x-auto,
+  div.overflow-x-auto[class*="flex"][class*="gap"] {
+    scrollbar-gutter: stable;
+  }
+  
+  /* Stelle sicher, dass Tabs/Tags horizontal bleiben */
+  nav.overflow-x-auto > *,
+  div.overflow-x-auto[class*="flex"] > * {
+    flex-shrink: 0;
+  }
+}

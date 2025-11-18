@@ -672,9 +672,9 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
   }
 
   return (
-    <div ref={containerRef} className="flex items-center gap-2 mb-3 mt-1">
+    <div ref={containerRef} className="flex items-center gap-1.5 sm:gap-2 mb-3 mt-1 overflow-x-auto overflow-y-hidden">
       {/* Dynamische Anzahl Filter inline anzeigen mit optimistischer Anzeige */}
-      <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-1 min-w-0 flex-nowrap">
         {/* Gruppen-Dropdowns */}
         {sortedGroups.map(group => {
           // Prüfe, ob ein Filter aus dieser Gruppe aktiv ist
@@ -690,14 +690,14 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                 onClick={() => toggleGroupDropdown(group.id)}
                 onDragOver={(e) => handleDragOver(e, group.id, 'group')}
                 onDrop={(e) => handleDrop(e, group.id, 'group')}
-                className={`flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors ${
+                className={`flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 border border-purple-300 dark:border-purple-700 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors ${
                   dragOverGroupId === group.id ? 'ring-2 ring-purple-500' : ''
                 } ${activeFilterInGroup ? 'ring-2 ring-purple-500' : ''}`}
               >
-                <span className="truncate max-w-[100px]">
+                <span className="truncate max-w-[4rem] sm:max-w-[100px]">
                   {displayName}
                 </span>
-                <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${openGroupDropdowns.has(group.id) ? 'rotate-180' : ''}`} />
+                <ChevronDownIcon className={`h-3 w-3 sm:h-4 sm:w-4 ml-0.5 sm:ml-1 transition-transform ${openGroupDropdowns.has(group.id) ? 'rotate-180' : ''}`} />
               </button>
               <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
                 {activeFilterInGroup ? displayName : `${group.name} (${group.filters.length})`}
@@ -821,7 +821,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
             onDrop={(e) => handleDrop(e, filter.id, 'filter')}
             onDragEnd={handleDragEnd}
             onClick={() => !filter.isPlaceholder && handleSelectFilter(filter)}
-            className={`relative group flex items-center px-3 py-1 rounded-full text-sm font-medium cursor-pointer transition-colors flex-shrink-0 ${
+            className={`relative group flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium cursor-pointer transition-colors flex-shrink-0 ${
               filter.isPlaceholder
                 ? 'bg-gray-200 dark:bg-gray-600 text-gray-400 dark:text-gray-500 animate-pulse cursor-default'
                 : draggedFilterId === filter.id
@@ -833,7 +833,7 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 border border-gray-300 dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-600'
             } ${!filter.isPlaceholder && isStandardFilter(filter.name) ? 'font-bold' : ''}`}
           >
-            <span className="truncate max-w-[100px]">
+            <span className="truncate max-w-[4rem] sm:max-w-[100px]">
               {filter.isPlaceholder && filter.name === '████████' ? (
                 <span className="inline-block w-16 h-4 bg-gray-300 dark:bg-gray-500 rounded animate-pulse"></span>
               ) : (
@@ -841,12 +841,12 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
               )}
             </span>
             {!filter.isPlaceholder && !isStandardFilter(filter.name) && (
-              <div className="relative group ml-2">
+              <div className="relative group ml-1 sm:ml-2">
                 <button
                   onClick={(e) => handleDeleteFilter(e, filter.id)}
                   className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 focus:outline-none"
                 >
-                  <XMarkIcon className="h-4 w-4" />
+                  <XMarkIcon className="h-3 w-3 sm:h-4 sm:w-4" />
                 </button>
                 <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
                   {t('filter.delete')}
@@ -865,10 +865,10 @@ const SavedFilterTags: React.FC<SavedFilterTagsProps> = ({
             <div className="relative group">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
+                className="inline-flex items-center px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-xs sm:text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600"
               >
                 <span>+{sortedFilters.length - visibleTagCount}</span>
-                <ChevronDownIcon className={`h-4 w-4 ml-1 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                <ChevronDownIcon className={`h-3 w-3 sm:h-4 sm:w-4 ml-0.5 sm:ml-1 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
               </button>
               <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
                 Weitere Filter anzeigen

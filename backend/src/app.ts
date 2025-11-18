@@ -36,10 +36,13 @@ import boldPaymentRoutes from './routes/boldPayment';
 import ttlockRoutes from './routes/ttlock';
 import whatsappRoutes from './routes/whatsapp';
 import reservationRoutes from './routes/reservations';
+import emailReservationRoutes from './routes/emailReservations';
 import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 import { checkAndGenerateMonthlyReports, triggerMonthlyReportCheck } from './services/monthlyReportScheduler';
 import { ReservationScheduler } from './services/reservationScheduler';
+import { EmailReservationScheduler } from './services/emailReservationScheduler';
+import { startWorkers, stopWorkers } from './queues';
 
 const app = express();
 
@@ -142,6 +145,15 @@ setInterval(async () => {
 
 // Starte Reservation Scheduler
 ReservationScheduler.start();
+
+// Starte Email-Reservation Scheduler
+EmailReservationScheduler.start();
+
+// Starte Queue Workers (wenn aktiviert)
+startWorkers().catch((error) => {
+  console.error('[App] Fehler beim Starten der Queue Workers:', error);
+  // Server startet trotzdem, aber Queue funktioniert nicht
+});
 
 // Eine direkte Test-Route für die Diagnose
 app.get('/api/test-route', (req: Request, res: Response) => {
@@ -247,6 +259,9 @@ app.use('/api/reservations', (req, res, next) => {
   next();
 }, reservationRoutes);
 console.log('[App] /api/reservations Route registriert');
+// Email-Reservation-Integration
+app.use('/api/email-reservations', emailReservationRoutes);
+console.log('[App] /api/email-reservations Route registriert');
 
 // 404 Handler
 app.use((req: Request, res: Response) => {

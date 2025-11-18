@@ -3,6 +3,8 @@
 **Datum**: 2025-11-18  
 **Status**: ✅ **FUNKTIONIEREND** - Getestet und bestätigt!
 
+**✅ KRITISCH - startDate**: Muss IMMER auf heute 00:00:00 gesetzt werden (`new Date()`), NICHT auf checkInDate (`new Date(startDate)`)! Die API akzeptiert kein startDate, das früher als heute ist!
+
 ## 🎯 WICHTIG - DIESE LÖSUNG FUNKTIONIERT!
 
 **GETESTETE CODES:**
@@ -22,8 +24,10 @@
 const accessToken = await this.getAccessToken();
 const currentTimestamp = Date.now(); // Millisekunden
 
+// ✅ KRITISCH: startDate muss IMMER auf heute 00:00:00 gesetzt werden, NICHT auf checkInDate!
+// Die API akzeptiert kein startDate, das früher als heute ist!
 // WICHTIG: startDate muss in der Vergangenheit liegen (heute 00:00:00)
-let actualStartDate = new Date(startDate);
+let actualStartDate = new Date(); // ✅ IMMER heute (NICHT new Date(startDate)!)
 actualStartDate.setHours(0, 0, 0, 0); // Heute 00:00:00
 
 // WICHTIG: endDate muss mindestens 1 Tag nach startDate liegen
@@ -66,7 +70,7 @@ if (generatedPasscode) {
 | **Endpunkt** | `/v3/keyboardPwd/get` | ✅ JA | Nur dieser Endpunkt funktioniert ohne Gateway/App-Sync! |
 | **`keyboardPwd`** | **NICHT setzen** | ✅ JA | Wenn gesetzt, funktioniert es NICHT ohne Gateway/App-Sync! |
 | **`keyboardPwdType`** | `3` (period) | ✅ JA | `2` (permanent) funktioniert NICHT ohne Gateway/App-Sync! |
-| **`startDate`** | Heute 00:00:00 (Millisekunden) | ✅ JA | Muss in der Vergangenheit liegen, damit Code sofort aktiv ist! |
+| **`startDate`** | **IMMER heute 00:00:00** (Millisekunden) | ✅ JA | **KRITISCH**: Muss IMMER auf heute 00:00:00 gesetzt werden, NICHT auf checkInDate! Die API akzeptiert kein startDate, das früher als heute ist! |
 | **`endDate`** | Mindestens 1 Tag später (Millisekunden) | ✅ JA | Muss mindestens 1 Tag nach `startDate` liegen! |
 | **`addType`** | `1` (via phone bluetooth) | ✅ JA | `2` (via gateway/WiFi) funktioniert NICHT ohne Gateway! |
 | **`date`** | Aktueller Timestamp (Millisekunden) | ✅ JA | Muss in Millisekunden sein (nicht Sekunden)! |
@@ -101,6 +105,7 @@ if (generatedPasscode) {
 4. **Kein Gateway erforderlich** - funktioniert ohne Gateway!
 5. **Keine App-Synchronisation erforderlich** - funktioniert ohne App-Sync!
 6. **Funktioniert sofort** - keine Wartezeit erforderlich!
+7. **✅ KRITISCH - startDate**: Muss IMMER auf heute 00:00:00 gesetzt werden (`new Date()`), NICHT auf checkInDate (`new Date(startDate)`)! Die API akzeptiert kein startDate, das früher als heute ist!
 
 ## 🔗 Referenzen
 

@@ -77,7 +77,33 @@ npm run build
 echo "✅ Frontend Build abgeschlossen"
 echo ""
 
-# 10. Zusammenfassung
+# 10. Redis prüfen und starten (falls nicht läuft)
+echo "🔍 Schritt 10: Redis-Status prüfen..."
+if ! systemctl is-active --quiet redis-server; then
+  echo "   ⚠️  Redis läuft nicht, starte Redis..."
+  sudo systemctl start redis-server
+  sudo systemctl enable redis-server
+  echo "   ✅ Redis gestartet"
+else
+  echo "   ✅ Redis läuft bereits"
+fi
+echo ""
+
+# 11. Queue-Einstellungen in .env prüfen
+echo "📝 Schritt 11: Queue-Einstellungen prüfen..."
+if ! grep -q "QUEUE_ENABLED=true" .env 2>/dev/null; then
+  echo "   ⚠️  QUEUE_ENABLED nicht in .env gefunden"
+  echo "   ⚠️  Bitte manuell in .env hinzufügen:"
+  echo "      QUEUE_ENABLED=true"
+  echo "      REDIS_HOST=localhost"
+  echo "      REDIS_PORT=6379"
+  echo "      QUEUE_CONCURRENCY=5"
+else
+  echo "   ✅ Queue-Einstellungen gefunden"
+fi
+echo ""
+
+# 12. Zusammenfassung
 echo ""
 echo "============================================================"
 echo "✅ Deployment abgeschlossen!"
@@ -87,5 +113,9 @@ echo "⚠️  WICHTIG: Server-Neustart erforderlich!"
 echo "   Führe aus:"
 echo "   pm2 restart intranet-backend"
 echo "   sudo systemctl restart nginx"
+echo ""
+echo "📋 Queue-System:"
+echo "   - Redis läuft: $(systemctl is-active redis-server)"
+echo "   - Prüfe Logs: pm2 logs intranet-backend | grep -i queue"
 echo ""
 

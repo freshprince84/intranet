@@ -441,7 +441,7 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
     // Konvertiere gruppierte Daten zurück in Array
     let grouped = Object.values(userGroups) as WorktimeGroup[];
 
-    // Globale Suchfunktion
+    // Globale Suchfunktion - zuerst einfache Suche anwenden
     let filtered = grouped.filter((group: WorktimeGroup) => {
       const fullName = `${group.user.firstName} ${group.user.lastName}`.toLowerCase();
       const username = group.user.username.toLowerCase();
@@ -457,70 +457,70 @@ const ActiveUsersList: React.FC<ActiveUsersListProps> = ({
         return false;
       }
       
-      // Wenn erweiterte Filterbedingungen definiert sind, wende diese an
-      if (filterConditions.length > 0) {
-        // Column-Evaluatoren für WorktimeGroups
-        const columnEvaluators: any = {
-          'name': (group: WorktimeGroup, cond: FilterCondition) => {
-            const fullName = `${group.user.firstName} ${group.user.lastName}`.toLowerCase();
-            const value = (cond.value as string || '').toLowerCase();
-            if (cond.operator === 'equals') return fullName === value;
-            if (cond.operator === 'contains') return fullName.includes(value);
-            if (cond.operator === 'startsWith') return fullName.startsWith(value);
-            if (cond.operator === 'endsWith') return fullName.endsWith(value);
-            return null;
-          },
-          'branch': (group: WorktimeGroup, cond: FilterCondition) => {
-            const branchName = group.branch.name.toLowerCase();
-            const value = (cond.value as string || '').toLowerCase();
-            if (cond.operator === 'equals') return branchName === value;
-            if (cond.operator === 'contains') return branchName.includes(value);
-            if (cond.operator === 'startsWith') return branchName.startsWith(value);
-            if (cond.operator === 'endsWith') return branchName.endsWith(value);
-            return null;
-          },
-          'hasActiveWorktime': (group: WorktimeGroup, cond: FilterCondition) => {
-            if (cond.operator === 'equals') {
-              const isActive = (cond.value === 'true' || cond.value === true);
-              return group.hasActiveWorktime === isActive;
-            }
-            return null;
-          },
-          'duration': (group: WorktimeGroup, cond: FilterCondition) => {
-            const minDuration = parseInt(cond.value as string || '0') * 60 * 60 * 1000; // Stunden in Millisekunden
-            if (cond.operator === 'greaterThan') return group.totalDuration > minDuration;
-            if (cond.operator === 'lessThan') return group.totalDuration < minDuration;
-            if (cond.operator === 'equals') {
-              const tolerance = 30 * 60 * 1000; // 30 Minuten Toleranz
-              return Math.abs(group.totalDuration - minDuration) <= tolerance;
-            }
-            return null;
-          }
-        };
-
-        const getFieldValue = (group: WorktimeGroup, columnId: string): any => {
-          switch (columnId) {
-            case 'name': return `${group.user.firstName} ${group.user.lastName}`;
-            case 'branch': return group.branch.name;
-            case 'hasActiveWorktime': return group.hasActiveWorktime;
-            case 'duration': return group.totalDuration;
-            case 'startTime': return group.startTime;
-            case 'endTime': return group.endTime;
-            default: return (group as any)[columnId];
-          }
-        };
-
-        filtered = applyFilters(
-          filtered,
-          filterConditions,
-          filterLogicalOperators,
-          getFieldValue,
-          columnEvaluators
-        );
-      }
-      
       return true;
     });
+
+    // Wenn erweiterte Filterbedingungen definiert sind, wende diese an (außerhalb des filter-Callbacks)
+    if (filterConditions.length > 0) {
+      // Column-Evaluatoren für WorktimeGroups
+      const columnEvaluators: any = {
+        'name': (group: WorktimeGroup, cond: FilterCondition) => {
+          const fullName = `${group.user.firstName} ${group.user.lastName}`.toLowerCase();
+          const value = (cond.value as string || '').toLowerCase();
+          if (cond.operator === 'equals') return fullName === value;
+          if (cond.operator === 'contains') return fullName.includes(value);
+          if (cond.operator === 'startsWith') return fullName.startsWith(value);
+          if (cond.operator === 'endsWith') return fullName.endsWith(value);
+          return null;
+        },
+        'branch': (group: WorktimeGroup, cond: FilterCondition) => {
+          const branchName = group.branch.name.toLowerCase();
+          const value = (cond.value as string || '').toLowerCase();
+          if (cond.operator === 'equals') return branchName === value;
+          if (cond.operator === 'contains') return branchName.includes(value);
+          if (cond.operator === 'startsWith') return branchName.startsWith(value);
+          if (cond.operator === 'endsWith') return branchName.endsWith(value);
+          return null;
+        },
+        'hasActiveWorktime': (group: WorktimeGroup, cond: FilterCondition) => {
+          if (cond.operator === 'equals') {
+            const isActive = (cond.value === 'true' || cond.value === true);
+            return group.hasActiveWorktime === isActive;
+          }
+          return null;
+        },
+        'duration': (group: WorktimeGroup, cond: FilterCondition) => {
+          const minDuration = parseInt(cond.value as string || '0') * 60 * 60 * 1000; // Stunden in Millisekunden
+          if (cond.operator === 'greaterThan') return group.totalDuration > minDuration;
+          if (cond.operator === 'lessThan') return group.totalDuration < minDuration;
+          if (cond.operator === 'equals') {
+            const tolerance = 30 * 60 * 1000; // 30 Minuten Toleranz
+            return Math.abs(group.totalDuration - minDuration) <= tolerance;
+          }
+          return null;
+        }
+      };
+
+      const getFieldValue = (group: WorktimeGroup, columnId: string): any => {
+        switch (columnId) {
+          case 'name': return `${group.user.firstName} ${group.user.lastName}`;
+          case 'branch': return group.branch.name;
+          case 'hasActiveWorktime': return group.hasActiveWorktime;
+          case 'duration': return group.totalDuration;
+          case 'startTime': return group.startTime;
+          case 'endTime': return group.endTime;
+          default: return (group as any)[columnId];
+        }
+      };
+
+      filtered = applyFilters(
+        filtered,
+        filterConditions,
+        filterLogicalOperators,
+        getFieldValue,
+        columnEvaluators
+      );
+    }
 
     // Sortieren nach Konfiguration
     if (viewMode === 'cards') {

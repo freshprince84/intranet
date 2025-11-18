@@ -48,9 +48,12 @@ const boldPayment_1 = __importDefault(require("./routes/boldPayment"));
 const ttlock_1 = __importDefault(require("./routes/ttlock"));
 const whatsapp_1 = __importDefault(require("./routes/whatsapp"));
 const reservations_1 = __importDefault(require("./routes/reservations"));
+const emailReservations_1 = __importDefault(require("./routes/emailReservations"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const monthlyReportScheduler_1 = require("./services/monthlyReportScheduler");
 const reservationScheduler_1 = require("./services/reservationScheduler");
+const emailReservationScheduler_1 = require("./services/emailReservationScheduler");
+const queues_1 = require("./queues");
 const app = (0, express_1.default)();
 // Middleware
 app.use(express_1.default.json({ limit: '50mb' })); // Größere JSON-Payload für Bilder erlauben
@@ -136,6 +139,13 @@ setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
 }), MONTHLY_REPORT_CHECK_INTERVAL_MS);
 // Starte Reservation Scheduler
 reservationScheduler_1.ReservationScheduler.start();
+// Starte Email-Reservation Scheduler
+emailReservationScheduler_1.EmailReservationScheduler.start();
+// Starte Queue Workers (wenn aktiviert)
+(0, queues_1.startWorkers)().catch((error) => {
+    console.error('[App] Fehler beim Starten der Queue Workers:', error);
+    // Server startet trotzdem, aber Queue funktioniert nicht
+});
 // Eine direkte Test-Route für die Diagnose
 app.get('/api/test-route', (req, res) => {
     res.json({
@@ -237,6 +247,9 @@ app.use('/api/reservations', (req, res, next) => {
     next();
 }, reservations_1.default);
 console.log('[App] /api/reservations Route registriert');
+// Email-Reservation-Integration
+app.use('/api/email-reservations', emailReservations_1.default);
+console.log('[App] /api/email-reservations Route registriert');
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route nicht gefunden' });

@@ -3,6 +3,15 @@
 **Datum**: 2025-11-18  
 **Status**: ✅ **FUNKTIONIEREND** - Lösung gefunden und getestet!
 
+**⚠️ WICHTIG**: Für die exakte funktionierende Lösung siehe auch: `TTLOCK_WORKING_SOLUTION.md`
+
+## 🚨 KRITISCH - startDate MUSS IMMER AUF HEUTE 00:00:00 GESETZT WERDEN!
+
+**✅ RICHTIG**: `let actualStartDate = new Date(); actualStartDate.setHours(0, 0, 0, 0);`  
+**❌ FALSCH**: `let actualStartDate = new Date(startDate); actualStartDate.setHours(0, 0, 0, 0);`
+
+**Warum?** Die TTLock API akzeptiert kein `startDate`, das früher als heute ist! Wenn `checkInDate` gestern war, würde `new Date(startDate)` gestern 00:00:00 ergeben → Fehler "Invalid Parameter"!
+
 ## ✅ FUNKTIONIERENDE LÖSUNG (GETESTET AM 18.11.2025)
 
 **WICHTIG - DIESE LÖSUNG FUNKTIONIERT UND MUSS GENAU SO VERWENDET WERDEN:**
@@ -24,10 +33,13 @@
 3. **`keyboardPwdType`**: `3` (period/temporär, NICHT `2` permanent!)
    - ✅ **KRITISCH**: `keyboardPwdType: 2` (permanent) funktioniert NICHT ohne Gateway/App-Sync!
    
-4. **`startDate`**: Heute 00:00:00 (in der Vergangenheit, damit sofort aktiv!)
-   - Code: `new Date(); startDate.setHours(0, 0, 0, 0);`
-   - In Millisekunden: `startDate.getTime().toString()`
-   - ✅ **KRITISCH**: Muss in der Vergangenheit liegen, damit Code sofort aktiv ist!
+4. **`startDate`**: **IMMER heute 00:00:00** (in der Vergangenheit, damit sofort aktiv!)
+   - Code: `let actualStartDate = new Date(); actualStartDate.setHours(0, 0, 0, 0);`
+   - In Millisekunden: `actualStartDate.getTime().toString()`
+   - ✅ **KRITISCH**: Muss IMMER auf heute 00:00:00 gesetzt werden, NICHT auf checkInDate!
+   - ✅ **KRITISCH**: Die API akzeptiert kein startDate, das früher als heute ist!
+   - ❌ **FALSCH**: `new Date(startDate)` - würde checkInDate verwenden (kann gestern sein!)
+   - ✅ **RICHTIG**: `new Date()` - verwendet IMMER heute!
    
 5. **`endDate`**: Mindestens 1 Tag nach `startDate`
    - Code: `new Date(); endDate.setDate(endDate.getDate() + 1);`
@@ -86,10 +98,11 @@ Alle Einstellungen können pro Organisation über das Frontend konfiguriert werd
 - **Username**: TTLock App Username (z.B. `+573024498991` oder `3024498991`)
 - **Password**: TTLock App Password (wird MD5-gehasht gespeichert)
 - **Passcode-Typ**: 
-  - `auto`: 9-stellige permanente Passcodes (ohne Gateway besser als Period-Passcodes)
-  - `custom`: 4-stellige Passcodes (erfordert Synchronisation)
+  - `auto`: Automatisch generierte Passcodes über `/v3/keyboardPwd/get` (funktioniert ohne Gateway/App-Sync!)
+  - `custom`: 4-stellige Passcodes (erfordert Synchronisation - NICHT FUNKTIONIEREND ohne Gateway/App-Sync!)
   
-**Hinweis**: `auto` generiert 9-stellige permanente Passcodes, die ohne Gateway besser funktionieren.
+**✅ WICHTIG**: `auto` verwendet die funktionierende Lösung mit `/v3/keyboardPwd/get` Endpunkt!
+**✅ KRITISCH**: `startDate` wird IMMER auf heute 00:00:00 gesetzt (`new Date()`), NICHT auf checkInDate (`new Date(startDate)`)! Die API akzeptiert kein startDate, das früher als heute ist!
 
 ### Backend (Settings Schema)
 
@@ -135,10 +148,12 @@ payload.append('lockId', lockId);
 // WICHTIG: keyboardPwd NICHT setzen - API generiert automatisch!
 payload.append('keyboardPwdName', passcodeName || 'Guest Passcode');
 payload.append('keyboardPwdType', '3'); // 3 = period (temporärer Passcode)
+// ✅ KRITISCH: startDate muss IMMER auf heute 00:00:00 gesetzt werden, NICHT auf checkInDate!
+// Die API akzeptiert kein startDate, das früher als heute ist!
 // WICHTIG: startDate muss in der Vergangenheit liegen (heute 00:00:00)
-const startDate = new Date();
-startDate.setHours(0, 0, 0, 0); // Heute 00:00:00
-payload.append('startDate', startDate.getTime().toString()); // Millisekunden
+let actualStartDate = new Date(); // ✅ IMMER heute (NICHT new Date(startDate)!)
+actualStartDate.setHours(0, 0, 0, 0); // Heute 00:00:00
+payload.append('startDate', actualStartDate.getTime().toString()); // Millisekunden
 // WICHTIG: endDate muss mindestens 1 Tag nach startDate liegen
 const endDate = new Date();
 endDate.setDate(endDate.getDate() + 1); // +1 Tag
@@ -159,7 +174,7 @@ const generatedPasscode = response.data.keyboardPwd || response.data.passcode;
 - ✅ **Endpunkt**: `/v3/keyboardPwd/get` (NICHT `/v3/keyboardPwd/add`!)
 - ✅ **`keyboardPwd`**: NICHT setzen (API generiert automatisch!)
 - ✅ **`keyboardPwdType`**: `3` (period, NICHT `2` permanent!)
-- ✅ **`startDate`**: Heute 00:00:00 (in der Vergangenheit, damit sofort aktiv!)
+- ✅ **`startDate`**: **IMMER heute 00:00:00** (in der Vergangenheit, damit sofort aktiv!) - **KRITISCH**: NICHT auf checkInDate setzen!
 - ✅ **`endDate`**: Mindestens 1 Tag nach `startDate`
 - ✅ **`addType`**: `1` (via phone bluetooth)
 - ✅ **`date`**: Aktueller Timestamp in Millisekunden
@@ -236,7 +251,7 @@ const passcode = await ttlockService.createTemporaryPasscode(
 - ✅ Endpunkt: `/v3/keyboardPwd/get`
 - ✅ `keyboardPwd`: NICHT gesetzt (API generiert automatisch)
 - ✅ `keyboardPwdType: 3` (period/temporär)
-- ✅ `startDate`: Heute 00:00:00 (in Millisekunden)
+- ✅ `startDate`: **IMMER heute 00:00:00** (in Millisekunden) - **KRITISCH**: NICHT auf checkInDate setzen! (`new Date()`, nicht `new Date(startDate)`)
 - ✅ `endDate`: Morgen (mindestens 1 Tag später, in Millisekunden)
 - ✅ `addType: 1` (via phone bluetooth)
 - ✅ `date`: Aktueller Timestamp in Millisekunden
@@ -290,7 +305,7 @@ echo $ENCRYPTION_KEY
 - ✅ Endpunkt: `/v3/keyboardPwd/get` (NICHT `/v3/keyboardPwd/add`!)
 - ✅ `keyboardPwd`: NICHT setzen (API generiert automatisch!)
 - ✅ `keyboardPwdType: 3` (period/temporär, NICHT `2` permanent!)
-- ✅ `startDate`: Heute 00:00:00 (in Millisekunden)
+- ✅ `startDate`: **IMMER heute 00:00:00** (in Millisekunden) - **KRITISCH**: NICHT auf checkInDate setzen!
 - ✅ `endDate`: Mindestens 1 Tag später (in Millisekunden)
 - ✅ `addType: 1` (via phone bluetooth)
 - ✅ `date`: Aktueller Timestamp in Millisekunden
@@ -364,13 +379,14 @@ echo $ENCRYPTION_KEY
   - Endpunkt: `/v3/keyboardPwd/get` (NICHT `/v3/keyboardPwd/add`!)
   - `keyboardPwd`: NICHT setzen (API generiert automatisch!)
   - `keyboardPwdType: 3` (period/temporär, NICHT `2` permanent!)
-  - `startDate`: Heute 00:00:00 (in Millisekunden)
+  - `startDate`: **IMMER heute 00:00:00** (in Millisekunden) - **KRITISCH**: NICHT auf checkInDate setzen!
   - `endDate`: Mindestens 1 Tag später (in Millisekunden)
   - `addType: 1` (via phone bluetooth)
   - `date`: Aktueller Timestamp in Millisekunden
 - ✅ **KEIN GATEWAY ERFORDERLICH**: Funktioniert ohne Gateway!
 - ✅ **KEINE APP-SYNCHRONISATION ERFORDERLICH**: Funktioniert ohne App-Sync!
 - ✅ **FUNKTIONIERT SOFORT AN DER TÜR**: Keine Wartezeit erforderlich!
+- ✅ **WICHTIGER FIX (18.11.2025)**: `startDate` muss IMMER auf heute 00:00:00 gesetzt werden (`new Date()`), NICHT auf checkInDate (`new Date(startDate)`)! Die API akzeptiert kein startDate, das früher als heute ist! Ohne diesen Fix: Fehler "Invalid Parameter" - "startDate is invalid, others can't be earlier than today!"
 - ❌ **ALLE ANDEREN METHODEN MARKIERT ALS NICHT FUNKTIONIEREND**:
   - `/v3/keyboardPwd/add` - erfordert Gateway/App-Sync
   - `keyboardPwdType: 2` (permanent) - funktioniert nicht ohne Gateway/App-Sync
