@@ -49,6 +49,7 @@ const ttlock_1 = __importDefault(require("./routes/ttlock"));
 const whatsapp_1 = __importDefault(require("./routes/whatsapp"));
 const reservations_1 = __importDefault(require("./routes/reservations"));
 const emailReservations_1 = __importDefault(require("./routes/emailReservations"));
+const shifts_1 = __importDefault(require("./routes/shifts"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const monthlyReportScheduler_1 = require("./services/monthlyReportScheduler");
 const reservationScheduler_1 = require("./services/reservationScheduler");
@@ -235,6 +236,13 @@ app.use('/api/monthly-consultation-reports', monthlyConsultationReports_1.defaul
 app.use('/api/database', database_1.default);
 app.use('/api/claude', claudeRoutes_1.default);
 app.use('/api/organizations', organizations_1.default);
+console.log('[App] Registriere /api/shifts Route...');
+console.log('[App] shiftRoutes:', shifts_1.default ? 'geladen' : 'FEHLT!');
+app.use('/api/shifts', (req, res, next) => {
+    console.log(`[App] /api/shifts Route aufgerufen: ${req.method} ${req.path}`);
+    console.log(`[App] Query:`, req.query);
+    next();
+}, shifts_1.default);
 app.use('/api/lobby-pms', lobbyPms_1.default);
 app.use('/api/bold-payment', boldPayment_1.default);
 app.use('/api/ttlock', ttlock_1.default);

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, getWeek, getYear, parse, addDays } from 'date-fns';
 import { de, es, enUS } from 'date-fns/locale';
 import { useLanguage } from '../hooks/useLanguage.ts';
-import { ChartBarIcon, DocumentArrowDownIcon } from '@heroicons/react/24/outline';
+import { ChartBarIcon, DocumentArrowDownIcon, CalendarIcon, ClockIcon } from '@heroicons/react/24/outline';
 import { API_URL, API_ENDPOINTS } from '../config/api.ts';
 import WorktimeList from './WorktimeList.tsx';
 import axios from 'axios';
@@ -410,34 +410,40 @@ const WorktimeStats: React.FC = () => {
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 p-6">
             <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center pl-2 sm:pl-0">
-                    <ChartBarIcon className="h-6 w-6 mr-2 dark:text-white" />
-                    <h2 className="text-xl font-semibold dark:text-white">{t('worktime.stats.title')}</h2>
+                <div className="flex items-center pl-2 sm:pl-0 flex-shrink min-w-0">
+                    <ChartBarIcon className="h-5 w-5 sm:h-6 sm:w-6 mr-2 dark:text-white flex-shrink-0" />
+                    <h2 className="text-base sm:text-lg md:text-xl font-semibold dark:text-white truncate">{t('worktime.stats.title')}</h2>
                 </div>
                 <div className="flex items-center space-x-2 sm:space-x-4">
-                    {/* Radio-Buttons für Woche/Quinzena - nur anzeigen wenn Kolumbien */}
+                    {/* Toggle-Button-Switch für Woche/Quinzena - nur anzeigen wenn Kolumbien */}
                     {isColombia && (
-                        <div className="flex items-center gap-2 sm:gap-4">
-                            <label className="flex items-center gap-1 sm:gap-2 cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="periodType"
-                                    checked={!useQuinzena}
-                                    onChange={() => handlePeriodChange(false)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                                />
-                                <span className="text-sm dark:text-white whitespace-nowrap">{t('worktime.stats.week')}</span>
-                            </label>
-                            <label className="flex items-center gap-1 sm:gap-2 cursor-pointer">
-                                <input
-                                    type="radio"
-                                    name="periodType"
-                                    checked={useQuinzena}
-                                    onChange={() => handlePeriodChange(true)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                                />
-                                <span className="text-sm dark:text-white whitespace-nowrap">{t('worktime.stats.quinzena')}</span>
-                            </label>
+                        <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 p-0.5 sm:p-1 bg-gray-50 dark:bg-gray-800">
+                            <button
+                                type="button"
+                                onClick={() => handlePeriodChange(false)}
+                                className={`flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                                    !useQuinzena
+                                        ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                }`}
+                            >
+                                <CalendarIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                <span className="hidden sm:inline whitespace-nowrap">{t('worktime.stats.week')}</span>
+                                <span className="sm:hidden whitespace-nowrap">7d</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handlePeriodChange(true)}
+                                className={`flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                                    useQuinzena
+                                        ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                }`}
+                            >
+                                <ClockIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                                <span className="hidden sm:inline whitespace-nowrap">{t('worktime.stats.quinzena')}</span>
+                                <span className="sm:hidden whitespace-nowrap">15d</span>
+                            </button>
                         </div>
                     )}
                     {useQuinzena ? (
@@ -461,7 +467,7 @@ const WorktimeStats: React.FC = () => {
                                     }
                                 }
                             }}
-                            className="border border-gray-300 dark:border-gray-600 rounded-md text-base sm:text-sm h-8 sm:h-10 px-3 dark:bg-gray-700 dark:text-white w-28"
+                            className="border border-gray-300 dark:border-gray-600 rounded-md text-sm h-7 sm:h-10 px-1.5 sm:px-3 dark:bg-gray-700 dark:text-white min-w-28 w-28 sm:w-28"
                             title={t('worktime.stats.quinzenaFormat')}
                         />
                     ) : (
@@ -485,18 +491,18 @@ const WorktimeStats: React.FC = () => {
                                     }
                                 }
                             }}
-                            className="border border-gray-300 dark:border-gray-600 rounded-md text-base sm:text-sm h-8 sm:h-10 px-3 dark:bg-gray-700 dark:text-white w-28"
+                            className="border border-gray-300 dark:border-gray-600 rounded-md text-sm h-7 sm:h-10 px-1.5 sm:px-3 dark:bg-gray-700 dark:text-white min-w-28 w-28 sm:w-28"
                             title={t('worktime.stats.weekFormat')}
                         />
                     )}
                     <button
                         onClick={handleExport}
-                        className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center min-w-8 min-h-8 w-8 h-8"
+                        className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1 sm:p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center min-w-7 min-h-7 sm:min-w-8 sm:min-h-8 w-7 h-7 sm:w-8 sm:h-8"
                         title={t('worktime.stats.export')}
                         aria-label={t('worktime.stats.exportTitle')}
                         style={{ marginTop: '1px', marginBottom: '1px' }}
                     >
-                        <DocumentArrowDownIcon className="h-4 w-4" />
+                        <DocumentArrowDownIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                     </button>
                 </div>
             </div>

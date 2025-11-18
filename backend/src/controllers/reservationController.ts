@@ -5,6 +5,7 @@ import { BoldPaymentService } from '../services/boldPaymentService';
 import { TTLockService } from '../services/ttlockService';
 import { ReservationNotificationService } from '../services/reservationNotificationService';
 import { reservationQueue, updateGuestContactQueue, checkQueueHealth } from '../services/queueService';
+import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
 
 const prisma = new PrismaClient();
 
@@ -202,9 +203,8 @@ ${ttlockCode}
         // Verwende existierendes Template: reservation_checkin_invitation
         const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
         // Template-Parameter: {{1}} = Gast-Name, {{2}} = Check-in-Link, {{3}} = Payment-Link
-        // Erstelle Check-in-Link für Template
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        const checkInLink = `${frontendUrl}/check-in/${updatedReservation.id}`;
+        // Erstelle LobbyPMS Check-in-Link
+        const checkInLink = generateLobbyPmsCheckInLink(updatedReservation);
         const templateParams = [updatedReservation.guestName, checkInLink, paymentLink];
         await whatsappService.sendMessageWithFallback(
           updatedReservation.guestPhone,
@@ -330,11 +330,16 @@ export const createReservation = async (req: Request, res: Response) => {
       }
     });
 
-    // NEU: Queue-basierte Verarbeitung (wenn aktiviert)
+    // Prüfe Einstellung: Automatischer Versand aktiviert?
+    const organization = reservation.organization;
+    const settings = organization.settings as any;
+    const autoSend = settings?.lobbyPms?.autoSendReservationInvitation !== false; // Default: true (Rückwärtskompatibilität)
+
+    // NEU: Queue-basierte Verarbeitung (wenn aktiviert UND autoSend = true)
     const queueEnabled = process.env.QUEUE_ENABLED === 'true';
     const isQueueHealthy = queueEnabled ? await checkQueueHealth() : false;
 
-    if (queueEnabled && isQueueHealthy && contactType === 'phone' && reservation.guestPhone) {
+    if (autoSend && queueEnabled && isQueueHealthy && contactType === 'phone' && reservation.guestPhone) {
       // Füge Job zur Queue hinzu
       try {
         await reservationQueue.add(
@@ -384,120 +389,52 @@ export const createReservation = async (req: Request, res: Response) => {
       }
     }
 
-    // FALLBACK: Alte synchrone Logik (wenn Queue deaktiviert oder Fehler)
-    // Nach Erstellung: Automatisch WhatsApp-Nachricht senden (wenn Telefonnummer vorhanden)
-    let sentMessage: string | null = null;
-    let sentMessageAt: Date | null = null;
-    let paymentLink: string | null = null;
+    // Wenn autoSend = false, überspringe automatischen Versand
+    if (!autoSend) {
+      console.log(`[Reservation] Automatischer Versand ist deaktiviert für Organisation ${reservation.organizationId}`);
+      // Hole aktuelle Reservierung
+      const finalReservation = await prisma.reservation.findUnique({
+        where: { id: reservation.id },
+        include: {
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              displayName: true,
+              settings: true
+            }
+          },
+          task: true
+        }
+      });
 
+      return res.status(201).json({
+        success: true,
+        data: finalReservation || reservation,
+        message: 'Reservierung erstellt. Benachrichtigung kann manuell versendet werden.',
+      });
+    }
+
+    // FALLBACK: Synchrone Logik (wenn Queue deaktiviert oder Fehler)
+    // Verwende neue Service-Methode sendReservationInvitation()
     if (contactType === 'phone' && reservation.guestPhone) {
       try {
-        // Erstelle Zahlungslink (ERFORDERLICH - Reservierung wird nicht als notification_sent markiert, wenn fehlschlägt)
-        const boldPaymentService = new BoldPaymentService(reservation.organizationId);
-        paymentLink = await boldPaymentService.createPaymentLink(
-          reservation,
-          amount,
-          currency,
-          `Zahlung für Reservierung ${reservation.guestName}`
-        );
-        console.log(`[Reservation] Payment-Link erstellt: ${paymentLink}`);
-
-        // Erstelle Check-in-Link
-        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-        const checkInLink = `${frontendUrl}/check-in/${reservation.id}`;
-
-        // Erstelle Nachrichtentext (mit Zahlungslink und Check-in-Aufforderung)
-        sentMessage = `Hola ${reservation.guestName},
-
-¡Bienvenido a La Familia Hostel!
-
-Tu reserva ha sido confirmada.
-Cargos: ${amount} ${currency}
-
-Puedes realizar el check-in en línea ahora:
-${checkInLink}
-
-Por favor, realiza el pago:
-${paymentLink}
-
-¡Te esperamos!`;
-
-        // Sende WhatsApp-Nachricht (mit Fallback auf Template)
-        console.log(`[Reservation] Initialisiere WhatsApp Service für Organisation ${reservation.organizationId}...`);
-        const whatsappService = new WhatsAppService(reservation.organizationId);
-        // Verwende existierendes Template: reservation_checkin_invitation
-        const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
-        // Template-Parameter: {{1}} = Gast-Name, {{2}} = Check-in-Link, {{3}} = Payment-Link
-        const templateParams = [
-          reservation.guestName,
-          checkInLink,
-          paymentLink
-        ];
-        
-        console.log(`[Reservation] Versuche WhatsApp-Nachricht zu senden an ${reservation.guestPhone}...`);
-        console.log(`[Reservation] Template Name: ${templateName}`);
-        console.log(`[Reservation] Template Params: ${JSON.stringify(templateParams)}`);
-        
-        const whatsappSuccess = await whatsappService.sendMessageWithFallback(
-          reservation.guestPhone,
-          sentMessage,
-          templateName,
-          templateParams
-        );
-
-        if (!whatsappSuccess) {
-          throw new Error('WhatsApp-Nachricht konnte nicht versendet werden (sendMessageWithFallback gab false zurück)');
-        }
-
-        sentMessageAt = new Date();
-
-        // Speichere versendete Nachricht und Payment Link in Reservierung
-        await prisma.reservation.update({
-          where: { id: reservation.id },
-          data: {
-            sentMessage,
-            sentMessageAt,
-            paymentLink,
-            status: 'notification_sent' as ReservationStatus
+        const result = await ReservationNotificationService.sendReservationInvitation(
+          reservation.id,
+          {
+            amount,
+            currency
           }
-        });
+        );
 
-        console.log(`[Reservation] ✅ Reservierung ${reservation.id} erstellt und WhatsApp-Nachricht erfolgreich versendet`);
+        if (result.success) {
+          console.log(`[Reservation] ✅ Reservierung ${reservation.id} erstellt und WhatsApp-Nachricht erfolgreich versendet`);
+        } else {
+          console.warn(`[Reservation] ⚠️ Reservierung ${reservation.id} erstellt, aber WhatsApp-Nachricht fehlgeschlagen: ${result.error}`);
+        }
       } catch (error) {
         console.error('[Reservation] ❌ Fehler beim Versenden der WhatsApp-Nachricht:', error);
-        console.error('[Reservation] Error Details:', JSON.stringify(error, null, 2));
-        
-        // Detaillierte Fehleranalyse
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const errorStack = error instanceof Error ? error.stack : undefined;
-        
-        console.error('[Reservation] Fehlermeldung:', errorMessage);
-        if (errorStack) {
-          console.error('[Reservation] Stack Trace:', errorStack);
-        }
-        
-        // Prüfe spezifische Fehlertypen
-        if (errorMessage.includes('access token') || errorMessage.includes('OAuthException') || errorMessage.includes('Session has expired')) {
-          console.error('[Reservation] ⚠️ WhatsApp Access Token ist abgelaufen! Bitte neuen Token in den Organisationseinstellungen eintragen.');
-        } else if (errorMessage.includes('API Key') || errorMessage.includes('nicht konfiguriert')) {
-          console.error('[Reservation] ⚠️ WhatsApp API Key fehlt oder ist nicht korrekt konfiguriert!');
-        } else if (errorMessage.includes('Phone Number ID')) {
-          console.error('[Reservation] ⚠️ WhatsApp Phone Number ID fehlt oder ist nicht korrekt konfiguriert!');
-        } else if (errorMessage.includes('Settings nicht gefunden')) {
-          console.error('[Reservation] ⚠️ WhatsApp Settings nicht gefunden für Organisation!');
-        } else if (errorMessage.includes('ENCRYPTION_KEY')) {
-          console.error('[Reservation] ⚠️ ENCRYPTION_KEY fehlt in den Environment-Variablen!');
-        }
-        
         // Fehler nicht weiterwerfen, Reservierung wurde bereits erstellt
-        // Status bleibt auf 'confirmed', da Nachricht nicht versendet wurde
-        // Payment Link wurde möglicherweise erstellt, speichere ihn trotzdem
-        if (paymentLink) {
-          await prisma.reservation.update({
-            where: { id: reservation.id },
-            data: { paymentLink }
-          });
-        }
       }
     }
 
@@ -573,6 +510,108 @@ export const getAllReservations = async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       message: error instanceof Error ? error.message : 'Fehler beim Abrufen der Reservierungen'
+    });
+  }
+};
+
+/**
+ * POST /api/reservations/:id/send-invitation
+ * Sendet Reservation-Einladung manuell (mit optionalen Parametern)
+ */
+export const sendReservationInvitation = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const reservationId = parseInt(id, 10);
+    const organizationId = req.organizationId;
+    const { guestPhone, guestEmail, customMessage, amount, currency } = req.body;
+
+    if (isNaN(reservationId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ungültige Reservierungs-ID'
+      });
+    }
+
+    if (!organizationId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Organisation-ID fehlt'
+      });
+    }
+
+    // Prüfe ob Reservierung existiert und zur Organisation gehört
+    const reservation = await prisma.reservation.findFirst({
+      where: {
+        id: reservationId,
+        organizationId: organizationId
+      }
+    });
+
+    if (!reservation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reservierung nicht gefunden oder gehört nicht zur Organisation'
+      });
+    }
+
+    console.log(`[Reservation] Sende Einladung für Reservierung ${reservationId}`);
+    console.log(`[Reservation] Organization ID: ${organizationId}`);
+    console.log(`[Reservation] Optionale Parameter:`, { guestPhone, guestEmail, customMessage, amount, currency });
+
+    // Rufe Service-Methode auf
+    try {
+      const result = await ReservationNotificationService.sendReservationInvitation(
+        reservationId,
+        {
+          guestPhone,
+          guestEmail,
+          customMessage,
+          amount,
+          currency
+        }
+      );
+
+      if (result.success) {
+        console.log(`[Reservation] ✅ Einladung erfolgreich versendet für Reservierung ${reservationId}`);
+        return res.json({
+          success: true,
+          data: {
+            reservationId,
+            paymentLink: result.paymentLink,
+            checkInLink: result.checkInLink,
+            messageSent: result.messageSent,
+            sentAt: result.sentAt
+          },
+          message: 'Einladung erfolgreich versendet'
+        });
+      } else {
+        console.warn(`[Reservation] ⚠️ Einladung teilweise fehlgeschlagen für Reservierung ${reservationId}: ${result.error}`);
+        return res.status(207).json({ // 207 Multi-Status für teilweise erfolgreich
+          success: false,
+          data: {
+            reservationId,
+            paymentLink: result.paymentLink,
+            checkInLink: result.checkInLink,
+            messageSent: result.messageSent,
+            sentAt: result.sentAt,
+            error: result.error
+          },
+          message: result.error || 'Einladung konnte nicht vollständig versendet werden'
+        });
+      }
+    } catch (error) {
+      console.error(`[Reservation] ❌ Fehler bei Einladung für Reservierung ${reservationId}:`, error);
+      const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler';
+      return res.status(500).json({
+        success: false,
+        message: `Fehler beim Versenden der Einladung: ${errorMessage}`
+      });
+    }
+  } catch (error) {
+    console.error('[Reservation] Fehler in sendReservationInvitation:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Fehler beim Versenden der Einladung'
     });
   }
 };
@@ -666,9 +705,67 @@ export const generatePinAndSendNotification = async (req: Request, res: Response
 };
 
 /**
- * GET /api/reservations/:id
- * Holt eine Reservierung nach ID
+ * GET /api/reservations/:id/notification-logs
+ * Holt Log-Historie für eine Reservation
  */
+export const getReservationNotificationLogs = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const organizationId = req.organizationId;
+
+    if (!organizationId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Organisation nicht gefunden'
+      });
+    }
+
+    const reservationId = parseInt(id, 10);
+    if (isNaN(reservationId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ungültige Reservierungs-ID'
+      });
+    }
+
+    // Prüfe ob Reservation existiert und zur Organisation gehört
+    const reservation = await prisma.reservation.findFirst({
+      where: {
+        id: reservationId,
+        organizationId: organizationId
+      }
+    });
+
+    if (!reservation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Reservierung nicht gefunden'
+      });
+    }
+
+    // Lade Notification-Logs
+    const logs = await prisma.reservationNotificationLog.findMany({
+      where: {
+        reservationId: reservationId
+      },
+      orderBy: {
+        sentAt: 'desc' // Neueste zuerst
+      }
+    });
+
+    return res.json({
+      success: true,
+      data: logs
+    });
+  } catch (error) {
+    console.error('[Reservation] Fehler beim Laden der Notification-Logs:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Fehler beim Laden der Notification-Logs'
+    });
+  }
+};
+
 export const getReservationById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

@@ -41,6 +41,7 @@ const defaultPages = [
 const defaultTables = [
   'requests',           // auf dashboard
   'tasks',             // auf worktracker
+  'reservations',      // auf worktracker (in To Do's Box)
   'users',             // auf organization_management
   'roles',             // auf organization_management
   'organization',      // auf organization_management
@@ -124,6 +125,7 @@ const defaultButtons = [
 const tableToPageMapping = {
   'requests': 'dashboard',
   'tasks': 'worktracker',
+  'reservations': 'worktracker',
   'users': 'organization_management',
   'roles': 'organization_management',
   'organization': 'organization_management',
@@ -407,6 +409,7 @@ const RoleManagementTab: React.FC<RoleManagementTabProps> = ({ onRolesChange, on
   // Display-Name-Mapping für Tabellen (dynamisch aus Übersetzungen)
   const tableDisplayNames = useMemo(() => ({
     'tasks': t('roles.tables.tasks'),
+    'reservations': t('roles.tables.reservations'),
     'worktime': t('roles.tables.worktime'),
     'users': t('roles.tables.users'),
     'roles': t('roles.tables.roles'),

@@ -5,10 +5,11 @@ import { useAuth } from '../hooks/useAuth.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 import { useTableSettings } from '../hooks/useTableSettings.ts';
 import TableColumnConfig from '../components/TableColumnConfig.tsx';
-import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon, EnvelopeIcon, PhoneIcon, LinkIcon, CurrencyDollarIcon, ClockIcon, KeyIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, ArrowLeftIcon, ArrowRightIcon, CheckCircleIcon, ArrowsUpDownIcon, FunnelIcon, XMarkIcon, DocumentDuplicateIcon, InformationCircleIcon, ClipboardDocumentListIcon, ArrowPathIcon, Squares2X2Icon, TableCellsIcon, UserIcon, BuildingOfficeIcon, CalendarIcon, ChevronLeftIcon, ChevronRightIcon, HomeIcon, EnvelopeIcon, PhoneIcon, LinkIcon, CurrencyDollarIcon, ClockIcon, KeyIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline';
 import CreateTaskModal from '../components/CreateTaskModal.tsx';
 import EditTaskModal from '../components/EditTaskModal.tsx';
 import CreateReservationModal from '../components/reservations/CreateReservationModal.tsx';
+import SendInvitationSidepane from '../components/reservations/SendInvitationSidepane.tsx';
 import { Reservation, ReservationStatus, PaymentStatus } from '../types/reservation.ts';
 import { useNavigate } from 'react-router-dom';
 import useMessage from '../hooks/useMessage.ts';
@@ -213,6 +214,8 @@ const Worktracker: React.FC = () => {
     const [isCreateReservationModalOpen, setIsCreateReservationModalOpen] = useState(false);
     const [syncingReservations, setSyncingReservations] = useState(false);
     const [generatingPinForReservation, setGeneratingPinForReservation] = useState<number | null>(null);
+    const [selectedReservationForInvitation, setSelectedReservationForInvitation] = useState<Reservation | null>(null);
+    const [isSendInvitationSidepaneOpen, setIsSendInvitationSidepaneOpen] = useState(false);
     
     // Reservations Filter States (analog zu Tasks)
     const [reservationFilterConditions, setReservationFilterConditions] = useState<FilterCondition[]>([]);
@@ -2200,20 +2203,64 @@ const Worktracker: React.FC = () => {
                                                                 <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                     <div className="flex space-x-2 action-buttons">
                                                                         {hasPermission('reservations', 'write', 'table') && (
-                                                                            <div className="relative group">
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        navigate(`/reservations/${reservation.id}`);
-                                                                                    }}
-                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                >
-                                                                                    <InformationCircleIcon className="h-4 w-4" />
-                                                                                </button>
-                                                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                    {t('common.viewDetails', 'Details anzeigen')}
+                                                                            <>
+                                                                                {/* Einladung senden Button */}
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            setSelectedReservationForInvitation(reservation);
+                                                                                            setIsSendInvitationSidepaneOpen(true);
+                                                                                        }}
+                                                                                        className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                        title={t('reservations.sendInvitation', 'Einladung senden')}
+                                                                                    >
+                                                                                        <PaperAirplaneIcon className="h-4 w-4" />
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('reservations.sendInvitation', 'Einladung senden')}
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
+                                                                                
+                                                                                {/* Key-Button für PIN-Generierung */}
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleGeneratePinAndSend(reservation.id);
+                                                                                        }}
+                                                                                        disabled={generatingPinForReservation === reservation.id}
+                                                                                        className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                                        title={t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                                    >
+                                                                                        {generatingPinForReservation === reservation.id ? (
+                                                                                            <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                                                                                        ) : (
+                                                                                            <KeyIcon className="h-4 w-4" />
+                                                                                        )}
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                                    </div>
+                                                                                </div>
+                                                                                
+                                                                                {/* Details Button */}
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            navigate(`/reservations/${reservation.id}`);
+                                                                                        }}
+                                                                                        className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                                                                                        title={t('common.viewDetails', 'Details anzeigen')}
+                                                                                    >
+                                                                                        <InformationCircleIcon className="h-4 w-4" />
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('common.viewDetails', 'Details anzeigen')}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </>
                                                                         )}
                                                                     </div>
                                                                 </td>
@@ -3113,10 +3160,29 @@ const Worktracker: React.FC = () => {
                                                     });
                                                 }
                                                 
-                                                // Action-Button für PIN-Generierung und Mitteilungsversand
+                                                // Action-Buttons für Einladung senden und PIN-Generierung
                                                 const hasWritePermission = hasPermission('reservations', 'write', 'table');
                                                 const actionButtons = hasWritePermission ? (
                                                     <div className="flex items-center space-x-2">
+                                                        {/* Einladung senden Button */}
+                                                        <div className="relative group">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedReservationForInvitation(reservation);
+                                                                    setIsSendInvitationSidepaneOpen(true);
+                                                                }}
+                                                                className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                title={t('reservations.sendInvitation', 'Einladung senden')}
+                                                            >
+                                                                <PaperAirplaneIcon className="h-4 w-4" />
+                                                            </button>
+                                                            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                {t('reservations.sendInvitation', 'Einladung senden')}
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* Key-Button für PIN-Generierung */}
                                                         <div className="relative group">
                                                             <button
                                                                 onClick={(e) => {
@@ -3259,20 +3325,64 @@ const Worktracker: React.FC = () => {
                                                                 <td className="px-3 sm:px-4 md:px-6 py-4 whitespace-nowrap">
                                                                     <div className="flex space-x-2 action-buttons">
                                                                         {hasPermission('reservations', 'write', 'table') && (
-                                                                            <div className="relative group">
-                                                                                <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        navigate(`/reservations/${reservation.id}`);
-                                                                                    }}
-                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                                                                                >
-                                                                                    <InformationCircleIcon className="h-4 w-4" />
-                                                                                </button>
-                                                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                    {t('common.viewDetails', 'Details anzeigen')}
+                                                                            <>
+                                                                                {/* Einladung senden Button */}
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            setSelectedReservationForInvitation(reservation);
+                                                                                            setIsSendInvitationSidepaneOpen(true);
+                                                                                        }}
+                                                                                        className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                        title={t('reservations.sendInvitation', 'Einladung senden')}
+                                                                                    >
+                                                                                        <PaperAirplaneIcon className="h-4 w-4" />
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('reservations.sendInvitation', 'Einladung senden')}
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
+                                                                                
+                                                                                {/* Key-Button für PIN-Generierung */}
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            handleGeneratePinAndSend(reservation.id);
+                                                                                        }}
+                                                                                        disabled={generatingPinForReservation === reservation.id}
+                                                                                        className="p-1.5 text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                                        title={t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                                    >
+                                                                                        {generatingPinForReservation === reservation.id ? (
+                                                                                            <ArrowPathIcon className="h-4 w-4 animate-spin" />
+                                                                                        ) : (
+                                                                                            <KeyIcon className="h-4 w-4" />
+                                                                                        )}
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('reservations.generatePinAndSend', 'PIN generieren & Mitteilung versenden')}
+                                                                                    </div>
+                                                                                </div>
+                                                                                
+                                                                                {/* Details Button */}
+                                                                                <div className="relative group">
+                                                                                    <button
+                                                                                        onClick={(e) => {
+                                                                                            e.stopPropagation();
+                                                                                            navigate(`/reservations/${reservation.id}`);
+                                                                                        }}
+                                                                                        className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
+                                                                                        title={t('common.viewDetails', 'Details anzeigen')}
+                                                                                    >
+                                                                                        <InformationCircleIcon className="h-4 w-4" />
+                                                                                    </button>
+                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                        {t('common.viewDetails', 'Details anzeigen')}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </>
                                                                         )}
                                                                     </div>
                                                                 </td>
@@ -3357,6 +3467,22 @@ const Worktracker: React.FC = () => {
                     await loadReservations();
                 }}
             />
+            
+            {/* Send Invitation Sidepane */}
+            {selectedReservationForInvitation && (
+                <SendInvitationSidepane
+                    isOpen={isSendInvitationSidepaneOpen}
+                    onClose={() => {
+                        setIsSendInvitationSidepaneOpen(false);
+                        setSelectedReservationForInvitation(null);
+                    }}
+                    reservation={selectedReservationForInvitation}
+                    onSuccess={async () => {
+                        // Lade Reservations neu, um den aktualisierten Status zu erhalten
+                        await loadReservations();
+                    }}
+                />
+            )}
         </div>
     );
 };

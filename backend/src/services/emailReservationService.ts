@@ -4,6 +4,7 @@ import { WhatsAppService } from './whatsappService';
 import { BoldPaymentService } from './boldPaymentService';
 import { EmailReadingService, EmailMessage } from './emailReadingService';
 import { EmailReservationParser } from './emailReservationParser';
+import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
 
 const prisma = new PrismaClient();
 
@@ -86,74 +87,20 @@ export class EmailReservationService {
       // Automatisch WhatsApp-Nachricht senden (wenn Telefonnummer vorhanden UND aktiviert)
       if (EMAIL_RESERVATION_WHATSAPP_ENABLED && reservation.guestPhone) {
         try {
-          // Erstelle Zahlungslink
-          const boldPaymentService = new BoldPaymentService(reservation.organizationId);
-          const paymentLink = await boldPaymentService.createPaymentLink(
-            reservation,
-            parsedEmail.amount,
-            parsedEmail.currency || 'COP',
-            `Zahlung für Reservierung ${reservation.guestName}`
-          );
-          console.log(`[EmailReservation] Payment-Link erstellt: ${paymentLink}`);
-
-          // Erstelle Check-in-Link
-          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-          const checkInLink = `${frontendUrl}/check-in/${reservation.id}`;
-
-          // Erstelle Nachrichtentext
-          const sentMessage = `Hola ${reservation.guestName},
-
-¡Bienvenido a La Familia Hostel!
-
-Tu reserva ha sido confirmada.
-Cargos: ${parsedEmail.amount} ${parsedEmail.currency || 'COP'}
-
-Puedes realizar el check-in en línea ahora:
-${checkInLink}
-
-Por favor, realiza el pago:
-${paymentLink}
-
-¡Te esperamos!`;
-
-          // Sende WhatsApp-Nachricht
-          const whatsappService = new WhatsAppService(reservation.organizationId);
-          const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
-          const templateParams = [
-            reservation.guestName,
-            checkInLink,
-            paymentLink
-          ];
-
-          const whatsappSuccess = await whatsappService.sendMessageWithFallback(
-            reservation.guestPhone,
-            sentMessage,
-            templateName,
-            templateParams
+          // Verwende neue Service-Methode sendReservationInvitation()
+          const { ReservationNotificationService } = await import('./reservationNotificationService');
+          const result = await ReservationNotificationService.sendReservationInvitation(
+            reservation.id,
+            {
+              amount: parsedEmail.amount,
+              currency: parsedEmail.currency || 'COP'
+            }
           );
 
-          if (whatsappSuccess) {
-            // Speichere versendete Nachricht und Payment Link
-            await prisma.reservation.update({
-              where: { id: reservation.id },
-              data: {
-                sentMessage,
-                sentMessageAt: new Date(),
-                paymentLink,
-                status: 'notification_sent' as ReservationStatus
-              }
-            });
-
+          if (result.success) {
             console.log(`[EmailReservation] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservation ${reservation.id}`);
           } else {
-            console.warn(`[EmailReservation] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservation ${reservation.id}`);
-            // Payment Link trotzdem speichern
-            if (paymentLink) {
-              await prisma.reservation.update({
-                where: { id: reservation.id },
-                data: { paymentLink }
-              });
-            }
+            console.warn(`[EmailReservation] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservation ${reservation.id}: ${result.error}`);
           }
         } catch (whatsappError) {
           console.error(`[EmailReservation] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, whatsappError);

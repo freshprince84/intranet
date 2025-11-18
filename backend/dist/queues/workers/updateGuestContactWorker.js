@@ -15,6 +15,7 @@ const boldPaymentService_1 = require("../../services/boldPaymentService");
 const whatsappService_1 = require("../../services/whatsappService");
 const ttlockService_1 = require("../../services/ttlockService");
 const client_1 = require("@prisma/client");
+const checkInLinkUtils_1 = require("../../utils/checkInLinkUtils");
 const prisma = new client_1.PrismaClient();
 /**
  * Erstellt einen Worker für Guest Contact Update Jobs
@@ -117,8 +118,8 @@ ${ttlockCode}
 ` : ''}¡Te esperamos!`;
                 const whatsappService = new whatsappService_1.WhatsAppService(organizationId);
                 const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
-                const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-                const checkInLink = `${frontendUrl}/check-in/${reservationId}`;
+                // Erstelle LobbyPMS Check-in-Link
+                const checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservation);
                 const templateParams = [guestName, checkInLink, paymentLink];
                 console.log(`[UpdateGuestContact Worker] Template Name: ${templateName}`);
                 console.log(`[UpdateGuestContact Worker] Template Params: ${JSON.stringify(templateParams)}`);

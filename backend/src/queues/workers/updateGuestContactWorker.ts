@@ -3,6 +3,7 @@ import { BoldPaymentService } from '../../services/boldPaymentService';
 import { WhatsAppService } from '../../services/whatsappService';
 import { TTLockService } from '../../services/ttlockService';
 import { PrismaClient } from '@prisma/client';
+import { generateLobbyPmsCheckInLink } from '../../utils/checkInLinkUtils';
 
 const prisma = new PrismaClient();
 
@@ -152,8 +153,8 @@ ${ttlockCode}
           const whatsappService = new WhatsAppService(organizationId);
           const templateName =
             process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
-          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-          const checkInLink = `${frontendUrl}/check-in/${reservationId}`;
+          // Erstelle LobbyPMS Check-in-Link
+          const checkInLink = generateLobbyPmsCheckInLink(reservation);
           const templateParams = [guestName, checkInLink, paymentLink];
 
           console.log(`[UpdateGuestContact Worker] Template Name: ${templateName}`);

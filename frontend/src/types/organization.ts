@@ -69,6 +69,7 @@ export interface OrganizationSettings {
     autoCreateTasks?: boolean;
     lateCheckInThreshold?: string;
     notificationChannels?: ('email' | 'whatsapp')[];
+    autoSendReservationInvitation?: boolean; // Default: true (Rückwärtskompatibilität)
   };
   
   // Door System Settings (TTLock)
