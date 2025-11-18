@@ -49,6 +49,7 @@ const whatsappService_1 = require("./whatsappService");
 const boldPaymentService_1 = require("./boldPaymentService");
 const ttlockService_1 = require("./ttlockService");
 const emailService_1 = require("./emailService");
+const checkInLinkUtils_1 = require("../utils/checkInLinkUtils");
 const prisma = new client_1.PrismaClient();
 /**
  * Service für automatische Benachrichtigungen zu Reservierungen
@@ -56,6 +57,40 @@ const prisma = new client_1.PrismaClient();
  * Orchestriert E-Mail/WhatsApp-Versand, Zahlungslinks und Türsystem-PINs
  */
 class ReservationNotificationService {
+    /**
+     * Loggt eine Notification in die Datenbank
+     *
+     * @param reservationId - ID der Reservierung
+     * @param notificationType - Typ der Notification ('invitation', 'pin', 'checkin_confirmation')
+     * @param channel - Kanal ('whatsapp', 'email', 'both')
+     * @param success - Erfolg (true/false)
+     * @param data - Zusätzliche Daten (sentTo, message, paymentLink, checkInLink, errorMessage)
+     */
+    static logNotification(reservationId, notificationType, channel, success, data) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                yield prisma.reservationNotificationLog.create({
+                    data: {
+                        reservationId,
+                        notificationType,
+                        channel,
+                        success,
+                        sentAt: new Date(),
+                        sentTo: (data === null || data === void 0 ? void 0 : data.sentTo) || null,
+                        message: (data === null || data === void 0 ? void 0 : data.message) || null,
+                        paymentLink: (data === null || data === void 0 ? void 0 : data.paymentLink) || null,
+                        checkInLink: (data === null || data === void 0 ? void 0 : data.checkInLink) || null,
+                        errorMessage: (data === null || data === void 0 ? void 0 : data.errorMessage) || null
+                    }
+                });
+                console.log(`[ReservationNotification] ✅ Log-Eintrag erstellt für Reservation ${reservationId}, Type: ${notificationType}, Success: ${success}`);
+            }
+            catch (error) {
+                // Log-Fehler sollten nicht die Hauptfunktionalität beeinträchtigen
+                console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags:`, error);
+            }
+        });
+    }
     /**
      * Sendet Check-in-Einladungen an Gäste mit späten Ankünften
      *
@@ -104,8 +139,8 @@ class ReservationNotificationService {
                                 // TODO: Hole tatsächlichen Betrag aus LobbyPMS
                                 const amount = 100000; // Placeholder: 100.000 COP
                                 const paymentLink = yield boldPaymentService.createPaymentLink(reservation, amount, 'COP', `Zahlung für Reservierung ${reservation.guestName}`);
-                                // Erstelle Check-in-Link
-                                const checkInLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/check-in/${reservation.id}`;
+                                // Erstelle LobbyPMS Check-in-Link
+                                const checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservation);
                                 // Versende Benachrichtigungen
                                 if (notificationChannels.includes('email') && reservation.guestEmail) {
                                     yield this.sendCheckInInvitationEmail(reservation, checkInLink, paymentLink);
@@ -137,6 +172,208 @@ class ReservationNotificationService {
             catch (error) {
                 console.error('[ReservationNotification] Fehler beim Versand:', error);
                 throw error;
+            }
+        });
+    }
+    /**
+     * Sendet Reservation-Einladung (Payment-Link + Check-in-Link + WhatsApp)
+     *
+     * @param reservationId - ID der Reservierung
+     * @param options - Optionale Parameter (Kontaktinfo, Nachricht, Betrag)
+     * @returns Ergebnis mit Details über Erfolg/Fehler
+     */
+    static sendReservationInvitation(reservationId, options) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                // Lade Reservation mit Organization
+                const reservation = yield prisma.reservation.findUnique({
+                    where: { id: reservationId },
+                    include: {
+                        organization: {
+                            select: {
+                                id: true,
+                                name: true,
+                                displayName: true,
+                                settings: true
+                            }
+                        }
+                    }
+                });
+                if (!reservation) {
+                    throw new Error(`Reservierung ${reservationId} nicht gefunden`);
+                }
+                // Verwende optionale Kontaktinfo oder Reservation-Daten
+                const guestPhone = (options === null || options === void 0 ? void 0 : options.guestPhone) || reservation.guestPhone;
+                const guestEmail = (options === null || options === void 0 ? void 0 : options.guestEmail) || reservation.guestEmail;
+                const amount = (options === null || options === void 0 ? void 0 : options.amount) || reservation.amount || 0;
+                const currency = (options === null || options === void 0 ? void 0 : options.currency) || reservation.currency || 'COP';
+                // Prüfe ob Kontaktinfo vorhanden ist
+                if (!guestPhone && !guestEmail) {
+                    throw new Error('Keine Kontaktinformation (Telefonnummer oder E-Mail) vorhanden');
+                }
+                let paymentLink = null;
+                let checkInLink = null;
+                let sentMessage = null;
+                let sentMessageAt = null;
+                let success = false;
+                let errorMessage = null;
+                // Schritt 1: Payment-Link erstellen (wenn Telefonnummer vorhanden)
+                if (guestPhone) {
+                    try {
+                        console.log(`[ReservationNotification] Erstelle Payment-Link für Reservierung ${reservationId}...`);
+                        const boldPaymentService = new boldPaymentService_1.BoldPaymentService(reservation.organizationId);
+                        // Konvertiere amount zu number (falls Decimal)
+                        const amountNumber = typeof amount === 'number' ? amount : Number(amount);
+                        paymentLink = yield boldPaymentService.createPaymentLink(reservation, amountNumber, currency, `Zahlung für Reservierung ${reservation.guestName}`);
+                        console.log(`[ReservationNotification] ✅ Payment-Link erstellt: ${paymentLink}`);
+                    }
+                    catch (error) {
+                        console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des Payment-Links:`, error);
+                        errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler beim Erstellen des Payment-Links';
+                        // Payment-Link-Fehler ist kritisch - wir können ohne Payment-Link nicht weitermachen
+                        throw new Error(`Payment-Link konnte nicht erstellt werden: ${errorMessage}`);
+                    }
+                }
+                // Schritt 2: Check-in-Link erstellen
+                try {
+                    // Erstelle temporäre Reservation mit guestEmail für Check-in-Link-Generierung
+                    const reservationForCheckInLink = {
+                        id: reservation.id,
+                        guestEmail: guestEmail || reservation.guestEmail || ''
+                    };
+                    checkInLink = (0, checkInLinkUtils_1.generateLobbyPmsCheckInLink)(reservationForCheckInLink) ||
+                        `${process.env.FRONTEND_URL || 'http://localhost:3000'}/check-in/${reservation.id}`;
+                    console.log(`[ReservationNotification] ✅ Check-in-Link erstellt: ${checkInLink}`);
+                }
+                catch (error) {
+                    console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Check-in-Links:`, error);
+                    // Check-in-Link-Fehler ist nicht kritisch - verwende Fallback
+                    checkInLink = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/check-in/${reservation.id}`;
+                }
+                // Schritt 3: WhatsApp-Nachricht senden (wenn Telefonnummer vorhanden)
+                if (guestPhone && paymentLink) {
+                    try {
+                        console.log(`[ReservationNotification] Sende WhatsApp-Nachricht für Reservierung ${reservationId}...`);
+                        // Verwende Custom Message oder Standard-Nachricht
+                        if (options === null || options === void 0 ? void 0 : options.customMessage) {
+                            sentMessage = options.customMessage;
+                            // Ersetze Variablen in Custom Message
+                            sentMessage = sentMessage
+                                .replace(/\{\{guestName\}\}/g, reservation.guestName)
+                                .replace(/\{\{checkInLink\}\}/g, checkInLink)
+                                .replace(/\{\{paymentLink\}\}/g, paymentLink);
+                        }
+                        else {
+                            // Standard-Nachricht
+                            sentMessage = `Hola ${reservation.guestName},
+
+¡Bienvenido a La Familia Hostel!
+
+Tu reserva ha sido confirmada.
+Cargos: ${amount} ${currency}
+
+Puedes realizar el check-in en línea ahora:
+${checkInLink}
+
+Por favor, realiza el pago:
+${paymentLink}
+
+¡Te esperamos!`;
+                        }
+                        const whatsappService = new whatsappService_1.WhatsAppService(reservation.organizationId);
+                        const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
+                        const templateParams = [
+                            reservation.guestName,
+                            checkInLink,
+                            paymentLink
+                        ];
+                        console.log(`[ReservationNotification] Template Name: ${templateName}`);
+                        console.log(`[ReservationNotification] Template Params: ${JSON.stringify(templateParams)}`);
+                        const whatsappSuccess = yield whatsappService.sendMessageWithFallback(guestPhone, sentMessage, templateName, templateParams);
+                        if (!whatsappSuccess) {
+                            throw new Error('WhatsApp-Nachricht konnte nicht versendet werden (sendMessageWithFallback gab false zurück)');
+                        }
+                        sentMessageAt = new Date();
+                        success = true;
+                        console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet`);
+                        // Log erfolgreiche Notification
+                        yield this.logNotification(reservationId, 'invitation', 'whatsapp', true, {
+                            sentTo: guestPhone,
+                            message: sentMessage,
+                            paymentLink: paymentLink,
+                            checkInLink: checkInLink
+                        });
+                    }
+                    catch (error) {
+                        console.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
+                        errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
+                        // WhatsApp-Fehler ist nicht kritisch - Links wurden bereits erstellt
+                        // Wir speichern die Links trotzdem, aber Status bleibt auf 'confirmed'
+                        // Log fehlgeschlagene Notification
+                        yield this.logNotification(reservationId, 'invitation', 'whatsapp', false, {
+                            sentTo: guestPhone,
+                            message: sentMessage || undefined,
+                            paymentLink: paymentLink || undefined,
+                            checkInLink: checkInLink || undefined,
+                            errorMessage: errorMessage
+                        });
+                    }
+                }
+                // Schritt 4: Reservation aktualisieren
+                try {
+                    const updateData = {
+                        paymentLink: paymentLink || undefined,
+                    };
+                    // Nur Status auf 'notification_sent' setzen, wenn WhatsApp erfolgreich war
+                    if (success && sentMessage) {
+                        updateData.sentMessage = sentMessage;
+                        updateData.sentMessageAt = sentMessageAt;
+                        updateData.status = 'notification_sent';
+                    }
+                    else if (paymentLink) {
+                        // Payment-Link wurde erstellt, aber WhatsApp fehlgeschlagen
+                        // Status bleibt auf 'confirmed', aber Payment-Link wird gespeichert
+                        console.log(`[ReservationNotification] ⚠️ Payment-Link gespeichert, aber WhatsApp fehlgeschlagen - Status bleibt auf 'confirmed'`);
+                    }
+                    yield prisma.reservation.update({
+                        where: { id: reservationId },
+                        data: updateData,
+                    });
+                    console.log(`[ReservationNotification] ✅ Reservierung ${reservationId} erfolgreich aktualisiert`);
+                }
+                catch (error) {
+                    console.error(`[ReservationNotification] ❌ Fehler beim Aktualisieren der Reservierung:`, error);
+                    // Fehler beim Update ist kritisch
+                    throw error;
+                }
+                return {
+                    success,
+                    paymentLink: paymentLink || undefined,
+                    checkInLink: checkInLink || undefined,
+                    messageSent: success,
+                    sentAt: sentMessageAt || undefined,
+                    error: errorMessage || undefined
+                };
+            }
+            catch (error) {
+                console.error(`[ReservationNotification] Fehler beim Senden der Reservation-Einladung:`, error);
+                const errorMsg = error instanceof Error ? error.message : 'Unbekannter Fehler';
+                // Log kritischen Fehler (wenn Reservation nicht gefunden wurde, etc.)
+                try {
+                    yield this.logNotification(reservationId, 'invitation', 'whatsapp', // Default, könnte auch 'both' sein
+                    false, {
+                        errorMessage: errorMsg
+                    });
+                }
+                catch (logError) {
+                    // Ignoriere Log-Fehler
+                    console.error(`[ReservationNotification] Fehler beim Loggen des kritischen Fehlers:`, logError);
+                }
+                return {
+                    success: false,
+                    messageSent: false,
+                    error: errorMsg
+                };
             }
         });
     }

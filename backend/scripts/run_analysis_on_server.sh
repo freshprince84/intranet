@@ -27,3 +27,4 @@ echo ""
 echo "📄 Ergebnisse wurden auch in cerebro_analysis_result.json gespeichert"
 
 
+

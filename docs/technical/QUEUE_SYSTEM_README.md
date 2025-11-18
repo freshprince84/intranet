@@ -115,12 +115,24 @@ Falls Redis nicht verfügbar ist:
 
 ## Troubleshooting
 
-### Problem: Redis-Verbindung fehlgeschlagen
+### Problem: Redis-Verbindung fehlgeschlagen (IPv6 vs IPv4)
+
+**Symptom:**
+```
+[Queue Service] Redis-Verbindungsfehler: connect ECONNREFUSED ::1:6379
+```
+
+**Lösung:**
+- **Fix bereits implementiert**: `family: 4` in `queueService.ts` erzwingt IPv4
+- **Siehe**: `QUEUE_SYSTEM_IPV4_FIX.md` für detaillierte Erklärung
+
+### Problem: Redis-Verbindung fehlgeschlagen (allgemein)
 
 **Lösung:**
 1. Prüfen ob Redis läuft: `redis-cli ping` (sollte `PONG` zurückgeben)
 2. Redis starten: `sudo systemctl start redis-server` (Linux) oder Memurai starten (Windows)
 3. `.env` Datei prüfen: `REDIS_HOST=localhost`, `REDIS_PORT=6379`
+4. IPv4/IPv6-Problem prüfen (siehe oben)
 
 ### Problem: Queue-System startet nicht
 
@@ -132,6 +144,7 @@ Falls Redis nicht verfügbar ist:
 ### Weitere Probleme
 
 Siehe:
+- `QUEUE_SYSTEM_IPV4_FIX.md` - IPv4/IPv6-Verbindungsproblem (wichtig!)
 - `QUEUE_SYSTEM_DEPLOYMENT.md` → Abschnitt "Troubleshooting"
 - `QUEUE_SYSTEM_HETZNER_SETUP.md` → Abschnitt "Troubleshooting"
 

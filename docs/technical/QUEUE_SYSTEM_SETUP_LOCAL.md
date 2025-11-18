@@ -152,12 +152,51 @@ Nach der Installation:
 
 ## Troubleshooting
 
+### Problem: Redis-Verbindung fehlgeschlagen (IPv6 vs IPv4)
+
+**Symptom:**
+```
+[Queue Service] Redis-Verbindungsfehler: connect ECONNREFUSED ::1:6379
+[Queue Service] Redis-Verbindung fehlgeschlagen: Error: Stream isn't writeable
+```
+
+**Ursache:**
+- Memurai läuft auf IPv4 (127.0.0.1), aber ioredis versucht IPv6 (::1)
+- Häufig auf Windows mit Memurai
+
+**Lösung:**
+1. **Code-Fix** (bereits implementiert):
+   - `family: 4` in `queueService.ts` erzwingt IPv4-Verbindung
+   - Siehe: `backend/src/services/queueService.ts` Zeile 24
+
+2. **Memurai-Verbindung testen:**
+   ```bash
+   # Memurai-CLI testen
+   memurai-cli ping
+   # Sollte "PONG" zurückgeben
+   
+   # IPv4 explizit testen
+   memurai-cli -h 127.0.0.1 ping
+   ```
+
+3. **Memurai-Service prüfen:**
+   - Windows Services öffnen: `services.msc`
+   - Prüfen ob "Memurai" läuft
+   - Falls nicht: Service starten
+
+4. **Server neu starten:**
+   ```bash
+   # Backend neu starten
+   npm run dev
+   ```
+
 ### Problem: "Connection refused"
 
 **Lösung:**
 - Prüfen ob Redis/Memurai läuft
 - Port 6379 prüfen: `netstat -an | findstr 6379`
 - Firewall-Regel prüfen
+- Memurai-Service prüfen: `services.msc` → "Memurai"
 
 ### Problem: "Command not found"
 

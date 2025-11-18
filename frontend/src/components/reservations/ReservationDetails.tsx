@@ -7,6 +7,7 @@ import { Reservation, ReservationStatus, PaymentStatus } from '../../types/reser
 import useMessage from '../../hooks/useMessage.ts';
 import CheckInForm from './CheckInForm.tsx';
 import GuestContactModal from './GuestContactModal.tsx';
+import ReservationNotificationLogs from './ReservationNotificationLogs.tsx';
 import {
   ArrowLeftIcon,
   CalendarIcon,
@@ -370,6 +371,11 @@ const ReservationDetails: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Notification Logs */}
+      <div className="mt-6">
+        <ReservationNotificationLogs reservationId={reservation.id} />
+      </div>
     </div>
   );
 };

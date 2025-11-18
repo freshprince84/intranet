@@ -157,12 +157,49 @@ Wenn Queue nicht verfügbar ist:
 
 ## Troubleshooting
 
+### Problem: Redis-Verbindung fehlgeschlagen (IPv6 vs IPv4)
+
+**Symptom:**
+```
+[Queue Service] Redis-Verbindungsfehler: connect ECONNREFUSED ::1:6379
+[Queue Service] Redis-Verbindung fehlgeschlagen: Error: Stream isn't writeable
+```
+
+**Ursache:**
+- Redis/Memurai läuft auf IPv4 (127.0.0.1), aber ioredis versucht IPv6 (::1)
+- Häufig auf Windows mit Memurai, kann aber auch auf Linux auftreten
+
+**Lösung:**
+1. **Code-Fix** (bereits implementiert):
+   - `family: 4` in `queueService.ts` erzwingt IPv4-Verbindung
+   - Siehe: `backend/src/services/queueService.ts` Zeile 24
+
+2. **Redis/Memurai-Verbindung testen:**
+   ```bash
+   # Windows (Memurai)
+   memurai-cli ping
+   
+   # Linux (Redis)
+   redis-cli ping
+   
+   # IPv4 explizit testen
+   redis-cli -h 127.0.0.1 ping
+   ```
+
+3. **Server neu starten** (nach Code-Update)
+
+**Siehe auch:**
+- `QUEUE_SYSTEM_DEPLOYMENT.md` → Abschnitt "Troubleshooting"
+- `QUEUE_SYSTEM_HETZNER_SETUP.md` → Abschnitt "Troubleshooting"
+- `QUEUE_SYSTEM_SETUP_LOCAL.md` → Abschnitt "Troubleshooting"
+
 ### Problem: Workers starten nicht
 
 **Lösung:**
 1. Prüfe ob Redis läuft: `redis-cli ping` (sollte "PONG" zurückgeben)
 2. Prüfe Environment-Variablen (`REDIS_HOST`, `REDIS_PORT`)
 3. Prüfe Logs: `[Queue] ⚠️ Redis nicht verfügbar`
+4. Prüfe IPv4/IPv6-Problem (siehe oben)
 
 ### Problem: Jobs werden nicht verarbeitet
 

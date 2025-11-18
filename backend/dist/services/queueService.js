@@ -40,6 +40,7 @@ function getConnection() {
             port: parseInt(process.env.REDIS_PORT || '6379'),
             password: process.env.REDIS_PASSWORD || undefined,
             db: parseInt(process.env.REDIS_DB || '0'),
+            family: 4, // IPv4 erzwingen (wichtig für Memurai auf Windows)
             maxRetriesPerRequest: null, // Wichtig für BullMQ
             lazyConnect: true, // Verbindung wird erst beim ersten Gebrauch hergestellt
             enableOfflineQueue: false, // Keine Offline-Queue, um Fehler zu vermeiden

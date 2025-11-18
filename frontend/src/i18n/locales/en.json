@@ -26,6 +26,7 @@
     "description": "Description",
     "today": "Today",
     "week": "Week",
+    "month": "Month",
     "active": "Active",
     "all": "All",
     "showMore": "Show more",
@@ -686,6 +687,7 @@
     },
     "tables": {
       "tasks": "Tasks",
+      "reservations": "Reservations",
       "worktime": "Time Tracker",
       "users": "Users",
       "roles": "Roles",
@@ -1038,13 +1040,34 @@
     "payrollComponent": {
       "title": "Payroll",
       "noPermission": "You do not have permission to view payroll.",
-      "totalHours": "Working Hours",
-      "grossPay": "Gross Pay",
+      "selectEmployee": "Select employee",
+      "pleaseSelect": "Please select",
+      "enterHours": "Enter work hours",
+      "regularHours": "Regular hours",
+      "overtimeHours": "Overtime hours",
+      "nightHours": "Night hours",
+      "holidayHours": "Holiday hours",
+      "sundayHolidayHours": "Sunday hours",
+      "overtimeNightHours": "Overtime night hours",
+      "overtimeSundayHolidayHours": "Overtime Sunday/holiday hours",
+      "overtimeNightSundayHolidayHours": "Overtime night Sunday/holiday hours",
+      "saveAndCalculate": "Save hours and calculate",
+      "saving": "Saving...",
+      "existingPayrolls": "Existing payrolls",
+      "payrollDetails": "Payroll details",
+      "period": "Payroll period",
+      "totalHours": "Total hours",
+      "grossPay": "Gross pay",
       "deductions": "Deductions",
-      "netPay": "Net Pay",
-      "noData": "No payroll data available for the current period.",
-      "futureDevelopment": "Note on Future Development",
-      "futureDevelopmentDescription": "This module will be restructured in the future. It should then take data from monthly reports and create payrolls with money amounts from them. Currently it still shows mock data for demonstration.",
+      "netPay": "Net pay",
+      "actions": "Actions",
+      "details": "Details",
+      "generatePDF": "Generate PDF",
+      "selectUserFirst": "Please select a user first",
+      "usersLoadError": "Failed to load users",
+      "payrollsLoadError": "Failed to load payrolls",
+      "saveError": "Failed to save hours",
+      "pdfError": "Failed to generate PDF",
       "loadError": "Error loading payroll data"
     }
   },
@@ -1355,12 +1378,43 @@
     },
     "tabs": {
       "worktimes": "Work Times & Activities",
+      "shifts": "Shift Plan",
       "todos": "To-Do Analytics",
       "requests": "Request Analytics"
     },
     "titles": {
       "todos": "To-Do Analytics",
       "requests": "Request Analytics"
+    },
+    "shifts": {
+      "actions": {
+        "add": "Add Shift",
+        "edit": "Edit Shift",
+        "delete": "Delete Shift",
+        "generate": "Generate Shift Plan",
+        "refresh": "Refresh"
+      },
+      "status": {
+        "scheduled": "Scheduled",
+        "confirmed": "Confirmed",
+        "cancelled": "Cancelled",
+        "swapped": "Swapped"
+      },
+      "legend": {
+        "scheduled": "Scheduled",
+        "confirmed": "Confirmed",
+        "cancelled": "Cancelled",
+        "swapped": "Swapped",
+        "unassigned": "Unassigned"
+      },
+      "messages": {
+        "loading": "Loading shifts...",
+        "loadError": "Error loading shifts",
+        "noShifts": "No shifts found",
+        "routeNotFound": "Route not found. Please restart server or check route.",
+        "unauthorized": "Not authenticated. Please log in again.",
+        "forbidden": "No permission for this action."
+      }
     },
     "filters": {
       "active": "Active",

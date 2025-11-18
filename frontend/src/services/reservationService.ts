@@ -48,6 +48,51 @@ export const reservationService = {
   async generatePinAndSend(id: number): Promise<Reservation> {
     const response = await axiosInstance.post(API_ENDPOINTS.RESERVATION.GENERATE_PIN_AND_SEND(id));
     return response.data.data || response.data;
+  },
+
+  /**
+   * Sendet Reservation-Einladung manuell (mit optionalen Parametern)
+   */
+  async sendInvitation(
+    id: number,
+    options?: {
+      guestPhone?: string;
+      guestEmail?: string;
+      customMessage?: string;
+      amount?: number;
+      currency?: string;
+    }
+  ): Promise<Reservation> {
+    const response = await axiosInstance.post(
+      API_ENDPOINTS.RESERVATION.SEND_INVITATION(id),
+      options || {}
+    );
+    return response.data.data || response.data;
+  },
+
+  /**
+   * Holt Notification-Logs für eine Reservierung
+   */
+  async getNotificationLogs(id: number): Promise<ReservationNotificationLog[]> {
+    const response = await axiosInstance.get(
+      API_ENDPOINTS.RESERVATION.NOTIFICATION_LOGS(id)
+    );
+    return response.data.data || response.data;
   }
 };
+
+export interface ReservationNotificationLog {
+  id: number;
+  reservationId: number;
+  notificationType: 'invitation' | 'pin' | 'checkin_confirmation';
+  channel: 'whatsapp' | 'email' | 'both';
+  success: boolean;
+  sentAt: string; // ISO datetime string
+  sentTo?: string | null;
+  message?: string | null;
+  paymentLink?: string | null;
+  checkInLink?: string | null;
+  errorMessage?: string | null;
+  createdAt: string; // ISO datetime string
+}
 

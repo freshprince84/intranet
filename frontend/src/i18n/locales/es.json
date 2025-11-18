@@ -26,6 +26,7 @@
     "description": "Descripción",
     "today": "Hoy",
     "week": "Semana",
+    "month": "Mes",
     "active": "Activo",
     "all": "Todos",
     "showMore": "Mostrar más",
@@ -701,6 +702,7 @@
     },
     "tables": {
       "tasks": "Tareas",
+      "reservations": "Reservaciones",
       "worktime": "Registro de tiempo",
       "users": "Usuarios",
       "roles": "Roles",
@@ -1005,10 +1007,6 @@
         "paid": "Pagado",
         "overdue": "Vencido",
         "cancelled": "Cancelado"
-      },
-      "groups": {
-        "users": "Usuarios",
-        "roles": "Roles"
       }
     },
     "operators": {
@@ -1053,13 +1051,34 @@
     "payrollComponent": {
       "title": "Nómina",
       "noPermission": "No tiene permiso para ver las nóminas.",
-      "totalHours": "Horas trabajadas",
+      "selectEmployee": "Seleccionar empleado",
+      "pleaseSelect": "Por favor seleccione",
+      "enterHours": "Registrar horas de trabajo",
+      "regularHours": "Horas regulares",
+      "overtimeHours": "Horas extras",
+      "nightHours": "Horas nocturnas",
+      "holidayHours": "Horas festivas",
+      "sundayHolidayHours": "Horas dominicales",
+      "overtimeNightHours": "Horas extras nocturnas",
+      "overtimeSundayHolidayHours": "Horas extras dominicales/festivas",
+      "overtimeNightSundayHolidayHours": "Horas extras nocturnas dominicales/festivas",
+      "saveAndCalculate": "Guardar horas y calcular",
+      "saving": "Guardando...",
+      "existingPayrolls": "Nóminas existentes",
+      "payrollDetails": "Detalles de nómina",
+      "period": "Período de liquidación",
+      "totalHours": "Total de horas",
       "grossPay": "Salario bruto",
       "deductions": "Deducciones",
       "netPay": "Salario neto",
-      "noData": "No hay datos de nómina disponibles para el período actual.",
-      "futureDevelopment": "Nota sobre desarrollo futuro",
-      "futureDevelopmentDescription": "Este módulo será reconstruido en el futuro. Entonces debería tomar los datos de los informes mensuales y crear nóminas con montos de dinero a partir de ellos. Actualmente todavía muestra datos simulados para demostración.",
+      "actions": "Acciones",
+      "details": "Detalles",
+      "generatePDF": "Generar PDF",
+      "selectUserFirst": "Por favor seleccione primero un usuario",
+      "usersLoadError": "No se pudieron cargar los usuarios",
+      "payrollsLoadError": "No se pudieron cargar las nóminas",
+      "saveError": "No se pudieron guardar las horas",
+      "pdfError": "No se pudo generar el PDF",
       "loadError": "Error al cargar los datos de nómina"
     }
   },
@@ -1354,12 +1373,43 @@
     },
     "tabs": {
       "worktimes": "Tiempos de trabajo y actividades",
+      "shifts": "Plan de Turnos",
       "todos": "Evaluaciones de tareas",
       "requests": "Evaluaciones de solicitudes"
     },
     "titles": {
       "todos": "Evaluaciones de tareas",
       "requests": "Evaluaciones de solicitudes"
+    },
+    "shifts": {
+      "actions": {
+        "add": "Añadir turno",
+        "edit": "Editar turno",
+        "delete": "Eliminar turno",
+        "generate": "Generar plan de turnos",
+        "refresh": "Actualizar"
+      },
+      "status": {
+        "scheduled": "Programado",
+        "confirmed": "Confirmado",
+        "cancelled": "Cancelado",
+        "swapped": "Intercambiado"
+      },
+      "legend": {
+        "scheduled": "Programado",
+        "confirmed": "Confirmado",
+        "cancelled": "Cancelado",
+        "swapped": "Intercambiado",
+        "unassigned": "Sin asignar"
+      },
+      "messages": {
+        "loading": "Cargando turnos...",
+        "loadError": "Error al cargar los turnos",
+        "noShifts": "No se encontraron turnos",
+        "routeNotFound": "Ruta no encontrada. Por favor, reinicie el servidor o verifique la ruta.",
+        "unauthorized": "No autenticado. Por favor, inicie sesión nuevamente.",
+        "forbidden": "Sin permiso para esta acción."
+      }
     },
     "filters": {
       "active": "Activo",

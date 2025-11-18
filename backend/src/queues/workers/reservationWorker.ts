@@ -1,7 +1,6 @@
 import { Worker, Job } from 'bullmq';
-import { BoldPaymentService } from '../../services/boldPaymentService';
-import { WhatsAppService } from '../../services/whatsappService';
-import { PrismaClient, ReservationStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import { ReservationNotificationService } from '../../services/reservationNotificationService';
 
 const prisma = new PrismaClient();
 
@@ -43,23 +42,9 @@ export function createReservationWorker(connection: any): Worker {
 
       console.log(`[Reservation Worker] Starte Verarbeitung für Reservierung ${reservationId} (Job ID: ${job.id})`);
 
-      let paymentLink: string | null = null;
-      let sentMessage: string | null = null;
-      let sentMessageAt: Date | null = null;
-
       // Prüfe ob Reservierung existiert
       const reservation = await prisma.reservation.findUnique({
-        where: { id: reservationId },
-        include: {
-          organization: {
-            select: {
-              id: true,
-              name: true,
-              displayName: true,
-              settings: true,
-            },
-          },
-        },
+        where: { id: reservationId }
       });
 
       if (!reservation) {
@@ -77,104 +62,44 @@ export function createReservationWorker(connection: any): Worker {
         };
       }
 
-      // Schritt 1: Payment-Link erstellen (wenn Telefonnummer vorhanden)
+      // Verwende neue Service-Methode sendReservationInvitation()
       if (contactType === 'phone' && guestPhone) {
         try {
-          console.log(`[Reservation Worker] Erstelle Payment-Link für Reservierung ${reservationId}...`);
-          const boldPaymentService = new BoldPaymentService(organizationId);
-          paymentLink = await boldPaymentService.createPaymentLink(
-            reservation,
-            amount,
-            currency,
-            `Zahlung für Reservierung ${guestName}`
+          const result = await ReservationNotificationService.sendReservationInvitation(
+            reservationId,
+            {
+              guestPhone,
+              guestEmail,
+              amount,
+              currency
+            }
           );
 
-          console.log(`[Reservation Worker] ✅ Payment-Link erstellt: ${paymentLink}`);
+          if (result.success) {
+            console.log(`[Reservation Worker] ✅ Einladung erfolgreich versendet für Reservierung ${reservationId}`);
+          } else {
+            console.warn(`[Reservation Worker] ⚠️ Einladung teilweise fehlgeschlagen für Reservierung ${reservationId}: ${result.error}`);
+            // Bei teilweisem Fehler: Fehler weiterwerfen, damit BullMQ retried
+            throw new Error(result.error || 'Einladung konnte nicht vollständig versendet werden');
+          }
+
+          return {
+            success: true,
+            paymentLink: result.paymentLink,
+            messageSent: result.messageSent,
+            reservationId,
+          };
         } catch (error) {
-          console.error(`[Reservation Worker] ❌ Fehler beim Erstellen des Payment-Links:`, error);
+          console.error(`[Reservation Worker] ❌ Fehler beim Versenden der Einladung:`, error);
           throw error; // Wird von BullMQ automatisch retried
         }
       }
 
-      // Schritt 2: WhatsApp-Nachricht senden (wenn Telefonnummer vorhanden)
-      if (contactType === 'phone' && guestPhone && paymentLink) {
-        try {
-          console.log(`[Reservation Worker] Sende WhatsApp-Nachricht für Reservierung ${reservationId}...`);
-          const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-          const checkInLink = `${frontendUrl}/check-in/${reservationId}`;
-
-          sentMessage = `Hola ${guestName},
-
-¡Bienvenido a La Familia Hostel!
-
-Tu reserva ha sido confirmada.
-Cargos: ${amount} ${currency}
-
-Puedes realizar el check-in en línea ahora:
-${checkInLink}
-
-Por favor, realiza el pago:
-${paymentLink}
-
-¡Te esperamos!`;
-
-          const whatsappService = new WhatsAppService(organizationId);
-          const templateName =
-            process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
-          const templateParams = [guestName, checkInLink, paymentLink];
-
-          console.log(`[Reservation Worker] Template Name: ${templateName}`);
-          console.log(`[Reservation Worker] Template Params: ${JSON.stringify(templateParams)}`);
-
-          const whatsappSuccess = await whatsappService.sendMessageWithFallback(
-            guestPhone,
-            sentMessage,
-            templateName,
-            templateParams
-          );
-
-          if (!whatsappSuccess) {
-            throw new Error('WhatsApp-Nachricht konnte nicht versendet werden (sendMessageWithFallback gab false zurück)');
-          }
-
-          sentMessageAt = new Date();
-          console.log(`[Reservation Worker] ✅ WhatsApp-Nachricht erfolgreich versendet`);
-        } catch (error) {
-          console.error(`[Reservation Worker] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
-          if (error instanceof Error) {
-            console.error(`[Reservation Worker] Fehlermeldung: ${error.message}`);
-          }
-          throw error; // Wird von BullMQ automatisch retried
-        }
-      }
-
-      // Schritt 3: Reservierung aktualisieren
-      try {
-        const updateData: any = {
-          paymentLink: paymentLink || undefined,
-        };
-
-        if (sentMessage) {
-          updateData.sentMessage = sentMessage;
-          updateData.sentMessageAt = sentMessageAt;
-          updateData.status = 'notification_sent' as ReservationStatus;
-        }
-
-        await prisma.reservation.update({
-          where: { id: reservationId },
-          data: updateData,
-        });
-
-        console.log(`[Reservation Worker] ✅ Reservierung ${reservationId} erfolgreich aktualisiert`);
-      } catch (error) {
-        console.error(`[Reservation Worker] ❌ Fehler beim Aktualisieren der Reservierung:`, error);
-        throw error;
-      }
-
+      // Wenn keine Telefonnummer vorhanden, überspringe
+      console.log(`[Reservation Worker] Keine Telefonnummer vorhanden, überspringe Einladung`);
       return {
         success: true,
-        paymentLink,
-        messageSent: !!sentMessage,
+        skipped: true,
         reservationId,
       };
     },

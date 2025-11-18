@@ -26,6 +26,7 @@ const ApiConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
     lobbyPmsPropertyId: '',
     lobbyPmsSyncEnabled: false,
     lobbyPmsAutoCreateTasks: false,
+    lobbyPmsAutoSendReservationInvitation: true, // Default: true (Rückwärtskompatibilität)
     lobbyPmsLateCheckInThreshold: '22:00',
     
     // TTLock
@@ -71,6 +72,7 @@ const ApiConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
         lobbyPmsPropertyId: lobbyPms.propertyId || '',
         lobbyPmsSyncEnabled: lobbyPms.syncEnabled || false,
         lobbyPmsAutoCreateTasks: lobbyPms.autoCreateTasks || false,
+        lobbyPmsAutoSendReservationInvitation: lobbyPms.autoSendReservationInvitation !== false, // Default: true
         lobbyPmsLateCheckInThreshold: lobbyPms.lateCheckInThreshold || '22:00',
         
         ttlockClientId: doorSystem.clientId || '',
@@ -122,6 +124,7 @@ const ApiConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
       lobbyPmsPropertyId: '',
       lobbyPmsSyncEnabled: false,
       lobbyPmsAutoCreateTasks: false,
+      lobbyPmsAutoSendReservationInvitation: true,
       lobbyPmsLateCheckInThreshold: '22:00',
       ttlockClientId: '',
       ttlockClientSecret: '',
@@ -185,6 +188,7 @@ const ApiConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
           propertyId: apiSettings.lobbyPmsPropertyId || undefined,
           syncEnabled: apiSettings.lobbyPmsSyncEnabled,
           autoCreateTasks: apiSettings.lobbyPmsAutoCreateTasks,
+          autoSendReservationInvitation: apiSettings.lobbyPmsAutoSendReservationInvitation,
           lateCheckInThreshold: apiSettings.lobbyPmsLateCheckInThreshold || undefined
         },
         doorSystem: {
@@ -402,6 +406,19 @@ const ApiConfigurationTab: React.FC<Props> = ({ organization, onSave }) => {
                 />
                 <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                   {t('organization.api.lobbyPms.autoCreateTasks')}
+                </span>
+              </label>
+
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="lobbyPmsAutoSendReservationInvitation"
+                  checked={apiSettings.lobbyPmsAutoSendReservationInvitation}
+                  onChange={handleChange}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  {t('organization.api.lobbyPms.autoSendReservationInvitation', 'Automatisch Einladung bei Reservation-Erstellung senden')}
                 </span>
               </label>
             </div>

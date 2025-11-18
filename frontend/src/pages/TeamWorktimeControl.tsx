@@ -7,9 +7,10 @@ import { format } from 'date-fns';
 import ActiveUsersList from '../components/teamWorktime/ActiveUsersList.tsx';
 import TodoAnalyticsTab from '../components/teamWorktime/TodoAnalyticsTab.tsx';
 import RequestAnalyticsTab from '../components/teamWorktime/RequestAnalyticsTab.tsx';
+import ShiftPlannerTab from '../components/teamWorktime/ShiftPlannerTab.tsx';
 import { usePermissions } from '../hooks/usePermissions.ts';
 
-type TabType = 'worktimes' | 'todos' | 'requests';
+type TabType = 'worktimes' | 'shifts' | 'todos' | 'requests';
 
 const TeamWorktimeControl: React.FC = () => {
   const { t } = useTranslation();
@@ -183,6 +184,16 @@ const TeamWorktimeControl: React.FC = () => {
                   {t('teamWorktime.tabs.worktimes')}
                 </button>
                 <button
+                  onClick={() => setActiveTab('shifts')}
+                  className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 ${
+                    activeTab === 'shifts'
+                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {t('teamWorktime.tabs.shifts')}
+                </button>
+                <button
                   onClick={() => setActiveTab('todos')}
                   className={`py-2 px-1 border-b-2 font-medium text-xs sm:text-sm flex-shrink-0 ${
                     activeTab === 'todos'
@@ -218,6 +229,9 @@ const TeamWorktimeControl: React.FC = () => {
                 showTodos={true}
                 showRequests={true}
               />
+            )}
+            {activeTab === 'shifts' && (
+              <ShiftPlannerTab selectedDate={selectedDate} />
             )}
             {activeTab === 'todos' && (
               <TodoAnalyticsTab selectedDate={selectedDate} />

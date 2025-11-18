@@ -42,6 +42,7 @@ Dieses Verzeichnis enth채lt speziell f체r Claude optimierte Ressourcen, die es K
 - **[QUEUE_SYSTEM.md](../technical/QUEUE_SYSTEM.md)** - Queue-System Hauptdokumentation
 - **[QUEUE_SYSTEM_DEPLOYMENT.md](../technical/QUEUE_SYSTEM_DEPLOYMENT.md)** - Deployment-Anleitung
 - **[QUEUE_SYSTEM_HETZNER_SETUP.md](../technical/QUEUE_SYSTEM_HETZNER_SETUP.md)** - Hetzner Server Setup
+- **[QUEUE_SYSTEM_IPV4_FIX.md](../technical/QUEUE_SYSTEM_IPV4_FIX.md)** - IPv4/IPv6-Verbindungsproblem und Fix (wichtig!)
 
 ### UI-Standards und Container-Strukturen
 - **[container-structures.md](docs/container-structures.md)** - Konsistente Container-Strukturen f체r Seiten und Boxen - **MUSS bei neuen Seiten befolgt werden!**
@@ -96,5 +97,8 @@ F체r die strukturierte Umsetzung neuer Module existieren detaillierte Schritt-f�
   - [MITARBEITERLEBENSZYKLUS_PROZESS.md](../implementation_plans/MITARBEITERLEBENSZYKLUS_PROZESS.md) - Detaillierte Prozessbeschreibung
   - [MITARBEITERLEBENSZYKLUS_ZUSAMMENFASSUNG.md](../implementation_plans/MITARBEITERLEBENSZYKLUS_ZUSAMMENFASSUNG.md) - Prozess-Zusammenfassung
   - [MITARBEITERLEBENSZYKLUS_DETAILLIERT.md](../implementation_plans/MITARBEITERLEBENSZYKLUS_DETAILLIERT.md) - Detaillierte Komponenten-Spezifikationen
+
+- **Schichtplaner** - Automatische Schichtplanung mit Verf체gbarkeiten und Pr채ferenzen
+  - [SCHICHTPLANER_ANALYSE_UND_PLAN.md](../implementation_plans/SCHICHTPLANER_ANALYSE_UND_PLAN.md) - Analyse, Recherche und Implementierungsplan
 
 Details zu allen Pl채nen siehe `/docs/implementation_plans/` 

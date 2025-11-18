@@ -170,7 +170,55 @@ sudo nano /etc/redis/redis.conf
 sudo systemctl restart redis-server
 ```
 
-### Problem: Redis-Verbindung fehlgeschlagen
+### Problem: Redis-Verbindung fehlgeschlagen (IPv6 vs IPv4)
+
+**Symptom:**
+```
+[Queue Service] Redis-Verbindungsfehler: connect ECONNREFUSED ::1:6379
+[Queue Service] Redis-Verbindung fehlgeschlagen: Error: Stream isn't writeable
+```
+
+**Ursache:**
+- Redis läuft auf IPv4 (127.0.0.1), aber ioredis versucht IPv6 (::1)
+- Kann auf Linux-Servern auftreten, wenn IPv6 aktiviert ist
+
+**Lösung:**
+1. **Code-Fix** (bereits implementiert):
+   - `family: 4` in `queueService.ts` erzwingt IPv4-Verbindung
+   - Wird automatisch beim nächsten Deployment übernommen
+
+2. **Redis-Verbindung testen:**
+   ```bash
+   # IPv4 explizit testen
+   redis-cli -h 127.0.0.1 ping
+   # Sollte "PONG" zurückgeben
+   
+   # Standard-Test
+   redis-cli ping
+   # Sollte "PONG" zurückgeben
+   ```
+
+3. **Redis-Konfiguration prüfen:**
+   ```bash
+   # Redis-Konfiguration anzeigen
+   sudo nano /etc/redis/redis.conf
+   
+   # Prüfen:
+   # bind 127.0.0.1  # Sollte auf IPv4 gebunden sein
+   # #bind ::1       # IPv6 sollte auskommentiert sein (optional)
+   ```
+
+4. **Redis neu starten (falls Konfiguration geändert):**
+   ```bash
+   sudo systemctl restart redis-server
+   ```
+
+5. **Server neu starten:**
+   ```bash
+   pm2 restart intranet-backend
+   ```
+
+### Problem: Redis-Verbindung fehlgeschlagen (allgemein)
 
 **Symptom:**
 ```
@@ -187,6 +235,9 @@ sudo systemctl start redis-server
 
 # Port prüfen
 netstat -tuln | grep 6379
+
+# Redis-Verbindung testen
+redis-cli ping  # Sollte "PONG" zurückgeben
 ```
 
 ### Problem: Queue-System startet nicht

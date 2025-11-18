@@ -112,6 +112,26 @@ export const API_ENDPOINTS = {
             TODOS_SHIFTS: '/team-worktime/analytics/todos-shifts'
         }
     },
+    // Shift Planning
+    SHIFTS: {
+        BASE: '/shifts',
+        BY_ID: (id: number) => `/shifts/${id}`,
+        GENERATE: '/shifts/generate',
+        TEMPLATES: {
+            BASE: '/shifts/templates',
+            BY_ID: (id: number) => `/shifts/templates/${id}`
+        },
+        AVAILABILITIES: {
+            BASE: '/shifts/availabilities',
+            BY_ID: (id: number) => `/shifts/availabilities/${id}`
+        },
+        SWAPS: {
+            BASE: '/shifts/swaps',
+            BY_ID: (id: number) => `/shifts/swaps/${id}`,
+            APPROVE: (id: number) => `/shifts/swaps/${id}/approve`,
+            REJECT: (id: number) => `/shifts/swaps/${id}/reject`
+        }
+    },
     // Cerebro Wiki-System
     CEREBRO: {
         // Artikel
@@ -199,6 +219,13 @@ export const API_ENDPOINTS = {
         CHECK_UNBILLED: '/monthly-consultation-reports/check-unbilled',
         PDF: (id: number) => `/monthly-consultation-reports/${id}/pdf`
     },
+    // Payroll
+    PAYROLL: {
+        BASE: '/payroll',
+        HOURS: '/payroll/hours',
+        CALCULATE: '/payroll/calculate',
+        PDF: (payrollId: number) => `/payroll/pdf/${payrollId}`
+    },
     // Database Management
     DATABASE: {
         TABLES: '/database/tables',
@@ -258,7 +285,9 @@ export const API_ENDPOINTS = {
         CREATE: '/reservations',
         BY_ID: (id: number) => `/reservations/${id}`,
         UPDATE_GUEST_CONTACT: (id: number) => `/reservations/${id}/guest-contact`,
-        GENERATE_PIN_AND_SEND: (id: number) => `/reservations/${id}/generate-pin-and-send`
+        GENERATE_PIN_AND_SEND: (id: number) => `/reservations/${id}/generate-pin-and-send`,
+        SEND_INVITATION: (id: number) => `/reservations/${id}/send-invitation`,
+        NOTIFICATION_LOGS: (id: number) => `/reservations/${id}/notification-logs`
     },
     // TTLock (Türsystem)
     TTLOCK: {

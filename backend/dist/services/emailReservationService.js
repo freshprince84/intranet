@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -11,8 +44,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailReservationService = void 0;
 const client_1 = require("@prisma/client");
-const whatsappService_1 = require("./whatsappService");
-const boldPaymentService_1 = require("./boldPaymentService");
 const emailReadingService_1 = require("./emailReadingService");
 const emailReservationParser_1 = require("./emailReservationParser");
 const prisma = new client_1.PrismaClient();
@@ -84,59 +115,17 @@ class EmailReservationService {
                 // Automatisch WhatsApp-Nachricht senden (wenn Telefonnummer vorhanden UND aktiviert)
                 if (EMAIL_RESERVATION_WHATSAPP_ENABLED && reservation.guestPhone) {
                     try {
-                        // Erstelle Zahlungslink
-                        const boldPaymentService = new boldPaymentService_1.BoldPaymentService(reservation.organizationId);
-                        const paymentLink = yield boldPaymentService.createPaymentLink(reservation, parsedEmail.amount, parsedEmail.currency || 'COP', `Zahlung für Reservierung ${reservation.guestName}`);
-                        console.log(`[EmailReservation] Payment-Link erstellt: ${paymentLink}`);
-                        // Erstelle Check-in-Link
-                        const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-                        const checkInLink = `${frontendUrl}/check-in/${reservation.id}`;
-                        // Erstelle Nachrichtentext
-                        const sentMessage = `Hola ${reservation.guestName},
-
-¡Bienvenido a La Familia Hostel!
-
-Tu reserva ha sido confirmada.
-Cargos: ${parsedEmail.amount} ${parsedEmail.currency || 'COP'}
-
-Puedes realizar el check-in en línea ahora:
-${checkInLink}
-
-Por favor, realiza el pago:
-${paymentLink}
-
-¡Te esperamos!`;
-                        // Sende WhatsApp-Nachricht
-                        const whatsappService = new whatsappService_1.WhatsAppService(reservation.organizationId);
-                        const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
-                        const templateParams = [
-                            reservation.guestName,
-                            checkInLink,
-                            paymentLink
-                        ];
-                        const whatsappSuccess = yield whatsappService.sendMessageWithFallback(reservation.guestPhone, sentMessage, templateName, templateParams);
-                        if (whatsappSuccess) {
-                            // Speichere versendete Nachricht und Payment Link
-                            yield prisma.reservation.update({
-                                where: { id: reservation.id },
-                                data: {
-                                    sentMessage,
-                                    sentMessageAt: new Date(),
-                                    paymentLink,
-                                    status: 'notification_sent'
-                                }
-                            });
+                        // Verwende neue Service-Methode sendReservationInvitation()
+                        const { ReservationNotificationService } = yield Promise.resolve().then(() => __importStar(require('./reservationNotificationService')));
+                        const result = yield ReservationNotificationService.sendReservationInvitation(reservation.id, {
+                            amount: parsedEmail.amount,
+                            currency: parsedEmail.currency || 'COP'
+                        });
+                        if (result.success) {
                             console.log(`[EmailReservation] ✅ WhatsApp-Nachricht erfolgreich versendet für Reservation ${reservation.id}`);
                         }
                         else {
-                            console.warn(`[EmailReservation] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservation ${reservation.id}`);
-                            // Payment Link trotzdem speichern
-                            if (paymentLink) {
-                                yield prisma.reservation.update({
-                                    where: { id: reservation.id },
-                                    data: { paymentLink }
-                                });
-                            }
+                            console.warn(`[EmailReservation] ⚠️ WhatsApp-Nachricht konnte nicht versendet werden für Reservation ${reservation.id}: ${result.error}`);
                         }
                     }
                     catch (whatsappError) {

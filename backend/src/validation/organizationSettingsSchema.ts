@@ -17,6 +17,7 @@ const lobbyPmsSchema = z.object({
     .regex(/^([0-1][0-9]|2[0-3]):[0-5][0-9]$/, 'Ungültiges Zeitformat (erwartet: HH:MM)')
     .optional(),
   notificationChannels: z.array(z.enum(['email', 'whatsapp'])).optional(),
+  autoSendReservationInvitation: z.boolean().optional(), // Default: true (Rückwärtskompatibilität)
 }).optional();
 
 // Door System Settings Schema (TTLock)

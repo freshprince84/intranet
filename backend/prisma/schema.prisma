@@ -73,6 +73,12 @@ model User {
   profileComplete          Boolean                     @default(false) // Profilvollständigkeit nach Registrierung (username, email, country, language)
   phoneNumber              String? // WhatsApp-Telefonnummer (mit Ländercode, z.B. +573001234567)
   whatsappConversations    WhatsAppConversation[]
+  shifts                   Shift[]
+  availabilities           UserAvailability[]
+  createdShifts            Shift[]                     @relation("ShiftCreator")
+  confirmedShifts          Shift[]                     @relation("ShiftConfirmer")
+  swapRequestsSent         ShiftSwapRequest[]          @relation("SwapRequester")
+  swapRequestsReceived     ShiftSwapRequest[]          @relation("SwapRequestee")
 }
 
 model Organization {
@@ -153,6 +159,9 @@ model Role {
   tasks          Task[]
   users          UserRole[]
   branches       RoleBranch[] // Spezifische Branch-Zuweisungen (nur wenn allBranches = false)
+  shiftTemplates ShiftTemplate[]
+  shifts         Shift[]
+  availabilities UserAvailability[]
 
   @@unique([name, organizationId])
 }
@@ -197,6 +206,9 @@ model Branch {
   roles                 RoleBranch[] // Rollen, die für diese Branch verfügbar sind
   whatsappConversations WhatsAppConversation[]
   phoneNumberMappings   WhatsAppPhoneNumberMapping[]
+  shiftTemplates        ShiftTemplate[]
+  shifts                Shift[]
+  availabilities        UserAvailability[]
 }
 
 model UsersBranches {
@@ -431,6 +443,12 @@ model UserNotificationSettings {
   joinRequestReceived            Boolean?
   joinRequestRejected            Boolean?
   organizationInvitationReceived Boolean?
+  shiftAssigned                  Boolean?
+  shiftUpdated                   Boolean?
+  shiftCancelled                 Boolean?
+  shiftSwapRequest               Boolean?
+  shiftSwapApproved              Boolean?
+  shiftSwapRejected              Boolean?
   user                           User     @relation(fields: [userId], references: [id])
 }
 
@@ -792,6 +810,8 @@ enum NotificationType {
   joinApproved
   joinRejected
   organizationInvitation
+  shift
+  shift_swap
 }
 
 enum InvoiceStatus {
@@ -1045,8 +1065,8 @@ model OnboardingEvent {
 // ============================================
 
 model Reservation {
-  id                       Int                      @id @default(autoincrement())
-  lobbyReservationId       String?                  @unique // ID aus LobbyPMS
+  id                       Int                          @id @default(autoincrement())
+  lobbyReservationId       String?                      @unique // ID aus LobbyPMS
   guestName                String
   guestEmail               String?
   guestPhone               String?
@@ -1055,21 +1075,21 @@ model Reservation {
   arrivalTime              DateTime? // Geschätzte Ankunftszeit
   roomNumber               String?
   roomDescription          String?
-  status                   ReservationStatus        @default(confirmed)
-  paymentStatus            PaymentStatus            @default(pending)
-  amount                   Decimal?                 @db.Decimal(10, 2) // Preis der Reservierung
-  currency                 String?                  @default("COP") // Währung (COP, USD, EUR, etc.)
+  status                   ReservationStatus            @default(confirmed)
+  paymentStatus            PaymentStatus                @default(pending)
+  amount                   Decimal?                     @db.Decimal(10, 2) // Preis der Reservierung
+  currency                 String?                      @default("COP") // Währung (COP, USD, EUR, etc.)
   paymentLink              String? // Bold Payment Link
   doorPin                  String? // PIN für Türsystem
   doorAppName              String? // App-Name (z.B. "TTLock")
   ttlLockId                String? // TTLock Lock ID
   ttlLockPassword          String? // TTLock Passcode/Password
-  onlineCheckInCompleted   Boolean                  @default(false)
+  onlineCheckInCompleted   Boolean                      @default(false)
   onlineCheckInCompletedAt DateTime?
   invitationSentAt         DateTime? // Wann wurde die Check-in-Einladung versendet
   sentMessage              String? // Versendete WhatsApp-Nachricht (für Anzeige)
   sentMessageAt            DateTime? // Wann wurde die Nachricht versendet
-  sireRegistered           Boolean                  @default(false)
+  sireRegistered           Boolean                      @default(false)
   sireRegistrationId       String? // ID der SIRE-Registrierung
   sireRegisteredAt         DateTime?
   sireRegistrationError    String? // Fehlermeldung bei fehlgeschlagener Registrierung
@@ -1077,12 +1097,13 @@ model Reservation {
   guestPassportNumber      String? // Passnummer (für SIRE)
   guestBirthDate           DateTime? // Geburtsdatum (für SIRE)
   organizationId           Int
-  organization             Organization             @relation(fields: [organizationId], references: [id])
+  organization             Organization                 @relation(fields: [organizationId], references: [id])
   taskId                   Int? // Verknüpfter Task
-  task                     Task?                    @relation
-  createdAt                DateTime                 @default(now())
-  updatedAt                DateTime                 @updatedAt
+  task                     Task?                        @relation
+  createdAt                DateTime                     @default(now())
+  updatedAt                DateTime                     @updatedAt
   syncHistory              ReservationSyncHistory[]
+  notificationLogs         ReservationNotificationLog[] @relation("NotificationLogs")
 
   @@index([organizationId])
   @@index([checkInDate])
@@ -1102,6 +1123,27 @@ model ReservationSyncHistory {
 
   @@index([reservationId])
   @@index([syncedAt])
+}
+
+model ReservationNotificationLog {
+  id               Int         @id @default(autoincrement())
+  reservationId    Int
+  reservation      Reservation @relation("NotificationLogs", fields: [reservationId], references: [id], onDelete: Cascade)
+  notificationType String // 'invitation', 'pin', 'checkin_confirmation'
+  channel          String // 'whatsapp', 'email', 'both'
+  success          Boolean
+  sentAt           DateTime    @default(now())
+  sentTo           String? // Telefonnummer oder E-Mail-Adresse
+  message          String? // Versendete Nachricht
+  paymentLink      String? // Zahlungslink (falls relevant)
+  checkInLink      String? // Check-in-Link (falls relevant)
+  errorMessage     String? // Fehlermeldung (falls Fehler)
+  createdAt        DateTime    @default(now())
+
+  @@index([reservationId])
+  @@index([sentAt])
+  @@index([notificationType])
+  @@index([success])
 }
 
 model WhatsAppPhoneNumberMapping {
@@ -1135,4 +1177,149 @@ model WhatsAppConversation {
   @@index([phoneNumber])
   @@index([branchId])
   @@index([userId])
+}
+
+// ============================================
+// SHIFT PLANNING MODELS
+// ============================================
+
+enum AvailabilityType {
+  available // Verfügbar
+  preferred // Bevorzugt
+  unavailable // Nicht verfügbar
+}
+
+enum ShiftStatus {
+  scheduled // Geplant, aber noch nicht bestätigt
+  confirmed // Bestätigt vom Mitarbeiter
+  cancelled // Abgesagt
+  swapped // Getauscht
+}
+
+enum SwapStatus {
+  pending // Wartet auf Antwort
+  approved // Genehmigt
+  rejected // Abgelehnt
+  cancelled // Abgebrochen
+}
+
+// Schicht-Template: Definiert welche Schichten eine Rolle pro Tag haben kann
+model ShiftTemplate {
+  id        Int      @id @default(autoincrement())
+  roleId    Int
+  branchId  Int
+  name      String // z.B. "Frühschicht", "Spätschicht", "Nachtschicht"
+  startTime String // Format: "HH:mm" (z.B. "06:00")
+  endTime   String // Format: "HH:mm" (z.B. "14:00")
+  duration  Float? // Optional: Dauer in Stunden (z.B. 8.0) - nur für Anzeige/Statistiken
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  role      Role     @relation(fields: [roleId], references: [id])
+  branch    Branch   @relation(fields: [branchId], references: [id])
+  shifts    Shift[] // Tatsächliche Schichten basierend auf diesem Template
+
+  @@unique([roleId, branchId, name]) // Pro Rolle/Branch darf ein Schichtname nur einmal vorkommen
+  @@index([roleId, branchId])
+}
+
+// Verfügbarkeits-Regel für einen User
+model UserAvailability {
+  id       Int  @id @default(autoincrement())
+  userId   Int
+  branchId Int? // Optional: Branch-spezifische Verfügbarkeit
+  roleId   Int? // Optional: Rolle-spezifische Verfügbarkeit
+
+  // Verfügbarkeits-Pattern
+  dayOfWeek Int? // 0=Sonntag, 1=Montag, ..., 6=Samstag (null = alle Tage)
+  startTime String? // Format: "HH:mm" (null = ganzer Tag)
+  endTime   String? // Format: "HH:mm" (null = ganzer Tag)
+
+  // Oder: Spezifische Datumsbereiche
+  startDate DateTime?
+  endDate   DateTime?
+
+  // Typ der Verfügbarkeit
+  type AvailabilityType @default(available) // available, preferred, unavailable
+
+  // Priorität (für automatische Planung)
+  priority Int @default(5) // 1-10, höher = bevorzugt
+
+  notes     String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+  branch    Branch?  @relation(fields: [branchId], references: [id])
+  role      Role?    @relation(fields: [roleId], references: [id])
+
+  @@index([userId])
+  @@index([branchId])
+  @@index([roleId])
+  @@index([dayOfWeek])
+}
+
+// Tatsächliche Schicht-Zuweisung
+model Shift {
+  id              Int      @id @default(autoincrement())
+  shiftTemplateId Int
+  branchId        Int
+  roleId          Int
+  userId          Int? // Zugewiesener User (null = noch nicht zugewiesen)
+  date            DateTime // Datum der Schicht (nur Datum, Zeit wird ignoriert)
+  startTime       DateTime // Vollständiges DateTime (Datum + Startzeit)
+  endTime         DateTime // Vollständiges DateTime (Datum + Endzeit)
+
+  // Status
+  status ShiftStatus @default(scheduled) // scheduled, confirmed, cancelled, swapped
+
+  // Metadaten
+  notes       String?
+  createdBy   Int // User-ID, der die Schicht erstellt hat
+  confirmedAt DateTime?
+  confirmedBy Int? // User-ID, der die Schicht bestätigt hat
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shiftTemplate ShiftTemplate @relation(fields: [shiftTemplateId], references: [id])
+  branch        Branch        @relation(fields: [branchId], references: [id])
+  role          Role          @relation(fields: [roleId], references: [id])
+  user          User?         @relation(fields: [userId], references: [id])
+  creator       User          @relation("ShiftCreator", fields: [createdBy], references: [id])
+  confirmer     User?         @relation("ShiftConfirmer", fields: [confirmedBy], references: [id])
+
+  // Schichttausch
+  swapRequests ShiftSwapRequest[] @relation("OriginalShift")
+  swapTargets  ShiftSwapRequest[] @relation("TargetShift")
+
+  @@index([branchId, date])
+  @@index([roleId, date])
+  @@index([userId, date])
+  @@index([date])
+  @@index([status])
+}
+
+// Schichttausch-Anfrage
+model ShiftSwapRequest {
+  id              Int        @id @default(autoincrement())
+  originalShiftId Int // Schicht, die abgegeben werden soll
+  targetShiftId   Int // Schicht, die übernommen werden soll
+  requestedBy     Int // User, der den Tausch anfragt
+  requestedFrom   Int // User, der die andere Schicht hat
+  status          SwapStatus @default(pending)
+  message         String?
+  responseMessage String?
+  respondedAt     DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  originalShift Shift @relation("OriginalShift", fields: [originalShiftId], references: [id])
+  targetShift   Shift @relation("TargetShift", fields: [targetShiftId], references: [id])
+  requester     User  @relation("SwapRequester", fields: [requestedBy], references: [id])
+  requestee     User  @relation("SwapRequestee", fields: [requestedFrom], references: [id])
+
+  @@index([requestedBy])
+  @@index([requestedFrom])
+  @@index([status])
 }

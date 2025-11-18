@@ -275,7 +275,44 @@ sudo systemctl enable redis-server
 
 ## 7. Troubleshooting
 
-### Problem: Redis-Verbindung fehlgeschlagen
+### Problem: Redis-Verbindung fehlgeschlagen (IPv6 vs IPv4)
+
+**Symptom:**
+```
+[Queue Service] Redis-Verbindungsfehler: connect ECONNREFUSED ::1:6379
+[Queue Service] Redis-Verbindung fehlgeschlagen: Error: Stream isn't writeable
+```
+
+**Ursache:**
+- Redis/Memurai läuft auf IPv4 (127.0.0.1), aber ioredis versucht IPv6 (::1)
+- Häufig auf Windows mit Memurai, kann aber auch auf Linux auftreten
+
+**Lösung:**
+1. **Code-Fix** (bereits implementiert):
+   - `family: 4` in `queueService.ts` erzwingt IPv4-Verbindung
+   - Siehe: `backend/src/services/queueService.ts` Zeile 24
+
+2. **Redis/Memurai prüfen:**
+   ```bash
+   # Windows (Memurai)
+   memurai-cli ping  # Sollte "PONG" zurückgeben
+   
+   # Linux (Redis)
+   redis-cli ping  # Sollte "PONG" zurückgeben
+   ```
+
+3. **Verbindung testen:**
+   ```bash
+   # IPv4 explizit testen
+   redis-cli -h 127.0.0.1 ping
+   ```
+
+4. **Falls Problem weiterhin besteht:**
+   - Prüfen ob Redis/Memurai auf IPv4 läuft: `netstat -an | grep 6379`
+   - Redis-Konfiguration prüfen: `/etc/redis/redis.conf` (Linux)
+   - Memurai-Konfiguration prüfen (Windows)
+
+### Problem: Redis-Verbindung fehlgeschlagen (allgemein)
 
 **Symptom:**
 ```
@@ -283,9 +320,10 @@ sudo systemctl enable redis-server
 ```
 
 **Lösung:**
-1. Prüfen ob Redis läuft: `sudo systemctl status redis-server`
-2. Redis starten: `sudo systemctl start redis-server`
-3. Port prüfen: `netstat -tuln | grep 6379`
+1. Prüfen ob Redis läuft: `sudo systemctl status redis-server` (Linux) oder Memurai-Service (Windows)
+2. Redis starten: `sudo systemctl start redis-server` (Linux)
+3. Port prüfen: `netstat -tuln | grep 6379` (Linux) oder `netstat -an | findstr 6379` (Windows)
+4. Firewall prüfen (falls aktiv)
 
 ### Problem: Redis-Passwort falsch
 

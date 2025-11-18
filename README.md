@@ -71,6 +71,7 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [QUEUE_SYSTEM_DEPLOYMENT.md](docs/technical/QUEUE_SYSTEM_DEPLOYMENT.md) - Queue-System Deployment-Anleitung
 - [QUEUE_SYSTEM_HETZNER_SETUP.md](docs/technical/QUEUE_SYSTEM_HETZNER_SETUP.md) - Queue-System Hetzner Server Setup
 - [QUEUE_SYSTEM_SETUP_LOCAL.md](docs/technical/QUEUE_SYSTEM_SETUP_LOCAL.md) - Queue-System Lokale Setup-Anleitung (Windows)
+- [QUEUE_SYSTEM_IPV4_FIX.md](docs/technical/QUEUE_SYSTEM_IPV4_FIX.md) - IPv4/IPv6-Verbindungsproblem und Fix
 - [QUEUE_PERFORMANCE_VERBESSERUNGEN.md](docs/technical/QUEUE_PERFORMANCE_VERBESSERUNGEN.md) - Queue-System Performance-Verbesserungen
 
 ### Modulspezifische Dokumentation
@@ -98,6 +99,7 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [MITARBEITERLEBENSZYKLUS_PROZESS.md](docs/implementation_plans/MITARBEITERLEBENSZYKLUS_PROZESS.md) - Detaillierte Prozessbeschreibung (Schritt für Schritt)
 - [MITARBEITERLEBENSZYKLUS_ZUSAMMENFASSUNG.md](docs/implementation_plans/MITARBEITERLEBENSZYKLUS_ZUSAMMENFASSUNG.md) - Prozess-Zusammenfassung (User-Flows, Komponenten-Übersicht)
 - [MITARBEITERLEBENSZYKLUS_DETAILLIERT.md](docs/implementation_plans/MITARBEITERLEBENSZYKLUS_DETAILLIERT.md) - **NEU**: Detaillierte Komponenten-Spezifikationen mit Code-Integration
+- [SCHICHTPLANER_ANALYSE_UND_PLAN.md](docs/implementation_plans/SCHICHTPLANER_ANALYSE_UND_PLAN.md) - **NEU**: Schichtplaner - Analyse, Recherche und Implementierungsplan
 
 ## Claude-spezifische Dokumentation
 - [claude/README.md](docs/claude/README.md) - Übersicht der speziell für Claude optimierten Ressourcen

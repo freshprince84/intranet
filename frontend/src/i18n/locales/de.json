@@ -25,6 +25,7 @@
     "description": "Beschreibung",
     "today": "Heute",
     "week": "Woche",
+    "month": "Monat",
     "active": "Aktive",
     "all": "Alle",
     "showMore": "Mehr anzeigen",
@@ -555,6 +556,7 @@
     },
     "tables": {
       "tasks": "To Do's",
+      "reservations": "Reservierungen",
       "worktime": "Time Tracker",
       "users": "Benutzer",
       "roles": "Rollen",
@@ -925,13 +927,34 @@
     "payrollComponent": {
       "title": "Lohnabrechnung",
       "noPermission": "Sie haben keine Berechtigung, Lohnabrechnungen einzusehen.",
-      "totalHours": "Arbeitsstunden",
+      "selectEmployee": "Mitarbeiter auswählen",
+      "pleaseSelect": "Bitte auswählen",
+      "enterHours": "Arbeitsstunden erfassen",
+      "regularHours": "Reguläre Stunden",
+      "overtimeHours": "Überstunden",
+      "nightHours": "Nachtstunden",
+      "holidayHours": "Feiertagsstunden",
+      "sundayHolidayHours": "Sonntagsstunden",
+      "overtimeNightHours": "Nachtüberstunden",
+      "overtimeSundayHolidayHours": "Sonntags-/Feiertagsüberstunden",
+      "overtimeNightSundayHolidayHours": "Nacht-Sonntags-/Feiertagsüberstunden",
+      "saveAndCalculate": "Stunden speichern und berechnen",
+      "saving": "Wird gespeichert...",
+      "existingPayrolls": "Bestehende Abrechnungen",
+      "payrollDetails": "Lohnabrechnung Details",
+      "period": "Abrechnungszeitraum",
+      "totalHours": "Gesamt Stunden",
       "grossPay": "Bruttolohn",
       "deductions": "Abzüge",
       "netPay": "Nettolohn",
-      "noData": "Keine Lohndaten für den aktuellen Zeitraum verfügbar.",
-      "futureDevelopment": "Hinweis zur zukünftigen Entwicklung",
-      "futureDevelopmentDescription": "Dieses Modul wird in Zukunft umgebaut. Es soll dann die Daten aus den Monatsabrechnungen übernehmen und daraus Lohnabrechnungen mit Geldbeträgen erstellen. Derzeit zeigt es noch Mock-Daten zur Demonstration.",
+      "actions": "Aktionen",
+      "details": "Details",
+      "generatePDF": "PDF generieren",
+      "selectUserFirst": "Bitte wählen Sie zuerst einen Benutzer aus",
+      "usersLoadError": "Benutzer konnten nicht geladen werden",
+      "payrollsLoadError": "Abrechnungen konnten nicht geladen werden",
+      "saveError": "Stunden konnten nicht gespeichert werden",
+      "pdfError": "PDF konnte nicht generiert werden",
       "loadError": "Fehler beim Laden der Lohndaten"
     }
   },
@@ -1377,12 +1400,43 @@
     },
     "tabs": {
       "worktimes": "Arbeitszeiten & Aktivitäten",
+      "shifts": "Schichtplan",
       "todos": "To-Do-Auswertungen",
       "requests": "Request-Auswertungen"
     },
     "titles": {
       "todos": "To-Do-Auswertungen",
       "requests": "Request-Auswertungen"
+    },
+    "shifts": {
+      "actions": {
+        "add": "Schicht hinzufügen",
+        "edit": "Schicht bearbeiten",
+        "delete": "Schicht löschen",
+        "generate": "Schichtplan generieren",
+        "refresh": "Aktualisieren"
+      },
+      "status": {
+        "scheduled": "Geplant",
+        "confirmed": "Bestätigt",
+        "cancelled": "Abgesagt",
+        "swapped": "Getauscht"
+      },
+      "legend": {
+        "scheduled": "Geplant",
+        "confirmed": "Bestätigt",
+        "cancelled": "Abgesagt",
+        "swapped": "Getauscht",
+        "unassigned": "Nicht zugewiesen"
+      },
+      "messages": {
+        "loading": "Lade Schichten...",
+        "loadError": "Fehler beim Laden der Schichten",
+        "noShifts": "Keine Schichten gefunden",
+        "routeNotFound": "Route nicht gefunden. Bitte Server neu starten oder Route prüfen.",
+        "unauthorized": "Nicht authentifiziert. Bitte erneut anmelden.",
+        "forbidden": "Keine Berechtigung für diese Aktion."
+      }
     },
     "filters": {
       "active": "Aktive",
