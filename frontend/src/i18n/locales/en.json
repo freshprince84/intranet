@@ -1088,6 +1088,7 @@
       "duplicatePeriodError": "A payroll already exists for the period {{periodStart}} to {{periodEnd}}",
       "periodStart": "Period Start",
       "periodEnd": "Period End",
+      "noEditPermission": "You do not have permission to edit payroll. You can only view the data.",
       "contractTypes": {
         "tiempo_completo": "Full Time (>21 days/month)",
         "tiempo_parcial_7": "Part Time (≤7 days/month)",

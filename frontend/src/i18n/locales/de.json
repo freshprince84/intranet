@@ -975,6 +975,7 @@
       "duplicatePeriodError": "Für den Zeitraum {{periodStart}} bis {{periodEnd}} existiert bereits eine Lohnabrechnung",
       "periodStart": "Periodenstart",
       "periodEnd": "Periodenende",
+      "noEditPermission": "Sie haben keine Berechtigung, Lohnabrechnungen zu bearbeiten. Sie können die Daten nur einsehen.",
       "contractTypes": {
         "tiempo_completo": "Tiempo Completo (>21 Tage/Monat)",
         "tiempo_parcial_7": "Tiempo Parcial (≤7 Tage/Monat)",
