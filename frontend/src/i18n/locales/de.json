@@ -955,7 +955,33 @@
       "payrollsLoadError": "Abrechnungen konnten nicht geladen werden",
       "saveError": "Stunden konnten nicht gespeichert werden",
       "pdfError": "PDF konnte nicht generiert werden",
-      "loadError": "Fehler beim Laden der Lohndaten"
+      "loadError": "Fehler beim Laden der Lohndaten",
+      "employee": "Mitarbeiter",
+      "country": "Land",
+      "contractType": "Vertragsart",
+      "workingHours": "Arbeitsstunden",
+      "holidaySundayHours": "Feiertags-/Sonntagsstunden",
+      "calculation": "Abrechnung",
+      "hourlyRate": "Stundensatz",
+      "socialSecurity": "Sozialversicherungsbeiträge",
+      "taxes": "Steuern",
+      "paymentInstruction": "Zahlungsanweisung für die Buchhaltung",
+      "recipient": "Empfänger",
+      "amount": "Betrag",
+      "paymentReason": "Zahlungsgrund",
+      "payUntil": "Zu zahlen bis",
+      "salary": "Lohn",
+      "selectUserAndPeriod": "Bitte wählen Sie einen Benutzer und eine Periode aus",
+      "duplicatePeriodError": "Für den Zeitraum {{periodStart}} bis {{periodEnd}} existiert bereits eine Lohnabrechnung",
+      "periodStart": "Periodenstart",
+      "periodEnd": "Periodenende",
+      "contractTypes": {
+        "tiempo_completo": "Tiempo Completo (>21 Tage/Monat)",
+        "tiempo_parcial_7": "Tiempo Parcial (≤7 Tage/Monat)",
+        "tiempo_parcial_14": "Tiempo Parcial (≤14 Tage/Monat)",
+        "tiempo_parcial_21": "Tiempo Parcial (≤21 Tage/Monat)",
+        "servicios_externos": "Servicios Externos (Stundenbasiert)"
+      }
     }
   },
   "cerebro": {

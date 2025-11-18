@@ -1079,7 +1079,33 @@
       "payrollsLoadError": "No se pudieron cargar las nóminas",
       "saveError": "No se pudieron guardar las horas",
       "pdfError": "No se pudo generar el PDF",
-      "loadError": "Error al cargar los datos de nómina"
+      "loadError": "Error al cargar los datos de nómina",
+      "employee": "Empleado",
+      "country": "País",
+      "contractType": "Tipo de contrato",
+      "workingHours": "Horas de trabajo",
+      "holidaySundayHours": "Horas festivas/dominicales",
+      "calculation": "Liquidación",
+      "hourlyRate": "Tarifa por hora",
+      "socialSecurity": "Aportes de seguridad social",
+      "taxes": "Impuestos",
+      "paymentInstruction": "Instrucción de pago para contabilidad",
+      "recipient": "Beneficiario",
+      "amount": "Monto",
+      "paymentReason": "Motivo de pago",
+      "payUntil": "Pagar hasta",
+      "salary": "Salario",
+      "selectUserAndPeriod": "Por favor seleccione un usuario y un período",
+      "duplicatePeriodError": "Ya existe una nómina para el período {{periodStart}} hasta {{periodEnd}}",
+      "periodStart": "Inicio del período",
+      "periodEnd": "Fin del período",
+      "contractTypes": {
+        "tiempo_completo": "Tiempo Completo (>21 días/mes)",
+        "tiempo_parcial_7": "Tiempo Parcial (≤7 días/mes)",
+        "tiempo_parcial_14": "Tiempo Parcial (≤14 días/mes)",
+        "tiempo_parcial_21": "Tiempo Parcial (≤21 días/mes)",
+        "servicios_externos": "Servicios Externos (Basado en horas)"
+      }
     }
   },
   "cerebro": {

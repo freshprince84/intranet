@@ -47,6 +47,7 @@ import { startWorkers, stopWorkers } from './queues';
 
 const app = express();
 
+
 // Middleware
 app.use(express.json({ limit: '50mb' })); // Größere JSON-Payload für Bilder erlauben
 app.use(cors({
@@ -248,13 +249,9 @@ app.use('/api/monthly-consultation-reports', monthlyConsultationReportsRoutes);
 app.use('/api/database', databaseRoutes);
 app.use('/api/claude', claudeRoutes);
 app.use('/api/organizations', organizationRoutes);
-console.log('[App] Registriere /api/shifts Route...');
-console.log('[App] shiftRoutes:', shiftRoutes ? 'geladen' : 'FEHLT!');
-app.use('/api/shifts', (req, res, next) => {
-  console.log(`[App] /api/shifts Route aufgerufen: ${req.method} ${req.path}`);
-  console.log(`[App] Query:`, req.query);
-  next();
-}, shiftRoutes);
+console.log('[App] Nach /api/organizations');
+app.use('/api/shifts', shiftRoutes);
+console.log('[App] /api/shifts Route registriert');
 app.use('/api/lobby-pms', lobbyPmsRoutes);
 app.use('/api/bold-payment', boldPaymentRoutes);
 app.use('/api/ttlock', ttlockRoutes);

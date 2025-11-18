@@ -4,6 +4,7 @@ import { CalculatorIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../config/api.ts';
 import axiosInstance from '../config/axios.ts';
 import { usePermissions } from '../hooks/usePermissions.ts';
+import { useOrganization } from '../contexts/OrganizationContext.tsx';
 
 interface Hours {
   regular: number;
@@ -57,6 +58,7 @@ const formatCurrency = (amount: number, currency: string = 'CHF'): string => {
 const PayrollComponent: React.FC = () => {
   const { t } = useTranslation();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const canEditPayroll = hasPermission('payroll', 'write') || hasPermission('payroll', 'both');
   const [hours, setHours] = useState<Hours>({
     regular: 0,
     overtime: 0,
@@ -70,7 +72,10 @@ const PayrollComponent: React.FC = () => {
   const [payroll, setPayroll] = useState<Payroll | null>(null);
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
   const [selectedUser, setSelectedUser] = useState<number | null>(null);
-  const [users, setUsers] = useState<{ id: number; firstName: string; lastName: string }[]>([]);
+  const [users, setUsers] = useState<{ id: number; firstName: string; lastName: string; payrollCountry?: string }[]>([]);
+  const { organization } = useOrganization();
+  const [periodStart, setPeriodStart] = useState<Date | null>(null);
+  const [periodEnd, setPeriodEnd] = useState<Date | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -115,10 +120,80 @@ const PayrollComponent: React.FC = () => {
     }
   }, [selectedUser, fetchPayrolls]);
 
+  // Helper-Funktion: Berechnet Standard-Periode basierend auf User
+  const getDefaultPeriod = (user: { payrollCountry?: string }): { start: Date; end: Date } => {
+    const now = new Date();
+    let start: Date;
+    let end: Date;
+
+    if (user.payrollCountry === 'CH') {
+      // Schweiz: Monatlich (1. bis 25.)
+      start = new Date(now.getFullYear(), now.getMonth(), 1);
+      end = new Date(now.getFullYear(), now.getMonth(), 25);
+    } else {
+      // Kolumbien: Quinzena (1.-15. oder 16.-Monatsende)
+      if (now.getDate() <= 15) {
+        start = new Date(now.getFullYear(), now.getMonth(), 1);
+        end = new Date(now.getFullYear(), now.getMonth(), 15);
+      } else {
+        start = new Date(now.getFullYear(), now.getMonth(), 16);
+        end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      }
+    }
+
+    return { start, end };
+  };
+
+  // Funktion zum Abrufen der vorausgefüllten Stunden
+  const fetchPrefilledHours = useCallback(async (userId: number, start: Date, end: Date) => {
+    try {
+      const response = await axiosInstance.get(
+        `${API_ENDPOINTS.PAYROLL.PREFILL_HOURS}?userId=${userId}&periodStart=${start.toISOString()}&periodEnd=${end.toISOString()}`
+      );
+      
+      setHours(response.data);
+    } catch (error) {
+      console.error('Fehler beim Abrufen der vorausgefüllten Stunden:', error);
+      // Kein Fehler anzeigen, da dies optional ist
+    }
+  }, []);
+
+  // Beim User-Auswahl: Perioden setzen (Stunden werden durch periodStart/periodEnd useEffect vorausgefüllt)
+  useEffect(() => {
+    if (selectedUser && users.length > 0) {
+      const user = users.find(u => u.id === selectedUser);
+      if (user) {
+        const defaultPeriod = getDefaultPeriod(user);
+        setPeriodStart(defaultPeriod.start);
+        setPeriodEnd(defaultPeriod.end);
+      }
+    } else {
+      setPeriodStart(null);
+      setPeriodEnd(null);
+    }
+  }, [selectedUser, users]);
+
+  // Beim Perioden-Wechsel: Stunden neu vorausfüllen (nur wenn User bereits ausgewählt)
+  useEffect(() => {
+    if (selectedUser && periodStart && periodEnd) {
+      fetchPrefilledHours(selectedUser, periodStart, periodEnd);
+    }
+  }, [periodStart, periodEnd, selectedUser, fetchPrefilledHours]);
+
   const handleUserChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const userId = Number(e.target.value);
     setSelectedUser(userId || null);
     setPayroll(null); // Reset Details bei User-Wechsel
+    setHours({
+      regular: 0,
+      overtime: 0,
+      night: 0,
+      holidayHours: 0,
+      sundayHoliday: 0,
+      overtimeNight: 0,
+      overtimeSundayHoliday: 0,
+      overtimeNightSundayHoliday: 0
+    }); // Reset Stunden
   };
 
   const handleHoursChange = (e: React.ChangeEvent<HTMLInputElement>, field: keyof Hours) => {
@@ -127,8 +202,8 @@ const PayrollComponent: React.FC = () => {
   };
 
   const saveHours = useCallback(async () => {
-    if (!selectedUser) {
-      setError(t('payroll.payrollComponent.selectUserFirst'));
+    if (!selectedUser || !periodStart || !periodEnd) {
+      setError(t('payroll.payrollComponent.selectUserAndPeriod'));
       return;
     }
 
@@ -138,7 +213,9 @@ const PayrollComponent: React.FC = () => {
     try {
       const response = await axiosInstance.post(API_ENDPOINTS.PAYROLL.HOURS, {
         userId: selectedUser,
-        hours
+        hours,
+        periodStart: periodStart.toISOString(),
+        periodEnd: periodEnd.toISOString()
       });
 
       // Automatisch berechnen
@@ -151,12 +228,21 @@ const PayrollComponent: React.FC = () => {
       fetchPayrolls();
 
       setLoading(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Fehler beim Speichern der Stunden:', error);
-      setError(t('payroll.payrollComponent.saveError'));
+      
+      // Spezielle Fehlerbehandlung für doppelte Perioden
+      if (error.response?.status === 400 && error.response?.data?.error?.includes('bereits eine Lohnabrechnung')) {
+        setError(t('payroll.payrollComponent.duplicatePeriodError', { 
+          periodStart: periodStart.toLocaleDateString(),
+          periodEnd: periodEnd.toLocaleDateString()
+        }) || error.response.data.error);
+      } else {
+        setError(error.response?.data?.error || t('payroll.payrollComponent.saveError'));
+      }
       setLoading(false);
     }
-  }, [selectedUser, hours, fetchPayrolls, t]);
+  }, [selectedUser, hours, periodStart, periodEnd, fetchPayrolls, t]);
 
   const selectPayroll = useCallback(async (payrollId: number) => {
     setLoading(true);
@@ -241,6 +327,52 @@ const PayrollComponent: React.FC = () => {
 
       {selectedUser && (
         <>
+          {/* Hinweis bei read-only */}
+          {!canEditPayroll && (
+            <div className="mb-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                {t('payroll.payrollComponent.noEditPermission')}
+              </p>
+            </div>
+          )}
+
+          {/* Perioden-Auswahl */}
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-4 dark:text-white">{t('payroll.payrollComponent.period')}</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('payroll.payrollComponent.periodStart')}
+                </label>
+                <input
+                  type="date"
+                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={periodStart ? periodStart.toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : null;
+                    setPeriodStart(date);
+                  }}
+                  disabled={!canEditPayroll}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('payroll.payrollComponent.periodEnd')}
+                </label>
+                <input
+                  type="date"
+                  className="border border-gray-300 dark:border-gray-600 rounded-md p-2 w-full dark:bg-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                  value={periodEnd ? periodEnd.toISOString().split('T')[0] : ''}
+                  onChange={(e) => {
+                    const date = e.target.value ? new Date(e.target.value) : null;
+                    setPeriodEnd(date);
+                  }}
+                  disabled={!canEditPayroll}
+                />
+              </div>
+            </div>
+          </div>
+
           <div className="mb-6">
             <h2 className="text-xl font-semibold mb-4 dark:text-white">{t('payroll.payrollComponent.enterHours')}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -428,7 +560,7 @@ const PayrollComponent: React.FC = () => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <h3 className="font-medium text-gray-700 dark:text-gray-300">Mitarbeiter</h3>
+                  <h3 className="font-medium text-gray-700 dark:text-gray-300">{t('payroll.payrollComponent.employee')}</h3>
                   <p className="text-gray-900 dark:text-gray-100">{payroll.user.firstName} {payroll.user.lastName}</p>
                 </div>
                 <div>
@@ -436,19 +568,19 @@ const PayrollComponent: React.FC = () => {
                   <p className="text-gray-900 dark:text-gray-100">{new Date(payroll.periodStart).toLocaleDateString()} - {new Date(payroll.periodEnd).toLocaleDateString()}</p>
                 </div>
                 <div>
-                  <h3 className="font-medium text-gray-700 dark:text-gray-300">Land</h3>
-                  <p className="text-gray-900 dark:text-gray-100">{payroll.user.payrollCountry === 'CH' ? 'Schweiz' : 'Kolumbien'}</p>
+                  <h3 className="font-medium text-gray-700 dark:text-gray-300">{t('payroll.payrollComponent.country')}</h3>
+                  <p className="text-gray-900 dark:text-gray-100">{t(`countries.${payroll.user.payrollCountry}`)}</p>
                 </div>
                 {payroll.user.payrollCountry === 'CO' && payroll.user.contractType && (
                   <div>
-                    <h3 className="font-medium text-gray-700 dark:text-gray-300">Vertragsart</h3>
-                    <p className="text-gray-900 dark:text-gray-100">{formatContractType(payroll.user.contractType)}</p>
+                    <h3 className="font-medium text-gray-700 dark:text-gray-300">{t('payroll.payrollComponent.contractType')}</h3>
+                    <p className="text-gray-900 dark:text-gray-100">{formatContractType(payroll.user.contractType, t)}</p>
                   </div>
                 )}
               </div>
 
               <div className="border-t border-gray-200 dark:border-gray-600 pt-4 mb-4">
-                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Arbeitsstunden</h3>
+                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">{t('payroll.payrollComponent.workingHours')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <p className="text-sm text-gray-500 dark:text-gray-400">{t('payroll.payrollComponent.regularHours')}</p>
@@ -463,7 +595,7 @@ const PayrollComponent: React.FC = () => {
                     <p className="font-medium text-gray-900 dark:text-gray-100">{payroll.nightHours}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Feiertags-/Sonntagsstunden</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('payroll.payrollComponent.holidaySundayHours')}</p>
                     <p className="font-medium text-gray-900 dark:text-gray-100">{payroll.holidayHours + payroll.sundayHolidayHours}</p>
                   </div>
                   {payroll.user.payrollCountry === 'CO' && (
@@ -486,10 +618,10 @@ const PayrollComponent: React.FC = () => {
               </div>
 
               <div className="border-t border-gray-200 dark:border-gray-600 pt-4">
-                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Abrechnung</h3>
+                <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">{t('payroll.payrollComponent.calculation')}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Stundensatz</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('payroll.payrollComponent.hourlyRate')}</p>
                     <p className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(Number(payroll.hourlyRate), payroll.currency)}</p>
                   </div>
                   <div>
@@ -497,11 +629,11 @@ const PayrollComponent: React.FC = () => {
                     <p className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(Number(payroll.grossPay), payroll.currency)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Sozialversicherungsbeiträge</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('payroll.payrollComponent.socialSecurity')}</p>
                     <p className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(Number(payroll.socialSecurity), payroll.currency)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Steuern</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">{t('payroll.payrollComponent.taxes')}</p>
                     <p className="font-medium text-gray-900 dark:text-gray-100">{formatCurrency(Number(payroll.taxes), payroll.currency)}</p>
                   </div>
                   <div>
@@ -520,11 +652,11 @@ const PayrollComponent: React.FC = () => {
                 </button>
 
                 <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
-                  <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">Zahlungsanweisung für die Buchhaltung</h3>
-                  <p className="text-blue-700 dark:text-blue-300"><strong>Empfänger:</strong> {payroll.user.firstName} {payroll.user.lastName}</p>
-                  <p className="text-blue-700 dark:text-blue-300"><strong>Betrag:</strong> {formatCurrency(Number(payroll.netPay), payroll.currency)}</p>
-                  <p className="text-blue-700 dark:text-blue-300"><strong>Zahlungsgrund:</strong> Lohn {new Date(payroll.periodStart).toLocaleDateString()} - {new Date(payroll.periodEnd).toLocaleDateString()}</p>
-                  <p className="text-blue-700 dark:text-blue-300"><strong>Zu zahlen bis:</strong> {new Date(new Date(payroll.periodEnd).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+                  <h3 className="font-medium text-blue-800 dark:text-blue-200 mb-2">{t('payroll.payrollComponent.paymentInstruction')}</h3>
+                  <p className="text-blue-700 dark:text-blue-300"><strong>{t('payroll.payrollComponent.recipient')}:</strong> {payroll.user.firstName} {payroll.user.lastName}</p>
+                  <p className="text-blue-700 dark:text-blue-300"><strong>{t('payroll.payrollComponent.amount')}:</strong> {formatCurrency(Number(payroll.netPay), payroll.currency)}</p>
+                  <p className="text-blue-700 dark:text-blue-300"><strong>{t('payroll.payrollComponent.paymentReason')}:</strong> {t('payroll.payrollComponent.salary')} {new Date(payroll.periodStart).toLocaleDateString()} - {new Date(payroll.periodEnd).toLocaleDateString()}</p>
+                  <p className="text-blue-700 dark:text-blue-300"><strong>{t('payroll.payrollComponent.payUntil')}:</strong> {new Date(new Date(payroll.periodEnd).getTime() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
                 </div>
               </div>
             </div>
@@ -535,16 +667,12 @@ const PayrollComponent: React.FC = () => {
   );
 };
 
-// Hilfsfunktion zum Formatieren der Vertragsart
-function formatContractType(contractType: string): string {
-  switch (contractType) {
-    case 'tiempo_completo': return 'Tiempo Completo (>21 Tage/Monat)';
-    case 'tiempo_parcial_7': return 'Tiempo Parcial (≤7 Tage/Monat)';
-    case 'tiempo_parcial_14': return 'Tiempo Parcial (≤14 Tage/Monat)';
-    case 'tiempo_parcial_21': return 'Tiempo Parcial (≤21 Tage/Monat)';
-    case 'servicios_externos': return 'Servicios Externos (Stundenbasiert)';
-    default: return contractType;
-  }
-}
+// Hilfsfunktion zum Formatieren der Vertragsart (wird innerhalb der Komponente verwendet)
+const formatContractType = (contractType: string, t: (key: string) => string): string => {
+  const translationKey = `payroll.payrollComponent.contractTypes.${contractType}`;
+  const translated = t(translationKey);
+  // Falls Übersetzung nicht gefunden, gib den contractType zurück
+  return translated !== translationKey ? translated : contractType;
+};
 
 export default PayrollComponent;

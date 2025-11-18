@@ -1068,7 +1068,33 @@
       "payrollsLoadError": "Failed to load payrolls",
       "saveError": "Failed to save hours",
       "pdfError": "Failed to generate PDF",
-      "loadError": "Error loading payroll data"
+      "loadError": "Error loading payroll data",
+      "employee": "Employee",
+      "country": "Country",
+      "contractType": "Contract Type",
+      "workingHours": "Working Hours",
+      "holidaySundayHours": "Holiday/Sunday Hours",
+      "calculation": "Calculation",
+      "hourlyRate": "Hourly Rate",
+      "socialSecurity": "Social Security Contributions",
+      "taxes": "Taxes",
+      "paymentInstruction": "Payment Instruction for Accounting",
+      "recipient": "Recipient",
+      "amount": "Amount",
+      "paymentReason": "Payment Reason",
+      "payUntil": "Pay Until",
+      "salary": "Salary",
+      "selectUserAndPeriod": "Please select a user and a period",
+      "duplicatePeriodError": "A payroll already exists for the period {{periodStart}} to {{periodEnd}}",
+      "periodStart": "Period Start",
+      "periodEnd": "Period End",
+      "contractTypes": {
+        "tiempo_completo": "Full Time (>21 days/month)",
+        "tiempo_parcial_7": "Part Time (≤7 days/month)",
+        "tiempo_parcial_14": "Part Time (≤14 days/month)",
+        "tiempo_parcial_21": "Part Time (≤21 days/month)",
+        "servicios_externos": "External Services (Hourly based)"
+      }
     }
   },
   "notifications": {

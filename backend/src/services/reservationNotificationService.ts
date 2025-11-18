@@ -230,25 +230,32 @@ export class ReservationNotificationService {
       let success = false;
       let errorMessage: string | null = null;
 
-      // Schritt 1: Payment-Link erstellen (wenn Telefonnummer vorhanden)
+      // Schritt 1: Payment-Link erstellen oder bestehenden verwenden (wenn Telefonnummer vorhanden)
       if (guestPhone) {
-        try {
-          console.log(`[ReservationNotification] Erstelle Payment-Link für Reservierung ${reservationId}...`);
-          const boldPaymentService = new BoldPaymentService(reservation.organizationId);
-          // Konvertiere amount zu number (falls Decimal)
-          const amountNumber = typeof amount === 'number' ? amount : Number(amount);
-          paymentLink = await boldPaymentService.createPaymentLink(
-            reservation,
-            amountNumber,
-            currency,
-            `Zahlung für Reservierung ${reservation.guestName}`
-          );
-          console.log(`[ReservationNotification] ✅ Payment-Link erstellt: ${paymentLink}`);
-        } catch (error) {
-          console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des Payment-Links:`, error);
-          errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler beim Erstellen des Payment-Links';
-          // Payment-Link-Fehler ist kritisch - wir können ohne Payment-Link nicht weitermachen
-          throw new Error(`Payment-Link konnte nicht erstellt werden: ${errorMessage}`);
+        // Verwende bestehenden Payment-Link, falls vorhanden
+        if (reservation.paymentLink) {
+          paymentLink = reservation.paymentLink;
+          console.log(`[ReservationNotification] ✅ Verwende bestehenden Payment-Link: ${paymentLink}`);
+        } else {
+          // Erstelle neuen Payment-Link nur wenn keiner existiert
+          try {
+            console.log(`[ReservationNotification] Erstelle Payment-Link für Reservierung ${reservationId}...`);
+            const boldPaymentService = new BoldPaymentService(reservation.organizationId);
+            // Konvertiere amount zu number (falls Decimal)
+            const amountNumber = typeof amount === 'number' ? amount : Number(amount);
+            paymentLink = await boldPaymentService.createPaymentLink(
+              reservation,
+              amountNumber,
+              currency,
+              `Zahlung für Reservierung ${reservation.guestName}`
+            );
+            console.log(`[ReservationNotification] ✅ Payment-Link erstellt: ${paymentLink}`);
+          } catch (error) {
+            console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des Payment-Links:`, error);
+            errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler beim Erstellen des Payment-Links';
+            // Payment-Link-Fehler ist kritisch - wir können ohne Payment-Link nicht weitermachen
+            throw new Error(`Payment-Link konnte nicht erstellt werden: ${errorMessage}`);
+          }
         }
       }
 
