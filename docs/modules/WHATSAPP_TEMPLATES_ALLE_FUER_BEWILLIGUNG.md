@@ -5,7 +5,8 @@
 
 ## Wichtige Hinweise
 
-- **Template-Sprache**: `English (en)` (auch wenn Text auf Spanisch ist)
+- **Spanische Templates**: Template-Sprache `Spanish (es)`, Template-Name ohne Suffix (z.B. `reservation_checkin_invitation`)
+- **Englische Templates**: Template-Sprache `English (en)`, Template-Name mit `_en` Suffix (z.B. `reservation_checkin_invitation_en`)
 - **Category**: `UTILITY` (für Service-Nachrichten)
 - **Variablen**: Keine Leerzeichen in `{{1}}`, `{{2}}`, etc.
 - **Maximale Zeichen**: 1024 Zeichen im Body
@@ -16,7 +17,7 @@
 
 **Name**: `reservation_checkin_invitation`  
 **Category**: `UTILITY`  
-**Language**: `English (en)`  
+**Language**: `Spanish (es)` ⚠️ **WICHTIG: Spanisch, da Text auf Spanisch ist!**  
 **Status**: ⚠️ **MUSS AKTUALISIERT WERDEN** (neue Version mit Aufforderung zur Antwort)
 
 ### Template-Body:
@@ -234,7 +235,7 @@ Una vez completados ambos, por favor escríbenos brevemente. ¡Gracias!
 - [ ] Create Template klicken
 - [ ] Name: `reservation_checkin_confirmation`
 - [ ] Category: `UTILITY`
-- [ ] Language: `English (en)`
+- [ ] Language: `Spanish (es)` ⚠️ **WICHTIG: Spanisch!**
 - [ ] Body-Text einfügen
 - [ ] Variablen prüfen: `{{1}}`, `{{2}}`, `{{3}}`, `{{4}}`, `{{5}}`
 - [ ] Save → Submit for Review
@@ -243,7 +244,7 @@ Una vez completados ambos, por favor escríbenos brevemente. ¡Gracias!
 - [ ] Create Template klicken
 - [ ] Name: `reservation_confirmation`
 - [ ] Category: `UTILITY`
-- [ ] Language: `English (en)`
+- [ ] Language: `Spanish (es)` ⚠️ **WICHTIG: Spanisch!**
 - [ ] Body-Text einfügen
 - [ ] Variablen prüfen: `{{1}}`, `{{2}}`, `{{3}}`, `{{4}}`
 - [ ] Save → Submit for Review
@@ -252,7 +253,7 @@ Una vez completados ambos, por favor escríbenos brevemente. ¡Gracias!
 - [ ] Create Template klicken
 - [ ] Name: `reservation_checkin_reminder`
 - [ ] Category: `UTILITY`
-- [ ] Language: `English (en)`
+- [ ] Language: `Spanish (es)` ⚠️ **WICHTIG: Spanisch!**
 - [ ] Body-Text einfügen
 - [ ] Variablen prüfen: `{{1}}`, `{{2}}`
 - [ ] Save → Submit for Review
@@ -261,7 +262,7 @@ Una vez completados ambos, por favor escríbenos brevemente. ¡Gracias!
 - [ ] Create Template klicken
 - [ ] Name: `reservation_payment_reminder`
 - [ ] Category: `UTILITY`
-- [ ] Language: `English (en)`
+- [ ] Language: `Spanish (es)` ⚠️ **WICHTIG: Spanisch!**
 - [ ] Body-Text einfügen
 - [ ] Variablen prüfen: `{{1}}`, `{{2}}`
 - [ ] Save → Submit for Review
@@ -270,7 +271,7 @@ Una vez completados ambos, por favor escríbenos brevemente. ¡Gracias!
 - [ ] Create Template klicken
 - [ ] Name: `reservation_general_reminder`
 - [ ] Category: `UTILITY`
-- [ ] Language: `English (en)`
+- [ ] Language: `Spanish (es)` ⚠️ **WICHTIG: Spanisch!**
 - [ ] Body-Text einfügen
 - [ ] Variablen prüfen: `{{1}}`, `{{2}}`, `{{3}}`
 - [ ] Save → Submit for Review
@@ -291,14 +292,37 @@ Una vez completados ambos, por favor escríbenos brevemente. ¡Gracias!
 - **Anzahl muss übereinstimmen**: Code sendet genau so viele Parameter wie im Template definiert
 
 ### Template-Sprache:
-- ⚠️ **Wichtig**: Template-Sprache ist `English (en)`, auch wenn Text auf Spanisch ist
-- Code verwendet Standard `'en'` (Englisch)
-- Template-Text kann in anderer Sprache sein als die Template-Sprache
+- ⚠️ **Wichtig**: Template-Sprache muss mit dem Text übereinstimmen!
+- **Spanische Templates**: Template-Sprache `Spanish (es)`, Text auf Spanisch
+- **Englische Templates**: Template-Sprache `English (en)`, Text auf Englisch
+- Code verwendet Standard `'es'` (Spanisch), kann aber später erweitert werden für automatische Sprachauswahl
 
 ### Genehmigung:
 - ⏳ **1-2 Tage Wartezeit** ist normal
 - 📧 **E-Mail-Benachrichtigung** bei Genehmigung/Ablehnung
 - 🔄 **Bei Ablehnung**: Fehlermeldung prüfen und Template korrigieren
+
+---
+
+## Englische Versionen (English Versions)
+
+Alle Templates sind auch auf Englisch verfügbar. Die englischen Versionen haben den Suffix `_en` im Namen.
+
+### Template-Namen (Englisch):
+- `reservation_checkin_invitation_en`
+- `reservation_checkin_confirmation_en`
+- `reservation_confirmation_en`
+- `reservation_checkin_reminder_en`
+- `reservation_payment_reminder_en`
+- `reservation_general_reminder_en`
+
+### Verwendung im Code:
+Der Code kann automatisch die richtige Sprache wählen, basierend auf:
+- Gast-Sprache (falls in Reservierung gespeichert)
+- Organisation-Sprache
+- Standard: Spanisch (`es`)
+
+**Hinweis**: Code-Anpassungen können später gemacht werden, um automatisch die richtige Template-Version zu wählen.
 
 ---
 
@@ -321,6 +345,10 @@ Una vez completados ambos, por favor escríbenos brevemente. ¡Gracias!
 4. **Templates 4-6** (später implementieren):
    - Können später im Code verwendet werden
    - Für Erinnerungen und Follow-ups
+
+5. **Mehrsprachigkeit** (später implementieren):
+   - Code kann erweitert werden, um automatisch die richtige Template-Version zu wählen
+   - Basierend auf Gast-Sprache oder Organisation-Sprache
 
 ---
 

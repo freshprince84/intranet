@@ -15,6 +15,7 @@ const whatsappService_1 = require("../services/whatsappService");
 const boldPaymentService_1 = require("../services/boldPaymentService");
 const ttlockService_1 = require("../services/ttlockService");
 const reservationNotificationService_1 = require("../services/reservationNotificationService");
+const queueService_1 = require("../services/queueService");
 const prisma = new client_1.PrismaClient();
 /**
  * Utility: Erkennt ob ein String eine Telefonnummer oder Email ist
@@ -73,8 +74,50 @@ const updateGuestContact = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Aktualisiere Reservierung
         const updatedReservation = yield prisma.reservation.update({
             where: { id: reservationId },
-            data: updateData
+            data: updateData,
+            include: {
+                organization: {
+                    select: {
+                        id: true,
+                        name: true,
+                        displayName: true,
+                        settings: true,
+                    },
+                },
+            },
         });
+        // NEU: Queue-basierte Verarbeitung (wenn aktiviert)
+        const queueEnabled = process.env.QUEUE_ENABLED === 'true';
+        const isQueueHealthy = queueEnabled ? yield (0, queueService_1.checkQueueHealth)() : false;
+        if (queueEnabled && isQueueHealthy && contactType === 'phone' && updatedReservation.guestPhone) {
+            // Füge Job zur Queue hinzu
+            try {
+                yield queueService_1.updateGuestContactQueue.add('update-guest-contact', {
+                    reservationId: updatedReservation.id,
+                    organizationId: reservation.organizationId,
+                    contact: contact.trim(),
+                    contactType: contactType,
+                    guestPhone: updatedReservation.guestPhone,
+                    guestName: updatedReservation.guestName,
+                }, {
+                    priority: 1, // Hohe Priorität für manuelle Updates
+                    jobId: `update-guest-contact-${updatedReservation.id}`, // Eindeutige ID für Idempotenz
+                });
+                console.log(`[Reservation] ✅ Job zur Queue hinzugefügt für Guest Contact Update ${updatedReservation.id}`);
+                // Sofortige Antwort - Job läuft im Hintergrund
+                // Frontend lädt Reservierung neu (onSuccess), daher sind sentMessage/sentMessageAt null ok
+                return res.json({
+                    success: true,
+                    data: Object.assign(Object.assign({}, updatedReservation), { sentMessage: null, sentMessageAt: null }),
+                    message: 'Kontaktinformation aktualisiert. Benachrichtigung wird im Hintergrund versendet.',
+                });
+            }
+            catch (queueError) {
+                console.error('[Reservation] Fehler beim Hinzufügen zur Queue, verwende Fallback:', queueError);
+                // Fallback auf synchrone Logik
+            }
+        }
+        // FALLBACK: Alte synchrone Logik (wenn Queue deaktiviert oder Fehler)
         // Sende WhatsApp-Nachricht (wenn Telefonnummer vorhanden)
         let sentMessage = null;
         let sentMessageAt = null;
@@ -101,8 +144,8 @@ const updateGuestContact = (req, res) => __awaiter(void 0, void 0, void 0, funct
                                 doorPin: ttlockCode,
                                 doorAppName: 'TTLock',
                                 ttlLockId: lockId,
-                                ttlLockPassword: ttlockCode
-                            }
+                                ttlLockPassword: ttlockCode,
+                            },
                         });
                     }
                 }
@@ -136,11 +179,7 @@ ${ttlockCode}
                 // Erstelle Check-in-Link für Template
                 const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
                 const checkInLink = `${frontendUrl}/check-in/${updatedReservation.id}`;
-                const templateParams = [
-                    updatedReservation.guestName,
-                    checkInLink,
-                    paymentLink
-                ];
+                const templateParams = [updatedReservation.guestName, checkInLink, paymentLink];
                 yield whatsappService.sendMessageWithFallback(updatedReservation.guestPhone, sentMessage, templateName, templateParams);
                 sentMessageAt = new Date();
                 // Speichere versendete Nachricht in Reservierung
@@ -149,8 +188,8 @@ ${ttlockCode}
                     data: {
                         sentMessage,
                         sentMessageAt,
-                        paymentLink
-                    }
+                        paymentLink,
+                    },
                 });
                 console.log(`[Reservation] WhatsApp-Nachricht versendet für Reservierung ${reservationId}`);
             }
@@ -162,7 +201,7 @@ ${ttlockCode}
         res.json({
             success: true,
             data: Object.assign(Object.assign({}, updatedReservation), { sentMessage,
-                sentMessageAt })
+                sentMessageAt }),
         });
     }
     catch (error) {
@@ -246,6 +285,53 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 }
             }
         });
+        // NEU: Queue-basierte Verarbeitung (wenn aktiviert)
+        const queueEnabled = process.env.QUEUE_ENABLED === 'true';
+        const isQueueHealthy = queueEnabled ? yield (0, queueService_1.checkQueueHealth)() : false;
+        if (queueEnabled && isQueueHealthy && contactType === 'phone' && reservation.guestPhone) {
+            // Füge Job zur Queue hinzu
+            try {
+                yield queueService_1.reservationQueue.add('process-reservation', {
+                    reservationId: reservation.id,
+                    organizationId: reservation.organizationId,
+                    amount: amount,
+                    currency: currency,
+                    contactType: contactType,
+                    guestPhone: reservation.guestPhone,
+                    guestName: reservation.guestName,
+                }, {
+                    priority: 1, // Hohe Priorität für manuelle Reservierungen
+                    jobId: `reservation-${reservation.id}`, // Eindeutige ID für Idempotenz
+                });
+                console.log(`[Reservation] ✅ Job zur Queue hinzugefügt für Reservierung ${reservation.id}`);
+                // Hole aktuelle Reservierung (ohne Updates)
+                const finalReservation = yield prisma.reservation.findUnique({
+                    where: { id: reservation.id },
+                    include: {
+                        organization: {
+                            select: {
+                                id: true,
+                                name: true,
+                                displayName: true,
+                                settings: true
+                            }
+                        },
+                        task: true
+                    }
+                });
+                // Sofortige Antwort - Job läuft im Hintergrund
+                return res.status(201).json({
+                    success: true,
+                    data: finalReservation || reservation,
+                    message: 'Reservierung erstellt. Benachrichtigung wird im Hintergrund versendet.',
+                });
+            }
+            catch (queueError) {
+                console.error('[Reservation] Fehler beim Hinzufügen zur Queue, verwende Fallback:', queueError);
+                // Fallback auf synchrone Logik
+            }
+        }
+        // FALLBACK: Alte synchrone Logik (wenn Queue deaktiviert oder Fehler)
         // Nach Erstellung: Automatisch WhatsApp-Nachricht senden (wenn Telefonnummer vorhanden)
         let sentMessage = null;
         let sentMessageAt = null;

@@ -52,6 +52,8 @@ const reservations_1 = __importDefault(require("./routes/reservations"));
 const claudeConsoleService_1 = require("./services/claudeConsoleService");
 const worktimeController_1 = require("./controllers/worktimeController");
 const monthlyReportScheduler_1 = require("./services/monthlyReportScheduler");
+const reservationScheduler_1 = require("./services/reservationScheduler");
+const queues_1 = require("./queues");
 const app = (0, express_1.default)();
 // Middleware
 app.use(express_1.default.json({ limit: '50mb' })); // Größere JSON-Payload für Bilder erlauben
@@ -135,6 +137,13 @@ setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
         }
     }
 }), MONTHLY_REPORT_CHECK_INTERVAL_MS);
+// Starte Reservation Scheduler
+reservationScheduler_1.ReservationScheduler.start();
+// Starte Queue Workers (wenn aktiviert)
+(0, queues_1.startWorkers)().catch((error) => {
+    console.error('[App] Fehler beim Starten der Queue Workers:', error);
+    // Server startet trotzdem, aber Queue funktioniert nicht
+});
 // Eine direkte Test-Route für die Diagnose
 app.get('/api/test-route', (req, res) => {
     res.json({
@@ -239,19 +248,21 @@ server.listen(PORT, () => {
     }
 });
 // Graceful Shutdown
-process.on('SIGTERM', () => {
+process.on('SIGTERM', () => __awaiter(void 0, void 0, void 0, function* () {
     console.log('SIGTERM signal empfangen. Server wird heruntergefahren...');
+    yield (0, queues_1.stopWorkers)();
     server.close(() => {
         console.log('Server erfolgreich heruntergefahren.');
         process.exit(0);
     });
-});
-process.on('SIGINT', () => {
+}));
+process.on('SIGINT', () => __awaiter(void 0, void 0, void 0, function* () {
     console.log('SIGINT signal empfangen. Server wird heruntergefahren...');
+    yield (0, queues_1.stopWorkers)();
     server.close(() => {
         console.log('Server erfolgreich heruntergefahren.');
         process.exit(0);
     });
-});
+}));
 exports.default = server;
 //# sourceMappingURL=index.js.map

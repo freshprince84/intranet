@@ -56,6 +56,7 @@ Diese Dokumentation beschreibt den vollständigen Prozess für die Bereitstellun
 - **Node.js**: v14.x oder höher
 - **npm**: v6.x oder höher
 - **PostgreSQL**: v13.x oder höher
+- **Redis**: v6.x oder höher (für Queue-System)
 - **Git**: Neueste Version
 - **Docker** (optional): v20.x oder höher
 - **Docker Compose** (optional): v1.29.x oder höher
@@ -145,6 +146,16 @@ SMTP_HOST="smtp.example.com"
 SMTP_PORT=587
 SMTP_USER="no-reply@example.com"
 SMTP_PASS="your-smtp-password"
+
+# Redis Configuration (für Queue-System)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=  # Optional, nur wenn Redis Passwort hat
+REDIS_DB=0
+
+# Queue Configuration
+QUEUE_ENABLED=true  # Setze auf 'true' um Queue zu aktivieren
+QUEUE_CONCURRENCY=5  # Anzahl paralleler Worker-Jobs
 ```
 
 **Frontend**:
@@ -185,6 +196,31 @@ npm -v
 sudo apt update
 sudo apt install postgresql postgresql-contrib
 ```
+
+### Redis-Setup (für Queue-System)
+
+1. Installieren Sie Redis:
+
+```bash
+sudo apt update
+sudo apt install redis-server -y
+```
+
+2. Starten Sie Redis und aktivieren Sie den automatischen Start:
+
+```bash
+sudo systemctl start redis-server
+sudo systemctl enable redis-server
+```
+
+3. Prüfen Sie den Status:
+
+```bash
+sudo systemctl status redis-server
+redis-cli ping  # Sollte "PONG" zurückgeben
+```
+
+**WICHTIG**: Siehe `docs/technical/QUEUE_SYSTEM_DEPLOYMENT.md` für detaillierte Anleitung.
 
 2. Erstellen Sie einen Datenbankbenutzer und eine Datenbank:
 

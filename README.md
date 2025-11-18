@@ -67,6 +67,11 @@ Die Dokumentation ist in mehrere spezialisierte Dateien aufgeteilt:
 - [TROUBLESHOOTING_WHATSAPP_HETZNER.md](docs/technical/TROUBLESHOOTING_WHATSAPP_HETZNER.md) - WhatsApp-Troubleshooting auf Hetzner
 - [WO_HER_API_KEYS_BEKOMMEN.md](docs/technical/WO_HER_API_KEYS_BEKOMMEN.md) - API-Keys-Beschaffung
 - [NOTIFICATION_SYSTEM.md](docs/modules/NOTIFICATION_SYSTEM.md) - Benachrichtigungssystem und Trigger
+- [QUEUE_SYSTEM.md](docs/technical/QUEUE_SYSTEM.md) - Queue-System Übersicht (BullMQ mit Redis)
+- [QUEUE_SYSTEM_DEPLOYMENT.md](docs/technical/QUEUE_SYSTEM_DEPLOYMENT.md) - Queue-System Deployment-Anleitung
+- [QUEUE_SYSTEM_HETZNER_SETUP.md](docs/technical/QUEUE_SYSTEM_HETZNER_SETUP.md) - Queue-System Hetzner Server Setup
+- [QUEUE_SYSTEM_SETUP_LOCAL.md](docs/technical/QUEUE_SYSTEM_SETUP_LOCAL.md) - Queue-System Lokale Setup-Anleitung (Windows)
+- [QUEUE_PERFORMANCE_VERBESSERUNGEN.md](docs/technical/QUEUE_PERFORMANCE_VERBESSERUNGEN.md) - Queue-System Performance-Verbesserungen
 
 ### Modulspezifische Dokumentation
 - [MODUL_ZEITERFASSUNG.md](docs/modules/MODUL_ZEITERFASSUNG.md) - Zeiterfassungssystem

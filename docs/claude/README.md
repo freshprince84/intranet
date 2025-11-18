@@ -37,6 +37,12 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 - **[claude_usage_guidelines.md](claude_usage_guidelines.md)** - Richtlinien für die automatische Tool-Nutzung durch Claude
 - **[log_housekeeping.md](log_housekeeping.md)** - Automatisches Log-Management und Rotation-System für Claude Console Logs
 
+### Queue-System
+- **[QUEUE_SYSTEM_README.md](../technical/QUEUE_SYSTEM_README.md)** - Queue-System Dokumentations-Übersicht
+- **[QUEUE_SYSTEM.md](../technical/QUEUE_SYSTEM.md)** - Queue-System Hauptdokumentation
+- **[QUEUE_SYSTEM_DEPLOYMENT.md](../technical/QUEUE_SYSTEM_DEPLOYMENT.md)** - Deployment-Anleitung
+- **[QUEUE_SYSTEM_HETZNER_SETUP.md](../technical/QUEUE_SYSTEM_HETZNER_SETUP.md)** - Hetzner Server Setup
+
 ### UI-Standards und Container-Strukturen
 - **[container-structures.md](docs/container-structures.md)** - Konsistente Container-Strukturen für Seiten und Boxen - **MUSS bei neuen Seiten befolgt werden!**
 - **[DESIGN_STANDARDS.md](../core/DESIGN_STANDARDS.md)** - **⚠️ KRITISCH: Button-Design-Regel - KEIN TEXT IN BUTTONS!** Siehe Abschnitt "Buttons und Aktionselemente"

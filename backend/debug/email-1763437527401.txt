@@ -1,0 +1,97 @@
+=== EMAIL METADATEN ===
+Message ID: <93164aaef9b13146b59769c991d6abe8@swift.generated>
+From: "LobbyBookings.com" <notification@lobbybookings.com>
+Subject: Nueva reserva en Booking.com
+Date: 2025-10-27T16:42:10.000Z
+
+=== EMAIL TEXT ===
+[https://app.lobbybookings.com/img/lobbybookings_logo.png]
+
+Hola, La Familia Hostel - Manila
+
+Recibiste una nueva reserva de Booking.com para La Familia Hostel - Manila
+Código de reserva: 6996527533
+
+Titular:
+Laura Corominas
+España
+lcorom.587882@guest.booking.com
+
+3 noches, 1 habitaciones, 1 huéspedes
+Check in: 19/01/2026
+Check out: 22/01/2026
+El abuelo viajero (1)
+
+Total: COP 111841
+Comisión: COP 16776
+
+Solicitudes especiales:
+solicitaría servicio de recogida al aeropuerto
+
+Clic aquí para ingresar a lobbybookings y ver la reserva
+[https://app.lobbybookings.com/bookings/details/2339231]
+
+--------------------------------------------------------------------------------
+
+Enviado desde lobbybookings.com
+
+
+
+=== EMAIL HTML ===
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Nueva reserva en Booking.com</title>
+</head>
+<body>
+    <img src="https://app.lobbybookings.com/img/lobbybookings_logo.png" style="display: block; margin: 20px 0px 40px 0px; border: none; width: 260px; height: auto;">
+	<p>
+        Hola, La Familia Hostel - Manila
+        <br>
+        <br>
+        Recibiste una nueva reserva de Booking.com para <b>La Familia Hostel - Manila</b>
+        <br>
+        Código de reserva: <b>6996527533</b>
+        <br>
+        <br>
+        <b>Titular:</b>
+        <br>
+        Laura Corominas
+
+                <br>
+        España
+                <br>
+        lcorom.587882@guest.booking.com
+        <br>
+        <br>
+        <b>3 noches,
+                1
+                habitaciones, 1 huéspedes</b>
+        <br>
+        Check in: 19/01/2026
+        <br>
+        Check out: 22/01/2026
+                <br>
+        El abuelo viajero (1)
+        
+        <br>
+        <br>
+        <b>Total:</b>
+                  COP 111841
+                        <br>
+        <b>Comisión:</b> COP 16776
+                                <br>
+        <br>
+        <b>Solicitudes especiales:</b>
+        <br>
+        solicitaría servicio de recogida al aeropuerto
+                <br>
+        <br>
+        <a href="https://app.lobbybookings.com/bookings/details/2339231">Clic aquí para ingresar a lobbybookings y ver la reserva</a>
+        <hr>
+        Enviado desde lobbybookings.com
+	</p>
+</body>
+</html>
+
+
