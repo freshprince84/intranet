@@ -555,6 +555,74 @@ export class WhatsAppService {
   }
 
   /**
+   * Sendet direkt eine Template Message (ohne Session Message zu versuchen)
+   * 
+   * WICHTIG: Diese Methode verwendet NUR Template Messages, keine Session Messages.
+   * Verwendung für Reservation-Einladungen, wo das 24h-Fenster meist nicht aktiv ist.
+   * 
+   * @param to - Telefonnummer des Empfängers
+   * @param templateName - Template-Name (Basis, wird basierend auf Sprache angepasst)
+   * @param templateParams - Template-Parameter (Array von Strings)
+   * @param message - Nachrichtentext (wird ignoriert, da Template verwendet wird)
+   * @returns true wenn erfolgreich
+   */
+  async sendTemplateMessageDirectly(
+    to: string,
+    templateName: string,
+    templateParams: string[],
+    message?: string // Wird ignoriert, nur für Kompatibilität
+  ): Promise<boolean> {
+    try {
+      console.log(`[WhatsApp Service] Sende DIREKT Template Message an ${to} (kein Session Message Fallback)`);
+      await this.loadSettings();
+      
+      if (!this.axiosInstance || !this.phoneNumberId) {
+        throw new Error('WhatsApp Service nicht initialisiert');
+      }
+
+      const normalizedPhone = this.normalizePhoneNumber(to);
+      console.log(`[WhatsApp Service] Normalisierte Telefonnummer: ${normalizedPhone}`);
+      
+      // Formatiere Template-Parameter
+      const formattedParams = templateParams.map(text => ({
+        type: 'text' as const,
+        text: String(text)
+      }));
+
+      console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
+
+      // Template-Sprache
+      const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+      console.log(`[WhatsApp Service] Template-Sprache: ${languageCode}`);
+      
+      // Passe Template-Namen basierend auf Sprache an
+      const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
+      console.log(`[WhatsApp Service] Template-Name (angepasst für Sprache ${languageCode}): ${adjustedTemplateName}`);
+      
+      const templateResult = await this.sendViaWhatsAppBusiness(
+        normalizedPhone, 
+        message || '', // Wird ignoriert, da Template verwendet wird
+        adjustedTemplateName, 
+        formattedParams, 
+        languageCode
+      );
+      
+      if (templateResult) {
+        console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to}`);
+        return true;
+      } else {
+        console.error(`[WhatsApp Service] ❌ Template Message gab false zurück für ${to}`);
+        throw new Error('Template Message gab false zurück');
+      }
+    } catch (error) {
+      console.error('[WhatsApp Service] ❌ Fehler bei Template Message:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('[WhatsApp Service] Template Error Details:', errorMessage);
+      throw error;
+    }
+  }
+
+  /**
    * Sendet Check-in-Einladung per WhatsApp
    * Verwendet Hybrid-Ansatz: Session Message mit Fallback auf Template
    * 
