@@ -277,16 +277,35 @@ export const decryptApiSettings = (settings: any): any => {
     try {
       // Versuche immer zu entschlüsseln, wenn der String ein ':' enthält (verschlüsseltes Format)
       if (decrypted.whatsapp.apiKey.includes(':')) {
+        const encryptedLength = decrypted.whatsapp.apiKey.length;
+        const decryptedKey = decryptSecret(decrypted.whatsapp.apiKey);
+        console.log('[WhatsApp Token Debug] Entschlüsselung:', {
+          encryptedLength,
+          decryptedLength: decryptedKey.length,
+          decryptedStart: decryptedKey.substring(0, 30),
+          decryptedEnd: decryptedKey.substring(decryptedKey.length - 30),
+          containsColon: decryptedKey.includes(':'),
+          isValidFormat: /^[A-Za-z0-9]+$/.test(decryptedKey)
+        });
         decrypted.whatsapp = {
           ...decrypted.whatsapp,
-          apiKey: decryptSecret(decrypted.whatsapp.apiKey)
+          apiKey: decryptedKey
         };
+      } else {
+        console.log('[WhatsApp Token Debug] Token ist bereits unverschlüsselt:', {
+          length: decrypted.whatsapp.apiKey.length,
+          start: decrypted.whatsapp.apiKey.substring(0, 30)
+        });
       }
       // Wenn kein ':' vorhanden ist, ist der Token bereits unverschlüsselt (für Migration)
     } catch (error) {
       console.error('Error decrypting WhatsApp API key:', error);
       // Bei Fehler: Token ist möglicherweise bereits unverschlüsselt
       console.log('Token wird als unverschlüsselt behandelt');
+      console.log('[WhatsApp Token Debug] Fehler beim Entschlüsseln - verwende Token wie er ist:', {
+        length: decrypted.whatsapp.apiKey.length,
+        start: decrypted.whatsapp.apiKey.substring(0, 50)
+      });
     }
   }
   if (decrypted.whatsapp?.apiSecret) {
