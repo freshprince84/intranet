@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import axiosInstance from '../../config/axios.ts';
 import { Dialog } from '@headlessui/react';
-import { XMarkIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, TrashIcon, ArrowsRightLeftIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import { useAuth } from '../../hooks/useAuth.tsx';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 import { format } from 'date-fns';
+import SwapRequestModal from './SwapRequestModal.tsx';
 
 interface Shift {
   id: number;
@@ -103,6 +104,7 @@ const EditShiftModal: React.FC<EditShiftModalProps> = ({
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isSwapModalOpen, setIsSwapModalOpen] = useState(false);
 
   useEffect(() => {
     const checkScreenSize = () => {
@@ -382,6 +384,20 @@ const EditShiftModal: React.FC<EditShiftModalProps> = ({
         />
       </div>
 
+      {/* Swap Button - nur wenn Schicht dem aktuellen User gehört */}
+      {shift.userId === user?.id && shift.status !== 'cancelled' && shift.status !== 'swapped' && (
+        <div className="pt-4 border-t dark:border-gray-700">
+          <button
+            type="button"
+            onClick={() => setIsSwapModalOpen(true)}
+            className="w-full px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md hover:bg-blue-100 dark:hover:bg-blue-900/30 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex items-center justify-center gap-2"
+          >
+            <ArrowsRightLeftIcon className="h-5 w-5" />
+            {t('teamWorktime.shifts.actions.swap')}
+          </button>
+        </div>
+      )}
+
       {/* Delete Button */}
       <div className="pt-4 border-t dark:border-gray-700">
         <button
@@ -562,6 +578,19 @@ const EditShiftModal: React.FC<EditShiftModalProps> = ({
           </div>
         </form>
       </div>
+      
+      {/* Swap Request Modal */}
+      {shift.userId === user?.id && (
+        <SwapRequestModal
+          isOpen={isSwapModalOpen}
+          onClose={() => setIsSwapModalOpen(false)}
+          onSwapRequestCreated={() => {
+            setIsSwapModalOpen(false);
+            onShiftUpdated(shift); // Aktualisiere Schicht (Status könnte sich geändert haben)
+          }}
+          originalShift={shift}
+        />
+      )}
     </>
   );
 };

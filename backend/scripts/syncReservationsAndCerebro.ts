@@ -130,6 +130,25 @@ async function importReservations() {
       }
     }
     
+    // ⚠️ WICHTIG: Synchronisiere PostgreSQL-Sequenz nach Import mit expliziten IDs
+    // Dies stellt sicher, dass nachfolgende autoincrement-Erstellungen (manuell oder Email-Import) funktionieren
+    try {
+      const maxIdResult = await prisma.$queryRaw<[{ max: bigint | null }]>`
+        SELECT MAX(id) as max FROM "Reservation"
+      `;
+      const maxId = maxIdResult[0].max;
+      
+      if (maxId && maxId > 0) {
+        await prisma.$executeRaw\`SELECT setval('"Reservation_id_seq"', \${Number(maxId)}, true)\`;
+        console.log(\`✅ PostgreSQL-Sequenz für Reservation.id synchronisiert auf \${maxId}\`);
+      } else {
+        console.log('⚠️  Keine Reservationen gefunden, Sequenz bleibt unverändert');
+      }
+    } catch (seqError) {
+      console.error('⚠️  Fehler beim Synchronisieren der Sequenz (nicht kritisch):', seqError);
+      // Nicht kritisch, Import war erfolgreich
+    }
+    
     console.log(\`✅ Import abgeschlossen: \${imported} importiert, \${skipped} übersprungen, \${errors} Fehler\`);
   } catch (error) {
     console.error('❌ Fehler beim Import:', error);

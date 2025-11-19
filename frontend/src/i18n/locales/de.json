@@ -1441,7 +1441,8 @@
         "edit": "Schicht bearbeiten",
         "delete": "Schicht löschen",
         "generate": "Schichtplan generieren",
-        "refresh": "Aktualisieren"
+        "refresh": "Aktualisieren",
+        "swap": "Schicht tauschen"
       },
       "status": {
         "scheduled": "Geplant",
@@ -1536,6 +1537,140 @@
           "startDateAfterEndDate": "Startdatum muss vor Enddatum liegen",
           "generateError": "Fehler beim Generieren des Schichtplans"
         }
+      },
+      "swap": {
+        "title": "Schicht tauschen",
+        "submit": "Tausch-Anfrage senden",
+        "submitting": "Wird gesendet...",
+        "form": {
+          "yourShift": "Ihre Schicht",
+          "shift": "Schicht",
+          "targetShift": "Ziel-Schicht",
+          "selectTargetShift": "Ziel-Schicht auswählen",
+          "message": "Nachricht (optional)",
+          "messagePlaceholder": "Optionale Nachricht an den anderen Mitarbeiter...",
+          "noShiftsAvailable": "Keine verfügbaren Schichten zum Tauschen gefunden"
+        },
+        "errors": {
+          "loadShiftsError": "Fehler beim Laden der verfügbaren Schichten",
+          "selectTargetShift": "Bitte wählen Sie eine Ziel-Schicht aus",
+          "createError": "Fehler beim Erstellen der Tausch-Anfrage"
+        }
+      },
+      "swapList": {
+        "title": "Schichttausch-Anfragen",
+        "status": {
+          "pending": "Ausstehend",
+          "approved": "Genehmigt",
+          "rejected": "Abgelehnt"
+        },
+        "filter": {
+          "all": "Alle",
+          "pending": "Ausstehend",
+          "approved": "Genehmigt",
+          "rejected": "Abgelehnt"
+        },
+        "receivedRequests": "Erhaltene Anfragen",
+        "yourRequests": "Ihre Anfragen",
+        "wantsToSwap": "möchte mit Ihnen eine Schicht tauschen",
+        "youRequestedSwap": "Sie haben eine Tausch-Anfrage an",
+        "yourShift": "Ihre Schicht",
+        "theirShift": "Ihre Schicht",
+        "message": "Nachricht",
+        "response": "Antwort",
+        "approve": "Genehmigen",
+        "reject": "Ablehnen",
+        "approving": "Wird genehmigt...",
+        "rejecting": "Wird abgelehnt...",
+        "noRequests": "Keine Tausch-Anfragen gefunden",
+        "errors": {
+          "loadError": "Fehler beim Laden der Tausch-Anfragen",
+          "approveError": "Fehler beim Genehmigen der Tausch-Anfrage",
+          "rejectError": "Fehler beim Ablehnen der Tausch-Anfrage"
+        }
+      },
+      "templates": {
+        "title": "Schicht-Templates",
+        "createTitle": "Template erstellen",
+        "editTitle": "Template bearbeiten",
+        "noTemplates": "Keine Templates gefunden",
+        "inactive": "Inaktiv",
+        "minutes": "Minuten",
+        "deleteConfirm": "Möchten Sie dieses Template wirklich löschen?",
+        "form": {
+          "name": "Name",
+          "branch": "Niederlassung",
+          "role": "Rolle",
+          "startTime": "Startzeit",
+          "endTime": "Endzeit",
+          "duration": "Dauer (Minuten)",
+          "durationPlaceholder": "Optional",
+          "isActive": "Aktiv",
+          "selectBranch": "Niederlassung auswählen",
+          "selectRole": "Rolle auswählen"
+        },
+        "errors": {
+          "loadError": "Fehler beim Laden der Templates",
+          "fillRequiredFields": "Bitte füllen Sie alle Pflichtfelder aus",
+          "saveError": "Fehler beim Speichern des Templates",
+          "deleteError": "Fehler beim Löschen des Templates"
+        }
+      },
+      "availabilities": {
+        "title": "Verfügbarkeiten",
+        "createTitle": "Verfügbarkeit erstellen",
+        "editTitle": "Verfügbarkeit bearbeiten",
+        "noAvailabilities": "Keine Verfügbarkeiten gefunden",
+        "inactive": "Inaktiv",
+        "priority": "Priorität",
+        "deleteConfirm": "Möchten Sie diese Verfügbarkeit wirklich löschen?",
+        "form": {
+          "branch": "Niederlassung",
+          "role": "Rolle",
+          "dayOfWeek": "Wochentag",
+          "allDays": "Alle Tage",
+          "sunday": "Sonntag",
+          "monday": "Montag",
+          "tuesday": "Dienstag",
+          "wednesday": "Mittwoch",
+          "thursday": "Donnerstag",
+          "friday": "Freitag",
+          "saturday": "Samstag",
+          "startTime": "Startzeit",
+          "endTime": "Endzeit",
+          "startDate": "Startdatum",
+          "endDate": "Enddatum",
+          "type": "Typ",
+          "priority": "Priorität",
+          "notes": "Notizen",
+          "isActive": "Aktiv",
+          "selectBranch": "Niederlassung auswählen (optional)",
+          "selectRole": "Rolle auswählen (optional)",
+          "startTimeHint": "Optional: Wenn leer, ganzer Tag verfügbar",
+          "endTimeHint": "Optional: Wenn leer, ganzer Tag verfügbar",
+          "startDateHint": "Optional: Gültigkeitszeitraum Start",
+          "endDateHint": "Optional: Gültigkeitszeitraum Ende",
+          "notesPlaceholder": "Optionale Notizen..."
+        },
+        "type": {
+          "available": "Verfügbar",
+          "preferred": "Bevorzugt",
+          "unavailable": "Nicht verfügbar"
+        },
+        "errors": {
+          "loadError": "Fehler beim Laden der Verfügbarkeiten",
+          "fillRequiredFields": "Bitte füllen Sie alle Pflichtfelder aus",
+          "saveError": "Fehler beim Speichern der Verfügbarkeit",
+          "deleteError": "Fehler beim Löschen der Verfügbarkeit"
+        }
+      },
+      "filters": {
+        "title": "Filter",
+        "branch": "Niederlassung",
+        "role": "Rolle",
+        "status": "Status",
+        "user": "Mitarbeiter",
+        "reset": "Zurücksetzen"
       }
     },
     "filters": {

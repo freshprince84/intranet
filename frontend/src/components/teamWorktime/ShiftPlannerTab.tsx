@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CalendarIcon, PlusIcon, ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, Squares2X2Icon } from '@heroicons/react/24/outline';
+import { CalendarIcon, PlusIcon, ArrowPathIcon, ChevronLeftIcon, ChevronRightIcon, Squares2X2Icon, FunnelIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import axiosInstance from '../../config/axios.ts';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import { format, startOfWeek, endOfWeek, addWeeks, subWeeks, parse } from 'date-fns';
@@ -13,6 +13,9 @@ import { EventInput } from '@fullcalendar/core';
 import CreateShiftModal from './CreateShiftModal.tsx';
 import EditShiftModal from './EditShiftModal.tsx';
 import GenerateShiftPlanModal from './GenerateShiftPlanModal.tsx';
+import SwapRequestList from './SwapRequestList.tsx';
+import ShiftTemplateManagement from './ShiftTemplateManagement.tsx';
+import AvailabilityManagement from './AvailabilityManagement.tsx';
 // FullCalendar v6 CSS - Import über CDN in index.html oder direkt hier
 
 interface ShiftPlannerTabProps {
@@ -57,6 +60,7 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
   const { user } = useAuth();
   
   const [shifts, setShifts] = useState<Shift[]>([]);
+  const [allShifts, setAllShifts] = useState<Shift[]>([]); // Alle geladenen Schichten (vor Filterung)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
@@ -64,10 +68,23 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
   const calendarRef = useRef<FullCalendar>(null);
   const isProgrammaticNavigation = useRef(false);
   
+  // Filter States
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  const [selectedBranchIds, setSelectedBranchIds] = useState<number[]>([]);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<number[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedUserIds, setSelectedUserIds] = useState<number[]>([]);
+  const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
+  const [roles, setRoles] = useState<Array<{ id: number; name: string }>>([]);
+  const [users, setUsers] = useState<Array<{ id: number; firstName: string; lastName: string }>>([]);
+  
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [isSwapListOpen, setIsSwapListOpen] = useState(false);
+  const [isTemplateManagementOpen, setIsTemplateManagementOpen] = useState(false);
+  const [isAvailabilityManagementOpen, setIsAvailabilityManagementOpen] = useState(false);
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [createModalInitialDate, setCreateModalInitialDate] = useState<Date | undefined>(undefined);
   
@@ -99,8 +116,9 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
       if (response.data && response.data.success !== false) {
         // Wenn success: true oder success nicht vorhanden, aber data vorhanden
         const shiftsData = response.data.data || response.data || [];
-        setShifts(Array.isArray(shiftsData) ? shiftsData : []);
-        console.log('[ShiftPlanner] Loaded shifts:', shiftsData.length);
+        const shiftsArray = Array.isArray(shiftsData) ? shiftsData : [];
+        setAllShifts(shiftsArray); // Speichere alle Schichten
+        console.log('[ShiftPlanner] Loaded shifts:', shiftsArray.length);
       } else {
         const errorMsg = response.data?.message || t('teamWorktime.shifts.messages.loadError');
         console.error('[ShiftPlanner] Error in response:', errorMsg);
@@ -153,6 +171,50 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
   useEffect(() => {
     fetchShifts(currentWeek);
   }, [currentWeek, fetchShifts]);
+  
+  // Lade Branches, Rollen und User für Filter
+  useEffect(() => {
+    const fetchFilterData = async () => {
+      try {
+        const [branchesRes, rolesRes, usersRes] = await Promise.all([
+          axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE),
+          axiosInstance.get(API_ENDPOINTS.ROLES.BASE),
+          axiosInstance.get(API_ENDPOINTS.USERS.DROPDOWN)
+        ]);
+        
+        setBranches(branchesRes.data || []);
+        setRoles(rolesRes.data || []);
+        setUsers(usersRes.data || []);
+      } catch (err) {
+        console.error('Fehler beim Laden der Filter-Daten:', err);
+      }
+    };
+    
+    fetchFilterData();
+  }, []);
+  
+  // Filtere Schichten basierend auf ausgewählten Filtern
+  useEffect(() => {
+    let filtered = [...allShifts];
+    
+    if (selectedBranchIds.length > 0) {
+      filtered = filtered.filter(shift => selectedBranchIds.includes(shift.branchId));
+    }
+    
+    if (selectedRoleIds.length > 0) {
+      filtered = filtered.filter(shift => selectedRoleIds.includes(shift.roleId));
+    }
+    
+    if (selectedStatuses.length > 0) {
+      filtered = filtered.filter(shift => selectedStatuses.includes(shift.status));
+    }
+    
+    if (selectedUserIds.length > 0) {
+      filtered = filtered.filter(shift => shift.userId && selectedUserIds.includes(shift.userId));
+    }
+    
+    setShifts(filtered);
+  }, [allShifts, selectedBranchIds, selectedRoleIds, selectedStatuses, selectedUserIds]);
   
   const handlePreviousWeek = () => {
     isProgrammaticNavigation.current = true;
@@ -286,6 +348,24 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
     isProgrammaticNavigation.current = false;
   };
   
+  const getActiveFilterCount = () => {
+    return selectedBranchIds.length + selectedRoleIds.length + selectedStatuses.length + selectedUserIds.length;
+  };
+  
+  const resetFilters = () => {
+    setSelectedBranchIds([]);
+    setSelectedRoleIds([]);
+    setSelectedStatuses([]);
+    setSelectedUserIds([]);
+  };
+  
+  const statusOptions = [
+    { value: 'scheduled', label: t('teamWorktime.shifts.status.scheduled') },
+    { value: 'confirmed', label: t('teamWorktime.shifts.status.confirmed') },
+    { value: 'cancelled', label: t('teamWorktime.shifts.status.cancelled') },
+    { value: 'swapped', label: t('teamWorktime.shifts.status.swapped') }
+  ];
+  
   return (
     <div>
       {/* Header mit Woche-Navigation */}
@@ -362,8 +442,75 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
           </div>
         </div>
         
-        {/* Rechte Seite: Generate & Refresh Buttons */}
+        {/* Rechte Seite: Filter, Availabilities, Templates, Swap List, Generate & Refresh Buttons */}
         <div className="flex items-center gap-1">
+          {/* Filter Button */}
+          <div className="relative group">
+            <button
+              type="button"
+              onClick={() => setIsFilterPanelOpen(!isFilterPanelOpen)}
+              className={`p-2 rounded-md ${getActiveFilterCount() > 0 ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'} focus:outline-none focus:ring-2 focus:ring-blue-500 relative`}
+            >
+              <FunnelIcon className="h-5 w-5" />
+              {getActiveFilterCount() > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-blue-600 dark:bg-blue-500 text-white rounded-full text-xs flex items-center justify-center z-10">
+                  {getActiveFilterCount()}
+                </span>
+              )}
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('common.filter')}
+            </div>
+          </div>
+          
+          {/* Availabilities Button */}
+          <div className="relative group">
+            <button
+              type="button"
+              onClick={() => setIsAvailabilityManagementOpen(true)}
+              className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+              </svg>
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('teamWorktime.shifts.availabilities.title')}
+            </div>
+          </div>
+          
+          {/* Templates Button */}
+          <div className="relative group">
+            <button
+              type="button"
+              onClick={() => setIsTemplateManagementOpen(true)}
+              className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('teamWorktime.shifts.templates.title')}
+            </div>
+          </div>
+          
+          {/* Swap List Button */}
+          <div className="relative group">
+            <button
+              type="button"
+              onClick={() => setIsSwapListOpen(true)}
+              className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+              </svg>
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('teamWorktime.shifts.swapList.title')}
+            </div>
+          </div>
+          
           {/* Generate Button */}
           <div className="relative group">
             <button
@@ -441,10 +588,151 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
               >
                 <Squares2X2Icon className="h-5 w-5" />
               </button>
+        </div>
+      </div>
+      
+      {/* Filter-Panel */}
+      {isFilterPanelOpen && (
+        <div className="mb-4 px-3 sm:px-4 md:px-6">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                {t('teamWorktime.shifts.filters.title')}
+              </h3>
+              <button
+                onClick={() => setIsFilterPanelOpen(false)}
+                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+              >
+                <XMarkIcon className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Branch Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('teamWorktime.shifts.filters.branch')}
+                </label>
+                <div className="max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-700">
+                  {branches.map((branch) => (
+                    <label key={branch.id} className="flex items-center space-x-2 py-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedBranchIds.includes(branch.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedBranchIds([...selectedBranchIds, branch.id]);
+                          } else {
+                            setSelectedBranchIds(selectedBranchIds.filter(id => id !== branch.id));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{branch.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Role Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('teamWorktime.shifts.filters.role')}
+                </label>
+                <div className="max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-700">
+                  {roles.map((role) => (
+                    <label key={role.id} className="flex items-center space-x-2 py-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedRoleIds.includes(role.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedRoleIds([...selectedRoleIds, role.id]);
+                          } else {
+                            setSelectedRoleIds(selectedRoleIds.filter(id => id !== role.id));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{role.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Status Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('teamWorktime.shifts.filters.status')}
+                </label>
+                <div className="max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-700">
+                  {statusOptions.map((status) => (
+                    <label key={status.value} className="flex items-center space-x-2 py-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedStatuses.includes(status.value)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedStatuses([...selectedStatuses, status.value]);
+                          } else {
+                            setSelectedStatuses(selectedStatuses.filter(s => s !== status.value));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{status.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              
+              {/* User Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {t('teamWorktime.shifts.filters.user')}
+                </label>
+                <div className="max-h-32 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-md p-2 bg-white dark:bg-gray-700">
+                  {users.map((user) => (
+                    <label key={user.id} className="flex items-center space-x-2 py-1">
+                      <input
+                        type="checkbox"
+                        checked={selectedUserIds.includes(user.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedUserIds([...selectedUserIds, user.id]);
+                          } else {
+                            setSelectedUserIds(selectedUserIds.filter(id => id !== user.id));
+                          }
+                        }}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">{user.firstName} {user.lastName}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            
+            {/* Filter Actions */}
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={resetFilters}
+                className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
+              >
+                {t('teamWorktime.shifts.filters.reset')}
+              </button>
+              <button
+                onClick={() => setIsFilterPanelOpen(false)}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+              >
+                {t('common.apply')}
+              </button>
             </div>
           </div>
-          
-          {/* FullCalendar */}
+        </div>
+      )}
+      
+      {/* FullCalendar */}
           <div className="fullcalendar-container">
             <FullCalendar
               ref={calendarRef}
@@ -558,6 +846,27 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
         onPlanGenerated={handlePlanGenerated}
         initialStartDate={startOfWeek(currentWeek, { weekStartsOn: 1 })}
         initialEndDate={endOfWeek(currentWeek, { weekStartsOn: 1 })}
+      />
+      
+      {/* Swap Request List */}
+      <SwapRequestList
+        isOpen={isSwapListOpen}
+        onClose={() => setIsSwapListOpen(false)}
+        onSwapRequestUpdated={() => {
+          fetchShifts(currentWeek); // Lade Schichten neu, da sich Status geändert haben könnte
+        }}
+      />
+      
+      {/* Template Management */}
+      <ShiftTemplateManagement
+        isOpen={isTemplateManagementOpen}
+        onClose={() => setIsTemplateManagementOpen(false)}
+      />
+      
+      {/* Availability Management */}
+      <AvailabilityManagement
+        isOpen={isAvailabilityManagementOpen}
+        onClose={() => setIsAvailabilityManagementOpen(false)}
       />
     </div>
   );
