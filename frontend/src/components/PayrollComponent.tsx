@@ -79,11 +79,11 @@ const PayrollComponent: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Benutzer laden
+  // Benutzer laden (nur aktive User)
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axiosInstance.get(API_ENDPOINTS.USERS.BASE);
+        const response = await axiosInstance.get(API_ENDPOINTS.USERS.DROPDOWN);
         setUsers(response.data);
       } catch (error) {
         console.error('Fehler beim Laden der Benutzer:', error);

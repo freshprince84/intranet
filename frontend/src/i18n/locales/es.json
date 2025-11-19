@@ -1436,6 +1436,79 @@
         "routeNotFound": "Ruta no encontrada. Por favor, reinicie el servidor o verifique la ruta.",
         "unauthorized": "No autenticado. Por favor, inicie sesión nuevamente.",
         "forbidden": "Sin permiso para esta acción."
+      },
+      "modal": {
+        "create": {
+          "title": "Crear nuevo turno",
+          "branch": "Sucursal",
+          "role": "Rol",
+          "template": "Plantilla de turno",
+          "date": "Fecha",
+          "user": "Empleado",
+          "notes": "Notas",
+          "selectBranch": "Seleccionar sucursal",
+          "selectRole": "Seleccionar rol",
+          "selectTemplate": "Seleccionar plantilla",
+          "selectUser": "Seleccionar empleado (opcional)",
+          "selectBranchRoleFirst": "Por favor, seleccione primero la sucursal y el rol",
+          "notesPlaceholder": "Notas opcionales para el turno..."
+        },
+        "edit": {
+          "title": "Editar turno",
+          "branch": "Sucursal",
+          "role": "Rol",
+          "template": "Plantilla de turno",
+          "date": "Fecha",
+          "user": "Empleado",
+          "status": "Estado",
+          "notes": "Notas",
+          "selectUser": "Seleccionar empleado (opcional)",
+          "notesPlaceholder": "Notas opcionales para el turno...",
+          "delete": "Eliminar turno",
+          "deleteConfirm": "¿Realmente desea eliminar este turno?"
+        },
+        "errors": {
+          "loadDataError": "Error al cargar los datos",
+          "loadTemplatesError": "Error al cargar las plantillas",
+          "fillRequiredFields": "Por favor, complete todos los campos obligatorios",
+          "createError": "Error al crear el turno",
+          "updateError": "Error al actualizar el turno",
+          "deleteError": "Error al eliminar el turno"
+        }
+      },
+      "generate": {
+        "title": "Generar plan de turnos",
+        "generate": "Generar",
+        "generating": "Generando...",
+        "form": {
+          "startDate": "Fecha de inicio",
+          "endDate": "Fecha de fin",
+          "branch": "Sucursal",
+          "roles": "Roles",
+          "selectBranch": "Seleccionar sucursal",
+          "selectAll": "Seleccionar todos",
+          "deselectAll": "Deseleccionar todos",
+          "rolesHint": "Si no se seleccionan roles, se utilizarán todos los roles de la sucursal.",
+          "selectBranchFirst": "Por favor, seleccione primero una sucursal",
+          "noRolesAvailable": "No hay roles disponibles"
+        },
+        "result": {
+          "summary": "Resumen",
+          "total": "Total",
+          "assigned": "Asignado",
+          "unassigned": "Sin asignar",
+          "conflicts": "Conflictos",
+          "conflictsTitle": "Conflictos",
+          "success": "¡Plan de turnos generado con éxito!"
+        },
+        "errors": {
+          "loadBranchesError": "Error al cargar las sucursales",
+          "loadRolesError": "Error al cargar los roles",
+          "fillRequiredFields": "Por favor, complete todos los campos obligatorios",
+          "invalidDates": "Fechas inválidas",
+          "startDateAfterEndDate": "La fecha de inicio debe ser anterior a la fecha de fin",
+          "generateError": "Error al generar el plan de turnos"
+        }
       }
     },
     "filters": {

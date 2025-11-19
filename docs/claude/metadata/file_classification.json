@@ -6,7 +6,8 @@
       {"path": "frontend/src/pages/TeamWorktimeControl.tsx", "module": "worktime", "description": "Implementierung der Teamarbeitszeitüberwachung"},
       {"path": "frontend/src/pages/Payroll.tsx", "module": "payroll", "description": "Implementierung der Gehaltsabrechnung"},
       {"path": "frontend/src/components/Layout.tsx", "module": "ui", "description": "Hauptlayoutkomponente"},
-      {"path": "backend/src/app.ts", "module": "server", "description": "Express-Servereinrichtung"},
+      {"path": "backend/src/app.ts", "module": "server", "description": "Express-App-Setup (Middleware, Routes, Timer, Scheduler)"},
+      {"path": "backend/src/index.ts", "module": "server", "description": "Server-Start (importiert app.ts, erstellt HTTP-Server)"},
       {"path": "backend/src/controllers", "module": "api", "description": "API-Controller-Implementierungen"}
     ],
     "interface": [

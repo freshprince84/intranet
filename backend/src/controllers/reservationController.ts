@@ -200,7 +200,8 @@ ${ttlockCode}
 
         // Sende WhatsApp-Nachricht (mit Fallback auf Template)
         const whatsappService = new WhatsAppService(reservation.organizationId);
-        // Verwende existierendes Template: reservation_checkin_invitation
+        // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
+        // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
         const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
         // Template-Parameter: {{1}} = Gast-Name, {{2}} = Check-in-Link, {{3}} = Payment-Link
         // Erstelle LobbyPMS Check-in-Link

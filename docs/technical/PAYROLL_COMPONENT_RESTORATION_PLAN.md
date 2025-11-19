@@ -22,7 +22,7 @@ Die `PayrollComponent` wurde von einer vollständigen Lohnabrechnungs-Anwendung 
   - `GET /api/payroll/calculate`
   - `GET /api/payroll`
   - `GET /api/payroll/pdf/:payrollId`
-- ✅ `backend/src/app.ts` - Route ist registriert: `app.use('/api/payroll', payrollRoutes)`
+- ✅ `backend/src/index.ts` - Route ist registriert: `app.use('/api/payroll', payrollRoutes)` ⚠️ **WICHTIG:** Routes werden in `index.ts` registriert, NICHT in `app.ts`!
 - ✅ Datenbank-Schema: `EmployeePayroll` Model existiert mit allen Feldern
 
 **Frontend (teilweise vorhanden):**
@@ -621,7 +621,7 @@ function formatContractType(contractType: string): string {
 
 - ✅ `backend/src/controllers/payrollController.ts` - Bereits vollständig
 - ✅ `backend/src/routes/payroll.ts` - Bereits vollständig
-- ✅ `backend/src/app.ts` - Route bereits registriert
+- ✅ `backend/src/app.ts` - Route bereits registriert ⚠️ **WICHTIG:** Routes werden in `app.ts` registriert!
 - ✅ Datenbank-Schema - Bereits vorhanden
 
 ## Wichtige Hinweise

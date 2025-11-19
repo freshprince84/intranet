@@ -127,6 +127,7 @@ export const getAllUsersForDropdown = async (req: Request, res: Response) => {
                 email: true,
                 firstName: true,
                 lastName: true,
+                payrollCountry: true,
                 roles: {
                     include: {
                         role: {

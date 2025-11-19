@@ -139,6 +139,9 @@ function checkOverlap(userId, date, startTime, endTime) {
  * Holt alle Schichten (mit Filtern)
  */
 const getAllShifts = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('[getAllShifts] 🚀 Controller aufgerufen');
+    console.log('[getAllShifts] Query:', req.query);
+    console.log('[getAllShifts] organizationId:', req.organizationId);
     try {
         const branchId = req.query.branchId ? parseInt(req.query.branchId, 10) : null;
         const roleId = req.query.roleId ? parseInt(req.query.roleId, 10) : null;
@@ -146,6 +149,7 @@ const getAllShifts = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         const startDate = req.query.startDate ? new Date(req.query.startDate) : null;
         const endDate = req.query.endDate ? new Date(req.query.endDate) : null;
         const status = req.query.status;
+        console.log('[getAllShifts] Filter:', { branchId, roleId, userId, startDate, endDate, status });
         const where = {};
         if (branchId && !isNaN(branchId)) {
             where.branchId = branchId;
@@ -168,6 +172,7 @@ const getAllShifts = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (status) {
             where.status = status;
         }
+        console.log('[getAllShifts] 🔍 Führe Prisma-Query aus...');
         const shifts = yield prisma.shift.findMany({
             where,
             include: {
@@ -220,10 +225,12 @@ const getAllShifts = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 { startTime: 'asc' }
             ]
         });
+        console.log('[getAllShifts] ✅ Gefunden:', shifts.length, 'Schichten');
         res.json({
             success: true,
             data: shifts
         });
+        console.log('[getAllShifts] ✅ Response gesendet');
     }
     catch (error) {
         console.error('[Shift] Fehler beim Abrufen der Schichten:', error);

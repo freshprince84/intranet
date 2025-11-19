@@ -217,21 +217,29 @@ class ReservationNotificationService {
                 let sentMessageAt = null;
                 let success = false;
                 let errorMessage = null;
-                // Schritt 1: Payment-Link erstellen (wenn Telefonnummer vorhanden)
+                // Schritt 1: Payment-Link erstellen oder bestehenden verwenden (wenn Telefonnummer vorhanden)
                 if (guestPhone) {
-                    try {
-                        console.log(`[ReservationNotification] Erstelle Payment-Link für Reservierung ${reservationId}...`);
-                        const boldPaymentService = new boldPaymentService_1.BoldPaymentService(reservation.organizationId);
-                        // Konvertiere amount zu number (falls Decimal)
-                        const amountNumber = typeof amount === 'number' ? amount : Number(amount);
-                        paymentLink = yield boldPaymentService.createPaymentLink(reservation, amountNumber, currency, `Zahlung für Reservierung ${reservation.guestName}`);
-                        console.log(`[ReservationNotification] ✅ Payment-Link erstellt: ${paymentLink}`);
+                    // Verwende bestehenden Payment-Link, falls vorhanden
+                    if (reservation.paymentLink) {
+                        paymentLink = reservation.paymentLink;
+                        console.log(`[ReservationNotification] ✅ Verwende bestehenden Payment-Link: ${paymentLink}`);
                     }
-                    catch (error) {
-                        console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des Payment-Links:`, error);
-                        errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler beim Erstellen des Payment-Links';
-                        // Payment-Link-Fehler ist kritisch - wir können ohne Payment-Link nicht weitermachen
-                        throw new Error(`Payment-Link konnte nicht erstellt werden: ${errorMessage}`);
+                    else {
+                        // Erstelle neuen Payment-Link nur wenn keiner existiert
+                        try {
+                            console.log(`[ReservationNotification] Erstelle Payment-Link für Reservierung ${reservationId}...`);
+                            const boldPaymentService = new boldPaymentService_1.BoldPaymentService(reservation.organizationId);
+                            // Konvertiere amount zu number (falls Decimal)
+                            const amountNumber = typeof amount === 'number' ? amount : Number(amount);
+                            paymentLink = yield boldPaymentService.createPaymentLink(reservation, amountNumber, currency, `Zahlung für Reservierung ${reservation.guestName}`);
+                            console.log(`[ReservationNotification] ✅ Payment-Link erstellt: ${paymentLink}`);
+                        }
+                        catch (error) {
+                            console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des Payment-Links:`, error);
+                            errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler beim Erstellen des Payment-Links';
+                            // Payment-Link-Fehler ist kritisch - wir können ohne Payment-Link nicht weitermachen
+                            throw new Error(`Payment-Link konnte nicht erstellt werden: ${errorMessage}`);
+                        }
                     }
                 }
                 // Schritt 2: Check-in-Link erstellen
@@ -281,13 +289,15 @@ ${paymentLink}
 ¡Te esperamos!`;
                         }
                         const whatsappService = new whatsappService_1.WhatsAppService(reservation.organizationId);
+                        // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
+                        // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
                         const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
                         const templateParams = [
                             reservation.guestName,
                             checkInLink,
                             paymentLink
                         ];
-                        console.log(`[ReservationNotification] Template Name: ${templateName}`);
+                        console.log(`[ReservationNotification] Template Name (Basis): ${templateName}`);
                         console.log(`[ReservationNotification] Template Params: ${JSON.stringify(templateParams)}`);
                         const whatsappSuccess = yield whatsappService.sendMessageWithFallback(guestPhone, sentMessage, templateName, templateParams);
                         if (!whatsappSuccess) {

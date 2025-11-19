@@ -151,13 +151,15 @@ ${ttlockCode}
 ` : ''}¡Te esperamos!`;
 
           const whatsappService = new WhatsAppService(organizationId);
+          // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
+          // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
           const templateName =
             process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
           // Erstelle LobbyPMS Check-in-Link
           const checkInLink = generateLobbyPmsCheckInLink(reservation);
           const templateParams = [guestName, checkInLink, paymentLink];
 
-          console.log(`[UpdateGuestContact Worker] Template Name: ${templateName}`);
+          console.log(`[UpdateGuestContact Worker] Template Name (Basis): ${templateName}`);
           console.log(`[UpdateGuestContact Worker] Template Params: ${JSON.stringify(templateParams)}`);
 
           await whatsappService.sendMessageWithFallback(

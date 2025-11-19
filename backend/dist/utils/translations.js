@@ -16,6 +16,7 @@ exports.getRequestNotificationText = getRequestNotificationText;
 exports.getUserNotificationText = getUserNotificationText;
 exports.getRoleNotificationText = getRoleNotificationText;
 exports.getSystemNotificationText = getSystemNotificationText;
+exports.getPayrollPDFTranslations = getPayrollPDFTranslations;
 const client_1 = require("@prisma/client");
 const prisma = new client_1.PrismaClient();
 /**
@@ -707,5 +708,117 @@ function getSystemNotificationText(language, type, periodStart, periodEnd, branc
         default:
             return translations.monthlyReportError();
     }
+}
+/**
+ * Übersetzungen für Payroll-PDF
+ */
+const payrollPDFTranslations = {
+    de: {
+        title: 'Lohnabrechnung',
+        employee: 'Mitarbeiter',
+        period: 'Abrechnungszeitraum',
+        country: 'Land',
+        contractType: 'Vertragsart',
+        workingHours: 'Arbeitsstunden',
+        regularHours: 'Reguläre Stunden',
+        overtimeHours: 'Überstunden',
+        nightHours: 'Nachtstunden',
+        holidaySundayHours: 'Feiertags-/Sonntagsstunden',
+        overtimeNightHours: 'Nachtüberstunden',
+        overtimeSundayHolidayHours: 'Feiertags-/Sonntagsüberstunden',
+        overtimeNightSundayHolidayHours: 'Nacht-Feiertags-/Sonntagsüberstunden',
+        calculation: 'Abrechnung',
+        hourlyRate: 'Stundensatz',
+        grossPay: 'Bruttolohn',
+        socialSecurity: 'Sozialversicherungsbeiträge',
+        taxes: 'Steuern',
+        netPay: 'Nettolohn',
+        createdOn: 'Erstellt am',
+        countries: {
+            CH: 'Schweiz',
+            CO: 'Kolumbien'
+        },
+        contractTypes: {
+            tiempo_completo: 'Tiempo Completo (>21 Tage/Monat)',
+            tiempo_parcial_7: 'Tiempo Parcial (≤7 Tage/Monat)',
+            tiempo_parcial_14: 'Tiempo Parcial (≤14 Tage/Monat)',
+            tiempo_parcial_21: 'Tiempo Parcial (≤21 Tage/Monat)',
+            servicios_externos: 'Servicios Externos (Stundenbasiert)'
+        }
+    },
+    es: {
+        title: 'Nómina',
+        employee: 'Empleado',
+        period: 'Período de liquidación',
+        country: 'País',
+        contractType: 'Tipo de contrato',
+        workingHours: 'Horas de trabajo',
+        regularHours: 'Horas regulares',
+        overtimeHours: 'Horas extras',
+        nightHours: 'Horas nocturnas',
+        holidaySundayHours: 'Horas festivas/dominicales',
+        overtimeNightHours: 'Horas extras nocturnas',
+        overtimeSundayHolidayHours: 'Horas extras dominicales/festivas',
+        overtimeNightSundayHolidayHours: 'Horas extras nocturnas dominicales/festivas',
+        calculation: 'Liquidación',
+        hourlyRate: 'Tarifa por hora',
+        grossPay: 'Salario bruto',
+        socialSecurity: 'Aportes de seguridad social',
+        taxes: 'Impuestos',
+        netPay: 'Salario neto',
+        createdOn: 'Creado el',
+        countries: {
+            CH: 'Suiza',
+            CO: 'Colombia'
+        },
+        contractTypes: {
+            tiempo_completo: 'Tiempo Completo (>21 días/mes)',
+            tiempo_parcial_7: 'Tiempo Parcial (≤7 días/mes)',
+            tiempo_parcial_14: 'Tiempo Parcial (≤14 días/mes)',
+            tiempo_parcial_21: 'Tiempo Parcial (≤21 días/mes)',
+            servicios_externos: 'Servicios Externos (Basado en horas)'
+        }
+    },
+    en: {
+        title: 'Payroll',
+        employee: 'Employee',
+        period: 'Payroll Period',
+        country: 'Country',
+        contractType: 'Contract Type',
+        workingHours: 'Working Hours',
+        regularHours: 'Regular hours',
+        overtimeHours: 'Overtime hours',
+        nightHours: 'Night hours',
+        holidaySundayHours: 'Holiday/Sunday hours',
+        overtimeNightHours: 'Overtime night hours',
+        overtimeSundayHolidayHours: 'Overtime Sunday/holiday hours',
+        overtimeNightSundayHolidayHours: 'Overtime night Sunday/holiday hours',
+        calculation: 'Calculation',
+        hourlyRate: 'Hourly Rate',
+        grossPay: 'Gross Pay',
+        socialSecurity: 'Social Security Contributions',
+        taxes: 'Taxes',
+        netPay: 'Net Pay',
+        createdOn: 'Created on',
+        countries: {
+            CH: 'Switzerland',
+            CO: 'Colombia'
+        },
+        contractTypes: {
+            tiempo_completo: 'Full Time (>21 days/month)',
+            tiempo_parcial_7: 'Part Time (≤7 days/month)',
+            tiempo_parcial_14: 'Part Time (≤14 days/month)',
+            tiempo_parcial_21: 'Part Time (≤21 days/month)',
+            servicios_externos: 'External Services (Hourly based)'
+        }
+    }
+};
+/**
+ * Ruft die Payroll-PDF-Übersetzungen für eine Sprache ab
+ */
+function getPayrollPDFTranslations(language) {
+    const lang = language || 'de';
+    const translations = payrollPDFTranslations[lang];
+    return translations || payrollPDFTranslations['de']; // Fallback zu Deutsch
 }
 //# sourceMappingURL=translations.js.map

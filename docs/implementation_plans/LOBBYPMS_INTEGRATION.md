@@ -794,7 +794,7 @@ LOBBY_PMS: {
 ### Schritt 10: Scheduler
 - [ ] `reservationScheduler.ts` erstellen
 - [ ] Cron-Jobs konfigurieren
-- [ ] In `app.ts` starten
+- [ ] In `index.ts` starten ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`!
 
 ### Schritt 11: Frontend
 - [ ] Reservierungsübersicht

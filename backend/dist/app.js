@@ -56,6 +56,8 @@ const reservationScheduler_1 = require("./services/reservationScheduler");
 const emailReservationScheduler_1 = require("./services/emailReservationScheduler");
 const queues_1 = require("./queues");
 const app = (0, express_1.default)();
+console.log('[App] ⚠️ App erstellt, shiftRoutes Type:', typeof shifts_1.default);
+console.log('[App] ⚠️ shiftRoutes vorhanden:', !!shifts_1.default);
 // Middleware
 app.use(express_1.default.json({ limit: '50mb' })); // Größere JSON-Payload für Bilder erlauben
 app.use((0, cors_1.default)({
@@ -236,13 +238,14 @@ app.use('/api/monthly-consultation-reports', monthlyConsultationReports_1.defaul
 app.use('/api/database', database_1.default);
 app.use('/api/claude', claudeRoutes_1.default);
 app.use('/api/organizations', organizations_1.default);
-console.log('[App] Registriere /api/shifts Route...');
-console.log('[App] shiftRoutes:', shifts_1.default ? 'geladen' : 'FEHLT!');
+console.log('[App] ✅ /api/organizations registriert');
+console.log('[App] 🔄 Registriere /api/shifts Route...');
+console.log('[App] shiftRoutes vorhanden:', !!shifts_1.default);
 app.use('/api/shifts', (req, res, next) => {
-    console.log(`[App] /api/shifts Route aufgerufen: ${req.method} ${req.path}`);
-    console.log(`[App] Query:`, req.query);
+    console.log(`[App] 🎯 /api/shifts Route erreicht: ${req.method} ${req.path}`);
     next();
 }, shifts_1.default);
+console.log('[App] ✅ /api/shifts Route registriert');
 app.use('/api/lobby-pms', lobbyPms_1.default);
 app.use('/api/bold-payment', boldPayment_1.default);
 app.use('/api/ttlock', ttlock_1.default);

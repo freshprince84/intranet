@@ -12,24 +12,64 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generatePayrollPDF = exports.getPayrolls = exports.calculatePayroll = exports.saveWorkHours = void 0;
+exports.generatePayrollPDF = exports.getPrefilledHours = exports.getPayrolls = exports.calculatePayroll = exports.saveWorkHours = void 0;
 const client_1 = require("@prisma/client");
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
+const translations_1 = require("../utils/translations");
+const date_fns_1 = require("date-fns");
 const prisma = new client_1.PrismaClient();
 const saveWorkHours = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { userId, hours } = req.body; // hours: { regular, overtime, night, sundayHoliday, overtimeNight, overtimeSundayHoliday, overtimeNightSundayHoliday }
+        const { userId, hours, periodStart, periodEnd } = req.body; // hours: { regular, overtime, night, sundayHoliday, overtimeNight, overtimeSundayHoliday, overtimeNightSundayHoliday }
         const user = yield prisma.user.findUnique({ where: { id: userId } });
         if (!user)
             return res.status(404).json({ error: 'Benutzer nicht gefunden' });
+        // Perioden bestimmen (mit Fallback)
+        let startDate;
+        let endDate;
+        if (periodStart && periodEnd) {
+            startDate = new Date(periodStart);
+            endDate = new Date(periodEnd);
+        }
+        else {
+            // Fallback: Automatische Berechnung
+            startDate = new Date();
+            endDate = getPayrollEndDate(user.payrollCountry);
+        }
+        // Validierung: periodStart muss vor periodEnd liegen
+        if (startDate >= endDate) {
+            return res.status(400).json({ error: 'periodStart muss vor periodEnd liegen' });
+        }
+        // Prüfe auf doppelte Perioden (Überschneidungen)
+        const existingPayroll = yield prisma.employeePayroll.findFirst({
+            where: {
+                userId,
+                OR: [
+                    {
+                        periodStart: { lte: endDate },
+                        periodEnd: { gte: startDate }
+                    }
+                ]
+            }
+        });
+        if (existingPayroll) {
+            return res.status(400).json({
+                error: 'Für diesen Zeitraum existiert bereits eine Lohnabrechnung',
+                existingPayroll: {
+                    id: existingPayroll.id,
+                    periodStart: existingPayroll.periodStart,
+                    periodEnd: existingPayroll.periodEnd
+                }
+            });
+        }
         const effectiveHourlyRate = yield calculateEffectiveHourlyRate(user);
         const payroll = yield prisma.employeePayroll.create({
             data: {
                 userId,
-                periodStart: new Date(),
-                periodEnd: getPayrollEndDate(user.payrollCountry),
+                periodStart: startDate,
+                periodEnd: endDate,
                 regularHours: hours.regular || 0,
                 overtimeHours: hours.overtime || 0,
                 nightHours: hours.night || 0,
@@ -111,6 +151,41 @@ const getPayrolls = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.getPayrolls = getPayrolls;
+const getPrefilledHours = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { userId, periodStart, periodEnd } = req.query;
+        if (!userId || !periodStart || !periodEnd) {
+            return res.status(400).json({ error: 'userId, periodStart und periodEnd sind erforderlich' });
+        }
+        const user = yield prisma.user.findUnique({ where: { id: Number(userId) } });
+        if (!user)
+            return res.status(404).json({ error: 'Benutzer nicht gefunden' });
+        const startDate = new Date(periodStart);
+        const endDate = new Date(periodEnd);
+        // Hole alle WorkTime-Einträge im Zeitraum (nur abgeschlossene)
+        const workTimes = yield prisma.workTime.findMany({
+            where: {
+                userId: Number(userId),
+                startTime: { gte: startDate },
+                endTime: {
+                    not: null,
+                    lte: endDate
+                }
+            },
+            orderBy: {
+                startTime: 'asc'
+            }
+        });
+        // Kategorisiere Stunden
+        const categorizedHours = categorizeWorkTimeHours(workTimes, user, startDate, endDate);
+        res.json(categorizedHours);
+    }
+    catch (error) {
+        console.error('Fehler beim Abrufen der vorausgefüllten Stunden:', error);
+        res.status(500).json({ error: 'Interner Serverfehler' });
+    }
+});
+exports.getPrefilledHours = getPrefilledHours;
 const generatePayrollPDF = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { payrollId } = req.params;
@@ -120,6 +195,9 @@ const generatePayrollPDF = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
         if (!payroll)
             return res.status(404).json({ error: 'Lohnabrechnung nicht gefunden' });
+        // Sprache bestimmen
+        const language = yield (0, translations_1.getUserLanguage)(payroll.userId);
+        const t = (0, translations_1.getPayrollPDFTranslations)(language);
         const doc = new pdfkit_1.default();
         const tempPath = path_1.default.join(__dirname, `../../../tmp/payroll_${payrollId}_${Date.now()}.pdf`);
         // Stelle sicher, dass das Verzeichnis existiert
@@ -129,40 +207,42 @@ const generatePayrollPDF = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }
         const writeStream = fs_1.default.createWriteStream(tempPath);
         doc.pipe(writeStream);
-        // PDF-Inhalt
-        doc.fontSize(18).text('Lohnabrechnung', { align: 'center' });
+        // PDF-Inhalt mit Übersetzungen
+        doc.fontSize(18).text(t.title, { align: 'center' });
         doc.moveDown();
-        doc.fontSize(12).text(`Mitarbeiter: ${payroll.user.firstName} ${payroll.user.lastName}`);
-        doc.text(`Abrechnungszeitraum: ${formatDate(payroll.periodStart)} bis ${formatDate(payroll.periodEnd)}`);
-        doc.text(`Land: ${payroll.user.payrollCountry === 'CH' ? 'Schweiz' : 'Kolumbien'}`);
+        doc.fontSize(12).text(`${t.employee}: ${payroll.user.firstName} ${payroll.user.lastName}`);
+        const periodSeparator = language === 'es' ? ' hasta ' : language === 'en' ? ' to ' : ' bis ';
+        doc.text(`${t.period}: ${formatDate(payroll.periodStart, language)}${periodSeparator}${formatDate(payroll.periodEnd, language)}`);
+        doc.text(`${t.country}: ${t.countries[payroll.user.payrollCountry]}`);
         if (payroll.user.payrollCountry === 'CO' && payroll.user.contractType) {
-            doc.text(`Vertragsart: ${formatContractType(payroll.user.contractType)}`);
+            doc.text(`${t.contractType}: ${t.contractTypes[payroll.user.contractType] || payroll.user.contractType}`);
         }
         doc.moveDown();
-        doc.text('Arbeitsstunden:', { underline: true });
-        doc.text(`Reguläre Stunden: ${payroll.regularHours}`);
-        doc.text(`Überstunden: ${payroll.overtimeHours}`);
-        doc.text(`Nachtstunden: ${payroll.nightHours}`);
-        doc.text(`Feiertags-/Sonntagsstunden: ${payroll.holidayHours + payroll.sundayHolidayHours}`);
+        doc.text(t.workingHours + ':', { underline: true });
+        doc.text(`${t.regularHours}: ${payroll.regularHours}`);
+        doc.text(`${t.overtimeHours}: ${payroll.overtimeHours}`);
+        doc.text(`${t.nightHours}: ${payroll.nightHours}`);
+        doc.text(`${t.holidaySundayHours}: ${payroll.holidayHours + payroll.sundayHolidayHours}`);
         if (payroll.user.payrollCountry === 'CO') {
-            doc.text(`Nachtüberstunden: ${payroll.overtimeNightHours}`);
-            doc.text(`Feiertags-/Sonntagsüberstunden: ${payroll.overtimeSundayHolidayHours}`);
-            doc.text(`Nacht-Feiertags-/Sonntagsüberstunden: ${payroll.overtimeNightSundayHolidayHours}`);
+            doc.text(`${t.overtimeNightHours}: ${payroll.overtimeNightHours}`);
+            doc.text(`${t.overtimeSundayHolidayHours}: ${payroll.overtimeSundayHolidayHours}`);
+            doc.text(`${t.overtimeNightSundayHolidayHours}: ${payroll.overtimeNightSundayHolidayHours}`);
         }
         doc.moveDown();
-        doc.text('Abrechnung:', { underline: true });
-        doc.text(`Stundensatz: ${payroll.hourlyRate} ${payroll.currency}`);
-        doc.text(`Bruttolohn: ${payroll.grossPay} ${payroll.currency}`);
-        doc.text(`Sozialversicherungsbeiträge: ${payroll.socialSecurity} ${payroll.currency}`);
-        doc.text(`Steuern: ${payroll.taxes} ${payroll.currency}`);
-        doc.text(`Nettolohn: ${payroll.netPay} ${payroll.currency}`);
+        doc.text(t.calculation + ':', { underline: true });
+        doc.text(`${t.hourlyRate}: ${payroll.hourlyRate} ${payroll.currency}`);
+        doc.text(`${t.grossPay}: ${payroll.grossPay} ${payroll.currency}`);
+        doc.text(`${t.socialSecurity}: ${payroll.socialSecurity} ${payroll.currency}`);
+        doc.text(`${t.taxes}: ${payroll.taxes} ${payroll.currency}`);
+        doc.text(`${t.netPay}: ${payroll.netPay} ${payroll.currency}`);
         doc.moveDown(2);
         const currentDate = new Date();
-        doc.text(`Erstellt am: ${formatDate(currentDate)}`);
+        doc.text(`${t.createdOn}: ${formatDate(currentDate, language)}`);
         doc.end();
         // Warte, bis das PDF fertig geschrieben ist
         writeStream.on('finish', () => {
-            res.download(tempPath, `lohnabrechnung_${payroll.user.lastName}_${formatDate(payroll.periodEnd)}.pdf`, () => {
+            const filenamePrefix = language === 'es' ? 'nomina' : language === 'en' ? 'payroll' : 'lohnabrechnung';
+            res.download(tempPath, `${filenamePrefix}_${payroll.user.lastName}_${formatDate(payroll.periodEnd, language)}.pdf`, () => {
                 // Lösche temporäre Datei nach dem Download
                 fs_1.default.unlinkSync(tempPath);
             });
@@ -262,21 +342,159 @@ function calculateDeductions(grossPay, payrollCountry) {
         return socialSecurity + taxes;
     }
 }
-function formatDate(date) {
-    return date.toLocaleDateString('de-CH', {
+// Feiertagsliste für Kolumbien (2025)
+function getColombianHolidays(year) {
+    const holidays = [];
+    // Feste Feiertage
+    holidays.push(new Date(year, 0, 1)); // Neujahr
+    holidays.push(new Date(year, 0, 6)); // Heilige Drei Könige
+    holidays.push(new Date(year, 2, 23)); // St. Josef
+    holidays.push(new Date(year, 3, 1)); // Gründonnerstag (2025)
+    holidays.push(new Date(year, 3, 2)); // Karfreitag (2025)
+    holidays.push(new Date(year, 4, 1)); // Tag der Arbeit
+    holidays.push(new Date(year, 5, 8)); // Fronleichnam (2025)
+    holidays.push(new Date(year, 5, 29)); // St. Peter und Paul
+    holidays.push(new Date(year, 6, 20)); // Unabhängigkeitstag
+    holidays.push(new Date(year, 7, 7)); // Schlacht von Boyacá
+    holidays.push(new Date(year, 7, 15)); // Mariä Himmelfahrt
+    holidays.push(new Date(year, 9, 12)); // Kolumbus-Tag
+    holidays.push(new Date(year, 10, 1)); // Allerheiligen
+    holidays.push(new Date(year, 10, 11)); // Unabhängigkeit von Cartagena
+    holidays.push(new Date(year, 11, 8)); // Mariä Empfängnis
+    holidays.push(new Date(year, 11, 25)); // Weihnachten
+    return holidays;
+}
+// Prüft ob ein Datum ein Feiertag ist
+function isHoliday(date, payrollCountry) {
+    if (payrollCountry === 'CO') {
+        const holidays = getColombianHolidays(date.getFullYear());
+        return holidays.some(h => (0, date_fns_1.isSameDay)(date, h));
+    }
+    // Schweiz: Feiertagsliste später implementieren (kantonabhängig)
+    return false;
+}
+// Prüft ob eine Zeit in der Nachtzeit liegt
+function isNightTime(startTime, endTime, nightStart, nightEnd) {
+    const startHour = startTime.getHours();
+    const endHour = endTime.getHours();
+    const startMinute = startTime.getMinutes();
+    const endMinute = endTime.getMinutes();
+    // Über Mitternacht
+    if (endTime < startTime || (endHour < startHour && endTime.getDate() !== startTime.getDate())) {
+        return startHour >= nightStart || endHour < nightEnd;
+    }
+    // Normaler Fall: Prüfe ob Start oder Ende in Nachtzeit liegt
+    const startTotalMinutes = startHour * 60 + startMinute;
+    const endTotalMinutes = endHour * 60 + endMinute;
+    const nightStartMinutes = nightStart * 60;
+    const nightEndMinutes = nightEnd * 60;
+    // Nachtzeit: 22:00-06:00 (CO) oder 20:00-06:00 (CH)
+    // Das bedeutet: >= 22:00 (1320 Min) oder < 06:00 (360 Min)
+    if (nightStart > nightEnd) {
+        // Nachtzeit über Mitternacht (z.B. 22:00-06:00)
+        return startTotalMinutes >= nightStartMinutes || endTotalMinutes < nightEndMinutes ||
+            (startTotalMinutes < nightEndMinutes && endTotalMinutes >= nightStartMinutes);
+    }
+    else {
+        // Normaler Fall (sollte nicht vorkommen bei Nachtzeit)
+        return startTotalMinutes >= nightStartMinutes && endTotalMinutes < nightEndMinutes;
+    }
+}
+// Kategorisiert WorkTime-Einträge in verschiedene Stundentypen
+function categorizeWorkTimeHours(workTimes, user, periodStart, periodEnd) {
+    const hours = {
+        regular: 0,
+        overtime: 0,
+        night: 0,
+        holidayHours: 0,
+        sundayHoliday: 0,
+        overtimeNight: 0,
+        overtimeSundayHoliday: 0,
+        overtimeNightSundayHoliday: 0
+    };
+    const isColombia = user.payrollCountry === 'CO';
+    const nightStart = isColombia ? 22 : 20; // 22:00 CO, 20:00 CH
+    const nightEnd = 6; // 06:00
+    const normalWorkingHours = user.normalWorkingHours || 8; // Standard: 8 Stunden
+    // Gruppiere WorkTimes nach Tag für bessere Überstunden-Berechnung
+    const workTimesByDay = new Map();
+    for (const workTime of workTimes) {
+        if (!workTime.endTime)
+            continue;
+        const startTime = new Date(workTime.startTime);
+        const dayKey = `${startTime.getFullYear()}-${startTime.getMonth()}-${startTime.getDate()}`;
+        if (!workTimesByDay.has(dayKey)) {
+            workTimesByDay.set(dayKey, []);
+        }
+        workTimesByDay.get(dayKey).push(workTime);
+    }
+    // Verarbeite jeden Tag
+    for (const [dayKey, dayWorkTimes] of workTimesByDay.entries()) {
+        // Berechne Gesamtstunden des Tages
+        let totalDayHours = 0;
+        for (const wt of dayWorkTimes) {
+            const start = new Date(wt.startTime);
+            const end = new Date(wt.endTime);
+            totalDayHours += (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        }
+        const isOvertimeDay = totalDayHours > normalWorkingHours;
+        const overtimeHours = Math.max(0, totalDayHours - normalWorkingHours);
+        const regularDayHours = Math.min(totalDayHours, normalWorkingHours);
+        // Verarbeite jeden WorkTime-Eintrag des Tages
+        for (const workTime of dayWorkTimes) {
+            const startTime = new Date(workTime.startTime);
+            const endTime = new Date(workTime.endTime);
+            const workHours = (endTime.getTime() - startTime.getTime()) / (1000 * 60 * 60);
+            const dayOfWeek = startTime.getDay(); // 0 = Sonntag
+            const isSunday = dayOfWeek === 0;
+            const isHolidayDay = isHoliday(startTime, user.payrollCountry);
+            const isNight = isNightTime(startTime, endTime, nightStart, nightEnd);
+            // Anteil dieses Eintrags an den Gesamtstunden
+            const proportion = workHours / totalDayHours;
+            const regularPart = regularDayHours * proportion;
+            const overtimePart = overtimeHours * proportion;
+            // Kategorisiere nach Priorität (höchste zuerst)
+            if (isOvertimeDay && isNight && (isSunday || isHolidayDay)) {
+                hours.overtimeNightSundayHoliday += overtimePart;
+            }
+            else if (isOvertimeDay && (isSunday || isHolidayDay)) {
+                hours.overtimeSundayHoliday += overtimePart;
+            }
+            else if (isOvertimeDay && isNight) {
+                hours.overtimeNight += overtimePart;
+            }
+            else if (isOvertimeDay) {
+                hours.overtime += overtimePart;
+            }
+            else if (isNight && (isSunday || isHolidayDay)) {
+                // Nacht + Sonntag/Feiertag (aber keine Überstunden)
+                hours.sundayHoliday += workHours;
+            }
+            else if (isNight) {
+                hours.night += workHours;
+            }
+            else if (isSunday || isHolidayDay) {
+                hours.sundayHoliday += workHours;
+            }
+            else {
+                hours.regular += workHours;
+            }
+        }
+    }
+    return hours;
+}
+function formatDate(date, language = 'de') {
+    // Locale basierend auf Sprache
+    const locales = {
+        de: 'de-CH',
+        es: 'es-CO',
+        en: 'en-US'
+    };
+    const locale = locales[language] || 'de-CH';
+    return date.toLocaleDateString(locale, {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric'
     });
-}
-function formatContractType(contractType) {
-    switch (contractType) {
-        case 'tiempo_completo': return 'Tiempo Completo (>21 Tage/Monat)';
-        case 'tiempo_parcial_7': return 'Tiempo Parcial (≤7 Tage/Monat)';
-        case 'tiempo_parcial_14': return 'Tiempo Parcial (≤14 Tage/Monat)';
-        case 'tiempo_parcial_21': return 'Tiempo Parcial (≤21 Tage/Monat)';
-        case 'servicios_externos': return 'Servicios Externos (Stundenbasiert)';
-        default: return contractType;
-    }
 }
 //# sourceMappingURL=payrollController.js.map

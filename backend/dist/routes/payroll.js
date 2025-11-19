@@ -17,5 +17,7 @@ router.get('/calculate', payrollController_1.calculatePayroll);
 router.get('/', payrollController_1.getPayrolls);
 // PDF generieren
 router.get('/pdf/:payrollId', payrollController_1.generatePayrollPDF);
+// Vorausgefüllte Stunden abrufen
+router.get('/prefill-hours', payrollController_1.getPrefilledHours);
 exports.default = router;
 //# sourceMappingURL=payroll.js.map

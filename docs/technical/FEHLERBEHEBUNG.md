@@ -239,7 +239,7 @@ CORS ist nicht korrekt konfiguriert oder der Server läuft nicht.
 
 **Lösung:**
 1. Überprüfen Sie, ob der Backend-Server läuft
-2. Überprüfen Sie die CORS-Konfiguration in `backend/src/app.ts`
+2. Überprüfen Sie die CORS-Konfiguration in `backend/src/index.ts` ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`!
 3. Stellen Sie sicher, dass Ihr Frontend die korrekte API-URL verwendet
 4. Server neu starten nach Änderungen an der CORS-Konfiguration
 
@@ -252,7 +252,7 @@ Die Status-Buttons in der Worktracker-Ansicht reagieren nicht auf Klicks, obwohl
 Das Frontend verwendet die HTTP-Methode `PATCH` für Status-Updates, während das Backend die Methode nicht in der CORS-Konfiguration erlaubt oder keine entsprechende Route implementiert hat.
 
 **Lösung:**
-1. Stellen Sie sicher, dass in der CORS-Konfiguration des Backends (`backend/src/app.ts`) die `PATCH`-Methode in der Liste der erlaubten Methoden enthalten ist:
+1. Stellen Sie sicher, dass in der CORS-Konfiguration des Backends (`backend/src/index.ts`) die `PATCH`-Methode in der Liste der erlaubten Methoden enthalten ist: ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`!
    ```typescript
    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH']
    ```

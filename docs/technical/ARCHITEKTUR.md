@@ -63,6 +63,13 @@ Das System folgt diesen Architekturprinzipien:
 - **Logger**: Winston
 - **Fehlerbehandlung**: Eigene Middleware mit strukturierter Fehlerrückgabe
 
+⚠️ **WICHTIG: Backend-Server-Struktur**
+- **Express-App**: `backend/src/app.ts` - Enthält Express-App-Setup (Middleware, Routes, Timer, Scheduler)
+- **Server-Start**: `backend/src/index.ts` - Importiert app.ts, erstellt HTTP-Server, startet Server
+- **Route-Registrierung**: Alle Routes werden in `backend/src/app.ts` registriert
+- **Server-Code**: Server-Start-Logik, WebSocket-Setup, Graceful Shutdown gehört in `index.ts`
+- **App-Code**: Middleware, Routes, Timer, Scheduler gehören in `app.ts`
+
 ### Datenbank
 
 - **DBMS**: PostgreSQL

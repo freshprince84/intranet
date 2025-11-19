@@ -348,7 +348,7 @@ curl -X POST http://localhost:5000/api/admin/trigger-check-in-invitations \
 → Neu einloggen und neuen Token holen
 
 ### CORS-Fehler
-→ Prüfe CORS-Konfiguration in `backend/src/app.ts`
+→ Prüfe CORS-Konfiguration in `backend/src/index.ts` ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`!
 
 ---
 

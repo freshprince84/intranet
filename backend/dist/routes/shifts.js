@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const shiftTemplateController_1 = require("../controllers/shiftTemplateController");
@@ -10,11 +19,26 @@ const organization_1 = require("../middleware/organization");
 const router = (0, express_1.Router)();
 // Test-Endpunkt (vor Middleware, um zu prüfen, ob Route erreichbar ist)
 router.get('/test', (req, res) => {
+    console.log('[Shifts Route] /test Endpunkt aufgerufen!');
     res.json({ message: 'Shift-Route ist erreichbar!', timestamp: new Date().toISOString() });
 });
 // Alle Routen mit Authentifizierung schützen
-router.use(auth_1.authMiddleware);
-router.use(organization_1.organizationMiddleware);
+router.use((req, res, next) => {
+    console.log('[Shifts Route] 🔐 Vor authMiddleware, Path:', req.path);
+    next();
+}, auth_1.authMiddleware);
+router.use((req, res, next) => {
+    console.log('[Shifts Route] 🔐 Nach authMiddleware, Path:', req.path, 'userId:', req.userId);
+    next();
+});
+router.use((req, res, next) => {
+    console.log('[Shifts Route] 🏢 Vor organizationMiddleware, Path:', req.path, 'userId:', req.userId);
+    next();
+}, organization_1.organizationMiddleware);
+router.use((req, res, next) => {
+    console.log('[Shifts Route] 🏢 Nach organizationMiddleware, Path:', req.path, 'organizationId:', req.organizationId);
+    next();
+});
 // ShiftTemplate-Routen
 router.get('/templates', shiftTemplateController_1.getAllShiftTemplates);
 router.get('/templates/:id', shiftTemplateController_1.getShiftTemplateById);
@@ -29,12 +53,20 @@ router.put('/availabilities/:id', userAvailabilityController_1.updateAvailabilit
 router.delete('/availabilities/:id', userAvailabilityController_1.deleteAvailability);
 // Shift-Routen
 // WICHTIG: GET / muss VOR GET /:id kommen, sonst wird / als :id interpretiert!
-router.get('/', (req, res, next) => {
-    console.log('[Shifts Route] GET / aufgerufen');
+router.get('/', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log('[Shifts Route] 📥 GET / aufgerufen');
     console.log('[Shifts Route] Query:', req.query);
     console.log('[Shifts Route] OrganizationId:', req.organizationId);
-    (0, shiftController_1.getAllShifts)(req, res).catch(next);
-});
+    console.log('[Shifts Route] Rufe getAllShifts auf...');
+    try {
+        yield (0, shiftController_1.getAllShifts)(req, res);
+        console.log('[Shifts Route] ✅ getAllShifts erfolgreich');
+    }
+    catch (error) {
+        console.error('[Shifts Route] ❌ Fehler in getAllShifts:', error);
+        res.status(500).json({ error: 'Fehler beim Laden der Schichten' });
+    }
+}));
 router.get('/generate', shiftController_1.generateShiftPlan); // Muss vor /:id stehen!
 router.post('/generate', shiftController_1.generateShiftPlan);
 router.get('/:id', shiftController_1.getShiftById);

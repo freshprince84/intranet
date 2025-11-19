@@ -938,7 +938,7 @@ import { ClipboardDocumentListIcon } from '@heroicons/react/24/outline';
 ## Phase 10: Backend Server Configuration
 
 ### Schritt 10.1: Server.ts vollständig prüfen
-- [x] Öffne `backend/src/server.ts`
+- [x] Öffne `backend/src/app.ts` ⚠️ **WICHTIG:** Routes werden in `app.ts` registriert, NICHT in `server.ts`!
 - [x] Stelle sicher, dass alle Imports vorhanden sind:
 ```typescript
 import clientRoutes from './routes/clients';
@@ -983,7 +983,7 @@ app.use('/api/consultations', consultationRoutes);
 
 2. **API Endpoints nicht gefunden**
    - Server muss neu gestartet werden nach Backend-Änderungen
-   - Prüfe die Reihenfolge der Routes in server.ts
+   - Prüfe die Reihenfolge der Routes in app.ts ⚠️ **WICHTIG:** Routes werden in `app.ts` registriert, NICHT in `server.ts`!
 
 3. **Berechtigungsfehler**
    - Seed muss ausgeführt werden für neue Berechtigungen

@@ -520,6 +520,8 @@ ${ttlockCode}
 ¡Te esperamos!`;
 
                   console.log(`[Bold Payment Webhook] Versende einfache Zahlungsbestätigung (ohne PIN) für Reservierung ${reservation.id}...`);
+                  // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
+                  // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
                   const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
                   const templateParams = [updatedReservation.guestName];
                   

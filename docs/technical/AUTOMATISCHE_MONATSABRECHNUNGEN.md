@@ -17,7 +17,7 @@ Das System erstellt automatisch Monatsabrechnungen für Berater, die:
 - **Ausführung**: Täglich zwischen 9:00-10:00 Uhr alle 10 Minuten
 
 ### Integration in App
-- **Datei**: `backend/src/app.ts`
+- **Datei**: `backend/src/index.ts` ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`!
 - **Timer**: `setInterval()` mit 10-Minuten-Intervall
 - **Sicherheit**: Nur einmal pro Tag ausgeführt
 
