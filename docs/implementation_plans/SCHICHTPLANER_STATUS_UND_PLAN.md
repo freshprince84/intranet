@@ -24,6 +24,11 @@
 - ✅ **CreateShiftModal:** Modal/Sidepane zum Erstellen von Schichten (Phase 1)
 - ✅ **EditShiftModal:** Modal/Sidepane zum Bearbeiten von Schichten (Phase 1)
 - ✅ **GenerateShiftPlanModal:** Modal/Sidepane zur automatischen Schichtplan-Generierung (Phase 2)
+- ✅ **SwapRequestModal:** Modal/Sidepane zum Erstellen von Tausch-Anfragen (Phase 3)
+- ✅ **SwapRequestList:** Modal/Sidepane zur Verwaltung aller Tausch-Anfragen (Phase 3)
+- ✅ **ShiftTemplateManagement:** Modal/Sidepane zur Verwaltung von Schicht-Templates (Phase 4)
+- ✅ **AvailabilityManagement:** Modal/Sidepane zur Verwaltung von Verfügbarkeiten (Phase 5)
+- ✅ **Filter-Panel:** Filter-Funktionalität für Branch, Rolle, Status, User (Phase 6)
 
 ## ❌ Was fehlt
 
@@ -79,29 +84,36 @@
 
 ---
 
-### 3. Schichttausch-Funktionalität
+### 3. ✅ Schichttausch-Funktionalität (ABGESCHLOSSEN - Phase 3)
 
-**Status:** Backend fertig, Frontend fehlt komplett
+**Status:** ✅ Implementiert
 
-**Benötigt:**
-- **Für User (Schicht abgeben):**
-  - Button "Schicht tauschen" in Event-Details
-  - Modal: Andere Schicht auswählen (mit Filter: gleiche Rolle, Branch, etc.)
-  - Swap-Request erstellen
-- **Für User (Schicht übernehmen):**
-  - Liste der Swap-Requests (wo User als Empfänger vorgeschlagen wurde)
-  - Button "Annehmen" / "Ablehnen"
-- **Swap-Request-Liste:**
+**Implementiert:**
+- ✅ **SwapRequestModal.tsx** - Modal/Sidepane zum Erstellen einer Tausch-Anfrage
+  - Zeigt eigene Schicht an (read-only)
+  - Dropdown für Ziel-Schicht (gefiltert: gleiche Rolle/Branch, hat User, nicht cancelled/swapped)
+  - Optional: Nachricht hinzufügen
+- ✅ **SwapRequestList.tsx** - Liste aller Swap-Requests
   - Eigene Anfragen (Status: pending/approved/rejected)
-  - Erhaltene Anfragen (Status: pending)
+  - Erhaltene Anfragen (Status: pending/approved/rejected)
+  - Filter nach Status (all/pending/approved/rejected)
+  - Approve/Reject Buttons (nur für erhaltene pending Anfragen)
+  - Schicht-Details anzeigen (Original + Ziel)
+  - Nachrichten anzeigen
+- ✅ **Integration in EditShiftModal**
+  - Button "Schicht tauschen" (nur bei eigenen Schichten, nicht cancelled/swapped)
+  - Öffnet SwapRequestModal
+- ✅ **Integration in ShiftPlannerTab**
+  - Button "Schichttausch-Anfragen" im Header
+  - Öffnet SwapRequestList
+  - Nach Approve/Reject: Schichten werden neu geladen
 
-**API-Endpoints:** Bereits vorhanden
-- `POST /api/shifts/swaps` - Swap-Request erstellen
-- `GET /api/shifts/swaps` - Alle Swap-Requests laden
-- `PUT /api/shifts/swaps/:id/approve` - Swap-Request annehmen
-- `PUT /api/shifts/swaps/:id/reject` - Swap-Request ablehnen
-
-**Priorität:** 🟡 MITTEL
+**Dateien:**
+- `frontend/src/components/teamWorktime/SwapRequestModal.tsx`
+- `frontend/src/components/teamWorktime/SwapRequestList.tsx`
+- Integration in `frontend/src/components/teamWorktime/EditShiftModal.tsx`
+- Integration in `frontend/src/components/teamWorktime/ShiftPlannerTab.tsx`
+- Translations in `frontend/src/i18n/locales/{de,en,es}.json` unter `teamWorktime.shifts.swap.*` und `teamWorktime.shifts.swapList.*`
 
 ---
 
@@ -124,54 +136,54 @@
 
 ---
 
-### 5. Shift Templates Management
+### 5. ✅ Shift Templates Management (ABGESCHLOSSEN - Phase 4)
 
-**Status:** Backend fertig, Frontend fehlt komplett
+**Status:** ✅ Implementiert
 
-**Benötigt:**
-- Eigener Tab oder Modal für Template-Verwaltung
-- Liste aller Templates
-- CRUD-Operationen:
-  - Template erstellen (Name, Startzeit, Endzeit, Branch, Rolle)
-  - Template bearbeiten
-  - Template löschen
-  - Template aktivieren/deaktivieren
+**Implementiert:**
+- ✅ **ShiftTemplateManagement.tsx** - Modal/Sidepane zur Verwaltung von Templates
+- ✅ **Integration in ShiftPlannerTab** - Button "Schicht-Templates"
 
-**API-Endpoints:** Bereits vorhanden
-- `GET /api/shifts/templates` - Alle Templates
-- `POST /api/shifts/templates` - Template erstellen
-- `PUT /api/shifts/templates/:id` - Template bearbeiten
-- `DELETE /api/shifts/templates/:id` - Template löschen
+**Funktionalität:**
+- ✅ Liste aller Templates anzeigen
+- ✅ Template erstellen (Name, Startzeit, Endzeit, Branch, Rolle, Dauer optional, Aktiv/Inaktiv)
+- ✅ Template bearbeiten
+- ✅ Template löschen (mit Bestätigung)
+- ✅ Template aktivieren/deaktivieren
+- ✅ Inaktiv-Badge bei inaktiven Templates
 
-**Priorität:** 🟡 MITTEL
+**Dateien:**
+- `frontend/src/components/teamWorktime/ShiftTemplateManagement.tsx`
+- Translations in `frontend/src/i18n/locales/{de,en,es}.json` unter `teamWorktime.shifts.templates.*`
 
 ---
 
-### 6. User Availability Management
+### 6. ✅ User Availability Management (ABGESCHLOSSEN - Phase 5)
 
-**Status:** Backend fertig, Frontend fehlt komplett
+**Status:** ✅ Implementiert
 
-**Benötigt:**
-- Eigener Tab oder Modal für Verfügbarkeits-Verwaltung
-- Für jeden User:
-  - Verfügbarkeiten anzeigen
-  - Verfügbarkeit erstellen:
-    - Wochentag (Montag-Sonntag oder alle)
-    - Zeitfenster (optional: Startzeit, Endzeit)
-    - Typ (available/preferred mit Priorität)
-    - Gültigkeitszeitraum (optional: Startdatum, Enddatum)
-    - Branch-Filter (optional)
-    - Rollen-Filter (optional)
-  - Verfügbarkeit bearbeiten
-  - Verfügbarkeit löschen
+**Implementiert:**
+- ✅ **AvailabilityManagement.tsx** - Modal/Sidepane zur Verwaltung von Verfügbarkeiten
+- ✅ **Integration in ShiftPlannerTab** - Button "Verfügbarkeiten"
 
-**API-Endpoints:** Bereits vorhanden
-- `GET /api/shifts/availabilities` - Alle Verfügbarkeiten
-- `POST /api/shifts/availabilities` - Verfügbarkeit erstellen
-- `PUT /api/shifts/availabilities/:id` - Verfügbarkeit bearbeiten
-- `DELETE /api/shifts/availabilities/:id` - Verfügbarkeit löschen
+**Funktionalität:**
+- ✅ Verfügbarkeiten anzeigen (für aktuellen User)
+- ✅ Verfügbarkeit erstellen:
+  - ✅ Wochentag (Alle Tage / Sonntag-Samstag)
+  - ✅ Zeitfenster (optional: Startzeit, Endzeit)
+  - ✅ Typ (available/preferred/unavailable)
+  - ✅ Priorität (1-10)
+  - ✅ Gültigkeitszeitraum (optional: Startdatum, Enddatum)
+  - ✅ Branch-Filter (optional)
+  - ✅ Rollen-Filter (optional)
+  - ✅ Notizen (optional)
+  - ✅ Aktiv/Inaktiv
+- ✅ Verfügbarkeit bearbeiten
+- ✅ Verfügbarkeit löschen
 
-**Priorität:** 🟡 MITTEL
+**Dateien:**
+- `frontend/src/components/teamWorktime/AvailabilityManagement.tsx`
+- Translations in `frontend/src/i18n/locales/{de,en,es}.json` unter `teamWorktime.shifts.availabilities.*`
 
 ---
 
@@ -224,23 +236,38 @@
 
 ---
 
-### Phase 3: Schichttausch
+### Phase 3: Schichttausch (ABGESCHLOSSEN ✅)
 **Ziel:** User können Schichten tauschen
 
-1. ✅ **SwapRequestModal.tsx** erstellen
-   - Eigene Schicht auswählen
-   - Ziel-Schicht auswählen (mit Filter)
+1. ✅ **SwapRequestModal.tsx** erstellt
+   - Eigene Schicht wird angezeigt (read-only)
+   - Ziel-Schicht auswählen (mit Filter: gleiche Rolle/Branch, hat User, nicht cancelled/swapped)
+   - Optional: Nachricht hinzufügen
    - Swap-Request erstellen
+   - **Datei:** `frontend/src/components/teamWorktime/SwapRequestModal.tsx`
 
-2. ✅ **SwapRequestList** Komponente
+2. ✅ **SwapRequestList.tsx** erstellt
    - Eigene Anfragen anzeigen
    - Erhaltene Anfragen anzeigen
-   - Annehmen/Ablehnen Buttons
+   - Filter nach Status (all/pending/approved/rejected)
+   - Annehmen/Ablehnen Buttons (nur für erhaltene pending Anfragen)
+   - Schicht-Details anzeigen (Original + Ziel)
+   - Nachrichten anzeigen
+   - **Datei:** `frontend/src/components/teamWorktime/SwapRequestList.tsx`
 
-3. ✅ **Integration** in Event-Details
-   - Button "Schicht tauschen" hinzufügen
+3. ✅ **Integration** in EditShiftModal
+   - Button "Schicht tauschen" hinzugefügt (nur bei eigenen Schichten, nicht cancelled/swapped)
+   - Öffnet SwapRequestModal
 
-**Geschätzte Zeit:** 3-4 Stunden
+4. ✅ **Integration** in ShiftPlannerTab
+   - Button "Schichttausch-Anfragen" im Header hinzugefügt
+   - Öffnet SwapRequestList
+   - Nach Approve/Reject: Schichten werden neu geladen
+
+5. ✅ **Translations** hinzugefügt
+   - Keys unter `teamWorktime.shifts.swap.*` und `teamWorktime.shifts.swapList.*`
+
+**Status:** ✅ Abgeschlossen
 
 ---
 
@@ -265,10 +292,12 @@
 
 1. ✅ **ABGESCHLOSSEN:** CreateShiftModal + EditShiftModal (Phase 1)
 2. ✅ **ABGESCHLOSSEN:** Automatische Generierung UI (Phase 2)
-3. **🟡 MITTEL:** Schichttausch (Phase 3) - **NÄCHSTER SCHRITT**
-4. **🟡 MITTEL:** Templates Management (Phase 4)
-5. **🟡 MITTEL:** Availability Management (Phase 5)
-6. **🟢 NIEDRIG:** Filter & Verwaltung (Phase 6)
+3. ✅ **ABGESCHLOSSEN:** Schichttausch (Phase 3)
+4. ✅ **ABGESCHLOSSEN:** Templates Management (Phase 4)
+5. ✅ **ABGESCHLOSSEN:** Availability Management (Phase 5)
+6. ✅ **ABGESCHLOSSEN:** Filter-Funktionalität (Phase 6)
+
+**🎉 ALLE PHASEN ABGESCHLOSSEN! 🎉**
 
 ---
 

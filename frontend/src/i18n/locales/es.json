@@ -1414,7 +1414,8 @@
         "edit": "Editar turno",
         "delete": "Eliminar turno",
         "generate": "Generar plan de turnos",
-        "refresh": "Actualizar"
+        "refresh": "Actualizar",
+        "swap": "Intercambiar turno"
       },
       "status": {
         "scheduled": "Programado",
@@ -1509,6 +1510,140 @@
           "startDateAfterEndDate": "La fecha de inicio debe ser anterior a la fecha de fin",
           "generateError": "Error al generar el plan de turnos"
         }
+      },
+      "swap": {
+        "title": "Intercambiar turno",
+        "submit": "Enviar solicitud de intercambio",
+        "submitting": "Enviando...",
+        "form": {
+          "yourShift": "Su turno",
+          "shift": "Turno",
+          "targetShift": "Turno objetivo",
+          "selectTargetShift": "Seleccionar turno objetivo",
+          "message": "Mensaje (opcional)",
+          "messagePlaceholder": "Mensaje opcional al otro empleado...",
+          "noShiftsAvailable": "No se encontraron turnos disponibles para intercambiar"
+        },
+        "errors": {
+          "loadShiftsError": "Error al cargar los turnos disponibles",
+          "selectTargetShift": "Por favor, seleccione un turno objetivo",
+          "createError": "Error al crear la solicitud de intercambio"
+        }
+      },
+      "swapList": {
+        "title": "Solicitudes de intercambio de turnos",
+        "status": {
+          "pending": "Pendiente",
+          "approved": "Aprobado",
+          "rejected": "Rechazado"
+        },
+        "filter": {
+          "all": "Todos",
+          "pending": "Pendiente",
+          "approved": "Aprobado",
+          "rejected": "Rechazado"
+        },
+        "receivedRequests": "Solicitudes recibidas",
+        "yourRequests": "Sus solicitudes",
+        "wantsToSwap": "quiere intercambiar un turno con usted",
+        "youRequestedSwap": "Usted solicitó un intercambio a",
+        "yourShift": "Su turno",
+        "theirShift": "Su turno",
+        "message": "Mensaje",
+        "response": "Respuesta",
+        "approve": "Aprobar",
+        "reject": "Rechazar",
+        "approving": "Aprobando...",
+        "rejecting": "Rechazando...",
+        "noRequests": "No se encontraron solicitudes de intercambio",
+        "errors": {
+          "loadError": "Error al cargar las solicitudes de intercambio",
+          "approveError": "Error al aprobar la solicitud de intercambio",
+          "rejectError": "Error al rechazar la solicitud de intercambio"
+        }
+      },
+      "templates": {
+        "title": "Plantillas de turnos",
+        "createTitle": "Crear plantilla",
+        "editTitle": "Editar plantilla",
+        "noTemplates": "No se encontraron plantillas",
+        "inactive": "Inactivo",
+        "minutes": "minutos",
+        "deleteConfirm": "¿Realmente desea eliminar esta plantilla?",
+        "form": {
+          "name": "Nombre",
+          "branch": "Sucursal",
+          "role": "Rol",
+          "startTime": "Hora de inicio",
+          "endTime": "Hora de fin",
+          "duration": "Duración (minutos)",
+          "durationPlaceholder": "Opcional",
+          "isActive": "Activo",
+          "selectBranch": "Seleccionar sucursal",
+          "selectRole": "Seleccionar rol"
+        },
+        "errors": {
+          "loadError": "Error al cargar las plantillas",
+          "fillRequiredFields": "Por favor, complete todos los campos obligatorios",
+          "saveError": "Error al guardar la plantilla",
+          "deleteError": "Error al eliminar la plantilla"
+        }
+      },
+      "availabilities": {
+        "title": "Disponibilidades",
+        "createTitle": "Crear disponibilidad",
+        "editTitle": "Editar disponibilidad",
+        "noAvailabilities": "No se encontraron disponibilidades",
+        "inactive": "Inactivo",
+        "priority": "Prioridad",
+        "deleteConfirm": "¿Realmente desea eliminar esta disponibilidad?",
+        "form": {
+          "branch": "Sucursal",
+          "role": "Rol",
+          "dayOfWeek": "Día de la semana",
+          "allDays": "Todos los días",
+          "sunday": "Domingo",
+          "monday": "Lunes",
+          "tuesday": "Martes",
+          "wednesday": "Miércoles",
+          "thursday": "Jueves",
+          "friday": "Viernes",
+          "saturday": "Sábado",
+          "startTime": "Hora de inicio",
+          "endTime": "Hora de fin",
+          "startDate": "Fecha de inicio",
+          "endDate": "Fecha de fin",
+          "type": "Tipo",
+          "priority": "Prioridad",
+          "notes": "Notas",
+          "isActive": "Activo",
+          "selectBranch": "Seleccionar sucursal (opcional)",
+          "selectRole": "Seleccionar rol (opcional)",
+          "startTimeHint": "Opcional: Si está vacío, todo el día disponible",
+          "endTimeHint": "Opcional: Si está vacío, todo el día disponible",
+          "startDateHint": "Opcional: Inicio del período de validez",
+          "endDateHint": "Opcional: Fin del período de validez",
+          "notesPlaceholder": "Notas opcionales..."
+        },
+        "type": {
+          "available": "Disponible",
+          "preferred": "Preferido",
+          "unavailable": "No disponible"
+        },
+        "errors": {
+          "loadError": "Error al cargar las disponibilidades",
+          "fillRequiredFields": "Por favor, complete todos los campos obligatorios",
+          "saveError": "Error al guardar la disponibilidad",
+          "deleteError": "Error al eliminar la disponibilidad"
+        }
+      },
+      "filters": {
+        "title": "Filtros",
+        "branch": "Sucursal",
+        "role": "Rol",
+        "status": "Estado",
+        "user": "Empleado",
+        "reset": "Restablecer"
       }
     },
     "filters": {

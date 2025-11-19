@@ -1419,7 +1419,8 @@
         "edit": "Edit Shift",
         "delete": "Delete Shift",
         "generate": "Generate Shift Plan",
-        "refresh": "Refresh"
+        "refresh": "Refresh",
+        "swap": "Swap Shift"
       },
       "status": {
         "scheduled": "Scheduled",
@@ -1514,6 +1515,140 @@
           "startDateAfterEndDate": "Start date must be before end date",
           "generateError": "Error generating shift plan"
         }
+      },
+      "swap": {
+        "title": "Swap Shift",
+        "submit": "Send Swap Request",
+        "submitting": "Sending...",
+        "form": {
+          "yourShift": "Your Shift",
+          "shift": "Shift",
+          "targetShift": "Target Shift",
+          "selectTargetShift": "Select target shift",
+          "message": "Message (optional)",
+          "messagePlaceholder": "Optional message to the other employee...",
+          "noShiftsAvailable": "No available shifts found for swapping"
+        },
+        "errors": {
+          "loadShiftsError": "Error loading available shifts",
+          "selectTargetShift": "Please select a target shift",
+          "createError": "Error creating swap request"
+        }
+      },
+      "swapList": {
+        "title": "Shift Swap Requests",
+        "status": {
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        },
+        "filter": {
+          "all": "All",
+          "pending": "Pending",
+          "approved": "Approved",
+          "rejected": "Rejected"
+        },
+        "receivedRequests": "Received Requests",
+        "yourRequests": "Your Requests",
+        "wantsToSwap": "wants to swap a shift with you",
+        "youRequestedSwap": "You requested a swap from",
+        "yourShift": "Your Shift",
+        "theirShift": "Their Shift",
+        "message": "Message",
+        "response": "Response",
+        "approve": "Approve",
+        "reject": "Reject",
+        "approving": "Approving...",
+        "rejecting": "Rejecting...",
+        "noRequests": "No swap requests found",
+        "errors": {
+          "loadError": "Error loading swap requests",
+          "approveError": "Error approving swap request",
+          "rejectError": "Error rejecting swap request"
+        }
+      },
+      "templates": {
+        "title": "Shift Templates",
+        "createTitle": "Create Template",
+        "editTitle": "Edit Template",
+        "noTemplates": "No templates found",
+        "inactive": "Inactive",
+        "minutes": "minutes",
+        "deleteConfirm": "Do you really want to delete this template?",
+        "form": {
+          "name": "Name",
+          "branch": "Branch",
+          "role": "Role",
+          "startTime": "Start Time",
+          "endTime": "End Time",
+          "duration": "Duration (minutes)",
+          "durationPlaceholder": "Optional",
+          "isActive": "Active",
+          "selectBranch": "Select branch",
+          "selectRole": "Select role"
+        },
+        "errors": {
+          "loadError": "Error loading templates",
+          "fillRequiredFields": "Please fill in all required fields",
+          "saveError": "Error saving template",
+          "deleteError": "Error deleting template"
+        }
+      },
+      "availabilities": {
+        "title": "Availabilities",
+        "createTitle": "Create Availability",
+        "editTitle": "Edit Availability",
+        "noAvailabilities": "No availabilities found",
+        "inactive": "Inactive",
+        "priority": "Priority",
+        "deleteConfirm": "Do you really want to delete this availability?",
+        "form": {
+          "branch": "Branch",
+          "role": "Role",
+          "dayOfWeek": "Day of Week",
+          "allDays": "All Days",
+          "sunday": "Sunday",
+          "monday": "Monday",
+          "tuesday": "Tuesday",
+          "wednesday": "Wednesday",
+          "thursday": "Thursday",
+          "friday": "Friday",
+          "saturday": "Saturday",
+          "startTime": "Start Time",
+          "endTime": "End Time",
+          "startDate": "Start Date",
+          "endDate": "End Date",
+          "type": "Type",
+          "priority": "Priority",
+          "notes": "Notes",
+          "isActive": "Active",
+          "selectBranch": "Select branch (optional)",
+          "selectRole": "Select role (optional)",
+          "startTimeHint": "Optional: If empty, whole day available",
+          "endTimeHint": "Optional: If empty, whole day available",
+          "startDateHint": "Optional: Validity period start",
+          "endDateHint": "Optional: Validity period end",
+          "notesPlaceholder": "Optional notes..."
+        },
+        "type": {
+          "available": "Available",
+          "preferred": "Preferred",
+          "unavailable": "Unavailable"
+        },
+        "errors": {
+          "loadError": "Error loading availabilities",
+          "fillRequiredFields": "Please fill in all required fields",
+          "saveError": "Error saving availability",
+          "deleteError": "Error deleting availability"
+        }
+      },
+      "filters": {
+        "title": "Filters",
+        "branch": "Branch",
+        "role": "Role",
+        "status": "Status",
+        "user": "Employee",
+        "reset": "Reset"
       }
     },
     "filters": {
