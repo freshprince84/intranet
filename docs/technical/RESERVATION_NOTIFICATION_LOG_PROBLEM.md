@@ -48,11 +48,26 @@ if (guestPhone && paymentLink) {
 2. **Fehlerbehandlung verbessern**: Wenn der Payment-Link nicht erstellt werden kann, sollte trotzdem ein Log erstellt werden (mit Fehlermeldung).
 3. **E-Mail-Versand berücksichtigen**: Wenn keine Telefonnummer vorhanden ist, aber eine E-Mail-Adresse, sollte trotzdem ein Log erstellt werden.
 
-## Lösung
+## Lösung (IMPLEMENTIERT)
 
-1. **Log auch bei Fehlern erstellen**: Wenn der Payment-Link nicht erstellt werden kann, sollte trotzdem ein Log erstellt werden (mit Fehlermeldung).
-2. **Log auch ohne WhatsApp**: Wenn keine Telefonnummer vorhanden ist, sollte trotzdem ein Log erstellt werden (z.B. für E-Mail-Versand oder Fehler).
-3. **Fehlerbehandlung verbessern**: Statt die gesamte Funktion abzubrechen, sollte der Fehler geloggt werden und die Funktion sollte fortgesetzt werden (wenn möglich).
+### Änderungen in `backend/src/services/reservationNotificationService.ts`
+
+1. **Log auch bei Payment-Link-Fehlern erstellen**:
+   - Wenn der Payment-Link nicht erstellt werden kann, wird jetzt trotzdem ein Log erstellt (mit Fehlermeldung)
+   - Die Funktion bricht nicht mehr ab, wenn eine E-Mail-Adresse vorhanden ist (für zukünftige E-Mail-Implementierung)
+
+2. **Log auch ohne WhatsApp**:
+   - Wenn keine Telefonnummer vorhanden ist, aber eine E-Mail-Adresse, wird jetzt ein Log erstellt
+   - Wenn Telefonnummer vorhanden ist, aber Payment-Link fehlt, wird jetzt ein Log erstellt
+
+3. **Verbesserte Fehlerbehandlung**:
+   - Alle Log-Erstellungen sind jetzt in try-catch-Blöcken, damit Fehler beim Loggen die Hauptfunktionalität nicht beeinträchtigen
+   - Reservation-Update-Fehler führen nicht mehr zum Abbruch, sondern werden im Log dokumentiert
+
+4. **Zusätzliche Log-Szenarien**:
+   - Log wird erstellt, wenn Payment-Link fehlt (aber Telefonnummer vorhanden)
+   - Log wird erstellt, wenn nur E-Mail vorhanden ist (für zukünftige Implementierung)
+   - Log wird erstellt, wenn Reservation-Update fehlschlägt
 
 ## Betroffene Dateien
 

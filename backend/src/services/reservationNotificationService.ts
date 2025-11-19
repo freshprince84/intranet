@@ -253,8 +253,27 @@ export class ReservationNotificationService {
           } catch (error) {
             console.error(`[ReservationNotification] ❌ Fehler beim Erstellen des Payment-Links:`, error);
             errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler beim Erstellen des Payment-Links';
-            // Payment-Link-Fehler ist kritisch - wir können ohne Payment-Link nicht weitermachen
-            throw new Error(`Payment-Link konnte nicht erstellt werden: ${errorMessage}`);
+            // Payment-Link-Fehler: Log erstellen, aber nicht abbrechen
+            // Wir versuchen trotzdem weiterzumachen (z.B. für E-Mail-Versand)
+            try {
+              await this.logNotification(
+                reservationId,
+                'invitation',
+                guestPhone ? 'whatsapp' : (guestEmail ? 'email' : 'both'),
+                false,
+                {
+                  sentTo: guestPhone || guestEmail || undefined,
+                  errorMessage: `Payment-Link konnte nicht erstellt werden: ${errorMessage}`
+                }
+              );
+            } catch (logError) {
+              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für Payment-Link-Fehler:`, logError);
+            }
+            // Payment-Link-Fehler ist kritisch für WhatsApp - wir können ohne Payment-Link nicht weitermachen
+            // Aber wir brechen nicht ab, falls E-Mail-Versand möglich ist
+            if (!guestEmail) {
+              throw new Error(`Payment-Link konnte nicht erstellt werden: ${errorMessage}`);
+            }
           }
         }
       }
@@ -336,25 +355,52 @@ ${paymentLink}
           console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet`);
           
           // Log erfolgreiche Notification
-          await this.logNotification(
-            reservationId,
-            'invitation',
-            'whatsapp',
-            true,
-            {
-              sentTo: guestPhone,
-              message: sentMessage,
-              paymentLink: paymentLink,
-              checkInLink: checkInLink
-            }
-          );
+          try {
+            await this.logNotification(
+              reservationId,
+              'invitation',
+              'whatsapp',
+              true,
+              {
+                sentTo: guestPhone,
+                message: sentMessage,
+                paymentLink: paymentLink,
+                checkInLink: checkInLink
+              }
+            );
+          } catch (logError) {
+            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Notification:`, logError);
+            // Log-Fehler sollte nicht die Hauptfunktionalität beeinträchtigen
+          }
         } catch (error) {
           console.error(`[ReservationNotification] ❌ Fehler beim Versenden der WhatsApp-Nachricht:`, error);
           errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der WhatsApp-Nachricht';
           // WhatsApp-Fehler ist nicht kritisch - Links wurden bereits erstellt
           // Wir speichern die Links trotzdem, aber Status bleibt auf 'confirmed'
           
-          // Log fehlgeschlagene Notification
+          // Log fehlgeschlagene Notification - IMMER versuchen, auch bei Fehlern
+          try {
+            await this.logNotification(
+              reservationId,
+              'invitation',
+              'whatsapp',
+              false,
+              {
+                sentTo: guestPhone,
+                message: sentMessage || undefined,
+                paymentLink: paymentLink || undefined,
+                checkInLink: checkInLink || undefined,
+                errorMessage: errorMessage
+              }
+            );
+          } catch (logError) {
+            console.error(`[ReservationNotification] ⚠️ KRITISCH: Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Notification:`, logError);
+            // Selbst wenn das Log fehlschlägt, sollten wir weitermachen
+          }
+        }
+      } else if (guestPhone && !paymentLink) {
+        // Telefonnummer vorhanden, aber Payment-Link fehlt - Log erstellen
+        try {
           await this.logNotification(
             reservationId,
             'invitation',
@@ -362,12 +408,27 @@ ${paymentLink}
             false,
             {
               sentTo: guestPhone,
-              message: sentMessage || undefined,
-              paymentLink: paymentLink || undefined,
-              checkInLink: checkInLink || undefined,
-              errorMessage: errorMessage
+              errorMessage: 'Payment-Link fehlt - WhatsApp-Nachricht konnte nicht versendet werden'
             }
           );
+        } catch (logError) {
+          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (kein Payment-Link):`, logError);
+        }
+      } else if (!guestPhone && guestEmail) {
+        // Nur E-Mail vorhanden - Log erstellen (für zukünftige E-Mail-Implementierung)
+        try {
+          await this.logNotification(
+            reservationId,
+            'invitation',
+            'email',
+            false,
+            {
+              sentTo: guestEmail,
+              errorMessage: 'E-Mail-Versand noch nicht implementiert'
+            }
+          );
+        } catch (logError) {
+          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (nur E-Mail):`, logError);
         }
       }
 
@@ -396,8 +457,29 @@ ${paymentLink}
         console.log(`[ReservationNotification] ✅ Reservierung ${reservationId} erfolgreich aktualisiert`);
       } catch (error) {
         console.error(`[ReservationNotification] ❌ Fehler beim Aktualisieren der Reservierung:`, error);
-        // Fehler beim Update ist kritisch
-        throw error;
+        const updateErrorMsg = error instanceof Error ? error.message : 'Unbekannter Fehler beim Aktualisieren der Reservierung';
+        
+        // Log auch bei Reservation-Update-Fehler erstellen
+        try {
+          await this.logNotification(
+            reservationId,
+            'invitation',
+            guestPhone ? 'whatsapp' : (guestEmail ? 'email' : 'both'),
+            false,
+            {
+              sentTo: guestPhone || guestEmail || undefined,
+              paymentLink: paymentLink || undefined,
+              checkInLink: checkInLink || undefined,
+              errorMessage: `Reservation-Update fehlgeschlagen: ${updateErrorMsg}`
+            }
+          );
+        } catch (logError) {
+          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für Reservation-Update-Fehler:`, logError);
+        }
+        
+        // Fehler beim Update ist kritisch, aber wir werfen den Fehler nicht, damit der Log erstellt werden kann
+        // Stattdessen geben wir den Fehler im Return-Value zurück
+        errorMessage = errorMessage || updateErrorMsg;
       }
 
       return {
