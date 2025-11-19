@@ -327,27 +327,33 @@ ${paymentLink}
           }
 
           const whatsappService = new WhatsAppService(reservation.organizationId);
-          // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
+          // WICHTIG: Für Reservation-Einladungen verwenden wir DIREKT Template Messages
+          // Grund: Das 24h-Fenster ist bei neuen Reservierungen meist nicht aktiv
+          // Template Messages funktionieren immer, unabhängig vom 24h-Fenster
+          
+          // Basis-Template-Name (wird basierend auf Sprache angepasst)
           // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
-          const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
+          const baseTemplateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
           const templateParams = [
             reservation.guestName,
             checkInLink,
             paymentLink
           ];
 
-          console.log(`[ReservationNotification] Template Name (Basis): ${templateName}`);
+          console.log(`[ReservationNotification] Verwende DIREKT Template Message (kein Session Message Fallback)`);
+          console.log(`[ReservationNotification] Template Name (Basis): ${baseTemplateName}`);
           console.log(`[ReservationNotification] Template Params: ${JSON.stringify(templateParams)}`);
 
-          const whatsappSuccess = await whatsappService.sendMessageWithFallback(
+          // Sende direkt als Template Message (ohne Session Message zu versuchen)
+          const templateResult = await whatsappService.sendTemplateMessageDirectly(
             guestPhone,
-            sentMessage,
-            templateName,
-            templateParams
+            baseTemplateName,
+            templateParams,
+            sentMessage // Wird ignoriert, nur für Kompatibilität
           );
 
-          if (!whatsappSuccess) {
-            throw new Error('WhatsApp-Nachricht konnte nicht versendet werden (sendMessageWithFallback gab false zurück)');
+          if (!templateResult) {
+            throw new Error('Template Message konnte nicht versendet werden');
           }
 
           sentMessageAt = new Date();
