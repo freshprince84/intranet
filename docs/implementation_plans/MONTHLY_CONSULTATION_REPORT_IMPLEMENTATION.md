@@ -465,8 +465,8 @@ router.get('/:id/pdf', generateMonthlyReportPDF);
 export default router;
 ```
 
-### Schritt 2.4: Routes in server.ts einbinden
-- [x] Öffne `backend/src/server.ts`
+### Schritt 2.4: Routes in app.ts einbinden
+- [x] Öffne `backend/src/app.ts` ⚠️ **WICHTIG:** Routes werden in `app.ts` registriert, NICHT in `server.ts`!
 - [x] Füge nach den anderen imports hinzu:
 ```typescript
 import monthlyConsultationReportsRoutes from './routes/monthlyConsultationReports';
@@ -758,7 +758,7 @@ const saveMonthlyReportSettings = async () => {
 ### Schritt 6.1: Cron Service erstellen
 - [ ] Erstelle neue Datei: `backend/src/services/monthlyReportCronService.ts`
 - [ ] Implementiere tägliche Prüfung auf fällige Monatsabrechnungen
-- [ ] Integriere in server.ts
+- [ ] Integriere in app.ts ⚠️ **WICHTIG:** Routes werden in `app.ts` registriert, NICHT in `server.ts`!
 
 ## Phase 7: API Endpoints erweitern
 

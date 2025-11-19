@@ -49,6 +49,13 @@ Dieses Verzeichnis enthält speziell für Claude optimierte Ressourcen, die es K
 - **[DESIGN_STANDARDS.md](../core/DESIGN_STANDARDS.md)** - **⚠️ KRITISCH: Button-Design-Regel - KEIN TEXT IN BUTTONS!** Siehe Abschnitt "Buttons und Aktionselemente"
 - **[CODING_STANDARDS.md](../core/CODING_STANDARDS.md)** - **⚠️ KRITISCH: Button-Implementierung - KEIN TEXT IN BUTTONS!** Siehe Abschnitt "Button-Implementierung"
 
+### Backend-Server-Struktur
+- **⚠️ KRITISCH: Route-Registrierung und Server-Code**
+  - **RICHTIG**: `backend/src/index.ts` - Diese Datei wird tatsächlich verwendet
+  - **FALSCH**: `backend/src/app.ts` - Diese Datei existiert, wird aber NICHT geladen/verwendet
+  - **Alle Routes, Middleware, Timer, etc. müssen in `index.ts` registriert/implementiert werden**
+  - Siehe auch: [ARCHITEKTUR.md](../technical/ARCHITEKTUR.md) - Abschnitt "Backend"
+
 ## Memory Anchors
 
 Im Code werden spezielle Kommentare als "Memory Anchors" verwendet, um auf spezifische Stellen zu verweisen. Diese folgen dem Format:

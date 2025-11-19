@@ -1441,6 +1441,79 @@
         "routeNotFound": "Route not found. Please restart server or check route.",
         "unauthorized": "Not authenticated. Please log in again.",
         "forbidden": "No permission for this action."
+      },
+      "modal": {
+        "create": {
+          "title": "Create New Shift",
+          "branch": "Branch",
+          "role": "Role",
+          "template": "Shift Template",
+          "date": "Date",
+          "user": "Employee",
+          "notes": "Notes",
+          "selectBranch": "Select branch",
+          "selectRole": "Select role",
+          "selectTemplate": "Select template",
+          "selectUser": "Select employee (optional)",
+          "selectBranchRoleFirst": "Please select branch and role first",
+          "notesPlaceholder": "Optional notes for the shift..."
+        },
+        "edit": {
+          "title": "Edit Shift",
+          "branch": "Branch",
+          "role": "Role",
+          "template": "Shift Template",
+          "date": "Date",
+          "user": "Employee",
+          "status": "Status",
+          "notes": "Notes",
+          "selectUser": "Select employee (optional)",
+          "notesPlaceholder": "Optional notes for the shift...",
+          "delete": "Delete Shift",
+          "deleteConfirm": "Do you really want to delete this shift?"
+        },
+        "errors": {
+          "loadDataError": "Error loading data",
+          "loadTemplatesError": "Error loading templates",
+          "fillRequiredFields": "Please fill in all required fields",
+          "createError": "Error creating shift",
+          "updateError": "Error updating shift",
+          "deleteError": "Error deleting shift"
+        }
+      },
+      "generate": {
+        "title": "Generate Shift Plan",
+        "generate": "Generate",
+        "generating": "Generating...",
+        "form": {
+          "startDate": "Start Date",
+          "endDate": "End Date",
+          "branch": "Branch",
+          "roles": "Roles",
+          "selectBranch": "Select branch",
+          "selectAll": "Select all",
+          "deselectAll": "Deselect all",
+          "rolesHint": "If no roles are selected, all roles of the branch will be used.",
+          "selectBranchFirst": "Please select a branch first",
+          "noRolesAvailable": "No roles available"
+        },
+        "result": {
+          "summary": "Summary",
+          "total": "Total",
+          "assigned": "Assigned",
+          "unassigned": "Unassigned",
+          "conflicts": "Conflicts",
+          "conflictsTitle": "Conflicts",
+          "success": "Shift plan generated successfully!"
+        },
+        "errors": {
+          "loadBranchesError": "Error loading branches",
+          "loadRolesError": "Error loading roles",
+          "fillRequiredFields": "Please fill in all required fields",
+          "invalidDates": "Invalid dates",
+          "startDateAfterEndDate": "Start date must be before end date",
+          "generateError": "Error generating shift plan"
+        }
       }
     },
     "filters": {

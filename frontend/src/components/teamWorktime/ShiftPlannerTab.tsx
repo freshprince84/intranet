@@ -10,6 +10,9 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { EventInput } from '@fullcalendar/core';
+import CreateShiftModal from './CreateShiftModal.tsx';
+import EditShiftModal from './EditShiftModal.tsx';
+import GenerateShiftPlanModal from './GenerateShiftPlanModal.tsx';
 // FullCalendar v6 CSS - Import über CDN in index.html oder direkt hier
 
 interface ShiftPlannerTabProps {
@@ -59,15 +62,23 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
   const [calendarView, setCalendarView] = useState<'timeGridWeek' | 'dayGridMonth'>('timeGridWeek');
   const calendarRef = useRef<FullCalendar>(null);
+  const isProgrammaticNavigation = useRef(false);
+  
+  // Modal States
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
+  const [createModalInitialDate, setCreateModalInitialDate] = useState<Date | undefined>(undefined);
   
   // Lade Schichten für die aktuelle Woche
-  const fetchShifts = useCallback(async () => {
+  const fetchShifts = useCallback(async (week: Date) => {
     try {
       setLoading(true);
       setError(null);
       
-      const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 }); // Montag
-      const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 }); // Sonntag
+      const weekStart = startOfWeek(week, { weekStartsOn: 1 }); // Montag
+      const weekEnd = endOfWeek(week, { weekStartsOn: 1 }); // Sonntag
       
       const url = API_ENDPOINTS.SHIFTS.BASE;
       const params = {
@@ -137,21 +148,24 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
     } finally {
       setLoading(false);
     }
-  }, [currentWeek, t]);
+  }, [t]); // currentWeek NICHT als Dependency - wird als Parameter übergeben
   
   useEffect(() => {
-    fetchShifts();
-  }, [fetchShifts]);
+    fetchShifts(currentWeek);
+  }, [currentWeek, fetchShifts]);
   
   const handlePreviousWeek = () => {
+    isProgrammaticNavigation.current = true;
     setCurrentWeek(subWeeks(currentWeek, 1));
   };
   
   const handleNextWeek = () => {
+    isProgrammaticNavigation.current = true;
     setCurrentWeek(addWeeks(currentWeek, 1));
   };
   
   const handleToday = () => {
+    isProgrammaticNavigation.current = true;
     setCurrentWeek(new Date());
   };
   
@@ -195,26 +209,81 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
   const handleEventClick = (clickInfo: any) => {
     const shift = clickInfo.event.extendedProps.shift;
     console.log('Shift clicked:', shift);
-    // TODO: Modal zum Bearbeiten der Schicht öffnen
+    setSelectedShift(shift);
+    setIsEditModalOpen(true);
   };
   
   // Handler für Datum-Klicks (neue Schicht erstellen)
   const handleDateClick = (dateClickInfo: any) => {
     console.log('Date clicked:', dateClickInfo.date);
-    // TODO: Modal zum Erstellen einer neuen Schicht öffnen
+    setCreateModalInitialDate(dateClickInfo.date);
+    setIsCreateModalOpen(true);
+  };
+  
+  // Handler für Add-Button
+  const handleAddClick = () => {
+    setCreateModalInitialDate(currentWeek);
+    setIsCreateModalOpen(true);
+  };
+  
+  // Handler für Schicht erstellt
+  const handleShiftCreated = (newShift: Shift) => {
+    // Füge neue Schicht zur Liste hinzu
+    setShifts(prev => [...prev, newShift]);
+    // Optional: Daten neu laden für Konsistenz
+    fetchShifts(currentWeek);
+  };
+  
+  // Handler für Schicht aktualisiert
+  const handleShiftUpdated = (updatedShift: Shift) => {
+    // Aktualisiere Schicht in der Liste
+    setShifts(prev => prev.map(s => s.id === updatedShift.id ? updatedShift : s));
+    // Optional: Daten neu laden für Konsistenz
+    fetchShifts(currentWeek);
+  };
+  
+  // Handler für Schicht gelöscht
+  const handleShiftDeleted = (shiftId: number) => {
+    // Entferne Schicht aus der Liste
+    setShifts(prev => prev.filter(s => s.id !== shiftId));
+    // Optional: Daten neu laden für Konsistenz
+    fetchShifts(currentWeek);
+  };
+  
+  // Handler für Schichtplan generiert
+  const handlePlanGenerated = () => {
+    // Lade Daten neu, um generierte Schichten anzuzeigen
+    fetchShifts(currentWeek);
+  };
+  
+  // Handler für Generate-Button
+  const handleGenerateClick = () => {
+    setIsGenerateModalOpen(true);
   };
   
   // Handler für View-Änderung
   const handleDatesSet = (dateInfo: any) => {
-    // Aktualisiere currentWeek basierend auf der angezeigten Woche
     const currentView = calendarRef.current?.getApi().view.type;
-    if (currentView === 'timeGridWeek') {
-      setCurrentWeek(dateInfo.start);
-    }
-    // Aktualisiere auch die calendarView, falls der Benutzer die View im Kalender selbst ändert
+    
+    // Aktualisiere calendarView, falls der Benutzer die View im Kalender selbst ändert
     if (currentView && currentView !== calendarView) {
       setCalendarView(currentView as 'timeGridWeek' | 'dayGridMonth');
     }
+    
+    // Aktualisiere currentWeek nur bei timeGridWeek-View, nur wenn sich die Woche wirklich geändert hat,
+    // und nur wenn die Navigation NICHT programmatisch war (z.B. von unseren Buttons)
+    if (currentView === 'timeGridWeek' && !isProgrammaticNavigation.current) {
+      const newWeekStart = startOfWeek(dateInfo.start, { weekStartsOn: 1 });
+      const currentWeekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+      
+      // Nur aktualisieren, wenn sich die Woche wirklich geändert hat (verhindert Loop)
+      if (newWeekStart.getTime() !== currentWeekStart.getTime()) {
+        setCurrentWeek(dateInfo.start);
+      }
+    }
+    
+    // Ref zurücksetzen nach jeder datesSet-Event
+    isProgrammaticNavigation.current = false;
   };
   
   return (
@@ -226,6 +295,7 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
           <div className="relative group">
             <button
               type="button"
+              onClick={handleAddClick}
               className="bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 p-1.5 rounded-full hover:bg-blue-50 dark:hover:bg-gray-600 border border-blue-200 dark:border-gray-600 shadow-sm flex items-center justify-center"
               style={{ width: '30.19px', height: '30.19px' }}
               aria-label={t('teamWorktime.shifts.actions.add')}
@@ -292,12 +362,29 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
           </div>
         </div>
         
-        {/* Rechte Seite: Refresh-Button */}
-        <div className="flex items-center">
-          <div className="relative group ml-1">
+        {/* Rechte Seite: Generate & Refresh Buttons */}
+        <div className="flex items-center gap-1">
+          {/* Generate Button */}
+          <div className="relative group">
             <button
               type="button"
-              onClick={fetchShifts}
+              onClick={handleGenerateClick}
+              className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            </button>
+            <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+              {t('teamWorktime.shifts.actions.generate')}
+            </div>
+          </div>
+          
+          {/* Refresh Button */}
+          <div className="relative group">
+            <button
+              type="button"
+              onClick={() => fetchShifts(currentWeek)}
               className="p-2 rounded-md text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <ArrowPathIcon className="h-5 w-5" />
@@ -363,6 +450,7 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
               ref={calendarRef}
               plugins={[timeGridPlugin, dayGridPlugin, interactionPlugin]}
               initialView={calendarView}
+              initialDate={currentWeek}
               headerToolbar={{
                 left: 'prev,next today',
                 center: 'title',
@@ -438,6 +526,39 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
           </div>
         </div>
       )}
+      
+      {/* Modals */}
+      <CreateShiftModal
+        isOpen={isCreateModalOpen}
+        onClose={() => {
+          setIsCreateModalOpen(false);
+          setCreateModalInitialDate(undefined);
+        }}
+        onShiftCreated={handleShiftCreated}
+        initialDate={createModalInitialDate}
+      />
+      
+      {selectedShift && (
+        <EditShiftModal
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedShift(null);
+          }}
+          onShiftUpdated={handleShiftUpdated}
+          onShiftDeleted={handleShiftDeleted}
+          shift={selectedShift}
+        />
+      )}
+      
+      {/* Generate Shift Plan Modal */}
+      <GenerateShiftPlanModal
+        isOpen={isGenerateModalOpen}
+        onClose={() => setIsGenerateModalOpen(false)}
+        onPlanGenerated={handlePlanGenerated}
+        initialStartDate={startOfWeek(currentWeek, { weekStartsOn: 1 })}
+        initialEndDate={endOfWeek(currentWeek, { weekStartsOn: 1 })}
+      />
     </div>
   );
 };

@@ -53,7 +53,7 @@
       "solution": "Konfigurieren Sie Prisma mit geeigneten Verbindungspooling-Einstellungen und stellen Sie sicher, dass Verbindungen ordnungsgemäß geschlossen werden",
       "affected_files": [
         "backend/prisma/schema.prisma",
-        "backend/src/app.ts"
+        "backend/src/index.ts"
       ],
       "references": [
         "BACKEND_SETUP.md"

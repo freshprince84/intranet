@@ -2205,14 +2205,14 @@ const Worktracker: React.FC = () => {
                                                                         {hasPermission('reservations', 'write', 'table') && (
                                                                             <>
                                                                                 {/* Einladung senden Button */}
-                                                                                <div className="relative group">
-                                                                                    <button
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
+                                                                            <div className="relative group">
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
                                                                                             setSelectedReservationForInvitation(reservation);
                                                                                             setIsSendInvitationSidepaneOpen(true);
-                                                                                        }}
-                                                                                        className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                    }}
+                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                                                                                         title={t('reservations.sendInvitation', 'Einladung senden')}
                                                                                     >
                                                                                         <PaperAirplaneIcon className="h-4 w-4" />
@@ -2253,13 +2253,13 @@ const Worktracker: React.FC = () => {
                                                                                         }}
                                                                                         className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
                                                                                         title={t('common.viewDetails', 'Details anzeigen')}
-                                                                                    >
-                                                                                        <InformationCircleIcon className="h-4 w-4" />
-                                                                                    </button>
-                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                        {t('common.viewDetails', 'Details anzeigen')}
-                                                                                    </div>
+                                                                                >
+                                                                                    <InformationCircleIcon className="h-4 w-4" />
+                                                                                </button>
+                                                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                    {t('common.viewDetails', 'Details anzeigen')}
                                                                                 </div>
+                                                                            </div>
                                                                             </>
                                                                         )}
                                                                     </div>
@@ -3327,14 +3327,14 @@ const Worktracker: React.FC = () => {
                                                                         {hasPermission('reservations', 'write', 'table') && (
                                                                             <>
                                                                                 {/* Einladung senden Button */}
-                                                                                <div className="relative group">
-                                                                                    <button
-                                                                                        onClick={(e) => {
-                                                                                            e.stopPropagation();
+                                                                            <div className="relative group">
+                                                                                <button
+                                                                                    onClick={(e) => {
+                                                                                        e.stopPropagation();
                                                                                             setSelectedReservationForInvitation(reservation);
                                                                                             setIsSendInvitationSidepaneOpen(true);
-                                                                                        }}
-                                                                                        className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                    }}
+                                                                                    className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                                                                                         title={t('reservations.sendInvitation', 'Einladung senden')}
                                                                                     >
                                                                                         <PaperAirplaneIcon className="h-4 w-4" />
@@ -3375,13 +3375,13 @@ const Worktracker: React.FC = () => {
                                                                                         }}
                                                                                         className="p-1.5 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-300"
                                                                                         title={t('common.viewDetails', 'Details anzeigen')}
-                                                                                    >
-                                                                                        <InformationCircleIcon className="h-4 w-4" />
-                                                                                    </button>
-                                                                                    <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
-                                                                                        {t('common.viewDetails', 'Details anzeigen')}
-                                                                                    </div>
+                                                                                >
+                                                                                    <InformationCircleIcon className="h-4 w-4" />
+                                                                                </button>
+                                                                                <div className="absolute left-full ml-2 px-2 py-1 bg-gray-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none z-50">
+                                                                                    {t('common.viewDetails', 'Details anzeigen')}
                                                                                 </div>
+                                                                            </div>
                                                                             </>
                                                                         )}
                                                                     </div>

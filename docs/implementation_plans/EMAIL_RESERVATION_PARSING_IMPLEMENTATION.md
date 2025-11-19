@@ -363,9 +363,9 @@ export class EmailReservationScheduler {
 }
 ```
 
-#### 4.2 Integration in app.ts
+#### 4.2 Integration in index.ts
 
-**Datei:** `backend/src/app.ts`
+**Datei:** `backend/src/index.ts` ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`! Die Datei `app.ts` existiert, wird aber NICHT verwendet.
 
 **Erweiterung:**
 ```typescript
@@ -405,7 +405,7 @@ router.post('/parse', authenticate, requirePermission('reservations:create'), em
 export default router;
 ```
 
-**Registrierung in app.ts:**
+**Registrierung in index.ts:** ⚠️ **WICHTIG:** Routes werden in `index.ts` registriert, NICHT in `app.ts`!
 ```typescript
 app.use('/api/email-reservations', emailReservationsRoutes);
 ```
@@ -588,7 +588,7 @@ OPENAI_API_KEY=sk-...
 ### Schritt 4: Automatisierung
 - [ ] `emailReservationScheduler.ts` erstellen
 - [ ] Cron-Job konfigurieren
-- [ ] Integration in `app.ts`
+- [ ] Integration in `index.ts` ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`!
 - [ ] Test: Automatische Verarbeitung
 
 ### Schritt 5: API-Endpoints

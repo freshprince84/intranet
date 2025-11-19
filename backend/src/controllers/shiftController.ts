@@ -158,6 +158,9 @@ async function checkOverlap(
  * Holt alle Schichten (mit Filtern)
  */
 export const getAllShifts = async (req: Request, res: Response) => {
+  console.log('[getAllShifts] 🚀 Controller aufgerufen');
+  console.log('[getAllShifts] Query:', req.query);
+  console.log('[getAllShifts] organizationId:', req.organizationId);
   try {
     const branchId = req.query.branchId ? parseInt(req.query.branchId as string, 10) : null;
     const roleId = req.query.roleId ? parseInt(req.query.roleId as string, 10) : null;
@@ -165,6 +168,7 @@ export const getAllShifts = async (req: Request, res: Response) => {
     const startDate = req.query.startDate ? new Date(req.query.startDate as string) : null;
     const endDate = req.query.endDate ? new Date(req.query.endDate as string) : null;
     const status = req.query.status as ShiftStatus | undefined;
+    console.log('[getAllShifts] Filter:', { branchId, roleId, userId, startDate, endDate, status });
 
     const where: any = {};
 
@@ -194,6 +198,7 @@ export const getAllShifts = async (req: Request, res: Response) => {
       where.status = status;
     }
 
+    console.log('[getAllShifts] 🔍 Führe Prisma-Query aus...');
     const shifts = await prisma.shift.findMany({
       where,
       include: {
@@ -247,10 +252,12 @@ export const getAllShifts = async (req: Request, res: Response) => {
       ]
     });
 
+    console.log('[getAllShifts] ✅ Gefunden:', shifts.length, 'Schichten');
     res.json({
       success: true,
       data: shifts
     });
+    console.log('[getAllShifts] ✅ Response gesendet');
   } catch (error) {
     console.error('[Shift] Fehler beim Abrufen der Schichten:', error);
     res.status(500).json({

@@ -1272,6 +1272,16 @@ export const updateCurrentOrganization = async (req: Request, res: Response) => 
         }
       }
 
+      // ⚠️ WICHTIG: Email-Reading für Organisation 1 (La Familia Hostel) ist STANDARDMÄSSIG aktiviert
+      // Das Seed-Script stellt sicher, dass Email-Reading für Organisation 1 immer aktiviert ist
+      // Wenn Email-Reading deaktiviert wird, wird es beim nächsten Seed automatisch wieder aktiviert
+      if (organization.id === 1 && newSettings.emailReading) {
+        // Stelle sicher, dass Email-Reading für Organisation 1 aktiviert bleibt
+        if (newSettings.emailReading.enabled === false) {
+          console.warn('[OrganizationController] ⚠️ Email-Reading für Organisation 1 wurde deaktiviert - wird beim nächsten Seed wieder aktiviert');
+        }
+      }
+
       // ✅ AUDIT-LOG: Protokolliere Settings-Änderungen
       await logSettingsChange(
         organization.id,

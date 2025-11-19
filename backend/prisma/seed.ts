@@ -488,6 +488,69 @@ async function main() {
     }
     console.log(`✅ Organisation 1: ${org1.displayName} (ID: ${org1.id})`);
 
+    // ========================================
+    // EMAIL-READING STANDARD-AKTIVIERUNG FÜR ORGANISATION 1
+    // ========================================
+    // WICHTIG: Email-Reading ist STANDARDMÄSSIG für Organisation 1 (La Familia Hostel) aktiviert
+    // Das Passwort muss separat über setup-email-reading-la-familia.ts gesetzt werden
+    console.log('📧 Stelle sicher, dass Email-Reading für Organisation 1 aktiviert ist...');
+    
+    // Lade aktuelle Settings
+    const org1WithSettings = await prisma.organization.findUnique({
+      where: { id: org1.id },
+      select: { settings: true }
+    });
+    
+    const currentSettings = (org1WithSettings?.settings || {}) as any;
+    const emailReading = currentSettings.emailReading;
+    
+    // Standard-Konfiguration für Email-Reading (ohne Passwort - muss separat gesetzt werden)
+    const defaultEmailReadingConfig = {
+      enabled: true, // STANDARD: IMMER aktiviert für Organisation 1
+      provider: 'imap' as const,
+      imap: {
+        host: 'mail.lafamilia-hostel.com',
+        port: 993,
+        secure: true,
+        user: 'office@lafamilia-hostel.com',
+        password: emailReading?.imap?.password || '', // Passwort bleibt erhalten oder leer
+        folder: 'INBOX',
+        processedFolder: 'Processed'
+      },
+      filters: {
+        from: ['notification@lobbybookings.com'],
+        subject: ['Nueva reserva', 'New reservation']
+      }
+    };
+    
+    // Wenn Email-Reading bereits konfiguriert ist, stelle sicher, dass enabled: true ist
+    // Wenn nicht konfiguriert, erstelle Standard-Konfiguration (ohne Passwort)
+    if (emailReading) {
+      // Email-Reading existiert bereits - stelle sicher, dass enabled: true ist
+      if (!emailReading.enabled) {
+        console.log('   ⚠️ Email-Reading ist deaktiviert - aktiviere es...');
+        currentSettings.emailReading = {
+          ...emailReading,
+          enabled: true // STANDARD: IMMER aktiviert für Organisation 1
+        };
+      } else {
+        console.log('   ✅ Email-Reading ist bereits aktiviert');
+      }
+    } else {
+      // Email-Reading nicht konfiguriert - erstelle Standard-Konfiguration
+      console.log('   ⚠️ Email-Reading nicht konfiguriert - erstelle Standard-Konfiguration (Passwort muss separat gesetzt werden)');
+      currentSettings.emailReading = defaultEmailReadingConfig;
+    }
+    
+    // Aktualisiere Organisation mit Settings
+    await prisma.organization.update({
+      where: { id: org1.id },
+      data: {
+        settings: currentSettings
+      }
+    });
+    console.log('   ✅ Email-Reading-Konfiguration für Organisation 1 aktualisiert');
+
     // Organisation 2: Mosaik
     let org2;
     if (existingOrg2 && existingOrg2.name !== 'mosaik') {

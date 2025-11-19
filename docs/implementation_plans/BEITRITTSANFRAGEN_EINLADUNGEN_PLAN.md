@@ -247,7 +247,7 @@ router.delete('/:id', authMiddleware, organizationMiddleware, deleteInvitation);
 router.post('/:id/resend', authMiddleware, organizationMiddleware, resendInvitation);
 ```
 
-**In `backend/src/app.ts` registrieren:**
+**In `backend/src/index.ts` registrieren:** ⚠️ **WICHTIG:** Routes werden in `index.ts` registriert, NICHT in `app.ts`!
 ```typescript
 app.use('/api/invitations', invitationsRouter);
 ```
@@ -468,7 +468,7 @@ export interface CreateInvitationRequest {
 1. ✅ `backend/src/controllers/invitationController.ts` - **NEUE DATEI**
 2. ✅ `backend/src/services/emailService.ts` - Funktion `sendInvitationEmail` hinzufügen
 3. ✅ `backend/src/routes/invitations.ts` - **NEUE DATEI**
-4. ✅ `backend/src/app.ts` - Route registrieren
+4. ✅ `backend/src/index.ts` - Route registrieren ⚠️ **WICHTIG:** Routes werden in `index.ts` registriert, NICHT in `app.ts`!
 5. ⚠️ `backend/src/controllers/organizationController.ts` - `getJoinRequests` prüfen/korrigieren (falls nötig)
 6. ⚠️ `backend/src/routes/organizations.ts` - Route prüfen/korrigieren (falls nötig)
 

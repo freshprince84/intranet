@@ -1463,6 +1463,79 @@
         "routeNotFound": "Route nicht gefunden. Bitte Server neu starten oder Route prüfen.",
         "unauthorized": "Nicht authentifiziert. Bitte erneut anmelden.",
         "forbidden": "Keine Berechtigung für diese Aktion."
+      },
+      "modal": {
+        "create": {
+          "title": "Neue Schicht erstellen",
+          "branch": "Niederlassung",
+          "role": "Rolle",
+          "template": "Schicht-Template",
+          "date": "Datum",
+          "user": "Mitarbeiter",
+          "notes": "Notizen",
+          "selectBranch": "Niederlassung auswählen",
+          "selectRole": "Rolle auswählen",
+          "selectTemplate": "Template auswählen",
+          "selectUser": "Mitarbeiter auswählen (optional)",
+          "selectBranchRoleFirst": "Bitte zuerst Niederlassung und Rolle auswählen",
+          "notesPlaceholder": "Optionale Notizen zur Schicht..."
+        },
+        "edit": {
+          "title": "Schicht bearbeiten",
+          "branch": "Niederlassung",
+          "role": "Rolle",
+          "template": "Schicht-Template",
+          "date": "Datum",
+          "user": "Mitarbeiter",
+          "status": "Status",
+          "notes": "Notizen",
+          "selectUser": "Mitarbeiter auswählen (optional)",
+          "notesPlaceholder": "Optionale Notizen zur Schicht...",
+          "delete": "Schicht löschen",
+          "deleteConfirm": "Möchten Sie diese Schicht wirklich löschen?"
+        },
+        "errors": {
+          "loadDataError": "Fehler beim Laden der Daten",
+          "loadTemplatesError": "Fehler beim Laden der Templates",
+          "fillRequiredFields": "Bitte füllen Sie alle Pflichtfelder aus",
+          "createError": "Fehler beim Erstellen der Schicht",
+          "updateError": "Fehler beim Aktualisieren der Schicht",
+          "deleteError": "Fehler beim Löschen der Schicht"
+        }
+      },
+      "generate": {
+        "title": "Schichtplan generieren",
+        "generate": "Generieren",
+        "generating": "Wird generiert...",
+        "form": {
+          "startDate": "Startdatum",
+          "endDate": "Enddatum",
+          "branch": "Niederlassung",
+          "roles": "Rollen",
+          "selectBranch": "Niederlassung auswählen",
+          "selectAll": "Alle auswählen",
+          "deselectAll": "Alle abwählen",
+          "rolesHint": "Wenn keine Rollen ausgewählt werden, werden alle Rollen der Niederlassung verwendet.",
+          "selectBranchFirst": "Bitte zuerst eine Niederlassung auswählen",
+          "noRolesAvailable": "Keine Rollen verfügbar"
+        },
+        "result": {
+          "summary": "Zusammenfassung",
+          "total": "Gesamt",
+          "assigned": "Zugewiesen",
+          "unassigned": "Nicht zugewiesen",
+          "conflicts": "Konflikte",
+          "conflictsTitle": "Konflikte",
+          "success": "Schichtplan erfolgreich generiert!"
+        },
+        "errors": {
+          "loadBranchesError": "Fehler beim Laden der Niederlassungen",
+          "loadRolesError": "Fehler beim Laden der Rollen",
+          "fillRequiredFields": "Bitte füllen Sie alle Pflichtfelder aus",
+          "invalidDates": "Ungültige Datumsangaben",
+          "startDateAfterEndDate": "Startdatum muss vor Enddatum liegen",
+          "generateError": "Fehler beim Generieren des Schichtplans"
+        }
       }
     },
     "filters": {

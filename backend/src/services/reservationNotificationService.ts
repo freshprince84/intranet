@@ -308,6 +308,8 @@ ${paymentLink}
           }
 
           const whatsappService = new WhatsAppService(reservation.organizationId);
+          // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
+          // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
           const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
           const templateParams = [
             reservation.guestName,
@@ -315,7 +317,7 @@ ${paymentLink}
             paymentLink
           ];
 
-          console.log(`[ReservationNotification] Template Name: ${templateName}`);
+          console.log(`[ReservationNotification] Template Name (Basis): ${templateName}`);
           console.log(`[ReservationNotification] Template Params: ${JSON.stringify(templateParams)}`);
 
           const whatsappSuccess = await whatsappService.sendMessageWithFallback(

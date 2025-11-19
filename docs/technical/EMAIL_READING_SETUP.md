@@ -4,6 +4,16 @@
 
 Diese Anleitung beschreibt, wie die Email-Reading-Konfiguration für automatische Reservation-Erstellung aus Emails eingerichtet wird.
 
+## ⚠️ WICHTIG: Standard-Konfiguration für Organisation 1
+
+**Email-Reading ist STANDARDMÄSSIG für Organisation 1 (La Familia Hostel) aktiviert.**
+
+- Das Seed-Script (`backend/prisma/seed.ts`) stellt sicher, dass Email-Reading für Organisation 1 immer aktiviert ist
+- Wenn Email-Reading deaktiviert wird, wird es beim nächsten Seed automatisch wieder aktiviert
+- **Das Passwort muss separat über `setup-email-reading-la-familia.ts` gesetzt werden**
+
+Siehe auch: `backend/scripts/enable-email-reading-org1.ts` zum manuellen Aktivieren.
+
 ## Voraussetzungen
 
 1. **Email-Account mit IMAP-Zugang**

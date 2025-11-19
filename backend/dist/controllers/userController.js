@@ -107,6 +107,7 @@ const getAllUsersForDropdown = (req, res) => __awaiter(void 0, void 0, void 0, f
                 email: true,
                 firstName: true,
                 lastName: true,
+                payrollCountry: true,
                 roles: {
                     include: {
                         role: {

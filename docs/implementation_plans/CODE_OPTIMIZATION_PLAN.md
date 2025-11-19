@@ -315,7 +315,7 @@
 
 #### Problem 5: CORS zu permissiv in Development
 **Aktuell:**
-- `app.ts` erlaubt alle IP-Adressen in Development
+- `index.ts` erlaubt alle IP-Adressen in Development ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`!
 
 **Aktion:**
 1. Strengere CORS-Config auch in Development:

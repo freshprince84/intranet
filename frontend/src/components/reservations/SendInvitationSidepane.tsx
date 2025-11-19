@@ -63,8 +63,20 @@ Por favor, realiza el pago:
   // Preview-Nachricht generieren (mit echten Links)
   useEffect(() => {
     if (customMessage) {
-      // Generiere Check-in-Link (analog zu Worktracker.tsx)
-      const checkInLink = `${window.location.origin}/check-in/${reservation.id}`;
+      // Generiere LobbyPMS Check-in-Link (analog zu Backend generateLobbyPmsCheckInLink)
+      // Format: https://app.lobbypms.com/checkinonline/confirmar?codigo={id}&email={email}&lg={language}
+      const email = guestEmail || reservation.guestEmail || '';
+      let checkInLink = '[Check-in-Link wird generiert]';
+      if (email) {
+        const codigo = reservation.id.toString();
+        const baseUrl = 'https://app.lobbypms.com/checkinonline/confirmar';
+        const params = new URLSearchParams();
+        params.append('codigo', codigo);
+        params.append('email', email);
+        params.append('lg', 'GB'); // Standard: Englisch
+        checkInLink = `${baseUrl}?${params.toString()}`;
+      }
+      
       // Verwende bestehenden Payment-Link oder Fallback
       const paymentLink = reservation.paymentLink || '[Zahlungslink wird erstellt]';
       
@@ -74,7 +86,7 @@ Por favor, realiza el pago:
         .replace(/\{\{paymentLink\}\}/g, paymentLink);
       setPreviewMessage(preview);
     }
-  }, [customMessage, reservation.guestName, reservation.paymentLink, reservation.id]);
+  }, [customMessage, reservation.guestName, reservation.paymentLink, reservation.id, reservation.guestEmail, guestEmail]);
 
   // Responsive-Verhalten
   useEffect(() => {

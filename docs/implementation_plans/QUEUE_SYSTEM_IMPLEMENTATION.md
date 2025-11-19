@@ -407,7 +407,7 @@ ${paymentLink}
 
 **Risiken:**
 - ⚠️ Worker muss laufen, sonst werden Jobs nicht verarbeitet
-- **Mitigation**: Worker-Start in `app.ts`, Health-Check
+- **Mitigation**: Worker-Start in `index.ts`, Health-Check ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`!
 
 #### Schritt 2.2: Worker-Initialisierung
 **Datei**: `backend/src/queues/index.ts`
@@ -455,7 +455,7 @@ export async function stopWorkers(): Promise<void> {
 }
 ```
 
-**Integration in `app.ts`:**
+**Integration in `index.ts`:** ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`!
 ```typescript
 import { startWorkers, stopWorkers } from './queues';
 
@@ -829,14 +829,14 @@ if (queueEnabled) {
 **Risiko**: Wenn Worker nicht läuft, werden Jobs nicht verarbeitet
 
 **Mitigation:**
-1. Worker-Start in `app.ts` (automatisch beim Server-Start)
+1. Worker-Start in `index.ts` (automatisch beim Server-Start) ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`!
 2. Health-Check für Worker-Status
 3. Monitoring-Dashboard
 4. Alerting bei Worker-Ausfall
 
 **Code:**
 ```typescript
-// In app.ts
+// In index.ts
 startWorkers().catch((error) => {
   console.error('[Queue] Fehler beim Starten der Workers:', error);
   // Server startet trotzdem, aber Queue funktioniert nicht
@@ -1109,7 +1109,7 @@ console.log('[Queue] Job gestartet', {
 
 ### Phase 2: Worker
 - [ ] Reservation Worker implementieren
-- [ ] Worker-Initialisierung in `app.ts`
+- [ ] Worker-Initialisierung in `index.ts` ⚠️ **WICHTIG:** Server-Code gehört in `index.ts`, NICHT in `app.ts`!
 - [ ] Graceful Shutdown implementieren
 - [ ] Logging einrichten
 

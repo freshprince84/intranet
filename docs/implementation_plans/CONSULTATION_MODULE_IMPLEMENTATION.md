@@ -252,8 +252,8 @@ router.delete('/:id', deleteClient);
 export default router;
 ```
 
-### Schritt 2.3: Routes in server.ts einbinden
-- [x] Öffne `backend/src/server.ts`
+### Schritt 2.3: Routes in app.ts einbinden
+- [x] Öffne `backend/src/app.ts` ⚠️ **WICHTIG:** Routes werden in `app.ts` registriert, NICHT in `server.ts`!
 - [x] Füge nach den anderen imports hinzu:
 ```typescript
 import clientRoutes from './routes/clients';
@@ -585,8 +585,8 @@ router.patch('/:id/notes', updateConsultationNotes);
 export default router;
 ```
 
-### Schritt 3.3: Routes in server.ts einbinden
-- [x] Öffne `backend/src/server.ts`
+### Schritt 3.3: Routes in app.ts einbinden
+- [x] Öffne `backend/src/app.ts` ⚠️ **WICHTIG:** Routes werden in `app.ts` registriert, NICHT in `server.ts`!
 - [x] Füge nach dem client routes import hinzu:
 ```typescript
 import consultationRoutes from './routes/consultations';

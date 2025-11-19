@@ -41,15 +41,19 @@ router.get('/test', (req, res) => {
 
 // Alle Routen mit Authentifizierung schützen
 router.use((req, res, next) => {
-  console.log('[Shifts Route] Vor authMiddleware, Path:', req.path);
+  console.log('[Shifts Route] 🔐 Vor authMiddleware, Path:', req.path);
   next();
 }, authMiddleware);
 router.use((req, res, next) => {
-  console.log('[Shifts Route] Vor organizationMiddleware, Path:', req.path, 'userId:', req.userId);
+  console.log('[Shifts Route] 🔐 Nach authMiddleware, Path:', req.path, 'userId:', req.userId);
+  next();
+});
+router.use((req, res, next) => {
+  console.log('[Shifts Route] 🏢 Vor organizationMiddleware, Path:', req.path, 'userId:', req.userId);
   next();
 }, organizationMiddleware);
 router.use((req, res, next) => {
-  console.log('[Shifts Route] Nach organizationMiddleware, Path:', req.path, 'organizationId:', req.organizationId);
+  console.log('[Shifts Route] 🏢 Nach organizationMiddleware, Path:', req.path, 'organizationId:', req.organizationId);
   next();
 });
 
@@ -70,13 +74,15 @@ router.delete('/availabilities/:id', deleteAvailability);
 // Shift-Routen
 // WICHTIG: GET / muss VOR GET /:id kommen, sonst wird / als :id interpretiert!
 router.get('/', async (req, res) => {
-  console.log('[Shifts Route] GET / aufgerufen');
+  console.log('[Shifts Route] 📥 GET / aufgerufen');
   console.log('[Shifts Route] Query:', req.query);
   console.log('[Shifts Route] OrganizationId:', req.organizationId);
+  console.log('[Shifts Route] Rufe getAllShifts auf...');
   try {
     await getAllShifts(req, res);
+    console.log('[Shifts Route] ✅ getAllShifts erfolgreich');
   } catch (error) {
-    console.error('[Shifts Route] Fehler in getAllShifts:', error);
+    console.error('[Shifts Route] ❌ Fehler in getAllShifts:', error);
     res.status(500).json({ error: 'Fehler beim Laden der Schichten' });
   }
 });

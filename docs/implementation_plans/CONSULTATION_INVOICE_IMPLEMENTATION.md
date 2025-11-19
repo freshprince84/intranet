@@ -304,7 +304,7 @@ enum InvoiceStatus {
 ### Schritt 2.4: Routes einbinden
 - [x] Erstelle `backend/src/routes/invoiceSettings.ts`
 - [x] Erstelle `backend/src/routes/consultationInvoices.ts`
-- [x] Registriere Routes in `server.ts`
+- [x] Registriere Routes in `app.ts` ⚠️ **WICHTIG:** Routes werden in `app.ts` registriert, NICHT in `server.ts`!
 
 ## Phase 3: Frontend - Invoice Settings
 

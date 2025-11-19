@@ -988,8 +988,8 @@ router.get('/search', searchOrganizations);
 export default router;
 ```
 
-### Schritt 3.3: Routes in server.ts einbinden
-- [ ] Öffne `backend/src/server.ts`
+### Schritt 3.3: Routes in app.ts einbinden
+- [ ] Öffne `backend/src/app.ts` ⚠️ **WICHTIG:** Routes werden in `app.ts` registriert, NICHT in `server.ts`!
 - [ ] Füge nach den anderen imports hinzu:
 ```typescript
 import organizationRoutes from './routes/organizations';
