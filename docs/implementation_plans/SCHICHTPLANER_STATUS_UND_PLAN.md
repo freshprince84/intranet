@@ -21,61 +21,61 @@
 - ✅ **Status-Legende:** Farbcodierung für scheduled/confirmed/cancelled/swapped
 - ✅ **Daten-Laden:** API-Integration funktioniert
 - ✅ **Fix:** Doppeltes Laden beim Datumwechsel behoben
+- ✅ **CreateShiftModal:** Modal/Sidepane zum Erstellen von Schichten (Phase 1)
+- ✅ **EditShiftModal:** Modal/Sidepane zum Bearbeiten von Schichten (Phase 1)
+- ✅ **GenerateShiftPlanModal:** Modal/Sidepane zur automatischen Schichtplan-Generierung (Phase 2)
 
 ## ❌ Was fehlt
 
-### 1. Schicht erstellen/bearbeiten Modals (KRITISCH)
+### 1. ✅ Schicht erstellen/bearbeiten Modals (ABGESCHLOSSEN - Phase 1)
 
-**Status:** TODO in Code vorhanden (Zeilen 202, 208)
+**Status:** ✅ Implementiert
 
-**Benötigt:**
-- `CreateShiftModal.tsx` - Modal/Sidepane zum Erstellen einer neuen Schicht
-- `EditShiftModal.tsx` - Modal/Sidepane zum Bearbeiten einer bestehenden Schicht
+**Implementiert:**
+- ✅ `CreateShiftModal.tsx` - Modal/Sidepane zum Erstellen einer neuen Schicht
+- ✅ `EditShiftModal.tsx` - Modal/Sidepane zum Bearbeiten einer bestehenden Schicht
 
 **Funktionalität:**
-- Shift Template auswählen
-- Branch auswählen
-- Rolle auswählen
-- User zuweisen (optional, mit Verfügbarkeitsprüfung)
-- Datum auswählen
-- Notizen hinzufügen
-- Status setzen (scheduled/confirmed/cancelled)
+- ✅ Shift Template auswählen
+- ✅ Branch auswählen
+- ✅ Rolle auswählen
+- ✅ User zuweisen (optional, mit Verfügbarkeitsprüfung)
+- ✅ Datum auswählen
+- ✅ Notizen hinzufügen
+- ✅ Status setzen (scheduled/confirmed/cancelled)
 
 **Pattern:** Sidepane auf Desktop, Modal auf Mobile (wie CreateTaskModal/CreateRequestModal)
 
-**API-Endpoints:** Bereits vorhanden
-- `POST /api/shifts` - Schicht erstellen
-- `PUT /api/shifts/:id` - Schicht bearbeiten
-- `GET /api/shifts/templates` - Templates laden
-- `GET /api/branches` - Branches laden
-- `GET /api/roles` - Rollen laden
-- `GET /api/users` - User laden
-
-**Priorität:** 🔴 HOCH
+**Dateien:**
+- `frontend/src/components/teamWorktime/CreateShiftModal.tsx`
+- `frontend/src/components/teamWorktime/EditShiftModal.tsx`
+- Translations in `frontend/src/i18n/locales/{de,en,es}.json` unter `teamWorktime.shifts.*`
 
 ---
 
-### 2. Automatische Schichtplan-Generierung UI
+### 2. ✅ Automatische Schichtplan-Generierung UI (ABGESCHLOSSEN - Phase 2)
 
-**Status:** Backend fertig, Frontend fehlt
+**Status:** ✅ Implementiert
 
-**Benötigt:**
-- Button "Schichtplan generieren" im Header
-- Modal/Sidepane mit Formular:
-  - Zeitraum auswählen (Startdatum, Enddatum)
-  - Branch auswählen
-  - Rollen auswählen (Multi-Select, optional - wenn leer, alle Rollen der Branch)
-  - Button "Generieren"
-- Ergebnis-Anzeige:
-  - Anzahl erstellter Schichten
-  - Anzahl zugewiesener Schichten
-  - Anzahl unzugewiesener Schichten
-  - Liste der Konflikte (falls vorhanden)
+**Implementiert:**
+- ✅ Button "Schichtplan generieren" im Header (Icon-Button mit Tooltip)
+- ✅ `GenerateShiftPlanModal.tsx` - Modal/Sidepane mit Formular:
+  - ✅ Zeitraum auswählen (Startdatum, Enddatum)
+  - ✅ Branch auswählen
+  - ✅ Rollen auswählen (Multi-Select mit Checkboxen, optional - wenn leer, alle Rollen der Branch)
+  - ✅ Button "Generieren"
+- ✅ Ergebnis-Anzeige:
+  - ✅ Anzahl erstellter Schichten (Gesamt)
+  - ✅ Anzahl zugewiesener Schichten
+  - ✅ Anzahl unzugewiesener Schichten
+  - ✅ Liste der Konflikte (falls vorhanden)
 
-**API-Endpoint:** Bereits vorhanden
-- `POST /api/shifts/generate` - Generiert Schichtplan
+**API-Endpoint:** `POST /api/shifts/generate` - Generiert Schichtplan
 
-**Priorität:** 🟡 MITTEL
+**Dateien:**
+- `frontend/src/components/teamWorktime/GenerateShiftPlanModal.tsx`
+- Integration in `frontend/src/components/teamWorktime/ShiftPlannerTab.tsx`
+- Translations in `frontend/src/i18n/locales/{de,en,es}.json` unter `teamWorktime.shifts.generate.*`
 
 ---
 
@@ -177,41 +177,50 @@
 
 ## 📋 Implementierungsplan
 
-### Phase 1: Kern-Funktionalität (KRITISCH)
+### Phase 1: Kern-Funktionalität (ABGESCHLOSSEN ✅)
 **Ziel:** Schichten können erstellt und bearbeitet werden
 
-1. ✅ **CreateShiftModal.tsx** erstellen
+1. ✅ **CreateShiftModal.tsx** erstellt
    - Pattern: Sidepane auf Desktop, Modal auf Mobile
    - Felder: Template, Branch, Rolle, User (optional), Datum, Notizen
-   - Validierung: Überschneidungen prüfen
+   - Validierung: Überschneidungen prüfen (Backend)
    - Integration: `handleDateClick` öffnet Modal mit vorausgewähltem Datum
+   - **Datei:** `frontend/src/components/teamWorktime/CreateShiftModal.tsx`
 
-2. ✅ **EditShiftModal.tsx** erstellen
+2. ✅ **EditShiftModal.tsx** erstellt
    - Pattern: Sidepane auf Desktop, Modal auf Mobile
    - Felder: Alle Felder bearbeitbar (außer ID)
-   - Validierung: Überschneidungen prüfen
+   - Validierung: Überschneidungen prüfen (Backend)
    - Integration: `handleEventClick` öffnet Modal mit Schicht-Daten
+   - Löschen-Funktionalität integriert
+   - **Datei:** `frontend/src/components/teamWorktime/EditShiftModal.tsx`
 
-3. ✅ **Translations** hinzufügen
+3. ✅ **Translations** hinzugefügt
    - Alle neuen Texte in de.json, en.json, es.json
+   - Keys unter `teamWorktime.shifts.*`
 
-**Geschätzte Zeit:** 4-6 Stunden
+**Status:** ✅ Abgeschlossen
 
 ---
 
-### Phase 2: Automatische Generierung
+### Phase 2: Automatische Generierung (ABGESCHLOSSEN ✅)
 **Ziel:** Schichtplan kann automatisch generiert werden
 
-1. ✅ **GenerateShiftPlanModal.tsx** erstellen
-   - Formular: Zeitraum, Branch, Rollen (Multi-Select)
+1. ✅ **GenerateShiftPlanModal.tsx** erstellt
+   - Formular: Zeitraum, Branch, Rollen (Multi-Select mit Checkboxen)
    - Ergebnis-Anzeige: Zusammenfassung + Konflikte
-   - Button im Header hinzufügen
+   - Validierung: Pflichtfelder, Datumsvalidierung
+   - **Datei:** `frontend/src/components/teamWorktime/GenerateShiftPlanModal.tsx`
 
 2. ✅ **Integration** in ShiftPlannerTab
-   - Button "Schichtplan generieren"
-   - Nach Generierung: Daten neu laden
+   - Button "Schichtplan generieren" (Icon-Button mit Tooltip)
+   - Nach Generierung: Daten neu laden via `handlePlanGenerated`
+   - Initialwerte: Aktuelle Woche (Montag-Sonntag)
 
-**Geschätzte Zeit:** 2-3 Stunden
+3. ✅ **Translations** hinzugefügt
+   - Keys unter `teamWorktime.shifts.generate.*`
+
+**Status:** ✅ Abgeschlossen
 
 ---
 
@@ -254,10 +263,12 @@
 
 ## 🎯 Nächste Schritte (Priorität)
 
-1. **🔴 HOCH:** CreateShiftModal + EditShiftModal (Phase 1)
-2. **🟡 MITTEL:** Automatische Generierung UI (Phase 2)
-3. **🟡 MITTEL:** Schichttausch (Phase 3)
-4. **🟢 NIEDRIG:** Filter & Verwaltung (Phase 4)
+1. ✅ **ABGESCHLOSSEN:** CreateShiftModal + EditShiftModal (Phase 1)
+2. ✅ **ABGESCHLOSSEN:** Automatische Generierung UI (Phase 2)
+3. **🟡 MITTEL:** Schichttausch (Phase 3) - **NÄCHSTER SCHRITT**
+4. **🟡 MITTEL:** Templates Management (Phase 4)
+5. **🟡 MITTEL:** Availability Management (Phase 5)
+6. **🟢 NIEDRIG:** Filter & Verwaltung (Phase 6)
 
 ---
 
