@@ -8,6 +8,7 @@ import { prisma } from '../utils/prisma';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getRequestNotificationText } from '../utils/translations';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
+import { convertFilterConditionsToPrismaWhere } from '../utils/filterToPrisma';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
 import path from 'path';
 import fs from 'fs';
@@ -64,36 +65,79 @@ export const getAllRequests = async (req: Request, res: Response) => {
         // Basis-Filter: Datenisolation (Standalone vs. Organisation)
         const isolationFilter = getDataIsolationFilter(req as any, 'request');
         
+        // Filter-Parameter aus Query lesen
+        const filterId = req.query.filterId as string | undefined;
+        const filterConditions = req.query.filterConditions 
+            ? JSON.parse(req.query.filterConditions as string) 
+            : undefined;
+        const limit = req.query.limit 
+            ? parseInt(req.query.limit as string, 10) 
+            : undefined;
+        
+        // Filter-Bedingungen konvertieren (falls vorhanden)
+        let filterWhereClause: any = {};
+        if (filterId) {
+            // Lade Filter von DB
+            const savedFilter = await prisma.savedFilter.findUnique({
+                where: { id: parseInt(filterId, 10) }
+            });
+            if (savedFilter) {
+                const conditions = JSON.parse(savedFilter.conditions);
+                const operators = JSON.parse(savedFilter.operators);
+                filterWhereClause = convertFilterConditionsToPrismaWhere(
+                    conditions,
+                    operators,
+                    'request'
+                );
+            }
+        } else if (filterConditions) {
+            // Direkte Filter-Bedingungen
+            filterWhereClause = convertFilterConditionsToPrismaWhere(
+                filterConditions.conditions || filterConditions,
+                filterConditions.operators || [],
+                'request'
+            );
+        }
+        
         // Erweitere Filter um private/öffentliche Logik
         // Private Requests: Nur für requesterId und responsibleId sichtbar
         // Öffentliche Requests: Für alle User der Organisation sichtbar
         // WICHTIG: isolationFilter und OR-Bedingung müssen mit AND kombiniert werden,
         // damit das OR aus isolationFilter nicht überschrieben wird
+        const baseWhereConditions: any[] = [
+            isolationFilter,
+            {
+                OR: [
+                    // Öffentliche Requests (isPrivate = false) innerhalb der Organisation
+                    {
+                        isPrivate: false,
+                        ...(organizationId ? { organizationId } : {})
+                    },
+                    // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                    {
+                        isPrivate: true,
+                        OR: [
+                            { requesterId: userId },
+                            { responsibleId: userId }
+                        ]
+                    }
+                ]
+            }
+        ];
+        
+        // Füge Filter-Bedingungen hinzu (falls vorhanden)
+        if (Object.keys(filterWhereClause).length > 0) {
+            baseWhereConditions.push(filterWhereClause);
+        }
+        
+        // Kombiniere alle Filter
         const whereClause: Prisma.RequestWhereInput = {
-            AND: [
-                isolationFilter,
-                {
-                    OR: [
-                        // Öffentliche Requests (isPrivate = false) innerhalb der Organisation
-                        {
-                            isPrivate: false,
-                            ...(organizationId ? { organizationId } : {})
-                        },
-                        // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
-                        {
-                            isPrivate: true,
-                            OR: [
-                                { requesterId: userId },
-                                { responsibleId: userId }
-                            ]
-                        }
-                    ]
-                }
-            ]
+            AND: baseWhereConditions
         };
         
         const requests = await prisma.request.findMany({
             where: whereClause,
+            ...(limit ? { take: limit } : {}),
             include: {
                 requester: {
                     select: userSelect

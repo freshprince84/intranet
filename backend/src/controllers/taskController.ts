@@ -10,6 +10,7 @@ import { createNotificationIfEnabled } from './notificationController';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 import { LifecycleService } from '../services/lifecycleService';
 import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
+import { convertFilterConditionsToPrismaWhere } from '../utils/filterToPrisma';
 
 const userSelect = {
     id: true,
@@ -37,13 +38,59 @@ export const getAllTasks = async (req: Request, res: Response) => {
         // Datenisolation: Standalone User sehen nur ihre eigenen Tasks
         const isolationFilter = getDataIsolationFilter(req, 'task');
         
+        // Filter-Parameter aus Query lesen
+        const filterId = req.query.filterId as string | undefined;
+        const filterConditions = req.query.filterConditions 
+            ? JSON.parse(req.query.filterConditions as string) 
+            : undefined;
+        const limit = req.query.limit 
+            ? parseInt(req.query.limit as string, 10) 
+            : undefined;
+        
+        // Filter-Bedingungen konvertieren (falls vorhanden)
+        let filterWhereClause: any = {};
+        if (filterId) {
+            // Lade Filter von DB
+            const savedFilter = await prisma.savedFilter.findUnique({
+                where: { id: parseInt(filterId, 10) }
+            });
+            if (savedFilter) {
+                const conditions = JSON.parse(savedFilter.conditions);
+                const operators = JSON.parse(savedFilter.operators);
+                filterWhereClause = convertFilterConditionsToPrismaWhere(
+                    conditions,
+                    operators,
+                    'task'
+                );
+            }
+        } else if (filterConditions) {
+            // Direkte Filter-Bedingungen
+            filterWhereClause = convertFilterConditionsToPrismaWhere(
+                filterConditions.conditions || filterConditions,
+                filterConditions.operators || [],
+                'task'
+            );
+        }
+        
+        // Kombiniere Isolation-Filter mit Filter-Bedingungen
+        const whereConditions: any[] = [isolationFilter];
+        if (Object.keys(filterWhereClause).length > 0) {
+            whereConditions.push(filterWhereClause);
+        }
+        
+        const whereClause = whereConditions.length === 1 
+            ? whereConditions[0] 
+            : { AND: whereConditions };
+        
         console.log('[getAllTasks] User ID:', req.userId);
         console.log('[getAllTasks] Organization ID:', req.organizationId);
         console.log('[getAllTasks] User Role:', req.userRole?.role?.id, req.userRole?.role?.name);
         console.log('[getAllTasks] Isolation Filter:', JSON.stringify(isolationFilter, null, 2));
+        console.log('[getAllTasks] Filter Where Clause:', JSON.stringify(filterWhereClause, null, 2));
         
         const tasks = await prisma.task.findMany({
-            where: isolationFilter,
+            where: whereClause,
+            ...(limit ? { take: limit } : {}),
             include: {
                 responsible: {
                     select: userSelect
