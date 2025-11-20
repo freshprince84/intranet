@@ -479,6 +479,16 @@ export class LobbyPmsService {
       paymentStatus = mapPaymentStatus(lobbyReservation.payment_status);
     }
 
+    // Hole Branch-ID: Verwende this.branchId, oder erste Branch der Organisation als Fallback
+    let branchId: number | null = this.branchId || null;
+    if (!branchId && this.organizationId) {
+      const branch = await prisma.branch.findFirst({
+        where: { organizationId: this.organizationId },
+        orderBy: { id: 'asc' }
+      });
+      branchId = branch?.id || null;
+    }
+
     const reservationData = {
       lobbyReservationId: bookingId,
       guestName: guestName,
@@ -492,7 +502,7 @@ export class LobbyPmsService {
       status: status,
       paymentStatus: paymentStatus,
       organizationId: this.organizationId!,
-      branchId: this.branchId || null,
+      branchId: branchId,
     };
 
     // Upsert: Erstelle oder aktualisiere Reservierung

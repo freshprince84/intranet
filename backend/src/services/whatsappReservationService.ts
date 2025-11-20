@@ -29,6 +29,12 @@ export class WhatsAppReservationService {
         return existingReservation;
       }
 
+      // Hole erste Branch der Organisation als Fallback
+      const branch = await prisma.branch.findFirst({
+        where: { organizationId },
+        orderBy: { id: 'asc' }
+      });
+
       // Erstelle neue Reservierung
       const reservation = await prisma.reservation.create({
         data: {
@@ -41,7 +47,7 @@ export class WhatsAppReservationService {
           status: ReservationStatus.confirmed,
           paymentStatus: PaymentStatus.pending,
           organizationId: organizationId,
-          // Speichere zusätzliche Daten in syncHistory
+          branchId: branch?.id || null
         }
       });
 

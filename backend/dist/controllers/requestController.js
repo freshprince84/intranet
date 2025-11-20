@@ -21,6 +21,7 @@ const prisma_1 = require("../utils/prisma");
 const notificationController_1 = require("./notificationController");
 const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
+const filterToPrisma_1 = require("../utils/filterToPrisma");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
@@ -41,32 +42,61 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
         const organizationId = req.organizationId;
         // Basis-Filter: Datenisolation (Standalone vs. Organisation)
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
+        // Filter-Parameter aus Query lesen
+        const filterId = req.query.filterId;
+        const filterConditions = req.query.filterConditions
+            ? JSON.parse(req.query.filterConditions)
+            : undefined;
+        const limit = req.query.limit
+            ? parseInt(req.query.limit, 10)
+            : undefined;
+        // Filter-Bedingungen konvertieren (falls vorhanden)
+        let filterWhereClause = {};
+        if (filterId) {
+            // Lade Filter von DB
+            const savedFilter = yield prisma_1.prisma.savedFilter.findUnique({
+                where: { id: parseInt(filterId, 10) }
+            });
+            if (savedFilter) {
+                const conditions = JSON.parse(savedFilter.conditions);
+                const operators = JSON.parse(savedFilter.operators);
+                filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'request');
+            }
+        }
+        else if (filterConditions) {
+            // Direkte Filter-Bedingungen
+            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'request');
+        }
         // Erweitere Filter um private/öffentliche Logik
         // Private Requests: Nur für requesterId und responsibleId sichtbar
         // Öffentliche Requests: Für alle User der Organisation sichtbar
         // WICHTIG: isolationFilter und OR-Bedingung müssen mit AND kombiniert werden,
         // damit das OR aus isolationFilter nicht überschrieben wird
+        const baseWhereConditions = [
+            isolationFilter,
+            {
+                OR: [
+                    Object.assign({ isPrivate: false }, (organizationId ? { organizationId } : {})),
+                    // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
+                    {
+                        isPrivate: true,
+                        OR: [
+                            { requesterId: userId },
+                            { responsibleId: userId }
+                        ]
+                    }
+                ]
+            }
+        ];
+        // Füge Filter-Bedingungen hinzu (falls vorhanden)
+        if (Object.keys(filterWhereClause).length > 0) {
+            baseWhereConditions.push(filterWhereClause);
+        }
+        // Kombiniere alle Filter
         const whereClause = {
-            AND: [
-                isolationFilter,
-                {
-                    OR: [
-                        Object.assign({ isPrivate: false }, (organizationId ? { organizationId } : {})),
-                        // Private Requests: Nur wenn User Ersteller oder Verantwortlicher ist
-                        {
-                            isPrivate: true,
-                            OR: [
-                                { requesterId: userId },
-                                { responsibleId: userId }
-                            ]
-                        }
-                    ]
-                }
-            ]
+            AND: baseWhereConditions
         };
-        const requests = yield prisma_1.prisma.request.findMany({
-            where: whereClause,
-            include: {
+        const requests = yield prisma_1.prisma.request.findMany(Object.assign(Object.assign({ where: whereClause }, (limit ? { take: limit } : {})), { include: {
                 requester: {
                     select: userSelect
                 },
@@ -81,11 +111,9 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         uploadedAt: 'desc'
                     }
                 }
-            },
-            orderBy: {
+            }, orderBy: {
                 createdAt: 'desc'
-            }
-        });
+            } }));
         // Formatiere die Daten für die Frontend-Nutzung
         const formattedRequests = requests.map(request => ({
             id: request.id,

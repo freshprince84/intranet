@@ -35,6 +35,12 @@ export class EmailReservationService {
         return existingReservation;
       }
 
+      // Hole erste Branch der Organisation als Fallback
+      const branch = await prisma.branch.findFirst({
+        where: { organizationId },
+        orderBy: { id: 'asc' }
+      });
+
       // Erstelle Reservation-Daten
       const reservationData: any = {
         lobbyReservationId: parsedEmail.reservationCode,
@@ -45,7 +51,8 @@ export class EmailReservationService {
         paymentStatus: PaymentStatus.pending,
         amount: parsedEmail.amount,
         currency: parsedEmail.currency || 'COP',
-        organizationId: organizationId
+        organizationId: organizationId,
+        branchId: branch?.id || null
       };
 
       // Setze Kontaktinformationen
