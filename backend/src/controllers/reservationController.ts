@@ -322,6 +322,16 @@ export const createReservation = async (req: Request, res: Response) => {
     const checkOutDate = new Date(checkInDate);
     checkOutDate.setDate(checkOutDate.getDate() + 1); // +1 Tag
     
+    // Hole Branch-ID aus Request (falls vorhanden) oder erste Branch der Organisation
+    let branchId: number | null = req.branchId || null;
+    if (!branchId) {
+      const branch = await prisma.branch.findFirst({
+        where: { organizationId: req.organizationId },
+        orderBy: { id: 'asc' }
+      });
+      branchId = branch?.id || null;
+    }
+
     const reservationData: any = {
       guestName: guestName.trim(),
       checkInDate: checkInDate,
@@ -330,7 +340,8 @@ export const createReservation = async (req: Request, res: Response) => {
       paymentStatus: PaymentStatus.pending,
       amount: amount,
       currency: currency,
-      organizationId: req.organizationId
+      organizationId: req.organizationId,
+      branchId: branchId
     };
 
     if (contactType === 'phone') {

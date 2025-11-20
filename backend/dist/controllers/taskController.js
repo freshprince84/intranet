@@ -20,6 +20,7 @@ const notificationController_1 = require("./notificationController");
 const organization_1 = require("../middleware/organization");
 const lifecycleService_1 = require("../services/lifecycleService");
 const translations_1 = require("../utils/translations");
+const filterToPrisma_1 = require("../utils/filterToPrisma");
 const userSelect = {
     id: true,
     firstName: true,
@@ -39,13 +40,45 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
     try {
         // Datenisolation: Standalone User sehen nur ihre eigenen Tasks
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
+        // Filter-Parameter aus Query lesen
+        const filterId = req.query.filterId;
+        const filterConditions = req.query.filterConditions
+            ? JSON.parse(req.query.filterConditions)
+            : undefined;
+        const limit = req.query.limit
+            ? parseInt(req.query.limit, 10)
+            : undefined;
+        // Filter-Bedingungen konvertieren (falls vorhanden)
+        let filterWhereClause = {};
+        if (filterId) {
+            // Lade Filter von DB
+            const savedFilter = yield prisma_1.prisma.savedFilter.findUnique({
+                where: { id: parseInt(filterId, 10) }
+            });
+            if (savedFilter) {
+                const conditions = JSON.parse(savedFilter.conditions);
+                const operators = JSON.parse(savedFilter.operators);
+                filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(conditions, operators, 'task');
+            }
+        }
+        else if (filterConditions) {
+            // Direkte Filter-Bedingungen
+            filterWhereClause = (0, filterToPrisma_1.convertFilterConditionsToPrismaWhere)(filterConditions.conditions || filterConditions, filterConditions.operators || [], 'task');
+        }
+        // Kombiniere Isolation-Filter mit Filter-Bedingungen
+        const whereConditions = [isolationFilter];
+        if (Object.keys(filterWhereClause).length > 0) {
+            whereConditions.push(filterWhereClause);
+        }
+        const whereClause = whereConditions.length === 1
+            ? whereConditions[0]
+            : { AND: whereConditions };
         console.log('[getAllTasks] User ID:', req.userId);
         console.log('[getAllTasks] Organization ID:', req.organizationId);
         console.log('[getAllTasks] User Role:', (_b = (_a = req.userRole) === null || _a === void 0 ? void 0 : _a.role) === null || _b === void 0 ? void 0 : _b.id, (_d = (_c = req.userRole) === null || _c === void 0 ? void 0 : _c.role) === null || _d === void 0 ? void 0 : _d.name);
         console.log('[getAllTasks] Isolation Filter:', JSON.stringify(isolationFilter, null, 2));
-        const tasks = yield prisma_1.prisma.task.findMany({
-            where: isolationFilter,
-            include: {
+        console.log('[getAllTasks] Filter Where Clause:', JSON.stringify(filterWhereClause, null, 2));
+        const tasks = yield prisma_1.prisma.task.findMany(Object.assign(Object.assign({ where: whereClause }, (limit ? { take: limit } : {})), { include: {
                 responsible: {
                     select: userSelect
                 },
@@ -63,8 +96,7 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                         uploadedAt: 'desc'
                     }
                 }
-            }
-        });
+            } }));
         console.log('[getAllTasks] Found tasks:', tasks.length);
         console.log('[getAllTasks] Task roleIds:', tasks.map(t => { var _a; return ({ id: t.id, roleId: t.roleId, roleName: (_a = t.role) === null || _a === void 0 ? void 0 : _a.name, title: t.title }); }));
         res.json(tasks);
