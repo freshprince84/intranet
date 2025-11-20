@@ -81,46 +81,66 @@ async function fetchPropertyInfo(apiUrl: string, apiKey: string): Promise<any> {
   });
 
   try {
-    // Versuche Property-Info abzurufen
-    const response = await axiosInstance.get<any>('/api/v1/properties', {
-      validateStatus: (status) => status < 500
-    });
-
-    if (response.data && typeof response.data === 'object') {
-      if (response.data.data && Array.isArray(response.data.data) && response.data.data.length > 0) {
-        return response.data.data[0]; // Erstes Property
-      }
-      if (Array.isArray(response.data) && response.data.length > 0) {
-        return response.data[0];
-      }
-      if (response.data.id || response.data.property_id) {
-        return response.data;
-      }
-    }
-
-    // Alternativ: Hole Bookings und extrahiere Property ID aus den Reservierungen
+    // Hole Bookings und extrahiere Property ID aus den Reservierungen
+    // Das ist zuverlässiger als die Properties-API
     const bookingsResponse = await axiosInstance.get<any>('/api/v1/bookings', {
       params: {
-        start_date: new Date().toISOString().split('T')[0],
-        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-        limit: 1
+        start_date: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Letzte 60 Tage
+        end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // +30 Tage
+        limit: 10
       },
       validateStatus: (status) => status < 500
     });
 
-    if (bookingsResponse.data && bookingsResponse.data.data && Array.isArray(bookingsResponse.data.data) && bookingsResponse.data.data.length > 0) {
-      const booking = bookingsResponse.data.data[0];
-      if (booking.property_id || booking.property?.id) {
-        return {
-          id: booking.property_id || booking.property?.id,
-          name: booking.property?.name || 'Unbekannt'
-        };
+    console.log(`   API Response Status: ${bookingsResponse.status}`);
+
+    if (bookingsResponse.data && typeof bookingsResponse.data === 'object') {
+      let bookings: any[] = [];
+      
+      if (bookingsResponse.data.data && Array.isArray(bookingsResponse.data.data)) {
+        bookings = bookingsResponse.data.data;
+      } else if (Array.isArray(bookingsResponse.data)) {
+        bookings = bookingsResponse.data;
       }
+
+      if (bookings.length > 0) {
+        // Extrahiere Property ID aus der ersten Reservierung
+        const booking = bookings[0];
+        const propertyId = booking.property_id || booking.property?.id || booking.property_id_number;
+        const propertyName = booking.property?.name || booking.property_name || 'Unbekannt';
+        
+        if (propertyId) {
+          console.log(`   ✅ Property ID gefunden in Reservierung: ${propertyId}`);
+          return {
+            id: String(propertyId),
+            name: propertyName
+          };
+        }
+        
+        // Falls property_id nicht direkt vorhanden, schaue in alle Reservierungen
+        for (const b of bookings) {
+          const pid = b.property_id || b.property?.id || b.property_id_number;
+          if (pid) {
+            console.log(`   ✅ Property ID gefunden: ${pid}`);
+            return {
+              id: String(pid),
+              name: b.property?.name || b.property_name || 'Unbekannt'
+            };
+          }
+        }
+      }
+      
+      console.log(`   ⚠️  Keine Property ID in Reservierungen gefunden`);
+      console.log(`   Response-Struktur:`, JSON.stringify(bookingsResponse.data, null, 2).substring(0, 500));
     }
 
     return null;
-  } catch (error) {
-    console.error('Fehler beim Abrufen der Property-Info:', error);
+  } catch (error: any) {
+    console.error('   ❌ Fehler beim Abrufen der Property-Info:', error.message);
+    if (error.response) {
+      console.error(`   Status: ${error.response.status}`);
+      console.error(`   Data:`, JSON.stringify(error.response.data, null, 2).substring(0, 500));
+    }
     return null;
   }
 }
