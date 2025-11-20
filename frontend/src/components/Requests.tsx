@@ -197,6 +197,7 @@ const getCardMetadataFromColumnOrder = (columnOrder: string[]): string[] => {
 const Requests: React.FC = () => {
   const { t } = useTranslation();
   const [requests, setRequests] = useState<Request[]>([]);
+  const [allRequests, setAllRequests] = useState<Request[]>([]); // Alle Requests (für Hintergrund-Laden und Filter-Wechsel)
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -360,10 +361,24 @@ const Requests: React.FC = () => {
     }
   }, [viewMode]);
 
-  const fetchRequests = async () => {
+  const fetchRequests = async (filterId?: number, filterConditions?: any[], background = false) => {
     try {
-      setLoading(true);
-      const response = await axiosInstance.get('/requests');
+      if (!background) {
+        setLoading(true);
+      }
+      
+      // Baue Query-Parameter
+      const params: any = {};
+      if (filterId) {
+        params.filterId = filterId;
+      } else if (filterConditions && filterConditions.length > 0) {
+        params.filterConditions = JSON.stringify({
+          conditions: filterConditions,
+          operators: filterLogicalOperators
+        });
+      }
+      
+      const response = await axiosInstance.get('/requests', { params });
       const requestsData = response.data;
       
       // Attachments sind bereits in der Response enthalten
@@ -385,25 +400,32 @@ const Requests: React.FC = () => {
         };
       });
       
-      setRequests(requestsWithAttachments);
+      if (background) {
+        // Hintergrund-Laden: Speichere in allRequests
+        console.log('📋 Alle Requests im Hintergrund geladen:', requestsWithAttachments.length, 'Requests');
+        setAllRequests(requestsWithAttachments);
+      } else {
+        // Vordergrund-Laden: Zeige sofort an
+        setRequests(requestsWithAttachments);
+      }
       setError(null);
     } catch (err) {
       console.error('Request Error:', err);
       // Einfachere Fehlerbehandlung ohne axios-Import
       const axiosError = err as any;
-      if (axiosError.code === 'ERR_NETWORK') {
-        setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
-      } else {
-        setError(`Fehler beim Laden der Requests: ${axiosError.response?.data?.message || axiosError.message}`);
+      if (!background) {
+        if (axiosError.code === 'ERR_NETWORK') {
+          setError('Verbindung zum Server konnte nicht hergestellt werden. Bitte stellen Sie sicher, dass der Server läuft.');
+        } else {
+          setError(`Fehler beim Laden der Requests: ${axiosError.response?.data?.message || axiosError.message}`);
+        }
       }
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   };
-
-  useEffect(() => {
-    fetchRequests();
-  }, []);
 
   // Standard-Filter erstellen und speichern
   useEffect(() => {
@@ -497,8 +519,9 @@ const Requests: React.FC = () => {
   }, []);
 
   // Initialer Default-Filter setzen (Controlled Mode)
+  // Initialer Default-Filter setzen und Requests laden
   useEffect(() => {
-    const setInitialFilter = async () => {
+    const setInitialFilterAndLoad = async () => {
       try {
         const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(REQUESTS_TABLE_ID));
         const filters = response.data;
@@ -508,8 +531,10 @@ const Requests: React.FC = () => {
           filter.name === 'Aktuell' || filter.name === 'Actual'
         );
         if (aktuellFilter) {
+          // 1. Filter-State setzen
           setActiveFilterName('Aktuell'); // Speichere deutschen Namen, wird beim Anzeigen übersetzt
           setSelectedFilterId(aktuellFilter.id);
+          
           // Migration: Altes Format zu neuem Format konvertieren
           let sortDirections = aktuellFilter.sortDirections || [];
           if (Array.isArray(sortDirections) && sortDirections.length > 0) {
@@ -524,13 +549,26 @@ const Requests: React.FC = () => {
             }));
           }
           applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators, sortDirections);
+          
+          // 2. Requests mit Standardfilter laden (server-seitig gefiltert)
+          await fetchRequests(aktuellFilter.id);
+          
+          // 3. Restliche Requests im Hintergrund laden (für Filter-Wechsel)
+          setTimeout(() => {
+            fetchRequests(undefined, undefined, true);
+          }, 2000); // 2 Sekunden Verzögerung, damit initiale Ladezeit nicht beeinflusst wird
+        } else {
+          // Fallback: Alle Requests laden (ohne Filter)
+          await fetchRequests();
         }
       } catch (error) {
         console.error('Fehler beim Setzen des initialen Filters:', error);
+        // Fallback: Alle Requests laden
+        await fetchRequests();
       }
     };
 
-    setInitialFilter();
+    setInitialFilterAndLoad();
   }, []);
 
   // getStatusText wird jetzt direkt von statusUtils verwendet (siehe getStatusLabel oben)
@@ -663,10 +701,17 @@ const Requests: React.FC = () => {
   };
   
   // Filter Change Handler (Controlled Mode)
-  const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+  const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
     setActiveFilterName(name);
     setSelectedFilterId(id);
     applyFilterConditions(conditions, operators, sortDirections);
+    
+    // Wenn Filter-ID vorhanden (Standardfilter): Server-seitig laden
+    // Sonst: Client-seitig filtern (komplexe Filter)
+    if (id) {
+      await fetchRequests(id);
+    }
+    // Wenn kein ID: Client-seitiges Filtering wird automatisch durch filteredAndSortedRequests angewendet
   };
 
   const getActiveFilterCount = () => {
@@ -674,7 +719,11 @@ const Requests: React.FC = () => {
   };
 
   const filteredAndSortedRequests = useMemo(() => {
-    return requests
+    // Verwende allRequests, wenn verfügbar und kein Standardfilter aktiv (für komplexe Filter)
+    // Sonst verwende requests (bereits server-seitig gefiltert)
+    const requestsToFilter = (allRequests.length > 0 && !selectedFilterId) ? allRequests : requests;
+    
+    return requestsToFilter
       .filter(request => {
         // Globale Suchfunktion
         if (searchTerm) {
@@ -895,7 +944,7 @@ const Requests: React.FC = () => {
         if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
-  }, [requests, searchTerm, sortConfig, filterConditions, filterLogicalOperators, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
+  }, [requests, allRequests, selectedFilterId, searchTerm, sortConfig, filterConditions, filterLogicalOperators, filterSortDirections, viewMode, cardMetadataOrder, visibleCardMetadata, cardSortDirections]);
 
   // Funktion zum Kopieren eines Requests
   const handleCopyRequest = async (request) => {

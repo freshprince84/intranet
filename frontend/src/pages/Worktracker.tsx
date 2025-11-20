@@ -199,6 +199,7 @@ const Worktracker: React.FC = () => {
     const [activeTab, setActiveTab] = useState<'todos' | 'reservations'>('todos');
     
     const [tasks, setTasks] = useState<Task[]>([]);
+    const [allTasks, setAllTasks] = useState<Task[]>([]); // Alle Tasks (für Hintergrund-Laden und Filter-Wechsel)
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -321,10 +322,24 @@ const Worktracker: React.FC = () => {
     const hasLoadedRef = useRef(false);
 
     // Funktion zum Neu Laden der Tasks
-    const loadTasks = async () => {
+    const loadTasks = async (filterId?: number, filterConditions?: any[], background = false) => {
         try {
-            setLoading(true);
-            const response = await axiosInstance.get(API_ENDPOINTS.TASKS.BASE);
+            if (!background) {
+                setLoading(true);
+            }
+            
+            // Baue Query-Parameter
+            const params: any = {};
+            if (filterId) {
+                params.filterId = filterId;
+            } else if (filterConditions && filterConditions.length > 0) {
+                params.filterConditions = JSON.stringify({
+                    conditions: filterConditions,
+                    operators: filterLogicalOperators
+                });
+            }
+            
+            const response = await axiosInstance.get(API_ENDPOINTS.TASKS.BASE, { params });
             const tasksData = response.data;
             
             // Attachments sind bereits in der Response enthalten
@@ -351,14 +366,25 @@ const Worktracker: React.FC = () => {
                     };
                 });
             
-            console.log('📋 Tasks geladen:', tasksWithAttachments.length, 'Tasks');
-            setTasks(tasksWithAttachments);
+            if (background) {
+                // Hintergrund-Laden: Speichere in allTasks
+                console.log('📋 Alle Tasks im Hintergrund geladen:', tasksWithAttachments.length, 'Tasks');
+                setAllTasks(tasksWithAttachments);
+            } else {
+                // Vordergrund-Laden: Zeige sofort an
+                console.log('📋 Tasks geladen:', tasksWithAttachments.length, 'Tasks');
+                setTasks(tasksWithAttachments);
+            }
             setError(null);
         } catch (error) {
             console.error('Fehler beim Laden der Tasks:', error);
-            setError(t('worktime.messages.tasksLoadError'));
+            if (!background) {
+                setError(t('worktime.messages.tasksLoadError'));
+            }
         } finally {
-            setLoading(false);
+            if (!background) {
+                setLoading(false);
+            }
         }
     };
 
@@ -432,17 +458,19 @@ const Worktracker: React.FC = () => {
         }
     }, [tasks, location.search]);
 
-    // Initialer Default-Filter setzen (Controlled Mode)
+    // Initialer Default-Filter setzen und Tasks laden (Controlled Mode)
     useEffect(() => {
-        const setInitialFilter = async () => {
+        const setInitialFilterAndLoad = async () => {
             try {
                 const response = await axiosInstance.get(API_ENDPOINTS.SAVED_FILTERS.BY_TABLE(TODOS_TABLE_ID));
                 const filters = response.data;
                 
                 const aktuellFilter = filters.find((filter: any) => filter.name === 'Aktuell');
                 if (aktuellFilter) {
+                    // 1. Filter-State setzen
                     setActiveFilterName(t('tasks.filters.current'));
                     setSelectedFilterId(aktuellFilter.id);
+                    
                     // Migration: Altes Format zu neuem Format konvertieren
                     let sortDirections = aktuellFilter.sortDirections || [];
                     if (Array.isArray(sortDirections) && sortDirections.length > 0) {
@@ -457,13 +485,26 @@ const Worktracker: React.FC = () => {
                         }));
                     }
                     applyFilterConditions(aktuellFilter.conditions, aktuellFilter.operators, sortDirections);
+                    
+                    // 2. Tasks mit Standardfilter laden (server-seitig gefiltert)
+                    await loadTasks(aktuellFilter.id);
+                    
+                    // 3. Restliche Tasks im Hintergrund laden (für Filter-Wechsel)
+                    setTimeout(() => {
+                        loadTasks(undefined, undefined, true);
+                    }, 2000); // 2 Sekunden Verzögerung, damit initiale Ladezeit nicht beeinflusst wird
+                } else {
+                    // Fallback: Alle Tasks laden (ohne Filter)
+                    await loadTasks();
                 }
             } catch (error) {
                 console.error('Fehler beim Setzen des initialen Filters:', error);
+                // Fallback: Alle Tasks laden
+                await loadTasks();
             }
         };
 
-        setInitialFilter();
+        setInitialFilterAndLoad();
     }, []);
 
     // Standard-Filter erstellen und speichern
@@ -741,11 +782,18 @@ const Worktracker: React.FC = () => {
     };
     
     // Filter Change Handler (Controlled Mode)
-    const handleFilterChange = (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
+    const handleFilterChange = async (name: string, id: number | null, conditions: FilterCondition[], operators: ('AND' | 'OR')[], sortDirections?: Array<{ column: string; direction: 'asc' | 'desc'; priority: number; conditionIndex: number }>) => {
         if (activeTab === 'todos') {
             setActiveFilterName(name);
             setSelectedFilterId(id);
             applyFilterConditions(conditions, operators, sortDirections);
+            
+            // Wenn Filter-ID vorhanden (Standardfilter): Server-seitig laden
+            // Sonst: Client-seitig filtern (komplexe Filter)
+            if (id) {
+                await loadTasks(id);
+            }
+            // Wenn kein ID: Client-seitiges Filtering wird automatisch durch filteredAndSortedTasks angewendet
         } else {
             setReservationActiveFilterName(name);
             setReservationSelectedFilterId(id);
@@ -799,10 +847,16 @@ const Worktracker: React.FC = () => {
     };
 
     const filteredAndSortedTasks = useMemo(() => {
-        console.log('🔄 Filtere Tasks:', tasks.length, 'Tasks vorhanden');
+        // Verwende allTasks, wenn verfügbar und kein Standardfilter aktiv (für komplexe Filter)
+        // Sonst verwende tasks (bereits server-seitig gefiltert)
+        const tasksToFilter = (allTasks.length > 0 && !selectedFilterId) ? allTasks : tasks;
+        
+        console.log('🔄 Filtere Tasks:', tasksToFilter.length, 'Tasks vorhanden');
         console.log('🔄 Filterbedingungen:', filterConditions);
+        console.log('🔄 Verwende:', allTasks.length > 0 && !selectedFilterId ? 'allTasks (client-seitig)' : 'tasks (server-seitig gefiltert)');
+        
         // Sicherstellen, dass keine undefined/null Werte im Array sind
-        const validTasks = tasks.filter(task => task != null);
+        const validTasks = tasksToFilter.filter(task => task != null);
         const filtered = validTasks
             .filter(task => {
                 // Globale Suchfunktion
@@ -1047,7 +1101,7 @@ const Worktracker: React.FC = () => {
         
         console.log('✅ Gefilterte und sortierte Tasks:', sorted.length);
         return sorted;
-    }, [tasks, searchTerm, tableSortConfig, getStatusPriority, filterConditions, filterLogicalOperators, filterSortDirections, viewMode]);
+    }, [tasks, allTasks, selectedFilterId, searchTerm, tableSortConfig, getStatusPriority, filterConditions, filterLogicalOperators, filterSortDirections, viewMode]);
 
     // Filter- und Sortierlogik für Reservations
     const filteredAndSortedReservations = useMemo(() => {

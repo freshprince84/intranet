@@ -1,0 +1,252 @@
+import { Prisma } from '@prisma/client';
+
+/**
+ * Filter-Bedingung (wie im Frontend verwendet)
+ */
+export interface FilterCondition {
+  column: string;
+  operator: string;
+  value: string | number | Date | null;
+}
+
+/**
+ * Konvertiert Filter-Bedingungen in Prisma Where-Klauseln
+ * 
+ * Unterstützt:
+ * - Einfache Operatoren: equals, notEquals, contains, startsWith, endsWith
+ * - Datum-Operatoren: before, after (mit __TODAY__ Unterstützung)
+ * - Zahlen-Operatoren: greaterThan, lessThan
+ * - UND/ODER-Verknüpfungen
+ * - User/Role-Filter (user-{id}, role-{id})
+ * 
+ * @param conditions - Array von Filter-Bedingungen
+ * @param operators - Array von logischen Operatoren ('AND' | 'OR')
+ * @param entityType - Entity-Typ ('request' | 'task') für spezielle Logik
+ * @returns Prisma Where-Klausel
+ */
+export function convertFilterConditionsToPrismaWhere(
+  conditions: FilterCondition[],
+  operators: ('AND' | 'OR')[],
+  entityType: 'request' | 'task'
+): Prisma.RequestWhereInput | Prisma.TaskWhereInput | {} {
+  if (conditions.length === 0) {
+    return {};
+  }
+
+  // Konvertiere jede Bedingung in eine Prisma Where-Klausel
+  const prismaConditions: any[] = [];
+
+  for (const cond of conditions) {
+    const whereClause = convertSingleCondition(cond, entityType);
+    if (Object.keys(whereClause).length > 0) {
+      prismaConditions.push(whereClause);
+    }
+  }
+
+  if (prismaConditions.length === 0) {
+    return {};
+  }
+
+  // UND/ODER-Verknüpfungen
+  if (operators.length === 0 || operators.every(op => op === 'AND')) {
+    // Alle UND: Kombiniere mit AND
+    return { AND: prismaConditions };
+  } else if (operators.every(op => op === 'OR')) {
+    // Alle ODER: Kombiniere mit OR
+    return { OR: prismaConditions };
+  } else {
+    // Gemischte Verknüpfungen: Gruppiere nach Operator-Sequenz
+    const grouped: any[] = [];
+    let currentGroup: any[] = [prismaConditions[0]];
+
+    for (let i = 1; i < prismaConditions.length; i++) {
+      const operator = operators[i - 1];
+      if (operator === 'AND') {
+        currentGroup.push(prismaConditions[i]);
+      } else {
+        // ODER: Aktuelle Gruppe abschließen, neue Gruppe starten
+        if (currentGroup.length > 0) {
+          grouped.push(currentGroup.length === 1 ? currentGroup[0] : { AND: currentGroup });
+        }
+        currentGroup = [prismaConditions[i]];
+      }
+    }
+
+    if (currentGroup.length > 0) {
+      grouped.push(currentGroup.length === 1 ? currentGroup[0] : { AND: currentGroup });
+    }
+
+    return grouped.length === 1 ? grouped[0] : { OR: grouped };
+  }
+}
+
+/**
+ * Konvertiert eine einzelne Filter-Bedingung in eine Prisma Where-Klausel
+ */
+function convertSingleCondition(
+  condition: FilterCondition,
+  entityType: 'request' | 'task'
+): any {
+  const { column, operator, value } = condition;
+
+  switch (column) {
+    case 'status':
+      if (operator === 'equals') {
+        return { status: value };
+      } else if (operator === 'notEquals') {
+        return { status: { not: value } };
+      }
+      return {};
+
+    case 'title':
+      if (operator === 'equals') {
+        return { title: { equals: value, mode: 'insensitive' } };
+      } else if (operator === 'contains') {
+        return { title: { contains: value as string, mode: 'insensitive' } };
+      } else if (operator === 'startsWith') {
+        return { title: { startsWith: value as string, mode: 'insensitive' } };
+      } else if (operator === 'endsWith') {
+        return { title: { endsWith: value as string, mode: 'insensitive' } };
+      }
+      return {};
+
+    case 'type':
+      if (operator === 'equals') {
+        return { type: value };
+      } else if (operator === 'notEquals') {
+        return { type: { not: value } };
+      }
+      return {};
+
+    case 'dueDate':
+      return convertDateCondition(value, operator);
+
+    case 'responsible':
+      return convertUserRoleCondition(value, operator, entityType, 'responsible');
+
+    case 'qualityControl':
+      if (entityType === 'task') {
+        return convertUserRoleCondition(value, operator, entityType, 'qualityControl');
+      }
+      return {};
+
+    case 'requestedBy':
+      if (entityType === 'request') {
+        return convertUserRoleCondition(value, operator, entityType, 'requestedBy');
+      }
+      return {};
+
+    case 'branch':
+      return convertBranchCondition(value, operator);
+
+    default:
+      // Fallback für unbekannte Spalten
+      return {};
+  }
+}
+
+/**
+ * Konvertiert Datum-Bedingungen
+ */
+function convertDateCondition(value: any, operator: string): any {
+  // Handle __TODAY__ dynamic date
+  let dateValue: Date;
+  if (value === '__TODAY__') {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    dateValue = today;
+  } else {
+    dateValue = new Date(value);
+    if (isNaN(dateValue.getTime())) {
+      return {};
+    }
+  }
+
+  if (operator === 'equals') {
+    const startOfDay = new Date(dateValue);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(dateValue);
+    endOfDay.setHours(23, 59, 59, 999);
+    return { dueDate: { gte: startOfDay, lte: endOfDay } };
+  } else if (operator === 'before') {
+    return { dueDate: { lt: dateValue } };
+  } else if (operator === 'after') {
+    return { dueDate: { gt: dateValue } };
+  }
+
+  return {};
+}
+
+/**
+ * Konvertiert User/Role-Bedingungen
+ */
+function convertUserRoleCondition(
+  value: any,
+  operator: string,
+  entityType: 'request' | 'task',
+  field: 'responsible' | 'qualityControl' | 'requestedBy'
+): any {
+  if (typeof value !== 'string') {
+    return {};
+  }
+
+  // Handle user-{id} format
+  if (value.startsWith('user-')) {
+    const userId = parseInt(value.replace('user-', ''), 10);
+    if (isNaN(userId)) {
+      return {};
+    }
+
+    if (field === 'responsible') {
+      if (entityType === 'task') {
+        return operator === 'notEquals'
+          ? { responsibleId: { not: userId } }
+          : { responsibleId: userId };
+      } else if (entityType === 'request') {
+        return operator === 'notEquals'
+          ? { responsibleId: { not: userId } }
+          : { responsibleId: userId };
+      }
+    } else if (field === 'qualityControl' && entityType === 'task') {
+      return operator === 'notEquals'
+        ? { qualityControlId: { not: userId } }
+        : { qualityControlId: userId };
+    } else if (field === 'requestedBy' && entityType === 'request') {
+      return operator === 'notEquals'
+        ? { requesterId: { not: userId } }
+        : { requesterId: userId };
+    }
+  }
+
+  // Handle role-{id} format
+  if (value.startsWith('role-')) {
+    const roleId = parseInt(value.replace('role-', ''), 10);
+    if (isNaN(roleId)) {
+      return {};
+    }
+
+    if (field === 'responsible' && entityType === 'task') {
+      return operator === 'notEquals'
+        ? { roleId: { not: roleId } }
+        : { roleId: roleId };
+    }
+    // Requests haben keine roleId
+  }
+
+  return {};
+}
+
+/**
+ * Konvertiert Branch-Bedingungen
+ */
+function convertBranchCondition(value: any, operator: string): any {
+  if (typeof value === 'string') {
+    if (operator === 'equals') {
+      return { branch: { name: { equals: value, mode: 'insensitive' } } };
+    } else if (operator === 'contains') {
+      return { branch: { name: { contains: value, mode: 'insensitive' } } };
+    }
+  }
+  return {};
+}
+
