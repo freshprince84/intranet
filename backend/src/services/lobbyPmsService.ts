@@ -86,7 +86,16 @@ export class LobbyPmsService {
           const lobbyPmsSettings = settings?.lobbyPms || settings;
 
           if (lobbyPmsSettings?.apiKey) {
-            this.apiUrl = lobbyPmsSettings.apiUrl || 'https://api.lobbypms.com';
+            let apiUrl = lobbyPmsSettings.apiUrl || 'https://api.lobbypms.com';
+            // Korrigiere app.lobbypms.com zu api.lobbypms.com
+            if (apiUrl.includes('app.lobbypms.com')) {
+              apiUrl = apiUrl.replace('app.lobbypms.com', 'api.lobbypms.com');
+            }
+            // Stelle sicher, dass apiUrl NICHT mit /api endet (wird im Endpoint hinzugefügt)
+            if (apiUrl.endsWith('/api')) {
+              apiUrl = apiUrl.replace(/\/api$/, '');
+            }
+            this.apiUrl = apiUrl;
             this.apiKey = lobbyPmsSettings.apiKey;
             this.propertyId = lobbyPmsSettings.propertyId;
             this.axiosInstance = this.createAxiosInstance();
@@ -130,7 +139,19 @@ export class LobbyPmsService {
       throw new Error(`LobbyPMS API URL ist nicht für Organisation ${this.organizationId} konfiguriert`);
     }
 
-    this.apiUrl = lobbyPmsSettings.apiUrl;
+    let apiUrl = lobbyPmsSettings.apiUrl;
+    if (!apiUrl) {
+      apiUrl = 'https://api.lobbypms.com';
+    }
+    // Korrigiere app.lobbypms.com zu api.lobbypms.com
+    if (apiUrl.includes('app.lobbypms.com')) {
+      apiUrl = apiUrl.replace('app.lobbypms.com', 'api.lobbypms.com');
+    }
+    // Stelle sicher, dass apiUrl NICHT mit /api endet (wird im Endpoint hinzugefügt)
+    if (apiUrl.endsWith('/api')) {
+      apiUrl = apiUrl.replace(/\/api$/, '');
+    }
+    this.apiUrl = apiUrl;
     this.apiKey = lobbyPmsSettings.apiKey;
     this.propertyId = lobbyPmsSettings.propertyId;
 
