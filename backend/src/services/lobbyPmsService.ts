@@ -546,10 +546,11 @@ export class LobbyPmsService {
         await this.syncReservation(lobbyReservation);
         syncedCount++;
       } catch (error) {
-        console.error(`[LobbyPMS] Fehler beim Synchronisieren der Reservierung ${lobbyReservation.id}:`, error);
+        const bookingId = String(lobbyReservation.booking_id || lobbyReservation.id || 'unknown');
+        console.error(`[LobbyPMS] Fehler beim Synchronisieren der Reservierung ${bookingId}:`, error);
         // Erstelle Sync-History mit Fehler
         const existingReservation = await prisma.reservation.findUnique({
-          where: { lobbyReservationId: lobbyReservation.id }
+          where: { lobbyReservationId: bookingId }
         });
         if (existingReservation) {
           await prisma.reservationSyncHistory.create({
