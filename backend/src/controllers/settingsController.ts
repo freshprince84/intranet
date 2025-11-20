@@ -1,11 +1,10 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { 
     validateNotificationSettings, 
     validateUserNotificationSettings 
 } from '../validation/notificationValidation';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
+import { notificationSettingsCache } from '../services/notificationSettingsCache';
 
 // System-weite Notification-Einstellungen abrufen
 export const getNotificationSettings = async (req: Request, res: Response) => {
@@ -68,6 +67,9 @@ export const updateNotificationSettings = async (req: Request, res: Response) =>
                 data
             });
         }
+        
+        // Cache invalidation nach Update
+        notificationSettingsCache.invalidateSystemSettings();
         
         res.json(settings);
     } catch (error) {
@@ -204,6 +206,9 @@ export const updateUserNotificationSettings = async (req: Request, res: Response
                 data
             });
         }
+        
+        // Cache invalidation nach Update
+        notificationSettingsCache.invalidateUserSettings(userId);
         
         res.json(settings);
     } catch (error) {
