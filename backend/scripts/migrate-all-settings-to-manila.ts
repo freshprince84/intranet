@@ -5,9 +5,12 @@
  * - LobbyPMS Settings (Organization.settings.lobbyPms → Branch.lobbyPmsSettings)
  * - Bold Payment Settings (Organization.settings.boldPayment → Branch.boldPaymentSettings)
  * - TTLock/Door System Settings (Organization.settings.doorSystem → Branch.doorSystemSettings)
- * - Email Settings (Organization.settings.smtp* + imap → Branch.emailSettings)
+ * - Email Settings (NUR SMTP für Email-Versand, Organization.settings.smtp* → Branch.emailSettings)
  * 
- * WICHTIG: Diese Migration muss NACH den Schema-Migrationen ausgeführt werden!
+ * WICHTIG: 
+ * - Diese Migration muss NACH den Schema-Migrationen ausgeführt werden!
+ * - emailReading wird NICHT migriert (Email-Import wird durch LobbyPMS API ersetzt)
+ * - Nur SMTP-Settings werden für Email-Versand benötigt
  */
 
 import { PrismaClient } from '@prisma/client';
@@ -81,7 +84,13 @@ async function migrateAllSettingsToManila() {
           hasAnySettings = true;
           console.log('   ✅ Verschlüsselt und bereit zum Speichern\n');
         } catch (error) {
-          console.log('   ⚠️  Verschlüsselung fehlgeschlagen, speichere unverschlüsselt\n');
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          if (errorMsg.includes('ENCRYPTION_KEY')) {
+            console.log('   ⚠️  ENCRYPTION_KEY nicht gesetzt - speichere unverschlüsselt');
+            console.log('   💡 Tipp: Generiere Key mit: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
+          } else {
+            console.log(`   ⚠️  Verschlüsselung fehlgeschlagen: ${errorMsg}\n`);
+          }
           updateData.lobbyPmsSettings = lobbyPmsSettings;
           hasAnySettings = true;
         }
@@ -102,7 +111,13 @@ async function migrateAllSettingsToManila() {
           hasAnySettings = true;
           console.log('   ✅ Verschlüsselt und bereit zum Speichern\n');
         } catch (error) {
-          console.log('   ⚠️  Verschlüsselung fehlgeschlagen, speichere unverschlüsselt\n');
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          if (errorMsg.includes('ENCRYPTION_KEY')) {
+            console.log('   ⚠️  ENCRYPTION_KEY nicht gesetzt - speichere unverschlüsselt');
+            console.log('   💡 Tipp: Generiere Key mit: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
+          } else {
+            console.log(`   ⚠️  Verschlüsselung fehlgeschlagen: ${errorMsg}\n`);
+          }
           updateData.boldPaymentSettings = boldPaymentSettings;
           hasAnySettings = true;
         }
@@ -123,20 +138,27 @@ async function migrateAllSettingsToManila() {
           hasAnySettings = true;
           console.log('   ✅ Verschlüsselt und bereit zum Speichern\n');
         } catch (error) {
-          console.log('   ⚠️  Verschlüsselung fehlgeschlagen, speichere unverschlüsselt\n');
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          if (errorMsg.includes('ENCRYPTION_KEY')) {
+            console.log('   ⚠️  ENCRYPTION_KEY nicht gesetzt - speichere unverschlüsselt');
+            console.log('   💡 Tipp: Generiere Key mit: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
+          } else {
+            console.log(`   ⚠️  Verschlüsselung fehlgeschlagen: ${errorMsg}\n`);
+          }
           updateData.doorSystemSettings = doorSystemSettings;
           hasAnySettings = true;
         }
       }
     }
 
-    // 7. Email Settings (SMTP + IMAP)
+    // 7. Email Settings (NUR SMTP für Email-Versand)
+    // WICHTIG: emailReading wird NICHT migriert, da Email-Import durch LobbyPMS API ersetzt wird
     const emailSettings: any = {};
     let hasEmailSettings = false;
 
-    // SMTP Settings
+    // SMTP Settings (für Email-Versand)
     if (orgSettings?.smtpHost || orgSettings?.smtpUser) {
-      console.log('📋 SMTP Settings gefunden:');
+      console.log('📋 SMTP Settings gefunden (für Email-Versand):');
       console.log(`   - SMTP Host: ${orgSettings.smtpHost || 'nicht gesetzt'}`);
       console.log(`   - SMTP Port: ${orgSettings.smtpPort || 'nicht gesetzt'}`);
       console.log(`   - SMTP User: ${orgSettings.smtpUser || 'nicht gesetzt'}`);
@@ -152,24 +174,9 @@ async function migrateAllSettingsToManila() {
       hasEmailSettings = true;
     }
 
-    // IMAP Settings (falls vorhanden)
-    if (orgSettings?.imap) {
-      console.log('📋 IMAP Settings gefunden:');
-      console.log(`   - IMAP Host: ${orgSettings.imap.host || 'nicht gesetzt'}`);
-      console.log(`   - IMAP User: ${orgSettings.imap.user || 'nicht gesetzt'}`);
-      
-      emailSettings.imap = {
-        enabled: orgSettings.imap.enabled || false,
-        host: orgSettings.imap.host,
-        port: orgSettings.imap.port,
-        secure: orgSettings.imap.secure !== false, // Default: true
-        user: orgSettings.imap.user,
-        password: orgSettings.imap.password, // Wird verschlüsselt
-        folder: orgSettings.imap.folder || 'INBOX',
-        processedFolder: orgSettings.imap.processedFolder
-      };
-      hasEmailSettings = true;
-    }
+    // HINWEIS: emailReading wird NICHT migriert
+    // - emailReading ist für Email-Import (wird durch LobbyPMS API ersetzt)
+    // - Nur SMTP-Settings werden für Email-Versand benötigt
 
     if (hasEmailSettings) {
       try {
@@ -177,7 +184,13 @@ async function migrateAllSettingsToManila() {
         hasAnySettings = true;
         console.log('   ✅ Email Settings verschlüsselt und bereit zum Speichern\n');
       } catch (error) {
-        console.log('   ⚠️  Verschlüsselung fehlgeschlagen, speichere unverschlüsselt\n');
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        if (errorMsg.includes('ENCRYPTION_KEY')) {
+          console.log('   ⚠️  ENCRYPTION_KEY nicht gesetzt - speichere unverschlüsselt');
+          console.log('   💡 Tipp: Generiere Key mit: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"\n');
+        } else {
+          console.log(`   ⚠️  Verschlüsselung fehlgeschlagen: ${errorMsg}\n`);
+        }
         updateData.emailSettings = emailSettings;
         hasAnySettings = true;
       }
@@ -202,8 +215,9 @@ async function migrateAllSettingsToManila() {
     if (updateData.lobbyPmsSettings) console.log('   ✅ LobbyPMS Settings');
     if (updateData.boldPaymentSettings) console.log('   ✅ Bold Payment Settings');
     if (updateData.doorSystemSettings) console.log('   ✅ TTLock/Door System Settings');
-    if (updateData.emailSettings) console.log('   ✅ Email Settings (SMTP + IMAP)');
+    if (updateData.emailSettings) console.log('   ✅ Email Settings (SMTP für Email-Versand)');
     console.log('\n⚠️  WICHTIG: Prüfe nach Migration, ob alles funktioniert!');
+    console.log('   💡 Falls ENCRYPTION_KEY fehlt: Generiere mit: node -e "console.log(require(\'crypto\').randomBytes(32).toString(\'hex\'))"');
 
   } catch (error) {
     console.error('❌ Fehler bei Migration:', error);

@@ -42,7 +42,9 @@ import { getClaudeConsoleService } from './services/claudeConsoleService';
 import { checkAndStopExceededWorktimes } from './controllers/worktimeController';
 import { checkAndGenerateMonthlyReports, triggerMonthlyReportCheck } from './services/monthlyReportScheduler';
 import { ReservationScheduler } from './services/reservationScheduler';
-import { EmailReservationScheduler } from './services/emailReservationScheduler';
+// Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
+// import { EmailReservationScheduler } from './services/emailReservationScheduler';
+import { LobbyPmsReservationScheduler } from './services/lobbyPmsReservationScheduler';
 import { startWorkers, stopWorkers } from './queues';
 
 const app = express();
@@ -150,8 +152,11 @@ setInterval(async () => {
 // Starte Reservation Scheduler
 ReservationScheduler.start();
 
-// Starte Email-Reservation Scheduler
-EmailReservationScheduler.start();
+// Starte LobbyPMS-Reservation Scheduler (ersetzt Email-Import)
+LobbyPmsReservationScheduler.start();
+
+// Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
+// EmailReservationScheduler.start();
 
 // Starte Queue Workers (wenn aktiviert)
 startWorkers().catch((error) => {
