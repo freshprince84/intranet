@@ -82,8 +82,8 @@ export class LobbyPmsService {
 
       if (branch?.lobbyPmsSettings) {
         try {
-          // branch.lobbyPmsSettings enthält bereits direkt die LobbyPMS Settings (nicht verschachtelt)
-          const lobbyPmsSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
+          const settings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
+          const lobbyPmsSettings = settings?.lobbyPms || settings;
 
           if (lobbyPmsSettings?.apiKey) {
             this.apiUrl = lobbyPmsSettings.apiUrl || 'https://api.lobbypms.com';
