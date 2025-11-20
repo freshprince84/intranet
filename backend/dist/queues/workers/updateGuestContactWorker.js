@@ -47,9 +47,8 @@ const bullmq_1 = require("bullmq");
 const boldPaymentService_1 = require("../../services/boldPaymentService");
 const whatsappService_1 = require("../../services/whatsappService");
 const ttlockService_1 = require("../../services/ttlockService");
-const client_1 = require("@prisma/client");
 const checkInLinkUtils_1 = require("../../utils/checkInLinkUtils");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../../utils/prisma");
 /**
  * Erstellt einen Worker für Guest Contact Update Jobs
  * Verarbeitet Payment-Link, TTLock Passcode und WhatsApp-Versand im Hintergrund
@@ -63,7 +62,7 @@ function createUpdateGuestContactWorker(connection) {
         const { reservationId, organizationId, contact, contactType, guestPhone, guestEmail, guestName, } = job.data;
         console.log(`[UpdateGuestContact Worker] Starte Verarbeitung für Reservierung ${reservationId} (Job ID: ${job.id})`);
         // Hole aktuelle Reservierung
-        const reservation = yield prisma.reservation.findUnique({
+        const reservation = yield prisma_1.prisma.reservation.findUnique({
             where: { id: reservationId },
             include: {
                 organization: {
@@ -136,7 +135,7 @@ function createUpdateGuestContactWorker(connection) {
                         ttlockCode = yield ttlockService.createTemporaryPasscode(lockId, reservation.checkInDate, reservation.checkOutDate, `Guest: ${guestName}`);
                         console.log(`[UpdateGuestContact Worker] ✅ TTLock Passcode erstellt: ${ttlockCode}`);
                         // Speichere TTLock Code in Reservierung
-                        yield prisma.reservation.update({
+                        yield prisma_1.prisma.reservation.update({
                             where: { id: reservationId },
                             data: {
                                 doorPin: ttlockCode,
@@ -202,7 +201,7 @@ ${ttlockCode}
                 updateData.sentMessage = sentMessage;
                 updateData.sentMessageAt = sentMessageAt;
             }
-            yield prisma.reservation.update({
+            yield prisma_1.prisma.reservation.update({
                 where: { id: reservationId },
                 data: updateData,
             });

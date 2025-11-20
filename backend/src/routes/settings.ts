@@ -12,9 +12,7 @@ import {
     updateUserNotificationSettings
 } from '../controllers/settingsController';
 import sharp from 'sharp';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 // Erweitere den Request-Typ
 declare module 'express-serve-static-core' {

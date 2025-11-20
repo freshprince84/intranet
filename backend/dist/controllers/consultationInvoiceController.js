@@ -13,12 +13,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.cancelInvoice = exports.markAsPaid = exports.generateInvoicePDFEndpoint = exports.updateInvoiceStatus = exports.getInvoiceById = exports.getInvoices = exports.createInvoiceFromConsultations = void 0;
-const client_1 = require("@prisma/client");
 const invoicePdfGenerator_1 = require("../services/invoicePdfGenerator");
 const organization_1 = require("../middleware/organization");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Rechnung aus gefilterten Beratungen erstellen
 const createInvoiceFromConsultations = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -35,7 +34,7 @@ const createInvoiceFromConsultations = (req, res) => __awaiter(void 0, void 0, v
             return res.status(400).json({ message: 'Client und Stundensatz sind erforderlich' });
         }
         // Prüfe, ob alle Beratungen dem User gehören und abgeschlossen sind
-        const consultations = yield prisma.workTime.findMany({
+        const consultations = yield prisma_1.prisma.workTime.findMany({
             where: {
                 id: { in: consultationIds.map((id) => Number(id)) },
                 userId: Number(userId),
@@ -59,12 +58,12 @@ const createInvoiceFromConsultations = (req, res) => __awaiter(void 0, void 0, v
             });
         }
         // Hole Invoice Settings für Rechnungsnummer
-        let invoiceSettings = yield prisma.invoiceSettings.findUnique({
+        let invoiceSettings = yield prisma_1.prisma.invoiceSettings.findUnique({
             where: { userId: Number(userId) }
         });
         if (!invoiceSettings) {
             // Erstelle Default-Settings wenn noch keine vorhanden
-            invoiceSettings = yield prisma.invoiceSettings.create({
+            invoiceSettings = yield prisma_1.prisma.invoiceSettings.create({
                 data: {
                     userId: Number(userId),
                     companyName: 'Meine Firma',
@@ -105,7 +104,7 @@ const createInvoiceFromConsultations = (req, res) => __awaiter(void 0, void 0, v
         // Erstelle QR-Referenz (vereinfacht)
         const qrReference = `${invoiceNumber}${Date.now()}`.replace(/[^0-9]/g, '').substring(0, 27);
         // Erstelle Rechnung in Transaktion
-        const invoice = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        const invoice = yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // Erstelle Rechnung
             const newInvoice = yield tx.consultationInvoice.create({
                 data: {
@@ -139,7 +138,7 @@ const createInvoiceFromConsultations = (req, res) => __awaiter(void 0, void 0, v
             return newInvoice;
         }));
         // Lade vollständige Rechnung mit Items
-        const fullInvoice = yield prisma.consultationInvoice.findUnique({
+        const fullInvoice = yield prisma_1.prisma.consultationInvoice.findUnique({
             where: { id: invoice.id },
             include: {
                 client: true,
@@ -187,7 +186,7 @@ const getInvoices = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             if (to)
                 whereClause.issueDate.lte = new Date(to);
         }
-        const invoices = yield prisma.consultationInvoice.findMany({
+        const invoices = yield prisma_1.prisma.consultationInvoice.findMany({
             where: whereClause,
             include: {
                 client: true,
@@ -215,7 +214,7 @@ const getInvoiceById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const invoice = yield prisma.consultationInvoice.findFirst({
+        const invoice = yield prisma_1.prisma.consultationInvoice.findFirst({
             where: {
                 id: Number(id),
                 userId: Number(userId)
@@ -258,7 +257,7 @@ const updateInvoiceStatus = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (!['DRAFT', 'SENT', 'PAID', 'OVERDUE', 'CANCELLED'].includes(status)) {
             return res.status(400).json({ message: 'Ungültiger Status' });
         }
-        const invoice = yield prisma.consultationInvoice.update({
+        const invoice = yield prisma_1.prisma.consultationInvoice.update({
             where: {
                 id: Number(id),
                 userId: Number(userId)
@@ -286,7 +285,7 @@ const generateInvoicePDFEndpoint = (req, res) => __awaiter(void 0, void 0, void 
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Lade vollständige Rechnung
-        const invoice = yield prisma.consultationInvoice.findFirst({
+        const invoice = yield prisma_1.prisma.consultationInvoice.findFirst({
             where: {
                 id: Number(id),
                 userId: Number(userId)
@@ -309,7 +308,7 @@ const generateInvoicePDFEndpoint = (req, res) => __awaiter(void 0, void 0, void 
             return res.status(404).json({ message: 'Rechnung nicht gefunden' });
         }
         // Lade Invoice Settings
-        const settings = yield prisma.invoiceSettings.findUnique({
+        const settings = yield prisma_1.prisma.invoiceSettings.findUnique({
             where: { userId: Number(userId) }
         });
         if (!settings) {
@@ -329,7 +328,7 @@ const generateInvoicePDFEndpoint = (req, res) => __awaiter(void 0, void 0, void 
         // Speichere PDF
         fs_1.default.writeFileSync(fullPdfPath, pdfBuffer);
         // Aktualisiere PDF-Pfad in Datenbank
-        yield prisma.consultationInvoice.update({
+        yield prisma_1.prisma.consultationInvoice.update({
             where: { id: Number(id) },
             data: { pdfPath }
         });
@@ -357,7 +356,7 @@ const markAsPaid = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return res.status(400).json({ message: 'Betrag und Zahlungsmethode sind erforderlich' });
         }
         // Prüfe ob Rechnung existiert
-        const invoice = yield prisma.consultationInvoice.findFirst({
+        const invoice = yield prisma_1.prisma.consultationInvoice.findFirst({
             where: {
                 id: Number(id),
                 userId: Number(userId)
@@ -372,7 +371,7 @@ const markAsPaid = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Berechne bereits bezahlten Betrag
         const paidAmount = invoice.payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
         const newTotalPaid = paidAmount + parseFloat(amount);
-        yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // Erfasse Zahlung
             yield tx.invoicePayment.create({
                 data: {
@@ -392,7 +391,7 @@ const markAsPaid = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             });
         }));
         // Lade aktualisierte Rechnung
-        const updatedInvoice = yield prisma.consultationInvoice.findUnique({
+        const updatedInvoice = yield prisma_1.prisma.consultationInvoice.findUnique({
             where: { id: Number(id) },
             include: {
                 client: true,
@@ -415,7 +414,7 @@ const cancelInvoice = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const invoice = yield prisma.consultationInvoice.findFirst({
+        const invoice = yield prisma_1.prisma.consultationInvoice.findFirst({
             where: {
                 id: Number(id),
                 userId: Number(userId)
@@ -430,7 +429,7 @@ const cancelInvoice = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (invoice.payments.length > 0) {
             return res.status(400).json({ message: 'Rechnung kann nicht storniert werden - bereits Zahlungen erhalten' });
         }
-        const cancelledInvoice = yield prisma.consultationInvoice.update({
+        const cancelledInvoice = yield prisma_1.prisma.consultationInvoice.update({
             where: { id: Number(id) },
             data: { status: 'CANCELLED' },
             include: {

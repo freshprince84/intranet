@@ -13,7 +13,7 @@ exports.getTodosShiftAnalysis = exports.getTodosFrequencyAnalysis = exports.getR
 const client_1 = require("@prisma/client");
 const organization_1 = require("../middleware/organization");
 const date_fns_1 = require("date-fns");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // To-Dos pro User für ein bestimmtes Datum
 const getTodosByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -29,7 +29,7 @@ const getTodosByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0, fu
         const start = (0, date_fns_1.startOfDay)(selectedDate);
         const end = (0, date_fns_1.endOfDay)(selectedDate);
         // Alle User mit ihren To-Dos für das Datum
-        const users = yield prisma.user.findMany({
+        const users = yield prisma_1.prisma.user.findMany({
             where: userFilter,
             include: {
                 tasksResponsible: {
@@ -165,7 +165,7 @@ const getRequestsByUserForDate = (req, res) => __awaiter(void 0, void 0, void 0,
         const start = (0, date_fns_1.startOfDay)(selectedDate);
         const end = (0, date_fns_1.endOfDay)(selectedDate);
         // Alle User mit ihren Requests für das Datum
-        const users = yield prisma.user.findMany({
+        const users = yield prisma_1.prisma.user.findMany({
             where: userFilter,
             include: {
                 requestsRequester: {
@@ -338,7 +338,7 @@ const getTodosChronological = (req, res) => __awaiter(void 0, void 0, void 0, fu
                 });
             }
         }
-        const tasks = yield prisma.task.findMany({
+        const tasks = yield prisma_1.prisma.task.findMany({
             where,
             include: {
                 responsible: {
@@ -454,7 +454,7 @@ const getRequestsChronological = (req, res) => __awaiter(void 0, void 0, void 0,
                 });
             }
         }
-        const requests = yield prisma.request.findMany({
+        const requests = yield prisma_1.prisma.request.findMany({
             where,
             include: {
                 requester: {
@@ -510,7 +510,7 @@ const getTodosFrequencyAnalysis = (req, res) => __awaiter(void 0, void 0, void 0
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
         // Erstelle Filter für TaskStatusHistory (basierend auf Task-Filter)
         // Da TaskStatusHistory taskId referenziert, müssen wir über Tasks filtern
-        const taskIdsForHistory = yield prisma.task.findMany({
+        const taskIdsForHistory = yield prisma_1.prisma.task.findMany({
             where: taskFilter,
             select: { id: true }
         });
@@ -519,7 +519,7 @@ const getTodosFrequencyAnalysis = (req, res) => __awaiter(void 0, void 0, void 0
         const start = (0, date_fns_1.startOfDay)(selectedDate);
         const end = (0, date_fns_1.endOfDay)(selectedDate);
         // 1. Erledigungsrate pro User
-        const userCompletionStats = yield prisma.taskStatusHistory.groupBy({
+        const userCompletionStats = yield prisma_1.prisma.taskStatusHistory.groupBy({
             by: ['userId'],
             where: {
                 AND: [
@@ -544,7 +544,7 @@ const getTodosFrequencyAnalysis = (req, res) => __awaiter(void 0, void 0, void 0
         });
         // User-Details für die Stats
         const userIds = userCompletionStats.map(s => s.userId);
-        const users = yield prisma.user.findMany({
+        const users = yield prisma_1.prisma.user.findMany({
             where: {
                 AND: [
                     userFilter,
@@ -573,7 +573,7 @@ const getTodosFrequencyAnalysis = (req, res) => __awaiter(void 0, void 0, void 0
             };
         }).sort((a, b) => b.completedCount - a.completedCount);
         // 2. Häufigste/nicht erledigte To-Dos (basierend auf Status-Wechseln zu "done")
-        const taskCompletionStats = yield prisma.taskStatusHistory.groupBy({
+        const taskCompletionStats = yield prisma_1.prisma.taskStatusHistory.groupBy({
             by: ['taskId'],
             where: {
                 AND: [
@@ -598,7 +598,7 @@ const getTodosFrequencyAnalysis = (req, res) => __awaiter(void 0, void 0, void 0
         });
         // Task-Details für die Stats
         const taskIds = taskCompletionStats.map(s => s.taskId);
-        const tasks = yield prisma.task.findMany({
+        const tasks = yield prisma_1.prisma.task.findMany({
             where: {
                 AND: [
                     taskFilter,
@@ -652,7 +652,7 @@ const getTodosFrequencyAnalysis = (req, res) => __awaiter(void 0, void 0, void 0
         // Berechne die Zeit, die Tasks in jedem Status verbracht haben
         const statusTimeStats = {};
         // Lade alle Status-Änderungen für das Datum
-        const allStatusChanges = yield prisma.taskStatusHistory.findMany({
+        const allStatusChanges = yield prisma_1.prisma.taskStatusHistory.findMany({
             where: {
                 AND: [
                     {
@@ -754,7 +754,7 @@ const getTodosShiftAnalysis = (req, res) => __awaiter(void 0, void 0, void 0, fu
         const start = (0, date_fns_1.startOfDay)(selectedDate);
         const end = (0, date_fns_1.endOfDay)(selectedDate);
         // 1. Alle WorkTimes (Schichten) für das Datum mit verknüpften Tasks
-        const workTimes = yield prisma.workTime.findMany({
+        const workTimes = yield prisma_1.prisma.workTime.findMany({
             where: {
                 AND: [
                     workTimeFilter,

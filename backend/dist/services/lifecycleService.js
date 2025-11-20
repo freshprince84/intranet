@@ -10,10 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LifecycleService = void 0;
-const client_1 = require("@prisma/client");
 const taskAutomationService_1 = require("./taskAutomationService");
 const documentService_1 = require("./documentService");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Service für Mitarbeiterlebenszyklus-Verwaltung
  */
@@ -23,7 +22,7 @@ class LifecycleService {
      */
     static getLifecycle(userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId },
                 include: {
                     lifecycleEvents: {
@@ -60,14 +59,14 @@ class LifecycleService {
     static createLifecycle(userId, organizationId) {
         return __awaiter(this, void 0, void 0, function* () {
             // Prüfe ob bereits ein Lebenszyklus existiert
-            const existing = yield prisma.employeeLifecycle.findUnique({
+            const existing = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (existing) {
                 return existing;
             }
             // Erstelle neuen Lebenszyklus
-            const lifecycle = yield prisma.employeeLifecycle.create({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.create({
                 data: {
                     userId,
                     organizationId,
@@ -76,7 +75,7 @@ class LifecycleService {
                 }
             });
             // Erstelle Event
-            yield prisma.lifecycleEvent.create({
+            yield prisma_1.prisma.lifecycleEvent.create({
                 data: {
                     lifecycleId: lifecycle.id,
                     eventType: 'onboarding_started',
@@ -106,7 +105,7 @@ class LifecycleService {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // Prüfe ob User bereits User-Rolle in der Organisation hat
-                const userRole = yield prisma.role.findFirst({
+                const userRole = yield prisma_1.prisma.role.findFirst({
                     where: {
                         organizationId: organizationId,
                         name: 'User'
@@ -117,7 +116,7 @@ class LifecycleService {
                     return null;
                 }
                 // Prüfe ob User bereits diese Rolle hat
-                const existingUserRole = yield prisma.userRole.findFirst({
+                const existingUserRole = yield prisma_1.prisma.userRole.findFirst({
                     where: {
                         userId: userId,
                         roleId: userRole.id
@@ -125,7 +124,7 @@ class LifecycleService {
                 });
                 // Füge User-Rolle hinzu, falls noch nicht vorhanden
                 if (!existingUserRole) {
-                    yield prisma.userRole.create({
+                    yield prisma_1.prisma.userRole.create({
                         data: {
                             userId: userId,
                             roleId: userRole.id,
@@ -137,7 +136,7 @@ class LifecycleService {
                 // Starte Lifecycle (erstellt ihn, falls noch nicht vorhanden)
                 const lifecycle = yield this.createLifecycle(userId, organizationId);
                 // Erstelle Event
-                yield prisma.lifecycleEvent.create({
+                yield prisma_1.prisma.lifecycleEvent.create({
                     data: {
                         lifecycleId: lifecycle.id,
                         eventType: 'lifecycle_started_after_onboarding',
@@ -162,7 +161,7 @@ class LifecycleService {
      */
     static updateStatus(userId, status, data, generatedBy) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (!lifecycle) {
@@ -193,7 +192,7 @@ class LifecycleService {
                 updateData.offboardingCompletedAt = new Date();
                 // Erstelle automatisch Arbeitszeugnis, falls noch keines existiert
                 try {
-                    const existingCertificates = yield prisma.employmentCertificate.findMany({
+                    const existingCertificates = yield prisma_1.prisma.employmentCertificate.findMany({
                         where: { lifecycleId: lifecycle.id }
                     });
                     // Nur erstellen, wenn noch kein Zertifikat existiert
@@ -212,7 +211,7 @@ class LifecycleService {
                 }
                 // Deaktiviere User (nicht löschen!)
                 try {
-                    yield prisma.user.update({
+                    yield prisma_1.prisma.user.update({
                         where: { id: userId },
                         data: { active: false }
                     });
@@ -226,7 +225,7 @@ class LifecycleService {
                 // Suche Tasks, die für diesen User erstellt wurden (über Branch oder Rolle)
                 try {
                     // Hole User mit Branch-Informationen
-                    const user = yield prisma.user.findUnique({
+                    const user = yield prisma_1.prisma.user.findUnique({
                         where: { id: userId },
                         include: {
                             branches: {
@@ -239,7 +238,7 @@ class LifecycleService {
                     });
                     if (user && user.branches.length > 0) {
                         const branchId = user.branches[0].branch.id;
-                        const offboardingTasks = yield prisma.task.findMany({
+                        const offboardingTasks = yield prisma_1.prisma.task.findMany({
                             where: {
                                 branchId: branchId,
                                 title: {
@@ -280,12 +279,12 @@ class LifecycleService {
                 if (data.exitReason)
                     updateData.exitReason = data.exitReason;
             }
-            const updated = yield prisma.employeeLifecycle.update({
+            const updated = yield prisma_1.prisma.employeeLifecycle.update({
                 where: { userId },
                 data: updateData
             });
             // Erstelle Event
-            yield prisma.lifecycleEvent.create({
+            yield prisma_1.prisma.lifecycleEvent.create({
                 data: {
                     lifecycleId: updated.id,
                     eventType: `status_changed_to_${status}`,
@@ -316,7 +315,7 @@ class LifecycleService {
      */
     static getSocialSecurityStatus(userId, type) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (!lifecycle) {
@@ -335,7 +334,7 @@ class LifecycleService {
                 };
             }
             // Hole aus EmployeeLifecycle oder SocialSecurityRegistration
-            const registration = yield prisma.socialSecurityRegistration.findUnique({
+            const registration = yield prisma_1.prisma.socialSecurityRegistration.findUnique({
                 where: {
                     lifecycleId_registrationType: {
                         lifecycleId: lifecycle.id,
@@ -387,7 +386,7 @@ class LifecycleService {
      */
     static updateSocialSecurityStatus(userId, type, data, completedBy) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (!lifecycle) {
@@ -402,12 +401,12 @@ class LifecycleService {
                 updateData[`${type}Provider`] = data.provider;
             if (data.registrationDate)
                 updateData[`${type}RegisteredAt`] = data.registrationDate;
-            yield prisma.employeeLifecycle.update({
+            yield prisma_1.prisma.employeeLifecycle.update({
                 where: { userId },
                 data: updateData
             });
             // Update oder erstelle SocialSecurityRegistration
-            yield prisma.socialSecurityRegistration.upsert({
+            yield prisma_1.prisma.socialSecurityRegistration.upsert({
                 where: {
                     lifecycleId_registrationType: {
                         lifecycleId: lifecycle.id,
@@ -436,7 +435,7 @@ class LifecycleService {
                 }
             });
             // Erstelle Event
-            yield prisma.lifecycleEvent.create({
+            yield prisma_1.prisma.lifecycleEvent.create({
                 data: {
                     lifecycleId: lifecycle.id,
                     eventType: `${type}_status_updated`,
@@ -451,7 +450,7 @@ class LifecycleService {
             });
             // Prüfe ob Onboarding automatisch abgeschlossen werden kann
             // Lade aktualisierten Lifecycle mit allen Daten
-            const updatedLifecycle = yield prisma.employeeLifecycle.findUnique({
+            const updatedLifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (updatedLifecycle && updatedLifecycle.status === 'onboarding') {
@@ -460,7 +459,7 @@ class LifecycleService {
                 if (progress.percent === 100) {
                     yield this.updateStatus(userId, 'active', undefined, completedBy);
                     // Erstelle Event für automatische Status-Änderung
-                    yield prisma.lifecycleEvent.create({
+                    yield prisma_1.prisma.lifecycleEvent.create({
                         data: {
                             lifecycleId: updatedLifecycle.id,
                             eventType: 'status_auto_changed',
@@ -482,13 +481,13 @@ class LifecycleService {
      */
     static getCertificates(userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (!lifecycle) {
                 return null;
             }
-            const certificates = yield prisma.employmentCertificate.findMany({
+            const certificates = yield prisma_1.prisma.employmentCertificate.findMany({
                 where: { lifecycleId: lifecycle.id },
                 orderBy: { createdAt: 'desc' },
                 include: {
@@ -509,13 +508,13 @@ class LifecycleService {
      */
     static getCertificate(userId, certificateId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (!lifecycle) {
                 return null;
             }
-            const certificate = yield prisma.employmentCertificate.findFirst({
+            const certificate = yield prisma_1.prisma.employmentCertificate.findFirst({
                 where: {
                     id: certificateId,
                     lifecycleId: lifecycle.id
@@ -539,14 +538,14 @@ class LifecycleService {
      */
     static createCertificate(userId, data, generatedBy) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (!lifecycle) {
                 throw new Error('Lebenszyklus nicht gefunden');
             }
             // Setze alle anderen Certificates auf isLatest = false
-            yield prisma.employmentCertificate.updateMany({
+            yield prisma_1.prisma.employmentCertificate.updateMany({
                 where: {
                     lifecycleId: lifecycle.id,
                     isLatest: true
@@ -567,7 +566,7 @@ class LifecycleService {
                 }, generatedBy);
             }
             // Erstelle neues Certificate
-            const certificate = yield prisma.employmentCertificate.create({
+            const certificate = yield prisma_1.prisma.employmentCertificate.create({
                 data: {
                     lifecycleId: lifecycle.id,
                     certificateType: data.certificateType || 'employment',
@@ -588,7 +587,7 @@ class LifecycleService {
                 }
             });
             // Erstelle Event
-            yield prisma.lifecycleEvent.create({
+            yield prisma_1.prisma.lifecycleEvent.create({
                 data: {
                     lifecycleId: lifecycle.id,
                     eventType: 'certificate_created',
@@ -607,13 +606,13 @@ class LifecycleService {
      */
     static updateCertificate(userId, certificateId, data, updatedBy) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (!lifecycle) {
                 throw new Error('Lebenszyklus nicht gefunden');
             }
-            const certificate = yield prisma.employmentCertificate.findFirst({
+            const certificate = yield prisma_1.prisma.employmentCertificate.findFirst({
                 where: {
                     id: certificateId,
                     lifecycleId: lifecycle.id
@@ -622,7 +621,7 @@ class LifecycleService {
             if (!certificate) {
                 throw new Error('Arbeitszeugnis nicht gefunden');
             }
-            const updated = yield prisma.employmentCertificate.update({
+            const updated = yield prisma_1.prisma.employmentCertificate.update({
                 where: { id: certificateId },
                 data: {
                     pdfPath: data.pdfPath || certificate.pdfPath,
@@ -639,7 +638,7 @@ class LifecycleService {
                 }
             });
             // Erstelle Event
-            yield prisma.lifecycleEvent.create({
+            yield prisma_1.prisma.lifecycleEvent.create({
                 data: {
                     lifecycleId: lifecycle.id,
                     eventType: 'certificate_updated',
@@ -657,13 +656,13 @@ class LifecycleService {
      */
     static getContracts(userId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (!lifecycle) {
                 return null;
             }
-            const contracts = yield prisma.employmentContract.findMany({
+            const contracts = yield prisma_1.prisma.employmentContract.findMany({
                 where: { lifecycleId: lifecycle.id },
                 orderBy: { createdAt: 'desc' },
                 include: {
@@ -687,13 +686,13 @@ class LifecycleService {
      */
     static getContract(userId, contractId) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (!lifecycle) {
                 return null;
             }
-            const contract = yield prisma.employmentContract.findFirst({
+            const contract = yield prisma_1.prisma.employmentContract.findFirst({
                 where: {
                     id: contractId,
                     lifecycleId: lifecycle.id
@@ -720,14 +719,14 @@ class LifecycleService {
      */
     static createContract(userId, data, generatedBy) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (!lifecycle) {
                 throw new Error('Lebenszyklus nicht gefunden');
             }
             // Setze alle anderen Contracts auf isLatest = false
-            yield prisma.employmentContract.updateMany({
+            yield prisma_1.prisma.employmentContract.updateMany({
                 where: {
                     lifecycleId: lifecycle.id,
                     isLatest: true
@@ -753,7 +752,7 @@ class LifecycleService {
                 }, generatedBy);
             }
             // Erstelle neuen Contract
-            const contract = yield prisma.employmentContract.create({
+            const contract = yield prisma_1.prisma.employmentContract.create({
                 data: {
                     lifecycleId: lifecycle.id,
                     contractType: data.contractType || 'employment',
@@ -779,7 +778,7 @@ class LifecycleService {
                 }
             });
             // Aktualisiere contractStartDate und contractEndDate im Lifecycle
-            yield prisma.employeeLifecycle.update({
+            yield prisma_1.prisma.employeeLifecycle.update({
                 where: { id: lifecycle.id },
                 data: {
                     contractStartDate: data.startDate,
@@ -788,7 +787,7 @@ class LifecycleService {
                 }
             });
             // Erstelle Event
-            yield prisma.lifecycleEvent.create({
+            yield prisma_1.prisma.lifecycleEvent.create({
                 data: {
                     lifecycleId: lifecycle.id,
                     eventType: 'contract_created',
@@ -807,13 +806,13 @@ class LifecycleService {
      */
     static updateContract(userId, contractId, data, updatedBy) {
         return __awaiter(this, void 0, void 0, function* () {
-            const lifecycle = yield prisma.employeeLifecycle.findUnique({
+            const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                 where: { userId }
             });
             if (!lifecycle) {
                 throw new Error('Lebenszyklus nicht gefunden');
             }
-            const contract = yield prisma.employmentContract.findFirst({
+            const contract = yield prisma_1.prisma.employmentContract.findFirst({
                 where: {
                     id: contractId,
                     lifecycleId: lifecycle.id
@@ -837,7 +836,7 @@ class LifecycleService {
                 updateData.pdfPath = data.pdfPath;
             if (data.templateVersion)
                 updateData.templateVersion = data.templateVersion;
-            const updated = yield prisma.employmentContract.update({
+            const updated = yield prisma_1.prisma.employmentContract.update({
                 where: { id: contractId },
                 data: updateData,
                 include: {
@@ -851,7 +850,7 @@ class LifecycleService {
                 }
             });
             // Erstelle Event
-            yield prisma.lifecycleEvent.create({
+            yield prisma_1.prisma.lifecycleEvent.create({
                 data: {
                     lifecycleId: lifecycle.id,
                     eventType: 'contract_updated',

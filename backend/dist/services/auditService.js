@@ -10,8 +10,6 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.logSettingsChange = exports.logAuditEvent = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
 /**
  * Erstellt einen Audit-Log-Eintrag
  *

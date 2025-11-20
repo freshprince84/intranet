@@ -1,11 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { WhatsAppMessageParser, ParsedReservationMessage } from '../services/whatsappMessageParser';
 import { WhatsAppReservationService } from '../services/whatsappReservationService';
 import { WhatsAppMessageHandler } from '../services/whatsappMessageHandler';
 import { WhatsAppService } from '../services/whatsappService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * POST /api/whatsapp/webhook

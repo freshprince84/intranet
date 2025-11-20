@@ -10,9 +10,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteConsultation = exports.updateConsultationNotes = exports.createTaskForConsultation = exports.linkTaskToConsultation = exports.getConsultations = exports.stopConsultation = exports.startConsultation = void 0;
-const client_1 = require("@prisma/client");
 const organization_1 = require("../middleware/organization");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Beratung starten (erweiterte Version von worktime/start)
 const startConsultation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -26,14 +25,14 @@ const startConsultation = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         // Validierung: Prüfe ob Client zur Organisation gehört
         const clientFilter = (0, organization_1.getDataIsolationFilter)(req, 'client');
-        const client = yield prisma.client.findFirst({
+        const client = yield prisma_1.prisma.client.findFirst({
             where: Object.assign(Object.assign({}, clientFilter), { id: Number(clientId) })
         });
         if (!client) {
             return res.status(400).json({ message: 'Client gehört nicht zu Ihrer Organisation' });
         }
         // Prüfe, ob bereits eine aktive Zeiterfassung existiert
-        const activeWorktime = yield prisma.workTime.findFirst({
+        const activeWorktime = yield prisma_1.prisma.workTime.findFirst({
             where: {
                 userId: Number(userId),
                 endTime: null
@@ -43,7 +42,7 @@ const startConsultation = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return res.status(400).json({ message: 'Es läuft bereits eine Zeiterfassung' });
         }
         const now = startTime ? new Date(startTime) : new Date();
-        const consultation = yield prisma.workTime.create({
+        const consultation = yield prisma_1.prisma.workTime.create({
             data: {
                 startTime: now,
                 userId: Number(userId),
@@ -75,7 +74,7 @@ const stopConsultation = (req, res) => __awaiter(void 0, void 0, void 0, functio
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Finde die aktive Beratung für den Benutzer
-        const activeConsultation = yield prisma.workTime.findFirst({
+        const activeConsultation = yield prisma_1.prisma.workTime.findFirst({
             where: {
                 userId: Number(userId),
                 endTime: null,
@@ -86,7 +85,7 @@ const stopConsultation = (req, res) => __awaiter(void 0, void 0, void 0, functio
             return res.status(404).json({ message: 'Keine aktive Beratung gefunden' });
         }
         const now = endTime ? new Date(endTime) : new Date();
-        const consultation = yield prisma.workTime.update({
+        const consultation = yield prisma_1.prisma.workTime.update({
             where: { id: activeConsultation.id },
             data: {
                 endTime: now,
@@ -128,7 +127,7 @@ const getConsultations = (req, res) => __awaiter(void 0, void 0, void 0, functio
             if (to)
                 whereClause.startTime.lte = new Date(to);
         }
-        const consultations = yield prisma.workTime.findMany({
+        const consultations = yield prisma_1.prisma.workTime.findMany({
             where: whereClause,
             include: {
                 branch: true,
@@ -181,7 +180,7 @@ const linkTaskToConsultation = (req, res) => __awaiter(void 0, void 0, void 0, f
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Prüfe ob die Beratung dem User gehört
-        const consultation = yield prisma.workTime.findFirst({
+        const consultation = yield prisma_1.prisma.workTime.findFirst({
             where: {
                 id: Number(id),
                 userId: Number(userId)
@@ -190,7 +189,7 @@ const linkTaskToConsultation = (req, res) => __awaiter(void 0, void 0, void 0, f
         if (!consultation) {
             return res.status(404).json({ message: 'Beratung nicht gefunden' });
         }
-        const link = yield prisma.workTimeTask.create({
+        const link = yield prisma_1.prisma.workTimeTask.create({
             data: {
                 workTimeId: Number(id),
                 taskId: Number(taskId)
@@ -222,7 +221,7 @@ const createTaskForConsultation = (req, res) => __awaiter(void 0, void 0, void 0
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Prüfe ob die Beratung dem User gehört
-        const consultation = yield prisma.workTime.findFirst({
+        const consultation = yield prisma_1.prisma.workTime.findFirst({
             where: {
                 id: Number(id),
                 userId: Number(userId)
@@ -235,7 +234,7 @@ const createTaskForConsultation = (req, res) => __awaiter(void 0, void 0, void 0
             return res.status(404).json({ message: 'Beratung nicht gefunden' });
         }
         // Erstelle Task und verknüpfe ihn direkt
-        const result = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        const result = yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             var _a;
             // Task erstellen
             const task = yield tx.task.create({
@@ -275,7 +274,7 @@ const updateConsultationNotes = (req, res) => __awaiter(void 0, void 0, void 0, 
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const consultation = yield prisma.workTime.update({
+        const consultation = yield prisma_1.prisma.workTime.update({
             where: {
                 id: Number(id),
                 userId: Number(userId)
@@ -303,7 +302,7 @@ const deleteConsultation = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Prüfe ob die Beratung dem User gehört
-        const consultation = yield prisma.workTime.findFirst({
+        const consultation = yield prisma_1.prisma.workTime.findFirst({
             where: {
                 id: Number(id),
                 userId: Number(userId),
@@ -318,13 +317,13 @@ const deleteConsultation = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(400).json({ message: 'Aktive Beratungen können nicht gelöscht werden. Bitte beenden Sie die Beratung zuerst.' });
         }
         // Lösche zuerst alle Task-Verknüpfungen
-        yield prisma.workTimeTask.deleteMany({
+        yield prisma_1.prisma.workTimeTask.deleteMany({
             where: {
                 workTimeId: Number(id)
             }
         });
         // Lösche die Beratung
-        yield prisma.workTime.delete({
+        yield prisma_1.prisma.workTime.delete({
             where: {
                 id: Number(id)
             }

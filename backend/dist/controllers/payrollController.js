@@ -13,17 +13,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generatePayrollPDF = exports.getPrefilledHours = exports.getPayrolls = exports.calculatePayroll = exports.saveWorkHours = void 0;
-const client_1 = require("@prisma/client");
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const fs_1 = __importDefault(require("fs"));
 const path_1 = __importDefault(require("path"));
 const translations_1 = require("../utils/translations");
 const date_fns_1 = require("date-fns");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 const saveWorkHours = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { userId, hours, periodStart, periodEnd } = req.body; // hours: { regular, overtime, night, sundayHoliday, overtimeNight, overtimeSundayHoliday, overtimeNightSundayHoliday }
-        const user = yield prisma.user.findUnique({ where: { id: userId } });
+        const user = yield prisma_1.prisma.user.findUnique({ where: { id: userId } });
         if (!user)
             return res.status(404).json({ error: 'Benutzer nicht gefunden' });
         // Perioden bestimmen (mit Fallback)
@@ -43,7 +42,7 @@ const saveWorkHours = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(400).json({ error: 'periodStart muss vor periodEnd liegen' });
         }
         // Prüfe auf doppelte Perioden (Überschneidungen)
-        const existingPayroll = yield prisma.employeePayroll.findFirst({
+        const existingPayroll = yield prisma_1.prisma.employeePayroll.findFirst({
             where: {
                 userId,
                 OR: [
@@ -65,7 +64,7 @@ const saveWorkHours = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             });
         }
         const effectiveHourlyRate = yield calculateEffectiveHourlyRate(user);
-        const payroll = yield prisma.employeePayroll.create({
+        const payroll = yield prisma_1.prisma.employeePayroll.create({
             data: {
                 userId,
                 periodStart: startDate,
@@ -99,13 +98,13 @@ const calculatePayroll = (req, res) => __awaiter(void 0, void 0, void 0, functio
         const { userId, payrollId } = req.query;
         let payroll;
         if (payrollId) {
-            payroll = yield prisma.employeePayroll.findUnique({
+            payroll = yield prisma_1.prisma.employeePayroll.findUnique({
                 where: { id: Number(payrollId) },
                 include: { user: true },
             });
         }
         else {
-            payroll = yield prisma.employeePayroll.findFirst({
+            payroll = yield prisma_1.prisma.employeePayroll.findFirst({
                 where: { userId: Number(userId) },
                 orderBy: { createdAt: 'desc' },
                 include: { user: true },
@@ -116,7 +115,7 @@ const calculatePayroll = (req, res) => __awaiter(void 0, void 0, void 0, functio
         const grossPay = calculateGrossPay(payroll, payroll.user.payrollCountry, payroll.user.contractType);
         const deductions = calculateDeductions(grossPay, payroll.user.payrollCountry);
         const netPay = grossPay - deductions;
-        const updatedPayroll = yield prisma.employeePayroll.update({
+        const updatedPayroll = yield prisma_1.prisma.employeePayroll.update({
             where: { id: payroll.id },
             data: {
                 grossPay,
@@ -138,7 +137,7 @@ exports.calculatePayroll = calculatePayroll;
 const getPayrolls = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { userId } = req.query;
-        const payrolls = yield prisma.employeePayroll.findMany({
+        const payrolls = yield prisma_1.prisma.employeePayroll.findMany({
             where: { userId: userId ? Number(userId) : undefined },
             include: { user: true },
             orderBy: { createdAt: 'desc' },
@@ -157,13 +156,13 @@ const getPrefilledHours = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!userId || !periodStart || !periodEnd) {
             return res.status(400).json({ error: 'userId, periodStart und periodEnd sind erforderlich' });
         }
-        const user = yield prisma.user.findUnique({ where: { id: Number(userId) } });
+        const user = yield prisma_1.prisma.user.findUnique({ where: { id: Number(userId) } });
         if (!user)
             return res.status(404).json({ error: 'Benutzer nicht gefunden' });
         const startDate = new Date(periodStart);
         const endDate = new Date(periodEnd);
         // Hole alle WorkTime-Einträge im Zeitraum (nur abgeschlossene)
-        const workTimes = yield prisma.workTime.findMany({
+        const workTimes = yield prisma_1.prisma.workTime.findMany({
             where: {
                 userId: Number(userId),
                 startTime: { gte: startDate },
@@ -189,7 +188,7 @@ exports.getPrefilledHours = getPrefilledHours;
 const generatePayrollPDF = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { payrollId } = req.params;
-        const payroll = yield prisma.employeePayroll.findUnique({
+        const payroll = yield prisma_1.prisma.employeePayroll.findUnique({
             where: { id: Number(payrollId) },
             include: { user: true },
         });

@@ -10,8 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteShiftTemplate = exports.updateShiftTemplate = exports.createShiftTemplate = exports.getShiftTemplateById = exports.getAllShiftTemplates = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * GET /api/shifts/templates
  * Holt alle ShiftTemplates (optional gefiltert nach branchId, roleId)
@@ -31,7 +30,7 @@ const getAllShiftTemplates = (req, res) => __awaiter(void 0, void 0, void 0, fun
         if (req.query.includeInactive !== 'true') {
             where.isActive = true;
         }
-        const templates = yield prisma.shiftTemplate.findMany({
+        const templates = yield prisma_1.prisma.shiftTemplate.findMany({
             where,
             include: {
                 role: {
@@ -82,7 +81,7 @@ const getShiftTemplateById = (req, res) => __awaiter(void 0, void 0, void 0, fun
                 message: 'Ungültige Template-ID'
             });
         }
-        const template = yield prisma.shiftTemplate.findUnique({
+        const template = yield prisma_1.prisma.shiftTemplate.findUnique({
             where: { id: templateId },
             include: {
                 role: {
@@ -165,7 +164,7 @@ const createShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
         // - Normale Schicht: startTime < endTime (z.B. 08:00 - 16:00)
         // - Nachtschicht: startTime > endTime (z.B. 22:00 - 06:00)
         // Prüfe, ob Template mit diesem Namen bereits existiert
-        const existing = yield prisma.shiftTemplate.findUnique({
+        const existing = yield prisma_1.prisma.shiftTemplate.findUnique({
             where: {
                 roleId_branchId_name: {
                     roleId,
@@ -181,14 +180,14 @@ const createShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
             });
         }
         // Prüfe, ob Rolle und Branch existieren
-        const role = yield prisma.role.findUnique({ where: { id: roleId } });
+        const role = yield prisma_1.prisma.role.findUnique({ where: { id: roleId } });
         if (!role) {
             return res.status(404).json({
                 success: false,
                 message: 'Rolle nicht gefunden'
             });
         }
-        const branch = yield prisma.branch.findUnique({ where: { id: branchId } });
+        const branch = yield prisma_1.prisma.branch.findUnique({ where: { id: branchId } });
         if (!branch) {
             return res.status(404).json({
                 success: false,
@@ -196,7 +195,7 @@ const createShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
             });
         }
         // Erstelle Template
-        const template = yield prisma.shiftTemplate.create({
+        const template = yield prisma_1.prisma.shiftTemplate.create({
             data: {
                 roleId,
                 branchId,
@@ -252,7 +251,7 @@ const updateShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
         }
         const { name, startTime, endTime, duration, isActive } = req.body;
         // Prüfe, ob Template existiert
-        const existing = yield prisma.shiftTemplate.findUnique({
+        const existing = yield prisma_1.prisma.shiftTemplate.findUnique({
             where: { id: templateId }
         });
         if (!existing) {
@@ -273,7 +272,7 @@ const updateShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
             updateData.name = name.trim();
             // Prüfe, ob neuer Name bereits existiert (nur wenn sich Name geändert hat)
             if (name.trim() !== existing.name) {
-                const duplicate = yield prisma.shiftTemplate.findUnique({
+                const duplicate = yield prisma_1.prisma.shiftTemplate.findUnique({
                     where: {
                         roleId_branchId_name: {
                             roleId: existing.roleId,
@@ -322,7 +321,7 @@ const updateShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (isActive !== undefined) {
             updateData.isActive = isActive;
         }
-        const template = yield prisma.shiftTemplate.update({
+        const template = yield prisma_1.prisma.shiftTemplate.update({
             where: { id: templateId },
             data: updateData,
             include: {
@@ -370,7 +369,7 @@ const deleteShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
             });
         }
         // Prüfe, ob Template existiert
-        const existing = yield prisma.shiftTemplate.findUnique({
+        const existing = yield prisma_1.prisma.shiftTemplate.findUnique({
             where: { id: templateId },
             include: {
                 shifts: {
@@ -391,7 +390,7 @@ const deleteShiftTemplate = (req, res) => __awaiter(void 0, void 0, void 0, func
                 message: 'Template kann nicht gelöscht werden, da bereits Schichten damit erstellt wurden'
             });
         }
-        yield prisma.shiftTemplate.delete({
+        yield prisma_1.prisma.shiftTemplate.delete({
             where: { id: templateId }
         });
         res.json({

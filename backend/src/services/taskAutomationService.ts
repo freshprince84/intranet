@@ -1,9 +1,7 @@
-import { PrismaClient, Reservation } from '@prisma/client';
+import { Reservation, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from '../controllers/notificationController';
 import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
-import { NotificationType } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Service für automatische Task-Erstellung bei Lebenszyklus-Events

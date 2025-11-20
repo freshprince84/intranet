@@ -40,8 +40,7 @@ export const handleWebhook = async (req: Request, res: Response) => {
 
       if (reservationId) {
         // Finde Organisation über Reservierung
-        const { PrismaClient } = await import('@prisma/client');
-        const prisma = new PrismaClient();
+        const { prisma } = await import('../utils/prisma');
         
         const reservation = await prisma.reservation.findUnique({
           where: { id: reservationId },
@@ -53,12 +52,9 @@ export const handleWebhook = async (req: Request, res: Response) => {
             ? await BoldPaymentService.createForBranch(reservation.branchId)
             : new BoldPaymentService(reservation.organizationId);
           await boldPaymentService.handleWebhook(payload);
-          await prisma.$disconnect();
           
           return res.json({ success: true, message: 'Webhook verarbeitet' });
         }
-        
-        await prisma.$disconnect();
       }
 
       return res.status(400).json({

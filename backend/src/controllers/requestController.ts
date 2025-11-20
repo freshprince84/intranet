@@ -3,7 +3,8 @@
 // Die aktuellen Linter-Fehler entstehen durch nicht aktualisierte Types
 
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, RequestStatus, RequestType, NotificationType } from '@prisma/client';
+import { Prisma, RequestStatus, RequestType, NotificationType } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getRequestNotificationText } from '../utils/translations';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
@@ -11,8 +12,6 @@ import { checkUserPermission } from '../middleware/permissionMiddleware';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-
-const prisma = new PrismaClient();
 
 interface AuthenticatedRequest extends Request {
     userId: string;

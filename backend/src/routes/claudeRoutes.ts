@@ -1,9 +1,8 @@
 import { Router, Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { getClaudeConsoleService } from '../services/claudeConsoleService';
+import { prisma } from '../utils/prisma';
 
 const router = Router();
-const prisma = new PrismaClient();
 
 // Sicherheits-Middleware für Claude-Endpunkte
 const claudeAuth = (req: Request, res: Response, next: any) => {

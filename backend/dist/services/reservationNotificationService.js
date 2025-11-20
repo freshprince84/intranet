@@ -50,7 +50,7 @@ const boldPaymentService_1 = require("./boldPaymentService");
 const ttlockService_1 = require("./ttlockService");
 const emailService_1 = require("./emailService");
 const checkInLinkUtils_1 = require("../utils/checkInLinkUtils");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Service für automatische Benachrichtigungen zu Reservierungen
  *
@@ -69,7 +69,7 @@ class ReservationNotificationService {
     static logNotification(reservationId, notificationType, channel, success, data) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                yield prisma.reservationNotificationLog.create({
+                yield prisma_1.prisma.reservationNotificationLog.create({
                     data: {
                         reservationId,
                         notificationType,
@@ -102,7 +102,7 @@ class ReservationNotificationService {
             console.log('[ReservationNotification] Starte Versand von Check-in-Einladungen...');
             try {
                 // Hole alle Organisationen mit aktivierter LobbyPMS-Synchronisation
-                const organizations = yield prisma.organization.findMany({
+                const organizations = yield prisma_1.prisma.organization.findMany({
                     where: {
                         settings: {
                             path: ['lobbyPms', 'syncEnabled'],
@@ -154,7 +154,7 @@ class ReservationNotificationService {
                                     yield whatsappService.sendCheckInInvitation(reservation.guestName, reservation.guestPhone, checkInLink, paymentLink);
                                 }
                                 // Markiere als versendet
-                                yield prisma.reservation.update({
+                                yield prisma_1.prisma.reservation.update({
                                     where: { id: reservation.id },
                                     data: { invitationSentAt: new Date() }
                                 });
@@ -190,7 +190,7 @@ class ReservationNotificationService {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // Lade Reservation mit Organization
-                const reservation = yield prisma.reservation.findUnique({
+                const reservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { id: reservationId },
                     include: {
                         organization: {
@@ -545,7 +545,7 @@ ${paymentLink}
                         // Status bleibt auf 'confirmed', aber Payment-Link wird gespeichert
                         console.log(`[ReservationNotification] ⚠️ Payment-Link gespeichert, aber alle Notifications fehlgeschlagen - Status bleibt auf 'confirmed'`);
                     }
-                    yield prisma.reservation.update({
+                    yield prisma_1.prisma.reservation.update({
                         where: { id: reservationId },
                         data: updateData,
                     });
@@ -610,7 +610,7 @@ ${paymentLink}
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b, _c;
             try {
-                const reservation = yield prisma.reservation.findUnique({
+                const reservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { id: reservationId },
                     include: { organization: true, branch: true }
                 });
@@ -677,7 +677,7 @@ ${paymentLink}
                         doorPin = yield ttlockService.createTemporaryPasscode(lockId, actualCheckInDate, actualCheckOutDate, `Guest: ${reservation.guestName}`);
                         console.log(`[ReservationNotification] ✅ TTLock Passcode erfolgreich generiert: ${doorPin}`);
                         // Speichere in Reservierung
-                        yield prisma.reservation.update({
+                        yield prisma_1.prisma.reservation.update({
                             where: { id: reservation.id },
                             data: {
                                 doorPin,
@@ -762,7 +762,7 @@ ${paymentLink}
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b;
             try {
-                const reservation = yield prisma.reservation.findUnique({
+                const reservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { id: reservationId },
                     include: { organization: true, branch: true }
                 });
@@ -800,7 +800,7 @@ ${paymentLink}
                         // Erstelle Passcode für Check-in bis Check-out
                         doorPin = yield ttlockService.createTemporaryPasscode(lockId, reservation.checkInDate, reservation.checkOutDate, `Guest: ${reservation.guestName}`);
                         // Speichere in Reservierung
-                        yield prisma.reservation.update({
+                        yield prisma_1.prisma.reservation.update({
                             where: { id: reservation.id },
                             data: {
                                 doorPin,

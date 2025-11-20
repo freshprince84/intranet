@@ -13,14 +13,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WhatsAppMessageHandler = void 0;
-const client_1 = require("@prisma/client");
 const whatsappAiService_1 = require("./whatsappAiService");
 const languageDetectionService_1 = require("./languageDetectionService");
 const whatsappService_1 = require("./whatsappService");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * WhatsApp Message Handler
  *
@@ -113,7 +112,7 @@ class WhatsAppMessageHandler {
             try {
                 console.log('[WhatsApp Message Handler] Suche User:', { phoneNumber, branchId });
                 // Versuche exakte Übereinstimmung
-                let user = yield prisma.user.findFirst({
+                let user = yield prisma_1.prisma.user.findFirst({
                     where: {
                         phoneNumber: phoneNumber,
                         branches: {
@@ -138,7 +137,7 @@ class WhatsAppMessageHandler {
                 if (phoneNumber.startsWith('+')) {
                     const phoneWithoutPlus = phoneNumber.substring(1);
                     console.log('[WhatsApp Message Handler] Versuche Suche ohne +:', phoneWithoutPlus);
-                    user = yield prisma.user.findFirst({
+                    user = yield prisma_1.prisma.user.findFirst({
                         where: {
                             OR: [
                                 { phoneNumber: phoneNumber },
@@ -166,7 +165,7 @@ class WhatsAppMessageHandler {
                 }
                 // Fallback: Suche ohne Branch-Filter (falls User in anderem Branch ist)
                 console.log('[WhatsApp Message Handler] Exakte Suche fehlgeschlagen, versuche ohne Branch-Filter...');
-                const userWithBranches = yield prisma.user.findFirst({
+                const userWithBranches = yield prisma_1.prisma.user.findFirst({
                     where: {
                         phoneNumber: phoneNumber
                     },
@@ -219,7 +218,7 @@ class WhatsAppMessageHandler {
                 else {
                     console.warn('[WhatsApp Message Handler] Kein User gefunden für Telefonnummer:', phoneNumber);
                     // Debug: Zeige alle User mit ähnlichen Telefonnummern
-                    const allUsers = yield prisma.user.findMany({
+                    const allUsers = yield prisma_1.prisma.user.findMany({
                         where: {
                             phoneNumber: { not: null }
                         },
@@ -255,7 +254,7 @@ class WhatsAppMessageHandler {
     static getOrCreateConversation(phoneNumber, branchId, userId) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                let conversation = yield prisma.whatsAppConversation.findUnique({
+                let conversation = yield prisma_1.prisma.whatsAppConversation.findUnique({
                     where: {
                         phoneNumber_branchId: {
                             phoneNumber: phoneNumber,
@@ -264,7 +263,7 @@ class WhatsAppMessageHandler {
                     }
                 });
                 if (!conversation) {
-                    conversation = yield prisma.whatsAppConversation.create({
+                    conversation = yield prisma_1.prisma.whatsAppConversation.create({
                         data: {
                             phoneNumber: phoneNumber,
                             branchId: branchId,
@@ -275,7 +274,7 @@ class WhatsAppMessageHandler {
                 }
                 else {
                     // Update lastMessageAt und userId (falls geändert)
-                    conversation = yield prisma.whatsAppConversation.update({
+                    conversation = yield prisma_1.prisma.whatsAppConversation.update({
                         where: { id: conversation.id },
                         data: {
                             lastMessageAt: new Date(),
@@ -297,7 +296,7 @@ class WhatsAppMessageHandler {
     static handleRequestsKeyword(userId, branchId, conversation) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const requests = yield prisma.request.findMany({
+                const requests = yield prisma_1.prisma.request.findMany({
                     where: {
                         OR: [
                             { requesterId: userId },
@@ -376,7 +375,7 @@ class WhatsAppMessageHandler {
     static handleTodosKeyword(userId, branchId, conversation) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const tasks = yield prisma.task.findMany({
+                const tasks = yield prisma_1.prisma.task.findMany({
                     where: {
                         OR: [
                             { responsibleId: userId },
@@ -458,7 +457,7 @@ class WhatsAppMessageHandler {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // Setze State auf "request_creation"
-                yield prisma.whatsAppConversation.update({
+                yield prisma_1.prisma.whatsAppConversation.update({
                     where: { id: conversation.id },
                     data: {
                         state: 'request_creation',
@@ -486,7 +485,7 @@ class WhatsAppMessageHandler {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // Setze State auf "task_creation"
-                yield prisma.whatsAppConversation.update({
+                yield prisma_1.prisma.whatsAppConversation.update({
                     where: { id: conversation.id },
                     data: {
                         state: 'task_creation',
@@ -530,7 +529,7 @@ class WhatsAppMessageHandler {
                             return translations[language] || translations.es;
                         }
                         // Update Context
-                        yield prisma.whatsAppConversation.update({
+                        yield prisma_1.prisma.whatsAppConversation.update({
                             where: { id: conversation.id },
                             data: {
                                 context: {
@@ -556,11 +555,11 @@ class WhatsAppMessageHandler {
                         const responsibleId = context.responsibleId;
                         let description = messageText || 'Request via WhatsApp';
                         // Hole Branch für organizationId
-                        const branch = yield prisma.branch.findUnique({
+                        const branch = yield prisma_1.prisma.branch.findUnique({
                             where: { id: branchId },
                             select: { organizationId: true }
                         });
-                        const request = yield prisma.request.create({
+                        const request = yield prisma_1.prisma.request.create({
                             data: {
                                 title: `Request de ${user.firstName} ${user.lastName}`,
                                 description: description,
@@ -587,7 +586,7 @@ class WhatsAppMessageHandler {
                                 const uniqueFileName = `${(0, uuid_1.v4)()}${path_1.default.extname(mediaData.fileName)}`;
                                 const filePath = path_1.default.join(UPLOAD_DIR, uniqueFileName);
                                 fs_1.default.writeFileSync(filePath, mediaData.buffer);
-                                const attachment = yield prisma.requestAttachment.create({
+                                const attachment = yield prisma_1.prisma.requestAttachment.create({
                                     data: {
                                         requestId: request.id,
                                         fileName: mediaData.fileName,
@@ -601,7 +600,7 @@ class WhatsAppMessageHandler {
                                 // Format: ![filename](/api/requests/{requestId}/attachments/{attachmentId})
                                 const attachmentUrl = `/api/requests/${request.id}/attachments/${attachment.id}`;
                                 const markdownImageLink = `\n\n![${mediaData.fileName}](${attachmentUrl})`;
-                                yield prisma.request.update({
+                                yield prisma_1.prisma.request.update({
                                     where: { id: request.id },
                                     data: {
                                         description: description + markdownImageLink
@@ -614,7 +613,7 @@ class WhatsAppMessageHandler {
                             }
                         }
                         // Reset Conversation State
-                        yield prisma.whatsAppConversation.update({
+                        yield prisma_1.prisma.whatsAppConversation.update({
                             where: { id: conversation.id },
                             data: {
                                 state: 'idle',
@@ -643,7 +642,7 @@ class WhatsAppMessageHandler {
                             };
                             return translations[language] || translations.es;
                         }
-                        yield prisma.whatsAppConversation.update({
+                        yield prisma_1.prisma.whatsAppConversation.update({
                             where: { id: conversation.id },
                             data: {
                                 context: {
@@ -668,7 +667,7 @@ class WhatsAppMessageHandler {
                         const responsibleId = context.responsibleId;
                         let description = messageText || 'Task via WhatsApp';
                         // Hole Quality Control User (erster Admin oder Verantwortlicher)
-                        const qualityControlUser = (yield prisma.user.findFirst({
+                        const qualityControlUser = (yield prisma_1.prisma.user.findFirst({
                             where: {
                                 branches: {
                                     some: { branchId: branchId }
@@ -681,7 +680,7 @@ class WhatsAppMessageHandler {
                                     }
                                 }
                             }
-                        })) || (yield prisma.user.findFirst({
+                        })) || (yield prisma_1.prisma.user.findFirst({
                             where: {
                                 branches: {
                                     some: { branchId: branchId }
@@ -692,11 +691,11 @@ class WhatsAppMessageHandler {
                             return yield this.getLanguageResponse(branchId, phoneNumber, 'error');
                         }
                         // Hole Branch für organizationId
-                        const branch = yield prisma.branch.findUnique({
+                        const branch = yield prisma_1.prisma.branch.findUnique({
                             where: { id: branchId },
                             select: { organizationId: true }
                         });
-                        const task = yield prisma.task.create({
+                        const task = yield prisma_1.prisma.task.create({
                             data: {
                                 title: `To-Do de ${user.firstName} ${user.lastName}`,
                                 description: description,
@@ -721,7 +720,7 @@ class WhatsAppMessageHandler {
                                 const uniqueFileName = `${(0, uuid_1.v4)()}${path_1.default.extname(mediaData.fileName)}`;
                                 const filePath = path_1.default.join(UPLOAD_DIR_TASK, uniqueFileName);
                                 fs_1.default.writeFileSync(filePath, mediaData.buffer);
-                                const attachment = yield prisma.taskAttachment.create({
+                                const attachment = yield prisma_1.prisma.taskAttachment.create({
                                     data: {
                                         taskId: task.id,
                                         fileName: mediaData.fileName,
@@ -735,7 +734,7 @@ class WhatsAppMessageHandler {
                                 // Format: ![filename](/api/tasks/{taskId}/attachments/{attachmentId})
                                 const attachmentUrl = `/api/tasks/${task.id}/attachments/${attachment.id}`;
                                 const markdownImageLink = `\n\n![${mediaData.fileName}](${attachmentUrl})`;
-                                yield prisma.task.update({
+                                yield prisma_1.prisma.task.update({
                                     where: { id: task.id },
                                     data: {
                                         description: description + markdownImageLink
@@ -748,7 +747,7 @@ class WhatsAppMessageHandler {
                             }
                         }
                         // Reset Conversation State
-                        yield prisma.whatsAppConversation.update({
+                        yield prisma_1.prisma.whatsAppConversation.update({
                             where: { id: conversation.id },
                             data: {
                                 state: 'idle',
@@ -765,7 +764,7 @@ class WhatsAppMessageHandler {
                     }
                 }
                 // Unbekannter State - reset
-                yield prisma.whatsAppConversation.update({
+                yield prisma_1.prisma.whatsAppConversation.update({
                     where: { id: conversation.id },
                     data: { state: 'idle', context: null }
                 });
@@ -775,7 +774,7 @@ class WhatsAppMessageHandler {
                 console.error('[WhatsApp Message Handler] Fehler bei Conversation-Continuation:', error);
                 // Reset State bei Fehler
                 try {
-                    yield prisma.whatsAppConversation.update({
+                    yield prisma_1.prisma.whatsAppConversation.update({
                         where: { id: conversation.id },
                         data: { state: 'idle', context: null }
                     });
@@ -794,7 +793,7 @@ class WhatsAppMessageHandler {
                 // Versuche zuerst als ID zu parsen
                 const userId = parseInt(searchTerm, 10);
                 if (!isNaN(userId)) {
-                    const user = yield prisma.user.findFirst({
+                    const user = yield prisma_1.prisma.user.findFirst({
                         where: {
                             id: userId,
                             branches: {
@@ -812,7 +811,7 @@ class WhatsAppMessageHandler {
                 }
                 // Suche nach Name
                 const searchLower = searchTerm.toLowerCase();
-                const users = yield prisma.user.findMany({
+                const users = yield prisma_1.prisma.user.findMany({
                     where: {
                         branches: {
                             some: { branchId: branchId }

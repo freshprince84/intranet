@@ -1,9 +1,7 @@
-import { PrismaClient, Reservation, TaskStatus } from '@prisma/client';
+import { Reservation, TaskStatus, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from '../controllers/notificationController';
-import { NotificationType } from '@prisma/client';
 import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Service für Reservierungs-Task-Management

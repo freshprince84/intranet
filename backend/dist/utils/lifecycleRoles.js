@@ -12,8 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.hasLifecycleRole = hasLifecycleRole;
 exports.isHROrAdmin = isHROrAdmin;
 exports.isLegalOrAdmin = isLegalOrAdmin;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("./prisma");
 /**
  * Prüft ob User eine bestimmte Lebenszyklus-Rolle hat
  * Nutzt req.organizationId und req.userRole aus organizationMiddleware
@@ -24,7 +23,7 @@ function hasLifecycleRole(req, roleType) {
             return false; // Keine Organisation oder keine aktive Rolle
         }
         // 1. Hole Organization mit settings
-        const organization = yield prisma.organization.findUnique({
+        const organization = yield prisma_1.prisma.organization.findUnique({
             where: { id: req.organizationId },
             select: { settings: true }
         });

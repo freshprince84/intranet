@@ -2,9 +2,7 @@ import { Request, Response } from 'express';
 import { EmailReservationService } from '../services/emailReservationService';
 import { EmailReservationParser } from '../services/emailReservationParser';
 import { EmailReservationScheduler } from '../services/emailReservationScheduler';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * POST /api/email-reservations/check

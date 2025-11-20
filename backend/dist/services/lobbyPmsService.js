@@ -17,7 +17,7 @@ const client_1 = require("@prisma/client");
 const axios_1 = __importDefault(require("axios"));
 const encryption_1 = require("../utils/encryption");
 const taskAutomationService_1 = require("./taskAutomationService");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Service für LobbyPMS API-Integration
  *
@@ -51,7 +51,7 @@ class LobbyPmsService {
         return __awaiter(this, void 0, void 0, function* () {
             // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
             if (this.branchId) {
-                const branch = yield prisma.branch.findUnique({
+                const branch = yield prisma_1.prisma.branch.findUnique({
                     where: { id: this.branchId },
                     select: {
                         lobbyPmsSettings: true,
@@ -63,7 +63,16 @@ class LobbyPmsService {
                         const settings = (0, encryption_1.decryptBranchApiSettings)(branch.lobbyPmsSettings);
                         const lobbyPmsSettings = (settings === null || settings === void 0 ? void 0 : settings.lobbyPms) || settings;
                         if (lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.apiKey) {
-                            this.apiUrl = lobbyPmsSettings.apiUrl || 'https://api.lobbypms.com';
+                            let apiUrl = lobbyPmsSettings.apiUrl || 'https://api.lobbypms.com';
+                            // Korrigiere app.lobbypms.com zu api.lobbypms.com
+                            if (apiUrl.includes('app.lobbypms.com')) {
+                                apiUrl = apiUrl.replace('app.lobbypms.com', 'api.lobbypms.com');
+                            }
+                            // Stelle sicher, dass apiUrl NICHT mit /api endet (wird im Endpoint hinzugefügt)
+                            if (apiUrl.endsWith('/api')) {
+                                apiUrl = apiUrl.replace(/\/api$/, '');
+                            }
+                            this.apiUrl = apiUrl;
                             this.apiKey = lobbyPmsSettings.apiKey;
                             this.propertyId = lobbyPmsSettings.propertyId;
                             this.axiosInstance = this.createAxiosInstance();
@@ -87,7 +96,7 @@ class LobbyPmsService {
             }
             // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
             if (this.organizationId) {
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: this.organizationId },
                     select: { settings: true }
                 });
@@ -102,7 +111,19 @@ class LobbyPmsService {
                 if (!(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.apiUrl)) {
                     throw new Error(`LobbyPMS API URL ist nicht für Organisation ${this.organizationId} konfiguriert`);
                 }
-                this.apiUrl = lobbyPmsSettings.apiUrl;
+                let apiUrl = lobbyPmsSettings.apiUrl;
+                if (!apiUrl) {
+                    apiUrl = 'https://api.lobbypms.com';
+                }
+                // Korrigiere app.lobbypms.com zu api.lobbypms.com
+                if (apiUrl.includes('app.lobbypms.com')) {
+                    apiUrl = apiUrl.replace('app.lobbypms.com', 'api.lobbypms.com');
+                }
+                // Stelle sicher, dass apiUrl NICHT mit /api endet (wird im Endpoint hinzugefügt)
+                if (apiUrl.endsWith('/api')) {
+                    apiUrl = apiUrl.replace(/\/api$/, '');
+                }
+                this.apiUrl = apiUrl;
                 this.apiKey = lobbyPmsSettings.apiKey;
                 this.propertyId = lobbyPmsSettings.propertyId;
                 // Erstelle Axios-Instanz mit korrekten Settings
@@ -329,6 +350,7 @@ class LobbyPmsService {
      */
     syncReservation(lobbyReservation) {
         return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b, _c;
             // Mappe LobbyPMS Status zu unserem ReservationStatus
             const mapStatus = (status) => {
                 switch (status === null || status === void 0 ? void 0 : status.toLowerCase()) {
@@ -357,31 +379,70 @@ class LobbyPmsService {
                         return client_1.PaymentStatus.pending;
                 }
             };
+            // API gibt booking_id zurück, nicht id
+            const bookingId = String(lobbyReservation.booking_id || lobbyReservation.id);
+            // Gastdaten aus holder-Objekt extrahieren (falls vorhanden)
+            const holder = lobbyReservation.holder || {};
+            const guestName = (holder.name && holder.surname)
+                ? `${holder.name} ${holder.surname}${holder.second_surname ? ' ' + holder.second_surname : ''}`.trim()
+                : (lobbyReservation.guest_name || 'Unbekannt');
+            const guestEmail = holder.email || lobbyReservation.guest_email || null;
+            const guestPhone = holder.phone || lobbyReservation.guest_phone || null;
+            // Datum-Felder: API gibt start_date/end_date zurück
+            const checkInDate = lobbyReservation.start_date || lobbyReservation.check_in_date;
+            const checkOutDate = lobbyReservation.end_date || lobbyReservation.check_out_date;
+            // Zimmer-Daten aus assigned_room-Objekt
+            const roomNumber = ((_a = lobbyReservation.assigned_room) === null || _a === void 0 ? void 0 : _a.name) || lobbyReservation.room_number || null;
+            const roomDescription = ((_b = lobbyReservation.assigned_room) === null || _b === void 0 ? void 0 : _b.type) || lobbyReservation.room_description || ((_c = lobbyReservation.category) === null || _c === void 0 ? void 0 : _c.name) || null;
+            // Status: API gibt checked_in/checked_out Booleans zurück
+            let status = client_1.ReservationStatus.confirmed;
+            if (lobbyReservation.checked_out) {
+                status = client_1.ReservationStatus.checked_out;
+            }
+            else if (lobbyReservation.checked_in) {
+                status = client_1.ReservationStatus.checked_in;
+            }
+            else if (lobbyReservation.status) {
+                status = mapStatus(lobbyReservation.status);
+            }
+            // Payment Status: API gibt paid_out und total_to_pay zurück
+            let paymentStatus = client_1.PaymentStatus.pending;
+            const paidOut = parseFloat(lobbyReservation.paid_out || '0');
+            const totalToPay = parseFloat(lobbyReservation.total_to_pay || lobbyReservation.total_to_pay_accommodation || '0');
+            if (paidOut >= totalToPay && totalToPay > 0) {
+                paymentStatus = client_1.PaymentStatus.paid;
+            }
+            else if (paidOut > 0) {
+                paymentStatus = client_1.PaymentStatus.partially_paid;
+            }
+            else if (lobbyReservation.payment_status) {
+                paymentStatus = mapPaymentStatus(lobbyReservation.payment_status);
+            }
             const reservationData = {
-                lobbyReservationId: lobbyReservation.id,
-                guestName: lobbyReservation.guest_name || 'Unbekannt',
-                guestEmail: lobbyReservation.guest_email || null,
-                guestPhone: lobbyReservation.guest_phone || null,
-                checkInDate: new Date(lobbyReservation.check_in_date),
-                checkOutDate: new Date(lobbyReservation.check_out_date),
+                lobbyReservationId: bookingId,
+                guestName: guestName,
+                guestEmail: guestEmail,
+                guestPhone: guestPhone,
+                checkInDate: new Date(checkInDate),
+                checkOutDate: new Date(checkOutDate),
                 arrivalTime: lobbyReservation.arrival_time ? new Date(lobbyReservation.arrival_time) : null,
-                roomNumber: lobbyReservation.room_number || null,
-                roomDescription: lobbyReservation.room_description || null,
-                status: mapStatus(lobbyReservation.status),
-                paymentStatus: mapPaymentStatus(lobbyReservation.payment_status),
+                roomNumber: roomNumber,
+                roomDescription: roomDescription,
+                status: status,
+                paymentStatus: paymentStatus,
                 organizationId: this.organizationId,
                 branchId: this.branchId || null,
             };
             // Upsert: Erstelle oder aktualisiere Reservierung
-            const reservation = yield prisma.reservation.upsert({
+            const reservation = yield prisma_1.prisma.reservation.upsert({
                 where: {
-                    lobbyReservationId: lobbyReservation.id
+                    lobbyReservationId: bookingId
                 },
                 create: reservationData,
                 update: reservationData
             });
             // Erstelle Sync-History-Eintrag
-            yield prisma.reservationSyncHistory.create({
+            yield prisma_1.prisma.reservationSyncHistory.create({
                 data: {
                     reservationId: reservation.id,
                     syncType: 'updated',
@@ -420,13 +481,14 @@ class LobbyPmsService {
                     syncedCount++;
                 }
                 catch (error) {
-                    console.error(`[LobbyPMS] Fehler beim Synchronisieren der Reservierung ${lobbyReservation.id}:`, error);
+                    const bookingId = String(lobbyReservation.booking_id || lobbyReservation.id || 'unknown');
+                    console.error(`[LobbyPMS] Fehler beim Synchronisieren der Reservierung ${bookingId}:`, error);
                     // Erstelle Sync-History mit Fehler
-                    const existingReservation = yield prisma.reservation.findUnique({
-                        where: { lobbyReservationId: lobbyReservation.id }
+                    const existingReservation = yield prisma_1.prisma.reservation.findUnique({
+                        where: { lobbyReservationId: bookingId }
                     });
                     if (existingReservation) {
-                        yield prisma.reservationSyncHistory.create({
+                        yield prisma_1.prisma.reservationSyncHistory.create({
                             data: {
                                 reservationId: existingReservation.id,
                                 syncType: 'error',

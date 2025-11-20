@@ -1,10 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { getDataIsolationFilter } from '../middleware/organization';
 import { startOfMonth, endOfMonth, subMonths, format } from 'date-fns';
 import { de } from 'date-fns/locale';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 interface AuthenticatedRequest extends Request {
   userId: string;

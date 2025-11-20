@@ -43,10 +43,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateMonthlyReportPDF = exports.checkUnbilledConsultations = exports.deleteMonthlyReport = exports.updateReportStatus = exports.generateAutomaticMonthlyReport = exports.generateMonthlyReport = exports.getMonthlyReportById = exports.getMonthlyReports = void 0;
-const client_1 = require("@prisma/client");
 const organization_1 = require("../middleware/organization");
 const date_fns_1 = require("date-fns");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Alle Monatsberichte des Benutzers abrufen
 const getMonthlyReports = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -56,7 +55,7 @@ const getMonthlyReports = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         // NEU: Verwende getDataIsolationFilter für organisations-spezifische Filterung
         const reportFilter = (0, organization_1.getDataIsolationFilter)(req, 'monthlyReport');
-        const reports = yield prisma.monthlyConsultationReport.findMany({
+        const reports = yield prisma_1.prisma.monthlyConsultationReport.findMany({
             where: reportFilter,
             include: {
                 items: {
@@ -83,7 +82,7 @@ const getMonthlyReportById = (req, res) => __awaiter(void 0, void 0, void 0, fun
         if (isNaN(userId) || isNaN(reportId)) {
             return res.status(400).json({ message: 'Ungültige Parameter' });
         }
-        const report = yield prisma.monthlyConsultationReport.findFirst({
+        const report = yield prisma_1.prisma.monthlyConsultationReport.findFirst({
             where: {
                 id: reportId,
                 userId
@@ -130,7 +129,7 @@ const generateMonthlyReport = (req, res) => __awaiter(void 0, void 0, void 0, fu
         const startDate = new Date(periodStart);
         const endDate = new Date(periodEnd);
         // Hole alle bestehenden Monthly Reports um deren Zeiträume zu ermitteln
-        const existingReports = yield prisma.monthlyConsultationReport.findMany({
+        const existingReports = yield prisma_1.prisma.monthlyConsultationReport.findMany({
             where: {
                 userId
             },
@@ -140,7 +139,7 @@ const generateMonthlyReport = (req, res) => __awaiter(void 0, void 0, void 0, fu
             }
         });
         // Hole alle nicht-abgerechneten Beratungen im Zeitraum
-        const consultations = yield prisma.workTime.findMany({
+        const consultations = yield prisma_1.prisma.workTime.findMany({
             where: {
                 userId,
                 clientId: { not: null },
@@ -190,7 +189,7 @@ const generateMonthlyReport = (req, res) => __awaiter(void 0, void 0, void 0, fu
         // Generiere Berichtsnummer
         const reportNumber = `MR-${(0, date_fns_1.format)(new Date(), 'yyyyMM')}-${userId.toString().padStart(3, '0')}`;
         // Erstelle Monatsbericht in Transaktion
-        const report = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        const report = yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             const newReport = yield tx.monthlyConsultationReport.create({
                 data: {
                     userId,
@@ -227,7 +226,7 @@ const generateMonthlyReport = (req, res) => __awaiter(void 0, void 0, void 0, fu
             return newReport;
         }));
         // Lade den vollständigen Bericht mit Items
-        const fullReport = yield prisma.monthlyConsultationReport.findUnique({
+        const fullReport = yield prisma_1.prisma.monthlyConsultationReport.findUnique({
             where: { id: report.id },
             include: {
                 items: {
@@ -260,7 +259,7 @@ const generateAutomaticMonthlyReport = (req, res) => __awaiter(void 0, void 0, v
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Hole User-Einstellungen
-        const invoiceSettings = yield prisma.invoiceSettings.findUnique({
+        const invoiceSettings = yield prisma_1.prisma.invoiceSettings.findUnique({
             where: { userId }
         });
         if (!(invoiceSettings === null || invoiceSettings === void 0 ? void 0 : invoiceSettings.monthlyReportEnabled)) {
@@ -289,7 +288,7 @@ const generateAutomaticMonthlyReport = (req, res) => __awaiter(void 0, void 0, v
             periodStart = new Date(today.getFullYear(), today.getMonth() - 2, reportDay);
         }
         // Prüfe, ob bereits ein Bericht für diesen Zeitraum existiert
-        const existingReport = yield prisma.monthlyConsultationReport.findFirst({
+        const existingReport = yield prisma_1.prisma.monthlyConsultationReport.findFirst({
             where: {
                 userId,
                 periodStart: {
@@ -329,7 +328,7 @@ const updateReportStatus = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (!['GENERATED', 'SENT', 'ARCHIVED'].includes(status)) {
             return res.status(400).json({ message: 'Ungültiger Status' });
         }
-        const report = yield prisma.monthlyConsultationReport.updateMany({
+        const report = yield prisma_1.prisma.monthlyConsultationReport.updateMany({
             where: {
                 id: reportId,
                 userId
@@ -355,7 +354,7 @@ const deleteMonthlyReport = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (isNaN(userId) || isNaN(reportId)) {
             return res.status(400).json({ message: 'Ungültige Parameter' });
         }
-        const report = yield prisma.monthlyConsultationReport.deleteMany({
+        const report = yield prisma_1.prisma.monthlyConsultationReport.deleteMany({
             where: {
                 id: reportId,
                 userId
@@ -397,10 +396,10 @@ const checkUnbilledConsultations = (req, res) => __awaiter(void 0, void 0, void 
                 lte: new Date(periodEnd)
             };
         }
-        const count = yield prisma.workTime.count({
+        const count = yield prisma_1.prisma.workTime.count({
             where: whereClause
         });
-        const consultations = yield prisma.workTime.findMany({
+        const consultations = yield prisma_1.prisma.workTime.findMany({
             where: whereClause,
             include: {
                 client: {
@@ -432,7 +431,7 @@ const generateMonthlyReportPDF = (req, res) => __awaiter(void 0, void 0, void 0,
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const report = yield prisma.monthlyConsultationReport.findFirst({
+        const report = yield prisma_1.prisma.monthlyConsultationReport.findFirst({
             where: {
                 id: Number(id),
                 userId: Number(userId)
@@ -450,7 +449,7 @@ const generateMonthlyReportPDF = (req, res) => __awaiter(void 0, void 0, void 0,
             return res.status(404).json({ message: 'Monatsbericht nicht gefunden' });
         }
         // Hole User-Settings für PDF-Generierung
-        const settings = yield prisma.settings.findUnique({
+        const settings = yield prisma_1.prisma.settings.findUnique({
             where: { userId: Number(userId) }
         });
         // Importiere den PDF Generator dynamisch
@@ -478,7 +477,7 @@ const generateMonthlyReportPDF = (req, res) => __awaiter(void 0, void 0, void 0,
         const pdfBuffer = yield generatePDF(reportForPDF, settings);
         // Speichere PDF-Pfad (optional)
         const pdfPath = `monthly-reports/${report.reportNumber}.pdf`;
-        yield prisma.monthlyConsultationReport.update({
+        yield prisma_1.prisma.monthlyConsultationReport.update({
             where: { id: report.id },
             data: { pdfPath }
         });

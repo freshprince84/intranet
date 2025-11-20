@@ -14,9 +14,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WhatsAppService = void 0;
 const axios_1 = __importDefault(require("axios"));
-const client_1 = require("@prisma/client");
 const encryption_1 = require("../utils/encryption");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * WhatsApp Service für Versand von WhatsApp-Nachrichten
  *
@@ -46,7 +45,7 @@ class WhatsAppService {
             // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
             if (this.branchId) {
                 console.log(`[WhatsApp Service] Lade Settings für Branch ${this.branchId}`);
-                const branch = yield prisma.branch.findUnique({
+                const branch = yield prisma_1.prisma.branch.findUnique({
                     where: { id: this.branchId },
                     select: {
                         whatsappSettings: true,
@@ -116,7 +115,7 @@ class WhatsAppService {
             // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
             if (this.organizationId) {
                 console.log(`[WhatsApp Service] Lade Settings für Organisation ${this.organizationId}`);
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: this.organizationId },
                     select: { settings: true }
                 });

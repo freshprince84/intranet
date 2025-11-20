@@ -1,7 +1,5 @@
 import { Request } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from './prisma';
 
 /**
  * Prüft ob User eine bestimmte Lebenszyklus-Rolle hat

@@ -12,9 +12,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReservationTaskService = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("../controllers/notificationController");
-const client_2 = require("@prisma/client");
 const translations_1 = require("../utils/translations");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Service für Reservierungs-Task-Management
  *
@@ -32,7 +31,7 @@ class ReservationTaskService {
             var _a;
             try {
                 // Finde Task zur Reservierung
-                const task = yield prisma.task.findUnique({
+                const task = yield prisma_1.prisma.task.findUnique({
                     where: { reservationId: reservationId },
                     include: {
                         reservation: true,
@@ -44,7 +43,7 @@ class ReservationTaskService {
                     return;
                 }
                 // Setze verantwortlichen User
-                const updatedTask = yield prisma.task.update({
+                const updatedTask = yield prisma_1.prisma.task.update({
                     where: { id: task.id },
                     data: {
                         status: client_1.TaskStatus.in_progress,
@@ -57,7 +56,7 @@ class ReservationTaskService {
                 // await this.startWorkTime(task.id, userId);
                 // Aktualisiere Reservierungs-Status
                 if (task.reservation) {
-                    yield prisma.reservation.update({
+                    yield prisma_1.prisma.reservation.update({
                         where: { id: reservationId },
                         data: {
                             status: 'checked_in'
@@ -72,7 +71,7 @@ class ReservationTaskService {
                         userId: task.qualityControlId,
                         title: notificationText.title,
                         message: notificationText.message,
-                        type: client_2.NotificationType.task,
+                        type: client_1.NotificationType.task,
                         relatedEntityId: task.id,
                         relatedEntityType: 'update'
                     });
@@ -96,7 +95,7 @@ class ReservationTaskService {
             var _a;
             try {
                 // Finde Task zur Reservierung
-                const task = yield prisma.task.findUnique({
+                const task = yield prisma_1.prisma.task.findUnique({
                     where: { reservationId: reservationId },
                     include: {
                         reservation: true
@@ -107,7 +106,7 @@ class ReservationTaskService {
                     return;
                 }
                 // Aktualisiere Task-Status auf "done"
-                const updatedTask = yield prisma.task.update({
+                const updatedTask = yield prisma_1.prisma.task.update({
                     where: { id: task.id },
                     data: {
                         status: client_1.TaskStatus.done,
@@ -122,7 +121,7 @@ class ReservationTaskService {
                 }
                 // Aktualisiere Reservierungs-Status
                 if (task.reservation) {
-                    yield prisma.reservation.update({
+                    yield prisma_1.prisma.reservation.update({
                         where: { id: reservationId },
                         data: {
                             status: 'checked_in',
@@ -139,7 +138,7 @@ class ReservationTaskService {
                         userId: task.qualityControlId,
                         title: notificationText.title,
                         message: notificationText.message,
-                        type: client_2.NotificationType.task,
+                        type: client_1.NotificationType.task,
                         relatedEntityId: task.id,
                         relatedEntityType: 'update'
                     });
@@ -159,7 +158,7 @@ class ReservationTaskService {
     static syncTaskStatus(reservationId) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const reservation = yield prisma.reservation.findUnique({
+                const reservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { id: reservationId },
                     include: {
                         task: true
@@ -188,7 +187,7 @@ class ReservationTaskService {
                         break;
                 }
                 if (newTaskStatus && reservation.task.status !== newTaskStatus) {
-                    yield prisma.task.update({
+                    yield prisma_1.prisma.task.update({
                         where: { id: reservation.task.id },
                         data: { status: newTaskStatus }
                     });

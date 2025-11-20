@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient, TaskStatus, RequestStatus } from '@prisma/client';
+import { TaskStatus, RequestStatus } from '@prisma/client';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 import { startOfDay, endOfDay, parseISO, format } from 'date-fns';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 // To-Dos pro User für ein bestimmtes Datum
 export const getTodosByUserForDate = async (req: Request, res: Response) => {

@@ -10,13 +10,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateUserNotificationSettings = exports.getUserNotificationSettings = exports.updateNotificationSettings = exports.getNotificationSettings = void 0;
-const client_1 = require("@prisma/client");
 const notificationValidation_1 = require("../validation/notificationValidation");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
+const notificationSettingsCache_1 = require("../services/notificationSettingsCache");
 // System-weite Notification-Einstellungen abrufen
 const getNotificationSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const settings = yield prisma.notificationSettings.findFirst();
+        const settings = yield prisma_1.prisma.notificationSettings.findFirst();
         // Standardeinstellungen, falls keine existieren
         if (!settings) {
             return res.json({
@@ -56,21 +56,23 @@ const updateNotificationSettings = (req, res) => __awaiter(void 0, void 0, void 
             return res.status(400).json({ message: validationError });
         }
         // Prüfen, ob bereits Einstellungen existieren
-        const existingSettings = yield prisma.notificationSettings.findFirst();
+        const existingSettings = yield prisma_1.prisma.notificationSettings.findFirst();
         let settings;
         if (existingSettings) {
             // Aktualisieren existierender Einstellungen
-            settings = yield prisma.notificationSettings.update({
+            settings = yield prisma_1.prisma.notificationSettings.update({
                 where: { id: existingSettings.id },
                 data
             });
         }
         else {
             // Erstellen neuer Einstellungen
-            settings = yield prisma.notificationSettings.create({
+            settings = yield prisma_1.prisma.notificationSettings.create({
                 data
             });
         }
+        // Cache invalidation nach Update
+        notificationSettingsCache_1.notificationSettingsCache.invalidateSystemSettings();
         res.json(settings);
     }
     catch (error) {
@@ -109,19 +111,19 @@ const getUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, void
         }
         console.log('[SettingsController] Lade Benachrichtigungseinstellungen für Benutzer:', numericUserId);
         // Überprüfe, ob der Prisma-Client verfügbar ist
-        if (!prisma) {
+        if (!prisma_1.prisma) {
             console.error('[SettingsController] Prisma-Client nicht verfügbar');
             return res.status(500).json({ message: 'Interner Datenbankfehler' });
         }
         // Benutzereinstellungen abrufen
-        const settings = yield prisma.userNotificationSettings.findFirst({
+        const settings = yield prisma_1.prisma.userNotificationSettings.findFirst({
             where: { userId: numericUserId }
         });
         console.log('[SettingsController] Gefundene Einstellungen:', settings ? 'Ja' : 'Nein');
         // Wenn keine benutzer-spezifischen Einstellungen, dann System-Einstellungen abrufen
         if (!settings) {
             console.log('[SettingsController] Keine Benutzereinstellungen gefunden, lade System-Einstellungen');
-            const systemSettings = yield prisma.notificationSettings.findFirst();
+            const systemSettings = yield prisma_1.prisma.notificationSettings.findFirst();
             console.log('[SettingsController] System-Einstellungen geladen:', !!systemSettings);
             // Default-Einstellungen mit Systemwerten oder Standardwerten
             return res.json({
@@ -178,23 +180,25 @@ const updateUserNotificationSettings = (req, res) => __awaiter(void 0, void 0, v
             return res.status(400).json({ message: validationError });
         }
         // Prüfen, ob bereits Einstellungen existieren
-        const existingSettings = yield prisma.userNotificationSettings.findFirst({
+        const existingSettings = yield prisma_1.prisma.userNotificationSettings.findFirst({
             where: { userId }
         });
         let settings;
         if (existingSettings) {
             // Aktualisieren existierender Einstellungen
-            settings = yield prisma.userNotificationSettings.update({
+            settings = yield prisma_1.prisma.userNotificationSettings.update({
                 where: { id: existingSettings.id },
                 data
             });
         }
         else {
             // Erstellen neuer Einstellungen
-            settings = yield prisma.userNotificationSettings.create({
+            settings = yield prisma_1.prisma.userNotificationSettings.create({
                 data
             });
         }
+        // Cache invalidation nach Update
+        notificationSettingsCache_1.notificationSettingsCache.invalidateUserSettings(userId);
         res.json(settings);
     }
     catch (error) {

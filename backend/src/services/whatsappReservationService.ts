@@ -1,7 +1,6 @@
-import { PrismaClient, ReservationStatus, PaymentStatus } from '@prisma/client';
+import { ReservationStatus, PaymentStatus } from '@prisma/client';
 import { ParsedReservationMessage } from './whatsappMessageParser';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Service für automatische Reservierungserstellung aus WhatsApp-Nachrichten

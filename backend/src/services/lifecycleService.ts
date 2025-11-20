@@ -1,8 +1,7 @@
-import { PrismaClient, EmployeeStatus, SocialSecurityStatus } from '@prisma/client';
+import { EmployeeStatus, SocialSecurityStatus } from '@prisma/client';
 import { TaskAutomationService } from './taskAutomationService';
 import { DocumentService } from './documentService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Service für Mitarbeiterlebenszyklus-Verwaltung

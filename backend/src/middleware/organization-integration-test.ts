@@ -7,9 +7,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 interface TestResult {
   testName: string;
@@ -268,7 +266,6 @@ export async function runOrganizationMiddlewareTests(): Promise<void> {
     console.log('⚠️  Some tests failed. Please review the issues above.');
   }
 
-  await prisma.$disconnect();
 }
 
 // Ausführen falls direkt aufgerufen

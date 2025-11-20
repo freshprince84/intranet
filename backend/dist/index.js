@@ -20,6 +20,7 @@ const http_1 = __importDefault(require("http"));
 const app_1 = __importDefault(require("./app"));
 const claudeConsoleService_1 = require("./services/claudeConsoleService");
 const queues_1 = require("./queues");
+const prisma_1 = require("./utils/prisma");
 // HTTP-Server mit WebSocket-Support erstellen
 const PORT = process.env.PORT || 5000;
 const server = http_1.default.createServer(app_1.default);
@@ -51,6 +52,7 @@ server.listen(PORT, () => {
 process.on('SIGTERM', () => __awaiter(void 0, void 0, void 0, function* () {
     console.log('SIGTERM signal empfangen. Server wird heruntergefahren...');
     yield (0, queues_1.stopWorkers)();
+    yield prisma_1.prisma.$disconnect();
     server.close(() => {
         console.log('Server erfolgreich heruntergefahren.');
         process.exit(0);
@@ -59,6 +61,7 @@ process.on('SIGTERM', () => __awaiter(void 0, void 0, void 0, function* () {
 process.on('SIGINT', () => __awaiter(void 0, void 0, void 0, function* () {
     console.log('SIGINT signal empfangen. Server wird heruntergefahren...');
     yield (0, queues_1.stopWorkers)();
+    yield prisma_1.prisma.$disconnect();
     server.close(() => {
         console.log('Server erfolgreich heruntergefahren.');
         process.exit(0);

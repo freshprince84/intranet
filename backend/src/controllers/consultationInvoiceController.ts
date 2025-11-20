@@ -1,11 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { generateInvoicePDF } from '../services/invoicePdfGenerator';
 import { getDataIsolationFilter } from '../middleware/organization';
 import path from 'path';
 import fs from 'fs';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 // Rechnung aus gefilterten Beratungen erstellen
 export const createInvoiceFromConsultations = async (req: Request, res: Response) => {

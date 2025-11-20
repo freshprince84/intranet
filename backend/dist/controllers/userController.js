@@ -50,16 +50,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.debugUserBranches = exports.getOnboardingAnalytics = exports.resetOnboarding = exports.trackOnboardingEvent = exports.completeOnboarding = exports.updateOnboardingProgress = exports.getOnboardingStatus = exports.deleteUser = exports.updateUser = exports.createUser = exports.switchUserRole = exports.updateInvoiceSettings = exports.getUserActiveLanguage = exports.updateUserSettings = exports.updateUserBranches = exports.updateUserRoles = exports.isProfileComplete = exports.updateProfile = exports.updateUserById = exports.getCurrentUser = exports.getUserById = exports.getAllUsersForDropdown = exports.getAllUsers = void 0;
 const client_1 = require("@prisma/client");
+const prisma_1 = require("../utils/prisma");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const notificationController_1 = require("./notificationController");
 const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const lifecycleService_1 = require("../services/lifecycleService");
-const prisma = new client_1.PrismaClient();
 // Alle Benutzer abrufen
 const getAllUsers = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const users = yield prisma.user.findMany({
+        const users = yield prisma_1.prisma.user.findMany({
             where: (0, organization_1.getUserOrganizationFilter)(req),
             include: {
                 roles: {
@@ -99,7 +99,7 @@ const getAllUsersForDropdown = (req, res) => __awaiter(void 0, void 0, void 0, f
     try {
         // Für Dropdowns: Nur User der Organisation (oder nur eigene wenn standalone) und nur aktive Benutzer
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-        const users = yield prisma.user.findMany({
+        const users = yield prisma_1.prisma.user.findMany({
             where: Object.assign(Object.assign({}, userFilter), { active: true }),
             select: {
                 id: true,
@@ -143,7 +143,7 @@ const getUserById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         if (isNaN(userId)) {
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             include: {
                 roles: {
@@ -195,7 +195,7 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 id: true,
@@ -280,7 +280,7 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         console.log('updateUserById - Active value:', active, 'Type:', typeof active);
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
-            const existingUser = yield prisma.user.findFirst({
+            const existingUser = yield prisma_1.prisma.user.findFirst({
                 where: {
                     OR: [
                         username ? { username } : {},
@@ -305,7 +305,7 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
         const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract !== undefined && { contract: contract || null })), (salary !== undefined && { salary: salary === null ? null : parseFloat(salary.toString()) })), (payrollCountry && { payrollCountry })), (hourlyRate !== undefined && { hourlyRate: hourlyRate === null ? null : hourlyRate })), (contractType !== undefined && { contractType })), (monthlySalary !== undefined && { monthlySalary: monthlySalary === null ? null : parseFloat(monthlySalary.toString()) })), (normalWorkingHours !== undefined && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (active !== undefined && active !== null && { active: Boolean(active) }));
         console.log('Updating user with data:', updateData);
-        const updatedUser = yield prisma.user.update({
+        const updatedUser = yield prisma_1.prisma.user.update({
             where: { id: userId },
             data: updateData,
             include: {
@@ -331,7 +331,7 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
                 console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
-                const lifecycle = yield prisma.employeeLifecycle.findUnique({
+                const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                     where: { userId }
                 });
                 if (lifecycle) {
@@ -340,14 +340,14 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                     const epsRequired = contract === 'tiempo_completo';
                     console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
                     console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
-                    const updated = yield prisma.employeeLifecycle.update({
+                    const updated = yield prisma_1.prisma.employeeLifecycle.update({
                         where: { userId },
                         data: { epsRequired }
                     });
                     console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
                     // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
                     if (epsRequired && !lifecycle.epsRequired) {
-                        const existingRegistration = yield prisma.socialSecurityRegistration.findUnique({
+                        const existingRegistration = yield prisma_1.prisma.socialSecurityRegistration.findUnique({
                             where: {
                                 lifecycleId_registrationType: {
                                     lifecycleId: lifecycle.id,
@@ -357,7 +357,7 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         });
                         if (existingRegistration && existingRegistration.status === 'not_required') {
                             // Ändere Status von "not_required" auf "pending"
-                            yield prisma.socialSecurityRegistration.update({
+                            yield prisma_1.prisma.socialSecurityRegistration.update({
                                 where: {
                                     lifecycleId_registrationType: {
                                         lifecycleId: lifecycle.id,
@@ -372,7 +372,7 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         }
                         else if (!existingRegistration) {
                             // Erstelle neue "pending"-Registrierung
-                            yield prisma.socialSecurityRegistration.create({
+                            yield prisma_1.prisma.socialSecurityRegistration.create({
                                 data: {
                                     lifecycleId: lifecycle.id,
                                     registrationType: 'eps',
@@ -383,7 +383,7 @@ const updateUserById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                         }
                     }
                     // Erstelle Event für die Änderung
-                    yield prisma.lifecycleEvent.create({
+                    yield prisma_1.prisma.lifecycleEvent.create({
                         data: {
                             lifecycleId: lifecycle.id,
                             eventType: 'eps_required_updated',
@@ -437,7 +437,7 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
-            const existingUser = yield prisma.user.findFirst({
+            const existingUser = yield prisma_1.prisma.user.findFirst({
                 where: {
                     OR: [
                         username ? { username } : {},
@@ -503,7 +503,7 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract !== undefined && { contract: contract || null })), (salary && { salary: parseFloat(salary) })), (normalWorkingHours && { normalWorkingHours: parseFloat(normalWorkingHours.toString()) })), (gender !== undefined && { gender: gender || null })), (phoneNumber !== undefined && { phoneNumber: normalizedPhoneNumber }));
         console.log('[updateProfile] Update data:', JSON.stringify(updateData, null, 2));
-        const updatedUser = yield prisma.user.update({
+        const updatedUser = yield prisma_1.prisma.user.update({
             where: { id: userId },
             data: updateData,
             select: {
@@ -546,7 +546,7 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             updatedUser.language);
         // Update profileComplete, falls sich der Status geändert hat
         if (isComplete !== updatedUser.profileComplete) {
-            yield prisma.user.update({
+            yield prisma_1.prisma.user.update({
                 where: { id: userId },
                 data: { profileComplete: isComplete }
             });
@@ -556,7 +556,7 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
                 console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
-                const lifecycle = yield prisma.employeeLifecycle.findUnique({
+                const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                     where: { userId }
                 });
                 if (lifecycle) {
@@ -565,14 +565,14 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                     const epsRequired = contract === 'tiempo_completo';
                     console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
                     console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
-                    const updated = yield prisma.employeeLifecycle.update({
+                    const updated = yield prisma_1.prisma.employeeLifecycle.update({
                         where: { userId },
                         data: { epsRequired }
                     });
                     console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
                     // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
                     if (epsRequired && !lifecycle.epsRequired) {
-                        const existingRegistration = yield prisma.socialSecurityRegistration.findUnique({
+                        const existingRegistration = yield prisma_1.prisma.socialSecurityRegistration.findUnique({
                             where: {
                                 lifecycleId_registrationType: {
                                     lifecycleId: lifecycle.id,
@@ -582,7 +582,7 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                         });
                         if (existingRegistration && existingRegistration.status === 'not_required') {
                             // Ändere Status von "not_required" auf "pending"
-                            yield prisma.socialSecurityRegistration.update({
+                            yield prisma_1.prisma.socialSecurityRegistration.update({
                                 where: {
                                     lifecycleId_registrationType: {
                                         lifecycleId: lifecycle.id,
@@ -597,7 +597,7 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                         }
                         else if (!existingRegistration) {
                             // Erstelle neue "pending"-Registrierung
-                            yield prisma.socialSecurityRegistration.create({
+                            yield prisma_1.prisma.socialSecurityRegistration.create({
                                 data: {
                                     lifecycleId: lifecycle.id,
                                     registrationType: 'eps',
@@ -608,7 +608,7 @@ const updateProfile = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                         }
                     }
                     // Erstelle Event für die Änderung
-                    yield prisma.lifecycleEvent.create({
+                    yield prisma_1.prisma.lifecycleEvent.create({
                         data: {
                             lifecycleId: lifecycle.id,
                             eventType: 'eps_required_updated',
@@ -659,7 +659,7 @@ const isProfileComplete = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 username: true,
@@ -683,7 +683,7 @@ const isProfileComplete = (req, res) => __awaiter(void 0, void 0, void 0, functi
         const complete = missingFields.length === 0;
         // Update profileComplete, falls noch nicht gesetzt
         if (complete !== user.profileComplete) {
-            yield prisma.user.update({
+            yield prisma_1.prisma.user.update({
                 where: { id: userId },
                 data: { profileComplete: complete }
             });
@@ -714,7 +714,7 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
             return res.status(400).json({ message: 'roleIds muss ein Array sein' });
         }
         // Überprüfe, ob der Benutzer existiert
-        const userExists = yield prisma.user.findUnique({
+        const userExists = yield prisma_1.prisma.user.findUnique({
             where: { id: userId }
         });
         if (!userExists) {
@@ -722,7 +722,7 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
         }
         // Überprüfe, ob alle Rollen existieren und zur Organisation gehören
         const roleFilter = (0, organization_1.getDataIsolationFilter)(req, 'role');
-        const existingRoles = yield prisma.role.findMany({
+        const existingRoles = yield prisma_1.prisma.role.findMany({
             where: Object.assign({ id: {
                     in: roleIds
                 } }, roleFilter)
@@ -733,19 +733,19 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
             });
         }
         // Aktuelle Benutzerrollen abrufen, um lastUsed-Status zu prüfen
-        const currentUserRoles = yield prisma.userRole.findMany({
+        const currentUserRoles = yield prisma_1.prisma.userRole.findMany({
             where: { userId },
             orderBy: { role: { id: 'asc' } }
         });
         // Prüfen, welche Rolle aktuell als lastUsed markiert ist
         const currentLastUsedRole = currentUserRoles.find(ur => ur.lastUsed);
         // Lösche alle vorhandenen Benutzerrollen
-        yield prisma.userRole.deleteMany({
+        yield prisma_1.prisma.userRole.deleteMany({
             where: { userId }
         });
         // Erstelle neue Benutzerrollen
         const userRoles = yield Promise.all(roleIds.map((roleId) => __awaiter(void 0, void 0, void 0, function* () {
-            return prisma.userRole.create({
+            return prisma_1.prisma.userRole.create({
                 data: {
                     userId,
                     roleId,
@@ -777,7 +777,7 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
                 }
             }
             // Markiere die ausgewählte Rolle als lastUsed
-            yield prisma.userRole.update({
+            yield prisma_1.prisma.userRole.update({
                 where: {
                     id: roleToMarkAsLastUsed.id
                 },
@@ -787,7 +787,7 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
             });
         }
         // Benutzer mit aktualisierten Rollen abrufen
-        const updatedUser = yield prisma.user.findUnique({
+        const updatedUser = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             include: {
                 roles: {
@@ -823,7 +823,7 @@ const updateUserRoles = (req, res) => __awaiter(void 0, void 0, void 0, function
         });
         // Benachrichtigung für Administratoren der Organisation senden
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-        const admins = yield prisma.user.findMany({
+        const admins = yield prisma_1.prisma.user.findMany({
             where: Object.assign(Object.assign({}, userFilter), { roles: {
                     some: {
                         role: {
@@ -872,7 +872,7 @@ const updateUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(400).json({ message: 'branchIds muss ein Array sein' });
         }
         // Überprüfe, ob der Benutzer existiert
-        const userExists = yield prisma.user.findUnique({
+        const userExists = yield prisma_1.prisma.user.findUnique({
             where: { id: userId }
         });
         if (!userExists) {
@@ -883,7 +883,7 @@ const updateUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
         console.log('[updateUserBranches] Branch Filter:', branchFilter);
         console.log('[updateUserBranches] Requested branchIds:', branchIds);
         console.log('[updateUserBranches] Organization ID:', req.organizationId);
-        const existingBranches = yield prisma.branch.findMany({
+        const existingBranches = yield prisma_1.prisma.branch.findMany({
             where: Object.assign({ id: {
                     in: branchIds
                 } }, branchFilter)
@@ -895,7 +895,7 @@ const updateUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
             const foundIds = existingBranches.map(b => b.id);
             const missingIds = branchIds.filter(id => !foundIds.includes(id));
             // Prüfe ob die fehlenden Branches existieren, aber zur falschen Organisation gehören
-            const allRequestedBranches = yield prisma.branch.findMany({
+            const allRequestedBranches = yield prisma_1.prisma.branch.findMany({
                 where: {
                     id: { in: branchIds }
                 },
@@ -915,19 +915,19 @@ const updateUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }
         // Aktuelle Benutzer-Branches abrufen, um lastUsed-Status zu prüfen
-        const currentUserBranches = yield prisma.usersBranches.findMany({
+        const currentUserBranches = yield prisma_1.prisma.usersBranches.findMany({
             where: { userId },
             orderBy: { branchId: 'asc' }
         });
         // Prüfen, welche Branch aktuell als lastUsed markiert ist
         const currentLastUsedBranch = currentUserBranches.find(ub => ub.lastUsed);
         // Lösche alle vorhandenen Benutzer-Branches
-        yield prisma.usersBranches.deleteMany({
+        yield prisma_1.prisma.usersBranches.deleteMany({
             where: { userId }
         });
         // Erstelle neue Benutzer-Branches
         const userBranches = yield Promise.all(branchIds.map((branchId) => __awaiter(void 0, void 0, void 0, function* () {
-            return prisma.usersBranches.create({
+            return prisma_1.prisma.usersBranches.create({
                 data: {
                     userId,
                     branchId,
@@ -959,7 +959,7 @@ const updateUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 }
             }
             // Markiere die ausgewählte Branch als lastUsed
-            yield prisma.usersBranches.update({
+            yield prisma_1.prisma.usersBranches.update({
                 where: {
                     id: branchToMarkAsLastUsed.id
                 },
@@ -969,7 +969,7 @@ const updateUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }
         // Benutzer mit aktualisierten Branches abrufen
-        const updatedUser = yield prisma.user.findUnique({
+        const updatedUser = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             include: {
                 branches: {
@@ -992,7 +992,7 @@ const updateUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
         });
         // Benachrichtigung für Administratoren der Organisation senden
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-        const admins = yield prisma.user.findMany({
+        const admins = yield prisma_1.prisma.user.findMany({
             where: Object.assign(Object.assign({}, userFilter), { roles: {
                     some: {
                         role: {
@@ -1035,19 +1035,19 @@ const updateUserSettings = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Prüfen, ob es bereits Einstellungen gibt
-        let settings = yield prisma.settings.findUnique({
+        let settings = yield prisma_1.prisma.settings.findUnique({
             where: { userId }
         });
         if (settings) {
             // Einstellungen aktualisieren
-            settings = yield prisma.settings.update({
+            settings = yield prisma_1.prisma.settings.update({
                 where: { userId },
                 data: Object.assign(Object.assign({}, (req.body.darkMode !== undefined && { darkMode: req.body.darkMode })), (req.body.sidebarCollapsed !== undefined && { sidebarCollapsed: req.body.sidebarCollapsed }))
             });
         }
         else {
             // Neue Einstellungen erstellen
-            settings = yield prisma.settings.create({
+            settings = yield prisma_1.prisma.settings.create({
                 data: Object.assign(Object.assign({ userId }, (req.body.darkMode !== undefined && { darkMode: req.body.darkMode })), (req.body.sidebarCollapsed !== undefined && { sidebarCollapsed: req.body.sidebarCollapsed }))
             });
         }
@@ -1071,7 +1071,7 @@ const getUserActiveLanguage = (req, res) => __awaiter(void 0, void 0, void 0, fu
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // 1. Prüfe User.language (falls gesetzt)
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 language: true,
@@ -1152,19 +1152,19 @@ const updateInvoiceSettings = (req, res) => __awaiter(void 0, void 0, void 0, fu
             }
         }
         // Prüfen, ob es bereits Invoice-Einstellungen gibt
-        let invoiceSettings = yield prisma.invoiceSettings.findUnique({
+        let invoiceSettings = yield prisma_1.prisma.invoiceSettings.findUnique({
             where: { userId }
         });
         if (invoiceSettings) {
             // Invoice-Einstellungen aktualisieren
-            invoiceSettings = yield prisma.invoiceSettings.update({
+            invoiceSettings = yield prisma_1.prisma.invoiceSettings.update({
                 where: { userId },
                 data: Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (req.body.monthlyReportEnabled !== undefined && { monthlyReportEnabled: req.body.monthlyReportEnabled })), (req.body.monthlyReportDay !== undefined && { monthlyReportDay: req.body.monthlyReportDay })), (req.body.monthlyReportRecipient !== undefined && { monthlyReportRecipient: req.body.monthlyReportRecipient })), (req.body.companyName !== undefined && { companyName: req.body.companyName })), (req.body.companyAddress !== undefined && { companyAddress: req.body.companyAddress })), (req.body.companyZip !== undefined && { companyZip: req.body.companyZip })), (req.body.companyCity !== undefined && { companyCity: req.body.companyCity })), (req.body.companyCountry !== undefined && { companyCountry: req.body.companyCountry })), (req.body.companyPhone !== undefined && { companyPhone: req.body.companyPhone })), (req.body.companyEmail !== undefined && { companyEmail: req.body.companyEmail })), (req.body.companyWebsite !== undefined && { companyWebsite: req.body.companyWebsite })), (req.body.vatNumber !== undefined && { vatNumber: req.body.vatNumber })), (req.body.iban !== undefined && { iban: req.body.iban })), (req.body.bankName !== undefined && { bankName: req.body.bankName })), (req.body.defaultHourlyRate !== undefined && { defaultHourlyRate: req.body.defaultHourlyRate })), (req.body.defaultVatRate !== undefined && { defaultVatRate: req.body.defaultVatRate })), (req.body.invoicePrefix !== undefined && { invoicePrefix: req.body.invoicePrefix })), (req.body.nextInvoiceNumber !== undefined && { nextInvoiceNumber: req.body.nextInvoiceNumber })), (req.body.footerText !== undefined && { footerText: req.body.footerText }))
             });
         }
         else {
             // Neue Invoice-Einstellungen erstellen mit Defaults
-            invoiceSettings = yield prisma.invoiceSettings.create({
+            invoiceSettings = yield prisma_1.prisma.invoiceSettings.create({
                 data: Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({ userId, companyName: req.body.companyName || '', companyAddress: req.body.companyAddress || '', companyZip: req.body.companyZip || '', companyCity: req.body.companyCity || '', companyCountry: req.body.companyCountry || 'CH', iban: req.body.iban || '', defaultHourlyRate: req.body.defaultHourlyRate || '0' }, (req.body.monthlyReportEnabled !== undefined && { monthlyReportEnabled: req.body.monthlyReportEnabled })), (req.body.monthlyReportDay !== undefined && { monthlyReportDay: req.body.monthlyReportDay })), (req.body.monthlyReportRecipient !== undefined && { monthlyReportRecipient: req.body.monthlyReportRecipient })), (req.body.companyPhone !== undefined && { companyPhone: req.body.companyPhone })), (req.body.companyEmail !== undefined && { companyEmail: req.body.companyEmail })), (req.body.companyWebsite !== undefined && { companyWebsite: req.body.companyWebsite })), (req.body.vatNumber !== undefined && { vatNumber: req.body.vatNumber })), (req.body.bankName !== undefined && { bankName: req.body.bankName })), (req.body.defaultVatRate !== undefined && { defaultVatRate: req.body.defaultVatRate })), (req.body.invoicePrefix !== undefined && { invoicePrefix: req.body.invoicePrefix })), (req.body.nextInvoiceNumber !== undefined && { nextInvoiceNumber: req.body.nextInvoiceNumber })), (req.body.footerText !== undefined && { footerText: req.body.footerText }))
             });
         }
@@ -1193,7 +1193,7 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
             return res.status(400).json({ message: 'Ungültige Rollen-ID' });
         }
         // Prüfen, ob die Rolle dem Benutzer zugewiesen ist
-        const userRole = yield prisma.userRole.findFirst({
+        const userRole = yield prisma_1.prisma.userRole.findFirst({
             where: {
                 userId,
                 roleId
@@ -1205,7 +1205,7 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
             });
         }
         // Prüfe, ob die Rolle für die aktive Branch verfügbar ist
-        const activeBranch = yield prisma.usersBranches.findFirst({
+        const activeBranch = yield prisma_1.prisma.usersBranches.findFirst({
             where: {
                 userId,
                 lastUsed: true
@@ -1225,7 +1225,7 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
             }
         }
         // Transaktion starten
-        yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // Alle Rollen des Benutzers auf lastUsed=false setzen
             yield tx.userRole.updateMany({
                 where: { userId },
@@ -1238,7 +1238,7 @@ const switchUserRole = (req, res) => __awaiter(void 0, void 0, void 0, function*
             });
         }));
         // Benutzer mit aktualisierten Rollen zurückgeben
-        const updatedUser = yield prisma.user.findUnique({
+        const updatedUser = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             include: {
                 roles: {
@@ -1283,7 +1283,7 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return res.status(403).json({ message: 'Nur Administratoren einer Organisation können Benutzer erstellen' });
         }
         // Prüfe ob der aktuelle Benutzer Admin der Organisation ist
-        const currentUser = yield prisma.user.findUnique({
+        const currentUser = yield prisma_1.prisma.user.findUnique({
             where: { id: Number(userId) },
             include: {
                 roles: {
@@ -1319,7 +1319,7 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Email als Username verwenden
         const username = email;
         // Überprüfe, ob Benutzername oder E-Mail bereits existieren
-        const existingUser = yield prisma.user.findFirst({
+        const existingUser = yield prisma_1.prisma.user.findFirst({
             where: {
                 OR: [
                     { username },
@@ -1335,7 +1335,7 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Hash das Passwort
         const hashedPassword = yield bcrypt_1.default.hash(password, 10);
         // Finde die "Hamburger"-Rolle der Organisation (Standard-Rolle für neue Benutzer)
-        const hamburgerRole = yield prisma.role.findFirst({
+        const hamburgerRole = yield prisma_1.prisma.role.findFirst({
             where: {
                 organizationId: organizationId,
                 name: 'Hamburger'
@@ -1344,7 +1344,7 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Falls keine "Hamburger"-Rolle existiert, suche nach "User"-Rolle
         let roleToAssign = hamburgerRole;
         if (!roleToAssign) {
-            roleToAssign = yield prisma.role.findFirst({
+            roleToAssign = yield prisma_1.prisma.role.findFirst({
                 where: {
                     organizationId: organizationId,
                     name: 'User'
@@ -1353,7 +1353,7 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         // Falls immer noch keine Rolle gefunden, nehme die erste verfügbare Rolle der Organisation (außer Admin)
         if (!roleToAssign) {
-            roleToAssign = yield prisma.role.findFirst({
+            roleToAssign = yield prisma_1.prisma.role.findFirst({
                 where: {
                     organizationId: organizationId,
                     name: {
@@ -1371,7 +1371,7 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             });
         }
         // Erstelle den Benutzer
-        const user = yield prisma.user.create({
+        const user = yield prisma_1.prisma.user.create({
             data: {
                 username,
                 email,
@@ -1401,7 +1401,7 @@ const createUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
         });
         // Benachrichtigung für Administratoren der Organisation senden
-        const admins = yield prisma.user.findMany({
+        const admins = yield prisma_1.prisma.user.findMany({
             where: {
                 roles: {
                     some: {
@@ -1456,7 +1456,7 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
         // Aktuellen Benutzer abrufen
-        const currentUser = yield prisma.user.findUnique({
+        const currentUser = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             include: {
                 roles: true
@@ -1470,7 +1470,7 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         console.log('Active value:', active, 'Type:', typeof active);
         // Überprüfe, ob Username oder Email bereits existieren
         if (username || email) {
-            const existingUser = yield prisma.user.findFirst({
+            const existingUser = yield prisma_1.prisma.user.findFirst({
                 where: {
                     OR: [
                         username ? { username } : {},
@@ -1490,7 +1490,7 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Aktualisiere den Benutzer
         const updateData = Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign(Object.assign({}, (username && { username })), (email && { email })), (firstName && { firstName })), (lastName && { lastName })), (birthday && { birthday: new Date(birthday) })), (bankDetails && { bankDetails })), (contract !== undefined && { contract: contract || null })), (salary && { salary: parseFloat(salary.toString()) })), (active !== undefined && active !== null && { active: Boolean(active) }));
         console.log('Update data to be applied:', updateData);
-        const updatedUser = yield prisma.user.update({
+        const updatedUser = yield prisma_1.prisma.user.update({
             where: { id: userId },
             data: updateData,
             include: {
@@ -1505,7 +1505,7 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (contract !== undefined && contract !== null && contract !== '') {
             try {
                 console.log(`[EPS Required] Contract geändert für User ${userId}: ${contract}`);
-                const lifecycle = yield prisma.employeeLifecycle.findUnique({
+                const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                     where: { userId }
                 });
                 if (lifecycle) {
@@ -1514,14 +1514,14 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     const epsRequired = contract === 'tiempo_completo';
                     console.log(`[EPS Required] Setze epsRequired auf ${epsRequired} für User ${userId} (contract: ${contract})`);
                     console.log(`[EPS Required] Aktueller Wert in DB: ${lifecycle.epsRequired}`);
-                    const updated = yield prisma.employeeLifecycle.update({
+                    const updated = yield prisma_1.prisma.employeeLifecycle.update({
                         where: { userId },
                         data: { epsRequired }
                     });
                     console.log(`[EPS Required] Nach Update - epsRequired in DB: ${updated.epsRequired}`);
                     // Wenn epsRequired von false auf true geändert wurde, aktualisiere bestehende "not_required"-Registrierung
                     if (epsRequired && !lifecycle.epsRequired) {
-                        const existingRegistration = yield prisma.socialSecurityRegistration.findUnique({
+                        const existingRegistration = yield prisma_1.prisma.socialSecurityRegistration.findUnique({
                             where: {
                                 lifecycleId_registrationType: {
                                     lifecycleId: lifecycle.id,
@@ -1531,7 +1531,7 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                         });
                         if (existingRegistration && existingRegistration.status === 'not_required') {
                             // Ändere Status von "not_required" auf "pending"
-                            yield prisma.socialSecurityRegistration.update({
+                            yield prisma_1.prisma.socialSecurityRegistration.update({
                                 where: {
                                     lifecycleId_registrationType: {
                                         lifecycleId: lifecycle.id,
@@ -1546,7 +1546,7 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                         }
                         else if (!existingRegistration) {
                             // Erstelle neue "pending"-Registrierung
-                            yield prisma.socialSecurityRegistration.create({
+                            yield prisma_1.prisma.socialSecurityRegistration.create({
                                 data: {
                                     lifecycleId: lifecycle.id,
                                     registrationType: 'eps',
@@ -1557,7 +1557,7 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                         }
                     }
                     // Erstelle Event für die Änderung
-                    yield prisma.lifecycleEvent.create({
+                    yield prisma_1.prisma.lifecycleEvent.create({
                         data: {
                             lifecycleId: lifecycle.id,
                             eventType: 'eps_required_updated',
@@ -1595,7 +1595,7 @@ const updateUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         });
         // Benachrichtigung für Administratoren der Organisation senden
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-        const admins = yield prisma.user.findMany({
+        const admins = yield prisma_1.prisma.user.findMany({
             where: Object.assign(Object.assign({}, userFilter), { roles: {
                     some: {
                         role: {
@@ -1638,46 +1638,46 @@ const deleteUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
         // Benutzer vor dem Löschen abrufen
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: userId }
         });
         if (!user) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden' });
         }
         // Lösche alle verknüpften Daten
-        yield prisma.$transaction([
+        yield prisma_1.prisma.$transaction([
             // Organisation-bezogene Abhängigkeiten löschen
-            prisma.organizationJoinRequest.deleteMany({
+            prisma_1.prisma.organizationJoinRequest.deleteMany({
                 where: { requesterId: userId }
             }),
             // processedBy wird automatisch auf NULL gesetzt (ON DELETE SET NULL)
-            prisma.organizationInvitation.deleteMany({
+            prisma_1.prisma.organizationInvitation.deleteMany({
                 where: { invitedBy: userId }
             }),
             // acceptedBy wird automatisch auf NULL gesetzt (ON DELETE SET NULL)
             // Standard-Abhängigkeiten löschen
-            prisma.userRole.deleteMany({
+            prisma_1.prisma.userRole.deleteMany({
                 where: { userId }
             }),
-            prisma.usersBranches.deleteMany({
+            prisma_1.prisma.usersBranches.deleteMany({
                 where: { userId }
             }),
-            prisma.settings.deleteMany({
+            prisma_1.prisma.settings.deleteMany({
                 where: { userId }
             }),
-            prisma.notification.deleteMany({
+            prisma_1.prisma.notification.deleteMany({
                 where: { userId }
             }),
-            prisma.userNotificationSettings.deleteMany({
+            prisma_1.prisma.userNotificationSettings.deleteMany({
                 where: { userId }
             }),
-            prisma.user.delete({
+            prisma_1.prisma.user.delete({
                 where: { id: userId }
             })
         ]);
         // Benachrichtigung für Administratoren der Organisation senden
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-        const admins = yield prisma.user.findMany({
+        const admins = yield prisma_1.prisma.user.findMany({
             where: Object.assign(Object.assign({}, userFilter), { roles: {
                     some: {
                         role: {
@@ -1717,7 +1717,7 @@ exports.deleteUser = deleteUser;
 const getOnboardingStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.userId, 10);
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 onboardingCompleted: true,
@@ -1753,7 +1753,7 @@ const updateOnboardingProgress = (req, res) => __awaiter(void 0, void 0, void 0,
         if (typeof currentStep !== 'number' || !Array.isArray(completedSteps)) {
             return res.status(400).json({ message: 'Ungültige Fortschrittsdaten' });
         }
-        const user = yield prisma.user.update({
+        const user = yield prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 onboardingProgress: {
@@ -1782,7 +1782,7 @@ exports.updateOnboardingProgress = updateOnboardingProgress;
 const completeOnboarding = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.userId, 10);
-        const user = yield prisma.user.update({
+        const user = yield prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 onboardingCompleted: true,
@@ -1816,7 +1816,7 @@ const trackOnboardingEvent = (req, res) => __awaiter(void 0, void 0, void 0, fun
         if (!validActions.includes(action)) {
             return res.status(400).json({ message: 'Ungültige Aktion' });
         }
-        const event = yield prisma.onboardingEvent.create({
+        const event = yield prisma_1.prisma.onboardingEvent.create({
             data: {
                 userId,
                 stepId,
@@ -1843,7 +1843,7 @@ exports.trackOnboardingEvent = trackOnboardingEvent;
 const resetOnboarding = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.userId, 10);
-        const user = yield prisma.user.update({
+        const user = yield prisma_1.prisma.user.update({
             where: { id: userId },
             data: {
                 onboardingCompleted: false,
@@ -1872,13 +1872,13 @@ const getOnboardingAnalytics = (req, res) => __awaiter(void 0, void 0, void 0, f
         const userId = parseInt(req.userId, 10);
         const roleId = parseInt(req.roleId, 10);
         // Prüfe ob Admin
-        const role = yield prisma.role.findUnique({
+        const role = yield prisma_1.prisma.role.findUnique({
             where: { id: roleId }
         });
         if (!role || role.name.toLowerCase() !== 'admin') {
             return res.status(403).json({ message: 'Keine Berechtigung' });
         }
-        const events = yield prisma.onboardingEvent.findMany({
+        const events = yield prisma_1.prisma.onboardingEvent.findMany({
             include: {
                 user: {
                     select: {
@@ -1939,7 +1939,7 @@ const debugUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return res.status(400).json({ message: 'Ungültige Benutzer-ID' });
         }
         // 1. User-Informationen
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 id: true,
@@ -1951,7 +1951,7 @@ const debugUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, functi
         });
         // 2. Alle Branches der Organisation
         const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
-        const allOrgBranches = yield prisma.branch.findMany({
+        const allOrgBranches = yield prisma_1.prisma.branch.findMany({
             where: branchFilter,
             select: {
                 id: true,
@@ -1961,7 +1961,7 @@ const debugUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, functi
             orderBy: { name: 'asc' }
         });
         // 3. User-Branches (zugewiesene Branches)
-        const userBranches = yield prisma.usersBranches.findMany({
+        const userBranches = yield prisma_1.prisma.usersBranches.findMany({
             where: { userId },
             include: {
                 branch: {
@@ -1975,7 +1975,7 @@ const debugUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, functi
             orderBy: { branchId: 'asc' }
         });
         // 4. Aktive Rolle
-        const activeRole = yield prisma.userRole.findFirst({
+        const activeRole = yield prisma_1.prisma.userRole.findFirst({
             where: {
                 userId,
                 lastUsed: true
@@ -2002,7 +2002,7 @@ const debugUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, functi
             }
         });
         // 5. Alle Rollen des Users
-        const userRoles = yield prisma.userRole.findMany({
+        const userRoles = yield prisma_1.prisma.userRole.findMany({
             where: { userId },
             include: {
                 role: {

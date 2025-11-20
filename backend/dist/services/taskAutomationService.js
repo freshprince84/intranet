@@ -13,8 +13,7 @@ exports.TaskAutomationService = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("../controllers/notificationController");
 const translations_1 = require("../utils/translations");
-const client_2 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Service für automatische Task-Erstellung bei Lebenszyklus-Events
  */
@@ -28,7 +27,7 @@ class TaskAutomationService {
             var _a;
             try {
                 // Hole User und Organization
-                const user = yield prisma.user.findUnique({
+                const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: userId },
                     include: {
                         branches: {
@@ -42,7 +41,7 @@ class TaskAutomationService {
                 if (!user) {
                     throw new Error('User nicht gefunden');
                 }
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: organizationId },
                     select: { settings: true }
                 });
@@ -59,7 +58,7 @@ class TaskAutomationService {
                 }
                 else {
                     // Fallback: Suche nach "Derecho"-Rolle
-                    const derechoRole = yield prisma.role.findFirst({
+                    const derechoRole = yield prisma_1.prisma.role.findFirst({
                         where: {
                             organizationId,
                             name: {
@@ -77,7 +76,7 @@ class TaskAutomationService {
                     console.warn(`[createOnboardingTasks] Keine Legal-Rolle gefunden für Organisation ${organizationId}. Onboarding-Tasks werden nicht erstellt.`);
                     console.warn(`[createOnboardingTasks] LifecycleRoles config:`, JSON.stringify(lifecycleRoles, null, 2));
                     // Debug: Zeige alle Rollen der Organisation
-                    const allRoles = yield prisma.role.findMany({
+                    const allRoles = yield prisma_1.prisma.role.findMany({
                         where: { organizationId },
                         select: { id: true, name: true }
                     });
@@ -88,7 +87,7 @@ class TaskAutomationService {
                 // Bestimme Admin-User für Quality Control
                 let adminUserId = null;
                 if (lifecycleRoles === null || lifecycleRoles === void 0 ? void 0 : lifecycleRoles.adminRoleId) {
-                    const adminUser = yield prisma.user.findFirst({
+                    const adminUser = yield prisma_1.prisma.user.findFirst({
                         where: {
                             roles: {
                                 some: {
@@ -104,7 +103,7 @@ class TaskAutomationService {
                 }
                 // Fallback: Suche nach Admin-Rolle und ersten Admin-User
                 if (!adminUserId) {
-                    const adminRole = yield prisma.role.findFirst({
+                    const adminRole = yield prisma_1.prisma.role.findFirst({
                         where: {
                             organizationId,
                             name: {
@@ -114,7 +113,7 @@ class TaskAutomationService {
                         }
                     });
                     if (adminRole) {
-                        const adminUser = yield prisma.user.findFirst({
+                        const adminUser = yield prisma_1.prisma.user.findFirst({
                             where: {
                                 roles: {
                                     some: {
@@ -134,7 +133,7 @@ class TaskAutomationService {
                 // Fallback: Wenn User keine Branch hat, verwende erste Branch der Organisation
                 if (!userBranch) {
                     console.warn(`[createOnboardingTasks] User ${userId} hat keine Niederlassung zugewiesen. Verwende erste Branch der Organisation.`);
-                    const firstOrgBranch = yield prisma.branch.findFirst({
+                    const firstOrgBranch = yield prisma_1.prisma.branch.findFirst({
                         where: { organizationId },
                         orderBy: { id: 'asc' }
                     });
@@ -192,7 +191,7 @@ class TaskAutomationService {
                             organizationId: organizationId,
                             branchId: userBranch.id
                         });
-                        const task = yield prisma.task.create({
+                        const task = yield prisma_1.prisma.task.create({
                             data: taskDataToCreate,
                             include: {
                                 role: {
@@ -206,11 +205,11 @@ class TaskAutomationService {
                         console.log(`[createOnboardingTasks] Task erstellt: ID=${task.id}, Title="${task.title}", RoleId=${task.roleId}, OrganizationId=${task.organizationId}`);
                         createdTasks.push(task);
                         // Erstelle Lifecycle-Event
-                        const lifecycle = yield prisma.employeeLifecycle.findUnique({
+                        const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                             where: { userId }
                         });
                         if (lifecycle) {
-                            yield prisma.lifecycleEvent.create({
+                            yield prisma_1.prisma.lifecycleEvent.create({
                                 data: {
                                     lifecycleId: lifecycle.id,
                                     eventType: `task_created_${taskData.type}`,
@@ -223,7 +222,7 @@ class TaskAutomationService {
                             });
                         }
                         // Benachrichtigung für alle User mit Legal-Rolle
-                        const legalUsers = yield prisma.user.findMany({
+                        const legalUsers = yield prisma_1.prisma.user.findMany({
                             where: {
                                 roles: {
                                     some: {
@@ -240,7 +239,7 @@ class TaskAutomationService {
                                 userId: legalUser.id,
                                 title: notificationText.title,
                                 message: notificationText.message,
-                                type: client_2.NotificationType.task,
+                                type: client_1.NotificationType.task,
                                 relatedEntityId: task.id,
                                 relatedEntityType: 'create'
                             });
@@ -268,7 +267,7 @@ class TaskAutomationService {
             var _a;
             try {
                 // Hole User und Organization
-                const user = yield prisma.user.findUnique({
+                const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: userId },
                     include: {
                         branches: {
@@ -282,7 +281,7 @@ class TaskAutomationService {
                 if (!user) {
                     throw new Error('User nicht gefunden');
                 }
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: organizationId },
                     select: { settings: true }
                 });
@@ -303,7 +302,7 @@ class TaskAutomationService {
                 }
                 else {
                     // Fallback: Suche nach Admin-Rolle
-                    const adminRole = yield prisma.role.findFirst({
+                    const adminRole = yield prisma_1.prisma.role.findFirst({
                         where: {
                             organizationId,
                             name: {
@@ -347,7 +346,7 @@ class TaskAutomationService {
                 // Erstelle Tasks
                 for (const taskData of offboardingTasks) {
                     try {
-                        const task = yield prisma.task.create({
+                        const task = yield prisma_1.prisma.task.create({
                             data: {
                                 title: taskData.title,
                                 description: taskData.description,
@@ -367,11 +366,11 @@ class TaskAutomationService {
                         });
                         createdTasks.push(task);
                         // Erstelle Lifecycle-Event
-                        const lifecycle = yield prisma.employeeLifecycle.findUnique({
+                        const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                             where: { userId }
                         });
                         if (lifecycle) {
-                            yield prisma.lifecycleEvent.create({
+                            yield prisma_1.prisma.lifecycleEvent.create({
                                 data: {
                                     lifecycleId: lifecycle.id,
                                     eventType: `task_created_${taskData.type}`,
@@ -384,7 +383,7 @@ class TaskAutomationService {
                             });
                         }
                         // Benachrichtigung für alle User mit HR-Rolle
-                        const hrUsers = yield prisma.user.findMany({
+                        const hrUsers = yield prisma_1.prisma.user.findMany({
                             where: {
                                 roles: {
                                     some: {
@@ -401,7 +400,7 @@ class TaskAutomationService {
                                 userId: hrUser.id,
                                 title: notificationText.title,
                                 message: notificationText.message,
-                                type: client_2.NotificationType.task,
+                                type: client_1.NotificationType.task,
                                 relatedEntityId: task.id,
                                 relatedEntityType: 'create'
                             });
@@ -428,7 +427,7 @@ class TaskAutomationService {
         return __awaiter(this, void 0, void 0, function* () {
             var _a;
             try {
-                const user = yield prisma.user.findUnique({
+                const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: userId },
                     include: {
                         branches: {
@@ -442,7 +441,7 @@ class TaskAutomationService {
                 if (!user) {
                     throw new Error('User nicht gefunden');
                 }
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: organizationId },
                     select: { settings: true }
                 });
@@ -458,7 +457,7 @@ class TaskAutomationService {
                     legalRoleId = lifecycleRoles.legalRoleId;
                 }
                 else {
-                    const derechoRole = yield prisma.role.findFirst({
+                    const derechoRole = yield prisma_1.prisma.role.findFirst({
                         where: {
                             organizationId,
                             name: {
@@ -484,7 +483,7 @@ class TaskAutomationService {
                     pension: 'Realizar afiliación Pensión',
                     caja: 'Realizar afiliación Caja'
                 };
-                const task = yield prisma.task.create({
+                const task = yield prisma_1.prisma.task.create({
                     data: {
                         title: taskTitles[type],
                         description: `${taskTitles[type]} para ${user.firstName} ${user.lastName}. Los datos requeridos se generarán automáticamente.`,
@@ -504,11 +503,11 @@ class TaskAutomationService {
                     }
                 });
                 // Erstelle Lifecycle-Event
-                const lifecycle = yield prisma.employeeLifecycle.findUnique({
+                const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                     where: { userId }
                 });
                 if (lifecycle) {
-                    yield prisma.lifecycleEvent.create({
+                    yield prisma_1.prisma.lifecycleEvent.create({
                         data: {
                             lifecycleId: lifecycle.id,
                             eventType: `task_created_${type}`,
@@ -521,7 +520,7 @@ class TaskAutomationService {
                     });
                 }
                 // Benachrichtigung für Legal-User
-                const legalUsers = yield prisma.user.findMany({
+                const legalUsers = yield prisma_1.prisma.user.findMany({
                     where: {
                         roles: {
                             some: {
@@ -538,7 +537,7 @@ class TaskAutomationService {
                         userId: legalUser.id,
                         title: notificationText.title,
                         message: notificationText.message,
-                        type: client_2.NotificationType.task,
+                        type: client_1.NotificationType.task,
                         relatedEntityId: task.id,
                         relatedEntityType: 'create'
                     });
@@ -563,7 +562,7 @@ class TaskAutomationService {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // Hole Organisation Settings
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: organizationId },
                     select: { settings: true }
                 });
@@ -580,7 +579,7 @@ class TaskAutomationService {
                 // Bestimme zuständige Rolle (z.B. "Rezeption")
                 let receptionRoleId = null;
                 // Suche nach "Rezeption" oder ähnlicher Rolle
-                const receptionRole = yield prisma.role.findFirst({
+                const receptionRole = yield prisma_1.prisma.role.findFirst({
                     where: {
                         organizationId,
                         name: {
@@ -594,7 +593,7 @@ class TaskAutomationService {
                 }
                 else {
                     // Fallback: Verwende erste verfügbare Rolle der Organisation
-                    const firstRole = yield prisma.role.findFirst({
+                    const firstRole = yield prisma_1.prisma.role.findFirst({
                         where: { organizationId }
                     });
                     if (firstRole) {
@@ -613,7 +612,7 @@ class TaskAutomationService {
                 }
                 else {
                     // Fallback: Hole erste Branch der Organisation
-                    const branch = yield prisma.branch.findFirst({
+                    const branch = yield prisma_1.prisma.branch.findFirst({
                         where: { organizationId }
                     });
                     if (!branch) {
@@ -624,7 +623,7 @@ class TaskAutomationService {
                     console.log(`[TaskAutomation] Verwende erste Branch ${branchId} der Organisation (Reservation hat keine branchId)`);
                 }
                 // Prüfe ob bereits ein Task für diese Reservierung existiert
-                const existingTask = yield prisma.task.findUnique({
+                const existingTask = yield prisma_1.prisma.task.findUnique({
                     where: { reservationId: reservation.id }
                 });
                 if (existingTask) {
@@ -645,7 +644,7 @@ Reservierungsdetails:
 - Zahlungsstatus: ${reservation.paymentStatus}
 ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleTimeString('de-DE')}` : ''}
       `.trim();
-                const task = yield prisma.task.create({
+                const task = yield prisma_1.prisma.task.create({
                     data: {
                         title: taskTitle,
                         description: taskDescription,
@@ -669,7 +668,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 });
                 console.log(`[TaskAutomation] Task ${task.id} für Reservierung ${reservation.id} erstellt`);
                 // Benachrichtigung für alle User mit Rezeption-Rolle
-                const receptionUsers = yield prisma.user.findMany({
+                const receptionUsers = yield prisma_1.prisma.user.findMany({
                     where: {
                         roles: {
                             some: {
@@ -686,7 +685,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                         userId: receptionUser.id,
                         title: notificationText.title,
                         message: notificationText.message,
-                        type: client_2.NotificationType.task,
+                        type: client_1.NotificationType.task,
                         relatedEntityId: task.id,
                         relatedEntityType: 'create'
                     });
@@ -712,7 +711,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
             var _a;
             try {
                 // Prüfe: Organisation in Kolumbien?
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: organizationId },
                     select: { country: true, settings: true }
                 });
@@ -721,7 +720,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     return null; // Nur für Kolumbien
                 }
                 // Hole User-Daten
-                const user = yield prisma.user.findUnique({
+                const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: userId },
                     include: {
                         branches: {
@@ -739,7 +738,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 let adminRoleId = (lifecycleRoles === null || lifecycleRoles === void 0 ? void 0 : lifecycleRoles.adminRoleId) || null;
                 // Fallback: Suche nach Admin-Rolle
                 if (!adminRoleId) {
-                    const adminRole = yield prisma.role.findFirst({
+                    const adminRole = yield prisma_1.prisma.role.findFirst({
                         where: {
                             organizationId: organizationId,
                             name: { contains: 'Admin', mode: 'insensitive' }
@@ -756,7 +755,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 // Hole Admin-User für QC (nutze bestehende Logik)
                 let adminUserId = null;
                 if (adminRoleId) {
-                    const adminUser = yield prisma.user.findFirst({
+                    const adminUser = yield prisma_1.prisma.user.findFirst({
                         where: {
                             roles: {
                                 some: {
@@ -773,7 +772,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 // Hole Branch (nutze bestehende Logik)
                 let userBranch = (_a = user.branches[0]) === null || _a === void 0 ? void 0 : _a.branch;
                 if (!userBranch) {
-                    const firstOrgBranch = yield prisma.branch.findFirst({
+                    const firstOrgBranch = yield prisma_1.prisma.branch.findFirst({
                         where: { organizationId },
                         orderBy: { id: 'asc' }
                     });
@@ -783,7 +782,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     userBranch = firstOrgBranch;
                 }
                 // Prüfe ob bereits ein Admin-Onboarding-Task existiert
-                const existingTask = yield prisma.task.findFirst({
+                const existingTask = yield prisma_1.prisma.task.findFirst({
                     where: {
                         organizationId: organizationId,
                         title: {
@@ -798,7 +797,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 // Erstelle Task für Admin
                 // WICHTIG: Task ist der Admin-Rolle zugewiesen (roleId), daher kann responsibleId NICHT gesetzt werden
                 // Der Onboarding-User wird im Link in der description gespeichert: userId=XXX
-                const task = yield prisma.task.create({
+                const task = yield prisma_1.prisma.task.create({
                     data: {
                         title: `Profil vervollständigen: ${user.firstName || ''} ${user.lastName || ''}`.trim() || `Profil vervollständigen: User ${userId}`,
                         description: `Bitte vervollständigen Sie das Profil für ${user.firstName || ''} ${user.lastName || ''}:\n- Contrato\n- Salario\n- Horas normales de trabajo\n\nLink: /organization?tab=users&userId=${userId}`,
@@ -815,7 +814,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                         userId: adminUserId,
                         title: 'Neues Onboarding-To-Do',
                         message: `Profil vervollständigen für ${user.firstName || ''} ${user.lastName || ''}`,
-                        type: client_2.NotificationType.task,
+                        type: client_1.NotificationType.task,
                         relatedEntityId: task.id,
                         relatedEntityType: 'task'
                     });
@@ -840,7 +839,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
             var _a;
             try {
                 // Hole User-Daten
-                const user = yield prisma.user.findUnique({
+                const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: userId },
                     include: {
                         branches: {
@@ -860,7 +859,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 // Hole Branch (nutze bestehende Logik)
                 let userBranch = (_a = user.branches[0]) === null || _a === void 0 ? void 0 : _a.branch;
                 if (!userBranch) {
-                    const firstOrgBranch = yield prisma.branch.findFirst({
+                    const firstOrgBranch = yield prisma_1.prisma.branch.findFirst({
                         where: { organizationId },
                         orderBy: { id: 'asc' }
                     });
@@ -870,7 +869,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     userBranch = firstOrgBranch;
                 }
                 // Hole Admin-User für QC (nutze bestehende Logik aus createAdminOnboardingTask)
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: organizationId },
                     select: { settings: true }
                 });
@@ -879,7 +878,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 let adminRoleId = (lifecycleRoles === null || lifecycleRoles === void 0 ? void 0 : lifecycleRoles.adminRoleId) || null;
                 // Fallback: Suche nach Admin-Rolle
                 if (!adminRoleId) {
-                    const adminRole = yield prisma.role.findFirst({
+                    const adminRole = yield prisma_1.prisma.role.findFirst({
                         where: {
                             organizationId: organizationId,
                             name: { contains: 'Admin', mode: 'insensitive' }
@@ -891,7 +890,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 }
                 let adminUserId = null;
                 if (adminRoleId) {
-                    const adminUser = yield prisma.user.findFirst({
+                    const adminUser = yield prisma_1.prisma.user.findFirst({
                         where: {
                             roles: {
                                 some: {
@@ -906,7 +905,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     }
                 }
                 // Prüfe ob bereits ein BankDetails-Task existiert (prüfe beide Varianten für Abwärtskompatibilität)
-                const existingTask = yield prisma.task.findFirst({
+                const existingTask = yield prisma_1.prisma.task.findFirst({
                     where: {
                         organizationId: organizationId,
                         responsibleId: userId,
@@ -922,7 +921,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 }
                 // Erstelle Task für User
                 // WICHTIG: Task ist dem User zugewiesen (responsibleId), daher kann roleId NICHT gesetzt werden
-                const task = yield prisma.task.create({
+                const task = yield prisma_1.prisma.task.create({
                     data: {
                         title: 'Ingresar datos bancarios',
                         description: `Por favor, ingrese sus datos bancarios en el perfil antes de poder utilizar el registro de tiempo.\n\nLink: /profile`,
@@ -938,7 +937,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     userId: userId,
                     title: 'Ingresar datos bancarios',
                     message: 'Por favor, ingrese sus datos bancarios en el perfil antes de poder utilizar el registro de tiempo.',
-                    type: client_2.NotificationType.task,
+                    type: client_1.NotificationType.task,
                     relatedEntityId: task.id,
                     relatedEntityType: 'task'
                 });
@@ -962,7 +961,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
             var _a;
             try {
                 // Prüfe: Organisation in Kolumbien?
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: organizationId },
                     select: { country: true, settings: true }
                 });
@@ -971,7 +970,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     return null; // Nur für Kolumbien
                 }
                 // Hole User-Daten
-                const user = yield prisma.user.findUnique({
+                const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: userId },
                     include: {
                         branches: {
@@ -995,7 +994,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 // Hole Branch (nutze bestehende Logik)
                 let userBranch = (_a = user.branches[0]) === null || _a === void 0 ? void 0 : _a.branch;
                 if (!userBranch) {
-                    const firstOrgBranch = yield prisma.branch.findFirst({
+                    const firstOrgBranch = yield prisma_1.prisma.branch.findFirst({
                         where: { organizationId },
                         orderBy: { id: 'asc' }
                     });
@@ -1010,7 +1009,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 let adminRoleId = (lifecycleRoles === null || lifecycleRoles === void 0 ? void 0 : lifecycleRoles.adminRoleId) || null;
                 // Fallback: Suche nach Admin-Rolle
                 if (!adminRoleId) {
-                    const adminRole = yield prisma.role.findFirst({
+                    const adminRole = yield prisma_1.prisma.role.findFirst({
                         where: {
                             organizationId: organizationId,
                             name: { contains: 'Admin', mode: 'insensitive' }
@@ -1022,7 +1021,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 }
                 let adminUserId = null;
                 if (adminRoleId) {
-                    const adminUser = yield prisma.user.findFirst({
+                    const adminUser = yield prisma_1.prisma.user.findFirst({
                         where: {
                             roles: {
                                 some: {
@@ -1037,7 +1036,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     }
                 }
                 // Prüfe ob bereits ein Identitätsdokument-Task existiert
-                const existingTask = yield prisma.task.findFirst({
+                const existingTask = yield prisma_1.prisma.task.findFirst({
                     where: {
                         organizationId: organizationId,
                         responsibleId: userId,
@@ -1053,7 +1052,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                 }
                 // Erstelle Task für User
                 // WICHTIG: Task ist dem User zugewiesen (responsibleId), daher kann roleId NICHT gesetzt werden
-                const task = yield prisma.task.create({
+                const task = yield prisma_1.prisma.task.create({
                     data: {
                         title: 'Subir documento de identidad',
                         description: `Por favor, suba su documento de identidad (Cédula o Pasaporte) en el perfil. Los campos se completarán automáticamente.\n\nLink: /profile`,
@@ -1069,7 +1068,7 @@ ${reservation.arrivalTime ? `- Ankunftszeit: ${reservation.arrivalTime.toLocaleT
                     userId: userId,
                     title: 'Subir documento de identidad',
                     message: 'Por favor, suba su documento de identidad (Cédula o Pasaporte) en el perfil. Los campos se completarán automáticamente.',
-                    type: client_2.NotificationType.task,
+                    type: client_1.NotificationType.task,
                     relatedEntityId: task.id,
                     relatedEntityType: 'task'
                 });

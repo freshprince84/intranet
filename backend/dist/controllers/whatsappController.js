@@ -10,12 +10,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.handleWebhook = void 0;
-const client_1 = require("@prisma/client");
 const whatsappMessageParser_1 = require("../services/whatsappMessageParser");
 const whatsappReservationService_1 = require("../services/whatsappReservationService");
 const whatsappMessageHandler_1 = require("../services/whatsappMessageHandler");
 const whatsappService_1 = require("../services/whatsappService");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * POST /api/whatsapp/webhook
  * Empfängt Webhooks von WhatsApp Business API
@@ -189,7 +188,7 @@ function identifyBranchFromPhoneNumberId(phoneNumberId) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             // 1. Prüfe Phone Number Mapping
-            const mapping = yield prisma.whatsAppPhoneNumberMapping.findFirst({
+            const mapping = yield prisma_1.prisma.whatsAppPhoneNumberMapping.findFirst({
                 where: { phoneNumberId },
                 select: { branchId: true }
             });
@@ -199,7 +198,7 @@ function identifyBranchFromPhoneNumberId(phoneNumberId) {
             }
             // 2. Fallback: Suche Branch mit dieser phoneNumberId in Settings
             // Prisma unterstützt JSONB-Pfad-Suche nicht direkt, daher manuell
-            const branches = yield prisma.branch.findMany({
+            const branches = yield prisma_1.prisma.branch.findMany({
                 where: {
                     whatsappSettings: { not: null }
                 },

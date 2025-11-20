@@ -11,8 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailReservationScheduler = void 0;
 const emailReservationService_1 = require("./emailReservationService");
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Scheduler für automatische Email-Reservation-Verarbeitung
  *
@@ -58,7 +57,7 @@ class EmailReservationScheduler {
             try {
                 console.log('[EmailReservationScheduler] Starte Email-Check für alle Organisationen...');
                 // Hole alle Organisationen
-                const organizations = yield prisma.organization.findMany({
+                const organizations = yield prisma_1.prisma.organization.findMany({
                     select: {
                         id: true,
                         name: true,

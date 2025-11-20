@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
+import { Prisma, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getSystemNotificationText } from '../utils/translations';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Ruft alle Benutzer mit aktiver Zeiterfassung ab

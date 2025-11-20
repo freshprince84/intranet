@@ -46,7 +46,7 @@ exports.EmailReservationService = void 0;
 const client_1 = require("@prisma/client");
 const emailReadingService_1 = require("./emailReadingService");
 const emailReservationParser_1 = require("./emailReservationParser");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Service für die Erstellung von Reservationen aus Emails
  */
@@ -63,7 +63,7 @@ class EmailReservationService {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // Prüfe auf Duplikate (via lobbyReservationId)
-                const existingReservation = yield prisma.reservation.findUnique({
+                const existingReservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { lobbyReservationId: parsedEmail.reservationCode }
                 });
                 if (existingReservation) {
@@ -90,7 +90,7 @@ class EmailReservationService {
                     reservationData.guestPhone = parsedEmail.guestPhone.trim();
                 }
                 // Erstelle Reservation
-                let reservation = yield prisma.reservation.create({
+                let reservation = yield prisma_1.prisma.reservation.create({
                     data: reservationData,
                     include: {
                         organization: {
@@ -194,7 +194,7 @@ class EmailReservationService {
                     return 0;
                 }
                 // Lade Filter aus Organisation-Settings
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: organizationId },
                     select: { settings: true }
                 });

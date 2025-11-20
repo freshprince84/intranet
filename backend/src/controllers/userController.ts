@@ -3,14 +3,13 @@
 // Die aktuellen Linter-Fehler entstehen durch nicht aktualisierte Types
 
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
+import { Prisma, NotificationType } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import bcrypt from 'bcrypt';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getUserNotificationText } from '../utils/translations';
 import { organizationMiddleware, getUserOrganizationFilter, getDataIsolationFilter } from '../middleware/organization';
 import { LifecycleService } from '../services/lifecycleService';
-
-const prisma = new PrismaClient();
 
 interface AuthenticatedRequest extends Request {
     userId: string;

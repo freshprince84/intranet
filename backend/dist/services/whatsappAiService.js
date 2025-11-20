@@ -47,9 +47,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WhatsAppAiService = void 0;
 const axios_1 = __importDefault(require("axios"));
-const client_1 = require("@prisma/client");
 const languageDetectionService_1 = require("./languageDetectionService");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * WhatsApp AI Service
  *
@@ -63,7 +62,7 @@ class WhatsAppAiService {
         return __awaiter(this, void 0, void 0, function* () {
             var _a, _b, _c;
             // 1. Lade Branch und KI-Konfiguration
-            const branch = yield prisma.branch.findUnique({
+            const branch = yield prisma_1.prisma.branch.findUnique({
                 where: { id: branchId },
                 select: { whatsappSettings: true }
             });
@@ -271,7 +270,7 @@ class WhatsAppAiService {
     static isAiEnabled(branchId) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const branch = yield prisma.branch.findUnique({
+                const branch = yield prisma_1.prisma.branch.findUnique({
                     where: { id: branchId },
                     select: { whatsappSettings: true }
                 });

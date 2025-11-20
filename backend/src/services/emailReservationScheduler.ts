@@ -1,7 +1,5 @@
 import { EmailReservationService } from './emailReservationService';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Scheduler für automatische Email-Reservation-Verarbeitung

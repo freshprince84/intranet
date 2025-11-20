@@ -15,9 +15,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendPasswordResetEmail = exports.sendEmail = exports.sendRegistrationEmail = void 0;
 const nodemailer_1 = __importDefault(require("nodemailer"));
 const axios_1 = __importDefault(require("axios"));
-const client_1 = require("@prisma/client");
 const encryption_1 = require("../utils/encryption");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // SMTP-Konfiguration aus Umgebungsvariablen, Branch-Settings oder Organisation-Settings
 const createTransporter = (organizationId, branchId) => __awaiter(void 0, void 0, void 0, function* () {
     let smtpHost;
@@ -27,7 +26,7 @@ const createTransporter = (organizationId, branchId) => __awaiter(void 0, void 0
     // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
     if (branchId) {
         try {
-            const branch = yield prisma.branch.findUnique({
+            const branch = yield prisma_1.prisma.branch.findUnique({
                 where: { id: branchId },
                 select: {
                     emailSettings: true,
@@ -70,7 +69,7 @@ const createTransporter = (organizationId, branchId) => __awaiter(void 0, void 0
     // 2. Wenn organizationId vorhanden, versuche Organisation-spezifische SMTP-Einstellungen zu laden
     if (organizationId && (!smtpHost || !smtpUser || !smtpPass)) {
         try {
-            const organization = yield prisma.organization.findUnique({
+            const organization = yield prisma_1.prisma.organization.findUnique({
                 where: { id: organizationId },
                 select: { settings: true }
             });
@@ -512,7 +511,7 @@ const sendEmail = (email, subject, html, text, organizationId, branchId) => __aw
         // 1. Versuche Branch Settings zu laden
         if (branchId) {
             try {
-                const branch = yield prisma.branch.findUnique({
+                const branch = yield prisma_1.prisma.branch.findUnique({
                     where: { id: branchId },
                     select: {
                         emailSettings: true,
@@ -555,7 +554,7 @@ const sendEmail = (email, subject, html, text, organizationId, branchId) => __aw
         // 2. Fallback: Lade From-Einstellungen aus Organisation-Settings
         if (organizationId) {
             try {
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: organizationId },
                     select: { settings: true, displayName: true }
                 });
@@ -617,7 +616,7 @@ const sendPasswordResetEmail = (email, username, resetLink, organizationId) => _
         let fromName = 'Intranet';
         if (organizationId) {
             try {
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: organizationId },
                     select: { settings: true, displayName: true }
                 });
@@ -812,7 +811,7 @@ const sendPasswordResetViaMailtrapAPI = (email, username, resetLink, organizatio
     let fromName = 'Intranet';
     if (organizationId) {
         try {
-            const organization = yield prisma.organization.findUnique({
+            const organization = yield prisma_1.prisma.organization.findUnique({
                 where: { id: organizationId },
                 select: { settings: true, displayName: true }
             });

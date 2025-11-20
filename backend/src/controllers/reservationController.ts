@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient, ReservationStatus, PaymentStatus } from '@prisma/client';
+import { ReservationStatus, PaymentStatus } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { WhatsAppService } from '../services/whatsappService';
 import { BoldPaymentService } from '../services/boldPaymentService';
 import { TTLockService } from '../services/ttlockService';
@@ -7,8 +8,6 @@ import { ReservationNotificationService } from '../services/reservationNotificat
 import { reservationQueue, updateGuestContactQueue, checkQueueHealth } from '../services/queueService';
 import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
-
-const prisma = new PrismaClient();
 
 /**
  * Utility: Erkennt ob ein String eine Telefonnummer oder Email ist

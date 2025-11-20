@@ -17,8 +17,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runOrganizationMiddlewareTests = runOrganizationMiddlewareTests;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Test 1: Gültige Organisation-Zuordnung
  */
@@ -31,7 +30,7 @@ function testValidOrganizationAssignment() {
                 user: { id: 1, username: 'testuser', email: 'test@example.com', roles: [] }
             };
             // Prüfe ob User existiert und aktive Rolle hat
-            const user = yield prisma.user.findUnique({
+            const user = yield prisma_1.prisma.user.findUnique({
                 where: { id: 1 },
                 include: {
                     roles: {
@@ -91,7 +90,7 @@ function testOrphanedRolesDetection() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             // Prüfe auf Rollen ohne Organization (sollte nicht existieren da organizationId required ist)
-            const allRoles = yield prisma.role.findMany({
+            const allRoles = yield prisma_1.prisma.role.findMany({
                 include: {
                     organization: true
                 }
@@ -126,7 +125,7 @@ function testDataIsolation() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             // Prüfe ob Tasks mit ungültigen Rollen-Zuordnungen existieren
-            const crossOrgTasks = yield prisma.$queryRaw `
+            const crossOrgTasks = yield prisma_1.prisma.$queryRaw `
       SELECT t.id, t.title, r.name as role_name, o.name as org_name
       FROM "Task" t
       LEFT JOIN "Role" r ON t."roleId" = r.id
@@ -142,7 +141,7 @@ function testDataIsolation() {
                 };
             }
             // Prüfe WorkTime-Isolation
-            const crossOrgWorkTime = yield prisma.$queryRaw `
+            const crossOrgWorkTime = yield prisma_1.prisma.$queryRaw `
       SELECT w.id, u.email, 'WORKTIME_NO_ORG' as alert
       FROM "WorkTime" w
       JOIN "User" u ON w."userId" = u.id
@@ -179,7 +178,7 @@ function testDataIsolation() {
 function testMultiOrgUsers() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const multiOrgUsers = yield prisma.$queryRaw `
+            const multiOrgUsers = yield prisma_1.prisma.$queryRaw `
       SELECT u.email, COUNT(DISTINCT r."organizationId") as org_count
       FROM "User" u
       JOIN "UserRole" ur ON u.id = ur."userId"
@@ -248,7 +247,6 @@ function runOrganizationMiddlewareTests() {
         else {
             console.log('⚠️  Some tests failed. Please review the issues above.');
         }
-        yield prisma.$disconnect();
     });
 }
 // Ausführen falls direkt aufgerufen

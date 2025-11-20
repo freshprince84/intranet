@@ -14,7 +14,7 @@ const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
 const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Ruft alle Benutzer mit aktiver Zeiterfassung ab
  */
@@ -36,7 +36,7 @@ const getActiveTeamWorktimes = (req, res) => __awaiter(void 0, void 0, void 0, f
             activeWorktimesQuery = Object.assign(Object.assign({}, activeWorktimesQuery), { branchId: Number(teamId) });
         }
         // Hole alle aktiven Zeiterfassungen mit Benutzer- und Branch-Informationen
-        const activeWorktimes = yield prisma.workTime.findMany({
+        const activeWorktimes = yield prisma_1.prisma.workTime.findMany({
             where: activeWorktimesQuery,
             include: {
                 user: {
@@ -79,7 +79,7 @@ const stopUserWorktime = (req, res) => __awaiter(void 0, void 0, void 0, functio
         // Datenisolation: Nur WorkTimes der Organisation
         const worktimeFilter = (0, organization_1.getDataIsolationFilter)(req, 'worktime');
         // Finde die aktive Zeiterfassung des Benutzers
-        const activeWorktime = yield prisma.workTime.findFirst({
+        const activeWorktime = yield prisma_1.prisma.workTime.findFirst({
             where: Object.assign(Object.assign({}, worktimeFilter), { userId: Number(userId), endTime: null }),
             include: {
                 user: true,
@@ -92,7 +92,7 @@ const stopUserWorktime = (req, res) => __awaiter(void 0, void 0, void 0, functio
         // Verwende die übergebene Endzeit oder die aktuelle Zeit
         const now = endTime ? new Date(endTime) : new Date();
         // Aktualisiere die Zeiterfassung
-        const worktime = yield prisma.workTime.update({
+        const worktime = yield prisma_1.prisma.workTime.update({
             where: { id: activeWorktime.id },
             data: Object.assign({ endTime: now }, (activeWorktime.timezone ? {} : { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone })),
             include: {
@@ -154,7 +154,7 @@ const getUserWorktimesByDay = (req, res) => __awaiter(void 0, void 0, void 0, fu
         const dayStart = new Date(localStartOfDay.getTime() - startOffsetMinutes * 60000);
         const dayEnd = new Date(localEndOfDay.getTime() - endOffsetMinutes * 60000);
         // Hole alle Zeiterfassungen für den angegebenen Tag
-        const worktimes = yield prisma.workTime.findMany({
+        const worktimes = yield prisma_1.prisma.workTime.findMany({
             where: Object.assign(Object.assign(Object.assign({}, worktimeFilter), (userId ? { userId: Number(userId) } : {})), { startTime: {
                     gte: dayStart,
                     lte: dayEnd
@@ -200,7 +200,7 @@ const updateUserWorktime = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Datenisolation: Nur WorkTimes der Organisation
         const worktimeFilter = (0, organization_1.getDataIsolationFilter)(req, 'worktime');
         // Finde die Zeiterfassung
-        const worktime = yield prisma.workTime.findFirst({
+        const worktime = yield prisma_1.prisma.workTime.findFirst({
             where: Object.assign(Object.assign({}, worktimeFilter), { id: Number(id) }),
             include: {
                 user: true,
@@ -211,7 +211,7 @@ const updateUserWorktime = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(404).json({ message: 'Zeiterfassung nicht gefunden' });
         }
         // Aktualisiere die Zeiterfassung
-        const updatedWorktime = yield prisma.workTime.update({
+        const updatedWorktime = yield prisma_1.prisma.workTime.update({
             where: { id: Number(id) },
             data: {
                 startTime: startTime ? new Date(startTime) : undefined,
@@ -260,14 +260,14 @@ const updateApprovedOvertimeHours = (req, res) => __awaiter(void 0, void 0, void
         // Datenisolation: Nur User der Organisation
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
         // Prüfe ob User zur Organisation gehört
-        const user = yield prisma.user.findFirst({
+        const user = yield prisma_1.prisma.user.findFirst({
             where: Object.assign(Object.assign({}, userFilter), { id: Number(userId) })
         });
         if (!user) {
             return res.status(404).json({ message: 'Benutzer nicht gefunden oder gehört nicht zu Ihrer Organisation' });
         }
         // Aktualisiere die bewilligten Überstunden des Benutzers
-        const updatedUser = yield prisma.user.update({
+        const updatedUser = yield prisma_1.prisma.user.update({
             where: { id: Number(userId) },
             data: {
                 approvedOvertimeHours: Number(approvedOvertimeHours)

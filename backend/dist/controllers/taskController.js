@@ -14,12 +14,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.unlinkTaskFromCarticle = exports.linkTaskToCarticle = exports.getTaskCarticles = exports.deleteTask = exports.updateTask = exports.createTask = exports.getTaskById = exports.getAllTasks = void 0;
 const client_1 = require("@prisma/client");
+const prisma_1 = require("../utils/prisma");
 const taskValidation_1 = require("../validation/taskValidation");
 const notificationController_1 = require("./notificationController");
 const organization_1 = require("../middleware/organization");
 const lifecycleService_1 = require("../services/lifecycleService");
 const translations_1 = require("../utils/translations");
-const prisma = new client_1.PrismaClient();
 const userSelect = {
     id: true,
     firstName: true,
@@ -43,7 +43,7 @@ const getAllTasks = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         console.log('[getAllTasks] Organization ID:', req.organizationId);
         console.log('[getAllTasks] User Role:', (_b = (_a = req.userRole) === null || _a === void 0 ? void 0 : _a.role) === null || _b === void 0 ? void 0 : _b.id, (_d = (_c = req.userRole) === null || _c === void 0 ? void 0 : _c.role) === null || _d === void 0 ? void 0 : _d.name);
         console.log('[getAllTasks] Isolation Filter:', JSON.stringify(isolationFilter, null, 2));
-        const tasks = yield prisma.task.findMany({
+        const tasks = yield prisma_1.prisma.task.findMany({
             where: isolationFilter,
             include: {
                 responsible: {
@@ -87,7 +87,7 @@ const getTaskById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
-        const task = yield prisma.task.findFirst({
+        const task = yield prisma_1.prisma.task.findFirst({
             where: Object.assign({ id: taskId }, isolationFilter),
             include: {
                 responsible: {
@@ -134,7 +134,7 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Validierung: Prüfe ob User-IDs zur Organisation gehören
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
         if (taskData.responsibleId) {
-            const responsibleUser = yield prisma.user.findFirst({
+            const responsibleUser = yield prisma_1.prisma.user.findFirst({
                 where: Object.assign(Object.assign({}, userFilter), { id: taskData.responsibleId })
             });
             if (!responsibleUser) {
@@ -142,7 +142,7 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
         }
         if (taskData.qualityControlId) {
-            const qualityControlUser = yield prisma.user.findFirst({
+            const qualityControlUser = yield prisma_1.prisma.user.findFirst({
                 where: Object.assign(Object.assign({}, userFilter), { id: taskData.qualityControlId })
             });
             if (!qualityControlUser) {
@@ -167,7 +167,7 @@ const createTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         if (taskData.roleId) {
             taskCreateData.roleId = taskData.roleId;
         }
-        const task = yield prisma.task.create({
+        const task = yield prisma_1.prisma.task.create({
             data: taskCreateData,
             include: {
                 responsible: {
@@ -242,7 +242,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
         // Aktuellen Task abrufen, um Änderungen zu erkennen
-        const currentTask = yield prisma.task.findFirst({
+        const currentTask = yield prisma_1.prisma.task.findFirst({
             where: Object.assign({ id: taskId }, isolationFilter),
             include: {
                 responsible: {
@@ -263,7 +263,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         const userId = parseInt(req.userId, 10);
         const roleId = parseInt(req.roleId, 10);
         // Prüfe ob User Admin ist
-        const userRole = yield prisma.role.findUnique({
+        const userRole = yield prisma_1.prisma.role.findUnique({
             where: { id: roleId },
             select: { name: true }
         });
@@ -271,7 +271,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // User-Rolle: Kann nur eigene Tasks oder Tasks der eigenen Rolle "User" status-shiften
         if (updateData.status && !isAdmin) {
             // Prüfe ob User die User-Rolle in der Organisation hat
-            const userRoleInOrg = yield prisma.role.findFirst({
+            const userRoleInOrg = yield prisma_1.prisma.role.findFirst({
                 where: {
                     organizationId: currentTask.organizationId,
                     name: 'User',
@@ -308,7 +308,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Validierung: Prüfe ob User-IDs zur Organisation gehören (wenn geändert)
         if (updateData.responsibleId !== undefined && updateData.responsibleId !== null) {
             const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-            const responsibleUser = yield prisma.user.findFirst({
+            const responsibleUser = yield prisma_1.prisma.user.findFirst({
                 where: Object.assign(Object.assign({}, userFilter), { id: updateData.responsibleId })
             });
             if (!responsibleUser) {
@@ -317,7 +317,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         if (updateData.qualityControlId !== undefined && updateData.qualityControlId !== null) {
             const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-            const qualityControlUser = yield prisma.user.findFirst({
+            const qualityControlUser = yield prisma_1.prisma.user.findFirst({
                 where: Object.assign(Object.assign({}, userFilter), { id: updateData.qualityControlId })
             });
             if (!qualityControlUser) {
@@ -355,7 +355,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             // Wenn explizit null gesetzt wird, entferne die Beziehung
             updateDataForPrisma.roleId = null;
         }
-        const task = yield prisma.task.update({
+        const task = yield prisma_1.prisma.task.update({
             where: { id: taskId },
             data: updateDataForPrisma,
             include: {
@@ -378,7 +378,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             // Status-History speichern
             const userId = req.userId;
             if (userId) {
-                yield prisma.taskStatusHistory.create({
+                yield prisma_1.prisma.taskStatusHistory.create({
                     data: {
                         taskId: task.id,
                         userId: Number(userId),
@@ -405,7 +405,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                     else {
                         const onboardingUserId = parseInt(userIdMatch[1], 10);
                         // Prüfe ob User contract, salary, normalWorkingHours hat
-                        const onboardingUser = yield prisma.user.findUnique({
+                        const onboardingUser = yield prisma_1.prisma.user.findUnique({
                             where: { id: onboardingUserId },
                             select: {
                                 id: true,
@@ -455,7 +455,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 try {
                     const bankDetailsUserId = task.responsibleId;
                     // Prüfe ob User bankDetails hat
-                    const bankDetailsUser = yield prisma.user.findUnique({
+                    const bankDetailsUser = yield prisma_1.prisma.user.findUnique({
                         where: { id: bankDetailsUserId },
                         select: {
                             id: true,
@@ -489,7 +489,7 @@ const updateTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
                 try {
                     const identificationDocumentUserId = task.responsibleId;
                     // Prüfe ob User ein Identitätsdokument hat
-                    const identificationDocumentUser = yield prisma.user.findUnique({
+                    const identificationDocumentUser = yield prisma_1.prisma.user.findUnique({
                         where: { id: identificationDocumentUserId },
                         include: {
                             identificationDocuments: {
@@ -628,7 +628,7 @@ const deleteTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
         // Task vor dem Löschen abrufen, um Benachrichtigungen zu senden
-        const task = yield prisma.task.findFirst({
+        const task = yield prisma_1.prisma.task.findFirst({
             where: Object.assign({ id: taskId }, isolationFilter),
             include: {
                 responsible: {
@@ -644,13 +644,13 @@ const deleteTask = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         // Lösche abhängige Datensätze vor dem Löschen des Tasks
         // TaskCerebroCarticle und WorkTimeTask haben keine Cascade Delete
-        yield prisma.taskCerebroCarticle.deleteMany({
+        yield prisma_1.prisma.taskCerebroCarticle.deleteMany({
             where: { taskId: taskId }
         });
-        yield prisma.workTimeTask.deleteMany({
+        yield prisma_1.prisma.workTimeTask.deleteMany({
             where: { taskId: taskId }
         });
-        yield prisma.task.delete({
+        yield prisma_1.prisma.task.delete({
             where: { id: taskId }
         });
         // Benachrichtigung für den Verantwortlichen, nur wenn ein Benutzer zugewiesen ist
@@ -708,7 +708,7 @@ const getTaskCarticles = (req, res) => __awaiter(void 0, void 0, void 0, functio
         }
         // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
-        const task = yield prisma.task.findFirst({
+        const task = yield prisma_1.prisma.task.findFirst({
             where: Object.assign({ id: taskId }, isolationFilter),
             include: {
                 carticles: {
@@ -765,19 +765,19 @@ const linkTaskToCarticle = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Datenisolation: Prüfe ob User Zugriff auf diesen Task hat
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'task');
         // Prüfen, ob Task existiert
-        const task = yield prisma.task.findFirst({
+        const task = yield prisma_1.prisma.task.findFirst({
             where: Object.assign({ id: taskId }, isolationFilter)
         });
         if (!task) {
             return res.status(404).json({ error: 'Task nicht gefunden' });
         }
         // Prüfen, ob Artikel existiert
-        const carticle = yield prisma.cerebroCarticle.findUnique({ where: { id: carticleId } });
+        const carticle = yield prisma_1.prisma.cerebroCarticle.findUnique({ where: { id: carticleId } });
         if (!carticle) {
             return res.status(404).json({ error: 'Artikel nicht gefunden' });
         }
         // Verknüpfung erstellen
-        const link = yield prisma.taskCerebroCarticle.create({
+        const link = yield prisma_1.prisma.taskCerebroCarticle.create({
             data: {
                 taskId,
                 carticleId
@@ -822,7 +822,7 @@ const unlinkTaskFromCarticle = (req, res) => __awaiter(void 0, void 0, void 0, f
             return res.status(400).json({ error: 'Ungültige Task-ID oder Artikel-ID' });
         }
         // Verknüpfung suchen
-        const link = yield prisma.taskCerebroCarticle.findUnique({
+        const link = yield prisma_1.prisma.taskCerebroCarticle.findUnique({
             where: {
                 taskId_carticleId: {
                     taskId,
@@ -834,7 +834,7 @@ const unlinkTaskFromCarticle = (req, res) => __awaiter(void 0, void 0, void 0, f
             return res.status(404).json({ error: 'Verknüpfung nicht gefunden' });
         }
         // Verknüpfung löschen
-        yield prisma.taskCerebroCarticle.delete({
+        yield prisma_1.prisma.taskCerebroCarticle.delete({
             where: {
                 taskId_carticleId: {
                     taskId,

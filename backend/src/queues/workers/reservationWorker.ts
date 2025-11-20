@@ -1,8 +1,6 @@
 import { Worker, Job } from 'bullmq';
-import { PrismaClient } from '@prisma/client';
 import { ReservationNotificationService } from '../../services/reservationNotificationService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../utils/prisma';
 
 /**
  * Job-Daten für Reservation-Verarbeitung

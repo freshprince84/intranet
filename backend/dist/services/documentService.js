@@ -49,10 +49,9 @@ exports.DocumentService = void 0;
 const pdfkit_1 = __importDefault(require("pdfkit"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
-const client_1 = require("@prisma/client");
 const date_fns_1 = require("date-fns");
 const locale_1 = require("date-fns/locale");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Upload-Verzeichnisse
 const CERTIFICATES_DIR = path.join(__dirname, '../../uploads/certificates');
 const CONTRACTS_DIR = path.join(__dirname, '../../uploads/contracts');
@@ -75,7 +74,7 @@ class DocumentService {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // Hole User-Daten
-                const user = yield prisma.user.findUnique({
+                const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: data.userId },
                     select: {
                         id: true,
@@ -90,7 +89,7 @@ class DocumentService {
                     throw new Error('User nicht gefunden');
                 }
                 // Hole Organization-Daten
-                const lifecycle = yield prisma.employeeLifecycle.findUnique({
+                const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                     where: { userId: data.userId },
                     include: {
                         organization: {
@@ -150,7 +149,7 @@ class DocumentService {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 // Hole User-Daten
-                const user = yield prisma.user.findUnique({
+                const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: data.userId },
                     select: {
                         id: true,
@@ -165,7 +164,7 @@ class DocumentService {
                     throw new Error('User nicht gefunden');
                 }
                 // Hole Organization-Daten
-                const lifecycle = yield prisma.employeeLifecycle.findUnique({
+                const lifecycle = yield prisma_1.prisma.employeeLifecycle.findUnique({
                     where: { userId: data.userId },
                     include: {
                         organization: {

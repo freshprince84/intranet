@@ -47,11 +47,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BoldPaymentService = void 0;
 const axios_1 = __importDefault(require("axios"));
-const client_1 = require("@prisma/client");
 const encryption_1 = require("../utils/encryption");
 const whatsappService_1 = require("./whatsappService");
 const ttlockService_1 = require("./ttlockService");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Service für Bold Payment Integration
  *
@@ -86,7 +85,7 @@ class BoldPaymentService {
         return __awaiter(this, void 0, void 0, function* () {
             // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
             if (this.branchId) {
-                const branch = yield prisma.branch.findUnique({
+                const branch = yield prisma_1.prisma.branch.findUnique({
                     where: { id: this.branchId },
                     select: {
                         boldPaymentSettings: true,
@@ -123,7 +122,7 @@ class BoldPaymentService {
             }
             // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
             if (this.organizationId) {
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: this.organizationId },
                     select: { settings: true }
                 });
@@ -277,7 +276,7 @@ class BoldPaymentService {
                 const paymentLinkId = (_b = response.data.payload) === null || _b === void 0 ? void 0 : _b.payment_link;
                 if (paymentLinkUrl) {
                     // Speichere Payment Link in Reservierung
-                    yield prisma.reservation.update({
+                    yield prisma_1.prisma.reservation.update({
                         where: { id: reservation.id },
                         data: {
                             paymentLink: paymentLinkUrl,
@@ -403,7 +402,7 @@ class BoldPaymentService {
                     console.warn('[Bold Payment Webhook] Reservierungs-ID nicht gefunden im Webhook');
                     return;
                 }
-                const reservation = yield prisma.reservation.findUnique({
+                const reservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { id: reservationId }
                 });
                 if (!reservation) {
@@ -414,14 +413,14 @@ class BoldPaymentService {
                 switch (event) {
                     case 'payment.paid':
                     case 'payment.completed':
-                        yield prisma.reservation.update({
+                        yield prisma_1.prisma.reservation.update({
                             where: { id: reservation.id },
                             data: { paymentStatus: 'paid' }
                         });
                         // Nach Zahlung: Erstelle TTLock Code und sende WhatsApp-Nachricht
                         try {
                             // Hole aktualisierte Reservierung mit Organisation und Branch
-                            const updatedReservation = yield prisma.reservation.findUnique({
+                            const updatedReservation = yield prisma_1.prisma.reservation.findUnique({
                                 where: { id: reservation.id },
                                 include: { organization: true, branch: true }
                             });
@@ -455,7 +454,7 @@ class BoldPaymentService {
                                         endDate.setDate(endDate.getDate() + 30);
                                         ttlockCode = yield ttlockService.createTemporaryPasscode(lockId, startDate, endDate, `Guest: ${updatedReservation.guestName}`);
                                         // Speichere TTLock Code in Reservierung
-                                        yield prisma.reservation.update({
+                                        yield prisma_1.prisma.reservation.update({
                                             where: { id: reservation.id },
                                             data: {
                                                 doorPin: ttlockCode,
@@ -492,7 +491,7 @@ ${ttlockCode}
 
 ¡Te esperamos!`;
                                             // Speichere versendete Nachricht
-                                            yield prisma.reservation.update({
+                                            yield prisma_1.prisma.reservation.update({
                                                 where: { id: reservation.id },
                                                 data: {
                                                     sentMessage: message,
@@ -520,7 +519,7 @@ ${ttlockCode}
                                         const whatsappSuccess = yield whatsappService.sendMessageWithFallback(updatedReservation.guestPhone, message, templateName, templateParams);
                                         if (whatsappSuccess) {
                                             // Speichere versendete Nachricht
-                                            yield prisma.reservation.update({
+                                            yield prisma_1.prisma.reservation.update({
                                                 where: { id: reservation.id },
                                                 data: {
                                                     sentMessage: message,
@@ -550,13 +549,13 @@ ${ttlockCode}
                         }
                         break;
                     case 'payment.partially_paid':
-                        yield prisma.reservation.update({
+                        yield prisma_1.prisma.reservation.update({
                             where: { id: reservation.id },
                             data: { paymentStatus: 'partially_paid' }
                         });
                         break;
                     case 'payment.refunded':
-                        yield prisma.reservation.update({
+                        yield prisma_1.prisma.reservation.update({
                             where: { id: reservation.id },
                             data: { paymentStatus: 'refunded' }
                         });

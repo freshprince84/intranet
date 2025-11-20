@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { getDataIsolationFilter, belongsToOrganization } from '../middleware/organization';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 // Alle Clients abrufen
 export const getClients = async (req: Request, res: Response) => {

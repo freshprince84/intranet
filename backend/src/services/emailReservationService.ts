@@ -1,12 +1,11 @@
-import { PrismaClient, ReservationStatus, PaymentStatus } from '@prisma/client';
+import { ReservationStatus, PaymentStatus } from '@prisma/client';
 import { ParsedReservationEmail } from './emailReservationParser';
 import { WhatsAppService } from './whatsappService';
 import { BoldPaymentService } from './boldPaymentService';
 import { EmailReadingService, EmailMessage } from './emailReadingService';
 import { EmailReservationParser } from './emailReservationParser';
 import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Service für die Erstellung von Reservationen aus Emails

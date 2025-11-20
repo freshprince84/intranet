@@ -10,8 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.removeFilterFromGroup = exports.addFilterToGroup = exports.deleteFilterGroup = exports.updateFilterGroup = exports.getFilterGroups = exports.createFilterGroup = exports.deleteFilter = exports.saveFilter = exports.getUserSavedFilters = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Funktion zum Abrufen aller gespeicherten Filter eines Benutzers für eine Tabelle
 const getUserSavedFilters = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -25,7 +24,7 @@ const getUserSavedFilters = (req, res) => __awaiter(void 0, void 0, void 0, func
         }
         // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
         try {
-            const savedFilters = yield prisma.savedFilter.findMany({
+            const savedFilters = yield prisma_1.prisma.savedFilter.findMany({
                 where: {
                     userId,
                     tableId
@@ -109,7 +108,7 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
         try {
             // Prüfe, ob bereits ein Filter mit diesem Namen existiert
-            const existingFilter = yield prisma.savedFilter.findFirst({
+            const existingFilter = yield prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     userId,
                     tableId,
@@ -119,7 +118,7 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             let filter;
             if (existingFilter) {
                 // Aktualisiere bestehenden Filter
-                filter = yield prisma.savedFilter.update({
+                filter = yield prisma_1.prisma.savedFilter.update({
                     where: {
                         id: existingFilter.id
                     },
@@ -132,7 +131,7 @@ const saveFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
             else {
                 // Erstelle neuen Filter
-                filter = yield prisma.savedFilter.create({
+                filter = yield prisma_1.prisma.savedFilter.create({
                     data: {
                         userId,
                         tableId,
@@ -212,7 +211,7 @@ const deleteFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // Überprüfe, ob der SavedFilter-Typ in Prisma existiert
         try {
             // Prüfe, ob der Filter existiert und dem Benutzer gehört
-            const existingFilter = yield prisma.savedFilter.findFirst({
+            const existingFilter = yield prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     id: filterId,
                     userId
@@ -222,7 +221,7 @@ const deleteFilter = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung zum Löschen' });
             }
             // Lösche den Filter
-            yield prisma.savedFilter.delete({
+            yield prisma_1.prisma.savedFilter.delete({
                 where: {
                     id: filterId
                 }
@@ -257,7 +256,7 @@ const createFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         try {
             // Prüfe, ob bereits eine Gruppe mit diesem Namen existiert
-            const existingGroup = yield prisma.filterGroup.findFirst({
+            const existingGroup = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     userId,
                     tableId,
@@ -268,7 +267,7 @@ const createFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 return res.status(400).json({ message: 'Eine Gruppe mit diesem Namen existiert bereits' });
             }
             // Finde die höchste order-Nummer für diese Tabelle
-            const maxOrder = yield prisma.filterGroup.findFirst({
+            const maxOrder = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     userId,
                     tableId
@@ -282,7 +281,7 @@ const createFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
             });
             const newOrder = maxOrder ? maxOrder.order + 1 : 0;
             // Erstelle neue Gruppe
-            const group = yield prisma.filterGroup.create({
+            const group = yield prisma_1.prisma.filterGroup.create({
                 data: {
                     userId,
                     tableId,
@@ -324,7 +323,7 @@ const getFilterGroups = (req, res) => __awaiter(void 0, void 0, void 0, function
             return res.status(400).json({ message: 'Table ID ist erforderlich' });
         }
         try {
-            const groups = yield prisma.filterGroup.findMany({
+            const groups = yield prisma_1.prisma.filterGroup.findMany({
                 where: {
                     userId,
                     tableId
@@ -393,7 +392,7 @@ const updateFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         try {
             // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-            const existingGroup = yield prisma.filterGroup.findFirst({
+            const existingGroup = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     id: groupId,
                     userId
@@ -403,7 +402,7 @@ const updateFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
             }
             // Prüfe, ob bereits eine andere Gruppe mit diesem Namen existiert
-            const nameExists = yield prisma.filterGroup.findFirst({
+            const nameExists = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     userId,
                     tableId: existingGroup.tableId,
@@ -417,7 +416,7 @@ const updateFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 return res.status(400).json({ message: 'Eine Gruppe mit diesem Namen existiert bereits' });
             }
             // Aktualisiere die Gruppe
-            const updatedGroup = yield prisma.filterGroup.update({
+            const updatedGroup = yield prisma_1.prisma.filterGroup.update({
                 where: {
                     id: groupId
                 },
@@ -480,7 +479,7 @@ const deleteFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         try {
             // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-            const existingGroup = yield prisma.filterGroup.findFirst({
+            const existingGroup = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     id: groupId,
                     userId
@@ -493,7 +492,7 @@ const deleteFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
             }
             // Entferne alle Filter aus der Gruppe (setze groupId = null)
-            yield prisma.savedFilter.updateMany({
+            yield prisma_1.prisma.savedFilter.updateMany({
                 where: {
                     groupId: groupId
                 },
@@ -503,7 +502,7 @@ const deleteFilterGroup = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 }
             });
             // Lösche die Gruppe
-            yield prisma.filterGroup.delete({
+            yield prisma_1.prisma.filterGroup.delete({
                 where: {
                     id: groupId
                 }
@@ -538,7 +537,7 @@ const addFilterToGroup = (req, res) => __awaiter(void 0, void 0, void 0, functio
         }
         try {
             // Prüfe, ob der Filter existiert und dem Benutzer gehört
-            const filter = yield prisma.savedFilter.findFirst({
+            const filter = yield prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     id: filterId,
                     userId
@@ -548,7 +547,7 @@ const addFilterToGroup = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung' });
             }
             // Prüfe, ob die Gruppe existiert und dem Benutzer gehört
-            const group = yield prisma.filterGroup.findFirst({
+            const group = yield prisma_1.prisma.filterGroup.findFirst({
                 where: {
                     id: groupId,
                     userId,
@@ -559,7 +558,7 @@ const addFilterToGroup = (req, res) => __awaiter(void 0, void 0, void 0, functio
                 return res.status(404).json({ message: 'Gruppe nicht gefunden oder keine Berechtigung' });
             }
             // Finde die höchste order-Nummer in der Gruppe
-            const maxOrder = yield prisma.savedFilter.findFirst({
+            const maxOrder = yield prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     groupId: groupId
                 },
@@ -572,7 +571,7 @@ const addFilterToGroup = (req, res) => __awaiter(void 0, void 0, void 0, functio
             });
             const newOrder = maxOrder ? maxOrder.order + 1 : 0;
             // Füge Filter zur Gruppe hinzu
-            const updatedFilter = yield prisma.savedFilter.update({
+            const updatedFilter = yield prisma_1.prisma.savedFilter.update({
                 where: {
                     id: filterId
                 },
@@ -620,7 +619,7 @@ const removeFilterFromGroup = (req, res) => __awaiter(void 0, void 0, void 0, fu
         }
         try {
             // Prüfe, ob der Filter existiert und dem Benutzer gehört
-            const filter = yield prisma.savedFilter.findFirst({
+            const filter = yield prisma_1.prisma.savedFilter.findFirst({
                 where: {
                     id: filterId,
                     userId
@@ -630,7 +629,7 @@ const removeFilterFromGroup = (req, res) => __awaiter(void 0, void 0, void 0, fu
                 return res.status(404).json({ message: 'Filter nicht gefunden oder keine Berechtigung' });
             }
             // Entferne Filter aus der Gruppe
-            const updatedFilter = yield prisma.savedFilter.update({
+            const updatedFilter = yield prisma_1.prisma.savedFilter.update({
                 where: {
                     id: filterId
                 },

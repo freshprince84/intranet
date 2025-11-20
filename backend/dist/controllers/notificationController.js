@@ -48,18 +48,17 @@ exports.createOrganizationNotification = createOrganizationNotification;
 exports.notifyOrganizationAdmins = notifyOrganizationAdmins;
 exports.notifyJoinRequestStatus = notifyJoinRequestStatus;
 const client_1 = require("@prisma/client");
+const prisma_1 = require("../utils/prisma");
 const notificationValidation_1 = require("../validation/notificationValidation");
-const prisma = new client_1.PrismaClient();
+const notificationSettingsCache_1 = require("../services/notificationSettingsCache");
 // Hilfsfunktion zum Prüfen, ob Benachrichtigung für einen Typ aktiviert ist
 function isNotificationEnabled(userId, type, relatedEntityType) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0, _1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, _17, _18, _19, _20, _21, _22, _23, _24, _25, _26, _27, _28, _29, _30, _31, _32, _33, _34, _35, _36, _37, _38, _39, _40, _41, _42, _43, _44, _45, _46, _47, _48, _49;
-        // Benutzereinstellungen abrufen
-        const userSettings = yield prisma.userNotificationSettings.findFirst({
-            where: { userId }
-        });
-        // Systemeinstellungen abrufen
-        const systemSettings = yield prisma.notificationSettings.findFirst();
+        // Benutzereinstellungen aus Cache abrufen (statt direkt von DB)
+        const userSettings = yield notificationSettingsCache_1.notificationSettingsCache.getUserSettings(userId);
+        // Systemeinstellungen aus Cache abrufen (statt direkt von DB)
+        const systemSettings = yield notificationSettingsCache_1.notificationSettingsCache.getSystemSettings();
         // Wenn keine Systemeinstellungen vorhanden sind, erstelle Standard-Werte
         if (!systemSettings) {
             console.warn('Keine NotificationSettings in der Datenbank gefunden. Verwende Standard-Werte (alle aktiviert).');
@@ -191,7 +190,7 @@ function createNotificationIfEnabled(data) {
                 console.log(`Notification nicht erstellt: Typ ${data.type}, EntityType ${data.relatedEntityType} für User ${data.userId} ist deaktiviert`);
                 return false;
             }
-            const notification = yield prisma.notification.create({
+            const notification = yield prisma_1.prisma.notification.create({
                 data: {
                     userId: data.userId,
                     title: data.title,
@@ -235,7 +234,7 @@ const getNotifications = (req, res) => __awaiter(void 0, void 0, void 0, functio
         if (req.query.type) {
             filter.type = req.query.type;
         }
-        const notifications = yield prisma.notification.findMany({
+        const notifications = yield prisma_1.prisma.notification.findMany({
             where: filter,
             orderBy: {
                 createdAt: 'desc'
@@ -257,7 +256,7 @@ const getNotificationById = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (!userId) {
             return res.status(401).json({ message: 'Nicht autorisiert' });
         }
-        const notification = yield prisma.notification.findUnique({
+        const notification = yield prisma_1.prisma.notification.findUnique({
             where: { id: parseInt(id) }
         });
         if (!notification) {
@@ -284,11 +283,11 @@ const createNotification = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(400).json({ message: validationError });
         }
         // Benutzer-Einstellungen prüfen
-        const userSettings = yield prisma.userNotificationSettings.findFirst({
+        const userSettings = yield prisma_1.prisma.userNotificationSettings.findFirst({
             where: { userId: data.userId }
         });
         // System-Einstellungen abrufen
-        const systemSettings = yield prisma.notificationSettings.findFirst();
+        const systemSettings = yield prisma_1.prisma.notificationSettings.findFirst();
         // Prüfen, ob Benachrichtigungen für diesen Typ aktiviert sind
         let isEnabled = true;
         if (userSettings) {
@@ -393,7 +392,7 @@ const createNotification = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }
         // Benachrichtigung erstellen
-        const notification = yield prisma.notification.create({
+        const notification = yield prisma_1.prisma.notification.create({
             data: {
                 userId: data.userId,
                 title: data.title,
@@ -424,7 +423,7 @@ const updateNotification = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(401).json({ message: 'Nicht autorisiert' });
         }
         // Prüfen, ob die Benachrichtigung existiert und dem Benutzer gehört
-        const notification = yield prisma.notification.findUnique({
+        const notification = yield prisma_1.prisma.notification.findUnique({
             where: { id: parseInt(id) }
         });
         if (!notification) {
@@ -434,7 +433,7 @@ const updateNotification = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(403).json({ message: 'Zugriff verweigert' });
         }
         // Aktualisieren der Benachrichtigung
-        const updatedNotification = yield prisma.notification.update({
+        const updatedNotification = yield prisma_1.prisma.notification.update({
             where: { id: parseInt(id) },
             data: updateData
         });
@@ -455,7 +454,7 @@ const deleteNotification = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Prüfen, ob die Benachrichtigung existiert und dem Benutzer gehört
-        const notification = yield prisma.notification.findFirst({
+        const notification = yield prisma_1.prisma.notification.findFirst({
             where: {
                 id: parseInt(id),
                 userId
@@ -465,7 +464,7 @@ const deleteNotification = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(404).json({ message: 'Benachrichtigung nicht gefunden' });
         }
         // Benachrichtigung löschen
-        yield prisma.notification.delete({
+        yield prisma_1.prisma.notification.delete({
             where: { id: parseInt(id) }
         });
         res.json({ message: 'Benachrichtigung wurde gelöscht' });
@@ -484,7 +483,7 @@ const markAllAsRead = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(401).json({ message: 'Nicht autorisiert' });
         }
         // Alle ungelesenen Benachrichtigungen des Benutzers als gelesen markieren
-        yield prisma.notification.updateMany({
+        yield prisma_1.prisma.notification.updateMany({
             where: {
                 userId,
                 read: false
@@ -505,12 +504,12 @@ const getNotificationSettings = (req, res) => __awaiter(void 0, void 0, void 0, 
     var _a;
     try {
         // Systemweite Einstellungen abrufen
-        const systemSettings = yield prisma.notificationSettings.findFirst();
+        const systemSettings = yield prisma_1.prisma.notificationSettings.findFirst();
         // Benutzereinstellungen abrufen
         const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.id;
         let userSettings = null;
         if (userId) {
-            userSettings = yield prisma.userNotificationSettings.findFirst({
+            userSettings = yield prisma_1.prisma.userNotificationSettings.findFirst({
                 where: { userId }
             });
         }
@@ -554,13 +553,13 @@ const getUserNotifications = (req, res) => __awaiter(void 0, void 0, void 0, fun
         }
         // Abfragen
         const [notifications, total] = yield Promise.all([
-            prisma.notification.findMany({
+            prisma_1.prisma.notification.findMany({
                 where,
                 orderBy: { createdAt: 'desc' },
                 skip,
                 take: limit
             }),
-            prisma.notification.count({ where })
+            prisma_1.prisma.notification.count({ where })
         ]);
         // Response-Format
         res.json({
@@ -587,7 +586,7 @@ const countUnreadNotifications = (req, res) => __awaiter(void 0, void 0, void 0,
         if (!userId) {
             return res.status(401).json({ message: 'Nicht autorisiert' });
         }
-        const count = yield prisma.notification.count({
+        const count = yield prisma_1.prisma.notification.count({
             where: {
                 userId,
                 read: false
@@ -611,7 +610,7 @@ const markNotificationAsRead = (req, res) => __awaiter(void 0, void 0, void 0, f
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Prüfen, ob die Benachrichtigung existiert und dem Benutzer gehört
-        const notification = yield prisma.notification.findFirst({
+        const notification = yield prisma_1.prisma.notification.findFirst({
             where: {
                 id: parseInt(id),
                 userId
@@ -621,7 +620,7 @@ const markNotificationAsRead = (req, res) => __awaiter(void 0, void 0, void 0, f
             return res.status(404).json({ message: 'Benachrichtigung nicht gefunden' });
         }
         // Als gelesen markieren
-        const updatedNotification = yield prisma.notification.update({
+        const updatedNotification = yield prisma_1.prisma.notification.update({
             where: { id: parseInt(id) },
             data: { read: true }
         });
@@ -641,7 +640,7 @@ const markAllNotificationsAsRead = (req, res) => __awaiter(void 0, void 0, void 
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Alle Benachrichtigungen des Benutzers als gelesen markieren
-        yield prisma.notification.updateMany({
+        yield prisma_1.prisma.notification.updateMany({
             where: {
                 userId,
                 read: false
@@ -664,7 +663,7 @@ const deleteAllNotifications = (req, res) => __awaiter(void 0, void 0, void 0, f
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Alle Benachrichtigungen des Benutzers löschen
-        yield prisma.notification.deleteMany({
+        yield prisma_1.prisma.notification.deleteMany({
             where: { userId }
         });
         res.json({ message: 'Alle Benachrichtigungen wurden gelöscht' });
@@ -707,7 +706,7 @@ function createOrganizationNotification(data) {
                 return false;
             }
             // Erstelle die Benachrichtigung
-            const notification = yield prisma.notification.create({
+            const notification = yield prisma_1.prisma.notification.create({
                 data: {
                     userId: data.userId,
                     title,
@@ -734,7 +733,7 @@ function notifyOrganizationAdmins(organizationId, joinRequestId, requesterEmail)
             // Erstelle ein Request-Objekt für den Filter (benötigt req.organizationId)
             const mockReq = { organizationId };
             const userFilter = getUserOrganizationFilter(mockReq);
-            const orgAdmins = yield prisma.user.findMany({
+            const orgAdmins = yield prisma_1.prisma.user.findMany({
                 where: Object.assign(Object.assign({}, userFilter), { roles: {
                         some: {
                             role: {

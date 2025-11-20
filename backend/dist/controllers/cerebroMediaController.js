@@ -13,11 +13,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateMedia = exports.deleteMedia = exports.getMediaFile = exports.getMediaById = exports.getMediaByArticle = exports.uploadMedia = exports.upload = void 0;
-const client_1 = require("@prisma/client");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Konfiguration für Multer (Datei-Upload)
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
@@ -75,7 +74,7 @@ const uploadMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }
         else if (carticleSlug) {
             // Artikel nach Slug suchen
-            const article = yield prisma.cerebroCarticle.findUnique({
+            const article = yield prisma_1.prisma.cerebroCarticle.findUnique({
                 where: { slug: carticleSlug },
                 select: { id: true }
             });
@@ -91,7 +90,7 @@ const uploadMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(400).json({ message: 'Artikel-ID oder Artikel-Slug ist erforderlich' });
         }
         // Prüfen, ob der Artikel existiert
-        const article = yield prisma.$queryRaw `
+        const article = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroCarticle" WHERE id = ${articleId}
         `;
         if (!article || (Array.isArray(article) && article.length === 0)) {
@@ -100,7 +99,7 @@ const uploadMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(404).json({ message: 'Artikel nicht gefunden' });
         }
         // Speichere die Mediendaten in der Datenbank
-        const media = yield prisma.$queryRaw `
+        const media = yield prisma_1.prisma.$queryRaw `
             INSERT INTO "CerebroMedia" (
                 path, 
                 filename, 
@@ -145,7 +144,7 @@ const uploadMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             }
             // Link zum Inhalt hinzufügen
             const updatedContent = currentContent + markdownLink;
-            yield prisma.$queryRaw `
+            yield prisma_1.prisma.$queryRaw `
                 UPDATE "CerebroCarticle"
                 SET content = ${updatedContent}, "updatedAt" = NOW()
                 WHERE id = ${articleId}
@@ -174,14 +173,14 @@ const getMediaByArticle = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return res.status(400).json({ message: 'Ungültige Artikel-ID' });
         }
         // Prüfen, ob der Artikel existiert
-        const article = yield prisma.$queryRaw `
+        const article = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroCarticle" WHERE id = ${articleId}
         `;
         if (!article || (Array.isArray(article) && article.length === 0)) {
             return res.status(404).json({ message: 'Artikel nicht gefunden' });
         }
         // Medien für den Artikel abrufen
-        const media = yield prisma.$queryRaw `
+        const media = yield prisma_1.prisma.$queryRaw `
             SELECT m.*, u.username as creatorName
             FROM "CerebroMedia" m
             JOIN "User" u ON m."createdById" = u.id
@@ -207,7 +206,7 @@ const getMediaById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             return res.status(400).json({ message: 'Ungültige Medien-ID' });
         }
         // Mediendatei abrufen
-        const media = yield prisma.$queryRaw `
+        const media = yield prisma_1.prisma.$queryRaw `
             SELECT m.*, u.username as creatorName, ca.title as articleTitle
             FROM "CerebroMedia" m
             JOIN "User" u ON m."createdById" = u.id
@@ -236,7 +235,7 @@ const getMediaFile = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             return res.status(400).json({ message: 'Ungültige Medien-ID' });
         }
         // Mediendatei abrufen
-        const media = yield prisma.$queryRaw `
+        const media = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroMedia" WHERE id = ${mediaId}
         `;
         if (!media || (Array.isArray(media) && media.length === 0)) {
@@ -291,7 +290,7 @@ const deleteMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(400).json({ message: 'Ungültige Medien-ID' });
         }
         // Mediendatei abrufen
-        const media = yield prisma.$queryRaw `
+        const media = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroMedia" WHERE id = ${mediaId}
         `;
         if (!media || (Array.isArray(media) && media.length === 0)) {
@@ -303,7 +302,7 @@ const deleteMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             fs_1.default.unlinkSync(filePath);
         }
         // Mediendatei aus der Datenbank löschen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             DELETE FROM "CerebroMedia" WHERE id = ${mediaId}
         `;
         res.status(200).json({ message: 'Mediendatei erfolgreich gelöscht' });
@@ -329,14 +328,14 @@ const updateMedia = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(400).json({ message: 'Dateiname ist erforderlich' });
         }
         // Prüfen, ob die Mediendatei existiert
-        const media = yield prisma.$queryRaw `
+        const media = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroMedia" WHERE id = ${mediaId}
         `;
         if (!media || (Array.isArray(media) && media.length === 0)) {
             return res.status(404).json({ message: 'Mediendatei nicht gefunden' });
         }
         // Mediendatei aktualisieren
-        const updatedMedia = yield prisma.$queryRaw `
+        const updatedMedia = yield prisma_1.prisma.$queryRaw `
             UPDATE "CerebroMedia"
             SET filename = ${filename}, "updatedAt" = NOW()
             WHERE id = ${mediaId}

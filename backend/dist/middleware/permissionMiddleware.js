@@ -10,8 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requireCompleteProfile = exports.isAdmin = exports.checkUserPermission = exports.checkPermission = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Middleware zur Überprüfung von Berechtigungen
  * @param entity - Entität (z.B. 'page', 'table' oder 'cerebro')
@@ -52,7 +51,7 @@ exports.checkPermission = checkPermission;
 const checkUserPermission = (userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1) => __awaiter(void 0, [userId_1, roleId_1, currentEntity_1, requiredAccess_1, ...args_1], void 0, function* (userId, roleId, currentEntity, requiredAccess, entityType = 'page') {
     try {
         // Hole die Berechtigungen für die aktuelle Rolle des Benutzers
-        const role = yield prisma.role.findUnique({
+        const role = yield prisma_1.prisma.role.findUnique({
             where: { id: roleId },
             include: { permissions: true }
         });
@@ -103,7 +102,7 @@ const isAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
             });
         }
         // Überprüfe, ob die Rolle 'admin' ist
-        const role = yield prisma.role.findUnique({
+        const role = yield prisma_1.prisma.role.findUnique({
             where: { id: roleId }
         });
         if (!role || role.name !== 'admin') {
@@ -141,7 +140,7 @@ const requireCompleteProfile = (req, res, next) => __awaiter(void 0, void 0, voi
             return next();
         }
         // Prüfe ob User Mitglied einer Organisation ist
-        const userRole = yield prisma.userRole.findFirst({
+        const userRole = yield prisma_1.prisma.userRole.findFirst({
             where: {
                 userId: userId,
                 lastUsed: true
@@ -161,7 +160,7 @@ const requireCompleteProfile = (req, res, next) => __awaiter(void 0, void 0, voi
             // User hat keine Organisation → Keine Profil-Blockierung
             return next();
         }
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             select: {
                 profileComplete: true,
@@ -181,7 +180,7 @@ const requireCompleteProfile = (req, res, next) => __awaiter(void 0, void 0, voi
             user.language);
         // Update profileComplete, falls noch nicht gesetzt
         if (isComplete !== user.profileComplete) {
-            yield prisma.user.update({
+            yield prisma_1.prisma.user.update({
                 where: { id: userId },
                 data: { profileComplete: isComplete }
             });

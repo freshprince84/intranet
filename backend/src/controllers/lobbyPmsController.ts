@@ -1,11 +1,9 @@
 import { Request, Response } from 'express';
 import { LobbyPmsService } from '../services/lobbyPmsService';
-import { PrismaClient } from '@prisma/client';
 import { getDataIsolationFilter } from '../middleware/organization';
 import { ReservationTaskService } from '../services/reservationTaskService';
 import { ReservationNotificationService } from '../services/reservationNotificationService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 interface AuthenticatedRequest extends Request {
   userId: string;
@@ -177,8 +175,6 @@ export const syncReservations = async (req: AuthenticatedRequest, res: Response)
 
     // NEU: Sync alle Branches der Organisation (wie automatischer Scheduler)
     const { LobbyPmsReservationSyncService } = await import('../services/lobbyPmsReservationSyncService');
-    const { PrismaClient } = await import('@prisma/client');
-    const prisma = new PrismaClient();
 
     // Hole alle Branches der Organisation
     const branches = await prisma.branch.findMany({
@@ -258,8 +254,6 @@ export const syncReservations = async (req: AuthenticatedRequest, res: Response)
         // Weiter mit nächster Branch
       }
     }
-
-    await prisma.$disconnect();
 
     res.json({
       success: true,

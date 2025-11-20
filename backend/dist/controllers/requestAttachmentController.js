@@ -13,11 +13,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteAttachment = exports.getAttachment = exports.getRequestAttachments = exports.addAttachment = void 0;
-const client_1 = require("@prisma/client");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Upload-Verzeichnis für Anhänge
 const UPLOAD_DIR = path_1.default.join(__dirname, '../../uploads/request-attachments');
 // Stelle sicher, dass das Upload-Verzeichnis existiert
@@ -33,7 +32,7 @@ const addAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(400).json({ message: 'Keine Datei hochgeladen' });
         }
         // Überprüfe, ob der Request existiert
-        const requestExists = yield prisma.request.findUnique({
+        const requestExists = yield prisma_1.prisma.request.findUnique({
             where: {
                 id: parseInt(requestId)
             }
@@ -47,7 +46,7 @@ const addAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Speichere die Datei
         fs_1.default.writeFileSync(filePath, file.buffer);
         // Erstelle den Anhang-Eintrag in der Datenbank
-        const attachment = yield prisma.requestAttachment.create({
+        const attachment = yield prisma_1.prisma.requestAttachment.create({
             data: {
                 requestId: parseInt(requestId),
                 fileName: file.originalname,
@@ -69,7 +68,7 @@ const getRequestAttachments = (req, res) => __awaiter(void 0, void 0, void 0, fu
     try {
         const { requestId } = req.params;
         // Überprüfe, ob der Request existiert
-        const requestExists = yield prisma.request.findUnique({
+        const requestExists = yield prisma_1.prisma.request.findUnique({
             where: {
                 id: parseInt(requestId)
             }
@@ -77,7 +76,7 @@ const getRequestAttachments = (req, res) => __awaiter(void 0, void 0, void 0, fu
         if (!requestExists) {
             return res.status(404).json({ message: 'Request nicht gefunden' });
         }
-        const attachments = yield prisma.requestAttachment.findMany({
+        const attachments = yield prisma_1.prisma.requestAttachment.findMany({
             where: {
                 requestId: parseInt(requestId),
             },
@@ -99,7 +98,7 @@ const getAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Für Anhänge verzichten wir auf Authentifizierung, damit Bilder auch in der Vorschau angezeigt werden können
         // Diese Route sollte öffentlich sein, da die Anhang-ID und Request-ID als ausreichender Schutz dienen
         const { requestId, attachmentId } = req.params;
-        const attachment = yield prisma.requestAttachment.findFirst({
+        const attachment = yield prisma_1.prisma.requestAttachment.findFirst({
             where: {
                 id: parseInt(attachmentId),
                 requestId: parseInt(requestId),
@@ -142,7 +141,7 @@ exports.getAttachment = getAttachment;
 const deleteAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { requestId, attachmentId } = req.params;
-        const attachment = yield prisma.requestAttachment.findFirst({
+        const attachment = yield prisma_1.prisma.requestAttachment.findFirst({
             where: {
                 id: parseInt(attachmentId),
                 requestId: parseInt(requestId),
@@ -157,7 +156,7 @@ const deleteAttachment = (req, res) => __awaiter(void 0, void 0, void 0, functio
             fs_1.default.unlinkSync(filePath);
         }
         // Lösche den Datenbankeintrag
-        yield prisma.requestAttachment.delete({
+        yield prisma_1.prisma.requestAttachment.delete({
             where: {
                 id: parseInt(attachmentId),
             },

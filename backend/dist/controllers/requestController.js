@@ -17,13 +17,13 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteRequest = exports.updateRequest = exports.createRequest = exports.getRequestById = exports.getAllRequests = void 0;
 const client_1 = require("@prisma/client");
+const prisma_1 = require("../utils/prisma");
 const notificationController_1 = require("./notificationController");
 const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
-const prisma = new client_1.PrismaClient();
 const userSelect = {
     id: true,
     username: true,
@@ -64,7 +64,7 @@ const getAllRequests = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 }
             ]
         };
-        const requests = yield prisma.request.findMany({
+        const requests = yield prisma_1.prisma.request.findMany({
             where: whereClause,
             include: {
                 requester: {
@@ -148,7 +148,7 @@ const getRequestById = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 }
             ]
         };
-        const request = yield prisma.request.findFirst({
+        const request = yield prisma_1.prisma.request.findFirst({
             where: whereClause,
             include: {
                 requester: {
@@ -215,7 +215,7 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const userId = parseInt(req.userId, 10);
         const roleId = parseInt(req.roleId, 10);
         // Prüfe ob User Admin ist
-        const userRole = yield prisma.role.findUnique({
+        const userRole = yield prisma_1.prisma.role.findUnique({
             where: { id: roleId },
             select: { name: true }
         });
@@ -226,19 +226,19 @@ const createRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         // Validierung: Prüfe ob User-IDs zur Organisation gehören
         const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-        const requesterUser = yield prisma.user.findFirst({
+        const requesterUser = yield prisma_1.prisma.user.findFirst({
             where: Object.assign(Object.assign({}, userFilter), { id: requesterId })
         });
         if (!requesterUser) {
             return res.status(400).json({ message: 'Antragsteller gehört nicht zu Ihrer Organisation' });
         }
-        const responsibleUser = yield prisma.user.findFirst({
+        const responsibleUser = yield prisma_1.prisma.user.findFirst({
             where: Object.assign(Object.assign({}, userFilter), { id: responsibleId })
         });
         if (!responsibleUser) {
             return res.status(400).json({ message: 'Verantwortlicher gehört nicht zu Ihrer Organisation' });
         }
-        const request = yield prisma.request.create({
+        const request = yield prisma_1.prisma.request.create({
             data: {
                 title,
                 description: description || '',
@@ -334,7 +334,7 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const { title, description, requested_by_id, responsible_id, branch_id, status, type, is_private, due_date, create_todo } = req.body;
         // Prüfe, ob der Request existiert und zur Organisation gehört
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
-        const existingRequest = yield prisma.request.findFirst({
+        const existingRequest = yield prisma_1.prisma.request.findFirst({
             where: Object.assign({ id: parseInt(id) }, isolationFilter),
             include: {
                 requester: {
@@ -354,7 +354,7 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const userId = parseInt(req.userId, 10);
         const roleId = parseInt(req.roleId, 10);
         // Prüfe ob User Admin ist
-        const userRole = yield prisma.role.findUnique({
+        const userRole = yield prisma_1.prisma.role.findUnique({
             where: { id: roleId },
             select: { name: true }
         });
@@ -375,7 +375,7 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Validierung: Prüfe ob User-IDs zur Organisation gehören (wenn geändert)
         if (requested_by_id) {
             const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-            const requesterUser = yield prisma.user.findFirst({
+            const requesterUser = yield prisma_1.prisma.user.findFirst({
                 where: Object.assign(Object.assign({}, userFilter), { id: parseInt(requested_by_id, 10) })
             });
             if (!requesterUser) {
@@ -384,7 +384,7 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         if (responsible_id) {
             const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-            const responsibleUser = yield prisma.user.findFirst({
+            const responsibleUser = yield prisma_1.prisma.user.findFirst({
                 where: Object.assign(Object.assign({}, userFilter), { id: parseInt(responsible_id, 10) })
             });
             if (!responsibleUser) {
@@ -392,7 +392,7 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             }
         }
         // Update den Request
-        const updatedRequest = yield prisma.request.update({
+        const updatedRequest = yield prisma_1.prisma.request.update({
             where: { id: parseInt(id) },
             data: {
                 title: title,
@@ -459,7 +459,7 @@ const updateRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         // Wenn der Request genehmigt wird und createTodo aktiv ist, erstelle einen Task
         if (status === 'approved' && updatedRequest.createTodo) {
-            const task = yield prisma.task.create({
+            const task = yield prisma_1.prisma.task.create({
                 data: {
                     title: `[Request] ${updatedRequest.title}`,
                     description: updatedRequest.description || '',
@@ -516,7 +516,7 @@ exports.updateRequest = updateRequest;
 const copyRequestAttachmentsToTask = (requestId, taskId) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Hole alle Anhänge des Requests
-        const requestAttachments = yield prisma.requestAttachment.findMany({
+        const requestAttachments = yield prisma_1.prisma.requestAttachment.findMany({
             where: {
                 requestId: requestId
             }
@@ -541,7 +541,7 @@ const copyRequestAttachmentsToTask = (requestId, taskId) => __awaiter(void 0, vo
             if (fs_1.default.existsSync(sourcePath)) {
                 fs_1.default.copyFileSync(sourcePath, destPath);
                 // Erstelle einen neuen TaskAttachment-Eintrag
-                yield prisma.taskAttachment.create({
+                yield prisma_1.prisma.taskAttachment.create({
                     data: {
                         taskId: taskId,
                         fileName: attachment.fileName,
@@ -564,7 +564,7 @@ const deleteRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const { id } = req.params;
         // Prüfe, ob der Request existiert und zur Organisation gehört
         const isolationFilter = (0, organization_1.getDataIsolationFilter)(req, 'request');
-        const request = yield prisma.request.findFirst({
+        const request = yield prisma_1.prisma.request.findFirst({
             where: Object.assign({ id: parseInt(id) }, isolationFilter),
             include: {
                 requester: {
@@ -590,7 +590,7 @@ const deleteRequest = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             message: notificationText.message
         });
         // Lösche den Request
-        yield prisma.request.delete({
+        yield prisma_1.prisma.request.delete({
             where: { id: parseInt(id) }
         });
         res.json({ message: 'Request erfolgreich gelöscht' });

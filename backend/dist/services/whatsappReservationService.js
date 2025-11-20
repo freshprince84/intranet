@@ -11,7 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.WhatsAppReservationService = void 0;
 const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Service für automatische Reservierungserstellung aus WhatsApp-Nachrichten
  */
@@ -28,7 +28,7 @@ class WhatsAppReservationService {
                 // ✅ Hardcodiert: Organisation ID = 1 (aktuell)
                 const organizationId = 1;
                 // Prüfe ob Reservierung bereits existiert
-                const existingReservation = yield prisma.reservation.findUnique({
+                const existingReservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { lobbyReservationId: parsedMessage.reservationId }
                 });
                 if (existingReservation) {
@@ -36,7 +36,7 @@ class WhatsAppReservationService {
                     return existingReservation;
                 }
                 // Erstelle neue Reservierung
-                const reservation = yield prisma.reservation.create({
+                const reservation = yield prisma_1.prisma.reservation.create({
                     data: {
                         lobbyReservationId: parsedMessage.reservationId,
                         guestName: parsedMessage.guestName,
@@ -51,7 +51,7 @@ class WhatsAppReservationService {
                     }
                 });
                 // Erstelle Sync-History-Eintrag
-                yield prisma.reservationSyncHistory.create({
+                yield prisma_1.prisma.reservationSyncHistory.create({
                     data: {
                         reservationId: reservation.id,
                         syncType: 'whatsapp_created',

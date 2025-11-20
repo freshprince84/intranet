@@ -1,10 +1,9 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
+import { Prisma, NotificationType } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
 import { getUserLanguage, getRoleNotificationText } from '../utils/translations';
 import { getDataIsolationFilter, belongsToOrganization, getUserOrganizationFilter } from '../middleware/organization';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 interface RoleParams {
     id: string;
@@ -56,10 +55,6 @@ export const isRoleAvailableForBranch = async (roleId: number, branchId: number)
 export const getAllRoles = async (req: Request, res: Response) => {
     try {
         console.log('getAllRoles aufgerufen');
-        
-        // Prüfen, ob Prisma-Verbindung hergestellt ist
-        await prisma.$connect();
-        console.log('Prisma-Verbindung OK');
         
         // Datenisolation: Zeigt alle Rollen der Organisation oder nur eigene (wenn standalone)
         const roleFilter = getDataIsolationFilter(req as any, 'role');

@@ -10,11 +10,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.withdrawJoinRequest = exports.processJoinRequest = exports.getMyJoinRequests = exports.getJoinRequestsForOrganization = exports.createJoinRequest = void 0;
-const client_1 = require("@prisma/client");
 const zod_1 = require("zod");
 const notificationController_1 = require("./notificationController");
 const taskAutomationService_1 = require("../services/taskAutomationService");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Validation Schemas
 const createJoinRequestSchema = zod_1.z.object({
     organizationName: zod_1.z.string().min(1, 'Organisationsname ist erforderlich'),
@@ -37,7 +36,7 @@ const createJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return res.status(400).json({ message: 'Organisationsname ist erforderlich' });
         }
         // Finde Organisation
-        const organization = yield prisma.organization.findUnique({
+        const organization = yield prisma_1.prisma.organization.findUnique({
             where: { name: organizationName.toLowerCase() }
         });
         if (!organization) {
@@ -47,7 +46,7 @@ const createJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return res.status(400).json({ message: 'Organisation ist nicht aktiv' });
         }
         // Prüfe ob bereits Anfrage existiert
-        const existingRequest = yield prisma.organizationJoinRequest.findUnique({
+        const existingRequest = yield prisma_1.prisma.organizationJoinRequest.findUnique({
             where: {
                 organizationId_requesterId: {
                     organizationId: organization.id,
@@ -59,11 +58,11 @@ const createJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return res.status(409).json({ message: 'Beitrittsanfrage bereits gestellt' });
         }
         // Hole Requester Info für Benachrichtigung
-        const requester = yield prisma.user.findUnique({
+        const requester = yield prisma_1.prisma.user.findUnique({
             where: { id: Number(userId) },
             select: { email: true }
         });
-        const joinRequest = yield prisma.organizationJoinRequest.create({
+        const joinRequest = yield prisma_1.prisma.organizationJoinRequest.create({
             data: {
                 organizationId: organization.id,
                 requesterId: Number(userId),
@@ -112,7 +111,7 @@ const getJoinRequestsForOrganization = (req, res) => __awaiter(void 0, void 0, v
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Hole aktuelle Organisation des Users
-        const userRole = yield prisma.userRole.findFirst({
+        const userRole = yield prisma_1.prisma.userRole.findFirst({
             where: {
                 userId: Number(userId),
                 lastUsed: true
@@ -128,7 +127,7 @@ const getJoinRequestsForOrganization = (req, res) => __awaiter(void 0, void 0, v
         if (!userRole) {
             return res.status(404).json({ message: 'Keine aktive Rolle gefunden' });
         }
-        const joinRequests = yield prisma.organizationJoinRequest.findMany({
+        const joinRequests = yield prisma_1.prisma.organizationJoinRequest.findMany({
             where: { organizationId: userRole.role.organizationId },
             include: {
                 requester: {
@@ -169,7 +168,7 @@ const getMyJoinRequests = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const joinRequests = yield prisma.organizationJoinRequest.findMany({
+        const joinRequests = yield prisma_1.prisma.organizationJoinRequest.findMany({
             where: { requesterId: Number(userId) },
             include: {
                 organization: {
@@ -218,7 +217,7 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(400).json({ message: 'Ungültige Anfrage-ID' });
         }
         // Hole Beitrittsanfrage
-        const joinRequest = yield prisma.organizationJoinRequest.findUnique({
+        const joinRequest = yield prisma_1.prisma.organizationJoinRequest.findUnique({
             where: { id: requestId },
             include: {
                 organization: true,
@@ -231,7 +230,7 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (joinRequest.status !== 'pending') {
             return res.status(400).json({ message: 'Anfrage bereits bearbeitet' });
         }
-        const result = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        const result = yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // Aktualisiere Beitrittsanfrage
             const updatedRequest = yield tx.organizationJoinRequest.update({
                 where: { id: requestId },
@@ -314,7 +313,7 @@ const withdrawJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, func
             return res.status(400).json({ message: 'Ungültige Anfrage-ID' });
         }
         // Hole Beitrittsanfrage
-        const joinRequest = yield prisma.organizationJoinRequest.findUnique({
+        const joinRequest = yield prisma_1.prisma.organizationJoinRequest.findUnique({
             where: { id: requestId }
         });
         if (!joinRequest) {
@@ -327,7 +326,7 @@ const withdrawJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (joinRequest.status !== 'pending') {
             return res.status(400).json({ message: 'Nur ausstehende Anfragen können zurückgezogen werden' });
         }
-        const updatedRequest = yield prisma.organizationJoinRequest.update({
+        const updatedRequest = yield prisma_1.prisma.organizationJoinRequest.update({
             where: { id: requestId },
             data: {
                 status: 'withdrawn',

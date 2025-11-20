@@ -13,11 +13,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteAttachment = exports.getAttachment = exports.getTaskAttachments = exports.addAttachment = void 0;
-const client_1 = require("@prisma/client");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const uuid_1 = require("uuid");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Upload-Verzeichnis für Attachments
 const UPLOAD_DIR = path_1.default.join(__dirname, '../../uploads/task-attachments');
 // Stelle sicher, dass das Upload-Verzeichnis existiert
@@ -38,7 +37,7 @@ const addAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Speichere die Datei
         fs_1.default.writeFileSync(filePath, file.buffer);
         // Erstelle den Attachment-Eintrag in der Datenbank
-        const attachment = yield prisma.taskAttachment.create({
+        const attachment = yield prisma_1.prisma.taskAttachment.create({
             data: {
                 taskId: parseInt(taskId),
                 fileName: file.originalname,
@@ -59,7 +58,7 @@ exports.addAttachment = addAttachment;
 const getTaskAttachments = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { taskId } = req.params;
-        const attachments = yield prisma.taskAttachment.findMany({
+        const attachments = yield prisma_1.prisma.taskAttachment.findMany({
             where: {
                 taskId: parseInt(taskId),
             },
@@ -81,7 +80,7 @@ const getAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Für Anhänge verzichten wir auf Authentifizierung, damit Bilder auch in der Vorschau angezeigt werden können
         // Diese Route sollte öffentlich sein, da die Anhang-ID und Task-ID als ausreichender Schutz dienen
         const { taskId, attachmentId } = req.params;
-        const attachment = yield prisma.taskAttachment.findFirst({
+        const attachment = yield prisma_1.prisma.taskAttachment.findFirst({
             where: {
                 id: parseInt(attachmentId),
                 taskId: parseInt(taskId),
@@ -124,7 +123,7 @@ exports.getAttachment = getAttachment;
 const deleteAttachment = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { taskId, attachmentId } = req.params;
-        const attachment = yield prisma.taskAttachment.findFirst({
+        const attachment = yield prisma_1.prisma.taskAttachment.findFirst({
             where: {
                 id: parseInt(attachmentId),
                 taskId: parseInt(taskId),
@@ -139,7 +138,7 @@ const deleteAttachment = (req, res) => __awaiter(void 0, void 0, void 0, functio
             fs_1.default.unlinkSync(filePath);
         }
         // Lösche den Datenbankeintrag
-        yield prisma.taskAttachment.delete({
+        yield prisma_1.prisma.taskAttachment.delete({
             where: {
                 id: parseInt(attachmentId),
             },

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { z } from 'zod';
 import multer from 'multer';
 import * as path from 'path';
@@ -11,8 +11,6 @@ import { logSettingsChange } from '../services/auditService';
 
 // Definiere AccessLevel als String-Literale entsprechend dem Enum in schema.prisma
 type AccessLevel = 'read' | 'write' | 'both' | 'none';
-
-const prisma = new PrismaClient();
 
 // Validation Schemas
 const createOrganizationSchema = z.object({

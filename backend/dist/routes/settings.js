@@ -20,8 +20,7 @@ const auth_1 = require("../middleware/auth");
 const roleCheck_1 = require("../middleware/roleCheck");
 const settingsController_1 = require("../controllers/settingsController");
 const sharp_1 = __importDefault(require("sharp"));
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 const router = (0, express_1.Router)();
 // Debug-Middleware für alle Settings-Routen
 router.use((req, res, next) => {
@@ -320,7 +319,7 @@ router.post('/logo', auth_1.authenticateToken, (req, res) => __awaiter(void 0, v
             if (!userId) {
                 return res.status(401).json({ message: 'Nicht authentifiziert' });
             }
-            const userRole = yield prisma.userRole.findFirst({
+            const userRole = yield prisma_1.prisma.userRole.findFirst({
                 where: {
                     userId: userId,
                     lastUsed: true
@@ -337,7 +336,7 @@ router.post('/logo', auth_1.authenticateToken, (req, res) => __awaiter(void 0, v
                 return res.status(404).json({ message: 'Keine Organisation gefunden' });
             }
             // Speichere Logo in Datenbank
-            yield prisma.organization.update({
+            yield prisma_1.prisma.organization.update({
                 where: { id: userRole.role.organization.id },
                 data: { logo: base64Logo }
             });

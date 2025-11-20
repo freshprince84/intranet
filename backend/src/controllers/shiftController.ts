@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient, ShiftStatus } from '@prisma/client';
+import { ShiftStatus } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
 import { addDays, startOfDay, format } from 'date-fns';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Hilfsfunktion: Prüft, ob zwei Zeitfenster sich überschneiden

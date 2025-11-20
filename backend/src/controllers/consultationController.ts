@@ -1,8 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { getDataIsolationFilter } from '../middleware/organization';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 // Beratung starten (erweiterte Version von worktime/start)
 export const startConsultation = async (req: Request, res: Response) => {

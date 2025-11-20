@@ -13,8 +13,7 @@ exports.triggerScheduler = exports.parseEmail = exports.getStatus = exports.chec
 const emailReservationService_1 = require("../services/emailReservationService");
 const emailReservationParser_1 = require("../services/emailReservationParser");
 const emailReservationScheduler_1 = require("../services/emailReservationScheduler");
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * POST /api/email-reservations/check
  * Manueller Email-Check (für Tests)
@@ -59,7 +58,7 @@ const getStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             });
         }
         // Lade Organisation-Settings
-        const organization = yield prisma.organization.findUnique({
+        const organization = yield prisma_1.prisma.organization.findUnique({
             where: { id: organizationId },
             select: { settings: true, name: true }
         });

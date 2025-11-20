@@ -14,8 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.authenticateToken = exports.authMiddleware = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 const SECRET_KEY = process.env.JWT_SECRET || 'your-secret-key';
 /**
  * Authentication middleware to verify the JWT token
@@ -35,7 +34,7 @@ const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         // Verify the token
         const decoded = jsonwebtoken_1.default.verify(token, SECRET_KEY);
         // Get the user with roles, including the active role
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: decoded.userId },
             include: {
                 roles: {
