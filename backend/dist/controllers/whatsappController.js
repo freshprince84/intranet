@@ -64,9 +64,40 @@ const handleWebhook = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             console.log('[WhatsApp Webhook] Webhook Field:', field);
             console.log('[WhatsApp Webhook] Has messages:', !!((_c = value === null || value === void 0 ? void 0 : value.messages) === null || _c === void 0 ? void 0 : _c[0]));
             console.log('[WhatsApp Webhook] Has statuses:', !!((_d = value === null || value === void 0 ? void 0 : value.statuses) === null || _d === void 0 ? void 0 : _d[0]));
-            // Status-Update (ignorieren)
+            // Status-Update (loggen für Debugging)
             if ((_e = value === null || value === void 0 ? void 0 : value.statuses) === null || _e === void 0 ? void 0 : _e[0]) {
-                console.log('[WhatsApp Webhook] Status-Update empfangen, ignoriere:', value.statuses[0].status);
+                const statusUpdate = value.statuses[0];
+                const status = statusUpdate.status;
+                const messageId = statusUpdate.id;
+                const recipientId = statusUpdate.recipient_id;
+                const timestamp = statusUpdate.timestamp;
+                const errors = statusUpdate.errors;
+                console.log('[WhatsApp Webhook] Status-Update empfangen:', {
+                    status,
+                    messageId,
+                    recipientId,
+                    timestamp,
+                    errors: errors ? JSON.stringify(errors, null, 2) : 'keine'
+                });
+                // Bei Fehlern detailliert loggen
+                if (status === 'failed' || errors) {
+                    console.error('[WhatsApp Webhook] ❌ Nachricht-Zustellung fehlgeschlagen!', {
+                        status,
+                        messageId,
+                        recipientId,
+                        errors: errors ? JSON.stringify(errors, null, 2) : 'keine Fehlerdetails',
+                        timestamp
+                    });
+                }
+                else if (status === 'sent') {
+                    console.log('[WhatsApp Webhook] ✅ Nachricht erfolgreich gesendet:', { messageId, recipientId });
+                }
+                else if (status === 'delivered') {
+                    console.log('[WhatsApp Webhook] ✅ Nachricht erfolgreich zugestellt:', { messageId, recipientId });
+                }
+                else if (status === 'read') {
+                    console.log('[WhatsApp Webhook] ✅ Nachricht gelesen:', { messageId, recipientId });
+                }
                 return res.status(200).json({ success: true, message: 'Status-Update empfangen' });
             }
             // Eingehende Nachricht

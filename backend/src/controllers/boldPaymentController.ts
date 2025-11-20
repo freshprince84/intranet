@@ -45,11 +45,13 @@ export const handleWebhook = async (req: Request, res: Response) => {
         
         const reservation = await prisma.reservation.findUnique({
           where: { id: reservationId },
-          select: { organizationId: true }
+          select: { organizationId: true, branchId: true }
         });
 
         if (reservation) {
-          const boldPaymentService = new BoldPaymentService(reservation.organizationId);
+          const boldPaymentService = reservation.branchId
+            ? await BoldPaymentService.createForBranch(reservation.branchId)
+            : new BoldPaymentService(reservation.organizationId);
           await boldPaymentService.handleWebhook(payload);
           await prisma.$disconnect();
           

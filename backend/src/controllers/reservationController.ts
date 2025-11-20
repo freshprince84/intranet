@@ -6,6 +6,7 @@ import { TTLockService } from '../services/ttlockService';
 import { ReservationNotificationService } from '../services/reservationNotificationService';
 import { reservationQueue, updateGuestContactQueue, checkQueueHealth } from '../services/queueService';
 import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
+import { checkUserPermission } from '../middleware/permissionMiddleware';
 
 const prisma = new PrismaClient();
 
@@ -83,6 +84,13 @@ export const updateGuestContact = async (req: Request, res: Response) => {
             settings: true,
           },
         },
+        branch: {
+          select: {
+            id: true,
+            name: true,
+            doorSystemSettings: true,
+          },
+        },
       },
     });
 
@@ -136,7 +144,9 @@ export const updateGuestContact = async (req: Request, res: Response) => {
     if (contactType === 'phone' && updatedReservation.guestPhone) {
       try {
         // Erstelle Zahlungslink
-        const boldPaymentService = new BoldPaymentService(reservation.organizationId);
+        const boldPaymentService = updatedReservation.branchId
+          ? await BoldPaymentService.createForBranch(updatedReservation.branchId)
+          : new BoldPaymentService(reservation.organizationId);
         // TODO: Hole Betrag aus Reservierung (aus syncHistory oder extra Feld)
         const amount = 360000; // Placeholder - sollte aus Reservierung kommen
         const paymentLink = await boldPaymentService.createPaymentLink(
@@ -149,9 +159,21 @@ export const updateGuestContact = async (req: Request, res: Response) => {
         // Erstelle TTLock Passcode (wenn konfiguriert)
         let ttlockCode: string | null = null;
         try {
-          const ttlockService = new TTLockService(reservation.organizationId);
-          const settings = reservation.organization.settings as any;
-          const doorSystemSettings = settings?.doorSystem;
+          const ttlockService = updatedReservation.branchId
+            ? await TTLockService.createForBranch(updatedReservation.branchId)
+            : new TTLockService(reservation.organizationId);
+          
+          // Lade Settings aus Branch oder Organisation
+          const { decryptApiSettings, decryptBranchApiSettings } = await import('../utils/encryption');
+          let doorSystemSettings: any = null;
+          
+          if (updatedReservation.branchId && updatedReservation.branch?.doorSystemSettings) {
+            const branchSettings = decryptBranchApiSettings(updatedReservation.branch.doorSystemSettings as any);
+            doorSystemSettings = branchSettings?.doorSystem || branchSettings;
+          } else {
+            const settings = decryptApiSettings(reservation.organization.settings as any);
+            doorSystemSettings = settings?.doorSystem;
+          }
 
           if (doorSystemSettings?.lockIds && doorSystemSettings.lockIds.length > 0) {
             const lockId = doorSystemSettings.lockIds[0];
@@ -199,7 +221,9 @@ ${ttlockCode}
 ` : ''}¡Te esperamos!`;
 
         // Sende WhatsApp-Nachricht (mit Fallback auf Template)
-        const whatsappService = new WhatsAppService(reservation.organizationId);
+        const whatsappService = updatedReservation.branchId
+          ? new WhatsAppService(undefined, updatedReservation.branchId)
+          : new WhatsAppService(reservation.organizationId);
         // Basis-Template-Name (wird in sendMessageWithFallback basierend auf Sprache angepasst)
         // Spanisch: reservation_checkin_invitation, Englisch: reservation_checkin_invitation_
         const templateName = process.env.WHATSAPP_TEMPLATE_RESERVATION_CONFIRMATION || 'reservation_checkin_invitation';
@@ -470,7 +494,7 @@ export const createReservation = async (req: Request, res: Response) => {
 
 /**
  * GET /api/reservations
- * Holt alle Reservierungen für die aktuelle Organisation
+ * Holt alle Reservierungen für die aktuelle Organisation (mit Branch-Filter basierend auf Berechtigungen)
  */
 export const getAllReservations = async (req: Request, res: Response) => {
   try {
@@ -483,16 +507,101 @@ export const getAllReservations = async (req: Request, res: Response) => {
       });
     }
 
+    const userId = parseInt(req.userId, 10);
+    const roleId = parseInt(req.roleId, 10);
+
+    if (isNaN(userId) || isNaN(roleId)) {
+      return res.status(401).json({
+        success: false,
+        message: 'Nicht authentifiziert'
+      });
+    }
+
+    // Prüfe Berechtigungen
+    const hasAllBranchesPermission = await checkUserPermission(
+      userId,
+      roleId,
+      'reservations_all_branches',
+      'read',
+      'table'
+    );
+    
+    const hasOwnBranchPermission = await checkUserPermission(
+      userId,
+      roleId,
+      'reservations_own_branch',
+      'read',
+      'table'
+    );
+
+    // Wenn keine der beiden Berechtigungen vorhanden, prüfe Fallback auf alte Berechtigung
+    let hasReservationsPermission = false;
+    if (!hasAllBranchesPermission && !hasOwnBranchPermission) {
+      hasReservationsPermission = await checkUserPermission(
+        userId,
+        roleId,
+        'reservations',
+        'read',
+        'table'
+      );
+    }
+
+    // Wenn keine Berechtigung vorhanden, verweigere Zugriff
+    if (!hasAllBranchesPermission && !hasOwnBranchPermission && !hasReservationsPermission) {
+      return res.status(403).json({
+        success: false,
+        message: 'Keine Berechtigung zum Anzeigen von Reservierungen'
+      });
+    }
+
+    // Baue Where-Clause auf
+    const whereClause: any = {
+      organizationId: req.organizationId
+    };
+
+    // Wenn nur "own_branch" Berechtigung: Filtere nach Branch
+    if (hasOwnBranchPermission && !hasAllBranchesPermission) {
+      // Hole branchId aus UsersBranches (falls vorhanden)
+      const userBranch = await prisma.usersBranches.findFirst({
+        where: {
+          userId: userId,
+          branch: {
+            organizationId: req.organizationId
+          }
+        },
+        select: {
+          branchId: true
+        }
+      });
+
+      if (userBranch?.branchId) {
+        whereClause.branchId = userBranch.branchId;
+        console.log(`[Reservation] Filtere nach Branch ${userBranch.branchId} (own_branch Berechtigung)`);
+      } else {
+        // User hat keine aktive Branch → keine Reservierungen
+        console.log(`[Reservation] User hat keine aktive Branch, gebe leeres Array zurück`);
+        return res.json({
+          success: true,
+          data: []
+        });
+      }
+    }
+    // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
+
     const reservations = await prisma.reservation.findMany({
-      where: {
-        organizationId: req.organizationId
-      },
+      where: whereClause,
       include: {
         organization: {
           select: {
             id: true,
             name: true,
             displayName: true
+          }
+        },
+        branch: {
+          select: {
+            id: true,
+            name: true
           }
         },
         task: true

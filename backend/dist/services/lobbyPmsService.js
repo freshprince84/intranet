@@ -27,11 +27,16 @@ class LobbyPmsService {
     /**
      * Erstellt eine neue LobbyPMS Service-Instanz
      *
-     * @param organizationId - ID der Organisation
-     * @throws Error wenn LobbyPMS nicht konfiguriert ist
+     * @param organizationId - ID der Organisation (optional, wenn branchId gesetzt)
+     * @param branchId - ID des Branches (optional, wenn organizationId gesetzt)
+     * @throws Error wenn weder organizationId noch branchId angegeben ist
      */
-    constructor(organizationId) {
+    constructor(organizationId, branchId) {
+        if (!organizationId && !branchId) {
+            throw new Error('Entweder organizationId oder branchId muss angegeben werden');
+        }
         this.organizationId = organizationId;
+        this.branchId = branchId;
         // Settings werden beim ersten API-Call geladen (lazy loading)
         this.axiosInstance = axios_1.default.create({
             baseURL: 'https://app.lobbypms.com/api', // Placeholder, wird in loadSettings überschrieben
@@ -39,31 +44,85 @@ class LobbyPmsService {
         });
     }
     /**
-     * Lädt LobbyPMS Settings aus der Organisation
+     * Lädt LobbyPMS Settings aus Branch oder Organisation (mit Fallback)
      * Muss vor jedem API-Call aufgerufen werden
      */
     loadSettings() {
         return __awaiter(this, void 0, void 0, function* () {
-            const organization = yield prisma.organization.findUnique({
-                where: { id: this.organizationId },
-                select: { settings: true }
-            });
-            if (!(organization === null || organization === void 0 ? void 0 : organization.settings)) {
-                throw new Error(`LobbyPMS ist nicht für Organisation ${this.organizationId} konfiguriert`);
+            // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
+            if (this.branchId) {
+                const branch = yield prisma.branch.findUnique({
+                    where: { id: this.branchId },
+                    select: {
+                        lobbyPmsSettings: true,
+                        organizationId: true
+                    }
+                });
+                if (branch === null || branch === void 0 ? void 0 : branch.lobbyPmsSettings) {
+                    try {
+                        const settings = (0, encryption_1.decryptBranchApiSettings)(branch.lobbyPmsSettings);
+                        const lobbyPmsSettings = (settings === null || settings === void 0 ? void 0 : settings.lobbyPms) || settings;
+                        if (lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.apiKey) {
+                            this.apiUrl = lobbyPmsSettings.apiUrl || 'https://api.lobbypms.com';
+                            this.apiKey = lobbyPmsSettings.apiKey;
+                            this.propertyId = lobbyPmsSettings.propertyId;
+                            this.axiosInstance = this.createAxiosInstance();
+                            console.log(`[LobbyPMS] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
+                            return; // Erfolgreich geladen
+                        }
+                    }
+                    catch (error) {
+                        console.warn(`[LobbyPMS] Fehler beim Laden der Branch Settings:`, error);
+                        // Fallback auf Organization Settings
+                    }
+                    // Fallback: Lade Organization Settings
+                    if (branch.organizationId) {
+                        this.organizationId = branch.organizationId;
+                    }
+                }
+                else if (branch === null || branch === void 0 ? void 0 : branch.organizationId) {
+                    // Branch hat keine Settings, aber Organization ID
+                    this.organizationId = branch.organizationId;
+                }
             }
-            const settings = (0, encryption_1.decryptApiSettings)(organization.settings);
-            const lobbyPmsSettings = settings === null || settings === void 0 ? void 0 : settings.lobbyPms;
-            if (!(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.apiKey)) {
-                throw new Error(`LobbyPMS API Key ist nicht für Organisation ${this.organizationId} konfiguriert`);
+            // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
+            if (this.organizationId) {
+                const organization = yield prisma.organization.findUnique({
+                    where: { id: this.organizationId },
+                    select: { settings: true }
+                });
+                if (!(organization === null || organization === void 0 ? void 0 : organization.settings)) {
+                    throw new Error(`LobbyPMS ist nicht für Organisation ${this.organizationId} konfiguriert`);
+                }
+                const settings = (0, encryption_1.decryptApiSettings)(organization.settings);
+                const lobbyPmsSettings = settings === null || settings === void 0 ? void 0 : settings.lobbyPms;
+                if (!(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.apiKey)) {
+                    throw new Error(`LobbyPMS API Key ist nicht für Organisation ${this.organizationId} konfiguriert`);
+                }
+                if (!(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.apiUrl)) {
+                    throw new Error(`LobbyPMS API URL ist nicht für Organisation ${this.organizationId} konfiguriert`);
+                }
+                this.apiUrl = lobbyPmsSettings.apiUrl;
+                this.apiKey = lobbyPmsSettings.apiKey;
+                this.propertyId = lobbyPmsSettings.propertyId;
+                // Erstelle Axios-Instanz mit korrekten Settings
+                this.axiosInstance = this.createAxiosInstance();
+                return;
             }
-            if (!(lobbyPmsSettings === null || lobbyPmsSettings === void 0 ? void 0 : lobbyPmsSettings.apiUrl)) {
-                throw new Error(`LobbyPMS API URL ist nicht für Organisation ${this.organizationId} konfiguriert`);
-            }
-            this.apiUrl = lobbyPmsSettings.apiUrl;
-            this.apiKey = lobbyPmsSettings.apiKey;
-            this.propertyId = lobbyPmsSettings.propertyId;
-            // Erstelle Axios-Instanz mit korrekten Settings
-            this.axiosInstance = this.createAxiosInstance();
+            throw new Error('LobbyPMS Settings nicht gefunden (weder Branch noch Organization)');
+        });
+    }
+    /**
+     * Statische Factory-Methode: Erstellt Service für Branch
+     *
+     * @param branchId - ID des Branches
+     * @returns LobbyPmsService-Instanz
+     */
+    static createForBranch(branchId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const service = new LobbyPmsService(undefined, branchId);
+            yield service.loadSettings();
+            return service;
         });
     }
     /**
@@ -124,7 +183,7 @@ class LobbyPmsService {
                 if (this.propertyId) {
                     params.property_id = this.propertyId;
                 }
-                const response = yield this.axiosInstance.get('/reservations', {
+                const response = yield this.axiosInstance.get('/api/v1/bookings', {
                     params,
                     validateStatus: (status) => status < 500 // Akzeptiere 4xx als gültige Antwort
                 });
@@ -133,15 +192,16 @@ class LobbyPmsService {
                 if (typeof responseData === 'string' && responseData.includes('<!DOCTYPE')) {
                     throw new Error('LobbyPMS API Endpoint nicht gefunden. Bitte prüfe die API-Dokumentation für den korrekten Endpoint.');
                 }
-                if (responseData && typeof responseData === 'object' && responseData.success && responseData.data) {
+                // LobbyPMS gibt { data: [...], meta: {...} } zurück
+                if (responseData && typeof responseData === 'object' && responseData.data && Array.isArray(responseData.data)) {
                     return responseData.data;
                 }
                 // Fallback: Direktes Array (wenn API direkt Array zurückgibt)
                 if (Array.isArray(responseData)) {
                     return responseData;
                 }
-                // Fallback: data-Array direkt im Response
-                if (responseData && typeof responseData === 'object' && responseData.data && Array.isArray(responseData.data)) {
+                // Fallback: success-Format
+                if (responseData && typeof responseData === 'object' && responseData.success && responseData.data) {
                     return responseData.data;
                 }
                 // Debug: Zeige Response-Struktur (nur wenn nicht HTML)
@@ -310,6 +370,7 @@ class LobbyPmsService {
                 status: mapStatus(lobbyReservation.status),
                 paymentStatus: mapPaymentStatus(lobbyReservation.payment_status),
                 organizationId: this.organizationId,
+                branchId: this.branchId || null,
             };
             // Upsert: Erstelle oder aktualisiere Reservierung
             const reservation = yield prisma.reservation.upsert({

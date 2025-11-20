@@ -1,18 +1,63 @@
 import nodemailer from 'nodemailer';
 import axios from 'axios';
 import { PrismaClient } from '@prisma/client';
+import { decryptBranchApiSettings } from '../utils/encryption';
 
 const prisma = new PrismaClient();
 
-// SMTP-Konfiguration aus Umgebungsvariablen oder Organisation-Settings
-const createTransporter = async (organizationId?: number) => {
+// SMTP-Konfiguration aus Umgebungsvariablen, Branch-Settings oder Organisation-Settings
+const createTransporter = async (organizationId?: number, branchId?: number) => {
   let smtpHost: string | undefined;
   let smtpPort: number = 587;
   let smtpUser: string | undefined;
   let smtpPass: string | undefined;
 
-  // Wenn organizationId vorhanden, versuche Organisation-spezifische SMTP-Einstellungen zu laden
-  if (organizationId) {
+  // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
+  if (branchId) {
+    try {
+      const branch = await prisma.branch.findUnique({
+        where: { id: branchId },
+        select: { 
+          emailSettings: true, 
+          organizationId: true 
+        }
+      });
+
+      if (branch?.emailSettings) {
+        try {
+          const settings = decryptBranchApiSettings(branch.emailSettings as any);
+          const emailSettings = settings?.email || settings;
+
+          if (emailSettings?.smtpHost && emailSettings?.smtpUser && emailSettings?.smtpPass) {
+            smtpHost = emailSettings.smtpHost;
+            const portValue = emailSettings.smtpPort;
+            smtpPort = typeof portValue === 'number' ? portValue : (portValue ? parseInt(String(portValue)) : 587);
+            smtpUser = emailSettings.smtpUser;
+            smtpPass = emailSettings.smtpPass; // Bereits entschlüsselt
+            console.log(`📧 Nutze Branch-spezifische SMTP-Einstellungen für Branch ${branchId}`);
+            // Weiter zu Transporter-Erstellung
+          }
+        } catch (error) {
+          console.warn(`[EMAIL] Fehler beim Laden der Branch Settings:`, error);
+          // Fallback auf Organisation Settings
+        }
+
+        // Fallback: Lade Organization Settings
+        if (!smtpHost && branch.organizationId) {
+          organizationId = branch.organizationId;
+        }
+      } else if (branch?.organizationId) {
+        // Branch hat keine Settings, aber Organization ID
+        organizationId = branch.organizationId;
+      }
+    } catch (error) {
+      console.warn(`[EMAIL] Fehler beim Laden der Branch Settings:`, error);
+      // Fallback auf Organisation Settings
+    }
+  }
+
+  // 2. Wenn organizationId vorhanden, versuche Organisation-spezifische SMTP-Einstellungen zu laden
+  if (organizationId && (!smtpHost || !smtpUser || !smtpPass)) {
     try {
       const organization = await prisma.organization.findUnique({
         where: { id: organizationId },
@@ -463,26 +508,71 @@ Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-
  * @param html HTML-Inhalt der E-Mail
  * @param text Text-Inhalt der E-Mail (optional)
  * @param organizationId Optional: ID der Organisation (für org-spezifische SMTP-Einstellungen)
+ * @param branchId Optional: ID des Branches (für branch-spezifische SMTP-Einstellungen)
  */
 export const sendEmail = async (
   email: string,
   subject: string,
   html: string,
   text?: string,
-  organizationId?: number
+  organizationId?: number,
+  branchId?: number
 ): Promise<boolean> => {
   try {
-    const transporter = await createTransporter(organizationId);
+    const transporter = await createTransporter(organizationId, branchId);
     
     if (!transporter) {
       console.warn('⚠️ E-Mail-Transporter nicht verfügbar. E-Mail wurde nicht versendet.');
       return false;
     }
 
-    // Lade From-Einstellungen aus Organisation-Settings (falls vorhanden)
+    // Lade From-Einstellungen aus Branch oder Organisation-Settings (falls vorhanden)
     let fromEmail = process.env.SMTP_USER || 'noreply@intranet.local';
     let fromName = 'Intranet';
     
+    // 1. Versuche Branch Settings zu laden
+    if (branchId) {
+      try {
+        const branch = await prisma.branch.findUnique({
+          where: { id: branchId },
+          select: { 
+            emailSettings: true, 
+            organizationId: true,
+            organization: {
+              select: { displayName: true }
+            }
+          }
+        });
+
+        if (branch?.emailSettings) {
+          try {
+            const settings = decryptBranchApiSettings(branch.emailSettings as any);
+            const emailSettings = settings?.email || settings;
+
+            if (emailSettings?.smtpFromEmail) {
+              fromEmail = emailSettings.smtpFromEmail;
+            }
+            if (emailSettings?.smtpFromName) {
+              fromName = emailSettings.smtpFromName;
+            } else if (branch.organization?.displayName) {
+              fromName = branch.organization.displayName;
+            }
+          } catch (error) {
+            console.warn('⚠️ Fehler beim Laden der Branch-From-Einstellungen:', error);
+            // Fallback auf Organisation
+            if (branch.organizationId) {
+              organizationId = branch.organizationId;
+            }
+          }
+        } else if (branch?.organizationId) {
+          organizationId = branch.organizationId;
+        }
+      } catch (error) {
+        console.warn('⚠️ Fehler beim Laden der Branch-From-Einstellungen:', error);
+      }
+    }
+    
+    // 2. Fallback: Lade From-Einstellungen aus Organisation-Settings
     if (organizationId) {
       try {
         const organization = await prisma.organization.findUnique({

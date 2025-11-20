@@ -111,7 +111,9 @@ export class ReservationNotificationService {
               }
 
               // Erstelle Zahlungslink
-              const boldPaymentService = new BoldPaymentService(organization.id);
+              const boldPaymentService = reservation.branchId
+                ? await BoldPaymentService.createForBranch(reservation.branchId)
+                : new BoldPaymentService(organization.id);
               // TODO: Hole tatsächlichen Betrag aus LobbyPMS
               const amount = 100000; // Placeholder: 100.000 COP
               const paymentLink = await boldPaymentService.createPaymentLink(
@@ -134,7 +136,9 @@ export class ReservationNotificationService {
               }
 
               if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
-                const whatsappService = new WhatsAppService(organization.id);
+                const whatsappService = reservation.branchId
+                  ? new WhatsAppService(undefined, reservation.branchId)
+                  : new WhatsAppService(organization.id);
                 await whatsappService.sendCheckInInvitation(
                   reservation.guestName,
                   reservation.guestPhone,
@@ -242,7 +246,9 @@ export class ReservationNotificationService {
           // Erstelle neuen Payment-Link nur wenn keiner existiert
           try {
             console.log(`[ReservationNotification] Erstelle Payment-Link für Reservierung ${reservationId}...`);
-            const boldPaymentService = new BoldPaymentService(reservation.organizationId);
+            const boldPaymentService = reservation.branchId
+              ? await BoldPaymentService.createForBranch(reservation.branchId)
+              : new BoldPaymentService(reservation.organizationId);
             // Konvertiere amount zu number (falls Decimal)
             const amountNumber = typeof amount === 'number' ? amount : Number(amount);
             paymentLink = await boldPaymentService.createPaymentLink(
@@ -325,7 +331,9 @@ ${paymentLink}
 ¡Te esperamos!`;
           }
 
-          const whatsappService = new WhatsAppService(reservation.organizationId);
+          const whatsappService = reservation.branchId
+            ? new WhatsAppService(undefined, reservation.branchId)
+            : new WhatsAppService(reservation.organizationId);
           // WICHTIG: Für Reservation-Einladungen verwenden wir DIREKT Template Messages
           // Grund: Das 24h-Fenster ist bei neuen Reservierungen meist nicht aktiv
           // Template Messages funktionieren immer, unabhängig vom 24h-Fenster
@@ -527,7 +535,8 @@ ${paymentLink}
             'Tu reserva ha sido confirmada - La Familia Hostel',
             emailHtml,
             emailMessage,
-            reservation.organizationId
+            reservation.organizationId,
+            reservation.branchId || undefined
           );
 
           if (emailSent) {
@@ -693,25 +702,40 @@ ${paymentLink}
     try {
       const reservation = await prisma.reservation.findUnique({
         where: { id: reservationId },
-        include: { organization: true }
+        include: { organization: true, branch: true }
       });
 
       if (!reservation) {
         throw new Error(`Reservierung ${reservationId} nicht gefunden`);
       }
 
-      // Entschlüssele Settings
-      const { decryptApiSettings } = await import('../utils/encryption');
+      // Entschlüssele Settings (aus Branch oder Organisation)
+      const { decryptApiSettings, decryptBranchApiSettings } = await import('../utils/encryption');
       console.log(`[ReservationNotification] Entschlüssele Settings für Reservation ${reservationId}...`);
-      const decryptedSettings = decryptApiSettings(reservation.organization.settings as any);
+      
+      let decryptedSettings: any = null;
+      let doorSystemSettings: any = null;
+      
+      // Lade Settings aus Branch oder Organisation
+      if (reservation.branchId && reservation.branch?.doorSystemSettings) {
+        const branchSettings = decryptBranchApiSettings(reservation.branch.doorSystemSettings as any);
+        doorSystemSettings = branchSettings?.doorSystem || branchSettings;
+        // Für notificationChannels: Fallback auf Organisation
+        const orgSettings = decryptApiSettings(reservation.organization.settings as any);
+        decryptedSettings = orgSettings;
+      } else {
+        decryptedSettings = decryptApiSettings(reservation.organization.settings as any);
+        doorSystemSettings = decryptedSettings?.doorSystem;
+      }
+      
       const notificationChannels = decryptedSettings?.lobbyPms?.notificationChannels || ['email'];
 
       console.log(`[ReservationNotification] Notification Channels:`, notificationChannels);
       console.log(`[ReservationNotification] Guest Phone: ${reservation.guestPhone || 'N/A'}`);
       console.log(`[ReservationNotification] Settings entschlüsselt:`, {
-        hasDoorSystem: !!decryptedSettings?.doorSystem,
-        doorSystemProvider: decryptedSettings?.doorSystem?.provider,
-        doorSystemLockIds: decryptedSettings?.doorSystem?.lockIds
+        hasDoorSystem: !!doorSystemSettings,
+        doorSystemProvider: doorSystemSettings?.provider,
+        doorSystemLockIds: doorSystemSettings?.lockIds
       });
 
       // Erstelle TTLock Passcode
@@ -721,8 +745,9 @@ ${paymentLink}
       console.log(`[ReservationNotification] Starte PIN-Generierung für Reservation ${reservationId}...`);
 
       try {
-        const ttlockService = new TTLockService(reservation.organizationId);
-        const doorSystemSettings = decryptedSettings?.doorSystem;
+        const ttlockService = reservation.branchId
+          ? await TTLockService.createForBranch(reservation.branchId)
+          : new TTLockService(reservation.organizationId);
 
         console.log(`[ReservationNotification] Door System Settings:`, {
           hasDoorSystem: !!doorSystemSettings,
@@ -802,7 +827,9 @@ ${paymentLink}
 
       if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
         try {
-          const whatsappService = new WhatsAppService(reservation.organizationId);
+          const whatsappService = reservation.branchId
+            ? new WhatsAppService(undefined, reservation.branchId)
+            : new WhatsAppService(reservation.organizationId);
           const whatsappSuccess = await whatsappService.sendCheckInConfirmation(
             reservation.guestName,
             reservation.guestPhone,
@@ -853,7 +880,7 @@ ${paymentLink}
     try {
       const reservation = await prisma.reservation.findUnique({
         where: { id: reservationId },
-        include: { organization: true }
+        include: { organization: true, branch: true }
       });
 
       if (!reservation) {
@@ -864,7 +891,21 @@ ${paymentLink}
         throw new Error(`Reservierung ${reservationId} ist nicht eingecheckt`);
       }
 
-      const settings = reservation.organization.settings as any;
+      // Lade Settings aus Branch oder Organisation
+      const { decryptApiSettings, decryptBranchApiSettings } = await import('../utils/encryption');
+      let doorSystemSettings: any = null;
+      let settings: any = null;
+      
+      if (reservation.branchId && reservation.branch?.doorSystemSettings) {
+        const branchSettings = decryptBranchApiSettings(reservation.branch.doorSystemSettings as any);
+        doorSystemSettings = branchSettings?.doorSystem || branchSettings;
+        // Für notificationChannels: Fallback auf Organisation
+        settings = decryptApiSettings(reservation.organization.settings as any);
+      } else {
+        settings = decryptApiSettings(reservation.organization.settings as any);
+        doorSystemSettings = settings?.doorSystem;
+      }
+      
       const notificationChannels = settings?.lobbyPms?.notificationChannels || ['email'];
 
       // Erstelle TTLock Passcode
@@ -872,8 +913,9 @@ ${paymentLink}
       let doorAppName: string | null = null;
 
       try {
-        const ttlockService = new TTLockService(reservation.organizationId);
-        const doorSystemSettings = settings?.doorSystem;
+        const ttlockService = reservation.branchId
+          ? await TTLockService.createForBranch(reservation.branchId)
+          : new TTLockService(reservation.organizationId);
 
         if (doorSystemSettings?.lockIds && doorSystemSettings.lockIds.length > 0) {
           const lockId = doorSystemSettings.lockIds[0]; // Verwende ersten Lock
@@ -913,7 +955,9 @@ ${paymentLink}
       }
 
       if (notificationChannels.includes('whatsapp') && reservation.guestPhone) {
-        const whatsappService = new WhatsAppService(reservation.organizationId);
+        const whatsappService = reservation.branchId
+          ? new WhatsAppService(undefined, reservation.branchId)
+          : new WhatsAppService(reservation.organizationId);
         await whatsappService.sendCheckInConfirmation(
           reservation.guestName,
           reservation.guestPhone,
@@ -1000,7 +1044,8 @@ ${paymentLink}
       subject,
       html,
       text,
-      reservation.organizationId
+      reservation.organizationId,
+      reservation.branchId || undefined
     );
   }
 
@@ -1081,7 +1126,8 @@ ${doorPin ? `Acceso:
       subject,
       html,
       text,
-      reservation.organizationId
+      reservation.organizationId,
+      reservation.branchId || undefined
     );
   }
 }

@@ -75,7 +75,13 @@ class EmailReservationScheduler {
                         }
                         const orgSettings = org.settings;
                         const emailReading = orgSettings.emailReading;
+                        // ⚠️ WICHTIG: Email-Reading für Organisation 1 (La Familia Hostel) ist STANDARDMÄSSIG aktiviert
+                        // Das Seed-Script stellt sicher, dass Email-Reading für Organisation 1 immer aktiviert ist
                         if (!emailReading || !emailReading.enabled) {
+                            // Für Organisation 1: Warnung, wenn Email-Reading deaktiviert ist
+                            if (org.id === 1) {
+                                console.warn(`[EmailReservationScheduler] ⚠️ Email-Reading für Organisation 1 ist deaktiviert - sollte standardmäßig aktiviert sein!`);
+                            }
                             continue;
                         }
                         console.log(`[EmailReservationScheduler] Prüfe Organisation ${org.id} (${org.name})...`);

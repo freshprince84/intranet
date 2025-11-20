@@ -507,7 +507,12 @@ const RequestAnalyticsTab: React.FC<RequestAnalyticsTabProps> = ({ selectedDate 
                 return (
                   <DataCard
                     key={request.id}
-                    title={request.title}
+                    title={
+                      <span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">{request.id}:</span>{' '}
+                        <span>{request.title}</span>
+                      </span>
+                    }
                     status={{
                       label: getStatusLabel(request.status),
                       color: getStatusColor(request.status)

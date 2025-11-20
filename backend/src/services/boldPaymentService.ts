@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { PrismaClient, Reservation } from '@prisma/client';
-import { decryptApiSettings } from '../utils/encryption';
+import { decryptApiSettings, decryptBranchApiSettings } from '../utils/encryption';
 import { WhatsAppService } from './whatsappService';
 import { TTLockService } from './ttlockService';
 
@@ -31,7 +31,8 @@ export interface BoldPaymentResponse<T = any> {
  * Bietet Funktionen zum Erstellen von Zahlungslinks und Status-Abfragen
  */
 export class BoldPaymentService {
-  private organizationId: number;
+  private organizationId?: number;
+  private branchId?: number;
   private apiKey?: string;
   private merchantId?: string;
   private environment: 'sandbox' | 'production' = 'sandbox';
@@ -41,11 +42,16 @@ export class BoldPaymentService {
   /**
    * Erstellt eine neue Bold Payment Service-Instanz
    * 
-   * @param organizationId - ID der Organisation
-   * @throws Error wenn Bold Payment nicht konfiguriert ist
+   * @param organizationId - ID der Organisation (optional, wenn branchId gesetzt)
+   * @param branchId - ID des Branches (optional, wenn organizationId gesetzt)
+   * @throws Error wenn weder organizationId noch branchId angegeben ist
    */
-  constructor(organizationId: number) {
+  constructor(organizationId?: number, branchId?: number) {
+    if (!organizationId && !branchId) {
+      throw new Error('Entweder organizationId oder branchId muss angegeben werden');
+    }
     this.organizationId = organizationId;
+    this.branchId = branchId;
     // Settings werden beim ersten API-Call geladen (lazy loading)
     this.axiosInstance = axios.create({
       baseURL: 'https://sandbox.bold.co', // Placeholder, wird in loadSettings überschrieben
@@ -54,10 +60,51 @@ export class BoldPaymentService {
   }
 
   /**
-   * Lädt Bold Payment Settings aus der Organisation
+   * Lädt Bold Payment Settings aus Branch oder Organisation (mit Fallback)
    * Muss vor jedem API-Call aufgerufen werden
    */
   private async loadSettings(): Promise<void> {
+    // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
+    if (this.branchId) {
+      const branch = await prisma.branch.findUnique({
+        where: { id: this.branchId },
+        select: { 
+          boldPaymentSettings: true, 
+          organizationId: true 
+        }
+      });
+
+      if (branch?.boldPaymentSettings) {
+        try {
+          const settings = decryptBranchApiSettings(branch.boldPaymentSettings as any);
+          const boldPaymentSettings = settings?.boldPayment || settings;
+
+          if (boldPaymentSettings?.apiKey) {
+            this.apiKey = boldPaymentSettings.apiKey;
+            this.merchantId = boldPaymentSettings.merchantId;
+            this.environment = boldPaymentSettings.environment || 'sandbox';
+            this.apiUrl = 'https://integrations.api.bold.co';
+            this.axiosInstance = this.createAxiosInstance();
+            console.log(`[BoldPayment] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
+            return; // Erfolgreich geladen
+          }
+        } catch (error) {
+          console.warn(`[BoldPayment] Fehler beim Laden der Branch Settings:`, error);
+          // Fallback auf Organization Settings
+        }
+
+        // Fallback: Lade Organization Settings
+        if (branch.organizationId) {
+          this.organizationId = branch.organizationId;
+        }
+      } else if (branch?.organizationId) {
+        // Branch hat keine Settings, aber Organization ID
+        this.organizationId = branch.organizationId;
+      }
+    }
+
+    // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
+    if (this.organizationId) {
     const organization = await prisma.organization.findUnique({
       where: { id: this.organizationId },
       select: { settings: true }
@@ -77,16 +124,24 @@ export class BoldPaymentService {
     this.apiKey = boldPaymentSettings.apiKey;
     this.merchantId = boldPaymentSettings.merchantId;
     this.environment = boldPaymentSettings.environment || 'sandbox';
-
-    // Bestimme API URL basierend auf Environment
-    // Bold Payment "API Link de pagos" (Botón de pagos) verwendet:
-    // - URL base: https://integrations.api.bold.co (für Sandbox und Production)
-    // - Authentifizierung: x-api-key Header mit <llave_de_identidad>
-    // Quelle: https://developers.bold.co/pagos-en-linea/api-link-de-pagos
     this.apiUrl = 'https://integrations.api.bold.co';
-
-    // Re-initialisiere Axios-Instanz mit korrekten Settings
     this.axiosInstance = this.createAxiosInstance();
+      return;
+    }
+
+    throw new Error('Bold Payment Settings nicht gefunden (weder Branch noch Organization)');
+  }
+
+  /**
+   * Statische Factory-Methode: Erstellt Service für Branch
+   * 
+   * @param branchId - ID des Branches
+   * @returns BoldPaymentService-Instanz
+   */
+  static async createForBranch(branchId: number): Promise<BoldPaymentService> {
+    const service = new BoldPaymentService(undefined, branchId);
+    await service.loadSettings();
+    return service;
   }
 
   /**
@@ -416,10 +471,10 @@ export class BoldPaymentService {
 
           // Nach Zahlung: Erstelle TTLock Code und sende WhatsApp-Nachricht
           try {
-            // Hole aktualisierte Reservierung mit Organisation
+            // Hole aktualisierte Reservierung mit Organisation und Branch
             const updatedReservation = await prisma.reservation.findUnique({
               where: { id: reservation.id },
-              include: { organization: true }
+              include: { organization: true, branch: true }
             });
 
             if (!updatedReservation) {
@@ -432,9 +487,20 @@ export class BoldPaymentService {
               let ttlockCode: string | null = null;
               
               try {
-                const ttlockService = new TTLockService(updatedReservation.organizationId);
+                const ttlockService = updatedReservation.branchId
+                  ? await TTLockService.createForBranch(updatedReservation.branchId)
+                  : new TTLockService(updatedReservation.organizationId);
+                
+                // Lade Settings aus Branch oder Organisation
+                let doorSystemSettings: any = null;
+                if (updatedReservation.branchId && updatedReservation.branch?.doorSystemSettings) {
+                  const { decryptBranchApiSettings } = await import('../utils/encryption');
+                  const branchSettings = decryptBranchApiSettings(updatedReservation.branch.doorSystemSettings as any);
+                  doorSystemSettings = branchSettings?.doorSystem || branchSettings;
+                } else {
                 const settings = updatedReservation.organization.settings as any;
-                const doorSystemSettings = settings?.doorSystem;
+                  doorSystemSettings = settings?.doorSystem;
+                }
 
                 if (doorSystemSettings?.lockIds && doorSystemSettings.lockIds.length > 0) {
                   const lockId = doorSystemSettings.lockIds[0];
@@ -471,7 +537,9 @@ export class BoldPaymentService {
 
               // Sende WhatsApp-Nachricht mit TTLock Code
               try {
-                const whatsappService = new WhatsAppService(updatedReservation.organizationId);
+                const whatsappService = updatedReservation.branchId
+                  ? new WhatsAppService(undefined, updatedReservation.branchId)
+                  : new WhatsAppService(updatedReservation.organizationId);
                 
                 // Wenn TTLock Code vorhanden, verwende sendCheckInConfirmation (mit Template-Fallback)
                 if (ttlockCode) {

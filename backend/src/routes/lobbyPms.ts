@@ -8,8 +8,6 @@ import {
   checkInReservation,
   handleWebhook,
   validateConnection,
-  registerSire,
-  getSireStatus
 } from '../controllers/lobbyPmsController';
 
 const router = express.Router();
@@ -26,10 +24,6 @@ router.use(organizationMiddleware);
 router.get('/reservations', getReservations);
 router.get('/reservations/:id', getReservationById);
 router.put('/reservations/:id/check-in', checkInReservation);
-
-// SIRE-Registrierung
-router.post('/reservations/:id/register-sire', registerSire);
-router.get('/reservations/:id/sire-status', getSireStatus);
 
 // Synchronisation
 router.post('/sync', syncReservations);

@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { PrismaClient } from '@prisma/client';
-import { decryptApiSettings } from '../utils/encryption';
+import { decryptApiSettings, decryptBranchApiSettings } from '../utils/encryption';
 import crypto from 'crypto';
 
 const prisma = new PrismaClient();
@@ -33,7 +33,8 @@ export interface TTLockResponse<T = any> {
  * Bietet Funktionen zum Erstellen und Verwalten von temporären Passcodes
  */
 export class TTLockService {
-  private organizationId: number;
+  private organizationId?: number;
+  private branchId?: number;
   private clientId?: string;
   private clientSecret?: string;
   private username?: string;
@@ -47,11 +48,16 @@ export class TTLockService {
   /**
    * Erstellt eine neue TTLock Service-Instanz
    * 
-   * @param organizationId - ID der Organisation
-   * @throws Error wenn TTLock nicht konfiguriert ist
+   * @param organizationId - ID der Organisation (optional, wenn branchId gesetzt)
+   * @param branchId - ID des Branches (optional, wenn organizationId gesetzt)
+   * @throws Error wenn weder organizationId noch branchId angegeben ist
    */
-  constructor(organizationId: number) {
+  constructor(organizationId?: number, branchId?: number) {
+    if (!organizationId && !branchId) {
+      throw new Error('Entweder organizationId oder branchId muss angegeben werden');
+    }
     this.organizationId = organizationId;
+    this.branchId = branchId;
     // Settings werden beim ersten API-Call geladen (lazy loading)
     this.axiosInstance = axios.create({
       baseURL: this.apiUrl,
@@ -63,10 +69,68 @@ export class TTLockService {
   }
 
   /**
-   * Lädt TTLock Settings aus der Organisation
+   * Lädt TTLock Settings aus Branch oder Organisation (mit Fallback)
    * Muss vor jedem API-Call aufgerufen werden
    */
   private async loadSettings(): Promise<void> {
+    // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
+    if (this.branchId) {
+      const branch = await prisma.branch.findUnique({
+        where: { id: this.branchId },
+        select: { 
+          doorSystemSettings: true, 
+          organizationId: true 
+        }
+      });
+
+      if (branch?.doorSystemSettings) {
+        try {
+          const settings = decryptBranchApiSettings(branch.doorSystemSettings as any);
+          const doorSystemSettings = settings?.doorSystem || settings;
+
+          if (doorSystemSettings?.clientId && doorSystemSettings?.clientSecret && 
+              doorSystemSettings?.username && doorSystemSettings?.password) {
+            // Prüfe ob Client Secret verschlüsselt ist und entschlüssele es
+            let clientSecret = doorSystemSettings.clientSecret;
+            if (clientSecret && clientSecret.includes(':')) {
+              const { decryptSecret } = await import('../utils/encryption');
+              try {
+                clientSecret = decryptSecret(clientSecret);
+                console.log('[TTLock] Client Secret erfolgreich entschlüsselt');
+              } catch (error) {
+                console.error('[TTLock] Fehler beim Entschlüsseln des Client Secrets:', error);
+                throw new Error('Client Secret konnte nicht entschlüsselt werden');
+              }
+            }
+
+            this.clientId = doorSystemSettings.clientId;
+            this.clientSecret = clientSecret;
+            this.username = doorSystemSettings.username;
+            this.password = doorSystemSettings.password;
+            this.apiUrl = doorSystemSettings.apiUrl || 'https://euopen.ttlock.com';
+            this.accessToken = doorSystemSettings.accessToken;
+            this.passcodeType = doorSystemSettings.passcodeType || 'auto';
+            this.axiosInstance = this.createAxiosInstance();
+            console.log(`[TTLock] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
+            return; // Erfolgreich geladen
+          }
+        } catch (error) {
+          console.warn(`[TTLock] Fehler beim Laden der Branch Settings:`, error);
+          // Fallback auf Organization Settings
+        }
+
+        // Fallback: Lade Organization Settings
+        if (branch.organizationId) {
+          this.organizationId = branch.organizationId;
+        }
+      } else if (branch?.organizationId) {
+        // Branch hat keine Settings, aber Organization ID
+        this.organizationId = branch.organizationId;
+      }
+    }
+
+    // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
+    if (this.organizationId) {
     const organization = await prisma.organization.findUnique({
       where: { id: this.organizationId },
       select: { settings: true }
@@ -107,10 +171,24 @@ export class TTLockService {
     this.password = doorSystemSettings.password; // Already MD5-hashed
     this.apiUrl = doorSystemSettings.apiUrl || 'https://euopen.ttlock.com';
     this.accessToken = doorSystemSettings.accessToken;
-    this.passcodeType = doorSystemSettings.passcodeType || 'auto'; // 'auto' = 10-stellig, 'custom' = 4-stellig
-
-    // Re-initialisiere Axios-Instanz mit korrekten Settings
+      this.passcodeType = doorSystemSettings.passcodeType || 'auto';
     this.axiosInstance = this.createAxiosInstance();
+      return;
+    }
+
+    throw new Error('TTLock Settings nicht gefunden (weder Branch noch Organization)');
+  }
+
+  /**
+   * Statische Factory-Methode: Erstellt Service für Branch
+   * 
+   * @param branchId - ID des Branches
+   * @returns TTLockService-Instanz
+   */
+  static async createForBranch(branchId: number): Promise<TTLockService> {
+    const service = new TTLockService(undefined, branchId);
+    await service.loadSettings();
+    return service;
   }
 
   /**

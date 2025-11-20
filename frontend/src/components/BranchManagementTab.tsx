@@ -14,6 +14,10 @@ interface Branch {
     id: number;
     name: string;
     whatsappSettings?: any;
+    lobbyPmsSettings?: any;
+    boldPaymentSettings?: any;
+    doorSystemSettings?: any;
+    emailSettings?: any;
 }
 
 interface BranchManagementTabProps {
@@ -30,7 +34,7 @@ const BranchCard: React.FC<{
 }> = ({ branch, onEdit, onDelete, canEdit, canDelete }) => {
     const { t } = useTranslation();
     return (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4 mb-4">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4">
             {/* Header mit Branchname und Aktionen */}
             <div className="flex justify-between items-start mb-2">
                 <h3 className="text-lg font-medium text-gray-900 dark:text-white">{branch.name}</h3>
@@ -94,8 +98,50 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                 temperature: 0.7,
                 maxTokens: 500
             }
+        },
+        lobbyPmsSettings: {
+            apiUrl: '',
+            apiKey: '',
+            propertyId: '',
+            autoCreateTasks: false,
+            lateCheckInThreshold: '22:00',
+            notificationChannels: ['email'] as string[],
+            autoSendInvitation: false
+        },
+        boldPaymentSettings: {
+            apiKey: '',
+            merchantId: '',
+            environment: 'sandbox' as 'sandbox' | 'production'
+        },
+        doorSystemSettings: {
+            clientId: '',
+            clientSecret: '',
+            username: '',
+            password: '',
+            apiUrl: 'https://euopen.ttlock.com',
+            lockIds: [] as string[],
+            appName: 'TTLock'
+        },
+        emailSettings: {
+            smtpHost: '',
+            smtpPort: 587,
+            smtpUser: '',
+            smtpPass: '',
+            smtpFromEmail: '',
+            smtpFromName: '',
+            imap: {
+                enabled: false,
+                host: '',
+                port: 993,
+                secure: true,
+                user: '',
+                password: '',
+                folder: 'INBOX',
+                processedFolder: ''
+            }
         }
     });
+    const [activeSettingsTab, setActiveSettingsTab] = useState<'whatsapp' | 'lobbypms' | 'boldpayment' | 'doorsystem' | 'email'>('whatsapp');
     const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
     const [searchTerm, setSearchTerm] = useState('');
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -162,8 +208,58 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                     temperature: 0.7,
                     maxTokens: 500
                 }
+            },
+            lobbyPmsSettings: {
+                apiUrl: '',
+                apiKey: '',
+                propertyId: '',
+                autoCreateTasks: false,
+                lateCheckInThreshold: '22:00',
+                notificationChannels: ['email'] as string[],
+                autoSendInvitation: false
+            },
+            boldPaymentSettings: {
+                apiKey: '',
+                merchantId: '',
+                environment: 'sandbox' as 'sandbox' | 'production'
+            },
+            doorSystemSettings: {
+                clientId: '',
+                clientSecret: '',
+                username: '',
+                password: '',
+                apiUrl: 'https://euopen.ttlock.com',
+                lockIds: [] as string[],
+                appName: 'TTLock'
+            },
+            sireSettings: {
+                enabled: false,
+                autoRegisterOnCheckIn: false,
+                apiUrl: '',
+                apiKey: '',
+                apiSecret: '',
+                propertyCode: ''
+            },
+            emailSettings: {
+                smtpHost: '',
+                smtpPort: 587,
+                smtpUser: '',
+                smtpPass: '',
+                smtpFromEmail: '',
+                smtpFromName: '',
+                imap: {
+                    enabled: false,
+                    host: '',
+                    port: 993,
+                    secure: true,
+                    user: '',
+                    password: '',
+                    folder: 'INBOX',
+                    processedFolder: ''
+                }
             }
         });
+        setActiveSettingsTab('whatsapp');
         setEditingBranch(null);
     };
 
@@ -176,15 +272,20 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
     // Modal öffnen für Bearbeitung
     const handleEdit = async (branch: Branch) => {
         setEditingBranch(branch);
-        const existingSettings = branch.whatsappSettings || {};
+        const existingWhatsapp = branch.whatsappSettings || {};
+        const existingLobbyPms = branch.lobbyPmsSettings || {};
+        const existingBoldPayment = branch.boldPaymentSettings || {};
+        const existingDoorSystem = branch.doorSystemSettings || {};
+        const existingEmail = branch.emailSettings || {};
+        
         setFormData({ 
             name: branch.name,
             whatsappSettings: {
-                provider: existingSettings.provider || 'whatsapp-business-api',
-                apiKey: existingSettings.apiKey || '',
-                apiSecret: existingSettings.apiSecret || '',
-                phoneNumberId: existingSettings.phoneNumberId || '',
-                ai: existingSettings.ai || {
+                provider: existingWhatsapp.provider || 'whatsapp-business-api',
+                apiKey: existingWhatsapp.apiKey || '',
+                apiSecret: existingWhatsapp.apiSecret || '',
+                phoneNumberId: existingWhatsapp.phoneNumberId || '',
+                ai: existingWhatsapp.ai || {
                     enabled: false,
                     model: 'gpt-4o',
                     systemPrompt: '',
@@ -192,6 +293,47 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                     sources: [],
                     temperature: 0.7,
                     maxTokens: 500
+                }
+            },
+            lobbyPmsSettings: {
+                apiUrl: existingLobbyPms.apiUrl || '',
+                apiKey: existingLobbyPms.apiKey || '',
+                propertyId: existingLobbyPms.propertyId || '',
+                autoCreateTasks: existingLobbyPms.autoCreateTasks || false,
+                lateCheckInThreshold: existingLobbyPms.lateCheckInThreshold || '22:00',
+                notificationChannels: existingLobbyPms.notificationChannels || ['email'],
+                autoSendInvitation: existingLobbyPms.autoSendInvitation || false
+            },
+            boldPaymentSettings: {
+                apiKey: existingBoldPayment.apiKey || '',
+                merchantId: existingBoldPayment.merchantId || '',
+                environment: existingBoldPayment.environment || 'sandbox'
+            },
+            doorSystemSettings: {
+                clientId: existingDoorSystem.clientId || '',
+                clientSecret: existingDoorSystem.clientSecret || '',
+                username: existingDoorSystem.username || '',
+                password: existingDoorSystem.password || '',
+                apiUrl: existingDoorSystem.apiUrl || 'https://euopen.ttlock.com',
+                lockIds: existingDoorSystem.lockIds || [],
+                appName: existingDoorSystem.appName || 'TTLock'
+            },
+            emailSettings: {
+                smtpHost: existingEmail.smtpHost || '',
+                smtpPort: existingEmail.smtpPort || 587,
+                smtpUser: existingEmail.smtpUser || '',
+                smtpPass: existingEmail.smtpPass || '',
+                smtpFromEmail: existingEmail.smtpFromEmail || '',
+                smtpFromName: existingEmail.smtpFromName || '',
+                imap: existingEmail.imap || {
+                    enabled: false,
+                    host: '',
+                    port: 993,
+                    secure: true,
+                    user: '',
+                    password: '',
+                    folder: 'INBOX',
+                    processedFolder: ''
                 }
             }
         });
@@ -218,7 +360,11 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                 // Branch aktualisieren
                 await axiosInstance.put(API_ENDPOINTS.BRANCHES.UPDATE(editingBranch.id), {
                     name: formData.name.trim(),
-                    whatsappSettings: formData.whatsappSettings
+                    whatsappSettings: formData.whatsappSettings,
+                    lobbyPmsSettings: formData.lobbyPmsSettings,
+                    boldPaymentSettings: formData.boldPaymentSettings,
+                    doorSystemSettings: formData.doorSystemSettings,
+                    emailSettings: formData.emailSettings
                 });
             } else {
                 // Neue Branch erstellen
@@ -579,12 +725,37 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                             />
                                         </div>
 
-                                        {/* WhatsApp Settings - nur beim Bearbeiten */}
+                                        {/* Settings Tabs - nur beim Bearbeiten */}
                                         {editingBranch && (
-                                            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                                                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
-                                                    WhatsApp Settings
-                                                </h4>
+                                            <>
+                                                {/* Tab Navigation */}
+                                                <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
+                                                    <nav className="-mb-px flex space-x-2 overflow-x-auto">
+                                                        {['whatsapp', 'lobbypms', 'boldpayment', 'doorsystem', 'email'].map((tab) => (
+                                                            <button
+                                                                key={tab}
+                                                                type="button"
+                                                                onClick={() => setActiveSettingsTab(tab as any)}
+                                                                className={`py-2 px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
+                                                                    activeSettingsTab === tab
+                                                                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                                                }`}
+                                                            >
+                                                                {tab === 'whatsapp' ? 'WhatsApp' : tab === 'lobbypms' ? 'LobbyPMS' : tab === 'boldpayment' ? 'Bold Payment' : tab === 'doorsystem' ? 'TTLock' : 'Email'}
+                                                            </button>
+                                                        ))}
+                                                    </nav>
+                                                </div>
+
+                                                {/* Tab Content */}
+                                                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                                    {/* WhatsApp Settings Tab */}
+                                                    {activeSettingsTab === 'whatsapp' && (
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                                                                WhatsApp Settings
+                                                            </h4>
                                                 
                                                 <div className="space-y-4">
                                                     <div>
@@ -847,6 +1018,493 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                             </div>
                                         )}
 
+                                                    {/* LobbyPMS Settings Tab */}
+                                                    {activeSettingsTab === 'lobbypms' && (
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                                                                LobbyPMS Settings
+                                                            </h4>
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        API URL
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.lobbyPmsSettings.apiUrl}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            lobbyPmsSettings: { ...formData.lobbyPmsSettings, apiUrl: e.target.value }
+                                                                        })}
+                                                                        placeholder="https://api.lobbypms.com"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        API Key
+                                                                    </label>
+                                                                    <input
+                                                                        type={showSecrets['lobbyPmsApiKey'] ? 'text' : 'password'}
+                                                                        value={formData.lobbyPmsSettings.apiKey}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            lobbyPmsSettings: { ...formData.lobbyPmsSettings, apiKey: e.target.value }
+                                                                        })}
+                                                                        placeholder="API Key"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Property ID
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.lobbyPmsSettings.propertyId}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            lobbyPmsSettings: { ...formData.lobbyPmsSettings, propertyId: e.target.value }
+                                                                        })}
+                                                                        placeholder="Property ID"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Bold Payment Settings Tab */}
+                                                    {activeSettingsTab === 'boldpayment' && (
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                                                                Bold Payment Settings
+                                                            </h4>
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        API Key
+                                                                    </label>
+                                                                    <input
+                                                                        type={showSecrets['boldPaymentApiKey'] ? 'text' : 'password'}
+                                                                        value={formData.boldPaymentSettings.apiKey}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, apiKey: e.target.value }
+                                                                        })}
+                                                                        placeholder="API Key"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Merchant ID
+                                                                    </label>
+                                                                    <input
+                                                                        type={showSecrets['boldPaymentMerchantId'] ? 'text' : 'password'}
+                                                                        value={formData.boldPaymentSettings.merchantId}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, merchantId: e.target.value }
+                                                                        })}
+                                                                        placeholder="Merchant ID"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Environment
+                                                                    </label>
+                                                                    <select
+                                                                        value={formData.boldPaymentSettings.environment}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, environment: e.target.value as 'sandbox' | 'production' }
+                                                                        })}
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    >
+                                                                        <option value="sandbox">Sandbox</option>
+                                                                        <option value="production">Production</option>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* TTLock Settings Tab */}
+                                                    {activeSettingsTab === 'doorsystem' && (
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                                                                TTLock Settings
+                                                            </h4>
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Client ID
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.doorSystemSettings.clientId}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            doorSystemSettings: { ...formData.doorSystemSettings, clientId: e.target.value }
+                                                                        })}
+                                                                        placeholder="Client ID"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Client Secret
+                                                                    </label>
+                                                                    <input
+                                                                        type={showSecrets['doorSystemClientSecret'] ? 'text' : 'password'}
+                                                                        value={formData.doorSystemSettings.clientSecret}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            doorSystemSettings: { ...formData.doorSystemSettings, clientSecret: e.target.value }
+                                                                        })}
+                                                                        placeholder="Client Secret"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Username
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.doorSystemSettings.username}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            doorSystemSettings: { ...formData.doorSystemSettings, username: e.target.value }
+                                                                        })}
+                                                                        placeholder="Username"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Password
+                                                                    </label>
+                                                                    <input
+                                                                        type={showSecrets['doorSystemPassword'] ? 'text' : 'password'}
+                                                                        value={formData.doorSystemSettings.password}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            doorSystemSettings: { ...formData.doorSystemSettings, password: e.target.value }
+                                                                        })}
+                                                                        placeholder="Password"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Email Settings Tab */}
+                                                    {activeSettingsTab === 'email' && (
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                                                                Email Settings
+                                                            </h4>
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP Host
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.emailSettings.smtpHost}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            emailSettings: { ...formData.emailSettings, smtpHost: e.target.value }
+                                                                        })}
+                                                                        placeholder="smtp.example.com"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP Port
+                                                                    </label>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={formData.emailSettings.smtpPort}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            emailSettings: { ...formData.emailSettings, smtpPort: parseInt(e.target.value) || 587 }
+                                                                        })}
+                                                                        placeholder="587"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP User
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.emailSettings.smtpUser}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            emailSettings: { ...formData.emailSettings, smtpUser: e.target.value }
+                                                                        })}
+                                                                        placeholder="user@example.com"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP Password
+                                                                    </label>
+                                                                    <div className="relative">
+                                                                        <input
+                                                                            type={showSecrets['emailSmtpPass'] ? 'text' : 'password'}
+                                                                            value={formData.emailSettings.smtpPass}
+                                                                            onChange={(e) => setFormData({
+                                                                                ...formData,
+                                                                                emailSettings: { ...formData.emailSettings, smtpPass: e.target.value }
+                                                                            })}
+                                                                            placeholder="Password"
+                                                                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2 pr-10"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setShowSecrets({ ...showSecrets, emailSmtpPass: !showSecrets['emailSmtpPass'] })}
+                                                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                                                        >
+                                                                            {showSecrets['emailSmtpPass'] ? (
+                                                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0L3 3m3.29 3.29L12 12m-5.71-5.71L12 12" />
+                                                                                </svg>
+                                                                            ) : (
+                                                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                                </svg>
+                                                                            )}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP From Email
+                                                                    </label>
+                                                                    <input
+                                                                        type="email"
+                                                                        value={formData.emailSettings.smtpFromEmail}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            emailSettings: { ...formData.emailSettings, smtpFromEmail: e.target.value }
+                                                                        })}
+                                                                        placeholder="noreply@example.com"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP From Name
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.emailSettings.smtpFromName}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            emailSettings: { ...formData.emailSettings, smtpFromName: e.target.value }
+                                                                        })}
+                                                                        placeholder="Branch Name"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+
+                                                                {/* IMAP Settings Section */}
+                                                                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                                                                    <div className="flex items-center justify-between mb-4">
+                                                                        <h5 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                            IMAP Settings (Email Reading)
+                                                                        </h5>
+                                                                        <label className="relative inline-flex items-center cursor-pointer">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={formData.emailSettings.imap.enabled}
+                                                                                onChange={(e) => setFormData({
+                                                                                    ...formData,
+                                                                                    emailSettings: {
+                                                                                        ...formData.emailSettings,
+                                                                                        imap: {
+                                                                                            ...formData.emailSettings.imap,
+                                                                                            enabled: e.target.checked
+                                                                                        }
+                                                                                    }
+                                                                                })}
+                                                                                className="sr-only peer"
+                                                                            />
+                                                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                                                            <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                                                                                {formData.emailSettings.imap.enabled ? 'Enabled' : 'Disabled'}
+                                                                            </span>
+                                                                        </label>
+                                                                    </div>
+
+                                                                    {formData.emailSettings.imap.enabled && (
+                                                                        <div className="space-y-4">
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    IMAP Host
+                                                                                </label>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={formData.emailSettings.imap.host}
+                                                                                    onChange={(e) => setFormData({
+                                                                                        ...formData,
+                                                                                        emailSettings: {
+                                                                                            ...formData.emailSettings,
+                                                                                            imap: { ...formData.emailSettings.imap, host: e.target.value }
+                                                                                        }
+                                                                                    })}
+                                                                                    placeholder="imap.example.com"
+                                                                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    IMAP Port
+                                                                                </label>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    value={formData.emailSettings.imap.port}
+                                                                                    onChange={(e) => setFormData({
+                                                                                        ...formData,
+                                                                                        emailSettings: {
+                                                                                            ...formData.emailSettings,
+                                                                                            imap: { ...formData.emailSettings.imap, port: parseInt(e.target.value) || 993 }
+                                                                                        }
+                                                                                    })}
+                                                                                    placeholder="993"
+                                                                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={formData.emailSettings.imap.secure}
+                                                                                        onChange={(e) => setFormData({
+                                                                                            ...formData,
+                                                                                            emailSettings: {
+                                                                                                ...formData.emailSettings,
+                                                                                                imap: { ...formData.emailSettings.imap, secure: e.target.checked }
+                                                                                            }
+                                                                                        })}
+                                                                                        className="sr-only peer"
+                                                                                    />
+                                                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                                                                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                                                                                        Secure (SSL/TLS)
+                                                                                    </span>
+                                                                                </label>
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    IMAP User
+                                                                                </label>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={formData.emailSettings.imap.user}
+                                                                                    onChange={(e) => setFormData({
+                                                                                        ...formData,
+                                                                                        emailSettings: {
+                                                                                            ...formData.emailSettings,
+                                                                                            imap: { ...formData.emailSettings.imap, user: e.target.value }
+                                                                                        }
+                                                                                    })}
+                                                                                    placeholder="user@example.com"
+                                                                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    IMAP Password
+                                                                                </label>
+                                                                                <div className="relative">
+                                                                                    <input
+                                                                                        type={showSecrets['emailImapPass'] ? 'text' : 'password'}
+                                                                                        value={formData.emailSettings.imap.password}
+                                                                                        onChange={(e) => setFormData({
+                                                                                            ...formData,
+                                                                                            emailSettings: {
+                                                                                                ...formData.emailSettings,
+                                                                                                imap: { ...formData.emailSettings.imap, password: e.target.value }
+                                                                                            }
+                                                                                        })}
+                                                                                        placeholder="Password"
+                                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2 pr-10"
+                                                                                    />
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => setShowSecrets({ ...showSecrets, emailImapPass: !showSecrets['emailImapPass'] })}
+                                                                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                                                                    >
+                                                                                        {showSecrets['emailImapPass'] ? (
+                                                                                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0L3 3m3.29 3.29L12 12m-5.71-5.71L12 12" />
+                                                                                            </svg>
+                                                                                        ) : (
+                                                                                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                                            </svg>
+                                                                                        )}
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    IMAP Folder
+                                                                                </label>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={formData.emailSettings.imap.folder}
+                                                                                    onChange={(e) => setFormData({
+                                                                                        ...formData,
+                                                                                        emailSettings: {
+                                                                                            ...formData.emailSettings,
+                                                                                            imap: { ...formData.emailSettings.imap, folder: e.target.value }
+                                                                                        }
+                                                                                    })}
+                                                                                    placeholder="INBOX"
+                                                                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    Processed Folder (optional)
+                                                                                </label>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={formData.emailSettings.imap.processedFolder}
+                                                                                    onChange={(e) => setFormData({
+                                                                                        ...formData,
+                                                                                        emailSettings: {
+                                                                                            ...formData.emailSettings,
+                                                                                            imap: { ...formData.emailSettings.imap, processedFolder: e.target.value }
+                                                                                        }
+                                                                                    })}
+                                                                                    placeholder="Processed"
+                                                                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </>
+                                        )}
+
                                         {/* Buttons */}
                                         <div className="flex justify-end pt-4 gap-2">
                                             <div className="relative group">
@@ -878,8 +1536,8 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                             </div>
                         </Dialog>
                     ) : (
-                        // Desktop - Sidepane
-                        <div className="fixed inset-y-0 right-0 w-full sm:w-96 bg-white dark:bg-gray-800 shadow-xl z-50 flex flex-col">
+                        // Desktop - Sidepane (dynamische Breite basierend auf Tab-Anzahl)
+                        <div className="fixed inset-y-0 right-0 w-full sm:min-w-[500px] sm:max-w-[600px] bg-white dark:bg-gray-800 shadow-xl z-50 flex flex-col">
                             {/* Header */}
                             <div className="px-6 py-4 border-b dark:border-gray-700 flex-shrink-0">
                                 <div className="flex items-center justify-between">
@@ -916,34 +1574,59 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                             />
                                         </div>
 
-                                        {/* WhatsApp Settings - nur beim Bearbeiten */}
+                                        {/* Settings Tabs - nur beim Bearbeiten */}
                                         {editingBranch && (
-                                            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                                                <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
-                                                    WhatsApp Settings
-                                                </h4>
-                                                
-                                                <div className="space-y-4">
-                                                    <div>
-                                                        <label htmlFor="whatsappProvider" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                                                            Provider
-                                                        </label>
-                                                        <select
-                                                            id="whatsappProvider"
-                                                            value={formData.whatsappSettings.provider}
-                                                            onChange={(e) => setFormData({
-                                                                ...formData,
-                                                                whatsappSettings: {
-                                                                    ...formData.whatsappSettings,
-                                                                    provider: e.target.value as 'twilio' | 'whatsapp-business-api'
-                                                                }
-                                                            })}
-                                                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
-                                                        >
-                                                            <option value="twilio">Twilio</option>
-                                                            <option value="whatsapp-business-api">WhatsApp Business API</option>
-                                                        </select>
-                                                    </div>
+                                            <>
+                                                {/* Tab Navigation */}
+                                                <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
+                                                    <nav className="-mb-px flex space-x-2 overflow-x-auto">
+                                                        {['whatsapp', 'lobbypms', 'boldpayment', 'doorsystem', 'email'].map((tab) => (
+                                                            <button
+                                                                key={tab}
+                                                                type="button"
+                                                                onClick={() => setActiveSettingsTab(tab as any)}
+                                                                className={`py-2 px-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
+                                                                    activeSettingsTab === tab
+                                                                        ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                                                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                                                }`}
+                                                            >
+                                                                {tab === 'whatsapp' ? 'WhatsApp' : tab === 'lobbypms' ? 'LobbyPMS' : tab === 'boldpayment' ? 'Bold Payment' : tab === 'doorsystem' ? 'TTLock' : 'Email'}
+                                                            </button>
+                                                        ))}
+                                                    </nav>
+                                                </div>
+
+                                                {/* Tab Content */}
+                                                <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                                                    {/* WhatsApp Settings Tab */}
+                                                    {activeSettingsTab === 'whatsapp' && (
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                                                                WhatsApp Settings
+                                                            </h4>
+                                                            
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label htmlFor="whatsappProviderDesktop" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Provider
+                                                                    </label>
+                                                                    <select
+                                                                        id="whatsappProviderDesktop"
+                                                                        value={formData.whatsappSettings.provider}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            whatsappSettings: {
+                                                                                ...formData.whatsappSettings,
+                                                                                provider: e.target.value as 'twilio' | 'whatsapp-business-api'
+                                                                            }
+                                                                        })}
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    >
+                                                                        <option value="twilio">Twilio</option>
+                                                                        <option value="whatsapp-business-api">WhatsApp Business API</option>
+                                                                    </select>
+                                                                </div>
 
                                                     <div>
                                                         <label htmlFor="whatsappApiKey" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -1182,6 +1865,493 @@ const BranchManagementTab: React.FC<BranchManagementTabProps> = ({ onError }) =>
                                                     </div>
                                                 </div>
                                             </div>
+                                        )}
+
+                                                    {/* LobbyPMS Settings Tab */}
+                                                    {activeSettingsTab === 'lobbypms' && (
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                                                                LobbyPMS Settings
+                                                            </h4>
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        API URL
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.lobbyPmsSettings.apiUrl}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            lobbyPmsSettings: { ...formData.lobbyPmsSettings, apiUrl: e.target.value }
+                                                                        })}
+                                                                        placeholder="https://api.lobbypms.com"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        API Key
+                                                                    </label>
+                                                                    <input
+                                                                        type={showSecrets['lobbyPmsApiKey'] ? 'text' : 'password'}
+                                                                        value={formData.lobbyPmsSettings.apiKey}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            lobbyPmsSettings: { ...formData.lobbyPmsSettings, apiKey: e.target.value }
+                                                                        })}
+                                                                        placeholder="API Key"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Property ID
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.lobbyPmsSettings.propertyId}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            lobbyPmsSettings: { ...formData.lobbyPmsSettings, propertyId: e.target.value }
+                                                                        })}
+                                                                        placeholder="Property ID"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Bold Payment Settings Tab */}
+                                                    {activeSettingsTab === 'boldpayment' && (
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                                                                Bold Payment Settings
+                                                            </h4>
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        API Key
+                                                                    </label>
+                                                                    <input
+                                                                        type={showSecrets['boldPaymentApiKey'] ? 'text' : 'password'}
+                                                                        value={formData.boldPaymentSettings.apiKey}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, apiKey: e.target.value }
+                                                                        })}
+                                                                        placeholder="API Key"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Merchant ID
+                                                                    </label>
+                                                                    <input
+                                                                        type={showSecrets['boldPaymentMerchantId'] ? 'text' : 'password'}
+                                                                        value={formData.boldPaymentSettings.merchantId}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, merchantId: e.target.value }
+                                                                        })}
+                                                                        placeholder="Merchant ID"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Environment
+                                                                    </label>
+                                                                    <select
+                                                                        value={formData.boldPaymentSettings.environment}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            boldPaymentSettings: { ...formData.boldPaymentSettings, environment: e.target.value as 'sandbox' | 'production' }
+                                                                        })}
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    >
+                                                                        <option value="sandbox">Sandbox</option>
+                                                                        <option value="production">Production</option>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* TTLock Settings Tab */}
+                                                    {activeSettingsTab === 'doorsystem' && (
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                                                                TTLock Settings
+                                                            </h4>
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Client ID
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.doorSystemSettings.clientId}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            doorSystemSettings: { ...formData.doorSystemSettings, clientId: e.target.value }
+                                                                        })}
+                                                                        placeholder="Client ID"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Client Secret
+                                                                    </label>
+                                                                    <input
+                                                                        type={showSecrets['doorSystemClientSecret'] ? 'text' : 'password'}
+                                                                        value={formData.doorSystemSettings.clientSecret}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            doorSystemSettings: { ...formData.doorSystemSettings, clientSecret: e.target.value }
+                                                                        })}
+                                                                        placeholder="Client Secret"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Username
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.doorSystemSettings.username}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            doorSystemSettings: { ...formData.doorSystemSettings, username: e.target.value }
+                                                                        })}
+                                                                        placeholder="Username"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        Password
+                                                                    </label>
+                                                                    <input
+                                                                        type={showSecrets['doorSystemPassword'] ? 'text' : 'password'}
+                                                                        value={formData.doorSystemSettings.password}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            doorSystemSettings: { ...formData.doorSystemSettings, password: e.target.value }
+                                                                        })}
+                                                                        placeholder="Password"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Email Settings Tab */}
+                                                    {activeSettingsTab === 'email' && (
+                                                        <div>
+                                                            <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">
+                                                                Email Settings
+                                                            </h4>
+                                                            <div className="space-y-4">
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP Host
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.emailSettings.smtpHost}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            emailSettings: { ...formData.emailSettings, smtpHost: e.target.value }
+                                                                        })}
+                                                                        placeholder="smtp.example.com"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP Port
+                                                                    </label>
+                                                                    <input
+                                                                        type="number"
+                                                                        value={formData.emailSettings.smtpPort}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            emailSettings: { ...formData.emailSettings, smtpPort: parseInt(e.target.value) || 587 }
+                                                                        })}
+                                                                        placeholder="587"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP User
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.emailSettings.smtpUser}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            emailSettings: { ...formData.emailSettings, smtpUser: e.target.value }
+                                                                        })}
+                                                                        placeholder="user@example.com"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP Password
+                                                                    </label>
+                                                                    <div className="relative">
+                                                                        <input
+                                                                            type={showSecrets['emailSmtpPass'] ? 'text' : 'password'}
+                                                                            value={formData.emailSettings.smtpPass}
+                                                                            onChange={(e) => setFormData({
+                                                                                ...formData,
+                                                                                emailSettings: { ...formData.emailSettings, smtpPass: e.target.value }
+                                                                            })}
+                                                                            placeholder="Password"
+                                                                            className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2 pr-10"
+                                                                        />
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setShowSecrets({ ...showSecrets, emailSmtpPass: !showSecrets['emailSmtpPass'] })}
+                                                                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                                                        >
+                                                                            {showSecrets['emailSmtpPass'] ? (
+                                                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0L3 3m3.29 3.29L12 12m-5.71-5.71L12 12" />
+                                                                                </svg>
+                                                                            ) : (
+                                                                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                                </svg>
+                                                                            )}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP From Email
+                                                                    </label>
+                                                                    <input
+                                                                        type="email"
+                                                                        value={formData.emailSettings.smtpFromEmail}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            emailSettings: { ...formData.emailSettings, smtpFromEmail: e.target.value }
+                                                                        })}
+                                                                        placeholder="noreply@example.com"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+                                                                <div>
+                                                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                        SMTP From Name
+                                                                    </label>
+                                                                    <input
+                                                                        type="text"
+                                                                        value={formData.emailSettings.smtpFromName}
+                                                                        onChange={(e) => setFormData({
+                                                                            ...formData,
+                                                                            emailSettings: { ...formData.emailSettings, smtpFromName: e.target.value }
+                                                                        })}
+                                                                        placeholder="Branch Name"
+                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                    />
+                                                                </div>
+
+                                                                {/* IMAP Settings Section */}
+                                                                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+                                                                    <div className="flex items-center justify-between mb-4">
+                                                                        <h5 className="text-sm font-semibold text-gray-900 dark:text-white">
+                                                                            IMAP Settings (Email Reading)
+                                                                        </h5>
+                                                                        <label className="relative inline-flex items-center cursor-pointer">
+                                                                            <input
+                                                                                type="checkbox"
+                                                                                checked={formData.emailSettings.imap.enabled}
+                                                                                onChange={(e) => setFormData({
+                                                                                    ...formData,
+                                                                                    emailSettings: {
+                                                                                        ...formData.emailSettings,
+                                                                                        imap: {
+                                                                                            ...formData.emailSettings.imap,
+                                                                                            enabled: e.target.checked
+                                                                                        }
+                                                                                    }
+                                                                                })}
+                                                                                className="sr-only peer"
+                                                                            />
+                                                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                                                            <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                                                                                {formData.emailSettings.imap.enabled ? 'Enabled' : 'Disabled'}
+                                                                            </span>
+                                                                        </label>
+                                                                    </div>
+
+                                                                    {formData.emailSettings.imap.enabled && (
+                                                                        <div className="space-y-4">
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    IMAP Host
+                                                                                </label>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={formData.emailSettings.imap.host}
+                                                                                    onChange={(e) => setFormData({
+                                                                                        ...formData,
+                                                                                        emailSettings: {
+                                                                                            ...formData.emailSettings,
+                                                                                            imap: { ...formData.emailSettings.imap, host: e.target.value }
+                                                                                        }
+                                                                                    })}
+                                                                                    placeholder="imap.example.com"
+                                                                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    IMAP Port
+                                                                                </label>
+                                                                                <input
+                                                                                    type="number"
+                                                                                    value={formData.emailSettings.imap.port}
+                                                                                    onChange={(e) => setFormData({
+                                                                                        ...formData,
+                                                                                        emailSettings: {
+                                                                                            ...formData.emailSettings,
+                                                                                            imap: { ...formData.emailSettings.imap, port: parseInt(e.target.value) || 993 }
+                                                                                        }
+                                                                                    })}
+                                                                                    placeholder="993"
+                                                                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={formData.emailSettings.imap.secure}
+                                                                                        onChange={(e) => setFormData({
+                                                                                            ...formData,
+                                                                                            emailSettings: {
+                                                                                                ...formData.emailSettings,
+                                                                                                imap: { ...formData.emailSettings.imap, secure: e.target.checked }
+                                                                                            }
+                                                                                        })}
+                                                                                        className="sr-only peer"
+                                                                                    />
+                                                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                                                                                    <span className="ml-3 text-sm text-gray-700 dark:text-gray-300">
+                                                                                        Secure (SSL/TLS)
+                                                                                    </span>
+                                                                                </label>
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    IMAP User
+                                                                                </label>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={formData.emailSettings.imap.user}
+                                                                                    onChange={(e) => setFormData({
+                                                                                        ...formData,
+                                                                                        emailSettings: {
+                                                                                            ...formData.emailSettings,
+                                                                                            imap: { ...formData.emailSettings.imap, user: e.target.value }
+                                                                                        }
+                                                                                    })}
+                                                                                    placeholder="user@example.com"
+                                                                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    IMAP Password
+                                                                                </label>
+                                                                                <div className="relative">
+                                                                                    <input
+                                                                                        type={showSecrets['emailImapPass'] ? 'text' : 'password'}
+                                                                                        value={formData.emailSettings.imap.password}
+                                                                                        onChange={(e) => setFormData({
+                                                                                            ...formData,
+                                                                                            emailSettings: {
+                                                                                                ...formData.emailSettings,
+                                                                                                imap: { ...formData.emailSettings.imap, password: e.target.value }
+                                                                                            }
+                                                                                        })}
+                                                                                        placeholder="Password"
+                                                                                        className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2 pr-10"
+                                                                                    />
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => setShowSecrets({ ...showSecrets, emailImapPass: !showSecrets['emailImapPass'] })}
+                                                                                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                                                                                    >
+                                                                                        {showSecrets['emailImapPass'] ? (
+                                                                                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0L3 3m3.29 3.29L12 12m-5.71-5.71L12 12" />
+                                                                                            </svg>
+                                                                                        ) : (
+                                                                                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                                                            </svg>
+                                                                                        )}
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    IMAP Folder
+                                                                                </label>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={formData.emailSettings.imap.folder}
+                                                                                    onChange={(e) => setFormData({
+                                                                                        ...formData,
+                                                                                        emailSettings: {
+                                                                                            ...formData.emailSettings,
+                                                                                            imap: { ...formData.emailSettings.imap, folder: e.target.value }
+                                                                                        }
+                                                                                    })}
+                                                                                    placeholder="INBOX"
+                                                                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                />
+                                                                            </div>
+                                                                            <div>
+                                                                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                                                    Processed Folder (optional)
+                                                                                </label>
+                                                                                <input
+                                                                                    type="text"
+                                                                                    value={formData.emailSettings.imap.processedFolder}
+                                                                                    onChange={(e) => setFormData({
+                                                                                        ...formData,
+                                                                                        emailSettings: {
+                                                                                            ...formData.emailSettings,
+                                                                                            imap: { ...formData.emailSettings.imap, processedFolder: e.target.value }
+                                                                                        }
+                                                                                    })}
+                                                                                    placeholder="Processed"
+                                                                                    className="mt-1 block w-full rounded-md border border-gray-300 dark:border-gray-600 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm dark:bg-gray-700 dark:text-white px-3 py-2"
+                                                                                />
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </>
                                         )}
                                     </div>
                                 </div>

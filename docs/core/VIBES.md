@@ -137,6 +137,13 @@
   - Ensure keyboard navigability
   - Maintain sufficient color contrast
 
+- **Spacing Standards**
+  - Use `space-y-4` (16px) for vertical spacing in lists/containers with flex column layout
+  - Use `gap-4` (16px) for grid layouts
+  - **IMPORTANT:** Do NOT add additional `mb-*` (margin-bottom) classes on child elements when parent uses `space-y-*`
+  - This prevents double spacing (e.g., `space-y-4` + `mb-4` = 32px instead of 16px)
+  - Standard spacing: `space-y-4` for vertical lists, `gap-4` for grids
+
 ## Security vulnerabilities to prevent
 
 - **SQL/NoSQL injection**

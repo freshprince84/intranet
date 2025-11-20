@@ -138,6 +138,16 @@ const ReservationCard: React.FC<ReservationCardProps> = ({ reservation, onClick,
           </div>
         )}
 
+        {/* Branch */}
+        {reservation.branch && (
+          <div className="flex items-center text-gray-600 dark:text-gray-400">
+            <HomeIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+            <span>
+              {t('branches.name', 'Branch')}: {reservation.branch.name}
+            </span>
+          </div>
+        )}
+
         {/* Icons für Status */}
         <div className="flex items-center gap-3 pt-2 border-t border-gray-200 dark:border-gray-700">
           {reservation.onlineCheckInCompleted && (

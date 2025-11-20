@@ -1,6 +1,6 @@
 import { PrismaClient, Reservation, ReservationStatus, PaymentStatus } from '@prisma/client';
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { decryptApiSettings } from '../utils/encryption';
+import { decryptApiSettings, decryptBranchApiSettings } from '../utils/encryption';
 import { TaskAutomationService } from './taskAutomationService';
 
 const prisma = new PrismaClient();
@@ -41,17 +41,23 @@ export class LobbyPmsService {
   private apiUrl: string;
   private apiKey: string;
   private propertyId?: string;
-  private organizationId: number;
+  private organizationId?: number;
+  private branchId?: number;
   private axiosInstance: AxiosInstance;
 
   /**
    * Erstellt eine neue LobbyPMS Service-Instanz
    * 
-   * @param organizationId - ID der Organisation
-   * @throws Error wenn LobbyPMS nicht konfiguriert ist
+   * @param organizationId - ID der Organisation (optional, wenn branchId gesetzt)
+   * @param branchId - ID des Branches (optional, wenn organizationId gesetzt)
+   * @throws Error wenn weder organizationId noch branchId angegeben ist
    */
-  constructor(organizationId: number) {
+  constructor(organizationId?: number, branchId?: number) {
+    if (!organizationId && !branchId) {
+      throw new Error('Entweder organizationId oder branchId muss angegeben werden');
+    }
     this.organizationId = organizationId;
+    this.branchId = branchId;
     // Settings werden beim ersten API-Call geladen (lazy loading)
     this.axiosInstance = axios.create({
       baseURL: 'https://app.lobbypms.com/api', // Placeholder, wird in loadSettings überschrieben
@@ -60,10 +66,50 @@ export class LobbyPmsService {
   }
 
   /**
-   * Lädt LobbyPMS Settings aus der Organisation
+   * Lädt LobbyPMS Settings aus Branch oder Organisation (mit Fallback)
    * Muss vor jedem API-Call aufgerufen werden
    */
   private async loadSettings(): Promise<void> {
+    // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
+    if (this.branchId) {
+      const branch = await prisma.branch.findUnique({
+        where: { id: this.branchId },
+        select: { 
+          lobbyPmsSettings: true, 
+          organizationId: true 
+        }
+      });
+
+      if (branch?.lobbyPmsSettings) {
+        try {
+          const settings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
+          const lobbyPmsSettings = settings?.lobbyPms || settings;
+
+          if (lobbyPmsSettings?.apiKey) {
+            this.apiUrl = lobbyPmsSettings.apiUrl || 'https://api.lobbypms.com';
+            this.apiKey = lobbyPmsSettings.apiKey;
+            this.propertyId = lobbyPmsSettings.propertyId;
+            this.axiosInstance = this.createAxiosInstance();
+            console.log(`[LobbyPMS] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
+            return; // Erfolgreich geladen
+          }
+        } catch (error) {
+          console.warn(`[LobbyPMS] Fehler beim Laden der Branch Settings:`, error);
+          // Fallback auf Organization Settings
+        }
+
+        // Fallback: Lade Organization Settings
+        if (branch.organizationId) {
+          this.organizationId = branch.organizationId;
+        }
+      } else if (branch?.organizationId) {
+        // Branch hat keine Settings, aber Organization ID
+        this.organizationId = branch.organizationId;
+      }
+    }
+
+    // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
+    if (this.organizationId) {
     const organization = await prisma.organization.findUnique({
       where: { id: this.organizationId },
       select: { settings: true }
@@ -90,6 +136,22 @@ export class LobbyPmsService {
 
     // Erstelle Axios-Instanz mit korrekten Settings
     this.axiosInstance = this.createAxiosInstance();
+      return;
+    }
+
+    throw new Error('LobbyPMS Settings nicht gefunden (weder Branch noch Organization)');
+  }
+
+  /**
+   * Statische Factory-Methode: Erstellt Service für Branch
+   * 
+   * @param branchId - ID des Branches
+   * @returns LobbyPmsService-Instanz
+   */
+  static async createForBranch(branchId: number): Promise<LobbyPmsService> {
+    const service = new LobbyPmsService(undefined, branchId);
+    await service.loadSettings();
+    return service;
   }
 
   /**
@@ -159,7 +221,7 @@ export class LobbyPmsService {
         params.property_id = this.propertyId;
       }
 
-      const response = await this.axiosInstance.get<any>('/reservations', {
+      const response = await this.axiosInstance.get<any>('/api/v1/bookings', {
         params,
         validateStatus: (status) => status < 500 // Akzeptiere 4xx als gültige Antwort
       });
@@ -170,7 +232,8 @@ export class LobbyPmsService {
         throw new Error('LobbyPMS API Endpoint nicht gefunden. Bitte prüfe die API-Dokumentation für den korrekten Endpoint.');
       }
 
-      if (responseData && typeof responseData === 'object' && responseData.success && responseData.data) {
+      // LobbyPMS gibt { data: [...], meta: {...} } zurück
+      if (responseData && typeof responseData === 'object' && responseData.data && Array.isArray(responseData.data)) {
         return responseData.data;
       }
 
@@ -179,8 +242,8 @@ export class LobbyPmsService {
         return responseData;
       }
 
-      // Fallback: data-Array direkt im Response
-      if (responseData && typeof responseData === 'object' && responseData.data && Array.isArray(responseData.data)) {
+      // Fallback: success-Format
+      if (responseData && typeof responseData === 'object' && responseData.success && responseData.data) {
         return responseData.data;
       }
 
@@ -367,7 +430,8 @@ export class LobbyPmsService {
       roomDescription: lobbyReservation.room_description || null,
       status: mapStatus(lobbyReservation.status),
       paymentStatus: mapPaymentStatus(lobbyReservation.payment_status),
-      organizationId: this.organizationId,
+      organizationId: this.organizationId!,
+      branchId: this.branchId || null,
     };
 
     // Upsert: Erstelle oder aktualisiere Reservierung

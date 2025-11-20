@@ -221,12 +221,8 @@ class EmailReservationService {
                         try {
                             const reservation = yield this.processEmail(email, organizationId);
                             if (reservation) {
-                                // Markiere Email als gelesen
-                                yield emailService.markAsRead(email.messageId);
-                                // Verschiebe Email in Processed-Ordner (falls konfiguriert)
-                                if (emailConfig.processedFolder) {
-                                    yield emailService.moveToFolder(email.messageId, emailConfig.processedFolder);
-                                }
+                                // WICHTIG: Email wird NICHT verschoben oder markiert - nur ausgelesen und in Ruhe gelassen!
+                                // Keine markAsRead() oder moveToFolder() Aufrufe mehr!
                                 processedCount++;
                                 console.log(`[EmailReservation] ✅ Email ${email.messageId} erfolgreich verarbeitet (Reservation ID: ${reservation.id})`);
                             }

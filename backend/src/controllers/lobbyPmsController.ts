@@ -4,7 +4,6 @@ import { PrismaClient } from '@prisma/client';
 import { getDataIsolationFilter } from '../middleware/organization';
 import { ReservationTaskService } from '../services/reservationTaskService';
 import { ReservationNotificationService } from '../services/reservationNotificationService';
-import { SireService } from '../services/sireService';
 
 const prisma = new PrismaClient();
 
@@ -206,7 +205,7 @@ export const checkInReservation = async (req: AuthenticatedRequest, res: Respons
     // Hole lokale Reservierung
     const localReservation = await prisma.reservation.findUnique({
       where: { lobbyReservationId: id },
-      include: { task: true }
+      include: { task: true, branch: true }
     });
 
     if (!localReservation) {
@@ -217,7 +216,9 @@ export const checkInReservation = async (req: AuthenticatedRequest, res: Respons
     }
 
     // Aktualisiere Status in LobbyPMS
-    const service = new LobbyPmsService(organizationId);
+    const service = localReservation.branchId
+      ? await LobbyPmsService.createForBranch(localReservation.branchId)
+      : new LobbyPmsService(organizationId);
     await service.updateReservationStatus(id, 'checked_in');
 
     // Aktualisiere lokale Reservierung
@@ -227,52 +228,26 @@ export const checkInReservation = async (req: AuthenticatedRequest, res: Respons
         status: 'checked_in' as any,
         onlineCheckInCompleted: true,
         onlineCheckInCompletedAt: new Date()
-      }
+      },
+      include: { branch: true }
     });
 
-      // Aktualisiere verknüpften Task falls vorhanden
-      const userId = parseInt(req.userId);
-      await ReservationTaskService.completeTaskOnCheckIn(localReservation.id, userId);
+    // Aktualisiere verknüpften Task falls vorhanden
+    const userId = parseInt(req.userId);
+    await ReservationTaskService.completeTaskOnCheckIn(localReservation.id, userId);
 
-      // Automatische SIRE-Registrierung (wenn aktiviert)
-      try {
-        const organization = await prisma.organization.findUnique({
-          where: { id: organizationId },
-          select: { settings: true }
-        });
+    // Sende Check-in-Bestätigung
+    try {
+      await ReservationNotificationService.sendCheckInConfirmation(localReservation.id);
+    } catch (error) {
+      console.error('Fehler beim Versenden der Check-in-Bestätigung:', error);
+      // Fehler nicht weiterwerfen, da Bestätigung optional ist
+    }
 
-        if (organization?.settings) {
-          const settings = organization.settings as any;
-          const sireSettings = settings?.sire;
-
-          if (sireSettings?.enabled && sireSettings?.autoRegisterOnCheckIn) {
-            const sireService = new SireService(organizationId);
-            const sireResult = await sireService.registerGuest(updatedReservation);
-
-            if (sireResult.success) {
-              console.log(`[LobbyPMS] SIRE-Registrierung erfolgreich für Reservierung ${updatedReservation.id}`);
-            } else {
-              console.warn(`[LobbyPMS] SIRE-Registrierung fehlgeschlagen: ${sireResult.error}`);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Fehler bei automatischer SIRE-Registrierung:', error);
-        // Fehler nicht weiterwerfen, da SIRE-Registrierung optional ist
-      }
-
-      // Sende Check-in-Bestätigung
-      try {
-        await ReservationNotificationService.sendCheckInConfirmation(localReservation.id);
-      } catch (error) {
-        console.error('Fehler beim Versenden der Check-in-Bestätigung:', error);
-        // Fehler nicht weiterwerfen, da Bestätigung optional ist
-      }
-
-      res.json({
-        success: true,
-        data: updatedReservation
-      });
+    res.json({
+      success: true,
+      data: updatedReservation
+    });
   } catch (error) {
     console.error('Error checking in reservation:', error);
     res.status(500).json({
@@ -403,115 +378,4 @@ export const validateConnection = async (req: AuthenticatedRequest, res: Respons
   }
 };
 
-/**
- * POST /api/lobby-pms/reservations/:id/register-sire
- * Manuelle SIRE-Registrierung für eine Reservierung
- */
-export const registerSire = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const organizationId = req.organizationId;
-
-    const reservation = await prisma.reservation.findUnique({
-      where: { id: parseInt(id) }
-    });
-
-    if (!reservation) {
-      return res.status(404).json({
-        success: false,
-        message: 'Reservierung nicht gefunden'
-      });
-    }
-
-    if (reservation.organizationId !== organizationId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Keine Berechtigung für diese Reservierung'
-      });
-    }
-
-    const sireService = new SireService(organizationId);
-    const result = await sireService.registerGuest(reservation);
-
-    if (result.success) {
-      res.json({
-        success: true,
-        registrationId: result.registrationId,
-        message: 'Gast erfolgreich bei SIRE registriert'
-      });
-    } else {
-      res.status(400).json({
-        success: false,
-        error: result.error,
-        message: 'SIRE-Registrierung fehlgeschlagen'
-      });
-    }
-  } catch (error) {
-    console.error('Error registering guest with SIRE:', error);
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Fehler bei der SIRE-Registrierung'
-    });
-  }
-};
-
-/**
- * GET /api/lobby-pms/reservations/:id/sire-status
- * Ruft SIRE-Registrierungsstatus ab
- */
-export const getSireStatus = async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { id } = req.params;
-    const organizationId = req.organizationId;
-
-    const reservation = await prisma.reservation.findUnique({
-      where: { id: parseInt(id) }
-    });
-
-    if (!reservation) {
-      return res.status(404).json({
-        success: false,
-        message: 'Reservierung nicht gefunden'
-      });
-    }
-
-    if (reservation.organizationId !== organizationId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Keine Berechtigung für diese Reservierung'
-      });
-    }
-
-    if (!reservation.sireRegistrationId) {
-      return res.json({
-        success: true,
-        data: {
-          registered: false,
-          message: 'Gast ist nicht bei SIRE registriert'
-        }
-      });
-    }
-
-    const sireService = new SireService(organizationId);
-    const status = await sireService.getRegistrationStatus(reservation.sireRegistrationId);
-
-    res.json({
-      success: true,
-      data: {
-        registered: reservation.sireRegistered,
-        registrationId: reservation.sireRegistrationId,
-        registeredAt: reservation.sireRegisteredAt,
-        error: reservation.sireRegistrationError,
-        status: status.status,
-        lastUpdated: status.lastUpdated
-      }
-    });
-  } catch (error) {
-    console.error('Error getting SIRE status:', error);
-    res.status(500).json({
-      success: false,
-      message: error instanceof Error ? error.message : 'Fehler beim Abrufen des SIRE-Status'
-    });
-  }
-};
 

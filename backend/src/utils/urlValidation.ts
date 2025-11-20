@@ -7,7 +7,6 @@
 const ALLOWED_DOMAINS = {
   lobbyPms: ['app.lobbypms.com'],
   ttlock: ['open.ttlock.com', 'euopen.ttlock.com', 'api.sciener.com'],
-  sire: ['api.sire.gov.co'],
   boldPayment: ['api.bold.co', 'sandbox.bold.co'],
 } as const;
 
@@ -17,7 +16,7 @@ export type ApiService = keyof typeof ALLOWED_DOMAINS;
  * Validiert eine API-URL gegen eine Whitelist
  * 
  * @param url - Die zu validierende URL
- * @param service - Der API-Service (lobbyPms, ttlock, sire, boldPayment)
+ * @param service - Der API-Service (lobbyPms, ttlock, boldPayment)
  * @returns true wenn URL gültig ist, false sonst
  */
 export const validateApiUrl = (url: string, service: ApiService): boolean => {
@@ -69,13 +68,6 @@ export const validateAllApiUrls = (settings: any): string[] => {
   if (settings.doorSystem?.apiUrl) {
     if (!validateApiUrl(settings.doorSystem.apiUrl, 'ttlock')) {
       errors.push('Ungültige TTLock API URL');
-    }
-  }
-
-  // SIRE URL
-  if (settings.sire?.apiUrl) {
-    if (!validateApiUrl(settings.sire.apiUrl, 'sire')) {
-      errors.push('Ungültige SIRE API URL');
     }
   }
 

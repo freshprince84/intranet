@@ -421,58 +421,67 @@ class WhatsAppService {
                 const errorMessage = error instanceof Error ? error.message : String(error);
                 console.error(`[WhatsApp Service] Fehler bei Session Message für ${to}:`, errorMessage);
                 // Prüfe ob Fehler "outside 24h window" ist
-                if (this.isOutside24HourWindowError(error)) {
+                const is24HourWindowError = this.isOutside24HourWindowError(error);
+                if (is24HourWindowError) {
                     console.log(`[WhatsApp Service] ⚠️ 24h-Fenster abgelaufen, verwende Template Message...`);
-                    if (!templateName) {
-                        console.error('[WhatsApp Service] Template-Name fehlt für Fallback!');
-                        throw new Error('Template Message erforderlich, aber kein Template-Name angegeben');
-                    }
-                    // Fallback: Template Message
-                    try {
-                        console.log(`[WhatsApp Service] Lade Settings für Template Message...`);
-                        yield this.loadSettings();
-                        if (!this.axiosInstance || !this.phoneNumberId) {
-                            throw new Error('WhatsApp Service nicht initialisiert');
-                        }
-                        const normalizedPhone = this.normalizePhoneNumber(to);
-                        console.log(`[WhatsApp Service] Normalisierte Telefonnummer: ${normalizedPhone}`);
-                        // Formatiere Template-Parameter
-                        const formattedParams = (templateParams === null || templateParams === void 0 ? void 0 : templateParams.map(text => ({
-                            type: 'text',
-                            text: text
-                        }))) || [];
-                        console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
-                        // Template-Sprache aus Environment-Variable oder Standard (Standard: Spanisch, da Templates auf Spanisch sind)
-                        const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
-                        console.log(`[WhatsApp Service] Template-Sprache: ${languageCode}`);
-                        // Passe Template-Namen basierend auf Sprache an
-                        // Englische Templates haben einen Unterstrich am Ende: reservation_checkin_invitation_
-                        // Spanische Templates haben keinen Unterstrich: reservation_checkin_invitation
-                        const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
-                        console.log(`[WhatsApp Service] Template-Name (angepasst für Sprache ${languageCode}): ${adjustedTemplateName}`);
-                        const templateResult = yield this.sendViaWhatsAppBusiness(normalizedPhone, message, adjustedTemplateName, formattedParams, languageCode);
-                        if (templateResult) {
-                            console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to}`);
-                            return true;
-                        }
-                        else {
-                            console.error(`[WhatsApp Service] ❌ Template Message gab false zurück für ${to}`);
-                            throw new Error('Template Message gab false zurück');
-                        }
-                    }
-                    catch (templateError) {
-                        console.error('[WhatsApp Service] ❌ Fehler bei Template Message:', templateError);
-                        const templateErrorMessage = templateError instanceof Error ? templateError.message : String(templateError);
-                        console.error('[WhatsApp Service] Template Error Details:', templateErrorMessage);
-                        throw templateError;
-                    }
                 }
                 else {
-                    // Anderer Fehler - weiterwerfen
-                    console.error('[WhatsApp Service] ❌ Unbekannter Fehler bei Session Message:', error);
-                    const errorDetails = error instanceof Error ? error.message : String(error);
-                    console.error('[WhatsApp Service] Error Details:', errorDetails);
-                    throw error;
+                    console.log(`[WhatsApp Service] ⚠️ Session Message fehlgeschlagen (${errorMessage}), versuche Template Message als Fallback...`);
+                }
+                // Template-Fallback versuchen (wenn Template-Name vorhanden)
+                // WICHTIG: Template-Fallback wird jetzt bei ALLEN Fehlern versucht, nicht nur bei 24h-Fenster-Fehlern
+                // Das macht Sinn, weil Templates auch bei anderen Fehlern funktionieren können (z.B. OAuth-Fehler, etc.)
+                if (!templateName) {
+                    console.error('[WhatsApp Service] Template-Name fehlt für Fallback!');
+                    if (is24HourWindowError) {
+                        throw new Error('Template Message erforderlich (24h-Fenster abgelaufen), aber kein Template-Name angegeben');
+                    }
+                    else {
+                        // Bei anderen Fehlern ist Template optional, aber empfohlen
+                        console.warn('[WhatsApp Service] ⚠️ Template-Name fehlt - Session Message fehlgeschlagen, aber kein Fallback möglich');
+                        throw error;
+                    }
+                }
+                // Fallback: Template Message
+                try {
+                    console.log(`[WhatsApp Service] Lade Settings für Template Message...`);
+                    yield this.loadSettings();
+                    if (!this.axiosInstance || !this.phoneNumberId) {
+                        throw new Error('WhatsApp Service nicht initialisiert');
+                    }
+                    const normalizedPhone = this.normalizePhoneNumber(to);
+                    console.log(`[WhatsApp Service] Normalisierte Telefonnummer: ${normalizedPhone}`);
+                    // Formatiere Template-Parameter
+                    const formattedParams = (templateParams === null || templateParams === void 0 ? void 0 : templateParams.map(text => ({
+                        type: 'text',
+                        text: text
+                    }))) || [];
+                    console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
+                    // Template-Sprache aus Environment-Variable oder Standard (Standard: Spanisch, da Templates auf Spanisch sind)
+                    const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+                    console.log(`[WhatsApp Service] Template-Sprache: ${languageCode}`);
+                    // Passe Template-Namen basierend auf Sprache an
+                    // Englische Templates haben einen Unterstrich am Ende: reservation_checkin_invitation_
+                    // Spanische Templates haben keinen Unterstrich: reservation_checkin_invitation
+                    const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
+                    console.log(`[WhatsApp Service] Template-Name (angepasst für Sprache ${languageCode}): ${adjustedTemplateName}`);
+                    const templateResult = yield this.sendViaWhatsAppBusiness(normalizedPhone, message, adjustedTemplateName, formattedParams, languageCode);
+                    if (templateResult) {
+                        console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to} (Fallback nach Session Message Fehler)`);
+                        return true;
+                    }
+                    else {
+                        console.error(`[WhatsApp Service] ❌ Template Message gab false zurück für ${to}`);
+                        throw new Error('Template Message gab false zurück');
+                    }
+                }
+                catch (templateError) {
+                    console.error('[WhatsApp Service] ❌ Fehler bei Template Message:', templateError);
+                    const templateErrorMessage = templateError instanceof Error ? templateError.message : String(templateError);
+                    console.error('[WhatsApp Service] Template Error Details:', templateErrorMessage);
+                    // Wenn Template auch fehlschlägt, werfe den ursprünglichen Fehler (Session Message Fehler)
+                    // Das gibt mehr Kontext über das ursprüngliche Problem
+                    throw new Error(`Session Message fehlgeschlagen: ${errorMessage}. Template-Fallback auch fehlgeschlagen: ${templateErrorMessage}`);
                 }
             }
         });
@@ -506,6 +515,60 @@ class WhatsAppService {
         }
         // Spanische Templates haben keinen Unterstrich
         return baseTemplateName;
+    }
+    /**
+     * Sendet direkt eine Template Message (ohne Session Message zu versuchen)
+     *
+     * WICHTIG: Diese Methode verwendet NUR Template Messages, keine Session Messages.
+     * Verwendung für Reservation-Einladungen, wo das 24h-Fenster meist nicht aktiv ist.
+     *
+     * @param to - Telefonnummer des Empfängers
+     * @param templateName - Template-Name (Basis, wird basierend auf Sprache angepasst)
+     * @param templateParams - Template-Parameter (Array von Strings)
+     * @param message - Nachrichtentext (wird ignoriert, da Template verwendet wird)
+     * @returns true wenn erfolgreich
+     */
+    sendTemplateMessageDirectly(to, templateName, templateParams, message // Wird ignoriert, nur für Kompatibilität
+    ) {
+        return __awaiter(this, void 0, void 0, function* () {
+            try {
+                console.log(`[WhatsApp Service] Sende DIREKT Template Message an ${to} (kein Session Message Fallback)`);
+                yield this.loadSettings();
+                if (!this.axiosInstance || !this.phoneNumberId) {
+                    throw new Error('WhatsApp Service nicht initialisiert');
+                }
+                const normalizedPhone = this.normalizePhoneNumber(to);
+                console.log(`[WhatsApp Service] Normalisierte Telefonnummer: ${normalizedPhone}`);
+                // Formatiere Template-Parameter
+                const formattedParams = templateParams.map(text => ({
+                    type: 'text',
+                    text: String(text)
+                }));
+                console.log(`[WhatsApp Service] Template-Parameter: ${JSON.stringify(formattedParams)}`);
+                // Template-Sprache
+                const languageCode = process.env.WHATSAPP_TEMPLATE_LANGUAGE || 'es';
+                console.log(`[WhatsApp Service] Template-Sprache: ${languageCode}`);
+                // Passe Template-Namen basierend auf Sprache an
+                const adjustedTemplateName = this.getTemplateNameForLanguage(templateName, languageCode);
+                console.log(`[WhatsApp Service] Template-Name (angepasst für Sprache ${languageCode}): ${adjustedTemplateName}`);
+                const templateResult = yield this.sendViaWhatsAppBusiness(normalizedPhone, message || '', // Wird ignoriert, da Template verwendet wird
+                adjustedTemplateName, formattedParams, languageCode);
+                if (templateResult) {
+                    console.log(`[WhatsApp Service] ✅ Template Message erfolgreich gesendet an ${to}`);
+                    return true;
+                }
+                else {
+                    console.error(`[WhatsApp Service] ❌ Template Message gab false zurück für ${to}`);
+                    throw new Error('Template Message gab false zurück');
+                }
+            }
+            catch (error) {
+                console.error('[WhatsApp Service] ❌ Fehler bei Template Message:', error);
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('[WhatsApp Service] Template Error Details:', errorMessage);
+                throw error;
+            }
+        });
     }
     /**
      * Sendet Check-in-Einladung per WhatsApp

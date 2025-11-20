@@ -1295,7 +1295,12 @@ const TodoAnalyticsTab: React.FC<TodoAnalyticsTabProps> = ({ selectedDate }) => 
                 return (
                   <DataCard
                     key={todo.id}
-                    title={todo.title}
+                    title={
+                      <span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">{todo.id}:</span>{' '}
+                        <span>{todo.title}</span>
+                      </span>
+                    }
                     status={{
                       label: getStatusLabel(todo.status),
                       color: getStatusColor(todo.status)

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.decryptApiSettings = exports.encryptApiSettings = exports.decryptSecret = exports.encryptSecret = void 0;
+exports.decryptBranchApiSettings = exports.encryptBranchApiSettings = exports.decryptApiSettings = exports.encryptApiSettings = exports.decryptSecret = exports.encryptSecret = void 0;
 const crypto_1 = __importDefault(require("crypto"));
 /**
  * Verschlüsselungs-Utility für sensitive Daten (API-Keys, Secrets)
@@ -219,7 +219,23 @@ const decryptApiSettings = (settings) => {
         try {
             // Versuche immer zu entschlüsseln, wenn der String ein ':' enthält (verschlüsseltes Format)
             if (decrypted.whatsapp.apiKey.includes(':')) {
-                decrypted.whatsapp = Object.assign(Object.assign({}, decrypted.whatsapp), { apiKey: (0, exports.decryptSecret)(decrypted.whatsapp.apiKey) });
+                const encryptedLength = decrypted.whatsapp.apiKey.length;
+                const decryptedKey = (0, exports.decryptSecret)(decrypted.whatsapp.apiKey);
+                console.log('[WhatsApp Token Debug] Entschlüsselung:', {
+                    encryptedLength,
+                    decryptedLength: decryptedKey.length,
+                    decryptedStart: decryptedKey.substring(0, 30),
+                    decryptedEnd: decryptedKey.substring(decryptedKey.length - 30),
+                    containsColon: decryptedKey.includes(':'),
+                    isValidFormat: /^[A-Za-z0-9]+$/.test(decryptedKey)
+                });
+                decrypted.whatsapp = Object.assign(Object.assign({}, decrypted.whatsapp), { apiKey: decryptedKey });
+            }
+            else {
+                console.log('[WhatsApp Token Debug] Token ist bereits unverschlüsselt:', {
+                    length: decrypted.whatsapp.apiKey.length,
+                    start: decrypted.whatsapp.apiKey.substring(0, 30)
+                });
             }
             // Wenn kein ':' vorhanden ist, ist der Token bereits unverschlüsselt (für Migration)
         }
@@ -227,6 +243,10 @@ const decryptApiSettings = (settings) => {
             console.error('Error decrypting WhatsApp API key:', error);
             // Bei Fehler: Token ist möglicherweise bereits unverschlüsselt
             console.log('Token wird als unverschlüsselt behandelt');
+            console.log('[WhatsApp Token Debug] Fehler beim Entschlüsseln - verwende Token wie er ist:', {
+                length: decrypted.whatsapp.apiKey.length,
+                start: decrypted.whatsapp.apiKey.substring(0, 50)
+            });
         }
     }
     if ((_h = decrypted.whatsapp) === null || _h === void 0 ? void 0 : _h.apiSecret) {
@@ -242,4 +262,102 @@ const decryptApiSettings = (settings) => {
     return decrypted;
 };
 exports.decryptApiSettings = decryptApiSettings;
+/**
+ * Verschlüsselt alle API-Keys in BranchSettings
+ *
+ * @param settings - BranchSettings Objekt (z.B. boldPaymentSettings, doorSystemSettings, etc.)
+ * @returns Settings mit verschlüsselten API-Keys
+ */
+const encryptBranchApiSettings = (settings) => {
+    var _a;
+    if (!settings || typeof settings !== 'object') {
+        return settings;
+    }
+    const encrypted = Object.assign({}, settings);
+    // Bold Payment
+    if (encrypted.apiKey && typeof encrypted.apiKey === 'string' && !encrypted.apiKey.includes(':')) {
+        encrypted.apiKey = (0, exports.encryptSecret)(encrypted.apiKey);
+    }
+    if (encrypted.merchantId && typeof encrypted.merchantId === 'string' && !encrypted.merchantId.includes(':')) {
+        encrypted.merchantId = (0, exports.encryptSecret)(encrypted.merchantId);
+    }
+    // TTLock
+    if (encrypted.clientId && typeof encrypted.clientId === 'string' && !encrypted.clientId.includes(':')) {
+        encrypted.clientId = (0, exports.encryptSecret)(encrypted.clientId);
+    }
+    if (encrypted.clientSecret && typeof encrypted.clientSecret === 'string' && !encrypted.clientSecret.includes(':')) {
+        encrypted.clientSecret = (0, exports.encryptSecret)(encrypted.clientSecret);
+    }
+    if (encrypted.username && typeof encrypted.username === 'string' && !encrypted.username.includes(':')) {
+        encrypted.username = (0, exports.encryptSecret)(encrypted.username);
+    }
+    if (encrypted.password && typeof encrypted.password === 'string' && !encrypted.password.includes(':')) {
+        encrypted.password = (0, exports.encryptSecret)(encrypted.password);
+    }
+    // SIRE
+    if (encrypted.apiKey && typeof encrypted.apiKey === 'string' && !encrypted.apiKey.includes(':')) {
+        encrypted.apiKey = (0, exports.encryptSecret)(encrypted.apiKey);
+    }
+    if (encrypted.apiSecret && typeof encrypted.apiSecret === 'string' && !encrypted.apiSecret.includes(':')) {
+        encrypted.apiSecret = (0, exports.encryptSecret)(encrypted.apiSecret);
+    }
+    // LobbyPMS
+    if (encrypted.apiKey && typeof encrypted.apiKey === 'string' && !encrypted.apiKey.includes(':')) {
+        encrypted.apiKey = (0, exports.encryptSecret)(encrypted.apiKey);
+    }
+    // WhatsApp (bereits in Branch.whatsappSettings)
+    if (encrypted.apiKey && typeof encrypted.apiKey === 'string' && !encrypted.apiKey.includes(':')) {
+        encrypted.apiKey = (0, exports.encryptSecret)(encrypted.apiKey);
+    }
+    if (encrypted.apiSecret && typeof encrypted.apiSecret === 'string' && !encrypted.apiSecret.includes(':')) {
+        encrypted.apiSecret = (0, exports.encryptSecret)(encrypted.apiSecret);
+    }
+    // Email SMTP
+    if (encrypted.smtpPass && typeof encrypted.smtpPass === 'string' && !encrypted.smtpPass.includes(':')) {
+        encrypted.smtpPass = (0, exports.encryptSecret)(encrypted.smtpPass);
+    }
+    // Email IMAP (verschachtelt)
+    if (((_a = encrypted.imap) === null || _a === void 0 ? void 0 : _a.password) && typeof encrypted.imap.password === 'string' && !encrypted.imap.password.includes(':')) {
+        encrypted.imap = Object.assign(Object.assign({}, encrypted.imap), { password: (0, exports.encryptSecret)(encrypted.imap.password) });
+    }
+    return encrypted;
+};
+exports.encryptBranchApiSettings = encryptBranchApiSettings;
+/**
+ * Entschlüsselt alle API-Keys in BranchSettings
+ *
+ * @param settings - BranchSettings Objekt mit verschlüsselten Keys
+ * @returns Settings mit entschlüsselten API-Keys
+ */
+const decryptBranchApiSettings = (settings) => {
+    var _a;
+    if (!settings || typeof settings !== 'object') {
+        return settings;
+    }
+    const decrypted = Object.assign({}, settings);
+    // Versuche alle möglichen verschlüsselten Felder zu entschlüsseln
+    const encryptedFields = ['apiKey', 'apiSecret', 'merchantId', 'clientId', 'clientSecret', 'username', 'password', 'smtpPass'];
+    for (const field of encryptedFields) {
+        if (decrypted[field] && typeof decrypted[field] === 'string' && decrypted[field].includes(':')) {
+            try {
+                decrypted[field] = (0, exports.decryptSecret)(decrypted[field]);
+            }
+            catch (error) {
+                console.error(`Error decrypting ${field}:`, error);
+                // Bei Fehler: Feld bleibt wie es ist
+            }
+        }
+    }
+    // Email IMAP Password (verschachtelt)
+    if (((_a = decrypted.imap) === null || _a === void 0 ? void 0 : _a.password) && typeof decrypted.imap.password === 'string' && decrypted.imap.password.includes(':')) {
+        try {
+            decrypted.imap = Object.assign(Object.assign({}, decrypted.imap), { password: (0, exports.decryptSecret)(decrypted.imap.password) });
+        }
+        catch (error) {
+            console.error('Error decrypting imap.password:', error);
+        }
+    }
+    return decrypted;
+};
+exports.decryptBranchApiSettings = decryptBranchApiSettings;
 //# sourceMappingURL=encryption.js.map

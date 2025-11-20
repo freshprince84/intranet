@@ -43,6 +43,10 @@ export const getAllBranches = async (req: Request, res: Response) => {
                 id: true,
                 name: true,
                 whatsappSettings: true,
+                lobbyPmsSettings: true,
+                boldPaymentSettings: true,
+                doorSystemSettings: true,
+                emailSettings: true,
                 roles: {
                     where: { roleId: roleId },
                     select: { id: true }
@@ -52,32 +56,65 @@ export const getAllBranches = async (req: Request, res: Response) => {
             queryOptions.select = {
                 id: true,
                 name: true,
-                whatsappSettings: true
+                whatsappSettings: true,
+                lobbyPmsSettings: true,
+                boldPaymentSettings: true,
+                doorSystemSettings: true,
+                emailSettings: true
             };
         }
         
         let branches = await prisma.branch.findMany(queryOptions);
         
-        // Entschlüssele WhatsApp Settings für alle Branches
+        // Entschlüssele alle Settings für alle Branches
         // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
-        const { decryptSecret } = await import('../utils/encryption');
+        const { decryptBranchApiSettings } = await import('../utils/encryption');
         branches = branches.map((branch: any) => {
+            // Entschlüssele WhatsApp Settings
             if (branch.whatsappSettings) {
                 try {
-                    const settings = branch.whatsappSettings;
-                    // Prüfe ob Settings verschlüsselt sind (Format: iv:authTag:encrypted)
-                    if (settings.apiKey && typeof settings.apiKey === 'string' && settings.apiKey.includes(':')) {
-                        settings.apiKey = decryptSecret(settings.apiKey);
-                    }
-                    if (settings.apiSecret && typeof settings.apiSecret === 'string' && settings.apiSecret.includes(':')) {
-                        settings.apiSecret = decryptSecret(settings.apiSecret);
-                    }
-                    branch.whatsappSettings = settings;
+                    branch.whatsappSettings = decryptBranchApiSettings(branch.whatsappSettings as any);
                 } catch (error) {
                     console.warn(`[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings für Branch ${branch.id}:`, error);
-                    // Bei Fehler: Settings bleiben verschlüsselt (für Migration)
                 }
             }
+            
+            // Entschlüssele LobbyPMS Settings
+            if (branch.lobbyPmsSettings) {
+                try {
+                    branch.lobbyPmsSettings = decryptBranchApiSettings(branch.lobbyPmsSettings as any);
+                } catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings für Branch ${branch.id}:`, error);
+                }
+            }
+            
+            // Entschlüssele Bold Payment Settings
+            if (branch.boldPaymentSettings) {
+                try {
+                    branch.boldPaymentSettings = decryptBranchApiSettings(branch.boldPaymentSettings as any);
+                } catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings für Branch ${branch.id}:`, error);
+                }
+            }
+            
+            // Entschlüssele Door System Settings
+            if (branch.doorSystemSettings) {
+                try {
+                    branch.doorSystemSettings = decryptBranchApiSettings(branch.doorSystemSettings as any);
+                } catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Door System Settings für Branch ${branch.id}:`, error);
+                }
+            }
+            
+            // Entschlüssele Email Settings
+            if (branch.emailSettings) {
+                try {
+                    branch.emailSettings = decryptBranchApiSettings(branch.emailSettings as any);
+                } catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Email Settings für Branch ${branch.id}:`, error);
+                }
+            }
+            
             return branch;
         });
         
@@ -106,11 +143,15 @@ export const getAllBranches = async (req: Request, res: Response) => {
                 branches = [];
             }
             
-            // Entferne das 'roles' Feld aus der Antwort, behalte aber whatsappSettings
+            // Entferne das 'roles' Feld aus der Antwort, behalte aber alle Settings
             branches = branches.map(branch => ({
                 id: branch.id,
                 name: branch.name,
-                whatsappSettings: (branch as any).whatsappSettings
+                whatsappSettings: (branch as any).whatsappSettings,
+                lobbyPmsSettings: (branch as any).lobbyPmsSettings,
+                boldPaymentSettings: (branch as any).boldPaymentSettings,
+                doorSystemSettings: (branch as any).doorSystemSettings,
+                emailSettings: (branch as any).emailSettings
             })) as any;
         }
         
@@ -354,7 +395,7 @@ export const createBranch = async (req: Request, res: Response) => {
 export const updateBranch = async (req: Request, res: Response) => {
     try {
         const branchId = parseInt(req.params.id, 10);
-        const { name, whatsappSettings } = req.body;
+        const { name, whatsappSettings, lobbyPmsSettings, boldPaymentSettings, doorSystemSettings, emailSettings } = req.body;
 
         if (isNaN(branchId)) {
             return res.status(400).json({ message: 'Ungültige Niederlassungs-ID' });
@@ -393,16 +434,56 @@ export const updateBranch = async (req: Request, res: Response) => {
             });
         }
 
-        // Verschlüssele WhatsApp Settings falls vorhanden
+        // Verschlüssele alle Settings falls vorhanden
+        const { encryptBranchApiSettings } = await import('../utils/encryption');
+        
         let encryptedWhatsAppSettings = whatsappSettings;
         if (whatsappSettings) {
             try {
-                const { encryptApiSettings } = await import('../utils/encryption');
-                encryptedWhatsAppSettings = encryptApiSettings(whatsappSettings);
-                console.log('[Branch Controller] WhatsApp Settings verschlüsselt und bereit zum Speichern');
+                encryptedWhatsAppSettings = encryptBranchApiSettings(whatsappSettings);
+                console.log('[Branch Controller] WhatsApp Settings verschlüsselt');
             } catch (error) {
                 console.warn('[Branch Controller] WhatsApp Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
-                // Falls Verschlüsselung fehlschlägt, speichere unverschlüsselt (nur für Development)
+            }
+        }
+        
+        let encryptedLobbyPmsSettings = lobbyPmsSettings;
+        if (lobbyPmsSettings) {
+            try {
+                encryptedLobbyPmsSettings = encryptBranchApiSettings(lobbyPmsSettings);
+                console.log('[Branch Controller] LobbyPMS Settings verschlüsselt');
+            } catch (error) {
+                console.warn('[Branch Controller] LobbyPMS Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+            }
+        }
+        
+        let encryptedBoldPaymentSettings = boldPaymentSettings;
+        if (boldPaymentSettings) {
+            try {
+                encryptedBoldPaymentSettings = encryptBranchApiSettings(boldPaymentSettings);
+                console.log('[Branch Controller] Bold Payment Settings verschlüsselt');
+            } catch (error) {
+                console.warn('[Branch Controller] Bold Payment Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+            }
+        }
+        
+        let encryptedDoorSystemSettings = doorSystemSettings;
+        if (doorSystemSettings) {
+            try {
+                encryptedDoorSystemSettings = encryptBranchApiSettings(doorSystemSettings);
+                console.log('[Branch Controller] Door System Settings verschlüsselt');
+            } catch (error) {
+                console.warn('[Branch Controller] Door System Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+            }
+        }
+        
+        let encryptedEmailSettings = emailSettings;
+        if (emailSettings) {
+            try {
+                encryptedEmailSettings = encryptBranchApiSettings(emailSettings);
+                console.log('[Branch Controller] Email Settings verschlüsselt');
+            } catch (error) {
+                console.warn('[Branch Controller] Email Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
 
@@ -413,13 +494,18 @@ export const updateBranch = async (req: Request, res: Response) => {
 
         if (whatsappSettings !== undefined) {
             updateData.whatsappSettings = encryptedWhatsAppSettings;
-            console.log('[Branch Controller] WhatsApp Settings werden gespeichert:', {
-                hasProvider: !!whatsappSettings?.provider,
-                hasApiKey: !!whatsappSettings?.apiKey,
-                hasPhoneNumberId: !!whatsappSettings?.phoneNumberId
-            });
-        } else {
-            console.log('[Branch Controller] Keine WhatsApp Settings im Request');
+        }
+        if (lobbyPmsSettings !== undefined) {
+            updateData.lobbyPmsSettings = encryptedLobbyPmsSettings;
+        }
+        if (boldPaymentSettings !== undefined) {
+            updateData.boldPaymentSettings = encryptedBoldPaymentSettings;
+        }
+        if (doorSystemSettings !== undefined) {
+            updateData.doorSystemSettings = encryptedDoorSystemSettings;
+        }
+        if (emailSettings !== undefined) {
+            updateData.emailSettings = encryptedEmailSettings;
         }
 
         const updatedBranch = await prisma.branch.update({
@@ -428,27 +514,54 @@ export const updateBranch = async (req: Request, res: Response) => {
             select: {
                 id: true,
                 name: true,
-                whatsappSettings: true
+                whatsappSettings: true,
+                lobbyPmsSettings: true,
+                boldPaymentSettings: true,
+                doorSystemSettings: true,
+                emailSettings: true
             }
         });
 
-        // Entschlüssele WhatsApp Settings für Response (Frontend braucht entschlüsselte Werte)
-        // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
+        // Entschlüssele alle Settings für Response (Frontend braucht entschlüsselte Werte)
+        const { decryptBranchApiSettings } = await import('../utils/encryption');
+        
         if (updatedBranch.whatsappSettings) {
             try {
-                const { decryptSecret } = await import('../utils/encryption');
-                const settings = updatedBranch.whatsappSettings as any;
-                // Prüfe ob Settings verschlüsselt sind (Format: iv:authTag:encrypted)
-                if (settings.apiKey && typeof settings.apiKey === 'string' && settings.apiKey.includes(':')) {
-                    settings.apiKey = decryptSecret(settings.apiKey);
-                }
-                if (settings.apiSecret && typeof settings.apiSecret === 'string' && settings.apiSecret.includes(':')) {
-                    settings.apiSecret = decryptSecret(settings.apiSecret);
-                }
-                (updatedBranch as any).whatsappSettings = settings;
+                (updatedBranch as any).whatsappSettings = decryptBranchApiSettings(updatedBranch.whatsappSettings as any);
             } catch (error) {
                 console.warn('[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings:', error);
-                // Bei Fehler: Settings bleiben verschlüsselt (für Migration)
+            }
+        }
+        
+        if (updatedBranch.lobbyPmsSettings) {
+            try {
+                (updatedBranch as any).lobbyPmsSettings = decryptBranchApiSettings(updatedBranch.lobbyPmsSettings as any);
+            } catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+            }
+        }
+        
+        if (updatedBranch.boldPaymentSettings) {
+            try {
+                (updatedBranch as any).boldPaymentSettings = decryptBranchApiSettings(updatedBranch.boldPaymentSettings as any);
+            } catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings:', error);
+            }
+        }
+        
+        if (updatedBranch.doorSystemSettings) {
+            try {
+                (updatedBranch as any).doorSystemSettings = decryptBranchApiSettings(updatedBranch.doorSystemSettings as any);
+            } catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Door System Settings:', error);
+            }
+        }
+        
+        if (updatedBranch.emailSettings) {
+            try {
+                (updatedBranch as any).emailSettings = decryptBranchApiSettings(updatedBranch.emailSettings as any);
+            } catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Email Settings:', error);
             }
         }
 

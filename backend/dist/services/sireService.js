@@ -26,46 +26,114 @@ class SireService {
     /**
      * Erstellt eine neue SIRE Service-Instanz
      *
-     * @param organizationId - ID der Organisation
-     * @throws Error wenn SIRE nicht konfiguriert ist
+     * @param organizationId - ID der Organisation (optional, wenn branchId gesetzt)
+     * @param branchId - ID des Branches (optional, wenn organizationId gesetzt)
+     * @throws Error wenn weder organizationId noch branchId angegeben ist
      */
-    constructor(organizationId) {
+    constructor(organizationId, branchId) {
         this.enabled = false;
         this.autoRegisterOnCheckIn = false;
+        if (!organizationId && !branchId) {
+            throw new Error('Entweder organizationId oder branchId muss angegeben werden');
+        }
         this.organizationId = organizationId;
+        this.branchId = branchId;
         // Settings werden beim ersten API-Call geladen (lazy loading)
     }
     /**
-     * Lädt SIRE Settings aus der Organisation
+     * Lädt SIRE Settings aus Branch oder Organisation (mit Fallback)
      * Muss vor jedem API-Call aufgerufen werden
      */
     loadSettings() {
         return __awaiter(this, void 0, void 0, function* () {
-            const organization = yield prisma.organization.findUnique({
-                where: { id: this.organizationId },
-                select: { settings: true }
-            });
-            if (!(organization === null || organization === void 0 ? void 0 : organization.settings)) {
-                throw new Error(`SIRE ist nicht für Organisation ${this.organizationId} konfiguriert`);
+            // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
+            if (this.branchId) {
+                const branch = yield prisma.branch.findUnique({
+                    where: { id: this.branchId },
+                    select: {
+                        sireSettings: true,
+                        organizationId: true
+                    }
+                });
+                if (branch === null || branch === void 0 ? void 0 : branch.sireSettings) {
+                    try {
+                        const settings = (0, encryption_1.decryptBranchApiSettings)(branch.sireSettings);
+                        const sireSettings = (settings === null || settings === void 0 ? void 0 : settings.sire) || settings;
+                        if (sireSettings) {
+                            this.enabled = sireSettings.enabled || false;
+                            this.autoRegisterOnCheckIn = sireSettings.autoRegisterOnCheckIn || false;
+                            this.apiUrl = sireSettings.apiUrl;
+                            this.apiKey = sireSettings.apiKey;
+                            this.apiSecret = sireSettings.apiSecret;
+                            this.propertyCode = sireSettings.propertyCode;
+                            if (this.enabled && (!this.apiUrl || !this.apiKey)) {
+                                throw new Error(`SIRE API URL oder API Key fehlt für Branch ${this.branchId}`);
+                            }
+                            // Erstelle Axios-Instanz wenn aktiviert
+                            if (this.enabled) {
+                                this.axiosInstance = this.createAxiosInstance();
+                            }
+                            console.log(`[SIRE] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
+                            return; // Erfolgreich geladen
+                        }
+                    }
+                    catch (error) {
+                        console.warn(`[SIRE] Fehler beim Laden der Branch Settings:`, error);
+                        // Fallback auf Organization Settings
+                    }
+                    // Fallback: Lade Organization Settings
+                    if (branch.organizationId) {
+                        this.organizationId = branch.organizationId;
+                    }
+                }
+                else if (branch === null || branch === void 0 ? void 0 : branch.organizationId) {
+                    // Branch hat keine Settings, aber Organization ID
+                    this.organizationId = branch.organizationId;
+                }
             }
-            const settings = (0, encryption_1.decryptApiSettings)(organization.settings);
-            const sireSettings = settings === null || settings === void 0 ? void 0 : settings.sire;
-            if (!sireSettings) {
-                throw new Error(`SIRE Settings sind nicht für Organisation ${this.organizationId} konfiguriert`);
+            // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
+            if (this.organizationId) {
+                const organization = yield prisma.organization.findUnique({
+                    where: { id: this.organizationId },
+                    select: { settings: true }
+                });
+                if (!(organization === null || organization === void 0 ? void 0 : organization.settings)) {
+                    throw new Error(`SIRE ist nicht für Organisation ${this.organizationId} konfiguriert`);
+                }
+                const settings = (0, encryption_1.decryptApiSettings)(organization.settings);
+                const sireSettings = settings === null || settings === void 0 ? void 0 : settings.sire;
+                if (!sireSettings) {
+                    throw new Error(`SIRE Settings sind nicht für Organisation ${this.organizationId} konfiguriert`);
+                }
+                this.enabled = sireSettings.enabled || false;
+                this.autoRegisterOnCheckIn = sireSettings.autoRegisterOnCheckIn || false;
+                this.apiUrl = sireSettings.apiUrl;
+                this.apiKey = sireSettings.apiKey;
+                this.apiSecret = sireSettings.apiSecret;
+                this.propertyCode = sireSettings.propertyCode;
+                if (this.enabled && (!this.apiUrl || !this.apiKey)) {
+                    throw new Error(`SIRE API URL oder API Key fehlt für Organisation ${this.organizationId}`);
+                }
+                // Erstelle Axios-Instanz wenn aktiviert
+                if (this.enabled) {
+                    this.axiosInstance = this.createAxiosInstance();
+                }
+                return;
             }
-            this.enabled = sireSettings.enabled || false;
-            this.autoRegisterOnCheckIn = sireSettings.autoRegisterOnCheckIn || false;
-            this.apiUrl = sireSettings.apiUrl;
-            this.apiKey = sireSettings.apiKey;
-            this.apiSecret = sireSettings.apiSecret;
-            this.propertyCode = sireSettings.propertyCode;
-            if (this.enabled && (!this.apiUrl || !this.apiKey)) {
-                throw new Error(`SIRE API URL oder API Key fehlt für Organisation ${this.organizationId}`);
-            }
-            // Erstelle Axios-Instanz wenn aktiviert
-            if (this.enabled) {
-                this.axiosInstance = this.createAxiosInstance();
-            }
+            throw new Error('SIRE Settings nicht gefunden (weder Branch noch Organization)');
+        });
+    }
+    /**
+     * Statische Factory-Methode: Erstellt Service für Branch
+     *
+     * @param branchId - ID des Branches
+     * @returns SireService-Instanz
+     */
+    static createForBranch(branchId) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const service = new SireService(undefined, branchId);
+            yield service.loadSettings();
+            return service;
         });
     }
     /**

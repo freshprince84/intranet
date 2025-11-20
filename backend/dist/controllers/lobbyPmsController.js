@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -183,13 +216,14 @@ exports.syncReservations = syncReservations;
  * Führt Check-in durch (aktualisiert Status in LobbyPMS und lokal)
  */
 const checkInReservation = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const { id } = req.params;
         const organizationId = req.organizationId;
         // Hole lokale Reservierung
         const localReservation = yield prisma.reservation.findUnique({
             where: { lobbyReservationId: id },
-            include: { task: true }
+            include: { task: true, branch: true }
         });
         if (!localReservation) {
             return res.status(404).json({
@@ -198,7 +232,9 @@ const checkInReservation = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }
         // Aktualisiere Status in LobbyPMS
-        const service = new lobbyPmsService_1.LobbyPmsService(organizationId);
+        const service = localReservation.branchId
+            ? yield lobbyPmsService_1.LobbyPmsService.createForBranch(localReservation.branchId)
+            : new lobbyPmsService_1.LobbyPmsService(organizationId);
         yield service.updateReservationStatus(id, 'checked_in');
         // Aktualisiere lokale Reservierung
         const updatedReservation = yield prisma.reservation.update({
@@ -207,29 +243,41 @@ const checkInReservation = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 status: 'checked_in',
                 onlineCheckInCompleted: true,
                 onlineCheckInCompletedAt: new Date()
-            }
+            },
+            include: { branch: true }
         });
         // Aktualisiere verknüpften Task falls vorhanden
         const userId = parseInt(req.userId);
         yield reservationTaskService_1.ReservationTaskService.completeTaskOnCheckIn(localReservation.id, userId);
         // Automatische SIRE-Registrierung (wenn aktiviert)
         try {
-            const organization = yield prisma.organization.findUnique({
-                where: { id: organizationId },
-                select: { settings: true }
-            });
-            if (organization === null || organization === void 0 ? void 0 : organization.settings) {
-                const settings = organization.settings;
-                const sireSettings = settings === null || settings === void 0 ? void 0 : settings.sire;
-                if ((sireSettings === null || sireSettings === void 0 ? void 0 : sireSettings.enabled) && (sireSettings === null || sireSettings === void 0 ? void 0 : sireSettings.autoRegisterOnCheckIn)) {
-                    const sireService = new sireService_1.SireService(organizationId);
-                    const sireResult = yield sireService.registerGuest(updatedReservation);
-                    if (sireResult.success) {
-                        console.log(`[LobbyPMS] SIRE-Registrierung erfolgreich für Reservierung ${updatedReservation.id}`);
-                    }
-                    else {
-                        console.warn(`[LobbyPMS] SIRE-Registrierung fehlgeschlagen: ${sireResult.error}`);
-                    }
+            // Lade Settings aus Branch oder Organisation
+            const { decryptApiSettings, decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+            let sireSettings = null;
+            if (updatedReservation.branchId && ((_a = updatedReservation.branch) === null || _a === void 0 ? void 0 : _a.sireSettings)) {
+                const branchSettings = decryptBranchApiSettings(updatedReservation.branch.sireSettings);
+                sireSettings = (branchSettings === null || branchSettings === void 0 ? void 0 : branchSettings.sire) || branchSettings;
+            }
+            else {
+                const organization = yield prisma.organization.findUnique({
+                    where: { id: organizationId },
+                    select: { settings: true }
+                });
+                if (organization === null || organization === void 0 ? void 0 : organization.settings) {
+                    const settings = decryptApiSettings(organization.settings);
+                    sireSettings = settings === null || settings === void 0 ? void 0 : settings.sire;
+                }
+            }
+            if ((sireSettings === null || sireSettings === void 0 ? void 0 : sireSettings.enabled) && (sireSettings === null || sireSettings === void 0 ? void 0 : sireSettings.autoRegisterOnCheckIn)) {
+                const sireService = updatedReservation.branchId
+                    ? yield sireService_1.SireService.createForBranch(updatedReservation.branchId)
+                    : new sireService_1.SireService(organizationId);
+                const sireResult = yield sireService.registerGuest(updatedReservation);
+                if (sireResult.success) {
+                    console.log(`[LobbyPMS] SIRE-Registrierung erfolgreich für Reservierung ${updatedReservation.id}`);
+                }
+                else {
+                    console.warn(`[LobbyPMS] SIRE-Registrierung fehlgeschlagen: ${sireResult.error}`);
                 }
             }
         }
@@ -379,7 +427,8 @@ const registerSire = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         const { id } = req.params;
         const organizationId = req.organizationId;
         const reservation = yield prisma.reservation.findUnique({
-            where: { id: parseInt(id) }
+            where: { id: parseInt(id) },
+            include: { branch: true }
         });
         if (!reservation) {
             return res.status(404).json({
@@ -393,7 +442,9 @@ const registerSire = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 message: 'Keine Berechtigung für diese Reservierung'
             });
         }
-        const sireService = new sireService_1.SireService(organizationId);
+        const sireService = reservation.branchId
+            ? yield sireService_1.SireService.createForBranch(reservation.branchId)
+            : new sireService_1.SireService(organizationId);
         const result = yield sireService.registerGuest(reservation);
         if (result.success) {
             res.json({
@@ -428,7 +479,8 @@ const getSireStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const { id } = req.params;
         const organizationId = req.organizationId;
         const reservation = yield prisma.reservation.findUnique({
-            where: { id: parseInt(id) }
+            where: { id: parseInt(id) },
+            include: { branch: true }
         });
         if (!reservation) {
             return res.status(404).json({
@@ -451,7 +503,9 @@ const getSireStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* 
                 }
             });
         }
-        const sireService = new sireService_1.SireService(organizationId);
+        const sireService = reservation.branchId
+            ? yield sireService_1.SireService.createForBranch(reservation.branchId)
+            : new sireService_1.SireService(organizationId);
         const status = yield sireService.getRegistrationStatus(reservation.sireRegistrationId);
         res.json({
             success: true,
