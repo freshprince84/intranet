@@ -98,6 +98,10 @@ export class LobbyPmsService {
             this.apiUrl = apiUrl;
             this.apiKey = lobbyPmsSettings.apiKey;
             this.propertyId = lobbyPmsSettings.propertyId;
+            // WICHTIG: organizationId muss gesetzt werden, auch wenn Branch-Settings vorhanden sind
+            if (branch.organizationId) {
+              this.organizationId = branch.organizationId;
+            }
             this.axiosInstance = this.createAxiosInstance();
             console.log(`[LobbyPMS] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
             return; // Erfolgreich geladen
