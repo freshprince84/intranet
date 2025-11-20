@@ -1,12 +1,10 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import fs from 'fs';
 import path from 'path';
 import { getUserLanguage, getPayrollPDFTranslations } from '../utils/translations';
 import { isSameDay } from 'date-fns';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 export const saveWorkHours = async (req: Request, res: Response) => {
   try {

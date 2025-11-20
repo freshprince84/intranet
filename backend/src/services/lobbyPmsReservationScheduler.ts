@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { LobbyPmsReservationSyncService } from './lobbyPmsReservationSyncService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Scheduler für automatische LobbyPMS-Reservation-Synchronisation

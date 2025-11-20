@@ -1,9 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { getDataIsolationFilter } from '../middleware/organization';
 import slugify from 'slugify';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Hilfsfunktion zum Erstellen eines eindeutigen Slugs

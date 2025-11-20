@@ -1,7 +1,5 @@
-import { PrismaClient } from '@prisma/client';
 import { LobbyPmsService } from './lobbyPmsService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Service für die Synchronisation von Reservierungen von LobbyPMS API pro Branch

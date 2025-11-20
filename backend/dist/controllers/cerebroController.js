@@ -13,17 +13,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.searchArticles = exports.deleteArticle = exports.updateArticle = exports.createArticle = exports.getArticlesStructure = exports.getArticleBySlug = exports.getArticleById = exports.getAllArticles = void 0;
-const client_1 = require("@prisma/client");
 const organization_1 = require("../middleware/organization");
 const slugify_1 = __importDefault(require("slugify"));
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Hilfsfunktion zum Erstellen eines eindeutigen Slugs
  */
 const createUniqueSlug = (title) => __awaiter(void 0, void 0, void 0, function* () {
     let slug = (0, slugify_1.default)(title, { lower: true, strict: true });
     // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
-    const existingArticle = yield prisma.cerebroCarticle.findUnique({
+    const existingArticle = yield prisma_1.prisma.cerebroCarticle.findUnique({
         where: { slug }
     });
     // Wenn der Slug bereits existiert, füge einen Zeitstempel hinzu
@@ -46,7 +45,7 @@ const getAllArticles = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
         const articleFilter = req.userId ? (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle') : {};
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
-        const articles = yield prisma.cerebroCarticle.findMany({
+        const articles = yield prisma_1.prisma.cerebroCarticle.findMany({
             where: articleFilter,
             include: {
                 createdBy: {
@@ -112,7 +111,7 @@ const getArticleById = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
         const articleFilter = req.userId ? (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle') : {};
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
-        const article = yield prisma.cerebroCarticle.findFirst({
+        const article = yield prisma_1.prisma.cerebroCarticle.findFirst({
             where: Object.assign({ id: articleId }, articleFilter),
             include: {
                 createdBy: {
@@ -176,7 +175,7 @@ const getArticleBySlug = (req, res) => __awaiter(void 0, void 0, void 0, functio
         // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
         const articleFilter = req.userId ? (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle') : {};
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
-        const article = yield prisma.cerebroCarticle.findFirst({
+        const article = yield prisma_1.prisma.cerebroCarticle.findFirst({
             where: Object.assign({ slug }, articleFilter),
             include: {
                 createdBy: {
@@ -243,7 +242,7 @@ const getArticlesStructure = (req, res) => __awaiter(void 0, void 0, void 0, fun
         // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
         const articleFilter = req.userId ? (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle') : {};
         // Jetzt mit Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
-        const articles = yield prisma.cerebroCarticle.findMany({
+        const articles = yield prisma_1.prisma.cerebroCarticle.findMany({
             where: articleFilter,
             select: {
                 id: true,
@@ -318,7 +317,7 @@ const createArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             if (isNaN(normalizedParentId)) {
                 return res.status(400).json({ message: 'Ungültige Parent-ID' });
             }
-            const parentArticle = yield prisma.$queryRaw `
+            const parentArticle = yield prisma_1.prisma.$queryRaw `
                 SELECT * FROM "CerebroCarticle" WHERE id = ${normalizedParentId}
             `;
             if (!parentArticle || (Array.isArray(parentArticle) && parentArticle.length === 0)) {
@@ -326,13 +325,13 @@ const createArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             }
         }
         // Artikel erstellen
-        const newArticle = yield prisma.$queryRaw `
+        const newArticle = yield prisma_1.prisma.$queryRaw `
             INSERT INTO "CerebroCarticle" (title, content, slug, "parentId", "createdById", "updatedById", "isPublished", "organizationId", "createdAt", "updatedAt")
             VALUES (${title}, ${content || ''}, ${slug}, ${normalizedParentId}, ${userId}, ${userId}, ${isPublished}, ${req.organizationId || null}, NOW(), NOW())
             RETURNING *
         `;
         // Benachrichtigung erstellen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             INSERT INTO "Notification" (
                 "userId", 
                 title, 
@@ -389,7 +388,7 @@ const updateArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(400).json({ message: 'Ungültige Artikel-ID' });
         }
         // Prüfen, ob der Artikel existiert
-        const existingArticle = yield prisma.$queryRaw `
+        const existingArticle = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroCarticle" WHERE id = ${articleId}
         `;
         if (!existingArticle || (Array.isArray(existingArticle) && existingArticle.length === 0)) {
@@ -402,7 +401,7 @@ const updateArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         }
         // Überprüfen, ob der übergeordnete Artikel existiert, falls angegeben
         if (parentId && parentId !== existingArticle[0].parentId) {
-            const parentArticle = yield prisma.$queryRaw `
+            const parentArticle = yield prisma_1.prisma.$queryRaw `
                 SELECT * FROM "CerebroCarticle" WHERE id = ${parentId}
             `;
             if (!parentArticle || (Array.isArray(parentArticle) && parentArticle.length === 0)) {
@@ -414,7 +413,7 @@ const updateArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             }
         }
         // Artikel aktualisieren
-        const updatedArticle = yield prisma.$queryRaw `
+        const updatedArticle = yield prisma_1.prisma.$queryRaw `
             UPDATE "CerebroCarticle"
             SET 
                 title = ${title || existingArticle[0].title},
@@ -428,7 +427,7 @@ const updateArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             RETURNING *
         `;
         // Benachrichtigung erstellen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             INSERT INTO "Notification" (
                 "userId", 
                 title, 
@@ -473,14 +472,14 @@ const deleteArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(400).json({ message: 'Ungültige Artikel-ID' });
         }
         // Prüfen, ob der Artikel existiert
-        const existingArticle = yield prisma.$queryRaw `
+        const existingArticle = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroCarticle" WHERE id = ${articleId}
         `;
         if (!existingArticle || (Array.isArray(existingArticle) && existingArticle.length === 0)) {
             return res.status(404).json({ message: 'Artikel nicht gefunden' });
         }
         // Prüfen, ob der Artikel Unterartikel hat
-        const childArticles = yield prisma.$queryRaw `
+        const childArticles = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroCarticle" WHERE "parentId" = ${articleId}
         `;
         if (childArticles && Array.isArray(childArticles) && childArticles.length > 0) {
@@ -490,35 +489,35 @@ const deleteArticle = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             });
         }
         // Verknüpfungen zu Tasks löschen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             DELETE FROM "TaskCerebroCarticle" WHERE "carticleId" = ${articleId}
         `;
         // Verknüpfungen zu Requests löschen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             DELETE FROM "RequestCerebroCarticle" WHERE "carticleId" = ${articleId}
         `;
         // Medien löschen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             DELETE FROM "CerebroMedia" WHERE "carticleId" = ${articleId}
         `;
         // Externe Links löschen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             DELETE FROM "CerebroExternalLink" WHERE "carticleId" = ${articleId}
         `;
         // Tag-Verknüpfungen löschen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             DELETE FROM "_CerebroCarticleToCerebroTag" WHERE "A" = ${articleId}
         `;
         // Benachrichtigungen löschen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             DELETE FROM "Notification" WHERE "carticleId" = ${articleId}
         `;
         // Artikel löschen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             DELETE FROM "CerebroCarticle" WHERE id = ${articleId}
         `;
         // Benachrichtigung über Löschung erstellen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             INSERT INTO "Notification" (
                 "userId", 
                 title, 
@@ -562,7 +561,7 @@ const searchArticles = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Für öffentliche Routen: Kein Filter, damit alle Artikel zugänglich sind
         const articleFilter = req.userId ? (0, organization_1.getDataIsolationFilter)(req, 'cerebroCarticle') : {};
         // Verwendung von Prisma ORM, da die CerebroCarticle-Tabelle jetzt existiert
-        const articles = yield prisma.cerebroCarticle.findMany({
+        const articles = yield prisma_1.prisma.cerebroCarticle.findMany({
             where: Object.assign(Object.assign({}, articleFilter), { OR: [
                     {
                         title: {

@@ -1,8 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { PrismaClient } from '@prisma/client';
 import { decryptApiSettings } from '../utils/encryption';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * WhatsApp Service für Versand von WhatsApp-Nachrichten

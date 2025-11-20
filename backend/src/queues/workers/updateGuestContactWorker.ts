@@ -2,10 +2,8 @@ import { Worker, Job } from 'bullmq';
 import { BoldPaymentService } from '../../services/boldPaymentService';
 import { WhatsAppService } from '../../services/whatsappService';
 import { TTLockService } from '../../services/ttlockService';
-import { PrismaClient } from '@prisma/client';
 import { generateLobbyPmsCheckInLink } from '../../utils/checkInLinkUtils';
-
-const prisma = new PrismaClient();
+import { prisma } from '../../utils/prisma';
 
 /**
  * Job-Daten für Guest Contact Update

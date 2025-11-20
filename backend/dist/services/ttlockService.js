@@ -47,9 +47,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TTLockService = void 0;
 const axios_1 = __importDefault(require("axios"));
-const client_1 = require("@prisma/client");
 const encryption_1 = require("../utils/encryption");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Service für TTLock Integration (Türsystem)
  *
@@ -88,7 +87,7 @@ class TTLockService {
         return __awaiter(this, void 0, void 0, function* () {
             // 1. Versuche Branch Settings zu laden (wenn branchId gesetzt)
             if (this.branchId) {
-                const branch = yield prisma.branch.findUnique({
+                const branch = yield prisma_1.prisma.branch.findUnique({
                     where: { id: this.branchId },
                     select: {
                         doorSystemSettings: true,
@@ -142,7 +141,7 @@ class TTLockService {
             }
             // 2. Lade Organization Settings (Fallback oder wenn nur organizationId)
             if (this.organizationId) {
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: this.organizationId },
                     select: { settings: true }
                 });
@@ -343,7 +342,7 @@ class TTLockService {
      */
     saveAccessToken(token) {
         return __awaiter(this, void 0, void 0, function* () {
-            const organization = yield prisma.organization.findUnique({
+            const organization = yield prisma_1.prisma.organization.findUnique({
                 where: { id: this.organizationId },
                 select: { settings: true }
             });
@@ -351,7 +350,7 @@ class TTLockService {
                 const settings = organization.settings;
                 if (settings.doorSystem) {
                     settings.doorSystem.accessToken = token;
-                    yield prisma.organization.update({
+                    yield prisma_1.prisma.organization.update({
                         where: { id: this.organizationId },
                         data: { settings }
                     });

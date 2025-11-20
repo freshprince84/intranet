@@ -10,12 +10,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.triggerMonthlyReportCheck = exports.checkAndGenerateMonthlyReports = void 0;
-const client_1 = require("@prisma/client");
 const monthlyConsultationReportController_1 = require("../controllers/monthlyConsultationReportController");
 const notificationController_1 = require("../controllers/notificationController");
 const notificationValidation_1 = require("../validation/notificationValidation");
 const translations_1 = require("../utils/translations");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Überprüft und erstellt automatische Monatsabrechnungen für alle Benutzer
  * die die automatische Funktion aktiviert haben und deren Stichdatum heute ist
@@ -27,7 +26,7 @@ const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, f
         const currentDay = today.getDate();
         // Hole alle Benutzer mit aktivierter automatischer Monatsabrechnung
         // deren Stichdatum heute ist
-        const usersWithActiveReports = yield prisma.invoiceSettings.findMany({
+        const usersWithActiveReports = yield prisma_1.prisma.invoiceSettings.findMany({
             where: {
                 monthlyReportEnabled: true,
                 monthlyReportDay: currentDay,
@@ -52,7 +51,7 @@ const checkAndGenerateMonthlyReports = () => __awaiter(void 0, void 0, void 0, f
                 console.log(`Verarbeite automatische Monatsabrechnung für Benutzer ${userSettings.user.firstName} ${userSettings.user.lastName} (ID: ${userSettings.userId})`);
                 // Prüfe, ob bereits ein Bericht für den aktuellen Zeitraum existiert
                 const { periodStart, periodEnd } = calculateReportPeriod(currentDay, today);
-                const existingReport = yield prisma.monthlyConsultationReport.findFirst({
+                const existingReport = yield prisma_1.prisma.monthlyConsultationReport.findFirst({
                     where: {
                         userId: userSettings.userId,
                         periodStart: {

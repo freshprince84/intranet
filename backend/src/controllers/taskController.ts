@@ -3,14 +3,13 @@
 // Die aktuellen Linter-Fehler entstehen durch nicht aktualisierte Types
 
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, TaskStatus, NotificationType } from '@prisma/client';
+import { Prisma, TaskStatus, NotificationType } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import { validateTask, TaskData } from '../validation/taskValidation';
 import { createNotificationIfEnabled } from './notificationController';
 import { getDataIsolationFilter, getUserOrganizationFilter } from '../middleware/organization';
 import { LifecycleService } from '../services/lifecycleService';
 import { getUserLanguage, getTaskNotificationText } from '../utils/translations';
-
-const prisma = new PrismaClient();
 
 const userSelect = {
     id: true,

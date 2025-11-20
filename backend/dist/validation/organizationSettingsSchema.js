@@ -32,15 +32,6 @@ const doorSystemSchema = zod_1.z.object({
     lockIds: zod_1.z.array(zod_1.z.union([zod_1.z.string(), zod_1.z.number()])).transform((val) => val.map(id => String(id))).optional(),
     passcodeType: zod_1.z.enum(['auto', 'custom']).optional(), // 'auto' = 10-stellig (ohne Sync), 'custom' = 4-stellig (mit Sync)
 }).optional();
-// SIRE Settings Schema
-const sireSchema = zod_1.z.object({
-    apiUrl: zod_1.z.string().url('Ungültige URL').optional(),
-    apiKey: zod_1.z.string().optional(),
-    apiSecret: zod_1.z.string().optional(),
-    enabled: zod_1.z.boolean().optional(),
-    autoRegisterOnCheckIn: zod_1.z.boolean().optional(),
-    propertyCode: zod_1.z.string().optional(),
-}).optional();
 // Bold Payment Settings Schema
 const boldPaymentSchema = zod_1.z.object({
     apiKey: zod_1.z.string().optional(),
@@ -67,7 +58,6 @@ exports.organizationSettingsSchema = zod_1.z.object({
     // API Settings
     lobbyPms: lobbyPmsSchema,
     doorSystem: doorSystemSchema,
-    sire: sireSchema,
     boldPayment: boldPaymentSchema,
     whatsapp: whatsappSchema,
     // Weitere Settings können hier hinzugefügt werden
@@ -88,7 +78,6 @@ exports.validateOrganizationSettings = validateOrganizationSettings;
 exports.apiSettingsSchema = zod_1.z.object({
     lobbyPms: lobbyPmsSchema,
     doorSystem: doorSystemSchema,
-    sire: sireSchema,
     boldPayment: boldPaymentSchema,
     whatsapp: whatsappSchema,
 }).passthrough();

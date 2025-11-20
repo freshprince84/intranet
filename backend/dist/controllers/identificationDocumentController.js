@@ -13,13 +13,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.downloadDocument = exports.verifyDocument = exports.deleteDocument = exports.updateDocument = exports.getUserDocuments = exports.addDocument = void 0;
-const client_1 = require("@prisma/client");
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
 const axios_1 = __importDefault(require("axios"));
 const taskAutomationService_1 = require("../services/taskAutomationService");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Konfiguration für Datei-Upload
 const storage = multer_1.default.diskStorage({
     destination: (req, file, cb) => {
@@ -63,7 +62,7 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 return res.status(400).json({ error: 'Dokumenttyp, Dokumentnummer und ausstellendes Land sind erforderlich' });
             }
             // Prüfen, ob bereits ein Dokument dieses Typs für den Benutzer existiert
-            const existingDoc = yield prisma.identificationDocument.findFirst({
+            const existingDoc = yield prisma_1.prisma.identificationDocument.findFirst({
                 where: {
                     userId,
                     documentType
@@ -103,7 +102,7 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 documentFile: documentFilePath,
                 isVerified: false
             };
-            const document = yield prisma.identificationDocument.create({
+            const document = yield prisma_1.prisma.identificationDocument.create({
                 data: documentData
             });
             // Automatische Extraktion und User-Update (nur wenn imageData vorhanden)
@@ -211,14 +210,14 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                                 }
                                 // Update User, falls Daten erkannt wurden
                                 if (Object.keys(userUpdateData).length > 0) {
-                                    yield prisma.user.update({
+                                    yield prisma_1.prisma.user.update({
                                         where: { id: userId },
                                         data: userUpdateData
                                     });
                                     console.log(`[addDocument] User ${userId} aktualisiert mit erkannten Daten:`, userUpdateData);
                                 }
                                 // Prüfe Organisation und erstelle Admin-Task für Kolumbien
-                                const user = yield prisma.user.findUnique({
+                                const user = yield prisma_1.prisma.user.findUnique({
                                     where: { id: userId },
                                     include: {
                                         roles: {
@@ -241,7 +240,7 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                                     yield taskAutomationService_1.TaskAutomationService.createAdminOnboardingTask(userId, userOrganization.id);
                                     // Markiere Identitätsdokument-To-Do als erledigt, falls vorhanden
                                     try {
-                                        const identificationDocumentTask = yield prisma.task.findFirst({
+                                        const identificationDocumentTask = yield prisma_1.prisma.task.findFirst({
                                             where: {
                                                 organizationId: userOrganization.id,
                                                 responsibleId: userId,
@@ -253,7 +252,7 @@ const addDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                                             }
                                         });
                                         if (identificationDocumentTask) {
-                                            yield prisma.task.update({
+                                            yield prisma_1.prisma.task.update({
                                                 where: { id: identificationDocumentTask.id },
                                                 data: { status: 'done' }
                                             });
@@ -291,7 +290,7 @@ exports.addDocument = addDocument;
 const getUserDocuments = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = parseInt(req.params.userId);
-        const documents = yield prisma.identificationDocument.findMany({
+        const documents = yield prisma_1.prisma.identificationDocument.findMany({
             where: { userId }
         });
         res.json(documents);
@@ -311,7 +310,7 @@ const updateDocument = (req, res) => __awaiter(void 0, void 0, void 0, function*
             }
             const docId = parseInt(req.params.docId);
             const { documentNumber, issueDate, expiryDate, issuingCountry, issuingAuthority, imageData } = req.body;
-            const existingDoc = yield prisma.identificationDocument.findUnique({
+            const existingDoc = yield prisma_1.prisma.identificationDocument.findUnique({
                 where: { id: docId }
             });
             if (!existingDoc) {
@@ -353,7 +352,7 @@ const updateDocument = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 updateData.verificationDate = null;
                 updateData.verifiedBy = null;
             }
-            const document = yield prisma.identificationDocument.update({
+            const document = yield prisma_1.prisma.identificationDocument.update({
                 where: { id: docId },
                 data: updateData
             });
@@ -370,7 +369,7 @@ exports.updateDocument = updateDocument;
 const deleteDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const docId = parseInt(req.params.docId);
-        const document = yield prisma.identificationDocument.findUnique({
+        const document = yield prisma_1.prisma.identificationDocument.findUnique({
             where: { id: docId }
         });
         if (!document) {
@@ -383,7 +382,7 @@ const deleteDocument = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 fs_1.default.unlinkSync(filePath);
             }
         }
-        yield prisma.identificationDocument.delete({
+        yield prisma_1.prisma.identificationDocument.delete({
             where: { id: docId }
         });
         res.json({ message: 'Dokument erfolgreich gelöscht' });
@@ -399,13 +398,13 @@ const verifyDocument = (req, res) => __awaiter(void 0, void 0, void 0, function*
     try {
         const docId = parseInt(req.params.docId);
         const adminId = parseInt(req.body.adminId);
-        const document = yield prisma.identificationDocument.findUnique({
+        const document = yield prisma_1.prisma.identificationDocument.findUnique({
             where: { id: docId }
         });
         if (!document) {
             return res.status(404).json({ error: 'Dokument nicht gefunden' });
         }
-        yield prisma.identificationDocument.update({
+        yield prisma_1.prisma.identificationDocument.update({
             where: { id: docId },
             data: {
                 isVerified: true,
@@ -425,7 +424,7 @@ exports.verifyDocument = verifyDocument;
 const downloadDocument = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const docId = parseInt(req.params.docId);
-        const document = yield prisma.identificationDocument.findUnique({
+        const document = yield prisma_1.prisma.identificationDocument.findUnique({
             where: { id: docId }
         });
         if (!document || !document.documentFile) {

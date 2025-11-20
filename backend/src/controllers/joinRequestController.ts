@@ -1,10 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import { z } from 'zod';
 import { notifyOrganizationAdmins, notifyJoinRequestStatus } from './notificationController';
 import { TaskAutomationService } from '../services/taskAutomationService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 // Validation Schemas
 const createJoinRequestSchema = z.object({

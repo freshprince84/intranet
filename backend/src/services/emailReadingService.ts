@@ -1,8 +1,6 @@
 import Imap from 'imap';
 import { simpleParser, ParsedMail } from 'mailparser';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 export interface EmailConfig {
   host: string;

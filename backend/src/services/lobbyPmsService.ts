@@ -1,9 +1,8 @@
-import { PrismaClient, Reservation, ReservationStatus, PaymentStatus } from '@prisma/client';
+import { Reservation, ReservationStatus, PaymentStatus } from '@prisma/client';
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { decryptApiSettings, decryptBranchApiSettings } from '../utils/encryption';
 import { TaskAutomationService } from './taskAutomationService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * LobbyPMS API Response Types
@@ -98,10 +97,6 @@ export class LobbyPmsService {
             this.apiUrl = apiUrl;
             this.apiKey = lobbyPmsSettings.apiKey;
             this.propertyId = lobbyPmsSettings.propertyId;
-            // WICHTIG: organizationId muss gesetzt werden, auch wenn Branch-Settings vorhanden sind
-            if (branch.organizationId) {
-              this.organizationId = branch.organizationId;
-            }
             this.axiosInstance = this.createAxiosInstance();
             console.log(`[LobbyPMS] Verwende Branch-spezifische Settings für Branch ${this.branchId}`);
             return; // Erfolgreich geladen
@@ -413,16 +408,6 @@ export class LobbyPmsService {
    * @returns Lokale Reservation
    */
   async syncReservation(lobbyReservation: LobbyPmsReservation): Promise<Reservation> {
-    // Stelle sicher, dass organizationId gesetzt ist
-    if (!this.organizationId && this.branchId) {
-      const branch = await prisma.branch.findUnique({
-        where: { id: this.branchId },
-        select: { organizationId: true }
-      });
-      if (branch?.organizationId) {
-        this.organizationId = branch.organizationId;
-      }
-    }
     // Mappe LobbyPMS Status zu unserem ReservationStatus
     const mapStatus = (status?: string): ReservationStatus => {
       switch (status?.toLowerCase()) {

@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { PrismaClient, Role } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { Role } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 
 export const adminMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     try {

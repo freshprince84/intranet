@@ -46,10 +46,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteLink = exports.updateLink = exports.getLinkPreview = exports.getLinkById = exports.getLinksByArticle = exports.createExternalLink = void 0;
-const client_1 = require("@prisma/client");
 const axios_1 = __importDefault(require("axios"));
 const cheerio = __importStar(require("cheerio"));
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Hilfsfunktion zum Extrahieren von Metadaten aus einer URL
  */
@@ -140,7 +139,7 @@ const createExternalLink = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(400).json({ message: 'Artikel-ID ist erforderlich' });
         }
         // Prüfen, ob der Artikel existiert
-        const article = yield prisma.$queryRaw `
+        const article = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroCarticle" WHERE id = ${parseInt(carticleId, 10)}
         `;
         if (!article || (Array.isArray(article) && article.length === 0)) {
@@ -149,7 +148,7 @@ const createExternalLink = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Metadaten extrahieren
         const metadata = yield extractMetadata(url);
         // Link erstellen
-        const link = yield prisma.$queryRaw `
+        const link = yield prisma_1.prisma.$queryRaw `
             INSERT INTO "CerebroExternalLink" (
                 url, 
                 title, 
@@ -180,7 +179,7 @@ const createExternalLink = (req, res) => __awaiter(void 0, void 0, void 0, funct
             const markdownLink = `\n\n[🔗 ${linkTitle}](${url})`;
             // Link zum Inhalt hinzufügen
             const updatedContent = currentContent + markdownLink;
-            yield prisma.$queryRaw `
+            yield prisma_1.prisma.$queryRaw `
                 UPDATE "CerebroCarticle"
                 SET content = ${updatedContent}, "updatedAt" = NOW()
                 WHERE id = ${parseInt(carticleId, 10)}
@@ -205,14 +204,14 @@ const getLinksByArticle = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return res.status(400).json({ message: 'Ungültige Artikel-ID' });
         }
         // Prüfen, ob der Artikel existiert
-        const article = yield prisma.$queryRaw `
+        const article = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroCarticle" WHERE id = ${articleId}
         `;
         if (!article || (Array.isArray(article) && article.length === 0)) {
             return res.status(404).json({ message: 'Artikel nicht gefunden' });
         }
         // Links für den Artikel abrufen
-        const links = yield prisma.$queryRaw `
+        const links = yield prisma_1.prisma.$queryRaw `
             SELECT l.*, u.username as creatorName
             FROM "CerebroExternalLink" l
             JOIN "User" u ON l."createdById" = u.id
@@ -238,7 +237,7 @@ const getLinkById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(400).json({ message: 'Ungültige Link-ID' });
         }
         // Link abrufen
-        const link = yield prisma.$queryRaw `
+        const link = yield prisma_1.prisma.$queryRaw `
             SELECT l.*, u.username as creatorName, ca.title as articleTitle
             FROM "CerebroExternalLink" l
             JOIN "User" u ON l."createdById" = u.id
@@ -296,14 +295,14 @@ const updateLink = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return res.status(400).json({ message: 'Titel ist erforderlich' });
         }
         // Prüfen, ob der Link existiert
-        const link = yield prisma.$queryRaw `
+        const link = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroExternalLink" WHERE id = ${linkId}
         `;
         if (!link || (Array.isArray(link) && link.length === 0)) {
             return res.status(404).json({ message: 'Link nicht gefunden' });
         }
         // Link aktualisieren
-        const updatedLink = yield prisma.$queryRaw `
+        const updatedLink = yield prisma_1.prisma.$queryRaw `
             UPDATE "CerebroExternalLink"
             SET title = ${title}, "updatedAt" = NOW()
             WHERE id = ${linkId}
@@ -328,14 +327,14 @@ const deleteLink = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return res.status(400).json({ message: 'Ungültige Link-ID' });
         }
         // Prüfen, ob der Link existiert
-        const link = yield prisma.$queryRaw `
+        const link = yield prisma_1.prisma.$queryRaw `
             SELECT * FROM "CerebroExternalLink" WHERE id = ${linkId}
         `;
         if (!link || (Array.isArray(link) && link.length === 0)) {
             return res.status(404).json({ message: 'Link nicht gefunden' });
         }
         // Link löschen
-        yield prisma.$queryRaw `
+        yield prisma_1.prisma.$queryRaw `
             DELETE FROM "CerebroExternalLink" WHERE id = ${linkId}
         `;
         res.status(200).json({ message: 'Link erfolgreich gelöscht' });

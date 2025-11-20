@@ -10,8 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.belongsToOrganization = exports.getDataIsolationFilter = exports.getUserOrganizationFilter = exports.getOrganizationFilter = exports.organizationMiddleware = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.userId;
@@ -19,7 +18,7 @@ const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, voi
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Hole aktuelle Rolle und Organisation des Users
-        const userRole = yield prisma.userRole.findFirst({
+        const userRole = yield prisma_1.prisma.userRole.findFirst({
             where: {
                 userId: Number(userId),
                 lastUsed: true
@@ -43,7 +42,7 @@ const organizationMiddleware = (req, res, next) => __awaiter(void 0, void 0, voi
         req.organizationId = userRole.role.organizationId;
         req.userRole = userRole;
         // Hole aktive Branch des Users
-        const userBranch = yield prisma.usersBranches.findFirst({
+        const userBranch = yield prisma_1.prisma.usersBranches.findFirst({
             where: {
                 userId: Number(userId),
                 lastUsed: true
@@ -251,7 +250,7 @@ const belongsToOrganization = (req, entity, resourceId) => __awaiter(void 0, voi
             const userId = Number(req.userId);
             switch (entity) {
                 case 'client':
-                    const client = yield prisma.client.findUnique({
+                    const client = yield prisma_1.prisma.client.findUnique({
                         where: { id: resourceId },
                         include: {
                             workTimes: {
@@ -262,7 +261,7 @@ const belongsToOrganization = (req, entity, resourceId) => __awaiter(void 0, voi
                     });
                     return client !== null && client.workTimes.length > 0;
                 case 'role':
-                    const role = yield prisma.role.findUnique({
+                    const role = yield prisma_1.prisma.role.findUnique({
                         where: { id: resourceId },
                         include: {
                             users: {
@@ -273,7 +272,7 @@ const belongsToOrganization = (req, entity, resourceId) => __awaiter(void 0, voi
                     });
                     return role !== null && role.users.length > 0;
                 case 'branch':
-                    const branch = yield prisma.branch.findUnique({
+                    const branch = yield prisma_1.prisma.branch.findUnique({
                         where: { id: resourceId },
                         include: {
                             users: {
@@ -290,7 +289,7 @@ const belongsToOrganization = (req, entity, resourceId) => __awaiter(void 0, voi
         // User mit Organisation: Prüfe ob Ressource zur Organisation gehört
         switch (entity) {
             case 'client':
-                const client = yield prisma.client.findFirst({
+                const client = yield prisma_1.prisma.client.findFirst({
                     where: {
                         id: resourceId,
                         workTimes: {
@@ -310,7 +309,7 @@ const belongsToOrganization = (req, entity, resourceId) => __awaiter(void 0, voi
                 });
                 return client !== null;
             case 'role':
-                const role = yield prisma.role.findFirst({
+                const role = yield prisma_1.prisma.role.findFirst({
                     where: {
                         id: resourceId,
                         organizationId: req.organizationId
@@ -318,7 +317,7 @@ const belongsToOrganization = (req, entity, resourceId) => __awaiter(void 0, voi
                 });
                 return role !== null;
             case 'branch':
-                const branch = yield prisma.branch.findFirst({
+                const branch = yield prisma_1.prisma.branch.findFirst({
                     where: {
                         id: resourceId,
                         users: {

@@ -46,7 +46,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.uploadSignatureMiddleware = exports.uploadTemplateMiddleware = exports.uploadDocumentSignature = exports.getDocumentSignatures = exports.uploadDocumentTemplate = exports.getDocumentTemplates = exports.updateLifecycleRoles = exports.getLifecycleRoles = exports.updateCurrentOrganization = exports.updateOrganizationLanguage = exports.getOrganizationLanguage = exports.searchOrganizations = exports.processJoinRequest = exports.getJoinRequests = exports.createJoinRequest = exports.getCurrentOrganization = exports.getOrganizationStats = exports.deleteOrganization = exports.updateOrganization = exports.createOrganization = exports.getOrganizationById = exports.getAllOrganizations = void 0;
-const client_1 = require("@prisma/client");
+const prisma_1 = require("../utils/prisma");
 const zod_1 = require("zod");
 const multer_1 = __importDefault(require("multer"));
 const path = __importStar(require("path"));
@@ -55,7 +55,6 @@ const encryption_1 = require("../utils/encryption");
 const urlValidation_1 = require("../utils/urlValidation");
 const organizationSettingsSchema_1 = require("../validation/organizationSettingsSchema");
 const auditService_1 = require("../services/auditService");
-const prisma = new client_1.PrismaClient();
 // Validation Schemas
 const createOrganizationSchema = zod_1.z.object({
     name: zod_1.z.string().min(1, 'Name ist erforderlich'),
@@ -79,7 +78,7 @@ const languageSchema = zod_1.z.enum(['es', 'de', 'en']);
 // Alle Organisationen abrufen
 const getAllOrganizations = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const organizations = yield prisma.organization.findMany({
+        const organizations = yield prisma_1.prisma.organization.findMany({
             select: {
                 id: true,
                 name: true,
@@ -118,7 +117,7 @@ const getOrganizationById = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (isNaN(organizationId)) {
             return res.status(400).json({ message: 'Ungültige Organisations-ID' });
         }
-        const organization = yield prisma.organization.findUnique({
+        const organization = yield prisma_1.prisma.organization.findUnique({
             where: { id: organizationId },
             include: {
                 roles: {
@@ -198,7 +197,7 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Normalisiere Name zu lowercase für Konsistenz
         const normalizedName = validatedData.name.toLowerCase().trim();
         // Prüfe ob Name bereits existiert
-        const existingOrg = yield prisma.organization.findUnique({
+        const existingOrg = yield prisma_1.prisma.organization.findUnique({
             where: { name: normalizedName }
         });
         if (existingOrg) {
@@ -207,7 +206,7 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Prüfe auch Domain falls angegeben
         if (validatedData.domain) {
             const normalizedDomain = validatedData.domain.toLowerCase().trim();
-            const existingOrgByDomain = yield prisma.organization.findUnique({
+            const existingOrgByDomain = yield prisma_1.prisma.organization.findUnique({
                 where: { domain: normalizedDomain }
             });
             if (existingOrgByDomain) {
@@ -296,7 +295,7 @@ const createOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
             'payroll_edit'
         ];
         // Erstelle Organisation und Admin-Rolle in einer Transaction
-        const result = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        const result = yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             var _a, _b;
             // 1. Organisation erstellen
             const normalizedName = validatedData.name.toLowerCase().trim();
@@ -568,13 +567,13 @@ const updateOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }
         const validatedData = updateOrganizationSchema.parse(req.body);
         // Prüfe ob Organisation existiert
-        const existingOrg = yield prisma.organization.findUnique({
+        const existingOrg = yield prisma_1.prisma.organization.findUnique({
             where: { id: organizationId }
         });
         if (!existingOrg) {
             return res.status(404).json({ message: 'Organisation nicht gefunden' });
         }
-        const organization = yield prisma.organization.update({
+        const organization = yield prisma_1.prisma.organization.update({
             where: { id: organizationId },
             data: validatedData,
             select: {
@@ -618,7 +617,7 @@ const deleteOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(400).json({ message: 'Standard-Organisation kann nicht gelöscht werden' });
         }
         // Prüfe ob Organisation existiert
-        const existingOrg = yield prisma.organization.findUnique({
+        const existingOrg = yield prisma_1.prisma.organization.findUnique({
             where: { id: organizationId },
             include: {
                 _count: {
@@ -640,7 +639,7 @@ const deleteOrganization = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }
         // Lösche zuerst abhängige Datensätze
-        yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // Lösche Join Requests
             yield tx.organizationJoinRequest.deleteMany({
                 where: { organizationId }
@@ -673,7 +672,7 @@ const getOrganizationStats = (req, res) => __awaiter(void 0, void 0, void 0, fun
         if (!organizationId || isNaN(organizationId)) {
             return res.status(400).json({ message: 'Ungültige Organisations-ID' });
         }
-        const stats = yield prisma.organization.findUnique({
+        const stats = yield prisma_1.prisma.organization.findUnique({
             where: { id: organizationId },
             select: {
                 id: true,
@@ -693,7 +692,7 @@ const getOrganizationStats = (req, res) => __awaiter(void 0, void 0, void 0, fun
             return res.status(404).json({ message: 'Organisation nicht gefunden' });
         }
         // Berechne aktuelle Benutzeranzahl über Rollen
-        const userCount = yield prisma.userRole.count({
+        const userCount = yield prisma_1.prisma.userRole.count({
             where: {
                 role: {
                     organizationId: organizationId
@@ -720,7 +719,7 @@ const getCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0, f
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Hole die aktuelle Rolle des Users
-        const userRole = yield prisma.userRole.findFirst({
+        const userRole = yield prisma_1.prisma.userRole.findFirst({
             where: {
                 userId: Number(userId),
                 lastUsed: true
@@ -778,14 +777,14 @@ const createJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
             return res.status(400).json({ message: 'Organisationsname ist erforderlich' });
         }
         // Finde Organisation
-        const organization = yield prisma.organization.findUnique({
+        const organization = yield prisma_1.prisma.organization.findUnique({
             where: { name: organizationName.toLowerCase() }
         });
         if (!organization) {
             return res.status(404).json({ message: 'Organisation nicht gefunden' });
         }
         // Prüfe ob bereits Anfrage existiert
-        const existingRequest = yield prisma.organizationJoinRequest.findUnique({
+        const existingRequest = yield prisma_1.prisma.organizationJoinRequest.findUnique({
             where: {
                 organizationId_requesterId: {
                     organizationId: organization.id,
@@ -796,7 +795,7 @@ const createJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (existingRequest) {
             return res.status(409).json({ message: 'Beitrittsanfrage bereits gestellt' });
         }
-        const joinRequest = yield prisma.organizationJoinRequest.create({
+        const joinRequest = yield prisma_1.prisma.organizationJoinRequest.create({
             data: {
                 organizationId: organization.id,
                 requesterId: Number(userId),
@@ -834,7 +833,7 @@ const getJoinRequests = (req, res) => __awaiter(void 0, void 0, void 0, function
             });
         }
         console.log('✅ Fetching join requests for organizationId:', req.organizationId);
-        const joinRequests = yield prisma.organizationJoinRequest.findMany({
+        const joinRequests = yield prisma_1.prisma.organizationJoinRequest.findMany({
             where: { organizationId: req.organizationId },
             include: {
                 requester: {
@@ -884,7 +883,7 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(400).json({ message: 'Ungültige Aktion' });
         }
         // Hole Beitrittsanfrage
-        const joinRequest = yield prisma.organizationJoinRequest.findUnique({
+        const joinRequest = yield prisma_1.prisma.organizationJoinRequest.findUnique({
             where: { id: Number(id) },
             include: {
                 organization: true,
@@ -901,7 +900,7 @@ const processJoinRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (joinRequest.status !== 'pending') {
             return res.status(400).json({ message: 'Anfrage bereits bearbeitet' });
         }
-        const result = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        const result = yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // Aktualisiere Beitrittsanfrage
             const updatedRequest = yield tx.organizationJoinRequest.update({
                 where: { id: Number(id) },
@@ -953,7 +952,7 @@ const searchOrganizations = (req, res) => __awaiter(void 0, void 0, void 0, func
         if (!search || typeof search !== 'string') {
             return res.status(400).json({ message: 'Suchbegriff ist erforderlich' });
         }
-        const organizations = yield prisma.organization.findMany({
+        const organizations = yield prisma_1.prisma.organization.findMany({
             where: {
                 AND: [
                     { isActive: true },
@@ -989,7 +988,7 @@ const getOrganizationLanguage = (req, res) => __awaiter(void 0, void 0, void 0, 
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Hole die aktuelle Organisation des Users
-        const userRole = yield prisma.userRole.findFirst({
+        const userRole = yield prisma_1.prisma.userRole.findFirst({
             where: {
                 userId: Number(userId),
                 lastUsed: true
@@ -1031,7 +1030,7 @@ const updateOrganizationLanguage = (req, res) => __awaiter(void 0, void 0, void 
         const { language } = req.body;
         const validatedLanguage = languageSchema.parse(language);
         // Hole die aktuelle Organisation des Users
-        const userRole = yield prisma.userRole.findFirst({
+        const userRole = yield prisma_1.prisma.userRole.findFirst({
             where: {
                 userId: Number(userId),
                 lastUsed: true
@@ -1051,7 +1050,7 @@ const updateOrganizationLanguage = (req, res) => __awaiter(void 0, void 0, void 
         const currentSettings = organization.settings || {};
         // Aktualisiere Sprache in settings JSON-Feld
         const updatedSettings = Object.assign(Object.assign({}, currentSettings), { language: validatedLanguage });
-        const updatedOrganization = yield prisma.organization.update({
+        const updatedOrganization = yield prisma_1.prisma.organization.update({
             where: { id: organization.id },
             data: {
                 settings: updatedSettings
@@ -1100,7 +1099,7 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
         // Validiere Eingabedaten
         const validatedData = updateOrganizationSchema.parse(req.body);
         // Hole die aktuelle Organisation des Users mit Berechtigungen
-        const userRole = yield prisma.userRole.findFirst({
+        const userRole = yield prisma_1.prisma.userRole.findFirst({
             where: {
                 userId: Number(userId),
                 lastUsed: true
@@ -1210,7 +1209,7 @@ const updateCurrentOrganization = (req, res) => __awaiter(void 0, void 0, void 0
             }
         }
         // Aktualisiere Organisation
-        const updatedOrganization = yield prisma.organization.update({
+        const updatedOrganization = yield prisma_1.prisma.organization.update({
             where: { id: organization.id },
             data: updateData,
             select: {
@@ -1272,7 +1271,7 @@ const getLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!req.organizationId) {
             return res.status(400).json({ message: 'Keine Organisation gefunden' });
         }
-        const organization = yield prisma.organization.findUnique({
+        const organization = yield prisma_1.prisma.organization.findUnique({
             where: { id: req.organizationId },
             select: { settings: true }
         });
@@ -1282,7 +1281,7 @@ const getLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, functi
         const settings = organization.settings;
         const lifecycleRoles = (settings === null || settings === void 0 ? void 0 : settings.lifecycleRoles) || null;
         // Hole alle verfügbaren Rollen der Organisation
-        const roles = yield prisma.role.findMany({
+        const roles = yield prisma_1.prisma.role.findMany({
             where: { organizationId: req.organizationId },
             select: {
                 id: true,
@@ -1369,12 +1368,12 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
         ].filter((id) => id !== null);
         if (roleIds.length > 0) {
             // Hole ALLE Rollen der Organisation für Debugging
-            const allOrgRoles = yield prisma.role.findMany({
+            const allOrgRoles = yield prisma_1.prisma.role.findMany({
                 where: { organizationId: req.organizationId },
                 select: { id: true, name: true }
             });
             console.log('[updateLifecycleRoles] All roles in organization:', allOrgRoles);
-            const validRoles = yield prisma.role.findMany({
+            const validRoles = yield prisma_1.prisma.role.findMany({
                 where: {
                     id: { in: roleIds },
                     organizationId: req.organizationId
@@ -1399,7 +1398,7 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
             }
         }
         // Hole aktuelle Organisation
-        const organization = yield prisma.organization.findUnique({
+        const organization = yield prisma_1.prisma.organization.findUnique({
             where: { id: req.organizationId },
             select: { settings: true }
         });
@@ -1433,7 +1432,7 @@ const updateLifecycleRoles = (req, res) => __awaiter(void 0, void 0, void 0, fun
         };
         console.log('[updateLifecycleRoles] Settings to save:', JSON.stringify(settings.lifecycleRoles, null, 2));
         // Aktualisiere Organisation
-        const updated = yield prisma.organization.update({
+        const updated = yield prisma_1.prisma.organization.update({
             where: { id: req.organizationId },
             data: { settings },
             select: {
@@ -1519,7 +1518,7 @@ const getDocumentTemplates = (req, res) => __awaiter(void 0, void 0, void 0, fun
         if (!req.organizationId) {
             return res.status(400).json({ message: 'Keine Organisation gefunden' });
         }
-        const organization = yield prisma.organization.findUnique({
+        const organization = yield prisma_1.prisma.organization.findUnique({
             where: { id: req.organizationId },
             select: { settings: true }
         });
@@ -1558,7 +1557,7 @@ const uploadDocumentTemplate = (req, res) => __awaiter(void 0, void 0, void 0, f
             return res.status(400).json({ message: 'Ungültiger Template-Typ' });
         }
         // Hole aktuelle Organisation
-        const organization = yield prisma.organization.findUnique({
+        const organization = yield prisma_1.prisma.organization.findUnique({
             where: { id: req.organizationId },
             select: { settings: true }
         });
@@ -1581,7 +1580,7 @@ const uploadDocumentTemplate = (req, res) => __awaiter(void 0, void 0, void 0, f
             uploadDate: new Date().toISOString()
         };
         // Aktualisiere Organisation
-        yield prisma.organization.update({
+        yield prisma_1.prisma.organization.update({
             where: { id: req.organizationId },
             data: { settings }
         });
@@ -1605,7 +1604,7 @@ const getDocumentSignatures = (req, res) => __awaiter(void 0, void 0, void 0, fu
         if (!req.organizationId) {
             return res.status(400).json({ message: 'Keine Organisation gefunden' });
         }
-        const organization = yield prisma.organization.findUnique({
+        const organization = yield prisma_1.prisma.organization.findUnique({
             where: { id: req.organizationId },
             select: { settings: true }
         });
@@ -1647,7 +1646,7 @@ const uploadDocumentSignature = (req, res) => __awaiter(void 0, void 0, void 0, 
             return res.status(400).json({ message: 'Name des Unterzeichners ist erforderlich' });
         }
         // Hole aktuelle Organisation
-        const organization = yield prisma.organization.findUnique({
+        const organization = yield prisma_1.prisma.organization.findUnique({
             where: { id: req.organizationId },
             select: { settings: true }
         });
@@ -1672,7 +1671,7 @@ const uploadDocumentSignature = (req, res) => __awaiter(void 0, void 0, void 0, 
             uploadDate: new Date().toISOString()
         };
         // Aktualisiere Organisation
-        yield prisma.organization.update({
+        yield prisma_1.prisma.organization.update({
             where: { id: req.organizationId },
             data: { settings }
         });

@@ -1,12 +1,10 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import axios from 'axios';
 import { TaskAutomationService } from '../services/taskAutomationService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 // Konfiguration für Datei-Upload
 const storage = multer.diskStorage({

@@ -11,9 +11,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createReservationWorker = createReservationWorker;
 const bullmq_1 = require("bullmq");
-const client_1 = require("@prisma/client");
 const reservationNotificationService_1 = require("../../services/reservationNotificationService");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../../utils/prisma");
 /**
  * Erstellt einen Worker für Reservation-Jobs
  * Verarbeitet Payment-Link-Erstellung und WhatsApp-Versand im Hintergrund
@@ -26,7 +25,7 @@ function createReservationWorker(connection) {
         const { reservationId, organizationId, amount, currency, contactType, guestPhone, guestEmail, guestName, } = job.data;
         console.log(`[Reservation Worker] Starte Verarbeitung für Reservierung ${reservationId} (Job ID: ${job.id})`);
         // Prüfe ob Reservierung existiert
-        const reservation = yield prisma.reservation.findUnique({
+        const reservation = yield prisma_1.prisma.reservation.findUnique({
             where: { id: reservationId }
         });
         if (!reservation) {

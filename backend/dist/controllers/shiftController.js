@@ -13,7 +13,7 @@ exports.generateShiftPlan = exports.deleteShift = exports.updateShift = exports.
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
 const date_fns_1 = require("date-fns");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Hilfsfunktion: Prüft, ob zwei Zeitfenster sich überschneiden
  */
@@ -65,7 +65,7 @@ function findAvailableUsers(params) {
     return __awaiter(this, void 0, void 0, function* () {
         const { branchId, roleId, date, dayOfWeek, startTime, endTime, fallbackToAllUsers = true } = params;
         // Hole Verfügbarkeits-Regeln
-        const availabilities = yield prisma.userAvailability.findMany({
+        const availabilities = yield prisma_1.prisma.userAvailability.findMany({
             where: {
                 AND: [
                     {
@@ -136,7 +136,7 @@ function findAvailableUsers(params) {
         // NEU: Wenn keine Verfügbarkeiten gefunden und Fallback aktiviert
         if (userMap.size === 0 && fallbackToAllUsers) {
             // Hole alle User mit passender Rolle und Branch
-            const usersWithRole = yield prisma.user.findMany({
+            const usersWithRole = yield prisma_1.prisma.user.findMany({
                 where: {
                     active: true,
                     roles: {
@@ -174,7 +174,7 @@ function findAvailableUsers(params) {
  */
 function checkOverlap(userId, date, startTime, endTime) {
     return __awaiter(this, void 0, void 0, function* () {
-        const existingShifts = yield prisma.shift.findMany({
+        const existingShifts = yield prisma_1.prisma.shift.findMany({
             where: {
                 userId,
                 date: {
@@ -236,7 +236,7 @@ const getAllShifts = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             where.status = status;
         }
         console.log('[getAllShifts] 🔍 Führe Prisma-Query aus...');
-        const shifts = yield prisma.shift.findMany({
+        const shifts = yield prisma_1.prisma.shift.findMany({
             where,
             include: {
                 shiftTemplate: {
@@ -318,7 +318,7 @@ const getShiftById = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 message: 'Ungültige Schicht-ID'
             });
         }
-        const shift = yield prisma.shift.findUnique({
+        const shift = yield prisma_1.prisma.shift.findUnique({
             where: { id: shiftId },
             include: {
                 shiftTemplate: {
@@ -434,7 +434,7 @@ const createShift = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             });
         }
         // Hole Template
-        const template = yield prisma.shiftTemplate.findUnique({
+        const template = yield prisma_1.prisma.shiftTemplate.findUnique({
             where: { id: shiftTemplateId }
         });
         if (!template) {
@@ -465,7 +465,7 @@ const createShift = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             }
         }
         // Erstelle Schicht
-        const shift = yield prisma.shift.create({
+        const shift = yield prisma_1.prisma.shift.create({
             data: {
                 shiftTemplateId,
                 branchId,
@@ -557,7 +557,7 @@ const updateShift = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 message: 'Ungültige Schicht-ID'
             });
         }
-        const existing = yield prisma.shift.findUnique({
+        const existing = yield prisma_1.prisma.shift.findUnique({
             where: { id: shiftId }
         });
         if (!existing) {
@@ -574,7 +574,7 @@ const updateShift = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             const finalDate = date ? new Date(date) : existing.date;
             if (finalUserId) {
                 // Hole Template für Start-/Endzeit
-                const template = yield prisma.shiftTemplate.findUnique({
+                const template = yield prisma_1.prisma.shiftTemplate.findUnique({
                     where: { id: existing.shiftTemplateId }
                 });
                 if (template) {
@@ -618,7 +618,7 @@ const updateShift = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 });
             }
             // Aktualisiere auch startTime und endTime basierend auf Template
-            const template = yield prisma.shiftTemplate.findUnique({
+            const template = yield prisma_1.prisma.shiftTemplate.findUnique({
                 where: { id: existing.shiftTemplateId }
             });
             if (template) {
@@ -668,7 +668,7 @@ const updateShift = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 updateData.confirmedBy = currentUserId || null;
             }
         }
-        const shift = yield prisma.shift.update({
+        const shift = yield prisma_1.prisma.shift.update({
             where: { id: shiftId },
             data: updateData,
             include: {
@@ -745,7 +745,7 @@ const deleteShift = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 message: 'Ungültige Schicht-ID'
             });
         }
-        const existing = yield prisma.shift.findUnique({
+        const existing = yield prisma_1.prisma.shift.findUnique({
             where: { id: shiftId }
         });
         if (!existing) {
@@ -765,7 +765,7 @@ const deleteShift = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 relatedEntityType: 'cancelled'
             });
         }
-        yield prisma.shift.delete({
+        yield prisma_1.prisma.shift.delete({
             where: { id: shiftId }
         });
         res.json({
@@ -826,10 +826,10 @@ const generateShiftPlan = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         // Hole Rollen
         const roles = roleIds && roleIds.length > 0
-            ? yield prisma.role.findMany({
+            ? yield prisma_1.prisma.role.findMany({
                 where: { id: { in: roleIds } }
             })
-            : yield prisma.role.findMany({
+            : yield prisma_1.prisma.role.findMany({
                 where: {
                     branches: {
                         some: { branchId }
@@ -851,7 +851,7 @@ const generateShiftPlan = (req, res) => __awaiter(void 0, void 0, void 0, functi
             // Iteriere über alle Rollen
             for (const role of roles) {
                 // Hole ShiftTemplates für diese Rolle
-                const templates = yield prisma.shiftTemplate.findMany({
+                const templates = yield prisma_1.prisma.shiftTemplate.findMany({
                     where: {
                         roleId: role.id,
                         branchId,
@@ -1010,11 +1010,11 @@ const generateShiftPlan = (req, res) => __awaiter(void 0, void 0, void 0, functi
             }
         }
         // Erstelle Schichten in der Datenbank
-        const createdShifts = yield prisma.shift.createMany({
+        const createdShifts = yield prisma_1.prisma.shift.createMany({
             data: shifts
         });
         // Hole erstellte Schichten mit Relations
-        const shiftsWithRelations = yield prisma.shift.findMany({
+        const shiftsWithRelations = yield prisma_1.prisma.shift.findMany({
             where: {
                 branchId,
                 date: {

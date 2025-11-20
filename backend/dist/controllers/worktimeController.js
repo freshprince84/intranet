@@ -44,6 +44,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.checkAndStopExceededWorktimes = exports.getActiveWorktime = exports.exportWorktimes = exports.getWorktimeStats = exports.updateWorktime = exports.deleteWorktime = exports.getWorktimes = exports.stopWorktime = exports.startWorktime = void 0;
 const client_1 = require("@prisma/client");
+const prisma_1 = require("../utils/prisma");
 const ExcelJS = __importStar(require("exceljs"));
 const date_fns_1 = require("date-fns");
 const locale_1 = require("date-fns/locale");
@@ -51,7 +52,6 @@ const date_fns_tz_1 = require("date-fns-tz");
 const notificationController_1 = require("./notificationController");
 const organization_1 = require("../middleware/organization");
 const translations_1 = require("../utils/translations");
-const prisma = new client_1.PrismaClient();
 const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { branchId, startTime } = req.body;
@@ -60,7 +60,7 @@ const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Prüfe, ob bereits eine aktive Zeiterfassung existiert
-        const activeWorktime = yield prisma.workTime.findFirst({
+        const activeWorktime = yield prisma_1.prisma.workTime.findFirst({
             where: {
                 userId: Number(userId),
                 endTime: null
@@ -70,7 +70,7 @@ const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(400).json({ message: 'Es läuft bereits eine Zeiterfassung' });
         }
         // Hole den Benutzer mit seinen Arbeitszeiteinstellungen
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: Number(userId) }
         });
         if (!user) {
@@ -101,7 +101,7 @@ const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         console.log(`Berechneter Tagesbeginn (kompensiert): ${todayStart.toISOString()}`);
         console.log(`Berechnetes Tagesende (kompensiert): ${todayEnd.toISOString()}`);
         // Hole alle Zeiterfassungen für heute
-        const todaysWorktimes = yield prisma.workTime.findMany({
+        const todaysWorktimes = yield prisma_1.prisma.workTime.findMany({
             where: {
                 userId: Number(userId),
                 startTime: {
@@ -135,7 +135,7 @@ const startWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             });
         }
         // Speichere die aktuelle Zeit direkt
-        const worktime = yield prisma.workTime.create({
+        const worktime = yield prisma_1.prisma.workTime.create({
             data: {
                 startTime: now,
                 userId: Number(userId),
@@ -176,7 +176,7 @@ const stopWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Finde die aktive Zeiterfassung für den Benutzer
-        const activeWorktime = yield prisma.workTime.findFirst({
+        const activeWorktime = yield prisma_1.prisma.workTime.findFirst({
             where: {
                 userId: Number(userId),
                 endTime: null
@@ -188,7 +188,7 @@ const stopWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // VEREINFACHT: Verwende die aktuelle Zeit oder die übergebene endTime direkt
         const now = endTime ? new Date(endTime) : new Date();
         console.log(`Stoppe Zeiterfassung mit Endzeit: ${now.toISOString()}`);
-        const worktime = yield prisma.workTime.update({
+        const worktime = yield prisma_1.prisma.workTime.update({
             where: { id: activeWorktime.id },
             data: Object.assign({ endTime: now }, (activeWorktime.timezone ? {} : { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone })),
             include: {
@@ -224,7 +224,7 @@ const getWorktimes = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Benutzer abrufen, um die Zeitzone zu bestimmen
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: Number(userId) }
         });
         if (!user) {
@@ -261,7 +261,7 @@ const getWorktimes = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                     lte: compensatedEndOfDay
                 } });
         }
-        const worktimes = yield prisma.workTime.findMany({
+        const worktimes = yield prisma_1.prisma.workTime.findMany({
             where: whereClause,
             include: {
                 branch: true
@@ -287,13 +287,13 @@ const deleteWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function*
         }
         // Datenisolation: Nur WorkTimes der Organisation
         const worktimeFilter = (0, organization_1.getDataIsolationFilter)(req, 'worktime');
-        const worktime = yield prisma.workTime.findFirst({
+        const worktime = yield prisma_1.prisma.workTime.findFirst({
             where: Object.assign(Object.assign({}, worktimeFilter), { id: Number(id) })
         });
         if (!worktime) {
             return res.status(404).json({ message: 'Zeiterfassung nicht gefunden' });
         }
-        yield prisma.workTime.delete({
+        yield prisma_1.prisma.workTime.delete({
             where: { id: Number(id) }
         });
         res.json({ message: 'Zeiterfassung erfolgreich gelöscht' });
@@ -316,7 +316,7 @@ const updateWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Datenisolation: Nur WorkTimes der Organisation
         const worktimeFilter = (0, organization_1.getDataIsolationFilter)(req, 'worktime');
         // Prüfe, ob die Zeiterfassung existiert und zur Organisation gehört
-        const worktime = yield prisma.workTime.findFirst({
+        const worktime = yield prisma_1.prisma.workTime.findFirst({
             where: Object.assign(Object.assign({}, worktimeFilter), { id: Number(id) })
         });
         if (!worktime) {
@@ -392,7 +392,7 @@ const updateWorktime = (req, res) => __awaiter(void 0, void 0, void 0, function*
             }
         }
         console.log('Final updateData:', JSON.stringify(updateData));
-        const updatedWorktime = yield prisma.workTime.update({
+        const updatedWorktime = yield prisma_1.prisma.workTime.update({
             where: { id: Number(id) },
             data: updateData,
             include: {
@@ -472,7 +472,7 @@ const getWorktimeStats = (req, res) => __awaiter(void 0, void 0, void 0, functio
         // Direkte Suche nach den Einträgen mit universellen UTC-Grenzen
         // WICHTIG: Auch aktive Zeitmessungen (endTime: null) holen, die im Zeitraum starten
         // ODER die vor dem Zeitraum starten aber noch aktiv sind (können in den Zeitraum hineinreichen)
-        const entries = yield prisma.workTime.findMany({
+        const entries = yield prisma_1.prisma.workTime.findMany({
             where: {
                 userId: Number(userId),
                 OR: [
@@ -890,7 +890,7 @@ const exportWorktimes = (req, res) => __awaiter(void 0, void 0, void 0, function
         const weekEndUtc = new Date(`${weekEndStr}T23:59:59.999Z`); // Z = UTC!
         console.log(`Universeller UTC-Bereich (weltweit konsistent): ${weekStartUtc.toISOString()} bis ${weekEndUtc.toISOString()}`);
         // Direkte Suche nach den Einträgen mit universellen UTC-Grenzen
-        const entries = yield prisma.workTime.findMany({
+        const entries = yield prisma_1.prisma.workTime.findMany({
             where: {
                 userId: Number(userId),
                 startTime: {
@@ -912,7 +912,7 @@ const exportWorktimes = (req, res) => __awaiter(void 0, void 0, void 0, function
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Arbeitszeiten');
         // Hole zusätzlich die Branch-Informationen
-        const worktimesWithBranch = yield prisma.workTime.findMany({
+        const worktimesWithBranch = yield prisma_1.prisma.workTime.findMany({
             where: {
                 userId: Number(userId),
                 startTime: {
@@ -972,7 +972,7 @@ const getActiveWorktime = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const activeWorktime = yield prisma.workTime.findFirst({
+        const activeWorktime = yield prisma_1.prisma.workTime.findFirst({
             where: {
                 userId: Number(userId),
                 endTime: null
@@ -1002,7 +1002,7 @@ exports.getActiveWorktime = getActiveWorktime;
 const checkAndStopExceededWorktimes = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Finde alle aktiven Worktime-Einträge
-        const activeWorktimes = yield prisma.workTime.findMany({
+        const activeWorktimes = yield prisma_1.prisma.workTime.findMany({
             where: {
                 endTime: null
             },
@@ -1034,7 +1034,7 @@ const checkAndStopExceededWorktimes = () => __awaiter(void 0, void 0, void 0, fu
             console.log(`Tagesbeginn (kompensiert): ${todayStart.toISOString()}`);
             console.log(`Tagesende (kompensiert): ${todayEnd.toISOString()}`);
             // Hole alle beendeten Zeiterfassungen für heute
-            const todaysWorktimes = yield prisma.workTime.findMany({
+            const todaysWorktimes = yield prisma_1.prisma.workTime.findMany({
                 where: {
                     userId: worktime.userId,
                     startTime: {
@@ -1083,7 +1083,7 @@ const checkAndStopExceededWorktimes = () => __awaiter(void 0, void 0, void 0, fu
                 const endTimeNow = new Date();
                 // Manuelle Korrektur für UTC-Speicherung - kompensiert den Zeitzonenversatz
                 const utcCorrectedTime = new Date(endTimeNow.getTime() - endTimeNow.getTimezoneOffset() * 60000);
-                const stoppedWorktime = yield prisma.workTime.update({
+                const stoppedWorktime = yield prisma_1.prisma.workTime.update({
                     where: { id: worktime.id },
                     data: Object.assign({ endTime: utcCorrectedTime }, (worktime.timezone ? {} : { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }))
                 });

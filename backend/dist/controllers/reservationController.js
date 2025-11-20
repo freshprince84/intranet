@@ -44,6 +44,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getReservationById = exports.getReservationNotificationLogs = exports.generatePinAndSendNotification = exports.sendReservationInvitation = exports.getAllReservations = exports.createReservation = exports.updateGuestContact = void 0;
 const client_1 = require("@prisma/client");
+const prisma_1 = require("../utils/prisma");
 const whatsappService_1 = require("../services/whatsappService");
 const boldPaymentService_1 = require("../services/boldPaymentService");
 const ttlockService_1 = require("../services/ttlockService");
@@ -51,7 +52,6 @@ const reservationNotificationService_1 = require("../services/reservationNotific
 const queueService_1 = require("../services/queueService");
 const checkInLinkUtils_1 = require("../utils/checkInLinkUtils");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
-const prisma = new client_1.PrismaClient();
 /**
  * Utility: Erkennt ob ein String eine Telefonnummer oder Email ist
  */
@@ -86,7 +86,7 @@ const updateGuestContact = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }
         // Hole Reservierung
-        const reservation = yield prisma.reservation.findUnique({
+        const reservation = yield prisma_1.prisma.reservation.findUnique({
             where: { id: reservationId },
             include: { organization: true }
         });
@@ -108,7 +108,7 @@ const updateGuestContact = (req, res) => __awaiter(void 0, void 0, void 0, funct
             updateData.guestEmail = contact.trim();
         }
         // Aktualisiere Reservierung
-        const updatedReservation = yield prisma.reservation.update({
+        const updatedReservation = yield prisma_1.prisma.reservation.update({
             where: { id: reservationId },
             data: updateData,
             include: {
@@ -194,7 +194,7 @@ const updateGuestContact = (req, res) => __awaiter(void 0, void 0, void 0, funct
                         const lockId = doorSystemSettings.lockIds[0];
                         ttlockCode = yield ttlockService.createTemporaryPasscode(lockId, updatedReservation.checkInDate, updatedReservation.checkOutDate, `Guest: ${updatedReservation.guestName}`);
                         // Speichere TTLock Code in Reservierung
-                        yield prisma.reservation.update({
+                        yield prisma_1.prisma.reservation.update({
                             where: { id: reservationId },
                             data: {
                                 doorPin: ttlockCode,
@@ -241,7 +241,7 @@ ${ttlockCode}
                 yield whatsappService.sendMessageWithFallback(updatedReservation.guestPhone, sentMessage, templateName, templateParams);
                 sentMessageAt = new Date();
                 // Speichere versendete Nachricht in Reservierung
-                yield prisma.reservation.update({
+                yield prisma_1.prisma.reservation.update({
                     where: { id: reservationId },
                     data: {
                         sentMessage,
@@ -331,7 +331,7 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
             reservationData.guestEmail = contact.trim();
         }
         // Erstelle Reservierung
-        let reservation = yield prisma.reservation.create({
+        let reservation = yield prisma_1.prisma.reservation.create({
             data: reservationData,
             include: {
                 organization: {
@@ -368,7 +368,7 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
                 });
                 console.log(`[Reservation] ✅ Job zur Queue hinzugefügt für Reservierung ${reservation.id}`);
                 // Hole aktuelle Reservierung (ohne Updates)
-                const finalReservation = yield prisma.reservation.findUnique({
+                const finalReservation = yield prisma_1.prisma.reservation.findUnique({
                     where: { id: reservation.id },
                     include: {
                         organization: {
@@ -398,7 +398,7 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
         if (!autoSend) {
             console.log(`[Reservation] Automatischer Versand ist deaktiviert für Organisation ${reservation.organizationId}`);
             // Hole aktuelle Reservierung
-            const finalReservation = yield prisma.reservation.findUnique({
+            const finalReservation = yield prisma_1.prisma.reservation.findUnique({
                 where: { id: reservation.id },
                 include: {
                     organization: {
@@ -439,7 +439,7 @@ const createReservation = (req, res) => __awaiter(void 0, void 0, void 0, functi
             }
         }
         // Hole die aktuelle Reservierung mit allen Feldern (inkl. Updates wie sentMessage, status, etc.)
-        const finalReservation = yield prisma.reservation.findUnique({
+        const finalReservation = yield prisma_1.prisma.reservation.findUnique({
             where: { id: reservation.id },
             include: {
                 organization: {
@@ -510,7 +510,7 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Wenn nur "own_branch" Berechtigung: Filtere nach Branch
         if (hasOwnBranchPermission && !hasAllBranchesPermission) {
             // Hole branchId aus UsersBranches (falls vorhanden)
-            const userBranch = yield prisma.usersBranches.findFirst({
+            const userBranch = yield prisma_1.prisma.usersBranches.findFirst({
                 where: {
                     userId: userId,
                     branch: {
@@ -535,7 +535,7 @@ const getAllReservations = (req, res) => __awaiter(void 0, void 0, void 0, funct
             }
         }
         // Wenn "all_branches" Berechtigung: Kein Branch-Filter (alle Reservierungen)
-        const reservations = yield prisma.reservation.findMany({
+        const reservations = yield prisma_1.prisma.reservation.findMany({
             where: whereClause,
             include: {
                 organization: {
@@ -594,7 +594,7 @@ const sendReservationInvitation = (req, res) => __awaiter(void 0, void 0, void 0
             });
         }
         // Prüfe ob Reservierung existiert und zur Organisation gehört
-        const reservation = yield prisma.reservation.findFirst({
+        const reservation = yield prisma_1.prisma.reservation.findFirst({
             where: {
                 id: reservationId,
                 organizationId: organizationId
@@ -688,7 +688,7 @@ const generatePinAndSendNotification = (req, res) => __awaiter(void 0, void 0, v
             });
         }
         // Prüfe ob Reservierung existiert und zur Organisation gehört
-        const reservation = yield prisma.reservation.findFirst({
+        const reservation = yield prisma_1.prisma.reservation.findFirst({
             where: {
                 id: reservationId,
                 organizationId: organizationId
@@ -716,7 +716,7 @@ const generatePinAndSendNotification = (req, res) => __awaiter(void 0, void 0, v
             throw error;
         }
         // Hole aktualisierte Reservierung
-        const updatedReservation = yield prisma.reservation.findUnique({
+        const updatedReservation = yield prisma_1.prisma.reservation.findUnique({
             where: { id: reservationId },
             include: {
                 organization: {
@@ -769,7 +769,7 @@ const getReservationNotificationLogs = (req, res) => __awaiter(void 0, void 0, v
             });
         }
         // Prüfe ob Reservation existiert und zur Organisation gehört
-        const reservation = yield prisma.reservation.findFirst({
+        const reservation = yield prisma_1.prisma.reservation.findFirst({
             where: {
                 id: reservationId,
                 organizationId: organizationId
@@ -782,7 +782,7 @@ const getReservationNotificationLogs = (req, res) => __awaiter(void 0, void 0, v
             });
         }
         // Lade Notification-Logs
-        const logs = yield prisma.reservationNotificationLog.findMany({
+        const logs = yield prisma_1.prisma.reservationNotificationLog.findMany({
             where: {
                 reservationId: reservationId
             },
@@ -814,7 +814,7 @@ const getReservationById = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 message: 'Ungültige Reservierungs-ID'
             });
         }
-        const reservation = yield prisma.reservation.findUnique({
+        const reservation = yield prisma_1.prisma.reservation.findUnique({
             where: { id: reservationId },
             include: {
                 organization: {

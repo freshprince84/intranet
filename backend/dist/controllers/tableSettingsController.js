@@ -10,8 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.saveUserTableSettings = exports.getUserTableSettings = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Funktion zum Abrufen der Tabelleneinstellungen eines Benutzers für eine bestimmte Tabelle
 const getUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -24,7 +23,7 @@ const getUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fun
             return res.status(400).json({ message: 'Table ID ist erforderlich' });
         }
         // Versuche, bestehende Einstellungen zu finden
-        const settings = yield prisma.userTableSettings.findUnique({
+        const settings = yield prisma_1.prisma.userTableSettings.findUnique({
             where: {
                 userId_tableId: {
                     userId,
@@ -76,7 +75,7 @@ const saveUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fu
         const columnOrderJson = JSON.stringify(columnOrder || []);
         const hiddenColumnsJson = JSON.stringify(hiddenColumns || []);
         // Prüfe, ob bereits Einstellungen für diese Tabelle existieren
-        const existingSettings = yield prisma.userTableSettings.findUnique({
+        const existingSettings = yield prisma_1.prisma.userTableSettings.findUnique({
             where: {
                 userId_tableId: {
                     userId,
@@ -87,7 +86,7 @@ const saveUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fu
         let settings;
         if (existingSettings) {
             // Aktualisiere bestehende Einstellungen
-            settings = yield prisma.userTableSettings.update({
+            settings = yield prisma_1.prisma.userTableSettings.update({
                 where: {
                     userId_tableId: {
                         userId,
@@ -103,7 +102,7 @@ const saveUserTableSettings = (req, res) => __awaiter(void 0, void 0, void 0, fu
         }
         else {
             // Erstelle neue Einstellungen
-            settings = yield prisma.userTableSettings.create({
+            settings = yield prisma_1.prisma.userTableSettings.create({
                 data: {
                     userId,
                     tableId,

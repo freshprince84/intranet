@@ -53,7 +53,9 @@ const shifts_1 = __importDefault(require("./routes/shifts"));
 const worktimeController_1 = require("./controllers/worktimeController");
 const monthlyReportScheduler_1 = require("./services/monthlyReportScheduler");
 const reservationScheduler_1 = require("./services/reservationScheduler");
-const emailReservationScheduler_1 = require("./services/emailReservationScheduler");
+// Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
+// import { EmailReservationScheduler } from './services/emailReservationScheduler';
+const lobbyPmsReservationScheduler_1 = require("./services/lobbyPmsReservationScheduler");
 const queues_1 = require("./queues");
 const app = (0, express_1.default)();
 console.log('[App] ⚠️ App erstellt, shiftRoutes Type:', typeof shifts_1.default);
@@ -142,8 +144,10 @@ setInterval(() => __awaiter(void 0, void 0, void 0, function* () {
 }), MONTHLY_REPORT_CHECK_INTERVAL_MS);
 // Starte Reservation Scheduler
 reservationScheduler_1.ReservationScheduler.start();
-// Starte Email-Reservation Scheduler
-emailReservationScheduler_1.EmailReservationScheduler.start();
+// Starte LobbyPMS-Reservation Scheduler (ersetzt Email-Import)
+lobbyPmsReservationScheduler_1.LobbyPmsReservationScheduler.start();
+// Email-Import deaktiviert - wird durch LobbyPMS API Import ersetzt
+// EmailReservationScheduler.start();
 // Starte Queue Workers (wenn aktiviert)
 (0, queues_1.startWorkers)().catch((error) => {
     console.error('[App] Fehler beim Starten der Queue Workers:', error);

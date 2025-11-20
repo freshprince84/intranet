@@ -13,12 +13,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getDatabaseLogs = exports.deleteDemoClients = exports.getResetableTables = exports.resetTable = void 0;
-const client_1 = require("@prisma/client");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const child_process_1 = require("child_process");
 const path_1 = __importDefault(require("path"));
 const fs_1 = __importDefault(require("fs"));
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Logger für Database Operations
 const logDatabaseOperation = (operation, userId, status, error) => {
     const logEntry = {
@@ -52,7 +51,7 @@ const resetTable = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         logDatabaseOperation(`reset_table_${tableName}`, userId, 'start');
         // 1. Validiere Admin-Berechtigung
-        const user = yield prisma.user.findFirst({
+        const user = yield prisma_1.prisma.user.findFirst({
             where: {
                 id: Number(userId),
                 roles: {
@@ -89,7 +88,7 @@ const resetTable = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             });
         }
         // 4. Führe Reset in Transaction aus
-        yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // Spezielle Behandlung für verschiedene Tabellen
             switch (tableName) {
                 case 'permission':
@@ -218,7 +217,7 @@ const deleteDemoClients = (req, res) => __awaiter(void 0, void 0, void 0, functi
         }
         logDatabaseOperation('delete_demo_clients', userId, 'start');
         // 1. Validiere Admin-Berechtigung
-        const user = yield prisma.user.findFirst({
+        const user = yield prisma_1.prisma.user.findFirst({
             where: {
                 id: Number(userId),
                 roles: {
@@ -248,7 +247,7 @@ const deleteDemoClients = (req, res) => __awaiter(void 0, void 0, void 0, functi
             'Tech Startup XYZ'
         ];
         // 4. Hole zuerst alle Clients, um zu überprüfen, welche Demo-Clients existieren
-        const allClients = yield prisma.client.findMany({
+        const allClients = yield prisma_1.prisma.client.findMany({
             select: { id: true, name: true }
         });
         // Filtere die Demo-Client IDs
@@ -259,7 +258,7 @@ const deleteDemoClients = (req, res) => __awaiter(void 0, void 0, void 0, functi
         // 5. Lösche nur Demo-Clients in einer Transaction
         let deletedCount = 0;
         if (demoClientIds.length > 0) {
-            yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+            yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
                 // Lösche jeden Demo-Client
                 for (const clientId of demoClientIds) {
                     try {

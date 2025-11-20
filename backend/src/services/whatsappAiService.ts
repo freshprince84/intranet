@@ -1,9 +1,7 @@
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
 import { decryptApiSettings } from '../utils/encryption';
 import { LanguageDetectionService } from './languageDetectionService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 export interface AIResponse {
   message: string;

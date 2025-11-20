@@ -18,9 +18,6 @@ router.use(organization_1.organizationMiddleware);
 router.get('/reservations', lobbyPmsController_1.getReservations);
 router.get('/reservations/:id', lobbyPmsController_1.getReservationById);
 router.put('/reservations/:id/check-in', lobbyPmsController_1.checkInReservation);
-// SIRE-Registrierung
-router.post('/reservations/:id/register-sire', lobbyPmsController_1.registerSire);
-router.get('/reservations/:id/sire-status', lobbyPmsController_1.getSireStatus);
 // Synchronisation
 router.post('/sync', lobbyPmsController_1.syncReservations);
 // Validierung

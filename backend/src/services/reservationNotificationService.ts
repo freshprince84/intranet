@@ -1,4 +1,4 @@
-import { PrismaClient, Reservation, ReservationStatus } from '@prisma/client';
+import { Reservation, ReservationStatus } from '@prisma/client';
 import { LobbyPmsService } from './lobbyPmsService';
 import { WhatsAppService } from './whatsappService';
 import { BoldPaymentService } from './boldPaymentService';
@@ -6,8 +6,7 @@ import { TTLockService } from './ttlockService';
 import { sendEmail } from './emailService';
 import { TaskAutomationService } from './taskAutomationService';
 import { generateLobbyPmsCheckInLink } from '../utils/checkInLinkUtils';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Service für automatische Benachrichtigungen zu Reservierungen

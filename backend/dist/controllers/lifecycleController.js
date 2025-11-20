@@ -45,10 +45,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.downloadContract = exports.updateContract = exports.createContract = exports.getContract = exports.getContracts = exports.downloadCertificate = exports.updateCertificate = exports.createCertificate = exports.getCertificate = exports.getCertificates = exports.updateSocialSecurity = exports.getSocialSecurity = exports.updateStatus = exports.getLifecycle = void 0;
 const lifecycleService_1 = require("../services/lifecycleService");
 const lifecycleRoles_1 = require("../utils/lifecycleRoles");
-const client_1 = require("@prisma/client");
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Upload-Verzeichnis für Certificates/Contracts
 const CERTIFICATES_DIR = path.join(__dirname, '../../uploads/certificates');
 const CONTRACTS_DIR = path.join(__dirname, '../../uploads/contracts');
@@ -80,7 +79,7 @@ const getLifecycle = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (!result) {
             try {
                 // Hole organizationId vom User
-                const user = yield prisma.user.findUnique({
+                const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: userId },
                     include: {
                         roles: {
@@ -257,7 +256,7 @@ const getCertificates = (req, res) => __awaiter(void 0, void 0, void 0, function
         // Falls kein Lifecycle existiert, erstelle einen automatisch
         if (certificates === null) {
             try {
-                const user = yield prisma.user.findUnique({
+                const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: userId },
                     include: {
                         roles: {
@@ -459,7 +458,7 @@ const getContracts = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         // Falls kein Lifecycle existiert, erstelle einen automatisch
         if (contracts === null) {
             try {
-                const user = yield prisma.user.findUnique({
+                const user = yield prisma_1.prisma.user.findUnique({
                     where: { id: userId },
                     include: {
                         roles: {

@@ -1,9 +1,7 @@
 import nodemailer from 'nodemailer';
 import axios from 'axios';
-import { PrismaClient } from '@prisma/client';
 import { decryptBranchApiSettings } from '../utils/encryption';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 // SMTP-Konfiguration aus Umgebungsvariablen, Branch-Settings oder Organisation-Settings
 const createTransporter = async (organizationId?: number, branchId?: number) => {

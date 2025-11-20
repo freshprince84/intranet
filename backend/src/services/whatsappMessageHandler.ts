@@ -1,12 +1,10 @@
-import { PrismaClient } from '@prisma/client';
 import { WhatsAppAiService } from './whatsappAiService';
 import { LanguageDetectionService } from './languageDetectionService';
 import { WhatsAppService } from './whatsappService';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * WhatsApp Message Handler

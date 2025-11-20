@@ -43,9 +43,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteBranch = exports.updateBranch = exports.createBranch = exports.switchUserBranch = exports.getUserBranches = exports.getAllBranches = exports.getTest = void 0;
-const client_1 = require("@prisma/client");
 const organization_1 = require("../middleware/organization");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Debug-Funktion ohne DB-Zugriff
 const getTest = (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const testBranches = [
@@ -73,6 +72,10 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 id: true,
                 name: true,
                 whatsappSettings: true,
+                lobbyPmsSettings: true,
+                boldPaymentSettings: true,
+                doorSystemSettings: true,
+                emailSettings: true,
                 roles: {
                     where: { roleId: roleId },
                     select: { id: true }
@@ -83,29 +86,61 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
             queryOptions.select = {
                 id: true,
                 name: true,
-                whatsappSettings: true
+                whatsappSettings: true,
+                lobbyPmsSettings: true,
+                boldPaymentSettings: true,
+                doorSystemSettings: true,
+                emailSettings: true
             };
         }
-        let branches = yield prisma.branch.findMany(queryOptions);
-        // Entschlüssele WhatsApp Settings für alle Branches
+        let branches = yield prisma_1.prisma.branch.findMany(queryOptions);
+        // Entschlüssele alle Settings für alle Branches
         // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
-        const { decryptSecret } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
+        const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
         branches = branches.map((branch) => {
+            // Entschlüssele WhatsApp Settings
             if (branch.whatsappSettings) {
                 try {
-                    const settings = branch.whatsappSettings;
-                    // Prüfe ob Settings verschlüsselt sind (Format: iv:authTag:encrypted)
-                    if (settings.apiKey && typeof settings.apiKey === 'string' && settings.apiKey.includes(':')) {
-                        settings.apiKey = decryptSecret(settings.apiKey);
-                    }
-                    if (settings.apiSecret && typeof settings.apiSecret === 'string' && settings.apiSecret.includes(':')) {
-                        settings.apiSecret = decryptSecret(settings.apiSecret);
-                    }
-                    branch.whatsappSettings = settings;
+                    branch.whatsappSettings = decryptBranchApiSettings(branch.whatsappSettings);
                 }
                 catch (error) {
                     console.warn(`[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings für Branch ${branch.id}:`, error);
-                    // Bei Fehler: Settings bleiben verschlüsselt (für Migration)
+                }
+            }
+            // Entschlüssele LobbyPMS Settings
+            if (branch.lobbyPmsSettings) {
+                try {
+                    branch.lobbyPmsSettings = decryptBranchApiSettings(branch.lobbyPmsSettings);
+                }
+                catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings für Branch ${branch.id}:`, error);
+                }
+            }
+            // Entschlüssele Bold Payment Settings
+            if (branch.boldPaymentSettings) {
+                try {
+                    branch.boldPaymentSettings = decryptBranchApiSettings(branch.boldPaymentSettings);
+                }
+                catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings für Branch ${branch.id}:`, error);
+                }
+            }
+            // Entschlüssele Door System Settings
+            if (branch.doorSystemSettings) {
+                try {
+                    branch.doorSystemSettings = decryptBranchApiSettings(branch.doorSystemSettings);
+                }
+                catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Door System Settings für Branch ${branch.id}:`, error);
+                }
+            }
+            // Entschlüssele Email Settings
+            if (branch.emailSettings) {
+                try {
+                    branch.emailSettings = decryptBranchApiSettings(branch.emailSettings);
+                }
+                catch (error) {
+                    console.warn(`[Branch Controller] Fehler beim Entschlüsseln der Email Settings für Branch ${branch.id}:`, error);
                 }
             }
             return branch;
@@ -113,7 +148,7 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
         // Wenn roleId angegeben, filtere Branches nach Verfügbarkeit für diese Rolle
         if (roleId && !isNaN(roleId)) {
             // Hole die Rolle, um allBranches zu prüfen
-            const role = yield prisma.role.findUnique({
+            const role = yield prisma_1.prisma.role.findUnique({
                 where: { id: roleId },
                 select: {
                     allBranches: true
@@ -134,11 +169,15 @@ const getAllBranches = (req, res) => __awaiter(void 0, void 0, void 0, function*
                 // Rolle nicht gefunden, keine Branches zurückgeben
                 branches = [];
             }
-            // Entferne das 'roles' Feld aus der Antwort, behalte aber whatsappSettings
+            // Entferne das 'roles' Feld aus der Antwort, behalte aber alle Settings
             branches = branches.map(branch => ({
                 id: branch.id,
                 name: branch.name,
-                whatsappSettings: branch.whatsappSettings
+                whatsappSettings: branch.whatsappSettings,
+                lobbyPmsSettings: branch.lobbyPmsSettings,
+                boldPaymentSettings: branch.boldPaymentSettings,
+                doorSystemSettings: branch.doorSystemSettings,
+                emailSettings: branch.emailSettings
             }));
         }
         res.json(branches);
@@ -162,7 +201,7 @@ const getUserBranches = (req, res) => __awaiter(void 0, void 0, void 0, function
         // Datenisolation: Zeigt nur Branches der Organisation
         const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
         // Lade alle Branches des Users mit lastUsed-Flag
-        const userBranches = yield prisma.usersBranches.findMany({
+        const userBranches = yield prisma_1.prisma.usersBranches.findMany({
             where: {
                 userId: userId,
                 branch: branchFilter
@@ -210,7 +249,7 @@ const switchUserBranch = (req, res) => __awaiter(void 0, void 0, void 0, functio
             return res.status(400).json({ message: 'Ungültige Niederlassungs-ID' });
         }
         // Prüfen, ob die Niederlassung dem Benutzer zugewiesen ist
-        const userBranch = yield prisma.usersBranches.findFirst({
+        const userBranch = yield prisma_1.prisma.usersBranches.findFirst({
             where: {
                 userId,
                 branchId
@@ -223,7 +262,7 @@ const switchUserBranch = (req, res) => __awaiter(void 0, void 0, void 0, functio
         }
         // Prüfen, ob Branch zur Organisation gehört (Datenisolation)
         const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
-        const branch = yield prisma.branch.findFirst({
+        const branch = yield prisma_1.prisma.branch.findFirst({
             where: Object.assign({ id: branchId }, branchFilter)
         });
         if (!branch) {
@@ -232,7 +271,7 @@ const switchUserBranch = (req, res) => __awaiter(void 0, void 0, void 0, functio
             });
         }
         // Prüfe, ob die aktive Rolle für die neue Branch verfügbar ist
-        const activeRole = yield prisma.userRole.findFirst({
+        const activeRole = yield prisma_1.prisma.userRole.findFirst({
             where: {
                 userId,
                 lastUsed: true
@@ -252,7 +291,7 @@ const switchUserBranch = (req, res) => __awaiter(void 0, void 0, void 0, functio
             }
         }
         // Transaktion starten
-        yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // Alle Branches des Benutzers auf lastUsed=false setzen
             yield tx.usersBranches.updateMany({
                 where: { userId },
@@ -265,7 +304,7 @@ const switchUserBranch = (req, res) => __awaiter(void 0, void 0, void 0, functio
             });
         }));
         // Aktualisierte Branches zurückgeben
-        const updatedUserBranches = yield prisma.usersBranches.findMany({
+        const updatedUserBranches = yield prisma_1.prisma.usersBranches.findMany({
             where: {
                 userId: userId,
                 branch: branchFilter
@@ -321,7 +360,7 @@ const createBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             });
         }
         // Prüfe ob Branch mit diesem Namen bereits existiert (global unique)
-        const existingBranch = yield prisma.branch.findUnique({
+        const existingBranch = yield prisma_1.prisma.branch.findUnique({
             where: { name: name.trim() }
         });
         if (existingBranch) {
@@ -330,7 +369,7 @@ const createBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             });
         }
         // Erstelle Branch
-        const branch = yield prisma.branch.create({
+        const branch = yield prisma_1.prisma.branch.create({
             data: {
                 name: name.trim(),
                 organizationId: organizationId
@@ -356,7 +395,7 @@ exports.createBranch = createBranch;
 const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const branchId = parseInt(req.params.id, 10);
-        const { name, whatsappSettings } = req.body;
+        const { name, whatsappSettings, lobbyPmsSettings, boldPaymentSettings, doorSystemSettings, emailSettings } = req.body;
         if (isNaN(branchId)) {
             return res.status(400).json({ message: 'Ungültige Niederlassungs-ID' });
         }
@@ -367,14 +406,14 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
         // Prüfe ob Branch zur Organisation gehört
         const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
-        const existingBranch = yield prisma.branch.findFirst({
+        const existingBranch = yield prisma_1.prisma.branch.findFirst({
             where: Object.assign({ id: branchId }, branchFilter)
         });
         if (!existingBranch) {
             return res.status(404).json({ message: 'Niederlassung nicht gefunden' });
         }
         // Prüfe ob Branch mit neuem Namen bereits existiert (außer dem aktuellen)
-        const duplicateBranch = yield prisma.branch.findFirst({
+        const duplicateBranch = yield prisma_1.prisma.branch.findFirst({
             where: {
                 name: name.trim(),
                 NOT: { id: branchId }
@@ -385,17 +424,56 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
                 message: 'Eine Niederlassung mit diesem Namen existiert bereits'
             });
         }
-        // Verschlüssele WhatsApp Settings falls vorhanden
+        // Verschlüssele alle Settings falls vorhanden
+        const { encryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
         let encryptedWhatsAppSettings = whatsappSettings;
         if (whatsappSettings) {
             try {
-                const { encryptApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
-                encryptedWhatsAppSettings = encryptApiSettings(whatsappSettings);
-                console.log('[Branch Controller] WhatsApp Settings verschlüsselt und bereit zum Speichern');
+                encryptedWhatsAppSettings = encryptBranchApiSettings(whatsappSettings);
+                console.log('[Branch Controller] WhatsApp Settings verschlüsselt');
             }
             catch (error) {
                 console.warn('[Branch Controller] WhatsApp Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
-                // Falls Verschlüsselung fehlschlägt, speichere unverschlüsselt (nur für Development)
+            }
+        }
+        let encryptedLobbyPmsSettings = lobbyPmsSettings;
+        if (lobbyPmsSettings) {
+            try {
+                encryptedLobbyPmsSettings = encryptBranchApiSettings(lobbyPmsSettings);
+                console.log('[Branch Controller] LobbyPMS Settings verschlüsselt');
+            }
+            catch (error) {
+                console.warn('[Branch Controller] LobbyPMS Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+            }
+        }
+        let encryptedBoldPaymentSettings = boldPaymentSettings;
+        if (boldPaymentSettings) {
+            try {
+                encryptedBoldPaymentSettings = encryptBranchApiSettings(boldPaymentSettings);
+                console.log('[Branch Controller] Bold Payment Settings verschlüsselt');
+            }
+            catch (error) {
+                console.warn('[Branch Controller] Bold Payment Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+            }
+        }
+        let encryptedDoorSystemSettings = doorSystemSettings;
+        if (doorSystemSettings) {
+            try {
+                encryptedDoorSystemSettings = encryptBranchApiSettings(doorSystemSettings);
+                console.log('[Branch Controller] Door System Settings verschlüsselt');
+            }
+            catch (error) {
+                console.warn('[Branch Controller] Door System Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
+            }
+        }
+        let encryptedEmailSettings = emailSettings;
+        if (emailSettings) {
+            try {
+                encryptedEmailSettings = encryptBranchApiSettings(emailSettings);
+                console.log('[Branch Controller] Email Settings verschlüsselt');
+            }
+            catch (error) {
+                console.warn('[Branch Controller] Email Settings Verschlüsselung fehlgeschlagen, speichere unverschlüsselt:', error);
             }
         }
         // Aktualisiere Branch
@@ -404,42 +482,72 @@ const updateBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         };
         if (whatsappSettings !== undefined) {
             updateData.whatsappSettings = encryptedWhatsAppSettings;
-            console.log('[Branch Controller] WhatsApp Settings werden gespeichert:', {
-                hasProvider: !!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.provider),
-                hasApiKey: !!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.apiKey),
-                hasPhoneNumberId: !!(whatsappSettings === null || whatsappSettings === void 0 ? void 0 : whatsappSettings.phoneNumberId)
-            });
         }
-        else {
-            console.log('[Branch Controller] Keine WhatsApp Settings im Request');
+        if (lobbyPmsSettings !== undefined) {
+            updateData.lobbyPmsSettings = encryptedLobbyPmsSettings;
         }
-        const updatedBranch = yield prisma.branch.update({
+        if (boldPaymentSettings !== undefined) {
+            updateData.boldPaymentSettings = encryptedBoldPaymentSettings;
+        }
+        if (doorSystemSettings !== undefined) {
+            updateData.doorSystemSettings = encryptedDoorSystemSettings;
+        }
+        if (emailSettings !== undefined) {
+            updateData.emailSettings = encryptedEmailSettings;
+        }
+        const updatedBranch = yield prisma_1.prisma.branch.update({
             where: { id: branchId },
             data: updateData,
             select: {
                 id: true,
                 name: true,
-                whatsappSettings: true
+                whatsappSettings: true,
+                lobbyPmsSettings: true,
+                boldPaymentSettings: true,
+                doorSystemSettings: true,
+                emailSettings: true
             }
         });
-        // Entschlüssele WhatsApp Settings für Response (Frontend braucht entschlüsselte Werte)
-        // Branch-Settings sind flach strukturiert (apiKey direkt), nicht verschachtelt (whatsapp.apiKey)
+        // Entschlüssele alle Settings für Response (Frontend braucht entschlüsselte Werte)
+        const { decryptBranchApiSettings } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
         if (updatedBranch.whatsappSettings) {
             try {
-                const { decryptSecret } = yield Promise.resolve().then(() => __importStar(require('../utils/encryption')));
-                const settings = updatedBranch.whatsappSettings;
-                // Prüfe ob Settings verschlüsselt sind (Format: iv:authTag:encrypted)
-                if (settings.apiKey && typeof settings.apiKey === 'string' && settings.apiKey.includes(':')) {
-                    settings.apiKey = decryptSecret(settings.apiKey);
-                }
-                if (settings.apiSecret && typeof settings.apiSecret === 'string' && settings.apiSecret.includes(':')) {
-                    settings.apiSecret = decryptSecret(settings.apiSecret);
-                }
-                updatedBranch.whatsappSettings = settings;
+                updatedBranch.whatsappSettings = decryptBranchApiSettings(updatedBranch.whatsappSettings);
             }
             catch (error) {
                 console.warn('[Branch Controller] Fehler beim Entschlüsseln der WhatsApp Settings:', error);
-                // Bei Fehler: Settings bleiben verschlüsselt (für Migration)
+            }
+        }
+        if (updatedBranch.lobbyPmsSettings) {
+            try {
+                updatedBranch.lobbyPmsSettings = decryptBranchApiSettings(updatedBranch.lobbyPmsSettings);
+            }
+            catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der LobbyPMS Settings:', error);
+            }
+        }
+        if (updatedBranch.boldPaymentSettings) {
+            try {
+                updatedBranch.boldPaymentSettings = decryptBranchApiSettings(updatedBranch.boldPaymentSettings);
+            }
+            catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Bold Payment Settings:', error);
+            }
+        }
+        if (updatedBranch.doorSystemSettings) {
+            try {
+                updatedBranch.doorSystemSettings = decryptBranchApiSettings(updatedBranch.doorSystemSettings);
+            }
+            catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Door System Settings:', error);
+            }
+        }
+        if (updatedBranch.emailSettings) {
+            try {
+                updatedBranch.emailSettings = decryptBranchApiSettings(updatedBranch.emailSettings);
+            }
+            catch (error) {
+                console.warn('[Branch Controller] Fehler beim Entschlüsseln der Email Settings:', error);
             }
         }
         res.json(updatedBranch);
@@ -467,7 +575,7 @@ const deleteBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
         // Prüfe ob Branch zur Organisation gehört
         const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
-        const branch = yield prisma.branch.findFirst({
+        const branch = yield prisma_1.prisma.branch.findFirst({
             where: Object.assign({ id: branchId }, branchFilter)
         });
         if (!branch) {
@@ -475,16 +583,16 @@ const deleteBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
         // Prüfe ob Branch verwendet wird
         const [workTimes, tasks, requests, userBranches] = yield Promise.all([
-            prisma.workTime.count({
+            prisma_1.prisma.workTime.count({
                 where: { branchId }
             }),
-            prisma.task.count({
+            prisma_1.prisma.task.count({
                 where: { branchId }
             }),
-            prisma.request.count({
+            prisma_1.prisma.request.count({
                 where: { branchId }
             }),
-            prisma.usersBranches.count({
+            prisma_1.prisma.usersBranches.count({
                 where: { branchId }
             })
         ]);
@@ -503,7 +611,7 @@ const deleteBranch = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             });
         }
         // Lösche Branch
-        yield prisma.branch.delete({
+        yield prisma_1.prisma.branch.delete({
             where: { id: branchId }
         });
         res.status(204).send();

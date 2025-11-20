@@ -19,16 +19,15 @@ exports.resetPassword = exports.requestPasswordReset = exports.getCurrentUser = 
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const crypto_1 = __importDefault(require("crypto"));
-const client_1 = require("@prisma/client");
 const emailService_1 = require("../services/emailService");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { email, password, username, first_name, last_name, language } = req.body;
         // Email als Username verwenden wenn kein Username angegeben
         const finalUsername = username || email;
         // Finde die User-Rolle mit ID 2 (Standard-Rolle für neue Benutzer)
-        const userRole = yield prisma.role.findUnique({
+        const userRole = yield prisma_1.prisma.role.findUnique({
             where: { id: 2 }
         });
         if (!userRole) {
@@ -36,7 +35,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             return res.status(500).json({ message: 'User-Rolle nicht gefunden' });
         }
         // Prüfe ob Benutzer bereits existiert
-        const existingUser = yield prisma.user.findFirst({
+        const existingUser = yield prisma_1.prisma.user.findFirst({
             where: {
                 OR: [
                     { username: finalUsername },
@@ -53,7 +52,7 @@ const register = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const supportedLanguages = ['de', 'es', 'en'];
         const validLanguage = language && supportedLanguages.includes(language) ? language : 'es'; // Default: es
         // Erstelle den Benutzer
-        const user = yield prisma.user.create({
+        const user = yield prisma_1.prisma.user.create({
             data: {
                 username: finalUsername,
                 email,
@@ -144,7 +143,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         username = username === null || username === void 0 ? void 0 : username.trim();
         password = password === null || password === void 0 ? void 0 : password.trim();
         // Finde den Benutzer mit Rollen (case-insensitive für username und email)
-        const user = yield prisma.user.findFirst({
+        const user = yield prisma_1.prisma.user.findFirst({
             where: {
                 OR: [
                     { username: { equals: username, mode: 'insensitive' } },
@@ -189,7 +188,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
                 const roleToActivate = sortedRoles[0]; // Rolle mit der niedrigsten ID
                 try {
                     // Aktualisiere den UserRole-Eintrag in der Datenbank
-                    yield prisma.userRole.update({
+                    yield prisma_1.prisma.userRole.update({
                         where: { id: roleToActivate.id },
                         data: { lastUsed: true }
                     });
@@ -222,7 +221,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             user.language);
         // Update profileComplete, falls noch nicht gesetzt
         if (isComplete !== user.profileComplete) {
-            yield prisma.user.update({
+            yield prisma_1.prisma.user.update({
                 where: { id: user.id },
                 data: { profileComplete: isComplete }
             });
@@ -295,7 +294,7 @@ const getCurrentUser = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (isNaN(userId)) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: userId },
             include: {
                 roles: {
@@ -369,7 +368,7 @@ const requestPasswordReset = (req, res) => __awaiter(void 0, void 0, void 0, fun
             return res.status(400).json({ message: 'Ungültiges E-Mail-Format' });
         }
         // Finde den Benutzer anhand der E-Mail-Adresse (case-insensitive) mit Rollen/Organisation
-        const user = yield prisma.user.findFirst({
+        const user = yield prisma_1.prisma.user.findFirst({
             where: {
                 email: { equals: email, mode: 'insensitive' }
             },
@@ -399,7 +398,7 @@ const requestPasswordReset = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 1);
         // Speichere Token in der Datenbank
-        yield prisma.passwordResetToken.create({
+        yield prisma_1.prisma.passwordResetToken.create({
             data: {
                 userId: user.id,
                 token: token,
@@ -459,7 +458,7 @@ const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(400).json({ message: 'Passwort muss mindestens 8 Zeichen lang sein' });
         }
         // Finde Token in der Datenbank
-        const resetToken = yield prisma.passwordResetToken.findUnique({
+        const resetToken = yield prisma_1.prisma.passwordResetToken.findUnique({
             where: { token: token },
             include: { user: true }
         });
@@ -477,12 +476,12 @@ const resetPassword = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         // Hash das neue Passwort
         const hashedPassword = yield bcrypt_1.default.hash(password, 10);
         // Aktualisiere das Passwort und markiere Token als verwendet (in einer Transaktion)
-        yield prisma.$transaction([
-            prisma.user.update({
+        yield prisma_1.prisma.$transaction([
+            prisma_1.prisma.user.update({
                 where: { id: resetToken.userId },
                 data: { password: hashedPassword }
             }),
-            prisma.passwordResetToken.update({
+            prisma_1.prisma.passwordResetToken.update({
                 where: { id: resetToken.id },
                 data: { used: true }
             })

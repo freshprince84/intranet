@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { PrismaClient, Prisma, NotificationType } from '@prisma/client';
+import { Prisma, NotificationType } from '@prisma/client';
+import { prisma } from '../utils/prisma';
 import * as ExcelJS from 'exceljs';
 import { startOfWeek, endOfWeek, format, startOfDay, endOfDay, isAfter, isSameDay, addDays, parseISO } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -8,8 +9,6 @@ import { createNotificationIfEnabled } from './notificationController';
 import { parse } from 'date-fns';
 import { getDataIsolationFilter } from '../middleware/organization';
 import { getUserLanguage, getWorktimeNotificationText } from '../utils/translations';
-
-const prisma = new PrismaClient();
 
 export const startWorktime = async (req: Request, res: Response) => {
   try {

@@ -1,12 +1,10 @@
 import PDFDocument from 'pdfkit';
 import * as path from 'path';
 import * as fs from 'fs';
-import { PrismaClient } from '@prisma/client';
 import { format } from 'date-fns';
 import { de, es } from 'date-fns/locale';
 import { PDFDocument as PDFLibDocument } from 'pdf-lib';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 // Upload-Verzeichnisse
 const CERTIFICATES_DIR = path.join(__dirname, '../../uploads/certificates');

@@ -1,10 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient } from '@prisma/client';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 // Upload-Verzeichnis für Attachments
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/task-attachments');

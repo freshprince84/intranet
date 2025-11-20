@@ -10,8 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.isTeamManager = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Middleware zur Überprüfung, ob ein Benutzer die Berechtigung hat, als Team-Manager zu agieren
  */
@@ -22,7 +21,7 @@ const isTeamManager = (req, res, next) => __awaiter(void 0, void 0, void 0, func
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
         // Hole den Benutzer mit seiner aktiven Rolle und deren Berechtigungen
-        const user = yield prisma.user.findUnique({
+        const user = yield prisma_1.prisma.user.findUnique({
             where: { id: Number(userId) },
             include: {
                 roles: {

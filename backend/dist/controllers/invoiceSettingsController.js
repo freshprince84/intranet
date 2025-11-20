@@ -10,8 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getNextInvoiceNumber = exports.createOrUpdateInvoiceSettings = exports.getInvoiceSettings = void 0;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Invoice Settings abrufen
 const getInvoiceSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -19,12 +18,12 @@ const getInvoiceSettings = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const settings = yield prisma.invoiceSettings.findUnique({
+        const settings = yield prisma_1.prisma.invoiceSettings.findUnique({
             where: { userId: Number(userId) }
         });
         if (!settings) {
             // Erstelle Default-Settings wenn noch keine vorhanden
-            const defaultSettings = yield prisma.invoiceSettings.create({
+            const defaultSettings = yield prisma_1.prisma.invoiceSettings.create({
                 data: {
                     userId: Number(userId),
                     companyName: '',
@@ -65,7 +64,7 @@ const createOrUpdateInvoiceSettings = (req, res) => __awaiter(void 0, void 0, vo
         if (!/^[A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}([A-Z0-9]?){0,16}$/.test(iban.replace(/\s/g, ''))) {
             return res.status(400).json({ message: 'Ungültige IBAN' });
         }
-        const settings = yield prisma.invoiceSettings.upsert({
+        const settings = yield prisma_1.prisma.invoiceSettings.upsert({
             where: { userId: Number(userId) },
             update: {
                 companyName,
@@ -119,7 +118,7 @@ const getNextInvoiceNumber = (req, res) => __awaiter(void 0, void 0, void 0, fun
         if (!userId) {
             return res.status(401).json({ message: 'Nicht authentifiziert' });
         }
-        const settings = yield prisma.invoiceSettings.findUnique({
+        const settings = yield prisma_1.prisma.invoiceSettings.findUnique({
             where: { userId: Number(userId) }
         });
         if (!settings) {
@@ -128,7 +127,7 @@ const getNextInvoiceNumber = (req, res) => __awaiter(void 0, void 0, void 0, fun
         const nextNumber = settings.nextInvoiceNumber;
         const invoiceNumber = `${settings.invoicePrefix}${nextNumber.toString().padStart(4, '0')}`;
         // Inkrementiere die nächste Nummer
-        yield prisma.invoiceSettings.update({
+        yield prisma_1.prisma.invoiceSettings.update({
             where: { userId: Number(userId) },
             data: { nextInvoiceNumber: nextNumber + 1 }
         });

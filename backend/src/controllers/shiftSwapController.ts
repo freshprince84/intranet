@@ -1,9 +1,8 @@
 import { Request, Response } from 'express';
-import { PrismaClient, SwapStatus, ShiftStatus } from '@prisma/client';
+import { SwapStatus, ShiftStatus } from '@prisma/client';
 import { createNotificationIfEnabled } from './notificationController';
 import { format } from 'date-fns';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * GET /api/shifts/swaps

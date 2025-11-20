@@ -10,15 +10,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getRecentClients = exports.deleteClient = exports.updateClient = exports.createClient = exports.getClientById = exports.getClients = void 0;
-const client_1 = require("@prisma/client");
 const organization_1 = require("../middleware/organization");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 // Alle Clients abrufen
 const getClients = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         // Datenisolation: Zeigt alle Clients der Organisation oder nur eigene (wenn standalone)
         const clientFilter = (0, organization_1.getDataIsolationFilter)(req, 'client');
-        const clients = yield prisma.client.findMany({
+        const clients = yield prisma_1.prisma.client.findMany({
             where: clientFilter,
             orderBy: { name: 'asc' }
         });
@@ -40,7 +39,7 @@ const getClientById = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (!hasAccess) {
             return res.status(403).json({ message: 'Zugriff auf diesen Client verweigert' });
         }
-        const client = yield prisma.client.findUnique({
+        const client = yield prisma_1.prisma.client.findUnique({
             where: { id: clientId },
             include: {
                 workTimes: {
@@ -71,7 +70,7 @@ const createClient = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (!name) {
             return res.status(400).json({ message: 'Name ist erforderlich' });
         }
-        const client = yield prisma.client.create({
+        const client = yield prisma_1.prisma.client.create({
             data: {
                 name,
                 company,
@@ -101,7 +100,7 @@ const updateClient = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (!hasAccess) {
             return res.status(403).json({ message: 'Zugriff auf diesen Client verweigert' });
         }
-        const client = yield prisma.client.update({
+        const client = yield prisma_1.prisma.client.update({
             where: { id: clientId },
             data: {
                 name,
@@ -131,7 +130,7 @@ const deleteClient = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         if (!hasAccess) {
             return res.status(403).json({ message: 'Zugriff auf diesen Client verweigert' });
         }
-        const client = yield prisma.client.findUnique({
+        const client = yield prisma_1.prisma.client.findUnique({
             where: { id: clientId }
         });
         if (!client) {
@@ -139,9 +138,9 @@ const deleteClient = (req, res) => __awaiter(void 0, void 0, void 0, function* (
         }
         // 2. Prüfe Verknüpfungen
         const [workTimes, consultationInvoices, monthlyReportItems] = yield Promise.all([
-            prisma.workTime.findMany({ where: { clientId } }),
-            prisma.consultationInvoice.findMany({ where: { clientId } }),
-            prisma.monthlyConsultationReportItem.findMany({ where: { clientId } })
+            prisma_1.prisma.workTime.findMany({ where: { clientId } }),
+            prisma_1.prisma.consultationInvoice.findMany({ where: { clientId } }),
+            prisma_1.prisma.monthlyConsultationReportItem.findMany({ where: { clientId } })
         ]);
         const hasWorkTimes = workTimes.length > 0;
         const hasInvoices = consultationInvoices.length > 0;
@@ -167,7 +166,7 @@ const deleteClient = (req, res) => __awaiter(void 0, void 0, void 0, function* (
             });
         }
         // 4. Client löschen wenn keine Verknüpfungen bestehen
-        yield prisma.client.delete({
+        yield prisma_1.prisma.client.delete({
             where: { id: clientId }
         });
         res.json({ message: 'Client erfolgreich gelöscht' });
@@ -198,7 +197,7 @@ const getRecentClients = (req, res) => __awaiter(void 0, void 0, void 0, functio
         const now = new Date(localNow.getTime() - localNow.getTimezoneOffset() * 60000);
         console.log('🕒 DEBUG: Timezone-korrigierte Zeit:', now.toISOString());
         // Hole vergangene Beratungen (startTime < jetzt) - diese sind "zuletzt beraten"
-        const pastConsultations = yield prisma.workTime.findMany({
+        const pastConsultations = yield prisma_1.prisma.workTime.findMany({
             where: {
                 userId: Number(userId),
                 clientId: { not: null },
@@ -214,7 +213,7 @@ const getRecentClients = (req, res) => __awaiter(void 0, void 0, void 0, functio
             take: 10
         });
         // Hole geplante Beratungen (startTime >= jetzt)
-        const plannedConsultations = yield prisma.workTime.findMany({
+        const plannedConsultations = yield prisma_1.prisma.workTime.findMany({
             where: {
                 userId: Number(userId),
                 clientId: { not: null },

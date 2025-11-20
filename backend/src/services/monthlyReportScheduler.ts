@@ -1,10 +1,8 @@
-import { PrismaClient } from '@prisma/client';
 import { generateAutomaticMonthlyReport } from '../controllers/monthlyConsultationReportController';
 import { createNotificationIfEnabled } from '../controllers/notificationController';
 import { NotificationType } from '../validation/notificationValidation';
 import { getUserLanguage, getSystemNotificationText } from '../utils/translations';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 interface MockRequest {
   userId: string;

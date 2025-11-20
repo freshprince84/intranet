@@ -105,7 +105,7 @@ exports.decryptSecret = decryptSecret;
  * @returns Settings mit verschlüsselten API-Keys
  */
 const encryptApiSettings = (settings) => {
-    var _a, _b, _c, _d, _e, _f, _g;
+    var _a, _b, _c, _d, _e;
     if (!settings || typeof settings !== 'object') {
         return settings;
     }
@@ -118,22 +118,15 @@ const encryptApiSettings = (settings) => {
     if ((_b = encrypted.doorSystem) === null || _b === void 0 ? void 0 : _b.clientSecret) {
         encrypted.doorSystem = Object.assign(Object.assign({}, encrypted.doorSystem), { clientSecret: (0, exports.encryptSecret)(encrypted.doorSystem.clientSecret) });
     }
-    // SIRE API Key & Secret
-    if ((_c = encrypted.sire) === null || _c === void 0 ? void 0 : _c.apiKey) {
-        encrypted.sire = Object.assign(Object.assign({}, encrypted.sire), { apiKey: (0, exports.encryptSecret)(encrypted.sire.apiKey) });
-    }
-    if ((_d = encrypted.sire) === null || _d === void 0 ? void 0 : _d.apiSecret) {
-        encrypted.sire = Object.assign(Object.assign({}, encrypted.sire), { apiSecret: (0, exports.encryptSecret)(encrypted.sire.apiSecret) });
-    }
     // Bold Payment API Key
-    if ((_e = encrypted.boldPayment) === null || _e === void 0 ? void 0 : _e.apiKey) {
+    if ((_c = encrypted.boldPayment) === null || _c === void 0 ? void 0 : _c.apiKey) {
         encrypted.boldPayment = Object.assign(Object.assign({}, encrypted.boldPayment), { apiKey: (0, exports.encryptSecret)(encrypted.boldPayment.apiKey) });
     }
     // WhatsApp API Key & Secret
-    if ((_f = encrypted.whatsapp) === null || _f === void 0 ? void 0 : _f.apiKey) {
+    if ((_d = encrypted.whatsapp) === null || _d === void 0 ? void 0 : _d.apiKey) {
         encrypted.whatsapp = Object.assign(Object.assign({}, encrypted.whatsapp), { apiKey: (0, exports.encryptSecret)(encrypted.whatsapp.apiKey) });
     }
-    if ((_g = encrypted.whatsapp) === null || _g === void 0 ? void 0 : _g.apiSecret) {
+    if ((_e = encrypted.whatsapp) === null || _e === void 0 ? void 0 : _e.apiSecret) {
         encrypted.whatsapp = Object.assign(Object.assign({}, encrypted.whatsapp), { apiSecret: (0, exports.encryptSecret)(encrypted.whatsapp.apiSecret) });
     }
     return encrypted;
@@ -146,7 +139,7 @@ exports.encryptApiSettings = encryptApiSettings;
  * @returns Settings mit entschlüsselten API-Keys
  */
 const decryptApiSettings = (settings) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f;
     if (!settings || typeof settings !== 'object') {
         return settings;
     }
@@ -188,25 +181,8 @@ const decryptApiSettings = (settings) => {
             console.error('Error decrypting TTLock client secret:', error);
         }
     }
-    // SIRE API Key & Secret
-    if ((_d = decrypted.sire) === null || _d === void 0 ? void 0 : _d.apiKey) {
-        try {
-            decrypted.sire = Object.assign(Object.assign({}, decrypted.sire), { apiKey: (0, exports.decryptSecret)(decrypted.sire.apiKey) });
-        }
-        catch (error) {
-            console.error('Error decrypting SIRE API key:', error);
-        }
-    }
-    if ((_e = decrypted.sire) === null || _e === void 0 ? void 0 : _e.apiSecret) {
-        try {
-            decrypted.sire = Object.assign(Object.assign({}, decrypted.sire), { apiSecret: (0, exports.decryptSecret)(decrypted.sire.apiSecret) });
-        }
-        catch (error) {
-            console.error('Error decrypting SIRE API secret:', error);
-        }
-    }
     // Bold Payment API Key
-    if ((_f = decrypted.boldPayment) === null || _f === void 0 ? void 0 : _f.apiKey) {
+    if ((_d = decrypted.boldPayment) === null || _d === void 0 ? void 0 : _d.apiKey) {
         try {
             decrypted.boldPayment = Object.assign(Object.assign({}, decrypted.boldPayment), { apiKey: (0, exports.decryptSecret)(decrypted.boldPayment.apiKey) });
         }
@@ -215,7 +191,7 @@ const decryptApiSettings = (settings) => {
         }
     }
     // WhatsApp API Key & Secret
-    if ((_g = decrypted.whatsapp) === null || _g === void 0 ? void 0 : _g.apiKey) {
+    if ((_e = decrypted.whatsapp) === null || _e === void 0 ? void 0 : _e.apiKey) {
         try {
             // Versuche immer zu entschlüsseln, wenn der String ein ':' enthält (verschlüsseltes Format)
             if (decrypted.whatsapp.apiKey.includes(':')) {
@@ -249,7 +225,7 @@ const decryptApiSettings = (settings) => {
             });
         }
     }
-    if ((_h = decrypted.whatsapp) === null || _h === void 0 ? void 0 : _h.apiSecret) {
+    if ((_f = decrypted.whatsapp) === null || _f === void 0 ? void 0 : _f.apiSecret) {
         try {
             if (decrypted.whatsapp.apiSecret.includes(':')) {
                 decrypted.whatsapp = Object.assign(Object.assign({}, decrypted.whatsapp), { apiSecret: (0, exports.decryptSecret)(decrypted.whatsapp.apiSecret) });

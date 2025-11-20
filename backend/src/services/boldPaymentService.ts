@@ -1,10 +1,9 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { PrismaClient, Reservation } from '@prisma/client';
+import { Reservation } from '@prisma/client';
 import { decryptApiSettings, decryptBranchApiSettings } from '../utils/encryption';
 import { WhatsAppService } from './whatsappService';
 import { TTLockService } from './ttlockService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * Bold Payment API Response Types

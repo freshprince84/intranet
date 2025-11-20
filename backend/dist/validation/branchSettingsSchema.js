@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.branchEmailSettingsSchema = exports.branchSireSettingsSchema = exports.branchDoorSystemSettingsSchema = exports.branchBoldPaymentSettingsSchema = exports.branchLobbyPmsSettingsSchema = void 0;
+exports.branchEmailSettingsSchema = exports.branchDoorSystemSettingsSchema = exports.branchBoldPaymentSettingsSchema = exports.branchLobbyPmsSettingsSchema = void 0;
 const zod_1 = require("zod");
 /**
  * Zod-Schemas für Branch-Settings Validierung
@@ -27,17 +27,6 @@ exports.branchDoorSystemSettingsSchema = zod_1.z.object({
     password: zod_1.z.string().min(1, 'Password ist erforderlich'),
     lockIds: zod_1.z.array(zod_1.z.number()).min(1, 'Mindestens eine Lock ID ist erforderlich'),
     appName: zod_1.z.string().default('TTLock')
-});
-exports.branchSireSettingsSchema = zod_1.z.object({
-    enabled: zod_1.z.boolean().default(false),
-    autoRegisterOnCheckIn: zod_1.z.boolean().default(false),
-    apiUrl: zod_1.z.string().url().optional(),
-    apiKey: zod_1.z.string().optional(),
-    apiSecret: zod_1.z.string().optional(),
-    propertyCode: zod_1.z.string().optional()
-}).refine((data) => !data.enabled || (data.apiUrl && data.apiKey), {
-    message: 'API URL und API Key sind erforderlich wenn SIRE aktiviert ist',
-    path: ['apiKey']
 });
 exports.branchEmailSettingsSchema = zod_1.z.object({
     smtpHost: zod_1.z.string().min(1, 'SMTP Host ist erforderlich'),

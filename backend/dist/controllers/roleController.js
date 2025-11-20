@@ -14,7 +14,7 @@ const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
 const translations_1 = require("../utils/translations");
 const organization_1 = require("../middleware/organization");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 const userSelect = {
     id: true,
     username: true,
@@ -23,7 +23,7 @@ const userSelect = {
 };
 // Hilfsfunktion: Prüft, ob eine Rolle für eine Branch verfügbar ist
 const isRoleAvailableForBranch = (roleId, branchId) => __awaiter(void 0, void 0, void 0, function* () {
-    const role = yield prisma.role.findUnique({
+    const role = yield prisma_1.prisma.role.findUnique({
         where: { id: roleId },
         select: {
             allBranches: true,
@@ -43,14 +43,11 @@ exports.isRoleAvailableForBranch = isRoleAvailableForBranch;
 const getAllRoles = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         console.log('getAllRoles aufgerufen');
-        // Prüfen, ob Prisma-Verbindung hergestellt ist
-        yield prisma.$connect();
-        console.log('Prisma-Verbindung OK');
         // Datenisolation: Zeigt alle Rollen der Organisation oder nur eigene (wenn standalone)
         const roleFilter = (0, organization_1.getDataIsolationFilter)(req, 'role');
         // Optional: Filter nach branchId (aus Query-Parameter)
         const branchId = req.query.branchId ? parseInt(req.query.branchId, 10) : null;
-        let roles = yield prisma.role.findMany({
+        let roles = yield prisma_1.prisma.role.findMany({
             where: roleFilter,
             include: {
                 permissions: true,
@@ -108,7 +105,7 @@ const getRoleById = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         if (!hasAccess) {
             return res.status(403).json({ message: 'Zugriff auf diese Rolle verweigert' });
         }
-        const role = yield prisma.role.findUnique({
+        const role = yield prisma_1.prisma.role.findUnique({
             where: { id: roleId },
             include: {
                 permissions: true,
@@ -189,7 +186,7 @@ const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Prüfe, ob alle branchIds zur Organisation gehören
         if (branchIds.length > 0) {
             const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
-            const existingBranches = yield prisma.branch.findMany({
+            const existingBranches = yield prisma_1.prisma.branch.findMany({
                 where: Object.assign({ id: { in: branchIds } }, branchFilter)
             });
             if (existingBranches.length !== branchIds.length) {
@@ -199,7 +196,7 @@ const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
         }
         try {
-            const role = yield prisma.role.create({
+            const role = yield prisma_1.prisma.role.create({
                 data: {
                     name,
                     description,
@@ -244,7 +241,7 @@ const createRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
             // Benachrichtigung für Administratoren der Organisation senden
             const userFilter = (0, organization_1.getUserOrganizationFilter)(req);
-            const admins = yield prisma.user.findMany({
+            const admins = yield prisma_1.prisma.user.findMany({
                 where: Object.assign(Object.assign({}, userFilter), { roles: {
                         some: {
                             role: {
@@ -325,7 +322,7 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Prüfe, ob alle branchIds zur Organisation gehören (wenn angegeben)
         if (branchIds && branchIds.length > 0) {
             const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
-            const existingBranches = yield prisma.branch.findMany({
+            const existingBranches = yield prisma_1.prisma.branch.findMany({
                 where: Object.assign({ id: { in: branchIds } }, branchFilter)
             });
             if (existingBranches.length !== branchIds.length) {
@@ -342,7 +339,7 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             console.log(`Permission ${index + 1}:`, JSON.stringify(perm));
         });
         // Transaktion verwenden, um sicherzustellen, dass alle Schritte erfolgreich sind oder komplett zurückgerollt werden
-        const updatedRole = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        const updatedRole = yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // 1. Prüfe, ob die Rolle existiert
             const existingRole = yield tx.role.findUnique({
                 where: { id: roleId },
@@ -424,7 +421,7 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return role;
         }));
         // Benachrichtigung für Administratoren senden
-        const admins = yield prisma.user.findMany({
+        const admins = yield prisma_1.prisma.user.findMany({
             where: {
                 roles: {
                     some: {
@@ -449,7 +446,7 @@ const updateRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         // Benachrichtigung für Benutzer mit dieser Rolle senden (nur User der Organisation)
         const roleFilter = (0, organization_1.getDataIsolationFilter)(req, 'role');
-        const usersWithRole = yield prisma.user.findMany({
+        const usersWithRole = yield prisma_1.prisma.user.findMany({
             where: {
                 roles: {
                     some: {
@@ -516,7 +513,7 @@ const deleteRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             return res.status(403).json({ message: 'Zugriff auf diese Rolle verweigert' });
         }
         // Rolle vor dem Löschen abrufen
-        const role = yield prisma.role.findUnique({
+        const role = yield prisma_1.prisma.role.findUnique({
             where: { id: roleId },
             include: {
                 users: true
@@ -527,7 +524,7 @@ const deleteRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         // Benutzer mit dieser Rolle abrufen (nur User der Organisation)
         const roleFilter = (0, organization_1.getDataIsolationFilter)(req, 'role');
-        const usersWithRole = yield prisma.user.findMany({
+        const usersWithRole = yield prisma_1.prisma.user.findMany({
             where: {
                 roles: {
                     some: {
@@ -538,26 +535,26 @@ const deleteRole = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             }
         });
         // Transaktion für das Löschen verwenden
-        yield prisma.$transaction([
+        yield prisma_1.prisma.$transaction([
             // 1. Lösche alle Berechtigungen dieser Rolle
-            prisma.permission.deleteMany({
+            prisma_1.prisma.permission.deleteMany({
                 where: { roleId: roleId }
             }),
             // 2. Lösche alle RoleBranch-Verknüpfungen
-            prisma.roleBranch.deleteMany({
+            prisma_1.prisma.roleBranch.deleteMany({
                 where: { roleId: roleId }
             }),
             // 3. Lösche alle Benutzer-Rollen-Verknüpfungen
-            prisma.userRole.deleteMany({
+            prisma_1.prisma.userRole.deleteMany({
                 where: { roleId: roleId }
             }),
             // 4. Lösche die Rolle selbst
-            prisma.role.delete({
+            prisma_1.prisma.role.delete({
                 where: { id: roleId }
             })
         ]);
         // Benachrichtigung für Administratoren senden
-        const admins = yield prisma.user.findMany({
+        const admins = yield prisma_1.prisma.user.findMany({
             where: {
                 roles: {
                     some: {
@@ -633,7 +630,7 @@ const getRolePermissions = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (!hasAccess) {
             return res.status(403).json({ message: 'Zugriff auf diese Rolle verweigert' });
         }
-        const permissions = yield prisma.permission.findMany({
+        const permissions = yield prisma_1.prisma.permission.findMany({
             where: { roleId: roleId }
         });
         res.json(permissions);
@@ -659,7 +656,7 @@ const getRoleBranches = (req, res) => __awaiter(void 0, void 0, void 0, function
         if (!hasAccess) {
             return res.status(403).json({ message: 'Zugriff auf diese Rolle verweigert' });
         }
-        const role = yield prisma.role.findUnique({
+        const role = yield prisma_1.prisma.role.findUnique({
             where: { id: roleId },
             select: {
                 id: true,
@@ -717,7 +714,7 @@ const updateRoleBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
         // Prüfe, ob alle branchIds zur Organisation gehören
         if (branchIds.length > 0) {
             const branchFilter = (0, organization_1.getDataIsolationFilter)(req, 'branch');
-            const existingBranches = yield prisma.branch.findMany({
+            const existingBranches = yield prisma_1.prisma.branch.findMany({
                 where: Object.assign({ id: { in: branchIds } }, branchFilter)
             });
             if (existingBranches.length !== branchIds.length) {
@@ -726,7 +723,7 @@ const updateRoleBranches = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 });
             }
         }
-        const updatedRole = yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        const updatedRole = yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // Lösche alle bestehenden RoleBranch Einträge
             yield tx.roleBranch.deleteMany({
                 where: { roleId: roleId }

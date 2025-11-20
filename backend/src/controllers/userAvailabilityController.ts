@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
-import { PrismaClient, AvailabilityType } from '@prisma/client';
+import { AvailabilityType } from '@prisma/client';
 import { checkUserPermission } from '../middleware/permissionMiddleware';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * GET /api/shifts/availabilities

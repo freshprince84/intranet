@@ -10,10 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
-const client_1 = require("@prisma/client");
 const claudeConsoleService_1 = require("../services/claudeConsoleService");
+const prisma_1 = require("../utils/prisma");
 const router = (0, express_1.Router)();
-const prisma = new client_1.PrismaClient();
 // Sicherheits-Middleware für Claude-Endpunkte
 const claudeAuth = (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -28,7 +27,7 @@ router.use(claudeAuth);
 // Tabellen-Übersicht
 router.get('/tables', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const tables = yield prisma.$queryRaw `
+        const tables = yield prisma_1.prisma.$queryRaw `
       SELECT 
         table_name,
         column_name,
@@ -69,7 +68,7 @@ router.post('/query', (req, res) => __awaiter(void 0, void 0, void 0, function* 
         if (query.length > 2000) {
             return res.status(413).json({ error: 'Query too long' });
         }
-        const result = yield prisma.$queryRawUnsafe(query);
+        const result = yield prisma_1.prisma.$queryRawUnsafe(query);
         res.json({
             query,
             result,
@@ -87,10 +86,10 @@ router.post('/query', (req, res) => __awaiter(void 0, void 0, void 0, function* 
 // Datenbankstatistiken
 router.get('/stats', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const userCount = yield prisma.user.count();
-        const taskCount = yield prisma.task.count();
-        const worktimeCount = yield prisma.workTime.count();
-        const requestCount = yield prisma.request.count();
+        const userCount = yield prisma_1.prisma.user.count();
+        const taskCount = yield prisma_1.prisma.task.count();
+        const worktimeCount = yield prisma_1.prisma.workTime.count();
+        const requestCount = yield prisma_1.prisma.request.count();
         const stats = {
             users: userCount,
             tasks: taskCount,
@@ -122,7 +121,7 @@ router.get('/table/:tableName', (req, res) => __awaiter(void 0, void 0, void 0, 
         const limitNum = Math.min(parseInt(limit) || 10, 100);
         const offsetNum = parseInt(offset) || 0;
         // Verwende Prisma-Model basierend auf Tabellenname
-        const model = prisma[tableName.toLowerCase()];
+        const model = prisma_1.prisma[tableName.toLowerCase()];
         if (!model) {
             return res.status(404).json({ error: 'Table not found' });
         }

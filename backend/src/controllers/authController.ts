@@ -6,10 +6,9 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { sendRegistrationEmail, sendPasswordResetEmail } from '../services/emailService';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 interface RegisterRequest {
     email: string;

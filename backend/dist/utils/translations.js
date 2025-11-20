@@ -17,8 +17,7 @@ exports.getUserNotificationText = getUserNotificationText;
 exports.getRoleNotificationText = getRoleNotificationText;
 exports.getSystemNotificationText = getSystemNotificationText;
 exports.getPayrollPDFTranslations = getPayrollPDFTranslations;
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("./prisma");
 /**
  * Ruft die aktive Sprache eines Users ab
  * Priorität: User.language > Organisation.language > 'de'
@@ -27,7 +26,7 @@ function getUserLanguage(userId) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
         try {
-            const user = yield prisma.user.findUnique({
+            const user = yield prisma_1.prisma.user.findUnique({
                 where: { id: userId },
                 select: {
                     language: true,

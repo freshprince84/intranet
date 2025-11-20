@@ -15,8 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EmailReadingService = void 0;
 const imap_1 = __importDefault(require("imap"));
 const mailparser_1 = require("mailparser");
-const client_1 = require("@prisma/client");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * Service für das Lesen von Emails via IMAP
  */
@@ -283,7 +282,7 @@ class EmailReadingService {
     static loadConfigFromOrganization(organizationId) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const organization = yield prisma.organization.findUnique({
+                const organization = yield prisma_1.prisma.organization.findUnique({
                     where: { id: organizationId },
                     select: { settings: true }
                 });

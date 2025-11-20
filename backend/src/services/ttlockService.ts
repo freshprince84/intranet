@@ -1,9 +1,7 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { PrismaClient } from '@prisma/client';
 import { decryptApiSettings, decryptBranchApiSettings } from '../utils/encryption';
 import crypto from 'crypto';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 /**
  * TTLock API Response Types

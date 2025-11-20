@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.rejectSwapRequest = exports.approveSwapRequest = exports.createSwapRequest = exports.getSwapRequestById = exports.getAllSwapRequests = void 0;
 const client_1 = require("@prisma/client");
 const notificationController_1 = require("./notificationController");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * GET /api/shifts/swaps
  * Holt alle Schichttausch-Anfragen
@@ -32,7 +32,7 @@ const getAllSwapRequests = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (status) {
             where.status = status;
         }
-        const swapRequests = yield prisma.shiftSwapRequest.findMany({
+        const swapRequests = yield prisma_1.prisma.shiftSwapRequest.findMany({
             where,
             include: {
                 originalShift: {
@@ -148,7 +148,7 @@ const getSwapRequestById = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 message: 'Ungültige Tausch-Anfrage-ID'
             });
         }
-        const swapRequest = yield prisma.shiftSwapRequest.findUnique({
+        const swapRequest = yield prisma_1.prisma.shiftSwapRequest.findUnique({
             where: { id: swapId },
             include: {
                 originalShift: {
@@ -248,13 +248,13 @@ const createSwapRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
             });
         }
         // Hole Schichten
-        const originalShift = yield prisma.shift.findUnique({
+        const originalShift = yield prisma_1.prisma.shift.findUnique({
             where: { id: originalShiftId },
             include: {
                 user: true
             }
         });
-        const targetShift = yield prisma.shift.findUnique({
+        const targetShift = yield prisma_1.prisma.shift.findUnique({
             where: { id: targetShiftId },
             include: {
                 user: true
@@ -294,7 +294,7 @@ const createSwapRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
             });
         }
         // Prüfe, ob bereits eine offene Anfrage existiert
-        const existingRequest = yield prisma.shiftSwapRequest.findFirst({
+        const existingRequest = yield prisma_1.prisma.shiftSwapRequest.findFirst({
             where: {
                 originalShiftId,
                 targetShiftId,
@@ -308,7 +308,7 @@ const createSwapRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
             });
         }
         // Erstelle Tausch-Anfrage
-        const swapRequest = yield prisma.shiftSwapRequest.create({
+        const swapRequest = yield prisma_1.prisma.shiftSwapRequest.create({
             data: {
                 originalShiftId,
                 targetShiftId,
@@ -416,7 +416,7 @@ const approveSwapRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }
         // Hole Tausch-Anfrage
-        const swapRequest = yield prisma.shiftSwapRequest.findUnique({
+        const swapRequest = yield prisma_1.prisma.shiftSwapRequest.findUnique({
             where: { id: swapId },
             include: {
                 originalShift: true,
@@ -444,7 +444,7 @@ const approveSwapRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }
         // Führe Tausch durch: Tausche User der beiden Schichten
-        yield prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
+        yield prisma_1.prisma.$transaction((tx) => __awaiter(void 0, void 0, void 0, function* () {
             // Aktualisiere Original-Schicht (User bekommt Ziel-Schicht)
             yield tx.shift.update({
                 where: { id: swapRequest.originalShiftId },
@@ -472,7 +472,7 @@ const approveSwapRequest = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }));
         // Hole aktualisierte Tausch-Anfrage
-        const updatedSwapRequest = yield prisma.shiftSwapRequest.findUnique({
+        const updatedSwapRequest = yield prisma_1.prisma.shiftSwapRequest.findUnique({
             where: { id: swapId },
             include: {
                 originalShift: {
@@ -570,7 +570,7 @@ const rejectSwapRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
             });
         }
         // Hole Tausch-Anfrage
-        const swapRequest = yield prisma.shiftSwapRequest.findUnique({
+        const swapRequest = yield prisma_1.prisma.shiftSwapRequest.findUnique({
             where: { id: swapId }
         });
         if (!swapRequest) {
@@ -594,7 +594,7 @@ const rejectSwapRequest = (req, res) => __awaiter(void 0, void 0, void 0, functi
             });
         }
         // Aktualisiere Tausch-Anfrage
-        const updatedSwapRequest = yield prisma.shiftSwapRequest.update({
+        const updatedSwapRequest = yield prisma_1.prisma.shiftSwapRequest.update({
             where: { id: swapId },
             data: {
                 status: client_1.SwapStatus.rejected,

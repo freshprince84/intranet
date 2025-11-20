@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteAvailability = exports.updateAvailability = exports.createAvailability = exports.getAvailabilityById = exports.getAllAvailabilities = void 0;
 const client_1 = require("@prisma/client");
 const permissionMiddleware_1 = require("../middleware/permissionMiddleware");
-const prisma = new client_1.PrismaClient();
+const prisma_1 = require("../utils/prisma");
 /**
  * GET /api/shifts/availabilities
  * Holt alle Verfügbarkeiten (optional gefiltert nach userId, branchId, roleId)
@@ -57,7 +57,7 @@ const getAllAvailabilities = (req, res) => __awaiter(void 0, void 0, void 0, fun
         if (req.query.includeInactive !== 'true') {
             where.isActive = true;
         }
-        const availabilities = yield prisma.userAvailability.findMany({
+        const availabilities = yield prisma_1.prisma.userAvailability.findMany({
             where,
             include: {
                 user: {
@@ -116,7 +116,7 @@ const getAvailabilityById = (req, res) => __awaiter(void 0, void 0, void 0, func
                 message: 'Ungültige Verfügbarkeits-ID'
             });
         }
-        const availability = yield prisma.userAvailability.findUnique({
+        const availability = yield prisma_1.prisma.userAvailability.findUnique({
             where: { id: availabilityId },
             include: {
                 user: {
@@ -272,7 +272,7 @@ const createAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }
         // Prüfe, ob User existiert
-        const user = yield prisma.user.findUnique({ where: { id: finalUserId } });
+        const user = yield prisma_1.prisma.user.findUnique({ where: { id: finalUserId } });
         if (!user) {
             return res.status(404).json({
                 success: false,
@@ -281,7 +281,7 @@ const createAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }
         // Prüfe, ob Branch existiert (wenn angegeben)
         if (branchId) {
-            const branch = yield prisma.branch.findUnique({ where: { id: branchId } });
+            const branch = yield prisma_1.prisma.branch.findUnique({ where: { id: branchId } });
             if (!branch) {
                 return res.status(404).json({
                     success: false,
@@ -291,7 +291,7 @@ const createAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
         }
         // Prüfe, ob Rolle existiert (wenn angegeben)
         if (roleId) {
-            const role = yield prisma.role.findUnique({ where: { id: roleId } });
+            const role = yield prisma_1.prisma.role.findUnique({ where: { id: roleId } });
             if (!role) {
                 return res.status(404).json({
                     success: false,
@@ -300,7 +300,7 @@ const createAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
             }
         }
         // Erstelle Verfügbarkeit
-        const availability = yield prisma.userAvailability.create({
+        const availability = yield prisma_1.prisma.userAvailability.create({
             data: {
                 userId: finalUserId,
                 branchId: branchId || null,
@@ -369,7 +369,7 @@ const updateAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }
         // Prüfe, ob Verfügbarkeit existiert
-        const existing = yield prisma.userAvailability.findUnique({
+        const existing = yield prisma_1.prisma.userAvailability.findUnique({
             where: { id: availabilityId }
         });
         if (!existing) {
@@ -484,7 +484,7 @@ const updateAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
         if (isActive !== undefined) {
             updateData.isActive = isActive;
         }
-        const availability = yield prisma.userAvailability.update({
+        const availability = yield prisma_1.prisma.userAvailability.update({
             where: { id: availabilityId },
             data: updateData,
             include: {
@@ -541,7 +541,7 @@ const deleteAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
             });
         }
         // Prüfe, ob Verfügbarkeit existiert
-        const existing = yield prisma.userAvailability.findUnique({
+        const existing = yield prisma_1.prisma.userAvailability.findUnique({
             where: { id: availabilityId }
         });
         if (!existing) {
@@ -568,7 +568,7 @@ const deleteAvailability = (req, res) => __awaiter(void 0, void 0, void 0, funct
                 });
             }
         }
-        yield prisma.userAvailability.delete({
+        yield prisma_1.prisma.userAvailability.delete({
             where: { id: availabilityId }
         });
         res.json({

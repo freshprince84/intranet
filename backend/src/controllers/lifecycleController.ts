@@ -1,11 +1,9 @@
 import { Request, Response } from 'express';
 import { LifecycleService } from '../services/lifecycleService';
 import { isHROrAdmin, isLegalOrAdmin } from '../utils/lifecycleRoles';
-import { PrismaClient } from '@prisma/client';
 import * as path from 'path';
 import * as fs from 'fs';
-
-const prisma = new PrismaClient();
+import { prisma } from '../utils/prisma';
 
 // Upload-Verzeichnis für Certificates/Contracts
 const CERTIFICATES_DIR = path.join(__dirname, '../../uploads/certificates');
