@@ -86,7 +86,10 @@
   - "16:00" (4 Uhr nachmittags)
   - "00:00" (Mitternacht)
   - "08:00" (8 Uhr morgens - für Nachtschicht)
-- **Wichtig:** Muss nach der Startzeit liegen! (Außer bei Nachtschicht über Mitternacht)
+- **Wichtig:** 
+  - Bei normalen Schichten: Muss nach der Startzeit liegen (z.B. 08:00 - 16:00)
+  - Bei Nachtschichten über Mitternacht: Kann vor der Startzeit liegen (z.B. 22:00 - 06:00)
+  - Das System erkennt automatisch Nachtschichten und addiert einen Tag zur Endzeit
 
 #### 6. Dauer (Optional)
 - **Feldtyp:** Number-Input (Zahlen-Eingabefeld)
@@ -299,10 +302,13 @@ Nachdem Templates erstellt wurden:
 
 ### Problem: "Startzeit muss vor Endzeit liegen"
 
-**Lösung:**
-- Startzeit prüfen (z.B. "08:00")
-- Endzeit prüfen (z.B. "16:00")
-- Bei Nachtschicht über Mitternacht: Endzeit am nächsten Tag (z.B. "06:00")
+**Status:** ✅ **Dieser Fehler sollte nicht mehr auftreten!**
+
+Nachtschichten über Mitternacht (z.B. 22:00 - 06:00) sind jetzt vollständig unterstützt. Das System erkennt automatisch, wenn die Endzeit vor der Startzeit liegt, und behandelt dies als Nachtschicht.
+
+**Falls der Fehler dennoch auftritt:**
+- Format prüfen: Beide Zeiten müssen im Format HH:mm sein (z.B. "22:00", "06:00")
+- Keine Leerzeichen oder zusätzliche Zeichen
 
 ### Problem: "Niederlassung nicht gefunden"
 

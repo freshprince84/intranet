@@ -157,7 +157,9 @@ Phase 4 implementiert die vollständige Verwaltung von Schicht-Templates. User k
 - `roleId` und `branchId` müssen existieren
 - `name` muss eindeutig sein (Kombination: roleId + branchId + name)
 - `startTime` und `endTime` müssen im Format HH:mm sein
-- `startTime` muss vor `endTime` liegen
+- Nachtschichten über Mitternacht sind erlaubt (z.B. 22:00 - 06:00)
+  - Bei Nachtschichten liegt `endTime` numerisch vor `startTime`
+  - Das System erkennt dies automatisch und addiert bei der Schicht-Erstellung einen Tag zur Endzeit
 
 **Beim Bearbeiten:**
 - Name-Eindeutigkeit wird nur geprüft, wenn sich Name geändert hat

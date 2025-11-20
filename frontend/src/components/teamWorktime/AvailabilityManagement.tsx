@@ -5,6 +5,7 @@ import { Dialog } from '@headlessui/react';
 import { XMarkIcon, PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { API_ENDPOINTS } from '../../config/api.ts';
 import { useAuth } from '../../hooks/useAuth.tsx';
+import { usePermissions } from '../../hooks/usePermissions.ts';
 import { useSidepane } from '../../contexts/SidepaneContext.tsx';
 import { format } from 'date-fns';
 
@@ -52,16 +53,28 @@ interface AvailabilityManagementProps {
   onClose: () => void;
 }
 
+interface User {
+  id: number;
+  firstName: string;
+  lastName: string;
+}
+
 const AvailabilityManagement = ({ isOpen, onClose }: AvailabilityManagementProps) => {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const { hasPermission } = usePermissions();
   const { openSidepane, closeSidepane } = useSidepane();
   const [isLargeScreen, setIsLargeScreen] = useState(window.innerWidth > 1070);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 640);
   
+  // Prüfe, ob User Verfügbarkeiten für andere User verwalten darf
+  const canManageAllAvailabilities = hasPermission('availability_management', 'write', 'page');
+  
   const [availabilities, setAvailabilities] = useState<UserAvailability[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
+  const [allUsers, setAllUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,6 +82,7 @@ const AvailabilityManagement = ({ isOpen, onClose }: AvailabilityManagementProps
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingAvailability, setEditingAvailability] = useState<UserAvailability | null>(null);
   const [formData, setFormData] = useState({
+    userId: null as number | null,
     branchId: '' as number | '',
     roleId: '' as number | '',
     dayOfWeek: '' as number | '' | null,
@@ -116,22 +130,44 @@ const AvailabilityManagement = ({ isOpen, onClose }: AvailabilityManagementProps
       setIsFormOpen(false);
       setEditingAvailability(null);
       resetForm();
+      setSelectedUserId(null);
     }
     
     return () => {
       closeSidepane();
     };
-  }, [isOpen, openSidepane, closeSidepane]);
+  }, [isOpen, openSidepane, closeSidepane, selectedUserId, canManageAllAvailabilities]);
 
   const fetchData = async () => {
     setLoadingData(true);
     setError(null);
     
     try {
+      // Lade User (wenn Permission vorhanden)
+      if (canManageAllAvailabilities) {
+        try {
+          const usersRes = await axiosInstance.get(API_ENDPOINTS.USERS.DROPDOWN);
+          setAllUsers(usersRes.data || []);
+        } catch (err) {
+          console.error('Fehler beim Laden der User:', err);
+        }
+      }
+
+      // Bestimme userId für API-Request
+      const params: any = { includeInactive: true };
+      if (canManageAllAvailabilities && selectedUserId) {
+        // Admin hat User ausgewählt
+        params.userId = selectedUserId;
+      } else if (canManageAllAvailabilities && !selectedUserId) {
+        // Admin, aber kein User ausgewählt → zeige alle (kein userId Parameter)
+        // params bleibt ohne userId
+      } else if (user?.id) {
+        // Normaler User: nur eigene Verfügbarkeiten
+        params.userId = user.id;
+      }
+
       const [availabilitiesRes, rolesRes, branchesRes] = await Promise.all([
-        axiosInstance.get(API_ENDPOINTS.SHIFTS.AVAILABILITIES.BASE, {
-          params: user?.id ? { userId: user.id, includeInactive: true } : { includeInactive: true }
-        }),
+        axiosInstance.get(API_ENDPOINTS.SHIFTS.AVAILABILITIES.BASE, { params }),
         axiosInstance.get(API_ENDPOINTS.ROLES.BASE),
         axiosInstance.get(API_ENDPOINTS.BRANCHES.BASE)
       ]);
@@ -149,6 +185,7 @@ const AvailabilityManagement = ({ isOpen, onClose }: AvailabilityManagementProps
 
   const resetForm = () => {
     setFormData({
+      userId: null,
       branchId: '',
       roleId: '',
       dayOfWeek: '',
@@ -167,6 +204,7 @@ const AvailabilityManagement = ({ isOpen, onClose }: AvailabilityManagementProps
   const handleEdit = (availability: UserAvailability) => {
     setEditingAvailability(availability);
     setFormData({
+      userId: availability.userId, // Beim Bearbeiten: userId setzen (read-only)
       branchId: availability.branchId || '',
       roleId: availability.roleId || '',
       dayOfWeek: availability.dayOfWeek !== null ? availability.dayOfWeek : '',
@@ -220,6 +258,11 @@ const AvailabilityManagement = ({ isOpen, onClose }: AvailabilityManagementProps
         notes: formData.notes.trim() || null,
         isActive: formData.isActive
       };
+
+      // Nur userId senden, wenn Permission vorhanden und User ausgewählt
+      if (canManageAllAvailabilities && formData.userId) {
+        availabilityData.userId = formData.userId;
+      }
 
       if (editingAvailability) {
         await axiosInstance.put(API_ENDPOINTS.SHIFTS.AVAILABILITIES.BY_ID(editingAvailability.id), availabilityData);
@@ -280,6 +323,33 @@ const AvailabilityManagement = ({ isOpen, onClose }: AvailabilityManagementProps
 
   const renderForm = () => (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* User (nur für Admins) */}
+      {canManageAllAvailabilities && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            {t('teamWorktime.shifts.availabilities.form.user')}
+          </label>
+          <select
+            value={formData.userId || ''}
+            onChange={(e) => setFormData({ ...formData, userId: e.target.value ? Number(e.target.value) : null })}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={!!editingAvailability} // Read-only beim Bearbeiten
+          >
+            <option value="">{t('teamWorktime.shifts.availabilities.form.selectUser')}</option>
+            {allUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.firstName} {u.lastName}
+              </option>
+            ))}
+          </select>
+          {editingAvailability && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {t('teamWorktime.shifts.availabilities.form.userReadOnly')}
+            </p>
+          )}
+        </div>
+      )}
+
       {/* Branch (optional) */}
       <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -490,6 +560,30 @@ const AvailabilityManagement = ({ isOpen, onClose }: AvailabilityManagementProps
         </div>
       )}
 
+      {/* User-Filter (nur für Admins) */}
+      {canManageAllAvailabilities && !isFormOpen && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            {t('teamWorktime.shifts.availabilities.filter.user')}
+          </label>
+          <select
+            value={selectedUserId || ''}
+            onChange={(e) => {
+              const userId = e.target.value ? parseInt(e.target.value, 10) : null;
+              setSelectedUserId(userId);
+            }}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">{t('teamWorktime.shifts.availabilities.filter.allUsers')}</option>
+            {allUsers.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.firstName} {u.lastName}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {isFormOpen ? (
         <div>
           <div className="flex items-center justify-between mb-4">
@@ -556,6 +650,11 @@ const AvailabilityManagement = ({ isOpen, onClose }: AvailabilityManagementProps
                       </div>
                       
                       <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                        {availability.user && canManageAllAvailabilities && (
+                          <div>
+                            <span className="font-medium">{t('teamWorktime.shifts.availabilities.userLabel')}:</span> {availability.user.firstName} {availability.user.lastName}
+                          </div>
+                        )}
                         <div>
                           <span className="font-medium">{t('teamWorktime.shifts.availabilities.form.dayOfWeek')}:</span> {getDayOfWeekLabel(availability.dayOfWeek)}
                         </div>

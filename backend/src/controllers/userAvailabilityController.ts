@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { PrismaClient, AvailabilityType } from '@prisma/client';
+import { checkUserPermission } from '../middleware/permissionMiddleware';
 
 const prisma = new PrismaClient();
 
@@ -23,9 +24,30 @@ export const getAllAvailabilities = async (req: Request, res: Response) => {
       });
     }
 
-    const where: any = {
-      userId: finalUserId
-    };
+    const currentUserId = req.user?.id as number | undefined;
+    const currentRoleId = req.roleId ? parseInt(req.roleId, 10) : null;
+
+    // Prüfe, ob User alle Verfügbarkeiten sehen darf (Permission)
+    let canViewAll = false;
+    if (currentRoleId && currentUserId) {
+      canViewAll = await checkUserPermission(
+        currentUserId,
+        currentRoleId,
+        'availability_management',
+        'read',
+        'page'
+      );
+    }
+
+    const where: any = {};
+
+    // Wenn User Permission hat und kein userId angegeben → zeige alle
+    if (canViewAll && !userId) {
+      // Kein Filter auf userId - zeige alle Verfügbarkeiten
+    } else {
+      // Normaler User: nur eigene Verfügbarkeiten
+      where.userId = finalUserId;
+    }
 
     if (branchId && !isNaN(branchId)) {
       where.branchId = branchId;
@@ -134,13 +156,32 @@ export const getAvailabilityById = async (req: Request, res: Response) => {
       });
     }
 
-    // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Admin)
+    // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Permission)
     const currentUserId = req.user?.id as number | undefined;
-    if (availability.userId !== currentUserId && !req.user?.roles?.some((r: any) => r.name === 'admin')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Keine Berechtigung'
-      });
+    const currentRoleId = req.roleId ? parseInt(req.roleId, 10) : null;
+
+    if (availability.userId !== currentUserId) {
+      if (!currentRoleId || !currentUserId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Nicht authentifiziert'
+        });
+      }
+
+      const hasPermission = await checkUserPermission(
+        currentUserId,
+        currentRoleId,
+        'availability_management',
+        'read',
+        'page'
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: 'Keine Berechtigung'
+        });
+      }
     }
 
     res.json({
@@ -187,13 +228,34 @@ export const createAvailability = async (req: Request, res: Response) => {
       });
     }
 
-    // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Admin)
+    // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Permission)
     const currentUserId = req.user?.id as number | undefined;
-    if (finalUserId !== currentUserId && !req.user?.roles?.some((r: any) => r.name === 'admin')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Keine Berechtigung, Verfügbarkeiten für andere User zu erstellen'
-      });
+    const currentRoleId = req.roleId ? parseInt(req.roleId, 10) : null;
+
+    if (finalUserId !== currentUserId) {
+      // User versucht Verfügbarkeit für anderen User zu erstellen
+      if (!currentRoleId || !currentUserId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Nicht authentifiziert'
+        });
+      }
+
+      // Prüfe Permission
+      const hasPermission = await checkUserPermission(
+        currentUserId,
+        currentRoleId,
+        'availability_management',
+        'write',
+        'page'
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: 'Keine Berechtigung, Verfügbarkeiten für andere User zu erstellen'
+        });
+      }
     }
 
     // Validierung
@@ -372,13 +434,32 @@ export const updateAvailability = async (req: Request, res: Response) => {
       });
     }
 
-    // Prüfe, ob User Zugriff hat
+    // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Permission)
     const currentUserId = req.user?.id as number | undefined;
-    if (existing.userId !== currentUserId && !req.user?.roles?.some((r: any) => r.name === 'admin')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Keine Berechtigung'
-      });
+    const currentRoleId = req.roleId ? parseInt(req.roleId, 10) : null;
+
+    if (existing.userId !== currentUserId) {
+      if (!currentRoleId || !currentUserId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Nicht authentifiziert'
+        });
+      }
+
+      const hasPermission = await checkUserPermission(
+        currentUserId,
+        currentRoleId,
+        'availability_management',
+        'write',
+        'page'
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: 'Keine Berechtigung'
+        });
+      }
     }
 
     const {
@@ -564,13 +645,32 @@ export const deleteAvailability = async (req: Request, res: Response) => {
       });
     }
 
-    // Prüfe, ob User Zugriff hat
+    // Prüfe, ob User Zugriff hat (nur eigene Verfügbarkeiten oder Permission)
     const currentUserId = req.user?.id as number | undefined;
-    if (existing.userId !== currentUserId && !req.user?.roles?.some((r: any) => r.name === 'admin')) {
-      return res.status(403).json({
-        success: false,
-        message: 'Keine Berechtigung'
-      });
+    const currentRoleId = req.roleId ? parseInt(req.roleId, 10) : null;
+
+    if (existing.userId !== currentUserId) {
+      if (!currentRoleId || !currentUserId) {
+        return res.status(401).json({
+          success: false,
+          message: 'Nicht authentifiziert'
+        });
+      }
+
+      const hasPermission = await checkUserPermission(
+        currentUserId,
+        currentRoleId,
+        'availability_management',
+        'write',
+        'page'
+      );
+
+      if (!hasPermission) {
+        return res.status(403).json({
+          success: false,
+          message: 'Keine Berechtigung'
+        });
+      }
     }
 
     await prisma.userAvailability.delete({

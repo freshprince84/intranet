@@ -1451,6 +1451,8 @@
         "swapped": "Getauscht"
       },
       "legend": {
+        "branches": "Standorte",
+        "statuses": "Status",
         "scheduled": "Geplant",
         "confirmed": "Bestätigt",
         "cancelled": "Abgesagt",
@@ -1624,7 +1626,15 @@
         "inactive": "Inaktiv",
         "priority": "Priorität",
         "deleteConfirm": "Möchten Sie diese Verfügbarkeit wirklich löschen?",
+        "userLabel": "Verfügbarkeit für",
+        "filter": {
+          "user": "Benutzer",
+          "allUsers": "Alle Benutzer"
+        },
         "form": {
+          "user": "Benutzer",
+          "selectUser": "Benutzer auswählen",
+          "userReadOnly": "Benutzer kann beim Bearbeiten nicht geändert werden",
           "branch": "Niederlassung",
           "role": "Rolle",
           "dayOfWeek": "Wochentag",

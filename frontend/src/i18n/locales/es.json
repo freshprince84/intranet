@@ -1424,6 +1424,8 @@
         "swapped": "Intercambiado"
       },
       "legend": {
+        "branches": "Sucursales",
+        "statuses": "Estado",
         "scheduled": "Programado",
         "confirmed": "Confirmado",
         "cancelled": "Cancelado",
@@ -1597,7 +1599,15 @@
         "inactive": "Inactivo",
         "priority": "Prioridad",
         "deleteConfirm": "¿Realmente desea eliminar esta disponibilidad?",
+        "userLabel": "Disponibilidad para",
+        "filter": {
+          "user": "Usuario",
+          "allUsers": "Todos los usuarios"
+        },
         "form": {
+          "user": "Usuario",
+          "selectUser": "Seleccionar usuario",
+          "userReadOnly": "El usuario no se puede cambiar al editar",
           "branch": "Sucursal",
           "role": "Rol",
           "dayOfWeek": "Día de la semana",

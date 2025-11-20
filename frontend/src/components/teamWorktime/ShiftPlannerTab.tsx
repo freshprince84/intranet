@@ -16,6 +16,7 @@ import GenerateShiftPlanModal from './GenerateShiftPlanModal.tsx';
 import SwapRequestList from './SwapRequestList.tsx';
 import ShiftTemplateManagement from './ShiftTemplateManagement.tsx';
 import AvailabilityManagement from './AvailabilityManagement.tsx';
+import { getBranchColor, getStatusColor } from '../../utils/colorPalette.ts';
 // FullCalendar v6 CSS - Import über CDN in index.html oder direkt hier
 
 interface ShiftPlannerTabProps {
@@ -241,15 +242,12 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
       const startDateTime = new Date(shift.startTime);
       const endDateTime = new Date(shift.endTime);
       
-      // Bestimme Farbe basierend auf Status
-      let backgroundColor = '#3b82f6'; // Blau (scheduled)
-      if (shift.status === 'confirmed') {
-        backgroundColor = '#10b981'; // Grün
-      } else if (shift.status === 'cancelled') {
-        backgroundColor = '#ef4444'; // Rot
-      } else if (shift.status === 'swapped') {
-        backgroundColor = '#f59e0b'; // Orange
-      }
+      // Farben: Hintergrund = Standort, Rand = Status
+      const branchColor = getBranchColor(shift.branchId);
+      const statusColor = getStatusColor(shift.status);
+      
+      // Text-Farbe für besseren Kontrast (heller Text auf dunklem Hintergrund)
+      const textColor = '#ffffff'; // Weiß für guten Kontrast
       
       return {
         id: shift.id.toString(),
@@ -258,8 +256,10 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
           : `${shift.shiftTemplate?.name || 'Schicht'} - Nicht zugewiesen`,
         start: startDateTime.toISOString(),
         end: endDateTime.toISOString(),
-        backgroundColor,
-        borderColor: backgroundColor,
+        backgroundColor: branchColor, // Hauptfarbe = Standort
+        borderColor: statusColor, // Rand = Status
+        borderWidth: 3, // Dicker Rand für bessere Sichtbarkeit
+        textColor: textColor, // Text-Farbe
         extendedProps: {
           shift,
         },
@@ -550,6 +550,99 @@ const ShiftPlannerTab: React.FC<ShiftPlannerTabProps> = ({ selectedDate }) => {
         </div>
       )}
       
+      {/* Legende */}
+      {!loading && shifts.length > 0 && (() => {
+        // Erstelle Legende-Daten
+        const branchMap = new Map<number, { id: number; name: string; color: string }>();
+        const statusMap = new Map<string, { status: string; label: string; color: string }>();
+
+        // Sammle alle eindeutigen Branches und Status
+        shifts.forEach(shift => {
+          if (shift.branch && !branchMap.has(shift.branch.id)) {
+            branchMap.set(shift.branch.id, {
+              id: shift.branch.id,
+              name: shift.branch.name,
+              color: getBranchColor(shift.branch.id)
+            });
+          }
+          
+          if (!statusMap.has(shift.status)) {
+            const statusLabels: Record<string, string> = {
+              scheduled: t('teamWorktime.shifts.status.scheduled'),
+              confirmed: t('teamWorktime.shifts.status.confirmed'),
+              cancelled: t('teamWorktime.shifts.status.cancelled'),
+              swapped: t('teamWorktime.shifts.status.swapped')
+            };
+            
+            statusMap.set(shift.status, {
+              status: shift.status,
+              label: statusLabels[shift.status] || shift.status,
+              color: getStatusColor(shift.status)
+            });
+          }
+        });
+
+        const legendBranches = Array.from(branchMap.values());
+        const legendStatuses = Array.from(statusMap.values());
+
+        if (legendBranches.length === 0 && legendStatuses.length === 0) {
+          return null;
+        }
+
+        return (
+          <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="flex flex-wrap gap-6">
+              {/* Standort-Legende */}
+              {legendBranches.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    {t('teamWorktime.shifts.legend.branches')}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {legendBranches.map(branch => (
+                      <div key={branch.id} className="flex items-center gap-2">
+                        <div 
+                          className="w-4 h-4 rounded"
+                          style={{ backgroundColor: branch.color }}
+                        />
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                          {branch.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Status-Legende */}
+              {legendStatuses.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
+                    {t('teamWorktime.shifts.legend.statuses')}
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    {legendStatuses.map(status => (
+                      <div key={status.status} className="flex items-center gap-2">
+                        <div 
+                          className="w-4 h-4 rounded border-2"
+                          style={{ 
+                            backgroundColor: 'transparent',
+                            borderColor: status.color
+                          }}
+                        />
+                        <span className="text-xs text-gray-600 dark:text-gray-400">
+                          {status.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Kalender-Ansicht */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
