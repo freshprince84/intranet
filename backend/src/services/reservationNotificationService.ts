@@ -229,9 +229,11 @@ export class ReservationNotificationService {
       let sentMessageAt: Date | null = null;
       let success = false;
       let errorMessage: string | null = null;
+      let whatsappSuccess = false;
+      let emailSuccess = false;
 
-      // Schritt 1: Payment-Link erstellen oder bestehenden verwenden (wenn Telefonnummer vorhanden)
-      if (guestPhone) {
+      // Schritt 1: Payment-Link IMMER erstellen (wenn Telefonnummer ODER Email vorhanden)
+      if (guestPhone || guestEmail) {
         // Verwende bestehenden Payment-Link, falls vorhanden
         if (reservation.paymentLink) {
           paymentLink = reservation.paymentLink;
@@ -269,11 +271,8 @@ export class ReservationNotificationService {
             } catch (logError) {
               console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für Payment-Link-Fehler:`, logError);
             }
-            // Payment-Link-Fehler ist kritisch für WhatsApp - wir können ohne Payment-Link nicht weitermachen
-            // Aber wir brechen nicht ab, falls E-Mail-Versand möglich ist
-            if (!guestEmail) {
-              throw new Error(`Payment-Link konnte nicht erstellt werden: ${errorMessage}`);
-            }
+            // Payment-Link-Fehler ist kritisch - ohne Payment-Link können wir keine Notifications versenden
+            throw new Error(`Payment-Link konnte nicht erstellt werden: ${errorMessage}`);
           }
         }
       }
@@ -357,10 +356,10 @@ ${paymentLink}
           }
 
           sentMessageAt = new Date();
-          success = true;
+          whatsappSuccess = true;
           console.log(`[ReservationNotification] ✅ WhatsApp-Nachricht erfolgreich versendet`);
           
-          // Log erfolgreiche Notification
+          // Log erfolgreiche WhatsApp-Notification
           try {
             await this.logNotification(
               reservationId,
@@ -420,8 +419,166 @@ ${paymentLink}
         } catch (logError) {
           console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (kein Payment-Link):`, logError);
         }
-      } else if (!guestPhone && guestEmail) {
-        // Nur E-Mail vorhanden - Log erstellen (für zukünftige E-Mail-Implementierung)
+      }
+
+      // Schritt 3b: Email senden (wenn Email-Adresse vorhanden)
+      if (guestEmail && checkInLink && paymentLink) {
+        let emailMessage: string = '';
+        try {
+          console.log(`[ReservationNotification] Sende Email für Reservierung ${reservationId}...`);
+          
+          // Verwende Custom Message oder Standard-Nachricht (gleicher Text wie WhatsApp)
+          if (options?.customMessage) {
+            emailMessage = options.customMessage;
+            // Ersetze Variablen in Custom Message
+            emailMessage = emailMessage
+              .replace(/\{\{guestName\}\}/g, reservation.guestName)
+              .replace(/\{\{checkInLink\}\}/g, checkInLink)
+              .replace(/\{\{paymentLink\}\}/g, paymentLink);
+          } else {
+            // Standard-Nachricht (gleicher Text wie WhatsApp)
+            emailMessage = `Hola ${reservation.guestName},
+
+¡Bienvenido a La Familia Hostel!
+
+Tu reserva ha sido confirmada.
+Cargos: ${amount} ${currency}
+
+Puedes realizar el check-in en línea ahora:
+${checkInLink}
+
+Por favor, realiza el pago:
+${paymentLink}
+
+¡Te esperamos!`;
+          }
+
+          // Konvertiere Plain-Text zu HTML (ähnlich wie sendCheckInInvitationEmail)
+          // Ersetze Links im Text durch HTML-Links
+          let emailHtmlContent = emailMessage
+            .replace(/\n/g, '<br>')
+            .replace(new RegExp(checkInLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
+              `<a href="${checkInLink}" style="color: #007bff; text-decoration: none; font-weight: bold;">${checkInLink}</a>`)
+            .replace(new RegExp(paymentLink.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), 
+              `<a href="${paymentLink}" style="color: #007bff; text-decoration: none; font-weight: bold;">${paymentLink}</a>`);
+
+          const emailHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="UTF-8">
+              <style>
+                body {
+                  font-family: Arial, sans-serif;
+                  line-height: 1.6;
+                  color: #333;
+                  max-width: 600px;
+                  margin: 0 auto;
+                  padding: 20px;
+                }
+                .container {
+                  background-color: #f9fafb;
+                  padding: 30px;
+                  border-radius: 8px;
+                  border: 1px solid #e5e7eb;
+                }
+                .button {
+                  display: inline-block;
+                  padding: 12px 24px;
+                  background-color: #007bff;
+                  color: white;
+                  text-decoration: none;
+                  border-radius: 4px;
+                  margin: 10px 5px;
+                }
+                .button:hover {
+                  background-color: #0056b3;
+                }
+                .button-container {
+                  text-align: center;
+                  margin: 20px 0;
+                }
+                .footer {
+                  text-align: center;
+                  margin-top: 30px;
+                  color: #6b7280;
+                  font-size: 12px;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                ${emailHtmlContent}
+                <div class="button-container">
+                  <a href="${checkInLink}" class="button">Online Check-in</a>
+                  <a href="${paymentLink}" class="button">Zahlung durchführen</a>
+                </div>
+              </div>
+              <div class="footer">
+                <p>Diese E-Mail wurde automatisch generiert. Bitte antworten Sie nicht auf diese E-Mail.</p>
+              </div>
+            </body>
+            </html>
+          `;
+
+          // Versende Email
+          const emailSent = await sendEmail(
+            guestEmail,
+            'Tu reserva ha sido confirmada - La Familia Hostel',
+            emailHtml,
+            emailMessage,
+            reservation.organizationId
+          );
+
+          if (emailSent) {
+            emailSuccess = true;
+            console.log(`[ReservationNotification] ✅ Email erfolgreich versendet`);
+            
+            // Log erfolgreiche Email-Notification
+            try {
+              await this.logNotification(
+                reservationId,
+                'invitation',
+                'email',
+                true,
+                {
+                  sentTo: guestEmail,
+                  message: emailMessage,
+                  paymentLink: paymentLink,
+                  checkInLink: checkInLink
+                }
+              );
+            } catch (logError) {
+              console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für erfolgreiche Email-Notification:`, logError);
+            }
+          } else {
+            throw new Error('Email konnte nicht versendet werden');
+          }
+        } catch (error) {
+          console.error(`[ReservationNotification] ❌ Fehler beim Versenden der Email:`, error);
+          const emailErrorMsg = error instanceof Error ? error.message : 'Unbekannter Fehler beim Versenden der Email';
+          
+          // Log fehlgeschlagene Email-Notification
+          try {
+            await this.logNotification(
+              reservationId,
+              'invitation',
+              'email',
+              false,
+              {
+                sentTo: guestEmail,
+                message: emailMessage || undefined,
+                paymentLink: paymentLink || undefined,
+                checkInLink: checkInLink || undefined,
+                errorMessage: emailErrorMsg
+              }
+            );
+          } catch (logError) {
+            console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags für fehlgeschlagene Email-Notification:`, logError);
+          }
+        }
+      } else if (guestEmail && (!checkInLink || !paymentLink)) {
+        // Email vorhanden, aber Links fehlen - Log erstellen
         try {
           await this.logNotification(
             reservationId,
@@ -430,13 +587,16 @@ ${paymentLink}
             false,
             {
               sentTo: guestEmail,
-              errorMessage: 'E-Mail-Versand noch nicht implementiert'
+              errorMessage: 'Check-in-Link oder Payment-Link fehlt - Email konnte nicht versendet werden'
             }
           );
         } catch (logError) {
-          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (nur E-Mail):`, logError);
+          console.error(`[ReservationNotification] ⚠️ Fehler beim Erstellen des Log-Eintrags (Email ohne Links):`, logError);
         }
       }
+
+      // Setze success = true wenn mindestens eine Notification erfolgreich war
+      success = whatsappSuccess || emailSuccess;
 
       // Schritt 4: Reservation aktualisieren
       try {
@@ -444,15 +604,15 @@ ${paymentLink}
           paymentLink: paymentLink || undefined,
         };
 
-        // Nur Status auf 'notification_sent' setzen, wenn WhatsApp erfolgreich war
+        // Status auf 'notification_sent' setzen, wenn mindestens eine Notification erfolgreich war
         if (success && sentMessage) {
           updateData.sentMessage = sentMessage;
           updateData.sentMessageAt = sentMessageAt;
           updateData.status = 'notification_sent' as ReservationStatus;
-        } else if (paymentLink) {
-          // Payment-Link wurde erstellt, aber WhatsApp fehlgeschlagen
+        } else if (paymentLink && !success) {
+          // Payment-Link wurde erstellt, aber alle Notifications fehlgeschlagen
           // Status bleibt auf 'confirmed', aber Payment-Link wird gespeichert
-          console.log(`[ReservationNotification] ⚠️ Payment-Link gespeichert, aber WhatsApp fehlgeschlagen - Status bleibt auf 'confirmed'`);
+          console.log(`[ReservationNotification] ⚠️ Payment-Link gespeichert, aber alle Notifications fehlgeschlagen - Status bleibt auf 'confirmed'`);
         }
 
         await prisma.reservation.update({

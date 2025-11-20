@@ -107,5 +107,14 @@ Für die strukturierte Umsetzung neuer Module existieren detaillierte Schritt-f�
 
 - **Schichtplaner** - Automatische Schichtplanung mit Verfügbarkeiten und Präferenzen
   - [SCHICHTPLANER_ANALYSE_UND_PLAN.md](../implementation_plans/SCHICHTPLANER_ANALYSE_UND_PLAN.md) - Analyse, Recherche und Implementierungsplan
+  - [SCHICHTPLANER_STATUS_UND_PLAN.md](../implementation_plans/SCHICHTPLANER_STATUS_UND_PLAN.md) - Aktueller Stand und Implementierungsplan
+  - [SCHICHTPLANER_VORAUSSETZUNGEN.md](../implementation_plans/SCHICHTPLANER_VORAUSSETZUNGEN.md) - **⚠️ WICHTIG: Voraussetzungen für automatische Generierung (warum 0 Einträge?)**
+  - [SCHICHTPLANER_TEMPLATES_ERSTELLEN.md](../implementation_plans/SCHICHTPLANER_TEMPLATES_ERSTELLEN.md) - **📝 Schritt-für-Schritt: Wie erstelle ich Templates?**
+  - [SCHICHTPLANER_GUIA_USUARIO_ES.md](../implementation_plans/SCHICHTPLANER_GUIA_USUARIO_ES.md) - **📖 Guía Completa del Usuario (Español) - Anleitung für Endbenutzer**
+  - [SCHICHTPLANER_PHASE_2_DOKUMENTATION.md](../implementation_plans/SCHICHTPLANER_PHASE_2_DOKUMENTATION.md) - Phase 2: Automatische Schichtplan-Generierung
+  - [SCHICHTPLANER_PHASE_3_DOKUMENTATION.md](../implementation_plans/SCHICHTPLANER_PHASE_3_DOKUMENTATION.md) - Phase 3: Schichttausch-Funktionalität
+  - [SCHICHTPLANER_PHASE_4_DOKUMENTATION.md](../implementation_plans/SCHICHTPLANER_PHASE_4_DOKUMENTATION.md) - Phase 4: Templates Management
+  - [SCHICHTPLANER_PHASE_5_DOKUMENTATION.md](../implementation_plans/SCHICHTPLANER_PHASE_5_DOKUMENTATION.md) - Phase 5: Availability Management
+  - [SCHICHTPLANER_PHASE_6_DOKUMENTATION.md](../implementation_plans/SCHICHTPLANER_PHASE_6_DOKUMENTATION.md) - Phase 6: Filter-Funktionalität
 
 Details zu allen Plänen siehe `/docs/implementation_plans/` 

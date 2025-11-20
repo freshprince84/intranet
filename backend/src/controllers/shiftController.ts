@@ -29,6 +29,38 @@ function isTimeOverlap(
 }
 
 /**
+ * Berechnet Ziel-Stunden pro Woche basierend auf Vertragstyp
+ */
+function getTargetWeeklyHours(contractType: string | null): number {
+  if (!contractType) {
+    return 45; // Standard: tiempo_completo
+  }
+
+  switch (contractType) {
+    case 'tiempo_completo':
+      return 45; // 9h/Tag × 5 Tage
+    case 'tiempo_parcial_7':
+      return 10.5; // 1.5h/Tag × 7 Tage
+    case 'tiempo_parcial_14':
+      return 21; // 1.5h/Tag × 14 Tage
+    case 'tiempo_parcial_21':
+      return 31.5; // 1.5h/Tag × 21 Tage
+    case 'servicios_externos':
+      return 0; // Stundenbasiert, kein Ziel
+    default:
+      return 45; // Standard
+  }
+}
+
+/**
+ * Berechnet Stunden zwischen zwei DateTime-Objekten
+ */
+function getHoursBetween(start: Date, end: Date): number {
+  const diffMs = end.getTime() - start.getTime();
+  return diffMs / (1000 * 60 * 60); // Millisekunden zu Stunden
+}
+
+/**
  * Hilfsfunktion: Findet verfügbare User für eine Schicht
  */
 async function findAvailableUsers(params: {
@@ -38,8 +70,9 @@ async function findAvailableUsers(params: {
   dayOfWeek: number;
   startTime: string;
   endTime: string;
+  fallbackToAllUsers?: boolean; // NEU: Fallback auf alle User
 }): Promise<Array<{ user: any; priority: number }>> {
-  const { branchId, roleId, date, dayOfWeek, startTime, endTime } = params;
+  const { branchId, roleId, date, dayOfWeek, startTime, endTime, fallbackToAllUsers = true } = params;
 
   // Hole Verfügbarkeits-Regeln
   const availabilities = await prisma.userAvailability.findMany({
@@ -84,7 +117,8 @@ async function findAvailableUsers(params: {
           id: true,
           firstName: true,
           lastName: true,
-          email: true
+          email: true,
+          contractType: true // NEU: Für Vertragstyp-Berechnung
         }
       }
     }
@@ -110,6 +144,41 @@ async function findAvailableUsers(params: {
       userMap.set(userId, {
         user: av.user,
         priority
+      });
+    }
+  }
+
+  // NEU: Wenn keine Verfügbarkeiten gefunden und Fallback aktiviert
+  if (userMap.size === 0 && fallbackToAllUsers) {
+    // Hole alle User mit passender Rolle und Branch
+    const usersWithRole = await prisma.user.findMany({
+      where: {
+        active: true,
+        roles: {
+          some: {
+            roleId: roleId
+          }
+        },
+        branches: {
+          some: {
+            branchId: branchId
+          }
+        }
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        contractType: true // Für Vertragstyp-Berechnung
+      }
+    });
+
+    // Konvertiere zu verfügbaren Usern mit niedriger Priorität
+    for (const user of usersWithRole) {
+      userMap.set(user.id, {
+        user: user,
+        priority: 1 // Niedrige Priorität für User ohne Verfügbarkeiten
       });
     }
   }
@@ -859,7 +928,13 @@ export const generateShiftPlan = async (req: Request, res: Response) => {
     }
 
     const shifts: any[] = [];
-    const userWorkload: Map<number, number> = new Map();
+    // userWorkload erweitert: Stunden statt Anzahl
+    interface UserWorkload {
+      count: number; // Anzahl Schichten
+      hours: number; // Stunden
+      targetHours: number; // Ziel-Stunden pro Woche
+    }
+    const userWorkload: Map<number, UserWorkload> = new Map();
     const conflicts: Array<{ date: Date; roleId: number; templateId: number; reason: string }> = [];
 
     // Iteriere über alle Tage
@@ -885,7 +960,8 @@ export const generateShiftPlan = async (req: Request, res: Response) => {
             date,
             dayOfWeek,
             startTime: template.startTime,
-            endTime: template.endTime
+            endTime: template.endTime,
+            fallbackToAllUsers: true // Fallback aktivieren
           });
 
           if (availableUsers.length === 0) {
@@ -924,20 +1000,35 @@ export const generateShiftPlan = async (req: Request, res: Response) => {
             continue;
           }
 
-          // Sortiere nach Priorität und Arbeitslast
+          // Sortiere nach Priorität und Stunden-Defizit
           const sortedUsers = availableUsers
-            .map(av => ({
-              user: av.user,
-              priority: av.priority,
-              workload: userWorkload.get(av.user.id) || 0
-            }))
+            .map(av => {
+              // Initialisiere userWorkload beim ersten Auftreten
+              if (!userWorkload.has(av.user.id)) {
+                userWorkload.set(av.user.id, {
+                  count: 0,
+                  hours: 0,
+                  targetHours: getTargetWeeklyHours(av.user.contractType)
+                });
+              }
+              
+              const workload = userWorkload.get(av.user.id)!;
+              const deficit = workload.targetHours - workload.hours; // Defizit = Ziel - Aktuell
+              
+              return {
+                user: av.user,
+                priority: av.priority,
+                workload: workload,
+                deficit: deficit // NEU: Stunden-Defizit
+              };
+            })
             .sort((a, b) => {
               // Erst nach Priorität (höher = besser)
               if (b.priority !== a.priority) {
                 return b.priority - a.priority;
               }
-              // Dann nach Arbeitslast (niedriger = besser)
-              return a.workload - b.workload;
+              // Dann nach Stunden-Defizit (größer = besser) - User mit größtem Defizit bekommen Vorrang
+              return b.deficit - a.deficit;
             });
 
           // Versuche User zuzuweisen
@@ -965,6 +1056,22 @@ export const generateShiftPlan = async (req: Request, res: Response) => {
             );
 
             if (!hasOverlap) {
+              // Berechne Schicht-Dauer in Stunden
+              const shiftHours = getHoursBetween(startDateTime, endDateTime);
+              
+              // Hole aktuelles Workload
+              const currentWorkload = userWorkload.get(candidate.user.id) || {
+                count: 0,
+                hours: 0,
+                targetHours: getTargetWeeklyHours(candidate.user.contractType)
+              };
+
+              // Prüfe, ob User bereits Ziel-Stunden erreicht hat (nur für tiempo_completo und tiempo_parcial)
+              if (currentWorkload.targetHours > 0 && currentWorkload.hours >= currentWorkload.targetHours) {
+                // User hat bereits Ziel-Stunden erreicht, überspringe
+                continue;
+              }
+
               // User zuweisen
               shifts.push({
                 shiftTemplateId: template.id,
@@ -978,10 +1085,12 @@ export const generateShiftPlan = async (req: Request, res: Response) => {
                 createdBy: currentUserId
               });
 
-              userWorkload.set(
-                candidate.user.id,
-                (userWorkload.get(candidate.user.id) || 0) + 1
-              );
+              // Aktualisiere userWorkload (Stunden statt Anzahl)
+              userWorkload.set(candidate.user.id, {
+                count: currentWorkload.count + 1,
+                hours: currentWorkload.hours + shiftHours,
+                targetHours: currentWorkload.targetHours
+              });
 
               assigned = true;
               break;

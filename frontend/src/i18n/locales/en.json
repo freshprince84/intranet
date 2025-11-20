@@ -1429,6 +1429,8 @@
         "swapped": "Swapped"
       },
       "legend": {
+        "branches": "Branches",
+        "statuses": "Status",
         "scheduled": "Scheduled",
         "confirmed": "Confirmed",
         "cancelled": "Cancelled",
@@ -1602,7 +1604,15 @@
         "inactive": "Inactive",
         "priority": "Priority",
         "deleteConfirm": "Do you really want to delete this availability?",
+        "userLabel": "Availability for",
+        "filter": {
+          "user": "User",
+          "allUsers": "All Users"
+        },
         "form": {
+          "user": "User",
+          "selectUser": "Select user",
+          "userReadOnly": "User cannot be changed when editing",
           "branch": "Branch",
           "role": "Role",
           "dayOfWeek": "Day of Week",
