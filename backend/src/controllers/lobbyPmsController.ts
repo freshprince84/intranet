@@ -232,22 +232,22 @@ export const checkInReservation = async (req: AuthenticatedRequest, res: Respons
       include: { branch: true }
     });
 
-    // Aktualisiere verknüpften Task falls vorhanden
-    const userId = parseInt(req.userId);
-    await ReservationTaskService.completeTaskOnCheckIn(localReservation.id, userId);
+      // Aktualisiere verknüpften Task falls vorhanden
+      const userId = parseInt(req.userId);
+      await ReservationTaskService.completeTaskOnCheckIn(localReservation.id, userId);
 
-    // Sende Check-in-Bestätigung
-    try {
-      await ReservationNotificationService.sendCheckInConfirmation(localReservation.id);
-    } catch (error) {
-      console.error('Fehler beim Versenden der Check-in-Bestätigung:', error);
-      // Fehler nicht weiterwerfen, da Bestätigung optional ist
-    }
+      // Sende Check-in-Bestätigung
+      try {
+        await ReservationNotificationService.sendCheckInConfirmation(localReservation.id);
+      } catch (error) {
+        console.error('Fehler beim Versenden der Check-in-Bestätigung:', error);
+        // Fehler nicht weiterwerfen, da Bestätigung optional ist
+      }
 
-    res.json({
-      success: true,
-      data: updatedReservation
-    });
+      res.json({
+        success: true,
+        data: updatedReservation
+      });
   } catch (error) {
     console.error('Error checking in reservation:', error);
     res.status(500).json({

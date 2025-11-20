@@ -55,8 +55,9 @@ export class LobbyPmsReservationScheduler {
    * Prüft alle Branches auf neue Reservierungen
    */
   private static async checkAllBranches(): Promise<void> {
+    const schedulerStartTime = Date.now();
     try {
-      console.log('[LobbyPmsReservationScheduler] Starte Sync für alle Branches...');
+      console.log(`[LobbyPmsReservationScheduler] 🔄 Starte Sync für alle Branches um ${new Date().toISOString()}...`);
 
       // Hole alle Branches mit Organisation
       const branches = await prisma.branch.findMany({
@@ -74,7 +75,12 @@ export class LobbyPmsReservationScheduler {
         }
       });
 
+      console.log(`[LobbyPmsReservationScheduler] 📊 ${branches.length} Branch(es) gefunden`);
+
       let totalProcessed = 0;
+      let branchesWithSync = 0;
+      let branchesSkipped = 0;
+      let branchesWithErrors = 0;
 
       // Prüfe jede Branch
       for (const branch of branches) {
@@ -91,35 +97,61 @@ export class LobbyPmsReservationScheduler {
           const lobbyPmsSettings = decryptedBranchSettings || decryptedOrgSettings?.lobbyPms;
 
           if (!lobbyPmsSettings?.apiKey) {
+            branchesSkipped++;
             continue; // Kein API Key konfiguriert
           }
 
           if (lobbyPmsSettings.syncEnabled === false) {
+            branchesSkipped++;
             continue; // Sync deaktiviert
           }
 
-          console.log(`[LobbyPmsReservationScheduler] Prüfe Branch ${branch.id} (${branch.name})...`);
+          branchesWithSync++;
+          console.log(`[LobbyPmsReservationScheduler] 🔍 Prüfe Branch ${branch.id} (${branch.name})...`);
 
           // Synchronisiere Reservierungen für diesen Branch
           const syncedCount = await LobbyPmsReservationSyncService.syncReservationsForBranch(branch.id);
           totalProcessed += syncedCount;
 
           if (syncedCount > 0) {
-            console.log(`[LobbyPmsReservationScheduler] ✅ Branch ${branch.id}: ${syncedCount} Reservation(s) synchronisiert`);
+            console.log(`[LobbyPmsReservationScheduler] ✅ Branch ${branch.id} (${branch.name}): ${syncedCount} Reservation(s) synchronisiert`);
+          } else {
+            console.log(`[LobbyPmsReservationScheduler] ℹ️  Branch ${branch.id} (${branch.name}): Keine neuen Reservierungen`);
           }
         } catch (error) {
-          console.error(`[LobbyPmsReservationScheduler] Fehler bei Branch ${branch.id}:`, error);
+          branchesWithErrors++;
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`[LobbyPmsReservationScheduler] ❌ Fehler bei Branch ${branch.id} (${branch.name}):`, {
+            message: errorMessage,
+            timestamp: new Date().toISOString()
+          });
           // Weiter mit nächster Branch
         }
       }
 
+      const schedulerDuration = Date.now() - schedulerStartTime;
+      console.log(`[LobbyPmsReservationScheduler] 📊 Sync abgeschlossen:`);
+      console.log(`   - Dauer: ${schedulerDuration}ms`);
+      console.log(`   - Branches mit Sync: ${branchesWithSync}`);
+      console.log(`   - Branches übersprungen: ${branchesSkipped}`);
+      console.log(`   - Branches mit Fehlern: ${branchesWithErrors}`);
+      console.log(`   - Reservierungen synchronisiert: ${totalProcessed}`);
+
       if (totalProcessed > 0) {
         console.log(`[LobbyPmsReservationScheduler] ✅ Insgesamt ${totalProcessed} Reservation(s) synchronisiert`);
+      } else if (branchesWithSync === 0) {
+        console.log(`[LobbyPmsReservationScheduler] ⚠️  Keine Branches mit aktivierter LobbyPMS-Sync gefunden`);
       } else {
-        console.log('[LobbyPmsReservationScheduler] Keine neuen Reservierungen gefunden');
+        console.log(`[LobbyPmsReservationScheduler] ℹ️  Keine neuen Reservierungen gefunden`);
       }
     } catch (error) {
-      console.error('[LobbyPmsReservationScheduler] Fehler beim Branch-Check:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorStack = error instanceof Error ? error.stack : undefined;
+      console.error('[LobbyPmsReservationScheduler] ❌ Kritischer Fehler beim Branch-Check:', {
+        message: errorMessage,
+        stack: errorStack,
+        timestamp: new Date().toISOString()
+      });
     }
   }
 
