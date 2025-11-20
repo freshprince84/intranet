@@ -439,18 +439,59 @@ export class LobbyPmsService {
       }
     };
 
+    // API gibt booking_id zurück, nicht id
+    const bookingId = String(lobbyReservation.booking_id || lobbyReservation.id);
+    
+    // Gastdaten aus holder-Objekt extrahieren (falls vorhanden)
+    const holder = lobbyReservation.holder || {};
+    const guestName = (holder.name && holder.surname) 
+      ? `${holder.name} ${holder.surname}${holder.second_surname ? ' ' + holder.second_surname : ''}`.trim()
+      : (lobbyReservation.guest_name || 'Unbekannt');
+    const guestEmail = holder.email || lobbyReservation.guest_email || null;
+    const guestPhone = holder.phone || lobbyReservation.guest_phone || null;
+    
+    // Datum-Felder: API gibt start_date/end_date zurück
+    const checkInDate = lobbyReservation.start_date || lobbyReservation.check_in_date;
+    const checkOutDate = lobbyReservation.end_date || lobbyReservation.check_out_date;
+    
+    // Zimmer-Daten aus assigned_room-Objekt
+    const roomNumber = lobbyReservation.assigned_room?.name || lobbyReservation.room_number || null;
+    const roomDescription = lobbyReservation.assigned_room?.type || lobbyReservation.room_description || lobbyReservation.category?.name || null;
+    
+    // Status: API gibt checked_in/checked_out Booleans zurück
+    let status = ReservationStatus.confirmed;
+    if (lobbyReservation.checked_out) {
+      status = ReservationStatus.checked_out;
+    } else if (lobbyReservation.checked_in) {
+      status = ReservationStatus.checked_in;
+    } else if (lobbyReservation.status) {
+      status = mapStatus(lobbyReservation.status);
+    }
+    
+    // Payment Status: API gibt paid_out und total_to_pay zurück
+    let paymentStatus = PaymentStatus.pending;
+    const paidOut = parseFloat(lobbyReservation.paid_out || '0');
+    const totalToPay = parseFloat(lobbyReservation.total_to_pay || lobbyReservation.total_to_pay_accommodation || '0');
+    if (paidOut >= totalToPay && totalToPay > 0) {
+      paymentStatus = PaymentStatus.paid;
+    } else if (paidOut > 0) {
+      paymentStatus = PaymentStatus.partially_paid;
+    } else if (lobbyReservation.payment_status) {
+      paymentStatus = mapPaymentStatus(lobbyReservation.payment_status);
+    }
+
     const reservationData = {
-      lobbyReservationId: lobbyReservation.id,
-      guestName: lobbyReservation.guest_name || 'Unbekannt',
-      guestEmail: lobbyReservation.guest_email || null,
-      guestPhone: lobbyReservation.guest_phone || null,
-      checkInDate: new Date(lobbyReservation.check_in_date),
-      checkOutDate: new Date(lobbyReservation.check_out_date),
+      lobbyReservationId: bookingId,
+      guestName: guestName,
+      guestEmail: guestEmail,
+      guestPhone: guestPhone,
+      checkInDate: new Date(checkInDate),
+      checkOutDate: new Date(checkOutDate),
       arrivalTime: lobbyReservation.arrival_time ? new Date(lobbyReservation.arrival_time) : null,
-      roomNumber: lobbyReservation.room_number || null,
-      roomDescription: lobbyReservation.room_description || null,
-      status: mapStatus(lobbyReservation.status),
-      paymentStatus: mapPaymentStatus(lobbyReservation.payment_status),
+      roomNumber: roomNumber,
+      roomDescription: roomDescription,
+      status: status,
+      paymentStatus: paymentStatus,
       organizationId: this.organizationId!,
       branchId: this.branchId || null,
     };
@@ -458,7 +499,7 @@ export class LobbyPmsService {
     // Upsert: Erstelle oder aktualisiere Reservierung
     const reservation = await prisma.reservation.upsert({
       where: {
-        lobbyReservationId: lobbyReservation.id
+        lobbyReservationId: bookingId
       },
       create: reservationData,
       update: reservationData
