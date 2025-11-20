@@ -225,35 +225,78 @@ async function checkPropertyIds() {
         continue;
       }
 
-      console.log(`\n🔄 Rufe Property-Info von LobbyPMS API ab...`);
-      const propertyInfo = await fetchPropertyInfo(apiUrl, apiKey);
+      console.log(`\n🔄 Rufe Reservierungen von LobbyPMS API ab...`);
+      
+      // Rufe Reservierungen ab und teste mit Property ID 13543
+      const axiosInstance: AxiosInstance = axios.create({
+        baseURL: apiUrl,
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 30000
+      });
 
-      if (!propertyInfo) {
-        console.log('⚠️  Konnte Property-Info nicht abrufen');
-        results.push({
-          branchId: branch.id,
-          branchName: branch.name,
-          dbPropertyId: dbPropertyId,
-          apiPropertyId: null,
-          apiPropertyName: null,
-          apiUrl: apiUrl,
-          match: false
+      let apiPropertyId: string | null = null;
+      let apiPropertyName: string | null = null;
+
+      try {
+        // Test 1: Rufe ohne Property ID ab
+        const responseWithoutId = await axiosInstance.get<any>('/api/v1/bookings', {
+          params: {
+            start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            limit: 5
+          },
+          validateStatus: (status) => status < 500
         });
-        continue;
+
+        if (responseWithoutId.data && responseWithoutId.data.data && Array.isArray(responseWithoutId.data.data) && responseWithoutId.data.data.length > 0) {
+          const booking = responseWithoutId.data.data[0];
+          // Versuche Property ID aus verschiedenen Feldern zu extrahieren
+          apiPropertyId = booking.property_id || booking.property?.id || booking.property_id_number || null;
+          apiPropertyName = booking.property?.name || booking.property_name || null;
+        }
+
+        // Test 2: Rufe MIT Property ID 13543 ab
+        const responseWith13543 = await axiosInstance.get<any>('/api/v1/bookings', {
+          params: {
+            property_id: '13543',
+            start_date: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            limit: 5
+          },
+          validateStatus: (status) => status < 500
+        });
+
+        const hasReservationsWith13543 = responseWith13543.data && 
+          responseWith13543.data.data && 
+          Array.isArray(responseWith13543.data.data) && 
+          responseWith13543.data.data.length > 0;
+
+        console.log(`   Reservierungen ohne Property ID Filter: ${responseWithoutId.data?.data?.length || 0}`);
+        console.log(`   Reservierungen MIT Property ID 13543: ${hasReservationsWith13543 ? responseWith13543.data.data.length : 0}`);
+
+        // Wenn mit Property ID 13543 Reservierungen kommen, dann gehört dieser Token zu Property 13543
+        if (hasReservationsWith13543) {
+          apiPropertyId = '13543';
+          console.log(`   ✅ Dieser API-Key gehört zu Property ID 13543`);
+        } else if (apiPropertyId) {
+          console.log(`   ✅ Property ID aus Reservierung extrahiert: ${apiPropertyId}`);
+        } else {
+          console.log(`   ⚠️  Konnte Property ID nicht bestimmen`);
+        }
+
+      } catch (error: any) {
+        console.error(`   ❌ Fehler beim API-Aufruf: ${error.message}`);
       }
-
-      const apiPropertyId = String(propertyInfo.id || propertyInfo.property_id || 'N/A');
-      const apiPropertyName = propertyInfo.name || propertyInfo.property_name || 'Unbekannt';
-
-      console.log(`\n📊 API-Response:`);
-      console.log(`   Property ID: ${apiPropertyId}`);
-      console.log(`   Property Name: ${apiPropertyName}`);
 
       const match = dbPropertyId === apiPropertyId;
 
       console.log(`\n${match ? '✅' : '❌'} Vergleich:`);
       console.log(`   DB Property ID: ${dbPropertyId || 'nicht gesetzt'}`);
-      console.log(`   API Property ID: ${apiPropertyId}`);
+      console.log(`   API Property ID: ${apiPropertyId || 'N/A'}`);
       console.log(`   ${match ? 'Stimmt überein' : 'STIMMT NICHT ÜBEREIN!'}`);
 
       results.push({
