@@ -413,6 +413,16 @@ export class LobbyPmsService {
    * @returns Lokale Reservation
    */
   async syncReservation(lobbyReservation: LobbyPmsReservation): Promise<Reservation> {
+    // Stelle sicher, dass organizationId gesetzt ist
+    if (!this.organizationId && this.branchId) {
+      const branch = await prisma.branch.findUnique({
+        where: { id: this.branchId },
+        select: { organizationId: true }
+      });
+      if (branch?.organizationId) {
+        this.organizationId = branch.organizationId;
+      }
+    }
     // Mappe LobbyPMS Status zu unserem ReservationStatus
     const mapStatus = (status?: string): ReservationStatus => {
       switch (status?.toLowerCase()) {
