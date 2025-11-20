@@ -459,7 +459,7 @@ export class LobbyPmsService {
     const roomDescription = lobbyReservation.assigned_room?.type || lobbyReservation.room_description || lobbyReservation.category?.name || null;
     
     // Status: API gibt checked_in/checked_out Booleans zurück
-    let status = ReservationStatus.confirmed;
+    let status: ReservationStatus = ReservationStatus.confirmed;
     if (lobbyReservation.checked_out) {
       status = ReservationStatus.checked_out;
     } else if (lobbyReservation.checked_in) {
@@ -469,7 +469,7 @@ export class LobbyPmsService {
     }
     
     // Payment Status: API gibt paid_out und total_to_pay zurück
-    let paymentStatus = PaymentStatus.pending;
+    let paymentStatus: PaymentStatus = PaymentStatus.pending;
     const paidOut = parseFloat(lobbyReservation.paid_out || '0');
     const totalToPay = parseFloat(lobbyReservation.total_to_pay || lobbyReservation.total_to_pay_accommodation || '0');
     if (paidOut >= totalToPay && totalToPay > 0) {
